@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
     DeploymentError,
     InvalidContentError,
@@ -65,8 +65,6 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)

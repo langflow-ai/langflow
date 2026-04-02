@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import DeploymentConflictError, InvalidContentError
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import create_config, validate_connection
@@ -35,8 +35,6 @@ if TYPE_CHECKING:
         WatsonxFlowArtifactProviderData,
     )
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
-
-logger = logging.getLogger(__name__)
 
 
 class OrderedUniqueStrs:
@@ -313,5 +311,5 @@ async def rollback_created_app_ids(
     for app_id in reversed(created_app_ids):
         try:
             await retry_rollback(delete_config_if_exists, clients, app_id=app_id)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Rollback failed for created app_id=%s — resource may be orphaned", app_id)

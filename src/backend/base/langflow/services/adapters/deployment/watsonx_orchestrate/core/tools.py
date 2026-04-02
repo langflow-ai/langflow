@@ -7,7 +7,6 @@ import copy
 import importlib.metadata as md
 import io
 import json
-import logging
 import zipfile
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -15,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 from cachetools import func
 from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import LangflowTool
 from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool as _create_langflow_tool
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import InvalidContentError, InvalidDeploymentOperationError
 from lfx.utils.flow_requirements import generate_requirements_from_flow
 
@@ -29,8 +29,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     require_tool_id,
 )
 from langflow.utils.version import get_version_info
-
-logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from lfx.services.adapters.deployment.schema import BaseFlowArtifact, SnapshotItems, SnapshotListResult

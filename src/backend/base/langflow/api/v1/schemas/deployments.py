@@ -764,10 +764,10 @@ class SnapshotUpdateResponse(BaseModel):
     provider_snapshot_id: str
 
 
-class DetectEnvVarsRequest(BaseModel):
+class DetectVarsRequest(BaseModel):
     """Request body for detecting environment variables from flow version IDs."""
 
-    reference_ids: list[UUID] = Field(
+    flow_version_ids: list[UUID] = Field(
         description="Flow version UUIDs to scan for global variable references.",
     )
 
@@ -782,7 +782,7 @@ class DetectedEnvVar(BaseModel):
     )
 
 
-class DetectEnvVarsResponse(BaseModel):
+class DetectVarsResponse(BaseModel):
     """Response containing detected environment variable references."""
 
     variables: list[DetectedEnvVar] = Field(default_factory=list)

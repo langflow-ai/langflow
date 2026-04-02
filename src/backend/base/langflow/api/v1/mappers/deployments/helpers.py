@@ -346,16 +346,19 @@ def handle_adapter_errors():
         detail = exc.message
         if isinstance(exc, DeploymentConflictError):
             detail = _friendly_conflict_message(exc.message)
+        logger.exception("Adapter error (status=%s): %s", http_status, detail)
         raise HTTPException(
             status_code=http_status,
             detail=detail,
         ) from exc
     except NotImplementedError as exc:
+        logger.exception("Adapter not-implemented error: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="This operation is not supported by the deployment provider.",
         ) from exc
     except ValueError as exc:
+        logger.exception("Adapter value error: %s", exc)
         raise_http_for_value_error(exc)
     except HTTPException:
         raise

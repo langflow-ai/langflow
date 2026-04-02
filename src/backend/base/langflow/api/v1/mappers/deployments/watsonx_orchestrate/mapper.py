@@ -492,6 +492,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             flow_version_id: f"{artifact.name}_v{version_number}"
             for flow_version_id, version_number, _project_id, artifact in flow_artifacts
         }
+        # Override with user-provided tool names when present
+        for op in api_provider_payload.operations:
+            if isinstance(op, WatsonxApiBindOperation) and op.tool_name:
+                raw_name_by_flow_version_id[op.flow_version_id] = op.tool_name
         raw_payloads = [
             artifact.model_copy(
                 update={
@@ -538,8 +542,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         reused_fv_ids = {fv for fv in bind_fv_ids if fv in flow_version_snapshot_id_map}
         filtered_raw_payloads = (
             [
-                artifact
-                for flow_version_id, _version_number, _project_id, artifact in flow_artifacts
+                raw_payload
+                for (flow_version_id, _version_number, _project_id, _artifact), raw_payload in zip(
+                    flow_artifacts, raw_payloads, strict=True
+                )
                 if flow_version_id not in reused_fv_ids
             ]
             if reused_fv_ids

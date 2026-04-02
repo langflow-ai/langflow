@@ -310,7 +310,7 @@ def _create_provider_spec(
     app_ids = existing_app_ids or ["app-existing-1"]
     return {
         "tools": {},
-        "connections": {"existing_app_ids": app_ids},
+        "connections": {},
         "llm": TEST_WXO_LLM,
         "operations": [
             {
@@ -538,7 +538,7 @@ async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(
         payload=DeploymentUpdate(
             provider_data={
                 "tools": {},
-                "connections": {"existing_app_ids": ["cfg-new"]},
+                "connections": {},
                 "llm": TEST_WXO_LLM,
                 "operations": [
                     {
@@ -603,7 +603,7 @@ async def test_update_provider_data_rejects_missing_llm(monkeypatch):
             deployment_id="dep-1",
             payload=DeploymentUpdate(
                 provider_data={
-                    "connections": {"existing_app_ids": ["cfg-1"]},
+                    "connections": {},
                     "operations": [
                         {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-1")}, "app_ids": ["cfg-1"]}
                     ],
@@ -621,7 +621,11 @@ def test_update_payload_rejects_connections_without_bind_or_unbind_operations():
         payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
             {
                 "llm": TEST_WXO_LLM,
-                "connections": {"existing_app_ids": ["cfg-1"]},
+                "connections": {
+                    "raw_payloads": [
+                        {"app_id": "cfg-1", "environment_variables": {"K": {"source": "raw", "value": "v"}}}
+                    ]
+                },
                 "operations": [],
             }
         )
@@ -668,7 +672,6 @@ def test_update_payload_rejects_attach_and_bind_for_same_existing_tool():
         payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
             {
                 "llm": TEST_WXO_LLM,
-                "connections": {"existing_app_ids": ["cfg-1"]},
                 "operations": [
                     {"op": "attach_tool", "tool": _tool_ref("tool-existing")},
                     {
@@ -689,7 +692,6 @@ def test_update_payload_rejects_remove_with_other_ops_for_same_tool():
         payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
             {
                 "llm": TEST_WXO_LLM,
-                "connections": {"existing_app_ids": ["cfg-1"]},
                 "operations": [
                     {"op": "remove_tool", "tool": _tool_ref("tool-existing")},
                     {
@@ -710,7 +712,6 @@ def test_update_payload_rejects_bind_unbind_overlapping_app_ids_for_same_tool():
         payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
             {
                 "llm": TEST_WXO_LLM,
-                "connections": {"existing_app_ids": ["cfg-1"]},
                 "operations": [
                     {
                         "op": "bind",
@@ -800,7 +801,6 @@ def test_create_payload_rejects_attach_and_bind_for_same_existing_tool():
         payloads_module.WatsonxDeploymentCreatePayload.model_validate(
             {
                 "llm": TEST_WXO_LLM,
-                "connections": {"existing_app_ids": ["cfg-1"]},
                 "operations": [
                     {"op": "attach_tool", "tool": _tool_ref("tool-existing")},
                     {
@@ -1095,7 +1095,7 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
         payload=DeploymentUpdate(
             provider_data={
                 "tools": {},
-                "connections": {"existing_app_ids": ["cfg-1", "cfg-2"]},
+                "connections": {},
                 "llm": TEST_WXO_LLM,
                 "operations": [
                     {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-3")}, "app_ids": ["cfg-2", "cfg-1"]},
@@ -1107,7 +1107,7 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
         db=object(),
     )
 
-    assert validate_calls == ["cfg-1", "cfg-2"]
+    assert validate_calls == ["cfg-2", "cfg-1"]
     assert result.provider_result is not None
     assert result.provider_result.created_app_ids == []
     assert result.provider_result.created_snapshot_ids == []
@@ -1155,7 +1155,6 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
                 ],
             },
             "connections": {
-                "existing_app_ids": ["cfg-1", "cfg-2", "cfg-3"],
                 "raw_payloads": [
                     {"app_id": "cfg-raw-1", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}},
                     {"app_id": "cfg-raw-2", "environment_variables": {"API_KEY": {"source": "raw", "value": "y"}}},
@@ -1182,7 +1181,7 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
 
     assert [ref.tool_id for ref in plan.added_existing_tool_refs] == ["tool-c"]
     assert plan.final_existing_tool_ids == ["tool-a", "tool-c"]
-    assert plan.existing_app_ids == ["cfg-1", "cfg-2", "cfg-3"]
+    assert plan.existing_app_ids == ["cfg-2", "cfg-1", "cfg-3"]
     assert [item.operation_app_id for item in plan.raw_connections_to_create] == ["cfg-raw-1", "cfg-raw-2"]
     assert [item.provider_app_id for item in plan.raw_connections_to_create] == ["cfg-raw-1", "cfg-raw-2"]
     assert len(plan.raw_tools_to_create) == 1
@@ -1438,7 +1437,7 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
     assert fake_clients.connections.create_calls == [{"app_id": "cfg"}]
     assert captured["connections"] == {"cfg": "conn-cfg"}
     assert fake_clients.agent.create_calls
-    assert fake_clients.agent.create_calls[0]["name"] == "lf_my_deployment"
+    assert fake_clients.agent.create_calls[0]["name"] == "my_deployment"
     assert fake_clients.agent.create_calls[0]["tools"] == ["created-tool-1"]
     assert fake_clients.agent.create_calls[0]["llm"] == TEST_WXO_LLM
     assert result.agent_id == "dep-created"
@@ -1454,7 +1453,7 @@ async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
             "tools": {},
-            "connections": {"existing_app_ids": ["cfg-1"]},
+            "connections": {},
             "llm": TEST_WXO_LLM,
             "operations": [{"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-1")}, "app_ids": ["cfg-1"]}],
         }
@@ -1845,7 +1844,7 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
     assert fake_clients.connections.create_calls == [{"app_id": "cfg"}]
     assert captured["connections"] == {"cfg": "conn-cfg"}
     assert fake_clients.agent.create_calls
-    assert fake_clients.agent.create_calls[0]["name"] == "lf_my_deployment"
+    assert fake_clients.agent.create_calls[0]["name"] == "my_deployment"
     assert fake_clients.agent.create_calls[0]["display_name"] == "my deployment"
     assert fake_clients.agent.create_calls[0]["description"] == "desc"
     assert fake_clients.agent.create_calls[0]["tools"] == ["created-tool-1"]
@@ -2129,7 +2128,7 @@ async def test_update_provider_data_rolls_back_mutated_tools_with_writable_paylo
                 spec=BaseDeploymentDataUpdate(description="trigger update"),
                 provider_data={
                     "tools": {},
-                    "connections": {"existing_app_ids": ["cfg-1"]},
+                    "connections": {},
                     "llm": TEST_WXO_LLM,
                     "operations": [
                         {
@@ -4170,14 +4169,14 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
         tool=SimpleNamespace(create=mock_create_tool),
         upload_tool_artifact=mock_upload_tool_artifact,
     )
-    monkeypatch.setattr(
-        tools_module,
-        "create_wxo_flow_tool",
-        lambda flow_payload, _connections: (
+
+    def _mock_create_wxo_flow_tool(*, flow_payload, connections):  # noqa: ARG001
+        return (
             {"name": flow_payload.name, "description": flow_payload.description},
             b"artifact",
-        ),
-    )
+        )
+
+    monkeypatch.setattr(tools_module, "create_wxo_flow_tool", _mock_create_wxo_flow_tool)
 
     bindings = [
         tools_module.FlowToolBindingSpec(
@@ -5124,19 +5123,21 @@ async def test_delete_preserves_exception_chain_on_unexpected_error(monkeypatch)
 # ---------------------------------------------------------------------------
 
 
-def test_ensure_dict_logs_warning_on_non_dict(caplog):
+def test_ensure_dict_logs_warning_on_non_dict():
     """_ensure_dict logs a warning when replacing a non-dict value."""
-    import logging
+    from unittest.mock import patch
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import _ensure_dict
 
     parent = {"binding": "not a dict"}
-    with caplog.at_level(logging.WARNING):
+    with patch("langflow.services.adapters.deployment.watsonx_orchestrate.core.tools.logger") as mock_logger:
         result = _ensure_dict(parent, "binding")
     assert result == {}
     assert parent["binding"] == {}
-    assert "Expected dict" in caplog.text
-    assert "str" in caplog.text
+    mock_logger.warning.assert_called_once()
+    call_args = mock_logger.warning.call_args
+    assert "Expected dict" in call_args[0][0]
+    assert call_args[0][2] == "str"
 
 
 # ---------------------------------------------------------------------------

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
     InvalidContentError,
     InvalidDeploymentOperationError,
@@ -61,8 +61,6 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
-
-logger = logging.getLogger(__name__)
 
 
 class ToolConnectionOps:
@@ -327,7 +325,7 @@ async def _rollback_agent_update(
         return
     try:
         await retry_rollback(asyncio.to_thread, clients.agent.update, agent_id, rollback_agent_payload)
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Rollback failed for agent_id=%s — resource may be orphaned", agent_id)
 
 
@@ -432,6 +430,12 @@ async def apply_provider_update_plan_with_rollback(
         if final_update_payload:
             await retry_update(asyncio.to_thread, clients.agent.update, agent_id, final_update_payload)
     except Exception:
+        logger.warning(
+            "Provider update failed for agent_id=%s — initiating rollback (tools=%s, apps=%s)",
+            agent_id,
+            created_tool_ids,
+            created_app_ids,
+        )
         await _rollback_agent_update(
             clients=clients,
             agent_id=agent_id,

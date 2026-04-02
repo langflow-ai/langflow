@@ -176,7 +176,6 @@ export function DeploymentStepperProvider({
 
   const buildDeploymentPayload = useCallback(
     (providerId: string): DeploymentCreateRequest => {
-      // Collect all unique connection IDs referenced across all flows
       const allConnectionIds = new Set<string>();
       Array.from(attachedConnectionByFlow.values()).forEach((ids) => {
         ids.forEach((id) => {
@@ -184,10 +183,12 @@ export function DeploymentStepperProvider({
         });
       });
 
-      const existingAppIds: string[] = [];
       const rawPayloads: Array<{
         app_id: string;
-        environment_variables: Record<string, { value: string; source: "raw" }>;
+        environment_variables: Record<
+          string,
+          { value: string; source: "raw" | "variable" }
+        >;
       }> = [];
 
       Array.from(allConnectionIds).forEach((id) => {
@@ -208,8 +209,6 @@ export function DeploymentStepperProvider({
             app_id: id,
             environment_variables: envVarsWrapped,
           });
-        } else {
-          existingAppIds.push(id);
         }
       });
 
@@ -237,7 +236,6 @@ export function DeploymentStepperProvider({
           llm: selectedLlm,
           operations,
           connections: {
-            existing_app_ids: existingAppIds,
             raw_payloads: rawPayloads,
           },
         },
