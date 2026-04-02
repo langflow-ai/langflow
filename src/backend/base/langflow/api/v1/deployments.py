@@ -798,7 +798,7 @@ async def list_deployment_configs(
     deployment_id: DeploymentIdQuery | None = None,
     provider_id: DeploymentProviderAccountIdQuery | None = None,
     page: Annotated[int, Query(ge=1)] = 1,
-    size: Annotated[int, Query(ge=1, le=10000)] = 20,
+    size: Annotated[int, Query(ge=1, le=10000)] = 20, # TODO: Paginate if performance is an issue
 ):
     """List deployment configs.
 
