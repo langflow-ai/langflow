@@ -7,6 +7,7 @@ import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { GradientSave } from "@/icons/GradientSparkles";
 
+// biome-ignore lint/suspicious/noExplicitAny: icon cache stores various icon types
 const iconCache = new Map<string, any>();
 
 export const BG_NOISE =
@@ -325,6 +326,7 @@ export const SIDEBAR_CATEGORIES = [
 export const SIDEBAR_BUNDLES = [
   { display_name: "AI/ML API", name: "aiml", icon: "AIML" },
   { display_name: "Agentics", name: "agentics", icon: "Agentics" },
+  { display_name: "AG2", name: "ag2", icon: "AG2" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
   { display_name: "ALTK", name: "altk", icon: "Zap" },
   {
@@ -623,6 +625,7 @@ export const getCachedIcon = (name: string) => {
 };
 
 export const getNodeIcon = async (name: string) => {
+  // biome-ignore lint/suspicious/noExplicitAny: icon type varies by provider
   const cacheAndReturn = (icon: any) => {
     iconCache.set(name, icon);
     return icon;
