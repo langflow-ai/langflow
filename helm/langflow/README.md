@@ -1,39 +1,73 @@
 # Langflow Helm Chart
 
 사원별 Langflow 인스턴스를 Kubernetes에 배포하기 위한 Helm chart입니다.
-Keycloak SSO 연동, NFS 스토리지, SSL 인증서를 지원합니다.
 
 ## 사전 요구사항
 
 - Kubernetes 1.24+
 - Helm 3.x
 - Keycloak 서버 (SSO 인증용)
-- NFS 서버 또는 동적 프로비저닝이 가능한 StorageClass
+- NFS 서버 또는 동적 프로비저닝 StorageClass
+- Wildcard DNS: `*.aipp02.skhynix.com` → Ingress controller
 
 ## 빠른 시작
 
-### 1. values 파일 작성
+### 1. 시크릿 생성 (운영 권장)
+
+```bash
+kubectl create namespace langflow-2074795
+
+kubectl create secret generic langflow-keycloak \
+  --namespace langflow-2074795 \
+  --from-literal=client-secret=YOUR_KEYCLOAK_SECRET \
+  --from-literal=langflow-secret-key=YOUR_LANGFLOW_KEY
+```
+
+### 2. Harbor 레지스트리 인증 (private registry 사용 시)
+
+```bash
+kubectl create secret docker-registry harbor-cred \
+  --namespace langflow-2074795 \
+  --docker-server=harbor-aipp01.skhynix.com \
+  --docker-username=YOUR_USERNAME \
+  --docker-password=YOUR_PASSWORD
+```
+
+### 3. values 파일 작성
 
 ```yaml
+# my-values.yaml
 empno: "2074795"
 
 keycloak:
   serverUrl: https://keycloak.skhynix.com
-  realm: your-realm
-  clientId: your-client-id
-  clientSecret: your-client-secret
+  realm: company
+  clientId: langflow
+  existingSecret: langflow-keycloak
 
-langflow:
-  secretKey: your-random-secret-key
-  storageClass: sc-nfs-app-retain
+ssl:
+  enabled: true
+  caCert: |
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
 
 nfs:
   enabled: true
   server: 10.0.0.1
-  basePath: /nfs/langflow
+  basePath: /nfs/data
+  mountOptions:
+    - nfsvers=3
+  initImage: harbor-aipp01.skhynix.com/busybox/busybox:latest
+
+langflow:
+  storageClass: sc-nfs-app-retain
+
+imagePullSecrets:
+  - name: harbor-cred
 ```
 
-### 2. 배포
+### 4. 배포
 
 ```bash
 helm install langflow ./helm/langflow \
@@ -42,9 +76,9 @@ helm install langflow ./helm/langflow \
   -f my-values.yaml
 ```
 
-배포 후 `https://langflow-2074795.aipp02.skhynix.com`으로 접속할 수 있습니다.
+접속: `http://langflow-2074795.aipp02.skhynix.com`
 
-### 3. 업그레이드
+### 5. 업그레이드
 
 ```bash
 helm upgrade langflow ./helm/langflow \
@@ -52,127 +86,89 @@ helm upgrade langflow ./helm/langflow \
   -f my-values.yaml
 ```
 
-### 4. 삭제
+### 6. 삭제
 
 ```bash
 helm uninstall langflow -n langflow-2074795
 kubectl delete namespace langflow-2074795
 ```
 
-## 설정 (values.yaml)
+## 전체 설정 (values.yaml)
 
-### 필수 설정
+### 기본
 
-| 파라미터 | 설명 | 예시 |
-|---------|------|------|
-| `empno` | 사원번호 (호스트명, 접근 제어에 사용) | `"2074795"` |
-| `keycloak.serverUrl` | Keycloak 서버 URL | `https://keycloak.skhynix.com` |
-| `keycloak.realm` | Keycloak realm | `your-realm` |
-| `keycloak.clientId` | Keycloak client ID | `langflow` |
-| `keycloak.clientSecret` | Keycloak client secret | (existingSecret 사용 시 생략 가능) |
-| `langflow.secretKey` | Langflow 암호화 키 | (existingSecret 사용 시 생략 가능) |
+| 파라미터 | 설명 | 기본값 |
+|---------|------|--------|
+| `empno` | 사원번호 (필수, 호스트명/접근제어에 사용) | `""` |
+| `image.repository` | Docker 이미지 | `dk02315/langflow-hynix` |
+| `image.tag` | 이미지 태그 | `v1.8.0-hynix-rc2` |
+| `image.pullPolicy` | 이미지 pull 정책 | `IfNotPresent` |
+| `imagePullSecrets` | Private registry 인증 | `[]` |
+| `resources` | CPU/메모리 제한 | `{}` |
 
-### 스토리지 설정
+### Ingress
 
-| 파라미터 | 기본값 | 설명 |
-|---------|--------|------|
-| `langflow.storage` | `5Gi` | PVC 크기 |
-| `langflow.storageClass` | `""` | StorageClass 이름 (예: `sc-nfs-app-retain`) |
-| `nfs.enabled` | `false` | NFS PV 자동 생성 여부 |
-| `nfs.server` | `""` | NFS 서버 IP |
-| `nfs.basePath` | `""` | NFS 기본 경로 (`/<empno>` 자동 추가) |
+| 파라미터 | 설명 | 기본값 |
+|---------|------|--------|
+| `ingress.enabled` | Ingress 생성 여부 | `true` |
+| `ingress.domain` | 기본 도메인 | `aipp02.skhynix.com` |
+| `ingress.annotations` | 추가 어노테이션 | `kubernetes.io/ingress.class: nginx` |
 
-`nfs.enabled=true`이면 Helm이 PersistentVolume을 자동 생성합니다.
-NFS 경로는 `<basePath>/<empno>` 형태로 설정됩니다 (예: `/nfs/langflow/2074795`).
+호스트명: `langflow-<empno>.<domain>` (예: `langflow-2074795.aipp02.skhynix.com`)
 
-> NFS 서버에 해당 디렉토리가 미리 존재해야 합니다.
+### Keycloak SSO
+
+| 파라미터 | 설명 | 기본값 |
+|---------|------|--------|
+| `keycloak.serverUrl` | Keycloak 서버 URL (필수) | `""` |
+| `keycloak.realm` | Realm (필수) | `""` |
+| `keycloak.clientId` | Client ID (필수) | `""` |
+| `keycloak.clientSecret` | Client secret (`existingSecret` 설정 시 무시) | `""` |
+| `keycloak.existingSecret` | 기존 K8s Secret 이름 | `""` |
+| `keycloak.existingSecretKeys.clientSecret` | Secret 내 client-secret 키 | `client-secret` |
+| `keycloak.existingSecretKeys.langflowSecretKey` | Secret 내 langflow-secret-key 키 | `langflow-secret-key` |
+| `keycloak.employeeClaim` | 사원번호 추출 토큰 클레임 | `preferred_username` |
+| `keycloak.buttonText` | 로그인 버튼 텍스트 | `SK하이닉스 SSO 로그인` |
+
+### Langflow
+
+| 파라미터 | 설명 | 기본값 |
+|---------|------|--------|
+| `langflow.secretKey` | 암호화 키 (`existingSecret` 설정 시 무시) | `""` |
+| `langflow.storage` | PVC 크기 | `5Gi` |
+| `langflow.storageClass` | StorageClass 이름 | `""` |
+| `langflow.refreshSecure` | refresh token 쿠키 Secure 플래그 | `"false"` |
+| `langflow.refreshSameSite` | refresh token 쿠키 SameSite 속성 | `"lax"` |
+
+> HTTP 환경에서는 `refreshSecure: "false"`, `refreshSameSite: "lax"` 사용.
+> HTTPS 환경에서는 `refreshSecure: "true"`, `refreshSameSite: "none"` 으로 변경.
+
+### NFS 스토리지
+
+| 파라미터 | 설명 | 기본값 |
+|---------|------|--------|
+| `nfs.enabled` | NFS PV 자동 생성 | `false` |
+| `nfs.server` | NFS 서버 IP | `""` |
+| `nfs.basePath` | NFS 기본 경로 | `""` |
+| `nfs.mountOptions` | NFS 마운트 옵션 | `[]` |
+| `nfs.initImage` | 디렉토리 생성용 initContainer 이미지 | `busybox:1.36` |
+
+`nfs.enabled=true`이면:
+- PV가 `basePath`를 마운트
+- initContainer가 `langflow-<empno>` 하위 디렉토리를 자동 생성
+- 메인 컨테이너는 `subPath: langflow-<empno>`로 해당 디렉토리만 사용
+
+> `basePath`는 NFS 서버에 이미 존재해야 합니다. 하위 디렉토리(`langflow-<empno>`)는 자동 생성됩니다.
 
 ### SSL 인증서
 
-사내 PKI CA 인증서가 필요한 경우:
-
-```yaml
-ssl:
-  enabled: true
-  # 방법 1: PEM 내용 직접 입력
-  caCert: |
-    -----BEGIN CERTIFICATE-----
-    MIIFazCCA1OgAwIBAgIUe...
-    -----END CERTIFICATE-----
-
-  # 방법 2: 기존 ConfigMap 사용
-  existingConfigMap: my-ca-configmap
-
-  # 방법 3: 기존 Secret 사용
-  existingSecret: my-ca-secret
-```
-
-### 시크릿 관리
-
-**방법 1**: values에 직접 입력 (테스트용)
-
-```yaml
-keycloak:
-  clientSecret: my-secret
-langflow:
-  secretKey: my-langflow-key
-```
-
-**방법 2**: 기존 K8s Secret 참조 (운영 권장)
-
-```bash
-kubectl create secret generic langflow-keycloak \
-  --namespace langflow-2074795 \
-  --from-literal=client-secret=YOUR_SECRET \
-  --from-literal=langflow-secret-key=YOUR_LANGFLOW_KEY
-```
-
-```yaml
-keycloak:
-  existingSecret: langflow-keycloak
-```
-
-### Ingress 설정
-
-| 파라미터 | 기본값 | 설명 |
-|---------|--------|------|
-| `ingress.enabled` | `true` | Ingress 생성 여부 |
-| `ingress.domain` | `aipp02.skhynix.com` | 기본 도메인 |
-| `ingress.annotations` | `{}` | 추가 어노테이션 |
-
-호스트명은 `langflow-<empno>.<domain>` 형식으로 자동 생성됩니다.
-
-### 리소스 제한
-
-```yaml
-resources:
-  requests:
-    cpu: 500m
-    memory: 1Gi
-  limits:
-    cpu: 2
-    memory: 4Gi
-```
-
-## Docker Compose (대안)
-
-Kubernetes 없이 단독 실행하려면 프로젝트 루트의 `docker-compose.yml`을 사용하세요.
-
-```bash
-# .env 파일 작성
-cat > .env << 'EOF'
-EMPNO=2074795
-LANGFLOW_SECRET_KEY=your-secret
-KEYCLOAK_SERVER_URL=https://keycloak.skhynix.com
-KEYCLOAK_REALM=your-realm
-KEYCLOAK_CLIENT_ID=your-client-id
-KEYCLOAK_CLIENT_SECRET=your-client-secret
-KEYCLOAK_REDIRECT_URI=http://localhost:7860/api/v1/keycloak/callback
-EOF
-
-# 실행
-docker compose up -d
-```
+| 파라미터 | 설명 | 기본값 |
+|---------|------|--------|
+| `ssl.enabled` | CA 인증서 마운트 | `false` |
+| `ssl.caCert` | PEM 내용 직접 입력 | `""` |
+| `ssl.existingConfigMap` | 기존 ConfigMap 사용 | `""` |
+| `ssl.existingSecret` | 기존 Secret 사용 | `""` |
+| `ssl.key` | ConfigMap/Secret 내 키 이름 | `ca.crt` |
 
 ## 생성되는 리소스
 
@@ -185,3 +181,17 @@ docker compose up -d
 | Secret | `langflow-<empno>-secret` | `existingSecret` 미설정 시 |
 | Ingress | `langflow-<empno>` | `ingress.enabled=true` |
 | ConfigMap | `langflow-<empno>-ca-cert` | `ssl.enabled=true` + `ssl.caCert` 설정 시 |
+
+## 여러 사원 일괄 배포
+
+공통 values 파일 하나로 여러 사원을 배포할 수 있습니다:
+
+```bash
+for EMPNO in 2074795 2073215 2071234; do
+  helm install langflow ./helm/langflow \
+    --namespace langflow-${EMPNO} \
+    --create-namespace \
+    -f values-common.yaml \
+    --set empno=${EMPNO}
+done
+```
