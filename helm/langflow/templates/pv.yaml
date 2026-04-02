@@ -20,5 +20,5 @@ spec:
   {{- end }}
   nfs:
     server: {{ required "nfs.server is required when nfs.enabled=true" .Values.nfs.server }}
-    path: {{ required "nfs.basePath is required when nfs.enabled=true" .Values.nfs.basePath }}/{{ .Values.empno }}
+    path: {{ required "nfs.basePath is required when nfs.enabled=true" .Values.nfs.basePath }}
 {{- end }}

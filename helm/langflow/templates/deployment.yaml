@@ -14,6 +14,18 @@ spec:
       labels:
         {{- include "langflow.selectorLabels" . | nindent 8 }}
     spec:
+      {{- if .Values.nfs.enabled }}
+      initContainers:
+        - name: nfs-init
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - mkdir -p /mnt/nfs/{{ .Values.empno }} && chmod 777 /mnt/nfs/{{ .Values.empno }}
+          volumeMounts:
+            - name: data
+              mountPath: /mnt/nfs
+      {{- end }}
       containers:
         - name: langflow
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -62,6 +74,9 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /app/data
+              {{- if .Values.nfs.enabled }}
+              subPath: {{ .Values.empno }}
+              {{- end }}
             {{- if .Values.ssl.enabled }}
             - name: ca-cert
               mountPath: /etc/ssl/custom
