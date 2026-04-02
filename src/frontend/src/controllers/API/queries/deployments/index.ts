@@ -3,6 +3,7 @@ export * from "./use-get-deployment";
 export * from "./use-get-deployment-attachments";
 export * from "./use-get-deployment-execution";
 export * from "./use-get-deployment-llms";
+export * from "./use-get-deployment-snapshots";
 export * from "./use-get-deployments";
 export * from "./use-patch-deployment";
 export * from "./use-patch-deployment-snapshot";

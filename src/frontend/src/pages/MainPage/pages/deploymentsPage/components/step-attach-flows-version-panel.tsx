@@ -16,6 +16,7 @@ export const VersionPanel = memo(function VersionPanel({
   onToolNameChange,
   onSelectPending,
   onAttach,
+  onManageConnections,
 }: {
   selectedFlow: FlowType | undefined;
   versions: FlowVersionEntry[];
@@ -26,6 +27,7 @@ export const VersionPanel = memo(function VersionPanel({
   onToolNameChange: (name: string) => void;
   onSelectPending: (id: string) => void;
   onAttach: () => void;
+  onManageConnections?: () => void;
 }) {
   if (!selectedFlow) {
     return (
@@ -36,11 +38,18 @@ export const VersionPanel = memo(function VersionPanel({
   }
 
   const attachedEntry = selectedVersionByFlow.get(selectedFlow.id);
+  const isAlreadyAttached = !!attachedEntry;
+  const pendingIsSameAsAttached =
+    isAlreadyAttached && pendingVersion === attachedEntry.versionId;
+  const pendingIsDifferentVersion =
+    isAlreadyAttached && pendingVersion && !pendingIsSameAsAttached;
 
   return (
     <>
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
-        Select a version to attach to this deployment
+        {isAlreadyAttached
+          ? "This flow is attached. Select a different version to update, or manage connections."
+          : "Select a version to attach to this deployment"}
       </div>
       <div className="flex flex-1 flex-col overflow-hidden px-4 py-2">
         <h3 className="py-2 text-lg font-semibold">{selectedFlow.name}</h3>
@@ -59,7 +68,8 @@ export const VersionPanel = memo(function VersionPanel({
             </div>
           ) : (
             versions.map((version) => {
-              const isAttachedVersion = attachedEntry?.versionId === version.id;
+              const isAttachedVersion =
+                attachedEntry?.versionId === version.id;
               const isSelected = pendingVersion === version.id;
               return (
                 <RadioSelectItem
@@ -93,7 +103,8 @@ export const VersionPanel = memo(function VersionPanel({
             })
           )}
         </div>
-        {pendingVersion && (
+        {/* Tool name input — only for new attachments */}
+        {pendingVersion && !isAlreadyAttached && (
           <div className="flex flex-col gap-1 pb-2">
             <span className="text-xs font-medium text-muted-foreground">
               Tool Name
@@ -107,13 +118,40 @@ export const VersionPanel = memo(function VersionPanel({
             />
           </div>
         )}
-        <Button
-          className="w-full"
-          disabled={!pendingVersion}
-          onClick={onAttach}
-        >
-          Attach Flow
-        </Button>
+        <div className="flex flex-col gap-2">
+          {isAlreadyAttached ? (
+            <>
+              <Button
+                className="w-full"
+                disabled={!pendingVersion || pendingIsSameAsAttached}
+                onClick={onAttach}
+              >
+                {pendingIsSameAsAttached
+                  ? "Already Attached"
+                  : pendingIsDifferentVersion
+                    ? "Change Version"
+                    : "Select a Version"}
+              </Button>
+              {onManageConnections && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={onManageConnections}
+                >
+                  Manage Connections
+                </Button>
+              )}
+            </>
+          ) : (
+            <Button
+              className="w-full"
+              disabled={!pendingVersion}
+              onClick={onAttach}
+            >
+              Attach Flow
+            </Button>
+          )}
+        </div>
       </div>
     </>
   );

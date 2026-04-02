@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { useGetDeploymentSnapshots } from "@/controllers/API/queries/deployments/use-get-deployment-snapshots";
 import { usePostDetectDeploymentEnvVars } from "@/controllers/API/queries/deployments/use-post-detect-deployment-env-vars";
 import { useGetFlowVersions } from "@/controllers/API/queries/flow-version/use-get-flow-versions";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
+import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
 import type { EnvVarEntry } from "../types";
 import type { ConnectionTab } from "./step-attach-flows-connection-panel";
@@ -14,6 +19,7 @@ import { FlowListPanel } from "./step-attach-flows-flow-list-panel";
 import { VersionPanel } from "./step-attach-flows-version-panel";
 
 type RightPanelView = "versions" | "connections";
+type AttachMode = "flows" | "existing-tools";
 
 export default function StepAttachFlows() {
   const {
@@ -25,11 +31,14 @@ export default function StepAttachFlows() {
     handleSelectVersion: onSelectVersion,
     toolNameByFlow,
     setToolNameByFlow,
+    attachedExistingTools,
+    setAttachedExistingTools,
     attachedConnectionByFlow,
     setAttachedConnectionByFlow: onAttachConnection,
     removedFlowIds,
     handleRemoveAttachedFlow,
     handleUndoRemoveFlow,
+    selectedInstance,
   } = useDeploymentStepper();
 
   const { folderId } = useParams();
@@ -52,7 +61,23 @@ export default function StepAttachFlows() {
         (f.folder_id === currentFolderId || f.id === initialFlowId),
     );
   }, [flowsData, currentFolderId, initialFlowId]);
-  // TODO: replace with real API data
+  const [attachMode, setAttachMode] = useState<AttachMode>("flows");
+
+  // Fetch existing provider tools for the "Existing Tools" tab
+  const providerId = selectedInstance?.id ?? "";
+  const { data: snapshotsData, isLoading: isLoadingSnapshots } =
+    useGetDeploymentSnapshots(
+      { providerId },
+      { enabled: !!providerId && attachMode === "existing-tools" },
+    );
+  const existingTools = snapshotsData?.snapshots ?? [];
+  const [toolSearch, setToolSearch] = useState("");
+
+  const filteredTools = useMemo(() => {
+    if (!toolSearch.trim()) return existingTools;
+    const q = toolSearch.toLowerCase();
+    return existingTools.filter((t) => t.name.toLowerCase().includes(q));
+  }, [existingTools, toolSearch]);
 
   const [selectedFlowId, setSelectedFlowId] = useState<string | null>(
     initialFlowId ?? null,
@@ -126,12 +151,20 @@ export default function StepAttachFlows() {
   const handleAttachFlow = useCallback(async () => {
     if (effectiveFlowId && pendingVersion) {
       const version = versions.find((v) => v.id === pendingVersion);
+      const isVersionChange = selectedVersionByFlow.has(effectiveFlowId);
       onSelectVersion(
         effectiveFlowId,
         pendingVersion,
         version?.version_tag ?? "",
       );
       setPendingVersion(null);
+
+      // For version changes on already-attached flows, stay on versions panel
+      // (no connection step needed — connections are preserved).
+      if (isVersionChange) {
+        return;
+      }
+
       setRightPanel("connections");
       setSelectedConnections(
         new Set(attachedConnectionByFlow.get(effectiveFlowId) ?? []),
@@ -175,6 +208,7 @@ export default function StepAttachFlows() {
     connections,
     detectEnvVars,
     onSelectVersion,
+    selectedVersionByFlow,
     attachedConnectionByFlow,
     setErrorData,
   ]);
@@ -286,8 +320,106 @@ export default function StepAttachFlows() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 py-3">
-      <h2 className="text-lg font-semibold">Attach Flows</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Attach Tools</h2>
+        <div className="flex rounded-lg border border-border bg-muted p-0.5">
+          {(["flows", "existing-tools"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setAttachMode(mode)}
+              className={cn(
+                "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                attachMode === mode
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {mode === "flows" ? "Create from Flow" : "Existing Tools"}
+            </button>
+          ))}
+        </div>
+      </div>
 
+      {attachMode === "existing-tools" ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border">
+          <div className="flex items-center gap-3 border-b border-border p-4">
+            <span className="text-sm text-muted-foreground">
+              Select existing tools from your provider
+            </span>
+            <Input
+              placeholder="Search tools..."
+              className="ml-auto h-8 w-48 bg-muted text-xs"
+              value={toolSearch}
+              onChange={(e) => setToolSearch(e.target.value)}
+            />
+          </div>
+          <div className="flex-1 space-y-1 overflow-y-auto p-3">
+            {isLoadingSnapshots ? (
+              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                Loading tools...
+              </div>
+            ) : filteredTools.length === 0 ? (
+              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                {toolSearch ? "No tools match your search" : "No tools found on the provider"}
+              </div>
+            ) : (
+              filteredTools.map((tool) => {
+                const isAttached = attachedExistingTools.has(tool.id);
+                return (
+                  <button
+                    key={tool.id}
+                    type="button"
+                    data-testid={`existing-tool-${tool.id}`}
+                    onClick={() => {
+                      setAttachedExistingTools((prev) => {
+                        const next = new Map(prev);
+                        if (next.has(tool.id)) {
+                          next.delete(tool.id);
+                        } else {
+                          next.set(tool.id, tool.name);
+                        }
+                        return next;
+                      });
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors",
+                      isAttached
+                        ? "border border-foreground bg-muted"
+                        : "border border-transparent hover:bg-muted/60",
+                    )}
+                  >
+                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
+                      <ForwardedIconComponent
+                        name="Wrench"
+                        className="h-4 w-4 text-muted-foreground"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-sm font-semibold">{tool.name}</span>
+                    </div>
+                    {isAttached && (
+                      <Badge
+                        variant="secondaryStatic"
+                        size="tag"
+                        className="bg-accent-blue-muted text-accent-blue-muted-foreground"
+                      >
+                        SELECTED
+                      </Badge>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+          {attachedExistingTools.size > 0 && (
+            <div className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
+              {attachedExistingTools.size}{" "}
+              {attachedExistingTools.size === 1 ? "tool" : "tools"} selected
+            </div>
+          )}
+        </div>
+      ) : (
       <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border border-border">
         <FlowListPanel
           flows={flows}
@@ -330,6 +462,22 @@ export default function StepAttachFlows() {
               }}
               onSelectPending={setPendingVersion}
               onAttach={handleAttachFlow}
+              onManageConnections={
+                effectiveFlowId &&
+                selectedVersionByFlow.has(effectiveFlowId)
+                  ? () => {
+                      setRightPanel("connections");
+                      setSelectedConnections(
+                        new Set(
+                          attachedConnectionByFlow.get(effectiveFlowId) ?? [],
+                        ),
+                      );
+                      if (connections.length === 0) {
+                        setConnectionTab("create");
+                      }
+                    }
+                  : undefined
+              }
             />
           ) : (
             <ConnectionPanel
@@ -362,6 +510,7 @@ export default function StepAttachFlows() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -12,12 +12,19 @@ export interface DeploymentCreateRequest {
   };
   provider_data: {
     llm: string;
-    operations: Array<{
-      op: "bind";
-      flow_version_id: string;
-      app_ids: string[];
-      tool_name?: string;
-    }>;
+    operations: Array<
+      | {
+          op: "bind";
+          flow_version_id: string;
+          app_ids: string[];
+          tool_name?: string;
+        }
+      | {
+          op: "bind_tool";
+          tool_id: string;
+          app_ids?: string[];
+        }
+    >;
     connections: {
       existing_app_ids: string[];
       raw_payloads: Array<{

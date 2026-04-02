@@ -642,8 +642,8 @@ class BaseDeploymentMapper:
             DeploymentSnapshotListItem(
                 id=str(item.id),
                 name=item.name,
-                created_at=item.created_at,
-                updated_at=item.updated_at,
+                created_at=getattr(item, "created_at", None),
+                updated_at=getattr(item, "updated_at", None),
                 provider_data=item.provider_data if isinstance(item.provider_data, dict) else None,
             )
             for item in result.snapshots

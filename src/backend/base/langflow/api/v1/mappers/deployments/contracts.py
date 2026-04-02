@@ -68,11 +68,5 @@ class FlowVersionPatch(BaseModel):
     def _dedupe_ids(cls, values: list[UUID]) -> list[UUID]:
         return list(dict.fromkeys(values))
 
-    @model_validator(mode="after")
-    def _validate_no_overlap(self) -> FlowVersionPatch:
-        overlap = set(self.add_flow_version_ids).intersection(self.remove_flow_version_ids)
-        if overlap:
-            ids = ", ".join(sorted(str(value) for value in overlap))
-            msg = f"Flow version ids cannot be present in both add/remove operations: {ids}."
-            raise ValueError(msg)
-        return self
+    # Overlap between add and remove is allowed — a flow version can be removed
+    # from one tool and re-added to a new tool (e.g., tool rename) in a single update.

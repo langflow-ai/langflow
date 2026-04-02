@@ -86,6 +86,9 @@ interface DeploymentStepperContextType {
   /** User-provided tool names per flow. Key = flowId. */
   toolNameByFlow: Map<string, string>;
   setToolNameByFlow: Dispatch<SetStateAction<Map<string, string>>>;
+  /** Existing provider tool IDs selected for direct attachment. Map<tool_id, tool_name>. */
+  attachedExistingTools: Map<string, string>;
+  setAttachedExistingTools: Dispatch<SetStateAction<Map<string, string>>>;
   /** Flow IDs that were originally attached but the user chose to remove. */
   removedFlowIds: Set<string>;
   /** Detach an existing flow (edit mode only). */
@@ -103,6 +106,27 @@ interface DeploymentStepperContextType {
     provider_snapshot_id: string;
     flow_version_id: string;
   }>;
+}
+
+/** Check if two string arrays have the same elements (order-independent). */
+function arraysEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const setA = new Set(a);
+  return b.every((id) => setA.has(id));
+}
+
+/** Build a bind operation record for provider_data.operations. */
+function makeBind(
+  flowVersionId: string,
+  appIds: string[],
+  toolName?: string,
+): Record<string, unknown> {
+  return {
+    op: "bind",
+    flow_version_id: flowVersionId,
+    app_ids: appIds,
+    ...(toolName && { tool_name: toolName }),
+  };
 }
 
 const DeploymentStepperContext =
@@ -174,6 +198,9 @@ export function DeploymentStepperProvider({
   );
   const [attachedConnectionByFlow, setAttachedConnectionByFlow] =
     useState<Map<string, string[]>>(initialAttachedRef);
+  const [attachedExistingTools, setAttachedExistingTools] = useState<
+    Map<string, string>
+  >(new Map());
   const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(new Set());
 
   const handleRemoveAttachedFlow = useCallback((flowId: string) => {
@@ -243,7 +270,7 @@ export function DeploymentStepperProvider({
     }
     if (logical === 3) {
       // In edit mode, the user can skip attaching new flows (they may only update name/LLM)
-      return isEditMode || selectedVersionByFlow.size > 0;
+      return isEditMode || selectedVersionByFlow.size > 0 || attachedExistingTools.size > 0;
     }
     // Review step — always true
     return true;
@@ -256,6 +283,7 @@ export function DeploymentStepperProvider({
     deploymentName,
     selectedLlm,
     selectedVersionByFlow,
+    attachedExistingTools,
     isEditMode,
   ]);
 
@@ -337,17 +365,18 @@ export function DeploymentStepperProvider({
         }
       });
 
-      const operations: DeploymentCreateRequest["provider_data"]["operations"] =
-        [];
+      type CreateOp = DeploymentCreateRequest["provider_data"]["operations"][number];
+      const operations: CreateOp[] = [];
       for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
         const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
-        const customToolName = toolNameByFlow.get(flowId)?.trim();
-        operations.push({
-          op: "bind",
-          flow_version_id: versionEntry.versionId,
-          app_ids: connectionIds,
-          ...(customToolName && { tool_name: customToolName }),
-        });
+        operations.push(
+          makeBind(versionEntry.versionId, connectionIds, toolNameByFlow.get(flowId)?.trim()) as CreateOp,
+        );
+      }
+
+      // Add bind_tool operations for existing provider tools
+      for (const [toolId] of Array.from(attachedExistingTools)) {
+        operations.push({ op: "bind_tool", tool_id: toolId });
       }
 
       return {
@@ -376,6 +405,7 @@ export function DeploymentStepperProvider({
       selectedLlm,
       selectedVersionByFlow,
       toolNameByFlow,
+      attachedExistingTools,
     ],
   );
 
@@ -412,22 +442,51 @@ export function DeploymentStepperProvider({
       const initialVersionByFlow = initialState?.selectedVersionByFlow;
       const snapshotByFlow = initialState?.initialSnapshotByFlow;
 
-      // Check all flows in selectedVersionByFlow for new additions
+      // Check all flows in selectedVersionByFlow
       for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
         const originalVersion = initialVersionByFlow?.get(flowId);
         if (originalVersion) {
-          // Existing flow — version changes are handled by getSnapshotUpdates
+          // Existing flow — check if connections changed
+          const currentConnections =
+            attachedConnectionByFlow.get(flowId) ?? [];
+          const originalConnections =
+            initialAttachedRef.get(flowId) ?? [];
+
+          if (!arraysEqual(currentConnections, originalConnections)) {
+            const existingToolId = snapshotByFlow?.get(flowId);
+            if (existingToolId) {
+              // Edit connections in-place on the existing tool using
+              // unbind_tool (remove old) + bind_tool (add new).
+              const removedConns = originalConnections.filter(
+                (id) => !currentConnections.includes(id),
+              );
+              const addedConns = currentConnections.filter(
+                (id) => !originalConnections.includes(id),
+              );
+              if (removedConns.length > 0) {
+                operations.push({
+                  op: "unbind_tool",
+                  tool_id: existingToolId,
+                  app_ids: removedConns,
+                });
+              }
+              if (addedConns.length > 0) {
+                operations.push({
+                  op: "bind_tool",
+                  tool_id: existingToolId,
+                  app_ids: addedConns,
+                });
+              }
+            }
+          }
+          // Version-only changes are handled by getSnapshotUpdates
           continue;
         }
         // Brand new flow → bind (with or without connections)
         const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
-        const customToolName = toolNameByFlow.get(flowId)?.trim();
-        operations.push({
-          op: "bind",
-          flow_version_id: versionEntry.versionId,
-          app_ids: connectionIds,
-          ...(customToolName && { tool_name: customToolName }),
-        });
+        operations.push(
+          makeBind(versionEntry.versionId, connectionIds, toolNameByFlow.get(flowId)?.trim()),
+        );
       }
 
       // Emit operations for flows in removedFlowIds.
@@ -435,8 +494,7 @@ export function DeploymentStepperProvider({
         const originalVersion = initialVersionByFlow?.get(flowId);
 
         if (selectedVersionByFlow.has(flowId)) {
-          // User removed then re-attached — need to remove the old tool
-          // AND bind the new one (may be different version / tool name).
+          // User removed then re-attached — remove old tool + bind new one.
           if (originalVersion) {
             operations.push({
               op: "remove_tool",
@@ -445,13 +503,9 @@ export function DeploymentStepperProvider({
           }
           const versionEntry = selectedVersionByFlow.get(flowId)!;
           const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
-          const customToolName = toolNameByFlow.get(flowId)?.trim();
-          operations.push({
-            op: "bind",
-            flow_version_id: versionEntry.versionId,
-            app_ids: connectionIds,
-            ...(customToolName && { tool_name: customToolName }),
-          });
+          operations.push(
+            makeBind(versionEntry.versionId, connectionIds, toolNameByFlow.get(flowId)?.trim()),
+          );
           continue;
         }
 
@@ -464,12 +518,19 @@ export function DeploymentStepperProvider({
         }
       }
 
-      // Collect connection details for flows that have bind operations
-      // (new flows + flows with changed versions)
+      // Add bind_tool operations for existing provider tools attached during edit
+      for (const [toolId] of Array.from(attachedExistingTools)) {
+        operations.push({ op: "bind_tool", tool_id: toolId });
+      }
+
+      // Collect all connection IDs referenced by operations.
+      // bind operations: new tool connections (from attachedConnectionByFlow)
+      // bind_tool operations: connections added to existing tools
       const bindFlowVersionIds = new Set(
         operations.filter((o) => o.op === "bind").map((o) => o.flow_version_id),
       );
       const newConnectionIds = new Set<string>();
+      // Connections from new flow binds
       for (const [flowId, connectionIds] of Array.from(
         attachedConnectionByFlow,
       )) {
@@ -477,6 +538,15 @@ export function DeploymentStepperProvider({
         if (!versionEntry || !bindFlowVersionIds.has(versionEntry.versionId))
           continue;
         connectionIds.forEach((id) => newConnectionIds.add(id));
+      }
+      // Connections from bind_tool / unbind_tool operations (existing tool modifications)
+      for (const op of operations) {
+        if (
+          (op.op === "bind_tool" || op.op === "unbind_tool") &&
+          Array.isArray(op.app_ids)
+        ) {
+          (op.app_ids as string[]).forEach((id) => newConnectionIds.add(id));
+        }
       }
 
       const existingAppIds: string[] = [];
@@ -541,6 +611,7 @@ export function DeploymentStepperProvider({
       removedFlowIds,
       selectedVersionByFlow,
       toolNameByFlow,
+      attachedExistingTools,
       attachedConnectionByFlow,
       connections,
     ]);
@@ -559,11 +630,17 @@ export function DeploymentStepperProvider({
     }> = [];
 
     for (const [flowId, originalVersion] of Array.from(initialVersionByFlow)) {
-      // Skip removed flows — they're handled by remove_tool_by_id
+      // Skip removed flows — they're handled by remove_tool
       if (removedFlowIds.has(flowId)) continue;
       const currentVersion = selectedVersionByFlow.get(flowId);
       if (!currentVersion) continue;
       if (currentVersion.versionId === originalVersion.versionId) continue;
+
+      // Skip flows where connections also changed — those are handled by
+      // remove_tool + bind in buildDeploymentUpdatePayload.
+      const currentConns = attachedConnectionByFlow.get(flowId) ?? [];
+      const originalConns = initialAttachedRef.get(flowId) ?? [];
+      if (!arraysEqual(currentConns, originalConns)) continue;
 
       const snapshotId = snapshotByFlow.get(flowId);
       if (!snapshotId) continue;
@@ -574,7 +651,7 @@ export function DeploymentStepperProvider({
       });
     }
     return updates;
-  }, [initialState, removedFlowIds, selectedVersionByFlow]);
+  }, [initialState, removedFlowIds, selectedVersionByFlow, attachedConnectionByFlow, initialAttachedRef]);
 
   const value = useMemo<DeploymentStepperContextType>(
     () => ({
@@ -606,6 +683,8 @@ export function DeploymentStepperProvider({
       handleSelectVersion,
       toolNameByFlow,
       setToolNameByFlow,
+      attachedExistingTools,
+      setAttachedExistingTools,
       attachedConnectionByFlow,
       setAttachedConnectionByFlow,
       removedFlowIds,
@@ -637,6 +716,7 @@ export function DeploymentStepperProvider({
       selectedVersionByFlow,
       handleSelectVersion,
       toolNameByFlow,
+      attachedExistingTools,
       attachedConnectionByFlow,
       removedFlowIds,
       handleRemoveAttachedFlow,

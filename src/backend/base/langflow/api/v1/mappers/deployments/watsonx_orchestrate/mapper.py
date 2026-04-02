@@ -516,16 +516,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             msg = f"Cannot resolve provider snapshot ids for flow_version_ids in watsonx operations: {missing_strict}"
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
 
-        reused_fv_ids = {fv for fv in bind_fv_ids if fv in flow_version_snapshot_id_map}
-        filtered_raw_payloads = (
-            [
-                artifact
-                for flow_version_id, _version_number, _project_id, artifact in flow_artifacts
-                if flow_version_id not in reused_fv_ids
-            ]
-            if reused_fv_ids
-            else raw_payloads
-        )
+        # Every bind creates a new tool — all raw payloads are needed.
+        filtered_raw_payloads = raw_payloads
 
         provider_operations = self._build_provider_operations(
             operations=api_provider_payload.operations,
@@ -1011,40 +1003,21 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         for operation in operations:
             if isinstance(operation, WatsonxApiBindOperation):
                 flow_version_id = operation.flow_version_id
-                existing_tool_id = (flow_version_snapshot_id_map or {}).get(flow_version_id)
-
-                if existing_tool_id:
-                    # Reuse existing tool -- no new artifact creation needed.
-                    if operation.app_ids:
-                        provider_operations.append(
-                            self._to_bind_existing_tool_provider_operation(
-                                tool_id=existing_tool_id,
-                                source_ref=str(flow_version_id),
-                                app_ids=operation.app_ids,
-                            )
-                        )
-                    else:
-                        provider_operations.append(
-                            self._to_attach_tool_provider_operation(
-                                tool_id=existing_tool_id,
-                                source_ref=str(flow_version_id),
-                            )
-                        )
-                else:
-                    # No existing tool -- create new via raw payload (current behavior).
-                    if flow_version_id not in raw_name_by_flow_version_id:
-                        msg = f"bind.flow_version_id not found: [{flow_version_id}]"
-                        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
-                    if not operation.app_ids:
-                        # Raw tool is still created via tools.raw_payloads;
-                        # no provider bind operation needed.
-                        continue
-                    provider_operations.append(
-                        self._to_bind_provider_operation(
-                            raw_name=raw_name_by_flow_version_id[flow_version_id],
-                            app_ids=operation.app_ids,
-                        )
+                # Always create a new tool via raw payload — no reuse of existing tools.
+                if flow_version_id not in raw_name_by_flow_version_id:
+                    msg = f"bind.flow_version_id not found: [{flow_version_id}]"
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+                if not operation.app_ids:
+                    # Tool is still created via tools.raw_payloads (pre-seeded
+                    # in the adapter plan builder). No provider bind operation
+                    # needed — the adapter requires min 1 app_id on bind.
+                    continue
+                provider_operations.append(
+                    self._to_bind_provider_operation(
+                        raw_name=raw_name_by_flow_version_id[flow_version_id],
+                        app_ids=operation.app_ids,
                     )
+                )
                 continue
 
             if isinstance(operation, WatsonxApiUnbindOperation):
