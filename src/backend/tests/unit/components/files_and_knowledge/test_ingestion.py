@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
@@ -126,6 +127,61 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert metadata["api_key_used"] is True
         assert metadata["chunk_size"] == 1000
         assert "created_at" in metadata
+
+    def test_update_metadata_metrics_persists_chunk_stats(self, component_class, default_kwargs, tmp_path, active_user):
+        """Test updating the persisted KB metrics from the Chroma collection."""
+        component = component_class(**default_kwargs)
+        kb_path = tmp_path / active_user.username / "test_kb"
+
+        mock_collection = MagicMock()
+        mock_collection.count.return_value = 2
+        mock_collection.get.return_value = {"documents": ["hello world", "foo"]}
+
+        mock_chroma = MagicMock()
+        mock_chroma._collection = mock_collection
+
+        component._update_metadata_metrics(kb_path, mock_chroma)
+        stored_metadata = json.loads((kb_path / "embedding_metadata.json").read_text())
+
+        assert stored_metadata["chunks"] == 2
+        assert stored_metadata["words"] == 3
+        assert stored_metadata["characters"] == 14
+        assert stored_metadata["avg_chunk_size"] == 7.0
+        assert stored_metadata["size"] > 0
+
+    def test_update_metadata_metrics_no_metadata_file(self, component_class, default_kwargs, tmp_path, active_user):
+        """Test _update_metadata_metrics silently returns when embedding_metadata.json does not exist."""
+        component = component_class(**default_kwargs)
+        kb_path = tmp_path / active_user.username / "no_metadata_kb"
+        kb_path.mkdir(parents=True, exist_ok=True)
+        # Do NOT create embedding_metadata.json
+
+        mock_chroma = MagicMock()
+
+        # Should return without error
+        component._update_metadata_metrics(kb_path, mock_chroma)
+
+        # Metadata file should still not exist
+        assert not (kb_path / "embedding_metadata.json").exists()
+
+    def test_update_metadata_metrics_empty_collection(self, component_class, default_kwargs, tmp_path, active_user):
+        """Test _update_metadata_metrics when Chroma collection has 0 chunks."""
+        component = component_class(**default_kwargs)
+        kb_path = tmp_path / active_user.username / "test_kb"
+
+        mock_collection = MagicMock()
+        mock_collection.count.return_value = 0
+
+        mock_chroma = MagicMock()
+        mock_chroma._collection = mock_collection
+
+        component._update_metadata_metrics(kb_path, mock_chroma)
+        stored_metadata = json.loads((kb_path / "embedding_metadata.json").read_text())
+
+        assert stored_metadata["chunks"] == 0
+        # update_text_metrics does not write words/characters/avg_chunk_size when chunks == 0
+        # unless they were already present — verify no crash occurred
+        mock_collection.get.assert_not_called()
 
     def test_build_column_metadata(self, component_class, default_kwargs):
         """Test building column metadata."""
@@ -416,6 +472,74 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         # Should raise a RuntimeError wrapping a ValueError with a clear message
         with pytest.raises(RuntimeError, match="no longer recognized"):
             await component.build_kb_info()
+
+    def test_scalar_notna_with_scalar_values(self, component_class, default_kwargs):
+        """Test _scalar_notna returns correct results for scalar values."""
+        component = component_class(**default_kwargs)
+
+        assert component._scalar_notna("hello") is True
+        assert component._scalar_notna(42) is True
+        assert component._scalar_notna(0) is True
+        assert component._scalar_notna("") is True
+        assert component._scalar_notna(None) is False
+        assert component._scalar_notna(float("nan")) is False
+
+    def test_scalar_notna_with_numpy_arrays(self, component_class, default_kwargs):
+        """Test _scalar_notna handles numpy arrays without raising ambiguous truth value errors."""
+        component = component_class(**default_kwargs)
+
+        # Empty array — should be falsy (no valid data)
+        assert not component._scalar_notna(np.array([]))
+
+        # Array with valid values — should be truthy
+        assert component._scalar_notna(np.array([1, 2, 3]))
+
+        # Array containing NaN — should be falsy (not all values are non-NA)
+        assert not component._scalar_notna(np.array([1, float("nan"), 3]))
+
+        # Array of strings — should be truthy
+        assert component._scalar_notna(np.array(["a", "b"]))
+
+    def test_scalar_notna_with_lists(self, component_class, default_kwargs):
+        """Test _scalar_notna handles plain lists safely."""
+        component = component_class(**default_kwargs)
+
+        assert not component._scalar_notna([])
+        assert component._scalar_notna([1, 2])
+
+    async def test_convert_df_to_data_objects_with_array_cells(self, component_class, default_kwargs):
+        """Test that _convert_df_to_data_objects handles DataFrame rows containing numpy arrays.
+
+        This reproduces the bug where Split Text output contains metadata columns with
+        array values, causing 'truth value of an empty array is ambiguous' errors.
+        """
+        # Build a DataFrame with an array-valued metadata column (mimics Split Text output)
+        data_df = DataFrame(
+            {
+                "text": ["chunk 1", "chunk 2"],
+                "source": ["file.txt", "file.txt"],
+                "tags": [np.array([]), np.array(["important"])],
+            }
+        )
+        default_kwargs["input_df"] = data_df
+        default_kwargs["column_config"] = [
+            {"column_name": "text", "vectorize": True, "identifier": False},
+            {"column_name": "source", "vectorize": False, "identifier": True},
+            {"column_name": "tags", "vectorize": False, "identifier": False},
+        ]
+        component = component_class(**default_kwargs)
+        config_list = default_kwargs["column_config"]
+
+        with patch("lfx.components.files_and_knowledge.ingestion.Chroma") as mock_chroma:
+            mock_chroma_instance = MagicMock()
+            mock_chroma_instance.get.return_value = {"metadatas": []}
+            mock_chroma.return_value = mock_chroma_instance
+
+            # This should NOT raise "truth value of an empty array is ambiguous"
+            data_objects = await component._convert_df_to_data_objects(data_df, config_list)
+
+        assert len(data_objects) == 2
+        assert all(isinstance(obj, Data) for obj in data_objects)
 
     def test_build_embedding_metadata_without_api_key(self, component_class, default_kwargs):
         """Test _build_embedding_metadata with no API key stores model_selection for later use."""
