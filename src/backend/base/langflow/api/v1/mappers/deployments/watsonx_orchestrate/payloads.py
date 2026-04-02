@@ -453,6 +453,21 @@ class WatsonxApiDeploymentListProviderData(BaseModel):
     entries: list[WatsonxApiProviderDeploymentListItem] = Field(default_factory=list)
 
 
+class WatsonxApiDeploymentFlowVersionItemData(BaseModel):
+    """API-facing provider_data contract for deployment flow-version list items."""
+
+    model_config = {"extra": "forbid"}
+
+    app_ids: list[str] = Field(min_length=1)
+
+    @field_validator("app_ids", mode="before")
+    @classmethod
+    def normalize_app_ids(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        return [str(app_id).strip() for app_id in value if str(app_id).strip()]
+
+
 class _WatsonxApiAgentExecutionResultBase(BaseModel):
     """Shared fields for API-facing agent execution result payloads.
 

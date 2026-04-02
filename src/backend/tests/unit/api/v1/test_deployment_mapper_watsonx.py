@@ -104,7 +104,7 @@ def test_watsonx_mapper_shapes_flow_version_item_data_from_connections() -> None
 
     shaped = mapper.shape_deployment_flow_version_item_data({"connections": {"cfg-1": "conn-1", "cfg-2": "conn-2"}})
 
-    assert shaped == {"connection_app_ids": ["cfg-1", "cfg-2"]}
+    assert shaped == {"app_ids": ["cfg-1", "cfg-2"]}
 
 
 def test_watsonx_mapper_flow_version_item_data_returns_none_for_missing_or_invalid_connections() -> None:
@@ -153,7 +153,87 @@ def test_watsonx_mapper_shapes_flow_version_list_result_with_enrichment() -> Non
     assert shaped.flow_versions[0].version_number == 3
     assert shaped.flow_versions[0].attached_at == attached_at
     assert shaped.flow_versions[0].provider_snapshot_id == "tool-1"
-    assert shaped.flow_versions[0].provider_data == {"connection_app_ids": ["cfg-1"]}
+    assert shaped.flow_versions[0].provider_data == {"app_ids": ["cfg-1"]}
+
+
+def test_watsonx_mapper_flow_version_list_result_degrades_when_snapshot_result_missing() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    rows = [
+        (
+            SimpleNamespace(provider_snapshot_id="tool-1", created_at=datetime.now(tz=timezone.utc)),
+            SimpleNamespace(id=uuid4(), flow_id=uuid4(), version_number=1),
+        )
+    ]
+
+    shaped = mapper.shape_flow_version_list_result(
+        rows=rows,
+        snapshot_result=None,
+        page=1,
+        size=20,
+        total=1,
+    )
+
+    assert shaped.total == 1
+    assert len(shaped.flow_versions) == 1
+    assert shaped.flow_versions[0].provider_snapshot_id == "tool-1"
+    assert shaped.flow_versions[0].provider_data is None
+
+
+def test_watsonx_mapper_flow_version_list_result_degrades_when_required_snapshot_missing() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    rows = [
+        (
+            SimpleNamespace(provider_snapshot_id="tool-1", created_at=datetime.now(tz=timezone.utc)),
+            SimpleNamespace(id=uuid4(), flow_id=uuid4(), version_number=1),
+        )
+    ]
+    snapshot_result = SnapshotListResult(
+        snapshots=[
+            SnapshotItem(
+                id="tool-2",
+                name="Tool 2",
+                provider_data={"connections": {"cfg-2": "conn-2"}},
+            )
+        ]
+    )
+
+    shaped = mapper.shape_flow_version_list_result(
+        rows=rows,
+        snapshot_result=snapshot_result,
+        page=1,
+        size=20,
+        total=1,
+    )
+
+    assert shaped.total == 1
+    assert len(shaped.flow_versions) == 1
+    assert shaped.flow_versions[0].provider_snapshot_id == "tool-1"
+    assert shaped.flow_versions[0].provider_data is None
+
+
+@pytest.mark.parametrize("provider_snapshot_id", [None, "   "])
+def test_watsonx_mapper_flow_version_list_result_fails_fast_on_invalid_attachment_snapshot_id(
+    provider_snapshot_id: str | None,
+) -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    rows = [
+        (
+            SimpleNamespace(provider_snapshot_id=provider_snapshot_id, created_at=datetime.now(tz=timezone.utc)),
+            SimpleNamespace(id=uuid4(), flow_id=uuid4(), version_number=1),
+        )
+    ]
+
+    with pytest.raises(HTTPException) as exc_info:
+        mapper.shape_flow_version_list_result(
+            rows=rows,
+            snapshot_result=SnapshotListResult(snapshots=[]),
+            page=1,
+            size=20,
+            total=1,
+        )
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "Flow version attachment has an invalid provider_snapshot_id."
 
 
 def test_watsonx_api_payload_accepts_flow_version_create_bind_contract() -> None:

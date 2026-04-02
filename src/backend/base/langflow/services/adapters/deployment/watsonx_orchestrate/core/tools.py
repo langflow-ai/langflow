@@ -521,11 +521,28 @@ async def verify_tools_by_ids(
         if not isinstance(tool, dict) or not tool.get("id"):
             continue
         connections = extract_langflow_connections_binding(tool)
+        normalized_connections: dict[str, str] = {
+            key: value
+            for raw_key, raw_value in connections.items()
+            if isinstance(raw_key, str)
+            and isinstance(raw_value, str)
+            and (key := raw_key.strip())
+            and (value := raw_value.strip())
+        }
+
+        if len(normalized_connections) < len(connections):
+            logger.warning(
+                "Tool %s returned malformed langflow connection bindings; defaulting to empty mapping",
+                tool["id"],
+            )
+            provider_data: dict[str, dict[str, str]] = {"connections": {}}
+        else:
+            provider_data = {"connections": normalized_connections}
         snapshots.append(
             SnapshotItem(
                 id=tool["id"],
                 name=tool.get("name") or tool["id"],
-                provider_data={"connections": connections} if connections else None,
+                provider_data=provider_data,
             )
         )
     return SnapshotListResult(snapshots=snapshots)

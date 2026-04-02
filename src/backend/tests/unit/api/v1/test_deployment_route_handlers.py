@@ -731,7 +731,7 @@ class TestListDeploymentFlowVersionsRoute:
             flow_versions=[
                 SimpleNamespace(
                     provider_snapshot_id="tool-1",
-                    provider_data={"connection_app_ids": ["cfg-1"]},
+                    provider_data={"app_ids": ["cfg-1"]},
                 )
             ],
         )
@@ -749,7 +749,7 @@ class TestListDeploymentFlowVersionsRoute:
         assert response.total == 7
         assert len(response.flow_versions) == 1
         assert response.flow_versions[0].provider_snapshot_id == "tool-1"
-        assert response.flow_versions[0].provider_data == {"connection_app_ids": ["cfg-1"]}
+        assert response.flow_versions[0].provider_data == {"app_ids": ["cfg-1"]}
 
         mock_list_flow_versions_synced.assert_awaited_once()
         helper_kwargs = mock_list_flow_versions_synced.call_args.kwargs

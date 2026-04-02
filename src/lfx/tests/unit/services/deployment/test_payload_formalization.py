@@ -270,7 +270,7 @@ def test_generic_parametrization_applies_to_result_and_list_models() -> None:
         configs=[],
         provider_result={"external_url": "https://dep.example"},
     )
-    typed_snapshot_list = SnapshotListResult[_ResultModel](
+    typed_snapshot_list = SnapshotListResult[_ResultModel, _StatusModel](
         snapshots=[],
         provider_result={"external_url": "https://dep.example"},
     )

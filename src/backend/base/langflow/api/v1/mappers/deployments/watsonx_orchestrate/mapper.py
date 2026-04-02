@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -57,6 +58,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiBindOperation,
     WatsonxApiBindToolOperation,
     WatsonxApiDeploymentCreatePayload,
+    WatsonxApiDeploymentFlowVersionItemData,
     WatsonxApiDeploymentListProviderData,
     WatsonxApiDeploymentLlmListResultData,
     WatsonxApiDeploymentUpdatePayload,
@@ -104,6 +106,13 @@ if TYPE_CHECKING:
     )
 
 
+@dataclass(frozen=True)
+class _NormalizedAttachmentRow:
+    attachment: FlowVersionDeploymentAttachment
+    flow_version: FlowVersion
+    snapshot_id: str
+
+
 @register_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
 class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     """Deployment mapper for Watsonx Orchestrate provider."""
@@ -123,6 +132,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         ),
         deployment_list_result=PayloadSlot(
             adapter_model=WatsonxApiDeploymentListProviderData,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
+        deployment_item_data=PayloadSlot(
+            adapter_model=WatsonxApiDeploymentFlowVersionItemData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
         execution_create_result=PayloadSlot(
@@ -889,27 +902,22 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         size: int,
         total: int,
     ) -> DeploymentFlowVersionListResponse:
-        snapshot_data_by_id = {
-            snapshot_id: (snapshot.provider_data if isinstance(snapshot.provider_data, dict) else None)
-            for snapshot in (snapshot_result.snapshots if snapshot_result else [])
-            if (snapshot_id := str(snapshot.id or "").strip())
-        }
+        normalized_rows = self._normalize_flow_version_attachment_rows(rows)
+        snapshot_data_by_id = self._resolve_snapshot_data_by_id(
+            snapshot_result=snapshot_result,
+        )
 
-        flow_versions: list[DeploymentFlowVersionListItem] = []
-        for attachment, flow_version in rows:
-            snapshot_id = (attachment.provider_snapshot_id or "").strip() or None
-            flow_versions.append(
-                DeploymentFlowVersionListItem(
-                    id=flow_version.id,
-                    flow_id=flow_version.flow_id,
-                    version_number=flow_version.version_number,
-                    attached_at=attachment.created_at,
-                    provider_snapshot_id=snapshot_id,
-                    provider_data=self.shape_deployment_flow_version_item_data(
-                        snapshot_data_by_id.get(snapshot_id) if snapshot_id else None
-                    ),
-                )
+        flow_versions = [
+            DeploymentFlowVersionListItem(
+                id=row.flow_version.id,
+                flow_id=row.flow_version.flow_id,
+                version_number=row.flow_version.version_number,
+                attached_at=row.attachment.created_at,
+                provider_snapshot_id=row.snapshot_id,
+                provider_data=self.shape_deployment_flow_version_item_data(snapshot_data_by_id.get(row.snapshot_id)),
             )
+            for row in normalized_rows
+        ]
 
         return DeploymentFlowVersionListResponse(
             flow_versions=flow_versions,
@@ -917,6 +925,45 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             size=size,
             total=total,
         )
+
+    def _normalize_flow_version_attachment_rows(
+        self,
+        rows: list[tuple[FlowVersionDeploymentAttachment, FlowVersion]],
+    ) -> list[_NormalizedAttachmentRow]:
+        normalized_rows: list[_NormalizedAttachmentRow] = []
+        for attachment, flow_version in rows:
+            snapshot_id = (attachment.provider_snapshot_id or "").strip()
+            if not snapshot_id:
+                msg = "Flow version attachment has an invalid provider_snapshot_id."
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+            normalized_rows.append(
+                _NormalizedAttachmentRow(
+                    attachment=attachment,
+                    flow_version=flow_version,
+                    snapshot_id=snapshot_id,
+                )
+            )
+        return normalized_rows
+
+    def _resolve_snapshot_data_by_id(
+        self,
+        *,
+        snapshot_result: SnapshotListResult | None,
+    ) -> dict[str, dict[str, Any] | None]:
+        if snapshot_result is None:
+            return {}
+        if not snapshot_result.snapshots:
+            return {}
+
+        snapshot_data_by_id: dict[str, dict[str, Any] | None] = {}
+        for snapshot in snapshot_result.snapshots:
+            snapshot_id = str(snapshot.id).strip()
+            if not snapshot_id:
+                continue
+            provider_data = snapshot.provider_data
+            snapshot_data_by_id[snapshot_id] = provider_data if isinstance(provider_data, dict) else None
+
+        return snapshot_data_by_id
 
     def shape_deployment_flow_version_item_data(
         self,
@@ -927,7 +974,17 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         raw_connections = snapshot_data.get("connections", {})
         if not isinstance(raw_connections, dict) or not raw_connections:
             return None
-        return {"connection_app_ids": list(raw_connections.keys())}
+        try:
+            return self._validate_slot(
+                self.api_payloads.deployment_item_data,
+                {"app_ids": list(raw_connections.keys())},
+            )
+        except AdapterPayloadValidationError as exc:
+            detail = exc.format_first_error()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Invalid flow-version provider_data payload: {detail}",
+            ) from exc
 
     def _shape_provider_deployment_list_entry(self, item: Any) -> dict[str, Any]:
         item_provider_data = item.provider_data

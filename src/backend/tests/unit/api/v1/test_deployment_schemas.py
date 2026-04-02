@@ -432,11 +432,11 @@ class TestDeploymentFlowVersionListSchemas:
             version_number=3,
             attached_at=now,
             provider_snapshot_id="tool-1",
-            provider_data={"connection_app_ids": ["cfg-1"]},
+            provider_data={"app_ids": ["cfg-1"]},
         )
         assert item.attached_at == now
         assert item.provider_snapshot_id == "tool-1"
-        assert item.provider_data == {"connection_app_ids": ["cfg-1"]}
+        assert item.provider_data == {"app_ids": ["cfg-1"]}
 
     def test_flow_version_list_item_does_not_expose_description_or_created_at(self):
         assert "description" not in DeploymentFlowVersionListItem.model_fields
