@@ -214,38 +214,24 @@ async def initiate_oauth_flow(
                     await logger.ainfo(f"OAuth flow {flow_id} completed successfully, status: {response.status_code}")
 
                 # Mark flow as complete
-                flow_data = await state_manager.get_flow_by_id(flow_id)
-                if flow_data:
-                    flow_data["status"] = "complete"
-                    await state_manager._cache_set(  # noqa: SLF001
-                        state_manager._flow_key(flow_id),  # noqa: SLF001
-                        flow_data,
-                    )
-                    await logger.ainfo(f"OAuth flow {flow_id} marked as complete")
+                await state_manager.update_flow(flow_id, {"status": "complete"})
+                await logger.ainfo(f"OAuth flow {flow_id} marked as complete")
 
             except TimeoutError:
                 await logger.awarning(f"OAuth flow {flow_id} timed out waiting for callback")
-                flow_data = await state_manager.get_flow_by_id(flow_id)
-                if flow_data:
-                    flow_data["status"] = "error"
-                    flow_data["error_message"] = "OAuth flow timed out"
-                    await state_manager._cache_set(  # noqa: SLF001
-                        state_manager._flow_key(flow_id),  # noqa: SLF001
-                        flow_data,
-                    )
-            except Exception as e:
+                await state_manager.update_flow(
+                    flow_id,
+                    {"status": "error", "error_message": "OAuth flow timed out"},
+                )
+            except Exception as e:  # noqa: BLE001
                 await logger.aexception(f"OAuth flow {flow_id} failed: {e}")
-                flow_data = await state_manager.get_flow_by_id(flow_id)
-                if flow_data:
-                    flow_data["status"] = "error"
-                    flow_data["error_message"] = str(e)
-                    await state_manager._cache_set(  # noqa: SLF001
-                        state_manager._flow_key(flow_id),  # noqa: SLF001
-                        flow_data,
-                    )
+                await state_manager.update_flow(
+                    flow_id,
+                    {"status": "error", "error_message": str(e)},
+                )
 
         # Start the OAuth flow in the background
-        asyncio.create_task(run_oauth_flow())
+        asyncio.create_task(run_oauth_flow())  # noqa: RUF006
 
         # Wait for auth_url to be available (up to 30 seconds)
         # This allows the frontend to get the auth_url directly from /initiate

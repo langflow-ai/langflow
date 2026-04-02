@@ -292,21 +292,15 @@ async def create_deployed_oauth_provider(
 
         if sdk_state:
             # Store mapping from SDK's state -> our flow_id
-            await state_manager._cache_set(  # noqa: SLF001
-                state_manager._state_key(sdk_state),  # noqa: SLF001
-                captured_flow_id,
-            )
+            await state_manager.map_sdk_state(sdk_state, captured_flow_id)
             await logger.ainfo(f"Stored SDK state mapping for flow {captured_flow_id}: {sdk_state[:20]}...")
 
         # Store the auth URL in the flow data so /status can return it
-        flow_data = await state_manager.get_flow_by_id(captured_flow_id)
-        if flow_data:
-            flow_data["auth_url"] = url
-            flow_data["status"] = "awaiting_callback"
-            await state_manager._cache_set(  # noqa: SLF001
-                state_manager._flow_key(captured_flow_id),  # noqa: SLF001
-                flow_data,
-            )
+        updated = await state_manager.update_flow(
+            captured_flow_id,
+            {"auth_url": url, "status": "awaiting_callback"},
+        )
+        if updated:
             await logger.ainfo(f"Stored auth URL for flow {captured_flow_id}, waiting for callback...")
 
         # Don't raise - let the SDK continue to call callback_handler
