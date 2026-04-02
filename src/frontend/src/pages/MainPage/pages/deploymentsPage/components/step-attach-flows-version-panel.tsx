@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { FlowType } from "@/types/flow";
 import type { FlowVersionEntry } from "@/types/flow/version";
 import { RadioSelectItem } from "./radio-select-item";
@@ -11,6 +12,8 @@ export const VersionPanel = memo(function VersionPanel({
   isLoadingVersions,
   pendingVersion,
   selectedVersionByFlow,
+  toolName,
+  onToolNameChange,
   onSelectPending,
   onAttach,
 }: {
@@ -19,6 +22,8 @@ export const VersionPanel = memo(function VersionPanel({
   isLoadingVersions: boolean;
   pendingVersion: string | null;
   selectedVersionByFlow: Map<string, { versionId: string; versionTag: string }>;
+  toolName: string;
+  onToolNameChange: (name: string) => void;
   onSelectPending: (id: string) => void;
   onAttach: () => void;
 }) {
@@ -88,6 +93,20 @@ export const VersionPanel = memo(function VersionPanel({
             })
           )}
         </div>
+        {pendingVersion && (
+          <div className="flex flex-col gap-1 pb-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              Tool Name
+            </span>
+            <Input
+              placeholder={selectedFlow.name}
+              className="bg-muted"
+              value={toolName}
+              onChange={(e) => onToolNameChange(e.target.value)}
+              data-testid="tool-name-input"
+            />
+          </div>
+        )}
         <Button
           className="w-full"
           disabled={!pendingVersion}

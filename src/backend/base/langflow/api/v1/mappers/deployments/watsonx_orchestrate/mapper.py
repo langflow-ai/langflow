@@ -371,6 +371,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             reference_ids=flow_version_ids,
         )
         raw_name_by_flow_version_id = {flow_version_id: artifact.name for flow_version_id, artifact in flow_artifacts}
+        # Override with user-provided tool names when present
+        for op in api_provider_payload.operations:
+            if isinstance(op, WatsonxApiBindOperation) and op.tool_name:
+                raw_name_by_flow_version_id[op.flow_version_id] = op.tool_name
         provider_operations = self._build_provider_operations(
             operations=api_provider_payload.operations,
             raw_name_by_flow_version_id=raw_name_by_flow_version_id,
@@ -385,6 +389,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                     raw_tool_payloads=[
                         artifact.model_copy(
                             update={
+                                "name": raw_name_by_flow_version_id[flow_version_id],
                                 "provider_data": self.util_create_flow_artifact_provider_data(
                                     project_id=project_id,
                                     flow_version_id=flow_version_id,

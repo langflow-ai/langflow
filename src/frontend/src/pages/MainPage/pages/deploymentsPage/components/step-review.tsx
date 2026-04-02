@@ -12,6 +12,7 @@ export default function StepReview() {
     selectedLlm,
     connections,
     selectedVersionByFlow,
+    toolNameByFlow,
     attachedConnectionByFlow,
   } = useDeploymentStepper();
 
@@ -52,9 +53,11 @@ export default function StepReview() {
         }
       }
 
+      const flowName = flow?.name ?? "Unknown";
       return {
         flowId,
-        flowName: flow?.name ?? "Unknown",
+        flowName,
+        toolName: toolNameByFlow.get(flowId)?.trim() || flowName,
         versionLabel: versionTag || versionId,
         connectionNames: flowConnections.map((c) => c.name),
         envVars,
@@ -120,7 +123,7 @@ export default function StepReview() {
                 reviewFlows.map((item) => (
                   <div key={item.flowId} className="flex items-center gap-1.5">
                     <ForwardedIconComponent
-                      name="Link"
+                      name="Workflow"
                       className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
                     />
                     <span className="text-sm text-foreground">
@@ -150,21 +153,32 @@ export default function StepReview() {
               className="rounded-xl border border-border bg-background p-4"
             >
               <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <ForwardedIconComponent
-                    name="Link"
-                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                  />
-                  <span className="text-sm font-medium text-foreground">
-                    {item.flowName}
-                  </span>
-                  <Badge
-                    variant="secondaryStatic"
-                    size="tag"
-                    className="bg-accent-purple-muted text-accent-purple-muted-foreground"
-                  >
-                    {item.versionLabel}
-                  </Badge>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <ForwardedIconComponent
+                      name="Wrench"
+                      className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                    />
+                    <span className="text-sm font-medium text-foreground">
+                      {item.toolName}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 pl-5">
+                    <ForwardedIconComponent
+                      name="Workflow"
+                      className="h-3 w-3 shrink-0 text-muted-foreground"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {item.flowName}
+                    </span>
+                    <Badge
+                      variant="secondaryStatic"
+                      size="tag"
+                      className="bg-accent-purple-muted text-accent-purple-muted-foreground"
+                    >
+                      {item.versionLabel}
+                    </Badge>
+                  </div>
                 </div>
 
                 {item.connectionNames.length > 0 && (

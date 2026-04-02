@@ -16,6 +16,7 @@ export interface DeploymentCreateRequest {
       op: "bind";
       flow_version_id: string;
       app_ids: string[];
+      tool_name?: string;
     }>;
     connections: {
       existing_app_ids: string[];

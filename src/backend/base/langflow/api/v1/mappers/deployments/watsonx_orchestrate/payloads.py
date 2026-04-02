@@ -39,6 +39,13 @@ class WatsonxApiBindOperation(BaseModel):
             "the flow version as a tool with no connection bindings."
         ),
     )
+    tool_name: str | None = Field(
+        default=None,
+        description=(
+            "Optional user-provided tool name. When omitted, the tool name "
+            "is derived from the flow name."
+        ),
+    )
 
 
 class WatsonxApiUnbindOperation(BaseModel):
