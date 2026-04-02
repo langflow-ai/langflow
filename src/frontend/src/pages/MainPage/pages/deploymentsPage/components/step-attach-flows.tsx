@@ -107,6 +107,12 @@ export default function StepAttachFlows() {
   const { data: globalVariables } = useGetGlobalVariables();
   const globalVariableOptions = (globalVariables ?? []).map((v) => v.name);
 
+  const isDuplicateConnectionName = useMemo(() => {
+    const trimmed = newConnectionName.trim().toLowerCase();
+    if (!trimmed) return false;
+    return connections.some((c) => c.name.trim().toLowerCase() === trimmed);
+  }, [newConnectionName, connections]);
+
   const effectiveFlowId = selectedFlowId ?? flows[0]?.id ?? null;
 
   const { data: versionResponse, isLoading: isLoadingVersions } =
@@ -361,6 +367,7 @@ export default function StepAttachFlows() {
               onSkipConnection={handleSkipConnection}
               onAttachConnection={handleAttachConnection}
               onCreateConnection={handleCreateConnection}
+              isDuplicateName={isDuplicateConnectionName}
             />
           )}
         </div>

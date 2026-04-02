@@ -29,6 +29,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   onSkipConnection,
   onAttachConnection,
   onCreateConnection,
+  isDuplicateName,
 }: {
   connectionTab: ConnectionTab;
   onTabChange: (tab: ConnectionTab) => void;
@@ -49,6 +50,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   onSkipConnection: () => void;
   onAttachConnection: () => void;
   onCreateConnection: () => void;
+  isDuplicateName?: boolean;
 }) {
   return (
     <>
@@ -140,6 +142,11 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                     onNameChange(e.target.value.replace(/[^a-zA-Z0-9_ ]/g, ""))
                   }
                 />
+                {isDuplicateName && (
+                  <span className="pt-1 text-xs text-destructive">
+                    A connection with this name already exists.
+                  </span>
+                )}
               </div>
               <div className="flex flex-col">
                 <span className="pb-2 text-sm font-medium">Description</span>
@@ -224,7 +231,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
           ) : (
             <Button
               className="flex-1"
-              disabled={newConnectionName.trim() === ""}
+              disabled={newConnectionName.trim() === "" || isDuplicateName}
               onClick={onCreateConnection}
             >
               Create Connection
