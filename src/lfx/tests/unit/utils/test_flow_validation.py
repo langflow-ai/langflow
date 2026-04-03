@@ -48,12 +48,14 @@ async def test_ensure_component_hash_lookups_loaded_surfaces_loader_failures(mon
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
     monkeypatch.setattr(component_cache, "type_to_current_hash", None)
 
-    with patch(
-        "lfx.interface.components.get_and_cache_all_types_dict",
-        new=AsyncMock(side_effect=RuntimeError("component import failed")),
+    with (
+        patch(
+            "lfx.interface.components.get_and_cache_all_types_dict",
+            new=AsyncMock(side_effect=RuntimeError("component import failed")),
+        ),
+        pytest.raises(RuntimeError, match="component import failed"),
     ):
-        with pytest.raises(RuntimeError, match="component import failed"):
-            await ensure_component_hash_lookups_loaded()
+        await ensure_component_hash_lookups_loaded()
 
 
 def test_validate_flow_for_current_settings_requires_settings_service(monkeypatch):
