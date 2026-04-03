@@ -1,9 +1,11 @@
+import { useMessagesStore } from "@/stores/messagesStore";
 import type { Message } from "@/types/messages";
 import { removeMessages, updateMessage } from "./message-utils";
 
 /**
  * Handles message-related events from the build process.
- * This keeps all chat message logic within the chat-view scope.
+ * Updates both React Query cache (used by the internal playground)
+ * and useMessagesStore (used by the shareable playground / IOModal).
  */
 export const handleMessageEvent = (
   eventType: string,
@@ -11,37 +13,48 @@ export const handleMessageEvent = (
 ): boolean => {
   switch (eventType) {
     case "add_message": {
-      // Add/update message in React Query cache (replaces placeholder if exists)
+      // Update React Query cache (internal playground)
       updateMessage(data as Message);
+      // Update Zustand store (shareable playground / IOModal)
+      useMessagesStore.getState().addMessage(data as Message);
       return true;
     }
     case "token": {
-      // Update message text in React Query cache for streaming
-      updateMessage({
-        id: data.id,
-        flow_id: data.flow_id || "",
-        session_id: data.session_id || "",
-        text: data.chunk || "",
-        sender: data.sender || "Machine",
-        sender_name: data.sender_name || "AI",
-        timestamp: data.timestamp || new Date().toISOString(),
-        files: data.files || [],
-        edit: data.edit || false,
-        background_color: data.background_color || "",
-        text_color: data.text_color || "",
-        properties: { ...data.properties, state: "partial" },
-      } as Message);
+      const d = data as Record<string, unknown>;
+      const tokenMessage = {
+        id: d.id,
+        flow_id: d.flow_id || "",
+        session_id: d.session_id || "",
+        text: d.chunk || "",
+        sender: d.sender || "Machine",
+        sender_name: d.sender_name || "AI",
+        timestamp: d.timestamp || new Date().toISOString(),
+        files: d.files || [],
+        edit: d.edit || false,
+        background_color: d.background_color || "",
+        text_color: d.text_color || "",
+        properties: { ...(d.properties as object), state: "partial" },
+      } as Message;
+      // Update React Query cache (internal playground)
+      updateMessage(tokenMessage);
+      // Update Zustand store (shareable playground / IOModal)
+      useMessagesStore.getState().addMessage(tokenMessage);
       return true;
     }
     case "remove_message": {
-      // Remove message from React Query cache
-      removeMessages([data.id], data.session_id || "", data.flow_id || "");
+      const rm = data as Record<string, string>;
+      // Remove from React Query cache
+      removeMessages([rm.id], rm.session_id || "", rm.flow_id || "");
+      // Remove from Zustand store
+      useMessagesStore.getState().removeMessage(data as Message);
       return true;
     }
     case "error": {
-      if (data?.category === "error") {
-        // Add error message to React Query cache
+      if ((data as Record<string, unknown>)?.category === "error") {
+        // Update React Query cache
         updateMessage(data as Message);
+        // Update Zustand store
+        useMessagesStore.getState().addMessage(data as Message);
       }
       return true;
     }

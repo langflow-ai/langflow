@@ -35,13 +35,40 @@ from langflow.utils.kb_constants import (
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_in_schema=False)
 
 
+def _validate_kb_path_containment(kb_user_path: Path, kb_path: Path, kb_name: str, username: str) -> None:
+    """Raise 403 if kb_path is not contained within kb_user_path.
+
+    Uses is_relative_to() instead of startswith() to prevent path traversal attacks.
+    startswith() has a prefix-ambiguity bug: a user named "alice" would incorrectly allow
+    paths under "alice_evil/" because the string starts with "alice". is_relative_to() performs
+    proper path containment checking.
+    """
+    if not kb_path.is_relative_to(kb_user_path):
+        logger.warning(
+            "Path traversal attempt blocked: user=%s kb_name=%r resolved_path=%s",
+            username,
+            kb_name,
+            kb_path,
+        )
+        raise HTTPException(status_code=403, detail=f"Access denied for knowledge base '{kb_name}'.")
+
+
 def _resolve_kb_path(kb_name: str, current_user: CurrentActiveUser) -> Path:
-    """Resolve and validate KB path, raising 404 if not found."""
+    """Resolve and validate KB path.
+
+    Raises 500 if root path not configured.
+    Raises 403 if path traversal is detected (kb_name escapes the user directory).
+    Raises 404 if the KB directory does not exist.
+    """
     kb_root_path = KBStorageHelper.get_root_path()
     if not kb_root_path:
         raise HTTPException(status_code=500, detail="Knowledge base root path not configured")
     kb_user = current_user.username
-    kb_path = kb_root_path / kb_user / kb_name
+    kb_user_path = (kb_root_path / kb_user).resolve()
+    kb_path = (kb_user_path / kb_name).resolve()
+
+    _validate_kb_path_containment(kb_user_path, kb_path, kb_name, kb_user)
+
     if not kb_path.exists() or not kb_path.is_dir():
         raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
     return kb_path
@@ -58,10 +85,16 @@ async def create_knowledge_base(
         kb_root_path = KBStorageHelper.get_root_path()
         kb_user = current_user.username
         kb_name = request.name.strip().replace(" ", "_")
-        kb_path = kb_root_path / kb_user / kb_name
         # Validate KB name
         if not kb_name or len(kb_name) < MIN_KB_NAME_LENGTH:
             raise HTTPException(status_code=400, detail="Knowledge base name must be at least 3 characters")
+
+        # Security: resolve paths and validate containment to prevent path traversal attacks.
+        # A crafted kb_name like "../victim/evil" or an absolute path like "/tmp/evil" must be
+        # rejected before any directory is created.
+        kb_user_path = (kb_root_path / kb_user).resolve()
+        kb_path = (kb_user_path / kb_name).resolve()
+        _validate_kb_path_containment(kb_user_path, kb_path, kb_name, kb_user)
 
         # Check if KB already exists
         if kb_path.exists():
@@ -622,17 +655,17 @@ async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -
 async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: CurrentActiveUser) -> dict[str, object]:
     """Delete multiple knowledge bases."""
     try:
-        kb_root_path = KBStorageHelper.get_root_path()
-        kb_user_path = kb_root_path / current_user.username
         deleted_count = 0
         not_found_kbs = []
 
         for kb_name in request.kb_names:
-            kb_path = kb_user_path / kb_name
-
-            if not kb_path.exists() or not kb_path.is_dir():
-                not_found_kbs.append(kb_name)
-                continue
+            try:
+                kb_path = _resolve_kb_path(kb_name, current_user)
+            except HTTPException as exc:
+                if exc.status_code == HTTPStatus.NOT_FOUND:
+                    not_found_kbs.append(kb_name)
+                    continue
+                raise  # Re-raise 403 (traversal) and 500 errors
 
             try:
                 if KBStorageHelper.delete_storage(kb_path, kb_name):

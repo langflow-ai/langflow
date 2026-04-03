@@ -49,7 +49,7 @@ For information about accepted values and functionality, see the [Couchbase docu
 | scope_name | String | Input parameter. Name of the Couchbase scope. Required. |
 | collection_name | String | Input parameter. Name of the Couchbase collection. Required. |
 | index_name | String | Input parameter. Name of the Couchbase index. Required. |
-| ingest_data | Data | Input parameter. The records to load into the vector store. Only relevant for writes. |
+| ingest_data | JSON | Input parameter. The records to load into the vector store. Only relevant for writes. |
 | search_query | String | Input parameter. The query string for vector search. Only relevant for reads. |
 | cache_vector_store | Boolean | Input parameter. If `true`, the component caches the vector store in memory for faster reads. Default: Enabled (`true`). |
 | embedding | Embeddings | Input parameter. The embedding function to use for the vector store. |
