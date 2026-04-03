@@ -28,13 +28,13 @@ def my_function(person: Person) -> str:
 async def test_guarded_tool_successful_execution():
     """Test GuardedTool with successful policy validation."""
     lc_tool = StructuredTool.from_function(my_function)
-    
+
     # Mock the toolguard context manager and guard_toolcall
     mock_toolguard = MagicMock()
     mock_toolguard.guard_toolcall = AsyncMock()
     mock_toolguard.__enter__ = MagicMock(return_value=mock_toolguard)
     mock_toolguard.__exit__ = MagicMock(return_value=None)
-    
+
     guarded_tool = GuardedTool(lc_tool, [lc_tool], mock_toolguard)
 
     # Test with dict input
@@ -49,13 +49,13 @@ async def test_guarded_tool_successful_execution():
 async def test_guarded_tool_policy_violation():
     """Test GuardedTool when policy is violated."""
     lc_tool = StructuredTool.from_function(my_function)
-    
+
     # Mock the toolguard to raise PolicyViolationException
     mock_toolguard = MagicMock()
     mock_toolguard.guard_toolcall = AsyncMock(side_effect=PolicyViolationException("Age must be under 25"))
     mock_toolguard.__enter__ = MagicMock(return_value=mock_toolguard)
     mock_toolguard.__exit__ = MagicMock(return_value=None)
-    
+
     guarded_tool = GuardedTool(lc_tool, [lc_tool], mock_toolguard)
 
     # Test with dict input that violates policy
@@ -73,12 +73,12 @@ async def test_guarded_tool_policy_violation():
 async def test_guarded_tool_parse_input_string():
     """Test parse_input with string input."""
     lc_tool = StructuredTool.from_function(my_function)
-    
+
     # Mock the toolguard
     mock_toolguard = MagicMock()
     mock_toolguard.__enter__ = MagicMock(return_value=mock_toolguard)
     mock_toolguard.__exit__ = MagicMock(return_value=None)
-    
+
     guarded_tool = GuardedTool(lc_tool, [lc_tool], mock_toolguard)
 
     # Test JSON string
@@ -94,12 +94,12 @@ async def test_guarded_tool_parse_input_string():
 async def test_guarded_tool_parse_input_toolcall():
     """Test parse_input with ToolCall dict format."""
     lc_tool = StructuredTool.from_function(my_function)
-    
+
     # Mock the toolguard
     mock_toolguard = MagicMock()
     mock_toolguard.__enter__ = MagicMock(return_value=mock_toolguard)
     mock_toolguard.__exit__ = MagicMock(return_value=None)
-    
+
     guarded_tool = GuardedTool(lc_tool, [lc_tool], mock_toolguard)
 
     # Test with args as JSON string
@@ -118,12 +118,12 @@ async def test_guarded_tool_parse_input_toolcall():
 def test_guarded_tool_run_not_implemented():
     """Test that sync run() raises NotImplementedError."""
     lc_tool = StructuredTool.from_function(my_function)
-    
+
     # Mock the toolguard
     mock_toolguard = MagicMock()
     mock_toolguard.__enter__ = MagicMock(return_value=mock_toolguard)
     mock_toolguard.__exit__ = MagicMock(return_value=None)
-    
+
     guarded_tool = GuardedTool(lc_tool, [lc_tool], mock_toolguard)
 
     with pytest.raises(NotImplementedError):

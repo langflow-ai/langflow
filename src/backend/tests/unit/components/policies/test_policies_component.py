@@ -127,7 +127,6 @@ async def test_cache_mode_multiple_tools(mock_component):
 
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load_guards,
         patch.object(mock_component, "make_toolguard_result") as mock_make_result,
         patch("lfx.components.policies.policies_component.load_toolguards_from_memory") as mock_load_memory,
         patch("lfx.components.policies.policies_component.GuardedTool") as mock_guarded_tool,
@@ -167,7 +166,7 @@ async def test_generate_mode_validation_errors(mock_component):
 
     # Test empty project
     mock_component.project = ""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa: PT011
         await mock_component.guard_tools()
 
     # Test empty policies
@@ -213,18 +212,18 @@ def test_to_snake_case():
     assert PoliciesComponent._to_snake_case("Project, Name") == "project_name"
     assert PoliciesComponent._to_snake_case("UPPERCASE") == "uppercase"
     assert PoliciesComponent._to_snake_case("Mixed-Case Project's Name") == "mixed_case_project_s_name"
-    
+
     # Test path traversal prevention
     assert PoliciesComponent._to_snake_case("../../etc/passwd") == "etc_passwd"
     assert PoliciesComponent._to_snake_case("../../../root") == "root"
     assert PoliciesComponent._to_snake_case("./hidden") == "hidden"
     assert PoliciesComponent._to_snake_case("path/to/file") == "path_to_file"
     assert PoliciesComponent._to_snake_case("back\\slash\\path") == "back_slash_path"
-    
+
     # Test special characters are sanitized
     assert PoliciesComponent._to_snake_case("test@#$%project") == "test_project"
     assert PoliciesComponent._to_snake_case("___multiple___underscores___") == "multiple_underscores"
-    
+
     # Test empty/invalid input
     with pytest.raises(ValueError, match="must contain at least one alphanumeric character"):
         PoliciesComponent._to_snake_case("...")
