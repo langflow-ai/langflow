@@ -731,6 +731,39 @@ async def test_upsert_flow_auto_renames_name_on_create_conflict(client: AsyncCli
     assert result["name"] == "duplicate_name (1)"  # Auto-renamed
 
 
+async def test_create_flow_auto_renames_endpoint_with_like_wildcards(
+    client: AsyncClient, logged_in_headers
+):
+    """Test that endpoint_name deduplication escapes SQL LIKE wildcards."""
+    first_flow = {
+        "name": "wildcard_endpoint_flow",
+        "endpoint_name": "dup_name",
+        "data": {},
+    }
+    unrelated_flow = {
+        "name": "wildcard_endpoint_unrelated",
+        "endpoint_name": "dupa_name-7",
+        "data": {},
+    }
+
+    response = await client.post("api/v1/flows/", json=first_flow, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    response = await client.post("api/v1/flows/", json=unrelated_flow, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    second_flow = {
+        "name": "wildcard_endpoint_flow_copy",
+        "endpoint_name": "dup_name",
+        "data": {},
+    }
+
+    response = await client.post("api/v1/flows/", json=second_flow, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["endpoint_name"] == "dup_name-1"
+
+
 async def test_upsert_flow_returns_409_for_name_conflict_on_update(client: AsyncClient, logged_in_headers):
     """Test that PUT returns 409 when name conflicts with another flow during UPDATE."""
     # Create two flows
