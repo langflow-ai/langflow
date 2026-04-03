@@ -460,12 +460,12 @@ class TestMultiServeStreaming:
                 ),
                 patch(
                     "lfx.utils.flow_validation.ensure_component_hash_lookups_loaded",
-                    new=AsyncMock(return_value={"ChatInput": hashlib.sha256(b"known").hexdigest()[:12]}),
+                    new=AsyncMock(return_value={"ChatInput": {hashlib.sha256(b"known").hexdigest()[:12]}}),
                 ),
                 patch.object(
                     component_cache,
                     "type_to_current_hash",
-                    {"ChatInput": hashlib.sha256(b"known").hexdigest()[:12]},
+                    {"ChatInput": {hashlib.sha256(b"known").hexdigest()[:12]}},
                 ),
                 patch(
                     "lfx.cli.serve_app.run_flow_generator_for_serve",

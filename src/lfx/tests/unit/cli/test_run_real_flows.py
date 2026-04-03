@@ -18,8 +18,8 @@ def _hash(code: str) -> str:
     return hashlib.sha256(code.encode("utf-8")).hexdigest()[:12]
 
 
-def _builtin_hashes_from_flow(flow: dict) -> dict[str, str]:
-    type_to_hash: dict[str, str] = {}
+def _builtin_hashes_from_flow(flow: dict) -> dict[str, set[str]]:
+    type_to_hash: dict[str, set[str]] = {}
 
     for node in flow.get("data", {}).get("nodes", []):
         node_data = node.get("data", {})
@@ -32,7 +32,7 @@ def _builtin_hashes_from_flow(flow: dict) -> dict[str, str]:
         if not node_code or not component_type:
             continue
 
-        type_to_hash[component_type] = _hash(node_code)
+        type_to_hash.setdefault(component_type, set()).add(_hash(node_code))
 
     return type_to_hash
 
@@ -240,7 +240,7 @@ class TestExecuteRealFlows:
 
         error_output = json.loads(result.stdout)
         assert error_output["success"] is False
-        assert error_output["exception_type"] == "ValueError"
+        assert error_output["exception_type"] == "CustomComponentValidationError"
         assert "custom components are not allowed" in error_output["exception_message"]
         assert "Async Component" in error_output["exception_message"]
         assert "Custom Component" in error_output["exception_message"]

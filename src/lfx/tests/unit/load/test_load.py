@@ -64,7 +64,7 @@ async def test_aload_flow_from_json_fail_closed_when_hashes_are_unavailable():
         patch("lfx.graph.graph.base.Graph.add_nodes_and_edges") as mock_add_nodes_and_edges,
         pytest.raises(
             ValueError,
-            match="component templates are still initializing",
+            match="Failed to load component templates for validation|component templates are still initializing",
         ),
     ):
         await aload_flow_from_json(flow, disable_logs=True)

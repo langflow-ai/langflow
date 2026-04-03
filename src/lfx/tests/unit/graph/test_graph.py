@@ -120,7 +120,7 @@ def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):
         "lfx.services.deps.get_settings_service",
         lambda: _settings_service(allow_custom_components=False),
     )
-    monkeypatch.setattr(component_cache, "type_to_current_hash", {"ChatInput": "known-hash"})
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {"ChatInput": {"known-hash"}})
     monkeypatch.setattr(component_cache, "all_types_dict", None)
 
     with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):

@@ -24,9 +24,23 @@ describe("checkCodeValidity", () => {
     },
   };
 
-  it("marks uploaded custom components as blocked when custom components are disabled", () => {
+  it("allows custom components with matching template when custom components are disabled", () => {
+    // Custom components loaded from components_path have a matching template,
+    // so they should not be blocked — the backend hash validation is the security gate.
     expect(
       checkCodeValidity(customComponentData, templates, false),
+    ).toMatchObject({
+      outdated: false,
+      blocked: false,
+      breakingChange: false,
+      userEdited: false,
+    });
+  });
+
+  it("blocks custom components with no matching template", () => {
+    const emptyTemplates = {};
+    expect(
+      checkCodeValidity(customComponentData, emptyTemplates, false),
     ).toMatchObject({
       outdated: false,
       blocked: true,
