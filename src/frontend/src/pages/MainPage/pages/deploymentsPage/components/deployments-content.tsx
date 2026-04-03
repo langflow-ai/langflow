@@ -13,6 +13,7 @@ import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation
 import { ALL_PROVIDERS, useProviderFilter } from "../hooks/use-provider-filter";
 import { useTestDeploymentModal } from "../hooks/use-test-deployment-modal";
 import type { Deployment, ProviderAccount } from "../types";
+import DeploymentDetailsModal from "./deployment-details-modal/deployment-details-modal";
 import DeploymentStepperModal from "./deployment-stepper-modal";
 import DeploymentsEmptyState from "./deployments-empty-state";
 import DeploymentsLoadingSkeleton from "./deployments-loading-skeleton";
@@ -58,6 +59,10 @@ export default function DeploymentsContent({
     null,
   );
 
+  const [detailsDeployment, setDetailsDeployment] = useState<Deployment | null>(
+    null,
+  );
+
   const isLoading = isLoadingProviders || isLoadingDeployments;
   const hasProviders = providers.length > 0;
   const isEmpty = !hasProviders || deployments.length === 0;
@@ -76,6 +81,7 @@ export default function DeploymentsContent({
         providerMap={providerMap}
         deletingId={deploymentDelete.deletingId}
         onTestDeployment={testModal.handleTestDeployment}
+        onViewDetails={(deployment) => setDetailsDeployment(deployment)}
         onUpdateDeployment={(deployment) => {
           setEditingDeployment(deployment);
           setStepperOpen(true);
@@ -133,6 +139,19 @@ export default function DeploymentsContent({
         setOpen={testModal.setOpen}
         deployment={testModal.testTarget}
         providerId={testModal.testProviderId}
+      />
+
+      <DeploymentDetailsModal
+        open={!!detailsDeployment}
+        setOpen={(open) => {
+          if (!open) setDetailsDeployment(null);
+        }}
+        deployment={detailsDeployment}
+        providerName={
+          detailsDeployment
+            ? (providerMap[detailsDeployment.provider_account_id ?? ""] ?? "—")
+            : ""
+        }
       />
 
       <DeleteConfirmationModal

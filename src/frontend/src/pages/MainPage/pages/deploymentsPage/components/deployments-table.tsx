@@ -27,7 +27,7 @@ interface DeploymentsTableProps {
   providerMap: Record<string, string>;
   deletingId?: string | null;
   onTestDeployment: (deployment: Deployment) => void;
-  onDuplicateDeployment?: (deployment: Deployment) => void;
+  onViewDetails?: (deployment: Deployment) => void;
   onUpdateDeployment?: (deployment: Deployment) => void;
   onDeleteDeployment?: (deployment: Deployment) => void;
 }
@@ -74,7 +74,7 @@ export default function DeploymentsTable({
   providerMap,
   deletingId,
   onTestDeployment,
-  onDuplicateDeployment,
+  onViewDetails,
   onUpdateDeployment,
   onDeleteDeployment,
 }: DeploymentsTableProps) {
@@ -201,13 +201,13 @@ export default function DeploymentsTable({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => onDuplicateDeployment?.(deployment)}
+                          onClick={() => onViewDetails?.(deployment)}
                         >
                           <ForwardedIconComponent
-                            name="Copy"
+                            name="Info"
                             className="mr-2 h-4 w-4"
                           />
-                          Duplicate
+                          Details
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => onUpdateDeployment?.(deployment)}
