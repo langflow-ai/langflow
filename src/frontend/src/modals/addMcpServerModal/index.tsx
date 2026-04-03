@@ -314,7 +314,11 @@ export default function AddMcpServerModal({
               ) : (
                 <>
                   Add and save MCP servers. Manage servers in{" "}
-                  <CustomLink className="underline" to={MCP_SETTINGS_PAGE}>
+                  <CustomLink
+                    className="underline"
+                    to={MCP_SETTINGS_PAGE}
+                    onClick={() => setOpen(false)}
+                  >
                     settings
                   </CustomLink>
                   .
