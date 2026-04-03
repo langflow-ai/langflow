@@ -84,7 +84,7 @@ class TestOAuthAuthWrapper:
             await gen.asend(httpx.Response(401))
 
         assert storage.cleared is True
-        assert wrapper._tokens_cleared is True  # noqa: SLF001
+        assert wrapper._tokens_cleared is True
 
     async def test_async_auth_flow_does_not_clear_on_200(
         self, wrapper: OAuthAuthWrapper, provider: MagicMock, storage: _FakeStorage
