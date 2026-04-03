@@ -251,6 +251,8 @@ class _DeploymentResponseBase(BaseModel):
     """Shared fields for deployment response schemas."""
 
     id: UUID = Field(description="Langflow DB deployment UUID.")
+    provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
+    provider_key: str = Field(description="Provider identifier (e.g. 'watsonx-orchestrate').")
     name: str
     description: str | None = None
     type: DeploymentType
@@ -462,13 +464,6 @@ class DeploymentUpdateRequest(BaseModel):
 class ExecutionCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    provider_id: UUID = Field(
-        description=(
-            "Langflow DB provider-account UUID (`deployment_provider_account.id`). "
-            "Included alongside deployment_id to allow provider routing without an extra DB lookup."
-        ),
-    )
-    deployment_id: UUID = Field(description="Langflow DB deployment UUID.")
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description="Provider-owned opaque execution input payload.",

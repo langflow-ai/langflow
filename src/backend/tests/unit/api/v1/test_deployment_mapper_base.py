@@ -283,8 +283,6 @@ async def test_base_mapper_resolve_deployment_update_rejects_invalid_provider_da
 async def test_base_mapper_resolve_execution_create_passthrough_when_slot_not_configured() -> None:
     mapper = BaseDeploymentMapper()
     payload = ExecutionCreateRequest(
-        provider_id=uuid4(),
-        deployment_id=uuid4(),
         provider_data={"invocation_id": "inv-1"},
     )
 
@@ -302,8 +300,6 @@ async def test_base_mapper_resolve_execution_create_passthrough_when_slot_not_co
 async def test_base_mapper_resolve_execution_create_validates_provider_data_when_slot_configured() -> None:
     mapper = _TypedMapper()
     payload = ExecutionCreateRequest(
-        provider_id=uuid4(),
-        deployment_id=uuid4(),
         provider_data={"invocation_id": "inv-1"},
     )
 
@@ -321,8 +317,6 @@ async def test_base_mapper_resolve_execution_create_validates_provider_data_when
 async def test_base_mapper_resolve_execution_create_rejects_invalid_provider_data_when_slot_configured() -> None:
     mapper = _TypedMapper()
     payload = ExecutionCreateRequest(
-        provider_id=uuid4(),
-        deployment_id=uuid4(),
         provider_data={"invalid": "value"},
     )
 
@@ -364,6 +358,7 @@ def test_base_mapper_shapes_deployment_create_result() -> None:
     mapper = BaseDeploymentMapper()
     timestamp = datetime.now(tz=timezone.utc)
     deployment_id = uuid4()
+    provider_account_id = uuid4()
     result = DeploymentCreateResult(id="provider-id", provider_result={"ok": True})
     deployment_row = SimpleNamespace(
         id=deployment_id,
@@ -372,11 +367,14 @@ def test_base_mapper_shapes_deployment_create_result() -> None:
         deployment_type=DeploymentType.AGENT,
         created_at=timestamp,
         updated_at=timestamp,
+        deployment_provider_account_id=provider_account_id,
     )
 
-    shaped = mapper.shape_deployment_create_result(result, deployment_row=deployment_row)
+    shaped = mapper.shape_deployment_create_result(result, deployment_row=deployment_row, provider_key="test-provider")
 
     assert shaped.id == deployment_id
+    assert shaped.provider_id == provider_account_id
+    assert shaped.provider_key == "test-provider"
     assert shaped.name == "Deployment 1"
     assert shaped.type == DeploymentType.AGENT
     assert shaped.provider_data == {"ok": True}
@@ -488,6 +486,7 @@ def test_base_mapper_flow_version_item_data_defaults_to_none() -> None:
 def test_shape_deployment_list_items_without_filter() -> None:
     """Without a flow filter, matched_attachments is None."""
     mapper = BaseDeploymentMapper()
+    provider_account_id = uuid4()
     row = SimpleNamespace(
         id=uuid4(),
         resource_key="rk-1",
@@ -496,12 +495,16 @@ def test_shape_deployment_list_items_without_filter() -> None:
         description=None,
         created_at=None,
         updated_at=None,
+        deployment_provider_account_id=provider_account_id,
     )
     items = mapper.shape_deployment_list_items(
         rows_with_counts=[(row, 0, [])],
         has_flow_filter=False,
+        provider_key="test-provider",
     )
     assert len(items) == 1
+    assert items[0].provider_id == provider_account_id
+    assert items[0].provider_key == "test-provider"
     assert items[0].matched_attachments is None
 
 
@@ -509,6 +512,7 @@ def test_shape_deployment_list_items_with_filter() -> None:
     """With a flow filter, matched_attachments is populated from matched tuples."""
     mapper = BaseDeploymentMapper()
     fv_id = uuid4()
+    provider_account_id = uuid4()
     row = SimpleNamespace(
         id=uuid4(),
         resource_key="rk-1",
@@ -517,12 +521,16 @@ def test_shape_deployment_list_items_with_filter() -> None:
         description=None,
         created_at=None,
         updated_at=None,
+        deployment_provider_account_id=provider_account_id,
     )
     items = mapper.shape_deployment_list_items(
         rows_with_counts=[(row, 1, [(fv_id, "snap-1")])],
         has_flow_filter=True,
+        provider_key="test-provider",
     )
     assert len(items) == 1
+    assert items[0].provider_id == provider_account_id
+    assert items[0].provider_key == "test-provider"
     assert items[0].matched_attachments is not None
     assert len(items[0].matched_attachments) == 1
     assert items[0].matched_attachments[0].flow_version_id == fv_id
@@ -532,6 +540,7 @@ def test_shape_deployment_list_items_with_filter() -> None:
 def test_shape_deployment_list_items_with_filter_empty_matches() -> None:
     """With a flow filter active but no matches, matched_attachments is an empty list."""
     mapper = BaseDeploymentMapper()
+    provider_account_id = uuid4()
     row = SimpleNamespace(
         id=uuid4(),
         resource_key="rk-1",
@@ -540,12 +549,16 @@ def test_shape_deployment_list_items_with_filter_empty_matches() -> None:
         description=None,
         created_at=None,
         updated_at=None,
+        deployment_provider_account_id=provider_account_id,
     )
     items = mapper.shape_deployment_list_items(
         rows_with_counts=[(row, 0, [])],
         has_flow_filter=True,
+        provider_key="test-provider",
     )
     assert len(items) == 1
+    assert items[0].provider_id == provider_account_id
+    assert items[0].provider_key == "test-provider"
     assert items[0].matched_attachments == []
 
 
@@ -560,6 +573,7 @@ def test_base_mapper_execution_provider_data_shapers_passthrough() -> None:
 def test_base_mapper_shapes_deployment_update_result() -> None:
     mapper = BaseDeploymentMapper()
     deployment_id = uuid4()
+    provider_account_id = uuid4()
     timestamp = datetime.now(tz=timezone.utc)
     result = DeploymentUpdateResult(id="provider-id", provider_result={"ok": True})
     deployment_row = SimpleNamespace(
@@ -569,14 +583,18 @@ def test_base_mapper_shapes_deployment_update_result() -> None:
         deployment_type=DeploymentType.AGENT,
         created_at=timestamp,
         updated_at=timestamp,
+        deployment_provider_account_id=provider_account_id,
     )
 
     shaped = mapper.shape_deployment_update_result(
         result,
         deployment_row,
+        provider_key="test-provider",
     )
 
     assert shaped.id == deployment_id
+    assert shaped.provider_id == provider_account_id
+    assert shaped.provider_key == "test-provider"
     assert shaped.name == "Deployment Name"
     assert shaped.description == "desc"
     assert shaped.type == DeploymentType.AGENT

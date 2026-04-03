@@ -656,6 +656,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         self,
         result: DeploymentCreateResult,
         deployment_row: Deployment,
+        *,
+        provider_key: str,
     ) -> DeploymentCreateResponse:
         """Shape create result provider_data with explicit ref-domain semantics.
 
@@ -714,6 +716,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         return DeploymentCreateResponse(
             id=deployment_row.id,
+            provider_id=deployment_row.deployment_provider_account_id,
+            provider_key=provider_key,
             name=deployment_row.name,
             description=deployment_row.description,
             type=deployment_row.deployment_type,
@@ -726,6 +730,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         self,
         result: DeploymentUpdateResult,
         deployment_row: Deployment,
+        *,
+        provider_key: str,
     ) -> DeploymentUpdateResponse:
         adapter_provider_result = self._parse_required_payload_slot(
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update_result,
@@ -748,6 +754,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         return DeploymentUpdateResponse(
             id=deployment_row.id,
+            provider_id=deployment_row.deployment_provider_account_id,
+            provider_key=provider_key,
             name=deployment_row.name,
             description=deployment_row.description,
             type=deployment_row.deployment_type,

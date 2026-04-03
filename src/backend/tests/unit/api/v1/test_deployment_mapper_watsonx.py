@@ -1036,8 +1036,10 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     timestamp = datetime.now(tz=timezone.utc)
     deployment_id = uuid4()
+    provider_account_id = uuid4()
     deployment_row = SimpleNamespace(
         id=deployment_id,
+        deployment_provider_account_id=provider_account_id,
         name="WXO Deployment",
         description="updated",
         deployment_type=DeploymentType.AGENT,
@@ -1064,9 +1066,11 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
         },
     )
 
-    shaped = mapper.shape_deployment_update_result(result, deployment_row)
+    shaped = mapper.shape_deployment_update_result(result, deployment_row, provider_key="watsonx-orchestrate")
 
     assert shaped.id == deployment_id
+    assert shaped.provider_id == provider_account_id
+    assert shaped.provider_key == "watsonx-orchestrate"
     assert shaped.provider_data == {
         "created_app_ids": ["created-app-1"],
         "tool_app_bindings": [
@@ -1080,8 +1084,10 @@ def test_watsonx_mapper_update_response_tolerates_non_uuid_source_ref() -> None:
     """Non-UUID source_ref (from tool_id ops) produces flow_version_id=None."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     timestamp = datetime.now(tz=timezone.utc)
+    provider_account_id = uuid4()
     deployment_row = SimpleNamespace(
         id=uuid4(),
+        deployment_provider_account_id=provider_account_id,
         name="WXO Deployment",
         description="updated",
         deployment_type=DeploymentType.AGENT,
@@ -1101,7 +1107,9 @@ def test_watsonx_mapper_update_response_tolerates_non_uuid_source_ref() -> None:
         },
     )
 
-    shaped = mapper.shape_deployment_update_result(result, deployment_row)
+    shaped = mapper.shape_deployment_update_result(result, deployment_row, provider_key="watsonx-orchestrate")
+    assert shaped.provider_id == provider_account_id
+    assert shaped.provider_key == "watsonx-orchestrate"
     bindings = shaped.provider_data["tool_app_bindings"]
     assert len(bindings) == 1
     assert "flow_version_id" not in bindings[0]
@@ -1113,8 +1121,10 @@ def test_watsonx_mapper_update_response_raises_on_unmapped_tool_binding() -> Non
     mapper = WatsonxOrchestrateDeploymentMapper()
     timestamp = datetime.now(tz=timezone.utc)
     mapped_fv_id = uuid4()
+    provider_account_id = uuid4()
     deployment_row = SimpleNamespace(
         id=uuid4(),
+        deployment_provider_account_id=provider_account_id,
         name="WXO Deployment",
         description="updated",
         deployment_type=DeploymentType.AGENT,
@@ -1136,7 +1146,7 @@ def test_watsonx_mapper_update_response_raises_on_unmapped_tool_binding() -> Non
     )
 
     with pytest.raises(HTTPException) as exc:
-        mapper.shape_deployment_update_result(result, deployment_row)
+        mapper.shape_deployment_update_result(result, deployment_row, provider_key="watsonx-orchestrate")
     assert exc.value.status_code == 500
     assert "orphan-tool" in exc.value.detail
     assert "no matching snapshot binding" in exc.value.detail
@@ -1846,9 +1856,11 @@ def test_watsonx_mapper_shapes_update_response_with_tool_id() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     timestamp = datetime.now(tz=timezone.utc)
     deployment_id = uuid4()
+    provider_account_id = uuid4()
     flow_version_id = uuid4()
     deployment_row = SimpleNamespace(
         id=deployment_id,
+        deployment_provider_account_id=provider_account_id,
         name="WXO Deployment",
         description="test",
         deployment_type=DeploymentType.AGENT,
@@ -1875,7 +1887,9 @@ def test_watsonx_mapper_shapes_update_response_with_tool_id() -> None:
         ),
     )
 
-    response = mapper.shape_deployment_update_result(result, deployment_row)
+    response = mapper.shape_deployment_update_result(result, deployment_row, provider_key="watsonx-orchestrate")
+    assert response.provider_id == provider_account_id
+    assert response.provider_key == "watsonx-orchestrate"
     bindings = response.provider_data["tool_app_bindings"]
     assert len(bindings) == 1
     assert bindings[0]["tool_id"] == "tool-1"
@@ -1886,8 +1900,10 @@ def test_watsonx_mapper_shapes_update_response_with_non_uuid_source_ref() -> Non
     """Non-UUID source_ref (from tool_id ops) should produce flow_version_id=None."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     timestamp = datetime.now(tz=timezone.utc)
+    provider_account_id = uuid4()
     deployment_row = SimpleNamespace(
         id=uuid4(),
+        deployment_provider_account_id=provider_account_id,
         name="WXO Deployment",
         description="test",
         deployment_type=DeploymentType.AGENT,
@@ -1914,7 +1930,9 @@ def test_watsonx_mapper_shapes_update_response_with_non_uuid_source_ref() -> Non
         ),
     )
 
-    response = mapper.shape_deployment_update_result(result, deployment_row)
+    response = mapper.shape_deployment_update_result(result, deployment_row, provider_key="watsonx-orchestrate")
+    assert response.provider_id == provider_account_id
+    assert response.provider_key == "watsonx-orchestrate"
     bindings = response.provider_data["tool_app_bindings"]
     assert len(bindings) == 1
     assert bindings[0]["tool_id"] == "external-tool-id"

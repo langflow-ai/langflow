@@ -2,7 +2,7 @@
 
 Covers:
 - Model: Deployment and DeploymentRead require DeploymentType enum and accept description
-- API responses: to_deployment_create_response surfaces persisted description
+- API responses: shape_deployment_create_result surfaces persisted description
 - Mapper: shape_deployment_update_result reads description from the DB row
 """
 
@@ -13,7 +13,6 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
-from langflow.api.v1.mappers.deployments.helpers import to_deployment_create_response
 from langflow.services.database.models.deployment.model import Deployment, DeploymentRead
 from lfx.services.adapters.deployment.schema import DeploymentCreateResult, DeploymentType, DeploymentUpdateResult
 
@@ -93,15 +92,18 @@ class TestDeploymentModel:
 
 
 # ---------------------------------------------------------------------------
-# to_deployment_create_response tests
+# shape_deployment_create_result tests
 # ---------------------------------------------------------------------------
 
 
 class TestCreateResponse:
     def test_surfaces_description_from_db_row(self):
+        mapper = BaseDeploymentMapper()
         now = datetime.now(timezone.utc)
+        provider_account_id = uuid4()
         row = SimpleNamespace(
             id=uuid4(),
+            deployment_provider_account_id=provider_account_id,
             name="deploy",
             description="my description",
             deployment_type=DeploymentType.AGENT,
@@ -109,13 +111,18 @@ class TestCreateResponse:
             updated_at=now,
         )
         result = DeploymentCreateResult(id="prov-1")
-        response = to_deployment_create_response(result, row)
+        response = mapper.shape_deployment_create_result(result, row, provider_key="test-provider")
         assert response.description == "my description"
+        assert response.provider_id == provider_account_id
+        assert response.provider_key == "test-provider"
 
     def test_description_none_when_not_set(self):
+        mapper = BaseDeploymentMapper()
         now = datetime.now(timezone.utc)
+        provider_account_id = uuid4()
         row = SimpleNamespace(
             id=uuid4(),
+            deployment_provider_account_id=provider_account_id,
             name="deploy",
             description=None,
             deployment_type=DeploymentType.AGENT,
@@ -123,13 +130,18 @@ class TestCreateResponse:
             updated_at=now,
         )
         result = DeploymentCreateResult(id="prov-1")
-        response = to_deployment_create_response(result, row)
+        response = mapper.shape_deployment_create_result(result, row, provider_key="test-provider")
         assert response.description is None
+        assert response.provider_id == provider_account_id
+        assert response.provider_key == "test-provider"
 
     def test_uses_enum_type_from_row(self):
+        mapper = BaseDeploymentMapper()
         now = datetime.now(timezone.utc)
+        provider_account_id = uuid4()
         row = SimpleNamespace(
             id=uuid4(),
+            deployment_provider_account_id=provider_account_id,
             name="deploy",
             description=None,
             deployment_type=DeploymentType.AGENT,
@@ -137,8 +149,10 @@ class TestCreateResponse:
             updated_at=now,
         )
         result = DeploymentCreateResult(id="prov-1")
-        response = to_deployment_create_response(result, row)
+        response = mapper.shape_deployment_create_result(result, row, provider_key="test-provider")
         assert response.type == DeploymentType.AGENT
+        assert response.provider_id == provider_account_id
+        assert response.provider_key == "test-provider"
 
 
 # ---------------------------------------------------------------------------
@@ -150,8 +164,10 @@ class TestMapperUpdateResult:
     def test_reads_description_from_row(self):
         mapper = BaseDeploymentMapper()
         now = datetime.now(timezone.utc)
+        provider_account_id = uuid4()
         row = SimpleNamespace(
             id=uuid4(),
+            deployment_provider_account_id=provider_account_id,
             name="deploy",
             description="persisted desc",
             deployment_type=DeploymentType.AGENT,
@@ -159,15 +175,19 @@ class TestMapperUpdateResult:
             updated_at=now,
         )
         result = DeploymentUpdateResult(id="prov-1", provider_result={"ok": True})
-        shaped = mapper.shape_deployment_update_result(result, row)
+        shaped = mapper.shape_deployment_update_result(result, row, provider_key="test-provider")
         assert shaped.description == "persisted desc"
         assert shaped.type == DeploymentType.AGENT
+        assert shaped.provider_id == provider_account_id
+        assert shaped.provider_key == "test-provider"
 
     def test_description_none_from_row(self):
         mapper = BaseDeploymentMapper()
         now = datetime.now(timezone.utc)
+        provider_account_id = uuid4()
         row = SimpleNamespace(
             id=uuid4(),
+            deployment_provider_account_id=provider_account_id,
             name="deploy",
             description=None,
             deployment_type=DeploymentType.AGENT,
@@ -175,8 +195,10 @@ class TestMapperUpdateResult:
             updated_at=now,
         )
         result = DeploymentUpdateResult(id="prov-1")
-        shaped = mapper.shape_deployment_update_result(result, row)
+        shaped = mapper.shape_deployment_update_result(result, row, provider_key="test-provider")
         assert shaped.description is None
+        assert shaped.provider_id == provider_account_id
+        assert shaped.provider_key == "test-provider"
 
     def test_no_description_kwarg_needed(self):
         """Signature no longer accepts a description keyword argument."""

@@ -306,10 +306,13 @@ class BaseDeploymentMapper:
         *,
         rows_with_counts: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]],
         has_flow_filter: bool = False,
+        provider_key: str,
     ) -> list[DeploymentListItem]:
         return [
             DeploymentListItem(
                 id=row.id,
+                provider_id=row.deployment_provider_account_id,
+                provider_key=provider_key,
                 resource_key=row.resource_key,
                 type=row.deployment_type,
                 name=row.name,
@@ -363,10 +366,14 @@ class BaseDeploymentMapper:
         self,
         result: DeploymentCreateResult,
         deployment_row: Deployment,
+        *,
+        provider_key: str,
     ) -> DeploymentCreateResponse:
         provider_data = result.provider_result if isinstance(result.provider_result, dict) else None
         return DeploymentCreateResponse(
             id=deployment_row.id,
+            provider_id=deployment_row.deployment_provider_account_id,
+            provider_key=provider_key,
             name=deployment_row.name,
             description=deployment_row.description,
             type=deployment_row.deployment_type,
@@ -379,10 +386,14 @@ class BaseDeploymentMapper:
         self,
         result: DeploymentUpdateResult,
         deployment_row: Deployment,
+        *,
+        provider_key: str,
     ) -> DeploymentUpdateResponse:
         provider_data = result.provider_result if isinstance(result.provider_result, dict) else None
         return DeploymentUpdateResponse(
             id=deployment_row.id,
+            provider_id=deployment_row.deployment_provider_account_id,
+            provider_key=provider_key,
             name=deployment_row.name,
             description=deployment_row.description,
             type=deployment_row.deployment_type,

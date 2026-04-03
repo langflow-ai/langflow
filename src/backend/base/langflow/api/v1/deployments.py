@@ -37,7 +37,6 @@ from langflow.api.v1.mappers.deployments.helpers import (
     raise_http_for_value_error,
     resolve_adapter_from_deployment,
     resolve_adapter_mapper_from_deployment,
-    resolve_adapter_mapper_from_provider_id,
     resolve_added_snapshot_bindings_for_update,
     resolve_deployment_adapter,
     resolve_flow_version_patch_for_update,
@@ -561,7 +560,9 @@ async def create_deployment(
                 db=session,
             )
         raise
-    return deployment_mapper.shape_deployment_create_result(provider_create_result, deployment_row)
+    return deployment_mapper.shape_deployment_create_result(
+        provider_create_result, deployment_row, provider_key=provider_account.provider_key
+    )
 
 
 @router.get("", response_model=DeploymentListResponse)
@@ -656,6 +657,7 @@ async def list_deployments(
     deployments = deployment_mapper.shape_deployment_list_items(
         rows_with_counts=rows_with_counts,
         has_flow_filter=bool(normalized_flow_version_ids),
+        provider_key=provider_account.provider_key,
     )
     return DeploymentListResponse(
         deployments=deployments,
@@ -705,22 +707,19 @@ async def list_deployment_llms(
     return deployment_mapper.shape_llm_list_result(llm_list_result)
 
 
-@router.post("/executions", response_model=ExecutionCreateResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/deployments/{deployment_id}/executions",
+    response_model=ExecutionCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_deployment_execution(
+    deployment_id: DeploymentIdPath,
     session: DbSession,
     payload: ExecutionCreateRequest,
     current_user: CurrentActiveUser,
 ):
-    deployment_row = await get_deployment_row_or_404(
-        deployment_id=payload.deployment_id,
-        user_id=current_user.id,
-        db=session,
-    )
-    if deployment_row.deployment_provider_account_id != payload.provider_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found for provider.")
-
-    deployment_adapter, deployment_mapper = await resolve_adapter_mapper_from_provider_id(
-        payload.provider_id,
+    deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
+        deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
     )
@@ -729,7 +728,7 @@ async def create_deployment_execution(
         db=session,
         payload=payload,
     )
-    with handle_adapter_errors(), deployment_provider_scope(payload.provider_id):
+    with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
         execution_result = await deployment_adapter.create_execution(
             payload=adapter_execution_payload,
             user_id=current_user.id,
@@ -742,40 +741,25 @@ async def create_deployment_execution(
     )
 
 
-@router.get("/executions/{execution_id}", response_model=ExecutionStatusResponse)
+@router.get("/deployments/{deployment_id}/executions/{execution_id}", response_model=ExecutionStatusResponse)
 async def get_deployment_execution(
+    deployment_id: DeploymentIdPath,
     execution_id: Annotated[str, Path(min_length=1, description="Provider-owned opaque execution identifier.")],
-    provider_id: DeploymentProviderAccountIdQuery,
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
 ):
-    deployment_adapter, deployment_mapper = await resolve_adapter_mapper_from_provider_id(
-        provider_id,
+    deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
+        deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
     )
     execution_lookup_id = execution_id.strip()
-    with handle_adapter_errors(), deployment_provider_scope(provider_id):
+    with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
         execution_result = await deployment_adapter.get_execution(
             execution_id=execution_lookup_id,
             user_id=current_user.id,
             db=session,
         )
-
-    provider_deployment_id = deployment_mapper.util_resource_key_from_execution(execution_result)
-    if not provider_deployment_id:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Deployment provider execution result did not include a deployment identifier.",
-        )
-    deployment_row = await get_deployment_by_resource_key(
-        session,
-        user_id=current_user.id,
-        deployment_provider_account_id=provider_id,
-        resource_key=provider_deployment_id,
-    )
-    if deployment_row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found for provider.")
 
     return deployment_mapper.shape_execution_status_result(
         execution_result,
@@ -1052,7 +1036,7 @@ async def get_deployment(
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
-    deployment_row, deployment_adapter, deployment_mapper = await resolve_adapter_mapper_from_deployment(
+    deployment_row, deployment_adapter, deployment_mapper, provider_key = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
@@ -1141,6 +1125,8 @@ async def get_deployment(
     provider_data = payload.get("provider_data") if isinstance(payload.get("provider_data"), dict) else {}
     return DeploymentGetResponse(
         id=deployment_row.id,
+        provider_id=deployment_row.deployment_provider_account_id,
+        provider_key=provider_key,
         name=deployment_row.name,
         description=deployment_row.description,
         type=deployment_row.deployment_type,
@@ -1163,7 +1149,7 @@ async def update_deployment(
     payload: DeploymentUpdateRequest,
     current_user: CurrentActiveUser,
 ):
-    deployment_row, deployment_adapter, deployment_mapper = await resolve_adapter_mapper_from_deployment(
+    deployment_row, deployment_adapter, deployment_mapper, provider_key = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
@@ -1254,6 +1240,7 @@ async def update_deployment(
     return deployment_mapper.shape_deployment_update_result(
         update_result,
         deployment_row,
+        provider_key=provider_key,
     )
 
 
@@ -1265,7 +1252,7 @@ async def delete_deployment(
     *,
     include_provider: IncludeProviderDeleteQuery = True,
 ):
-    deployment_row, deployment_adapter = await resolve_adapter_from_deployment(
+    deployment_row, deployment_adapter, _provider_key = await resolve_adapter_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
@@ -1305,7 +1292,7 @@ async def get_deployment_status(
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
 ):
-    deployment_row, deployment_adapter = await resolve_adapter_from_deployment(
+    deployment_row, deployment_adapter, provider_key = await resolve_adapter_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
@@ -1318,6 +1305,8 @@ async def get_deployment_status(
         )
     return DeploymentStatusResponse(
         id=deployment_row.id,
+        provider_id=deployment_row.deployment_provider_account_id,
+        provider_key=provider_key,
         name=deployment_row.name,
         description=deployment_row.description,
         type=deployment_row.deployment_type,
@@ -1338,7 +1327,7 @@ async def list_deployment_flow_versions(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
-    deployment_row, deployment_adapter, deployment_mapper = await resolve_adapter_mapper_from_deployment(
+    deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
