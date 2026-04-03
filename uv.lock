@@ -2721,15 +2721,6 @@ wheels = [
 ]
 
 [[package]]
-name = "eval-type-backport"
-version = "0.3.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fb/a3/cafafb4558fd638aadfe4121dc6cefb8d743368c085acb2f521df0f3d9d7/eval_type_backport-0.3.1.tar.gz", hash = "sha256:57e993f7b5b69d271e37482e62f74e76a0276c82490cf8e4f0dffeb6b332d5ed", size = 9445, upload-time = "2025-12-02T11:51:42.987Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/cf/22/fdc2e30d43ff853720042fa15baa3e6122722be1a7950a98233ebb55cd71/eval_type_backport-0.3.1-py3-none-any.whl", hash = "sha256:279ab641905e9f11129f56a8a78f493518515b83402b860f6f06dd7c011fdfa8", size = 6063, upload-time = "2025-12-02T11:51:41.665Z" },
-]
-
-[[package]]
 name = "events"
 version = "0.5"
 source = { registry = "https://pypi.org/simple" }
@@ -4031,41 +4022,6 @@ wheels = [
 ]
 
 [[package]]
-name = "griffe"
-version = "2.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "griffecli" },
-    { name = "griffelib" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/04/56/28a0accac339c164b52a92c6cfc45a903acc0c174caa5c1713803467b533/griffe-2.0.0.tar.gz", hash = "sha256:c68979cd8395422083a51ea7cf02f9c119d889646d99b7b656ee43725de1b80f", size = 293906, upload-time = "2026-03-23T21:06:53.402Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8b/94/ee21d41e7eb4f823b94603b9d40f86d3c7fde80eacc2c3c71845476dddaa/griffe-2.0.0-py3-none-any.whl", hash = "sha256:5418081135a391c3e6e757a7f3f156f1a1a746cc7b4023868ff7d5e2f9a980aa", size = 5214, upload-time = "2026-02-09T19:09:44.105Z" },
-]
-
-[[package]]
-name = "griffecli"
-version = "2.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "colorama" },
-    { name = "griffelib" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a4/f8/2e129fd4a86e52e58eefe664de05e7d502decf766e7316cc9e70fdec3e18/griffecli-2.0.0.tar.gz", hash = "sha256:312fa5ebb4ce6afc786356e2d0ce85b06c1c20d45abc42d74f0cda65e159f6ef", size = 56213, upload-time = "2026-03-23T21:06:54.8Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e6/ed/d93f7a447bbf7a935d8868e9617cbe1cadf9ee9ee6bd275d3040fbf93d60/griffecli-2.0.0-py3-none-any.whl", hash = "sha256:9f7cd9ee9b21d55e91689358978d2385ae65c22f307a63fb3269acf3f21e643d", size = 9345, upload-time = "2026-02-09T19:09:42.554Z" },
-]
-
-[[package]]
-name = "griffelib"
-version = "2.0.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ad/06/eccbd311c9e2b3ca45dbc063b93134c57a1ccc7607c5e545264ad092c4a9/griffelib-2.0.0.tar.gz", hash = "sha256:e504d637a089f5cab9b5daf18f7645970509bf4f53eda8d79ed71cce8bd97934", size = 166312, upload-time = "2026-03-23T21:06:55.954Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4d/51/c936033e16d12b627ea334aaaaf42229c37620d0f15593456ab69ab48161/griffelib-2.0.0-py3-none-any.whl", hash = "sha256:01284878c966508b6d6f1dbff9b6fa607bc062d8261c5c7253cb285b06422a7f", size = 142004, upload-time = "2026-02-09T19:09:40.561Z" },
-]
-
-[[package]]
 name = "groq"
 version = "0.37.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4216,14 +4172,14 @@ wheels = [
 
 [[package]]
 name = "gunicorn"
-version = "22.0.0"
+version = "25.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "packaging" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1e/88/e2f93c5738a4c1f56a458fc7a5b1676fc31dcdbb182bef6b40a141c17d66/gunicorn-22.0.0.tar.gz", hash = "sha256:4a0b436239ff76fb33f11c07a16482c521a7e09c1ce3cc293c2330afe01bec63", size = 3639760, upload-time = "2024-04-16T22:58:19.218Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c4/f4/e78fa054248fab913e2eab0332c6c2cb07421fca1ce56d8fe43b6aef57a4/gunicorn-25.3.0.tar.gz", hash = "sha256:f74e1b2f9f76f6cd1ca01198968bd2dd65830edc24b6e8e4d78de8320e2fe889", size = 634883, upload-time = "2026-03-27T00:00:26.092Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/29/97/6d610ae77b5633d24b69c2ff1ac3044e0e565ecbd1ec188f02c45073054c/gunicorn-22.0.0-py3-none-any.whl", hash = "sha256:350679f91b24062c86e386e198a15438d53a7a8207235a78ba1b53df4c4378d9", size = 84443, upload-time = "2024-04-16T22:58:15.233Z" },
+    { url = "https://files.pythonhosted.org/packages/43/c8/8aaf447698c4d59aa853fd318eed300b5c9e44459f242ab8ead6c9c09792/gunicorn-25.3.0-py3-none-any.whl", hash = "sha256:cacea387dab08cd6776501621c295a904fe8e3b7aae9a1a3cbb26f4e7ed54660", size = 208403, upload-time = "2026-03-27T00:00:27.386Z" },
 ]
 
 [[package]]
@@ -4796,15 +4752,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/72/34/14ca021ce8e5dfedc35312d08ba8bf51fdd999c576889fc2c24cb97f4f10/iniconfig-2.3.0.tar.gz", hash = "sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730", size = 20503, upload-time = "2025-10-18T21:55:43.219Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl", hash = "sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12", size = 7484, upload-time = "2025-10-18T21:55:41.639Z" },
-]
-
-[[package]]
-name = "invoke"
-version = "2.2.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/de/bd/b461d3424a24c80490313fd77feeb666ca4f6a28c7e72713e3d9095719b4/invoke-2.2.1.tar.gz", hash = "sha256:515bf49b4a48932b79b024590348da22f39c4942dff991ad1fb8b8baea1be707", size = 304762, upload-time = "2025-10-11T00:36:35.172Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/4b/b99e37f88336009971405cbb7630610322ed6fbfa31e1d7ab3fbf3049a2d/invoke-2.2.1-py3-none-any.whl", hash = "sha256:2413bc441b376e5cd3f55bb5d364f973ad8bdd7bf87e53c79de3c11bf3feecc8", size = 160287, upload-time = "2025-10-11T00:36:33.703Z" },
 ]
 
 [[package]]
@@ -5978,7 +5925,6 @@ dev = [
     { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "packaging" },
     { name = "pre-commit" },
-    { name = "pydantic-ai" },
     { name = "pyleak" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -6040,7 +5986,6 @@ dev = [
     { name = "onnxruntime", specifier = ">=1.20,<1.24" },
     { name = "packaging", specifier = ">=24.1,<25.0" },
     { name = "pre-commit", specifier = ">=3.7.0" },
-    { name = "pydantic-ai", specifier = ">=0.0.19" },
     { name = "pyleak", specifier = ">=0.1.14" },
     { name = "pytest", specifier = ">=8.2.0" },
     { name = "pytest-asyncio", specifier = ">=0.23.0" },
@@ -6257,7 +6202,6 @@ all = [
     { name = "opik" },
     { name = "pgvector" },
     { name = "pyarrow" },
-    { name = "pydantic-ai" },
     { name = "pymongo" },
     { name = "pypdf" },
     { name = "python-docx" },
@@ -6428,7 +6372,6 @@ complete = [
     { name = "opik" },
     { name = "pgvector" },
     { name = "pyarrow" },
-    { name = "pydantic-ai" },
     { name = "pymongo" },
     { name = "pypdf" },
     { name = "python-docx" },
@@ -6656,9 +6599,6 @@ postgresql = [
 pyarrow = [
     { name = "pyarrow" },
 ]
-pydantic-ai = [
-    { name = "pydantic-ai" },
-]
 pypdf = [
     { name = "pypdf" },
 ]
@@ -6826,7 +6766,7 @@ requires-dist = [
     { name = "grandalf", specifier = ">=0.8.0,<1.0.0" },
     { name = "graph-retriever", marker = "extra == 'graph-retriever'", specifier = "==0.8.0" },
     { name = "greenlet", specifier = ">=3.1.1,<4.0.0" },
-    { name = "gunicorn", specifier = ">=22.0.0,<23.0.0" },
+    { name = "gunicorn", specifier = ">=25.3.0,<26.0.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
     { name = "huggingface-hub", extras = ["inference"], marker = "extra == 'huggingface'", specifier = ">=0.23.2,<1.0.0" },
     { name = "ibm-cloud-sdk-core", marker = "extra == 'ibm-watsonx-clients'", specifier = "~=3.24.4" },
@@ -6947,7 +6887,6 @@ requires-dist = [
     { name = "langflow-base", extras = ["pgvector"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["pinecone"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["pyarrow"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pydantic-ai"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["pypdf"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["pytube"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["qdrant"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -7012,18 +6951,17 @@ requires-dist = [
     { name = "pandas", specifier = "==2.2.3" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
     { name = "pgvector", marker = "extra == 'pgvector'", specifier = ">=0.4.2" },
-    { name = "pillow", specifier = ">=11.1.0,<13.0.0" },
+    { name = "pillow", specifier = ">=11.3.0,<13.0.0" },
     { name = "pip", specifier = ">=26.0.0,<27.0.0" },
     { name = "platformdirs", specifier = ">=4.2.0,<5.0.0" },
     { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
     { name = "pyarrow", marker = "extra == 'pyarrow'", specifier = ">=19.0.1" },
     { name = "pyasn1", specifier = ">=0.6.3,<0.7.0" },
     { name = "pydantic", specifier = "~=2.12.5" },
-    { name = "pydantic-ai", marker = "extra == 'pydantic-ai'", specifier = ">=0.0.19" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
     { name = "pyjwt", specifier = ">=2.12.1" },
     { name = "pymongo", marker = "extra == 'mongodb'", specifier = "==4.10.1" },
-    { name = "pypdf", specifier = ">=6.4.0,<7.0.0" },
+    { name = "pypdf", specifier = ">=6.6.2,<7.0.0" },
     { name = "pypdf", marker = "extra == 'pypdf'", specifier = ">=6.9.0,<7.0.0" },
     { name = "pyperclip", specifier = ">=1.8.2,<2.0.0" },
     { name = "python-docx", specifier = ">=1.1.0,<2.0.0" },
@@ -7069,7 +7007,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "llama-cpp", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "dspy", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "astra", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "pydantic-ai", "apify", "spider", "altk", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "llama-cpp", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "dspy", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "astra", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -7580,15 +7518,6 @@ wheels = [
 ]
 
 [[package]]
-name = "logfire-api"
-version = "4.29.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/16/a4/ed2d823b4ad9a4c9dad1959c3399705c90ed3d96e6faaea5b897deb0f17c/logfire_api-4.29.0.tar.gz", hash = "sha256:55430c554cf198dcbddee390eca259a10a26d5f7e3527d51f859ddc31a83c840", size = 76407, upload-time = "2026-03-13T15:30:25.611Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/cc/62df4abc3e4650c25b81a8e39a1d498d3246c43f3aa4bfab7a73689317b4/logfire_api-4.29.0-py3-none-any.whl", hash = "sha256:48a1361b818357f5a37c71f9683f97e626e5df6c17f35212bfc1f19dddc6771c", size = 121457, upload-time = "2026-03-13T15:30:22.652Z" },
-]
-
-[[package]]
 name = "loguru"
 version = "0.7.3"
 source = { registry = "https://pypi.org/simple" }
@@ -8046,27 +7975,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/9b/2e/746f5bb1d6facd1e73eb4af6dd5efda11125b0f29d7908a097485ca6cad9/milvus_lite-2.5.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:a2e031088bf308afe5f8567850412d618cfb05a65238ed1a6117f60decccc95a", size = 24421451, upload-time = "2025-06-30T04:23:51.747Z" },
     { url = "https://files.pythonhosted.org/packages/2e/cf/3d1fee5c16c7661cf53977067a34820f7269ed8ba99fe9cf35efc1700866/milvus_lite-2.5.1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:a13277e9bacc6933dea172e42231f7e6135bd3bdb073dd2688ee180418abd8d9", size = 45337093, upload-time = "2025-06-30T04:24:06.706Z" },
     { url = "https://files.pythonhosted.org/packages/d3/82/41d9b80f09b82e066894d9b508af07b7b0fa325ce0322980674de49106a0/milvus_lite-2.5.1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:25ce13f4b8d46876dd2b7ac8563d7d8306da7ff3999bb0d14b116b30f71d706c", size = 55263911, upload-time = "2025-06-30T04:24:19.434Z" },
-]
-
-[[package]]
-name = "mistralai"
-version = "1.12.4"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "eval-type-backport" },
-    { name = "httpx" },
-    { name = "invoke" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp-proto-http" },
-    { name = "opentelemetry-sdk" },
-    { name = "pydantic" },
-    { name = "python-dateutil" },
-    { name = "pyyaml" },
-    { name = "typing-inspection" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/aa/12/c3476c53e907255b5f485f085ba50dd9a84b40fe662e9a888d6ded26fa7b/mistralai-1.12.4.tar.gz", hash = "sha256:e52b53bab58025dcd208eeac13e3c3df5778d4112eeca1f08124096c7738929f", size = 243129, upload-time = "2026-02-20T17:55:13.73Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/f9/98d825105c450b9c67c27026caa374112b7e466c18331601d02ca278a01b/mistralai-1.12.4-py3-none-any.whl", hash = "sha256:7b69fcbc306436491ad3377fbdead527c9f3a0ce145ec029bf04c6308ff2cca6", size = 509321, upload-time = "2026-02-20T17:55:15.27Z" },
 ]
 
 [[package]]
@@ -11137,78 +11045,6 @@ email = [
 ]
 
 [[package]]
-name = "pydantic-ai"
-version = "0.4.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pydantic-ai-slim", extra = ["anthropic", "bedrock", "cli", "cohere", "evals", "google", "groq", "huggingface", "mcp", "mistral", "openai", "vertexai"] },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b3/45/7a4b717a9c77a1d7d1c406c5acac4c7f0400def99c2c57d5dffa7bcafbe1/pydantic_ai-0.4.3.tar.gz", hash = "sha256:c469145af1cd4cf0ad031bfe703b86dd38beee7c2d399482f8b12f738a8cd2b0", size = 41367498, upload-time = "2025-07-16T16:37:25.164Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3c/77/624351aa51527271cb522bf9f0908c8b10f79f7d2cb1da94b6ca15c26216/pydantic_ai-0.4.3-py3-none-any.whl", hash = "sha256:b2700a730bd42a6f295570789b0a33f456b229a119f612b10da23171a4fff8c2", size = 10144, upload-time = "2025-07-16T16:37:16.884Z" },
-]
-
-[[package]]
-name = "pydantic-ai-slim"
-version = "0.4.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "eval-type-backport" },
-    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
-    { name = "griffe" },
-    { name = "httpx" },
-    { name = "opentelemetry-api" },
-    { name = "pydantic" },
-    { name = "pydantic-graph" },
-    { name = "typing-inspection" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/80/3d/912eee9931ffdf32a3f8999b8499e3df2281c53cab7bf91c60494900a988/pydantic_ai_slim-0.4.3.tar.gz", hash = "sha256:a09cd99acb6246552bfefd59c3413f9741e7b4c0a08f52c0822f3f46be6303bd", size = 169558, upload-time = "2025-07-16T16:37:29.964Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/23/ea/d9eb75d0acc23ae97a243c4172293173effa3afe55c949690d1a3dd46624/pydantic_ai_slim-0.4.3-py3-none-any.whl", hash = "sha256:1a8930473afc8259a93ae68bb8c34fb528c8c27266b771d93bbbc31ab2fd3404", size = 226233, upload-time = "2025-07-16T16:37:19.554Z" },
-]
-
-[package.optional-dependencies]
-anthropic = [
-    { name = "anthropic" },
-]
-bedrock = [
-    { name = "boto3" },
-]
-cli = [
-    { name = "argcomplete" },
-    { name = "prompt-toolkit" },
-    { name = "rich" },
-]
-cohere = [
-    { name = "cohere", marker = "sys_platform != 'emscripten'" },
-]
-evals = [
-    { name = "pydantic-evals" },
-]
-google = [
-    { name = "google-genai" },
-]
-groq = [
-    { name = "groq" },
-]
-huggingface = [
-    { name = "huggingface-hub", extra = ["inference"] },
-]
-mcp = [
-    { name = "mcp" },
-]
-mistral = [
-    { name = "mistralai" },
-]
-openai = [
-    { name = "openai" },
-]
-vertexai = [
-    { name = "google-auth" },
-    { name = "requests" },
-]
-
-[[package]]
 name = "pydantic-core"
 version = "2.41.5"
 source = { registry = "https://pypi.org/simple" }
@@ -11299,24 +11135,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pydantic-evals"
-version = "0.4.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "eval-type-backport", marker = "python_full_version < '3.11'" },
-    { name = "logfire-api" },
-    { name = "pydantic" },
-    { name = "pydantic-ai-slim" },
-    { name = "pyyaml" },
-    { name = "rich" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/eb/d8/007003d9eb01791c3b6daa728c4b3c4d0dbfd1c5f8ce72aac455fae4521f/pydantic_evals-0.4.3.tar.gz", hash = "sha256:e1a4ed01e56da564a2db3635336210f4f5df4f930076662ecbb29472fd0c8306", size = 43280, upload-time = "2025-07-16T16:37:31.166Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f9/b7/de93497e2812f7124ec342d283af2f37ab86d43e96fae7b6a7a69b65ec1d/pydantic_evals-0.4.3-py3-none-any.whl", hash = "sha256:c9b375ded3f4467d4f758a360a28b8945801c69f61283226571d7416ff37d023", size = 52025, upload-time = "2025-07-16T16:37:21.253Z" },
-]
-
-[[package]]
 name = "pydantic-extra-types"
 version = "2.11.0"
 source = { registry = "https://pypi.org/simple" }
@@ -11327,21 +11145,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/fd/35/2fee58b1316a73e025728583d3b1447218a97e621933fc776fb8c0f2ebdd/pydantic_extra_types-2.11.0.tar.gz", hash = "sha256:4e9991959d045b75feb775683437a97991d02c138e00b59176571db9ce634f0e", size = 157226, upload-time = "2025-12-31T16:18:27.944Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fe/17/fabd56da47096d240dd45ba627bead0333b0cf0ee8ada9bec579287dadf3/pydantic_extra_types-2.11.0-py3-none-any.whl", hash = "sha256:84b864d250a0fc62535b7ec591e36f2c5b4d1325fa0017eb8cda9aeb63b374a6", size = 74296, upload-time = "2025-12-31T16:18:26.38Z" },
-]
-
-[[package]]
-name = "pydantic-graph"
-version = "0.4.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-    { name = "logfire-api" },
-    { name = "pydantic" },
-    { name = "typing-inspection" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/88/07/a84a51e1e1af4fa2883e20f7a6527431a5c32561b576da9b641caabb9dc8/pydantic_graph-0.4.3.tar.gz", hash = "sha256:45d32db5fe2c3d78f8db36181fd10564a24a6d165f2138873d716c967ebf05d1", size = 21867, upload-time = "2025-07-16T16:37:32.063Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/88/f9/50fa967164728141447430f39bcf21d4adce29b5c057f1aa8f27374969be/pydantic_graph-0.4.3-py3-none-any.whl", hash = "sha256:e8cc3af1b65e07aa29c69c7c2e1c9bc09e024f642b70fef115c473438e57c2ea", size = 27494, upload-time = "2025-07-16T16:37:22.451Z" },
 ]
 
 [[package]]
