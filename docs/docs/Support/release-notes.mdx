@@ -52,9 +52,10 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
+### Breaking changes
 
 ### New features and enhancements
-
+    
 - Renamed `Data` and `DataFrame` types
 
     The `Data` object is now named `JSON`, and the `DataFrame` object is now named `Table`.
@@ -75,8 +76,17 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     **Langflow Assistant** is a graph-aware co-pilot that can create flows and components from natural language prompts, directly within the Langflow workspace.
     For more information, see [Langflow Assistant](../Flows/langflow-assistant.mdx).
 
-### Breaking changes
+- Vulnerability reporting now uses HackerOne
 
+    Security reports should now be filed through [IBM's HackerOne program](https://hackerone.com/ibm).
+    Please do not report security vulnerabilities through public GitHub issues or GitHub security advisories.
+    For the full policy and what to include in a report, see the [Langflow Security Policy](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md).
+    
+- Disable custom components
+
+    Set `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` to disable custom components and in-editor editing of component code.
+    For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx).
+    
 ## 1.8.x
 
 Highlights of this release include the following changes.

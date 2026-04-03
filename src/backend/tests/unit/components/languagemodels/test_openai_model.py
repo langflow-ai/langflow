@@ -50,6 +50,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
             max_retries=5,
             timeout=700,
             temperature=0.1,
+            stream_usage=True,
         )
         assert model == mock_instance
 
@@ -70,6 +71,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
             base_url="https://api.openai.com/v1",
             max_retries=5,
             timeout=700,
+            stream_usage=True,
         )
         assert model == mock_instance
 

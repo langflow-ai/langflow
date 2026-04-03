@@ -6,13 +6,20 @@ Provides `is_sensitive_field` for checking field names, and
 
 from __future__ import annotations
 
-SENSITIVE_KEYWORDS = {"api_key", "password", "secret", "token", "access_key", "private_key"}
+import re
+
+_SENSITIVE_PATTERN = re.compile(
+    r"(?:^|[_\-])(?:api[_\-]?key|password|secret|access[_\-]?key|private[_\-]?key|api[_\-]?token|access[_\-]?token)(?:[_\-]|$)",
+    re.IGNORECASE,
+)
 
 
 def is_sensitive_field(field_name: str) -> bool:
-    """Check if a field name looks like it holds sensitive data."""
-    name_lower = field_name.lower()
-    return any(kw in name_lower for kw in SENSITIVE_KEYWORDS)
+    """Check if a field name looks like it holds sensitive data.
+
+    Uses word-boundary matching so 'api_key' matches but 'token_count' does not.
+    """
+    return _SENSITIVE_PATTERN.search(field_name) is not None
 
 
 def redact_template(template: dict) -> dict:
