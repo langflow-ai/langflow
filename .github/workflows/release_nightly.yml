@@ -90,6 +90,12 @@ jobs:
           version=$(echo $version | sed 's/^v//')
           echo "version=$version" >> $GITHUB_OUTPUT
 
+      - name: Build langflow-sdk for distribution
+        run: |
+          cd src/sdk
+          rm -rf dist/
+          uv build --wheel --out-dir dist
+
       - name: Build LFX for distribution
         run: |
           cd src/lfx
@@ -99,11 +105,19 @@ jobs:
       - name: Test LFX CLI
         run: |
           cd src/lfx
+          # Install langflow-sdk first (not yet on PyPI)
+          uv pip install ../sdk/dist/*.whl --force-reinstall
           uv pip install dist/*.whl --force-reinstall
           uv run lfx --help
           echo "LFX CLI test completed successfully"
 
       # PyPI publishing moved to after cross-platform testing
+
+      - name: Upload langflow-sdk Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-nightly-sdk
+          path: src/sdk/dist
 
       - name: Upload LFX Artifact
         uses: actions/upload-artifact@v6
@@ -316,6 +330,7 @@ jobs:
       base-artifact-name: "dist-nightly-base"
       main-artifact-name: "dist-nightly-main"
       lfx-artifact-name: "dist-nightly-lfx"
+      sdk-artifact-name: "dist-nightly-sdk"
 
   publish-nightly-lfx:
     name: Publish LFX Nightly to PyPI

@@ -22,6 +22,10 @@ on:
         description: "Name of the LFX package artifact"
         required: false
         type: string
+      sdk-artifact-name:
+        description: "Name of the langflow-sdk package artifact"
+        required: false
+        type: string
       pre_release:
         description: "Whether this is a pre-release build"
         required: false
@@ -161,6 +165,13 @@ jobs:
         shell: bash
 
       # Download artifacts for wheel installation
+      - name: Download langflow-sdk package artifact
+        if: steps.install-method.outputs.method == 'wheel' && inputs.sdk-artifact-name != ''
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.sdk-artifact-name }}
+          path: ./sdk-dist
+
       - name: Download LFX package artifact
         if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
         uses: actions/download-artifact@v7
@@ -187,7 +198,31 @@ jobs:
           uv venv test-env --seed
         shell: bash
 
-      # Wheel installation steps
+      # Wheel installation steps — install langflow-sdk before LFX (sdk is not yet on PyPI)
+      - name: Install langflow-sdk from wheel (Windows)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && inputs.sdk-artifact-name != ''
+        run: |
+          WHEEL_FILE=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+          else
+            echo "No wheel file found in ./sdk-dist/"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Install langflow-sdk from wheel (Unix)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && inputs.sdk-artifact-name != ''
+        run: |
+          WHEEL_FILE=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
+          else
+            echo "No wheel file found in ./sdk-dist/"
+            exit 1
+          fi
+        shell: bash
+
       - name: Install LFX package from wheel (Windows)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && inputs.lfx-artifact-name != ''
         run: |
@@ -460,6 +495,13 @@ jobs:
         shell: bash
 
       # Download artifacts for wheel installation
+      - name: Download langflow-sdk package artifact
+        if: steps.install-method.outputs.method == 'wheel' && inputs.sdk-artifact-name != ''
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.sdk-artifact-name }}
+          path: ./sdk-dist
+
       - name: Download LFX package artifact
         if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
         uses: actions/download-artifact@v7
@@ -486,7 +528,31 @@ jobs:
           uv venv test-env --seed
         shell: bash
 
-      # Wheel installation steps
+      # Wheel installation steps — install langflow-sdk before LFX (sdk is not yet on PyPI)
+      - name: Install langflow-sdk from wheel (Windows)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && inputs.sdk-artifact-name != ''
+        run: |
+          WHEEL_FILE=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+          else
+            echo "No wheel file found in ./sdk-dist/"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Install langflow-sdk from wheel (Unix)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && inputs.sdk-artifact-name != ''
+        run: |
+          WHEEL_FILE=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
+          else
+            echo "No wheel file found in ./sdk-dist/"
+            exit 1
+          fi
+        shell: bash
+
       - name: Install LFX package from wheel (Windows)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && inputs.lfx-artifact-name != ''
         run: |
