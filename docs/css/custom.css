@@ -951,6 +951,38 @@ html[data-theme="light"] .sidebar-group-label {
   border-left: 3px solid var(--ifm-color-primary);
 }
 
+/* Code Hike + CodeSnippet: Code Hike uses height:100% on .ch-codeblock > * and omits overflow on the
+   wrapper when measured; we shrink-wrap the block (fixes <details>/Collapsible height) and put
+   overflow on <code> only so the copy button stays in the corner while scrolling long lines. */
+.markdown .ch-codeblock {
+  min-width: 0;
+  max-width: 100%;
+  height: fit-content;
+  align-self: flex-start;
+}
+
+.markdown .ch-codeblock .ch-code-wrapper {
+  overflow: visible;
+  min-width: 0;
+  box-sizing: border-box;
+  height: fit-content !important;
+  max-height: none !important;
+  min-height: 0;
+}
+
+.markdown .ch-codeblock .ch-code-wrapper > .ch-code-scroll-parent {
+  display: block;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.markdown .ch-codeblock .ch-code-button {
+  right: calc(10px + 0.75rem);
+  z-index: 2;
+}
+
 /* ========================================
    Breadcrumbs - Langfuse style
    ======================================== */
