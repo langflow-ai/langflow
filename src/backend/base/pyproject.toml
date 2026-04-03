@@ -22,7 +22,7 @@ dependencies = [
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
     "uvicorn>=0.30.0,<1.0.0",
-    "gunicorn>=22.0.0,<23.0.0",
+    "gunicorn>=25.3.0,<26.0.0",
     "langchain~=1.2.0",
     "langchain-community~=0.4.1",
     "langchain-core>=1.2.22,<2.0.0",
@@ -43,7 +43,7 @@ dependencies = [
     "alembic>=1.13.0,<2.0.0",
     "passlib>=1.7.4,<2.0.0",
     "bcrypt==4.0.1",
-    "pillow>=11.1.0,<13.0.0",
+    "pillow>=11.3.0,<13.0.0",
     "docstring-parser>=0.16,<1.0.0",
     "PyJWT>=2.12.1",
     "pandas==2.2.3",
@@ -78,7 +78,7 @@ dependencies = [
     "assemblyai>=0.33.0,<1.0.0",
     "fastapi-pagination>=0.13.1,<1.0.0",
     "defusedxml>=0.7.1,<1.0.0",
-    "pypdf>=6.4.0,<7.0.0",
+    "pypdf>=6.6.2,<7.0.0",
     "validators>=0.34.0,<1.0.0",
     "networkx>=3.4.2,<4.0.0",
     "json-repair>=0.30.3,<1.0.0",
@@ -282,7 +282,6 @@ openinference = ["openinference-instrumentation-langchain>=0.1.29"]
 mcp = ["mcp>=1.17.0,<2.0.0"]
 ag2 = ["ag2>=0.1.0"]
 scrapegraph = ["scrapegraph-py>=1.12.0"]
-pydantic-ai = ["pydantic-ai>=0.0.19"]
 apify = ["apify-client>=1.8.1"]
 spider = ["spider-client>=0.0.27,<1.0.0"]
 
@@ -424,7 +423,6 @@ complete = [
     "langflow-base[mcp]",
     "langflow-base[ag2]",
     "langflow-base[scrapegraph]",
-    "langflow-base[pydantic-ai]",
     "langflow-base[apify]",
     "langflow-base[spider]",
     # ALTK
