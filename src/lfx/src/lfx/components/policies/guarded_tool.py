@@ -102,35 +102,3 @@ class GuardedTool(Tool):
             except Exception:
                 logger.exception("Unhandled exception in class GuardedTool.arun()")
                 raise
-
-
-class ToolInvoker(IToolInvoker):
-    T = TypeVar("T")
-    _tools: dict[str, BaseTool]
-
-    def __init__(self, tools: list[BaseTool]) -> None:
-        self._tools = {tool.name: tool for tool in tools}
-
-    async def invoke(self, toolname: str, arguments: dict[str, Any], return_type: type[T]) -> T:
-        tool = self._tools.get(toolname)
-        if tool:
-            res = await tool.ainvoke(input=arguments)
-
-            if isinstance(res, CallToolResult):
-                res_dict = res.structuredContent.get("result")
-            elif isinstance(res, dict) and "value" in res:
-                res_dict = res["value"]
-            else:
-                res_dict = res
-
-            if isinstance(res_dict, BaseModel):
-                res_dict = res_dict.model_dump()
-
-            if issubclass(return_type, BaseModel):
-                return return_type.model_validate(res_dict)
-            if return_type in (int, float, str, bool):
-                return return_type(res_dict)
-            return res_dict
-
-        msg = f"unknown tool {toolname}"
-        raise ValueError(msg)

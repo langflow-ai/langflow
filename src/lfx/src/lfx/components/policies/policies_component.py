@@ -1,12 +1,7 @@
-import traceback
-from typing import Any, Optional, Union, cast, List, override
-from cohere import ToolCall
-from lfx.io import MessageTextInput
-from langflow.inputs import MultilineInput, DropdownInput
-from lfx.inputs.inputs import BoolInput, ModelInput
-from lfx.base.models.model import LCModelComponent
-from lfx.log.logger import logger
-from os.path import join
+import re
+import shutil
+from pathlib import Path
+from typing import TYPE_CHECKING, cast
 
 from toolguard.buildtime import (
     ToolGuardsCodeGenerationResult,
@@ -19,18 +14,27 @@ from toolguard.runtime import load_toolguards, load_toolguards_from_memory
 from toolguard.runtime.runtime import RESULTS_FILENAME
 
 from lfx.base.models import LCModelComponent
-from lfx.components.policies.wrapped_tool import LangchainModelWrapper, WrappedTool
-
 from lfx.base.models.unified_models import (
     get_language_model_options,
     get_llm,
     update_model_options_in_build_config,
 )
-from lfx.field_typing import LanguageModel
-
-from lfx.field_typing import Tool
-from lfx.inputs.inputs import BoolInput, MessageTextInput
-from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput
+from lfx.components.policies.guard_sync_utils import sync_generated_guard_code_inputs
+from lfx.components.policies.guarded_tool import GuardedTool
+from lfx.components.policies.llm_wrapper import LangchainModelWrapper
+from lfx.components.policies.module_utils import unload_module
+from lfx.field_typing import LanguageModel, Tool
+from lfx.io import (
+    BoolInput,
+    HandleInput,
+    ModelInput,
+    MultilineInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+    TabInput,
+)
+from lfx.log.logger import logger
 
 if TYPE_CHECKING:
     from lfx.inputs.inputs import InputTypes
@@ -42,6 +46,7 @@ STEP1 = "Step_1"
 STEP2 = "Step_2"
 BUILD_MODE_GENERATE = "Generate"
 BUILD_MODE_CACHE = "Use Cache"
+GENERATED_GUARD_INFO_PREFIX = "Auto-generated ToolGuard code for "
 
 
 class PoliciesComponent(LCModelComponent):
@@ -60,95 +65,65 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
     name = "policies"
     beta = True
 
-    inputs = [
-        BoolInput(
-            name="activate_policies",
-            display_name="Activate",
-            info="If `true` - invokes ToolGuard code prior to tool execution. If `false`, skip policy validation.",
-            value=True,
-        ),
-        TabInput(
-            name="build_mode",
-            display_name="Policies Build Mode",
-            options=[BUILD_MODE_GENERATE, BUILD_MODE_CACHE],
-            info="Indicates whether to invoke buildtime (Generate), or use a cached code (Use Cache)",
-            value=BUILD_MODE_GENERATE,
-            real_time_refresh=True,
-            tool_mode=True,
-        ),
-        StrInput(
-            name="policies",
-            display_name="Policies",
-            info="Enter one or more clear, well-defined and self-contained business policies, Using the '+' button.",
-            is_list=True,
-            tool_mode=True,
-            placeholder="Add business policy...",
-            list_add_label="Add Policy",
-            input_types=[],
-        ),
-        StrInput(
-            name="project",
-            display_name="ToolGuard Project",
-            info="Automatically generated ToolGuards code",
-            # show_if={"enable_tool_guard": True},
-            value="my_project",
-            # advanced=True,
-        ),
-        DropdownInput(
-            name="model_provider",
-            display_name="Model Provider",
-            info="The provider of the language model that will be used to generate ToolGuards code.",
-            options=[*MODEL_PROVIDERS_LIST],
-            value=MODEL_PROVIDERS_LIST[0],
-            # real_time_refresh=True,
-            # refresh_button=False,
-            required=True,
-            options=[
-                {
-                    "name": "gpt-4o",
-                    "icon": "OpenAI",
-                    "category": "OpenAI",
-                    "provider": "OpenAI",
-                    "metadata": {
-                        "context_length": 128000,
-                        "model_class": "ChatOpenAI",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key",
-                        "reasoning_models": ["gpt-4o"]
-                    }
-                },
-                {
-                    "name": "claude-sonnet-4",
-                    "icon": "Anthropic",
-                    "category": "Anthropic",
-                    "provider": "Anthropic",
-                    "metadata": {
-                        "context_length": 128000,
-                        "model_class": "ChatAnthropic",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key"
-                    }
-                }
-            ]
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="API Key",
-            info="Model Provider API key",
-            placeholder="model provider API key",
-            required=True,
-            #real_time_refresh=True,
-            advanced=False,
-        ),
-        HandleInput(
-            name="in_tools",
-            display_name="Tools",
-            input_types=["Tool"],
-            is_list=True,
-            required=False,
-            info="These are the tools that the agent can use to help with tasks.",
-        ),
-    ]
+    inputs = cast(
+        "list[InputTypes]",
+        [
+            BoolInput(
+                name="active",
+                display_name="Active",
+                info="If `true` - invokes ToolGuard code prior to tool execution. If `false`, skip policy validation.",
+                value=True,
+            ),
+            TabInput(
+                name="build_mode",
+                display_name="Build Mode",
+                options=[BUILD_MODE_GENERATE, BUILD_MODE_CACHE],
+                info="Generate new guard code or use cached. Review generated files in the details panel on the right.",
+                value=BUILD_MODE_GENERATE,
+                real_time_refresh=True,
+                tool_mode=True,
+            ),
+            MultilineInput(
+                name="project",
+                display_name="Policies Project",
+                info="Folder name of the generated code",
+                value="my_project",
+                # required=True,
+            ),
+            HandleInput(
+                name="in_tools",
+                display_name="Tools",
+                input_types=["Tool"],
+                is_list=True,
+                required=True,
+                info="These are the tools that the agent can use to help with tasks.",
+            ),
+            StrInput(
+                name="policies",
+                display_name="Policies",
+                info="One or more clear, well-defined and self-contained business policies",
+                is_list=True,
+                tool_mode=True,
+                placeholder="Add business policy...",
+                list_add_label="Add Policy",
+                # input_types=[],
+            ),
+            ModelInput(
+                name="model",
+                display_name="Language Model",
+                info="Select your model provider",
+                real_time_refresh=True,
+                required=True,
+            ),
+            SecretStrInput(
+                name="api_key",
+                display_name="API Key",
+                info="Model Provider API key",
+                required=False,
+                advanced=True,
+            ),
+        ],
+    )
     outputs = [
         Output(
             display_name="Guarded Tools",
@@ -159,20 +134,55 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         ),
     ]
 
-    async def _build_guard_specs(self) ->List[ToolGuardSpec]:
-        model = "gpt-4o-2024-08-06" #FIXME
-        llm_provider = "azure" #FIXME
-        llm = LitellmModel(model, llm_provider)
+    @property
+    def work_dir(self) -> Path:
+        return TOOLGUARD_WORK_DIR / self._to_snake_case(self.project)
 
-        toolguard_step1_dir = join(self.guard_code_path, STEP1)
-        policy_text = "\n".join(self.policies)
+    def build_model(self) -> LanguageModel:
+        llm_model = get_llm(
+            model=self.model,
+            user_id=self.user_id,
+            api_key=self.api_key,
+            stream=False,
+        )
+        if llm_model is None:
+            msg = "No language model selected. Please choose a model to proceed."
+            raise ValueError(msg)
+        return llm_model
+
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        """Dynamically update build config with user-filtered model options."""
+        updated_build_config = update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+            field_value=field_value,
+        )
+        py_module = self._to_snake_case(self.project)
+        return sync_generated_guard_code_inputs(
+            build_config=updated_build_config,
+            work_dir=self.work_dir,
+            step2_subdir=STEP2,
+            project_name=py_module,
+        )
+
+    async def _generate_guard_specs(self) -> list[ToolGuardSpec]:
+        logger.debug("Starting step 1")
+        logger.debug(f"model = {self.model}")
+        llm = LangchainModelWrapper(self.build_model())
+        out_dir = self.work_dir / STEP1
+        if out_dir.exists():
+            shutil.rmtree(out_dir)
+        policy_text = "\n * ".join(self.policies)
         open_api = langchain_tools_to_openapi(self.in_tools)
         specs = await generate_guard_specs(policy_text=policy_text, tools=open_api, llm=llm, work_dir=out_dir)
-        logger.info("Step 1 Done")
+        logger.debug("Step 1 Done")
         return specs
 
     async def _generate_guard_code(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
-        logger.info("Starting step 2")
+        logger.debug("Starting step 2")
         out_dir = self.work_dir / STEP2
         if out_dir.exists():
             shutil.rmtree(out_dir)
@@ -183,7 +193,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         gen_result = await generate_guards_code(
             tools=open_api, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=app_name
         )
-        logger.info("Step 2 Done")
+        logger.debug("Step 2 Done")
         return gen_result
 
     def in_recommended_models(self, model_name: str):
@@ -228,105 +238,91 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             )
             raise ValueError(msg)
 
-        if self.enabled:
-            # specs = await self._build_guard_specs()
-            # guards = await self._build_guards(specs)
-            self.guard_code_path = "/Users/davidboaz/Documents/GitHub/ToolGuardAgent/output/step2_claude4sonnet"
-            guarded_tools = [WrappedTool(tool, self.tools, self.guard_code_path) for tool in self.tools]
-            print(f"tool0={guarded_tools[0]}")
-            return guarded_tools # type: ignore
-        
-        return self.tools
-    
-from langchain_core.runnables import RunnableConfig
-from langchain_core.callbacks import CallbackManagerForToolRun
-from langchain_core.runnables import RunnableConfig
-
-
-class WrappedTool(Tool):
-    _wrapped: Tool
-    _tool_invoker: IToolInvoker
-    _tg_dir: str
-
-    def __init__(self, tool: Tool, all_tools: list[Tool], tg_dir: str):
-        super().__init__(
-            name=tool.name,
-            description=tool.description,
-            args_schema=getattr(tool, "args_schema", None),
-            return_direct=getattr(tool, "return_direct", False),
-            func=self._run,
-            coroutine=self._arun,
-            tags=tool.tags,
-            metadata=tool.metadata,
-            verbose=True,
-        )
-        self._wrapped = tool
-        self._tool_invoker = LangchainToolInvoker(all_tools)
-        self._tg_dir = tg_dir
-
-    @property
-    def args(self) -> dict:
-        return self._wrapped.args
-
-    def _call_wrapped_sync(self, args, config, run_manager, **kwargs):
-        if getattr(self._wrapped, "args_schema", None):
-            return self._wrapped._run(
-                **args,
-                config=config,
-                run_manager=run_manager,
-                **kwargs,
+        try:
+            load_toolguards(code_dir)
+        except FileNotFoundError as exc:
+            msg = (
+                f"Policies: Required guard code files missing in '{code_dir}'. "
+                f"Please run in 'Generate' mode to create the guard code."
             )
-        return self._wrapped._run(
-            args,
-            config=config,
-            run_manager=run_manager,
-            **kwargs,
-        )
-
-    async def _call_wrapped_async(self, args, config, run_manager, **kwargs):
-        if getattr(self._wrapped, "args_schema", None):
-            return await self._wrapped._arun(
-                **args,
-                config=config,
-                run_manager=run_manager,
-                **kwargs,
+            raise ValueError(msg) from exc
+        except Exception as exc:
+            msg = (
+                f"Policies: Failed to load guard code from '{code_dir}'. "
+                f"The cached code may be invalid or corrupted. "
+                f"Try running in 'Generate' mode to rebuild the guard code. "
+                f"Error: {exc!s}"
             )
-        return await self._wrapped._arun(
-            args,
-            config=config,
-            run_manager=run_manager,
-            **kwargs,
-        )
+            raise ValueError(msg) from exc
 
-    def _run(
-        self,
-        args: Any,
-        config: RunnableConfig,
-        run_manager: CallbackManagerForToolRun | None = None,
-        **kwargs: Any,
-    ) -> Any:
-        with load_toolguards(self._tg_dir) as toolguard:
-            from rt_toolguard.data_types import PolicyViolationException
-            try:
-                toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
-                return self._call_wrapped_sync(args, config=config, run_manager=run_manager, **kwargs)
-            except PolicyViolationException as ex:
-                return f"Error: {ex.message}"
+    def _validate_before_using_cache(self, code_dir: Path) -> None:
+        if not self.in_tools:
+            msg = "Policies: in_tools cannot be empty!"
+            raise ValueError(msg)
 
-    async def _arun(
-        self,
-        args: Any,
-        config: RunnableConfig,
-        run_manager: CallbackManagerForToolRun | None = None,
-        **kwargs: Any,
-    ) -> Any:
-        print(f"tool={self.name}, args={args}, config={config}, kwargs={kwargs}")
-        with load_toolguards(self._tg_dir) as toolguard:
-            from rt_toolguard.data_types import PolicyViolationException
+        self._verify_cached_guards(code_dir)
+
+    def make_toolguard_result(self) -> ToolGuardsCodeGenerationResult:
+        attrs = self.get_vertex().data["node"]["template"]
+        if not attrs:
+            raise ValueError
+
+        result_str = attrs[str(RESULTS_FILENAME)]["value"]
+        result = ToolGuardsCodeGenerationResult.model_validate_json(result_str)
+
+        result.domain.app_types.content = attrs.get(str(result.domain.app_types.file_name))["value"]
+        result.domain.app_api.content = attrs.get(str(result.domain.app_api.file_name))["value"]
+        result.domain.app_api_impl.content = attrs.get(str(result.domain.app_api_impl.file_name))["value"]
+
+        for tool in result.tools.values():
+            tool.guard_file.content = attrs.get(str(tool.guard_file.file_name))["value"]
+            for tool_item in tool.item_guard_files:
+                tool_item.content = attrs.get(str(tool_item.file_name))["value"]
+
+        return result
+
+    async def guard_tools(self) -> list[Tool]:
+        if self.active:
+            build_mode = getattr(self, "build_mode", BUILD_MODE_GENERATE)
+            if build_mode == BUILD_MODE_GENERATE:
+                self.log(f"Start generating guard code at {self.work_dir}", name="info")
+                self.validate_before_generate()
+                await self.generate()
+                self.log(f"Policies code generation saved to {self.work_dir}", name="info")
+                self.log("Review the generated files in the details panel on the right.", name="info")
+
+            else:  # build_mode == "use cache"
+                self.log(f"using cache from XX {self.work_dir}", name="info")
+
+            code_dir = self.work_dir / STEP2
+            self._validate_before_using_cache(code_dir)
+            # tg_runtime = load_toolguards(code_dir)
             try:
-                toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
-                return await self._call_wrapped_async(args, config=config, run_manager=run_manager, **kwargs)
-            except PolicyViolationException as ex:
-                return f"Error: {ex.message}"
-            except Exception as ex:
-                logger.exception("Unhandled exception in WrappedTool._arun", exc_info=ex)
+                tg_result = self.make_toolguard_result()
+                tg_runtime = load_toolguards_from_memory(tg_result)
+
+                return cast("list[Tool]", [GuardedTool(tool, self.in_tools, tg_runtime) for tool in self.in_tools])
+            except Exception as e:
+                logger.exception(e)
+                raise
+
+        return self.in_tools
+
+    @staticmethod
+    def _to_snake_case(human_name: str) -> str:
+        """Convert human-readable name to snake_case, sanitizing path traversal attempts."""
+        # Convert to lowercase
+        result = human_name.lower()
+
+        # Replace any non-alphanumeric character (including path traversal chars) with underscore
+        result = re.sub(r"[^a-z0-9]+", "_", result)
+
+        # Strip leading/trailing underscores
+        result = result.strip("_")
+
+        # Ensure the result contains at least one alphanumeric character
+        if not result or not re.search(r"[a-z0-9]", result):
+            msg = "Project name must contain at least one alphanumeric character"
+            raise ValueError(msg)
+
+        return result

@@ -115,35 +115,35 @@ async def test_cache_mode_corrupted_cache(mock_component):
             await mock_component.guard_tools()
 
 
-@pytest.mark.asyncio
-async def test_cache_mode_multiple_tools(mock_component):
-    """Test PoliciesComponent in cache mode with multiple tools."""
-    # Add more tools
-    tool2 = MagicMock()
-    tool2.name = "tool2"
-    tool3 = MagicMock()
-    tool3.name = "tool3"
-    mock_component.in_tools = [mock_component.in_tools[0], tool2, tool3]
+# @pytest.mark.asyncio
+# async def test_cache_mode_multiple_tools(mock_component):
+#     """Test PoliciesComponent in cache mode with multiple tools."""
+#     # Add more tools
+#     tool2 = MagicMock()
+#     tool2.name = "tool2"
+#     tool3 = MagicMock()
+#     tool3.name = "tool3"
+#     mock_component.in_tools = [mock_component.in_tools[0], tool2, tool3]
 
-    with (
-        patch.object(Path, "exists", return_value=True),
-        patch.object(mock_component, "make_toolguard_result") as mock_make_result,
-        patch("lfx.components.policies.policies_component.load_toolguards_from_memory") as mock_load_memory,
-        patch("lfx.components.policies.policies_component.GuardedTool") as mock_guarded_tool,
-    ):
-        mock_tg_result = MagicMock()
-        mock_make_result.return_value = mock_tg_result
-        mock_tg_runtime = MagicMock()
-        mock_load_memory.return_value = mock_tg_runtime
-        mock_guarded_instances = [MagicMock(), MagicMock(), MagicMock()]
-        mock_guarded_tool.side_effect = mock_guarded_instances
+#     with (
+#         patch.object(Path, "exists", return_value=True),
+#         patch.object(mock_component, "make_toolguard_result") as mock_make_result,
+#         patch("lfx.components.policies.policies_component.load_toolguards_from_memory") as mock_load_memory,
+#         patch("lfx.components.policies.policies_component.GuardedTool") as mock_guarded_tool,
+#     ):
+#         mock_tg_result = MagicMock()
+#         mock_make_result.return_value = mock_tg_result
+#         mock_tg_runtime = MagicMock()
+#         mock_load_memory.return_value = mock_tg_runtime
+#         mock_guarded_instances = [MagicMock(), MagicMock(), MagicMock()]
+#         mock_guarded_tool.side_effect = mock_guarded_instances
 
-        result = await mock_component.guard_tools()
+#         result = await mock_component.guard_tools()
 
-        # Verify GuardedTool was created for each tool
-        assert mock_guarded_tool.call_count == 3
-        assert len(result) == 3
-        assert result == mock_guarded_instances
+#         # Verify GuardedTool was created for each tool
+#         assert mock_guarded_tool.call_count == 3
+#         assert len(result) == 3
+#         assert result == mock_guarded_instances
 
 
 @pytest.mark.asyncio

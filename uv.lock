@@ -7203,7 +7203,7 @@ requires-dist = [
     { name = "sseclient-py", marker = "extra == 'sseclient'", specifier = "==1.8.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "supabase", marker = "extra == 'supabase'", specifier = ">=2.6.0,<3.0.0" },
-    { name = "toolguard", marker = "extra == 'toolguard'", specifier = ">=0.2.10,<1.0.0" },
+    { name = "toolguard", marker = "extra == 'toolguard'", specifier = ">=0.2.12,<1.0.0" },
     { name = "traceloop-sdk", marker = "extra == 'traceloop'", specifier = ">=0.43.1,<1.0.0" },
     { name = "trustcall", specifier = ">=0.0.38,<1.0.0" },
     { name = "twelvelabs", marker = "extra == 'twelvelabs'", specifier = ">=0.4.7,<1.0.0" },
