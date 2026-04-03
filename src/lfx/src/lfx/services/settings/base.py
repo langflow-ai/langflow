@@ -162,6 +162,11 @@ class Settings(BaseSettings):
     disable_track_apikey_usage: bool = False
     remove_api_keys: bool = False
     components_path: list[str] = []
+    """List of paths to custom components.
+
+    Security: This setting defines an allow-list of custom components 
+    permitted to execute, even when LANGFLOW_ALLOW_CUSTOM_COMPONENTS is False.
+    """
     components_index_path: str | None = None
     """Path or URL to a prebuilt component index JSON file.
 
