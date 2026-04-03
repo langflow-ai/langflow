@@ -40,7 +40,7 @@ class ComponentCache:
         # Precomputed code hashes for fast flow validation.
         # Populated by get_and_cache_all_types_dict() via _build_code_hash_lookups().
         # None means "not yet loaded" (fail-closed); {} means "loaded, no components found".
-        self.type_to_current_hash: dict[str, str] | None = None
+        self.type_to_current_hash: dict[str, set[str]] | None = None
         self.all_known_hashes: set[str] | None = None
 
 

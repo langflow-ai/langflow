@@ -265,7 +265,7 @@ export default function UpdateAllComponents() {
   const showDismissedWarning = !allowCustomComponents && allDismissed;
   const summaryMessage = showDismissedWarning
     ? blockedComponents.length > 0
-      ? "Custom components remain blocked while custom components are disabled"
+      ? "Custom components are disabled"
       : "Upgrade is required to execute flow"
     : !allowCustomComponents
       ? blockedComponents.length > 0 && updatableComponents.length > 0

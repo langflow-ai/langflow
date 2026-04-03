@@ -67,9 +67,14 @@ def _extract_flow_data(target: Mapping[str, Any] | Any | None) -> dict[str, Any]
 
 def collect_component_hash_lookups(
     all_types_dict: Mapping[str, Any],
-) -> tuple[dict[str, str], set[str]]:
-    """Build code-hash lookups for components and their aliases."""
-    type_to_hash: dict[str, str] = {}
+) -> tuple[dict[str, set[str]], set[str]]:
+    """Build code-hash lookups for components and their aliases.
+
+    Each component type maps to a *set* of valid hashes so that
+    custom components loaded from ``components_path`` can coexist
+    with built-in components of the same name.
+    """
+    type_to_hash: dict[str, set[str]] = {}
     all_hashes: set[str] = set()
 
     for category_components in all_types_dict.values():
@@ -90,14 +95,14 @@ def collect_component_hash_lookups(
 
             all_hashes.add(code_hash)
             for alias in get_component_type_aliases(component_name, component_data):
-                type_to_hash.setdefault(alias, code_hash)
+                type_to_hash.setdefault(alias, set()).add(code_hash)
 
     return type_to_hash, all_hashes
 
 
 def _get_invalid_components(
     nodes: list[dict],
-    type_to_current_hash: dict[str, str],
+    type_to_current_hash: dict[str, set[str]],
 ) -> tuple[list[str], list[str]]:
     """Walk nodes and classify invalid components."""
     blocked: list[str] = []
@@ -122,12 +127,12 @@ def _get_invalid_components(
         node_id = node_data.get("id") or node.get("id", "unknown")
         label = f"{display_name} ({node_id})"
 
-        expected_hash = type_to_current_hash.get(component_type)
-        if expected_hash is None:
+        expected_hashes = type_to_current_hash.get(component_type)
+        if expected_hashes is None:
             blocked.append(label)
         else:
             node_hash = _compute_code_hash(node_code)
-            if node_hash != expected_hash:
+            if node_hash not in expected_hashes:
                 outdated.append(label)
 
         flow_data = node_info.get("flow", {})
@@ -154,7 +159,7 @@ def check_flow_and_raise(
     flow_data: dict | None,
     *,
     allow_custom_components: bool,
-    type_to_current_hash: dict[str, str] | None = None,
+    type_to_current_hash: dict[str, set[str]] | None = None,
 ) -> None:
     """Validate flow component code against known server templates."""
     if allow_custom_components or not flow_data:
@@ -186,7 +191,7 @@ def check_flow_and_raise(
         raise CustomComponentValidationError(message)
 
 
-def get_component_hash_lookups_for_validation() -> dict[str, str] | None:
+def get_component_hash_lookups_for_validation() -> dict[str, set[str]] | None:
     """Return the cached component hashes, building them synchronously if possible."""
     from lfx.interface.components import component_cache
 

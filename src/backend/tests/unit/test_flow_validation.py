@@ -62,20 +62,27 @@ def _make_node(
 
 
 def _make_type_hash_dict(
-    components: dict[str, str] | None = None,
-) -> dict[str, str]:
+    components: dict[str, str | list[str]] | None = None,
+) -> dict[str, set[str]]:
     """Helper to build a type_to_current_hash dict.
 
     Args:
-        components: dict of {component_type: code_string}
+        components: dict of {component_type: code_string_or_list}
             The code is hashed to produce the expected hash.
+            Pass a list of code strings to register multiple valid hashes per type.
     """
     if components is None:
         components = {
             "ChatInput": "chat_input_code",
             "ChatOutput": "chat_output_code",
         }
-    return {comp_type: _hash(code) for comp_type, code in components.items()}
+    result: dict[str, set[str]] = {}
+    for comp_type, code in components.items():
+        if isinstance(code, list):
+            result[comp_type] = {_hash(c) for c in code}
+        else:
+            result[comp_type] = {_hash(code)}
+    return result
 
 
 # ==================== Tests ====================
@@ -318,8 +325,8 @@ class TestBuildCodeHashLookups:
         _build_code_hash_lookups(cache)
 
         assert cache.type_to_current_hash is not None
-        assert cache.type_to_current_hash["ChatInput"] == "abc123def456"
-        assert cache.type_to_current_hash["ChatOutput"] == "789012ghijkl"
+        assert cache.type_to_current_hash["ChatInput"] == {"abc123def456"}
+        assert cache.type_to_current_hash["ChatOutput"] == {"789012ghijkl"}
         assert cache.all_known_hashes == {"abc123def456", "789012ghijkl"}
 
     def test_skips_components_without_metadata(self):
@@ -336,7 +343,7 @@ class TestBuildCodeHashLookups:
 
         assert cache.type_to_current_hash is not None
         assert "NoMeta" not in cache.type_to_current_hash
-        assert cache.type_to_current_hash["WithMeta"] == "hash123hash1"
+        assert cache.type_to_current_hash["WithMeta"] == {"hash123hash1"}
 
     def test_skips_components_without_code_hash(self):
         from lfx.interface.components import ComponentCache, _build_code_hash_lookups
@@ -399,8 +406,8 @@ class TestBuildCodeHashLookups:
         _build_code_hash_lookups(cache)
 
         assert cache.type_to_current_hash is not None
-        assert cache.type_to_current_hash["Prompt Template"] == "prompthash12"
-        assert cache.type_to_current_hash["Prompt"] == "prompthash12"
+        assert cache.type_to_current_hash["Prompt Template"] == {"prompthash12"}
+        assert cache.type_to_current_hash["Prompt"] == {"prompthash12"}
 
     def test_legacy_alias_does_not_overwrite_direct_key(self):
         from lfx.interface.components import ComponentCache, _build_code_hash_lookups
@@ -422,8 +429,8 @@ class TestBuildCodeHashLookups:
         _build_code_hash_lookups(cache)
 
         assert cache.type_to_current_hash is not None
-        assert cache.type_to_current_hash["Prompt"] == "directhash12"
-        assert cache.type_to_current_hash["Prompt Template"] == "renamedhash1"
+        assert cache.type_to_current_hash["Prompt"] == {"directhash12", "renamedhash1"}
+        assert cache.type_to_current_hash["Prompt Template"] == {"renamedhash1"}
 
     def test_url_alias_allows_legacy_builtin_nodes(self):
         current_code = "current_url_code"
@@ -441,8 +448,8 @@ class TestBuildCodeHashLookups:
 
         type_to_current_hash, all_known_hashes = collect_component_hash_lookups(all_types_dict)
 
-        assert type_to_current_hash["URLComponent"] == _hash(current_code)
-        assert type_to_current_hash["URL"] == _hash(current_code)
+        assert type_to_current_hash["URLComponent"] == {_hash(current_code)}
+        assert type_to_current_hash["URL"] == {_hash(current_code)}
         assert all_known_hashes == {_hash(current_code)}
 
         flow_data = {
@@ -478,9 +485,9 @@ class TestBuildCodeHashLookups:
 
         type_to_current_hash, all_known_hashes = collect_component_hash_lookups(all_types_dict)
 
-        assert type_to_current_hash["ParserComponent"] == _hash(current_code)
-        assert type_to_current_hash["Parser"] == _hash(current_code)
-        assert type_to_current_hash["parser"] == _hash(current_code)
+        assert type_to_current_hash["ParserComponent"] == {_hash(current_code)}
+        assert type_to_current_hash["Parser"] == {_hash(current_code)}
+        assert type_to_current_hash["parser"] == {_hash(current_code)}
         assert all_known_hashes == {_hash(current_code)}
 
         flow_data = {
@@ -512,4 +519,209 @@ class TestBuildCodeHashLookups:
         _build_code_hash_lookups(cache)
 
         assert cache.type_to_current_hash is not None
-        assert cache.type_to_current_hash["Good"] == "goodhash1234"
+        assert cache.type_to_current_hash["Good"] == {"goodhash1234"}
+
+
+class TestCustomComponentsFromPathPassValidation:
+    """Custom components loaded via components_path should be hashed and indexed,
+    so they pass validation even when allow_custom_components=False.
+
+    This is the intended deployment model: operators set allow_custom_components=False
+    to block arbitrary code, but their own approved components (loaded from
+    components_path on startup) are still allowed because they're in the hash index.
+    """
+
+    def test_custom_component_passes_when_indexed(self):
+        """A flow using a custom component should pass validation when
+        that component was loaded from components_path and hashed at startup."""
+        from lfx.interface.components import ComponentCache, _build_code_hash_lookups
+
+        builtin_code = "class ChatInput(Component): ..."
+        custom_code = "class MyCustomRAG(Component): ..."
+
+        # Simulate startup: built-in + custom components merged into all_types_dict
+        cache = ComponentCache()
+        cache.all_types_dict = {
+            "inputs": {
+                "ChatInput": {
+                    "metadata": {"code_hash": _hash(builtin_code)},
+                    "template": {"code": {"value": builtin_code}},
+                },
+            },
+            "custom_components": {
+                "MyCustomRAG": {
+                    "metadata": {"code_hash": _hash(custom_code)},
+                    "template": {"code": {"value": custom_code}},
+                },
+            },
+        }
+        _build_code_hash_lookups(cache)
+
+        assert cache.type_to_current_hash is not None
+        assert "MyCustomRAG" in cache.type_to_current_hash
+
+        # Flow uses the custom component — should pass with allow_custom_components=False
+        flow_data = {
+            "nodes": [
+                _make_node(code=custom_code, node_type="MyCustomRAG", display_name="My RAG"),
+            ]
+        }
+        check_flow_and_raise(
+            flow_data,
+            allow_custom_components=False,
+            type_to_current_hash=cache.type_to_current_hash,
+        )
+
+    def test_custom_component_blocked_when_not_indexed(self):
+        """A component NOT loaded from components_path should still be blocked."""
+        from lfx.interface.components import ComponentCache, _build_code_hash_lookups
+
+        builtin_code = "class ChatInput(Component): ..."
+
+        cache = ComponentCache()
+        cache.all_types_dict = {
+            "inputs": {
+                "ChatInput": {
+                    "metadata": {"code_hash": _hash(builtin_code)},
+                    "template": {"code": {"value": builtin_code}},
+                },
+            },
+        }
+        _build_code_hash_lookups(cache)
+
+        # Flow uses a component that was never loaded — should be blocked
+        flow_data = {
+            "nodes": [
+                _make_node(
+                    code="class Sneaky(Component): ...",
+                    node_type="Sneaky",
+                    display_name="Sneaky",
+                ),
+            ]
+        }
+        with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
+            check_flow_and_raise(
+                flow_data,
+                allow_custom_components=False,
+                type_to_current_hash=cache.type_to_current_hash,
+            )
+
+    def test_modified_custom_component_detected_as_outdated(self):
+        """If a custom component's code is modified in the flow (hash mismatch),
+        it should be blocked as outdated even though the type is known."""
+        from lfx.interface.components import ComponentCache, _build_code_hash_lookups
+
+        original_code = "class MyCustomRAG(Component): pass"
+        tampered_code = "class MyCustomRAG(Component): import os; os.system('rm -rf /')"
+
+        cache = ComponentCache()
+        cache.all_types_dict = {
+            "custom_components": {
+                "MyCustomRAG": {
+                    "metadata": {"code_hash": _hash(original_code)},
+                    "template": {"code": {"value": original_code}},
+                },
+            },
+        }
+        _build_code_hash_lookups(cache)
+
+        flow_data = {
+            "nodes": [
+                _make_node(code=tampered_code, node_type="MyCustomRAG", display_name="Tampered RAG"),
+            ]
+        }
+        with pytest.raises(CustomComponentValidationError, match="outdated components must be updated"):
+            check_flow_and_raise(
+                flow_data,
+                allow_custom_components=False,
+                type_to_current_hash=cache.type_to_current_hash,
+            )
+
+    def test_mixed_builtin_and_custom_flow(self):
+        """A flow mixing built-in and custom components should pass when all are indexed."""
+        from lfx.interface.components import ComponentCache, _build_code_hash_lookups
+
+        builtin_code = "class ChatInput(Component): ..."
+        custom_code = "class MyCustomRAG(Component): ..."
+
+        cache = ComponentCache()
+        cache.all_types_dict = {
+            "inputs": {
+                "ChatInput": {
+                    "metadata": {"code_hash": _hash(builtin_code)},
+                    "template": {"code": {"value": builtin_code}},
+                },
+            },
+            "custom_components": {
+                "MyCustomRAG": {
+                    "metadata": {"code_hash": _hash(custom_code)},
+                    "template": {"code": {"value": custom_code}},
+                },
+            },
+        }
+        _build_code_hash_lookups(cache)
+
+        flow_data = {
+            "nodes": [
+                _make_node(code=builtin_code, node_type="ChatInput", node_id="n1"),
+                _make_node(code=custom_code, node_type="MyCustomRAG", node_id="n2", display_name="My RAG"),
+            ]
+        }
+        # Should not raise — both components are in the index
+        check_flow_and_raise(
+            flow_data,
+            allow_custom_components=False,
+            type_to_current_hash=cache.type_to_current_hash,
+        )
+
+    def test_duplicate_name_both_versions_accepted(self):
+        """When a custom component has the same name as a built-in, both hashes
+        should be valid — the built-in version and the custom version both pass."""
+        from lfx.interface.components import ComponentCache, _build_code_hash_lookups
+
+        builtin_code = "class CustomComponent(Component): pass  # built-in"
+        custom_code = "class CustomComponent(Component): pass  # user version"
+
+        cache = ComponentCache()
+        cache.all_types_dict = {
+            "custom_component": {
+                "CustomComponent": {
+                    "metadata": {"code_hash": _hash(builtin_code)},
+                    "template": {"code": {"value": builtin_code}},
+                },
+            },
+            "custom_comps": {
+                "CustomComponent": {
+                    "metadata": {"code_hash": _hash(custom_code)},
+                    "template": {"code": {"value": custom_code}},
+                },
+            },
+        }
+        _build_code_hash_lookups(cache)
+
+        # Both hashes should be registered for the same type
+        assert cache.type_to_current_hash is not None
+        assert _hash(builtin_code) in cache.type_to_current_hash["CustomComponent"]
+        assert _hash(custom_code) in cache.type_to_current_hash["CustomComponent"]
+
+        # Flow using the built-in version should pass
+        check_flow_and_raise(
+            {"nodes": [_make_node(code=builtin_code, node_type="CustomComponent")]},
+            allow_custom_components=False,
+            type_to_current_hash=cache.type_to_current_hash,
+        )
+
+        # Flow using the custom version should also pass
+        check_flow_and_raise(
+            {"nodes": [_make_node(code=custom_code, node_type="CustomComponent")]},
+            allow_custom_components=False,
+            type_to_current_hash=cache.type_to_current_hash,
+        )
+
+        # Flow using a tampered version should still be blocked
+        with pytest.raises(CustomComponentValidationError, match="outdated"):
+            check_flow_and_raise(
+                {"nodes": [_make_node(code="tampered code", node_type="CustomComponent")]},
+                allow_custom_components=False,
+                type_to_current_hash=cache.type_to_current_hash,
+            )
