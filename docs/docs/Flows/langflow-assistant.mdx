@@ -1,20 +1,24 @@
 ---
-title: Build flows and components with Langflow Assistant
+title: Build components with Langflow Assistant
 slug: /langflow-assistant
 ---
 
 import Icon from "@site/src/components/icon";
 
-**Langflow Assistant** is an in-app co-pilot pane within the **Playground**.
+**Langflow Assistant** is an in-app virtual assistant pane within the **Playground**.
 
-Like other co-pilots, **Langflow Assistant** can answer questions about the application and help you get more out of Langflow.
+It can answer questions about the application and help you get more out of Langflow.
 
-**Langflow Assistant** understands the structure of the Langflow graph, so it can create flows and components from natural language prompts.
+**Langflow Assistant** understands the structure of the Langflow graph, so it can create components from natural language prompts.
+
+Behind the scenes, **Langflow Assistant** runs a built-in Langflow flow on your Langflow server each time you send a message.
+This flow is distinct from the flow that is open in the canvas, and has its own language model.
+The language model in **Langflow Assistant** only has the currently opened flow in your workspace for context.
+To give **Langflow Assistant** context for a different flow, switch to that flow in your workspace, and open **Langflow Assistant**.
 
 ## Prerequisites
 
-* Start Langflow with `LANGFLOW_AGENTIC_EXPERIENCE=true` set in your `.env` file.
-* Connect an LLM provider in the [Global model providers page](/components-models).
+* Connect an LLM provider in the [Global model providers page](/components-models) for **Langflow Assistant** to use
 
 ## Create a custom component with Langflow Assistant
 
@@ -34,7 +38,7 @@ You'll then iterate on the code based on the results in the **Playground**.
     clean docstring and typed methods.”
     ```
 
-4. **Langflow Assistant** creates the component's code.
+4. **Langflow Assistant** generates component code from your prompt. Because generation is model-driven, your code may differ from the example below.
     <details closed>
     <summary>Python component code</summary>
 
@@ -170,7 +174,7 @@ You'll then iterate on the code based on the results in the **Playground**.
     To inspect the code, click **View Code**.
     To add the component to the canvas, click **Add to Canvas**.
 
-6. Connect the component to **Chat Input** and **Chat Output** components.
+5. Connect the component to **Chat Input** and **Chat Output** components.
     At this point your flow has three connected components:
 
     * **Chat Input** sends the text that contains URLs into the **URLTitleExtractor** so the flow runs when you chat in the **Playground** or send a prompt from an app.
@@ -179,7 +183,7 @@ You'll then iterate on the code based on the results in the **Playground**.
 
     ![A custom URL Title Extractor component connected to a chat input and chat output](/img/lf-assistant-flow.png)
 
-7. Open the **Playground**, and tell Langflow to check a list of URLs.
+6. Open the **Playground**, and tell Langflow to check a list of URLs.
     For example:
     ```
     Check these links: https://langflow.org
@@ -187,7 +191,7 @@ You'll then iterate on the code based on the results in the **Playground**.
     https://python.org
     https://this-domain-should-not-resolve-12345.invalid
     ```
-8. Run the flow.
+7. Run the flow.
     The output will be similar to the following, with a [Table](/data-types#table) with one row per URL, including page titles and status codes.
 
     | url | title | status |
@@ -197,11 +201,11 @@ You'll then iterate on the code based on the results in the **Playground**.
     | https://python.org | Welcome to Python.org | 200 |
     | https://this-domain-should-not-resolve-12345.invalid |  |  |
 
-9. To iterate further, tell **Langflow Assistant** what you want.
+8. To iterate further, tell **Langflow Assistant** what you want.
     For example, prompt it to `Update URLTitleExtractor to add max_urls (default 5) and skip duplicates.`.
 
-    **Langflow Assistant** creates a new **URLTitleExtractor** component, with the new features added.
-10. Replace the old component with the new component.
+    **Langflow Assistant** generates an updated **URLTitleExtractor** component (again, the exact code may differ from a previous run).
+9. Replace the old component with the new component.
     Set **max_urls** to `3`.
     In the **Playground**, enter a list that includes a duplicate URL and the invalid URL from before:
     ```
@@ -212,7 +216,7 @@ You'll then iterate on the code based on the results in the **Playground**.
     https://this-domain-should-not-resolve-12345.invalid
     ```
 
-11. Run the flow.
+10. Run the flow.
     The output will be similar to the following, with the duplicate `https://langflow.org` removed, and only 3 valid URLs displayed.
 
     | url | title | status |
