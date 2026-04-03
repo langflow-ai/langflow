@@ -8,14 +8,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import os
 from typing import TYPE_CHECKING, Any
 
 import httpx
 from starlette.status import HTTP_204_NO_CONTENT
 
-logger = logging.getLogger(__name__)
+from lfx.log.logger import logger
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -185,3 +184,10 @@ class LangflowClient:
             msg = f"Login failed: {exc}"
             raise RuntimeError(msg) from exc
         return self.api_key
+
+    async def post_event(self, flow_id: str, event_type: str, summary: str = "") -> None:
+        """Post an event to the flow events queue. Best-effort -- does not raise on failure."""
+        try:
+            await self.post(f"/flows/{flow_id}/events", json_data={"type": event_type, "summary": summary})
+        except Exception:  # noqa: BLE001
+            logger.warning("Failed to post flow event (flow_id=%s, type=%s)", flow_id, event_type, exc_info=True)
