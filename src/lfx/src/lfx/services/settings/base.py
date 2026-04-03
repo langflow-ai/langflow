@@ -358,6 +358,9 @@ class Settings(BaseSettings):
     when the cache is not yet loaded (e.g., during startup), all flow execution is blocked
     as a safety measure.
 
+    Note: LANGFLOW_COMPONENTS_PATH can be used to define an allow-list of custom components
+    that will be allowed to execute, even when allow_custom_components is False.
+
     Note: this is a beta feature. For security in a multi-tenant environment,
     use hardware-level isolation to restrict access."""
 
