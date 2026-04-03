@@ -523,18 +523,16 @@ class TestBuildCodeHashLookups:
 
 
 class TestCustomComponentsFromPathPassValidation:
-    """Custom components loaded via components_path should be hashed and indexed,
-    so they pass validation even when allow_custom_components=False.
+    """Custom components loaded via components_path should be hashed and indexed.
 
+    They pass validation even when allow_custom_components=False.
     This is the intended deployment model: operators set allow_custom_components=False
     to block arbitrary code, but their own approved components (loaded from
     components_path on startup) are still allowed because they're in the hash index.
     """
 
     def test_custom_component_passes_when_indexed(self):
-        """A flow using a custom component should pass validation when
-        that component was loaded from components_path and hashed at startup.
-        """
+        """A custom component from components_path should pass validation at startup."""
         from lfx.interface.components import ComponentCache, _build_code_hash_lookups
 
         builtin_code = "class ChatInput(Component): ..."
@@ -608,9 +606,7 @@ class TestCustomComponentsFromPathPassValidation:
             )
 
     def test_modified_custom_component_detected_as_outdated(self):
-        """If a custom component's code is modified in the flow (hash mismatch),
-        it should be blocked as outdated even though the type is known.
-        """
+        """Modified custom component code is detected as outdated."""
         from lfx.interface.components import ComponentCache, _build_code_hash_lookups
 
         original_code = "class MyCustomRAG(Component): pass"
@@ -677,9 +673,7 @@ class TestCustomComponentsFromPathPassValidation:
         )
 
     def test_duplicate_name_both_versions_accepted(self):
-        """When a custom component has the same name as a built-in, both hashes
-        should be valid — the built-in version and the custom version both pass.
-        """
+        """Duplicate component names accept both built-in and custom hashes."""
         from lfx.interface.components import ComponentCache, _build_code_hash_lookups
 
         builtin_code = "class CustomComponent(Component): pass  # built-in"

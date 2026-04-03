@@ -164,7 +164,7 @@ class Settings(BaseSettings):
     components_path: list[str] = []
     """List of paths to custom components.
 
-    Security: This setting defines an allow-list of custom components 
+    Security: This setting defines an allow-list of custom components
     permitted to execute, even when LANGFLOW_ALLOW_CUSTOM_COMPONENTS is False.
     """
     components_index_path: str | None = None
