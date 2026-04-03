@@ -3,10 +3,8 @@ title: Security
 slug: /security
 ---
 
-The Langflow UI is an IDE and code execution platform, which means that Langflow is inherently capable of executing arbitrary,
-developer-provided code.
-By design, the Langflow UI includes a code editor allowing developers to author and execute arbitrary Python with full access to the host
-Langflow backend process, filesystem, and network.
+The Langflow UI is an IDE and code execution platform, which means that Langflow is inherently capable of executing arbitrary, developer-provided code.
+By design, the Langflow UI includes a code editor allowing developers to author and execute arbitrary Python with full access to the host Langflow backend process, filesystem, and network.
 In addition, some components wrap and use code execution, including use of AI models to generate code to be executed based
 on user input.
 
@@ -25,7 +23,8 @@ You are responsible for the following:
 Langflow is a code execution platform with full access to your local system.
 You are responsible for ensuring the safety of flows you execute.
 
-In the event that Langflow could execute untrusted or LLM-generated code, consider using isolated or containerized execution environments. For more information, see [Containerize a Langflow application](/develop-application).
+In the event that Langflow could execute untrusted or LLM-generated code, consider [blocking custom component execution](./deployment-block-custom-components.mdx) and running Langflow in an isolated and containerized execution environment.
+For more information, see [Containerize a Langflow application](/develop-application).
 
 ## Secure first-party deployments
 

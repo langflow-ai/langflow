@@ -7,11 +7,17 @@ for non-blocking operations inside the MCP server.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from starlette.status import HTTP_204_NO_CONTENT
+
+from lfx.log.logger import logger
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 class LangflowClient:
@@ -88,6 +94,24 @@ class LangflowClient:
             msg = f"POST {path} failed: {exc}"
             raise RuntimeError(msg) from exc
 
+    async def stream_post(
+        self, path: str, json_data: Any = None, timeout: float = 300.0
+    ) -> AsyncIterator[dict[str, Any]]:
+        """POST with streaming SSE response. Yields parsed event dicts."""
+        url = self._url(path)
+        client = await self._client()
+        async with client.stream("POST", url, headers=self._headers(), json=json_data, timeout=timeout) as resp:
+            resp.raise_for_status()
+            async for raw_line in resp.aiter_lines():
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    yield json.loads(line)
+                except json.JSONDecodeError:
+                    logger.debug("stream_post: skipping non-JSON SSE line: %s", line[:200])
+                    continue
+
     async def patch(self, path: str, json_data: Any = None, **kwargs: Any) -> Any:
         url = self._url(path)
         try:
@@ -160,3 +184,10 @@ class LangflowClient:
             msg = f"Login failed: {exc}"
             raise RuntimeError(msg) from exc
         return self.api_key
+
+    async def post_event(self, flow_id: str, event_type: str, summary: str = "") -> None:
+        """Post an event to the flow events queue. Best-effort -- does not raise on failure."""
+        try:
+            await self.post(f"/flows/{flow_id}/events", json_data={"type": event_type, "summary": summary})
+        except Exception:  # noqa: BLE001
+            logger.warning("Failed to post flow event (flow_id=%s, type=%s)", flow_id, event_type, exc_info=True)

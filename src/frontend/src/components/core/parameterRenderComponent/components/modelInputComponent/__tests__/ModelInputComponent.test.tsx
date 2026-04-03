@@ -31,17 +31,20 @@ jest.mock("@/hooks/use-refresh-model-inputs", () => ({
   }),
 }));
 
-jest.mock("@/stores/flowStore", () => ({
-  __esModule: true,
-  default: {
-    getState: () => ({
-      getNode: jest.fn(),
-      setFilterEdge: jest.fn(),
-      setFilterType: jest.fn(),
-      nodes: [],
-    }),
-  },
-}));
+jest.mock("@/stores/flowStore", () => {
+  const state = {
+    getNode: jest.fn(),
+    setNode: jest.fn(),
+    setFilterEdge: jest.fn(),
+    setFilterType: jest.fn(),
+    nodes: [],
+    edges: [],
+  };
+  const hook = (selector?: (s: any) => any) =>
+    selector ? selector(state) : state;
+  hook.getState = () => state;
+  return { __esModule: true, default: hook };
+});
 
 jest.mock("@/stores/typesStore", () => ({
   useTypesStore: {
