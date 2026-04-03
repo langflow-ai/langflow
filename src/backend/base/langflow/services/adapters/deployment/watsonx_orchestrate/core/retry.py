@@ -23,6 +23,10 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
     ROLLBACK_MAX_RETRIES,
     UPDATE_MAX_RETRIES,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.local_dev import (
+    is_wxo_local_instance_url,
+    wxo_local_use_default_api_v1_layout,
+)
 
 if TYPE_CHECKING:
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
@@ -201,9 +205,55 @@ async def delete_tool_if_exists(clients: WxOClient, *, tool_id: str) -> None:
             raise
 
 
+def _sync_delete_wxo_connection(clients: WxOClient, app_id: str) -> None:
+    """Delete connection application; Developer Edition often supports query-style DELETE only."""
+    cc = clients.connections
+    instance_url = getattr(clients, "instance_url", "") or ""
+    local_loopback = is_wxo_local_instance_url(instance_url)
+    query_paths = (
+        f"/connections/applications?appid={app_id}",
+        f"/connections/applications?app_id={app_id}",
+    )
+
+    def try_query_deletes() -> bool:
+        for query_path in query_paths:
+            try:
+                cc._delete(query_path)  # noqa: SLF001
+            except ClientAPIException as exc:
+                if exc.response.status_code == status.HTTP_404_NOT_FOUND:
+                    return True
+            else:
+                return True
+        return False
+
+    if local_loopback:
+        if try_query_deletes():
+            return
+        try:
+            cc.delete(app_id)
+        except ClientAPIException as exc:
+            if exc.response.status_code == status.HTTP_404_NOT_FOUND:
+                return
+            raise
+        return
+
+    try:
+        cc.delete(app_id)
+    except ClientAPIException as exc:
+        if exc.response.status_code == status.HTTP_404_NOT_FOUND:
+            return
+        local_layout = wxo_local_use_default_api_v1_layout(instance_url)
+        server_err = exc.response.status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR
+        if local_layout and server_err and try_query_deletes():
+            return
+        raise
+    else:
+        return
+
+
 async def delete_config_if_exists(clients: WxOClient, *, app_id: str) -> None:
     try:
-        await asyncio.to_thread(clients.connections.delete, app_id)
+        await asyncio.to_thread(_sync_delete_wxo_connection, clients, app_id)
     except ClientAPIException as exc:
         if exc.response.status_code != status.HTTP_404_NOT_FOUND:
             raise

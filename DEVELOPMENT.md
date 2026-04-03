@@ -170,12 +170,12 @@ You will get output similar to:
 ```
   VITE v5.4.11  ready in 552 ms
 
-  ➜  Local:   http://localhost:3000/
+  ➜  Local:   http://localhost:3001/
   ➜  Network: use --host to expose
   ➜  press h + enter to show help
 ```
 
-At this point, you can navigate to http://localhost:3000/ in a browser and access the Langflow User Interface.
+At this point, you can navigate to http://localhost:3001/ in a browser and access the Langflow User Interface (default port; set `VITE_PORT` in `.env` to override).
 
 ### Build and display documentation
 

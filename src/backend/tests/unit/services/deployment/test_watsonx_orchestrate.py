@@ -228,7 +228,7 @@ class FakeConnectionsClient:
 
     def create(self, payload: dict):
         self.create_calls.append(payload)
-        app_id = str(payload.get("app_id"))
+        app_id = str(payload.get("app_id") or payload.get("appid") or "")
         self._connections_by_app_id[app_id] = f"conn-{app_id}"
 
     def create_config(self, app_id: str, payload: dict):
@@ -268,11 +268,12 @@ class FakeBaseClient:
 
 
 class FakeWXOClients(SimpleNamespace):
-    def __init__(self, *, agent=None, tool=None, connections=None):
+    def __init__(self, *, agent=None, tool=None, connections=None, instance_url: str = "https://wxo.fake.example.com"):
         super().__init__(
             agent=agent or FakeAgentClient({"id": "dep-1", "tools": []}),
             tool=tool or FakeToolClient([]),
             connections=connections or FakeConnectionsClient(),
+            instance_url=instance_url,
         )
         self.upload_tool_artifact_calls: list[str] = []
 
@@ -281,6 +282,52 @@ class FakeWXOClients(SimpleNamespace):
         file_obj.read()
         self.upload_tool_artifact_calls.append(tool_id)
         return {"id": tool_id}
+
+
+@pytest.mark.anyio
+async def test_resolve_connections_rolls_back_after_post_create_validate_failure():
+    """Orphan connections must be deleted if validate fails; otherwise retries see 'already exists'."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.shared import (
+        RawConnectionCreatePlan,
+        resolve_connections_for_operations,
+    )
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxConnectionRawPayload
+
+    fc = FakeConnectionsClient()
+    clients = SimpleNamespace(connections=fc)
+
+    async def fake_create(*, clients, app_id, payload, user_id, db, error_prefix):  # noqa: ARG001
+        return app_id
+
+    async def boom_validate(clients, *, app_id: str):  # noqa: ARG001
+        raise InvalidContentError(message="validate boom")
+
+    plans = [
+        RawConnectionCreatePlan(
+            operation_app_id="app_one",
+            provider_app_id="app_one",
+            payload=WatsonxConnectionRawPayload(app_id="app_one"),
+        ),
+        RawConnectionCreatePlan(
+            operation_app_id="app_two",
+            provider_app_id="app_two",
+            payload=WatsonxConnectionRawPayload(app_id="app_two"),
+        ),
+    ]
+
+    with pytest.raises(InvalidContentError, match="validate boom"):
+        await resolve_connections_for_operations(
+            clients=clients,
+            user_id="u1",
+            db=SimpleNamespace(),
+            existing_app_ids=[],
+            raw_connections_to_create=plans,
+            error_prefix="",
+            create_connection_fn=fake_create,
+            validate_connection_fn=boom_validate,
+        )
+
+    assert fc.delete_calls == ["app_two", "app_one"]
 
 
 def _with_wxo_wrappers(ns):
@@ -525,7 +572,7 @@ async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
         return fake_clients
 
-    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+    async def mock_validate_connection(clients, *, app_id):  # noqa: ARG001
         assert app_id == "cfg-new"
         return SimpleNamespace(connection_id="conn-new")
 
@@ -929,7 +976,7 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
         fake_connections._connections_by_app_id[config.name] = f"conn-{config.name}"
         return config.name
 
-    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+    async def mock_validate_connection(clients, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id=f"conn-{app_id}")
 
     async def mock_create_and_upload(*, clients, tool_bindings):
@@ -1017,7 +1064,7 @@ async def test_update_provider_data_binds_existing_tool_using_provider_app_id_fo
         fake_connections._connections_by_app_id[config.name] = f"conn-{config.name}"
         return config.name
 
-    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+    async def mock_validate_connection(clients, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id=f"conn-{app_id}")
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
@@ -1082,7 +1129,7 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
         return fake_clients
 
-    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+    async def mock_validate_connection(clients, *, app_id):  # noqa: ARG001
         validate_calls.append(app_id)
         return SimpleNamespace(connection_id=f"conn-{app_id}")
 
@@ -1480,7 +1527,7 @@ async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with
         connections=FakeConnectionsClient(existing_app_id="cfg-1"),
     )
 
-    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+    async def mock_validate_connection(clients, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id="conn-new")
 
     async def mock_create_agent_deployment(
@@ -2114,7 +2161,7 @@ async def test_update_provider_data_rolls_back_mutated_tools_with_writable_paylo
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
         return fake_clients
 
-    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+    async def mock_validate_connection(clients, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id="conn-new")
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
@@ -2171,7 +2218,7 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
         fake_connections._connections_by_app_id[config.name] = f"conn-{config.name}"
         return config.name
 
-    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+    async def mock_validate_connection(clients, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id=f"conn-{app_id}")
 
     async def mock_create_and_upload_with_bindings(*, clients, tool_bindings):
@@ -2253,7 +2300,7 @@ async def test_create_provider_data_rolls_back_partially_created_raw_tools(monke
         fake_connections._connections_by_app_id[app_id] = f"conn-{app_id}"
         return app_id
 
-    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+    async def mock_validate_connection(clients, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id=f"conn-{app_id}")
 
     async def mock_create_and_upload_with_bindings(*, clients, tool_bindings):
@@ -2334,7 +2381,7 @@ async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkey
     )
     captured: dict[str, object] = {}
 
-    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+    async def mock_validate_connection(clients, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id="conn-123")
 
     async def mock_create_and_upload_wxo_flow_tools(
@@ -2377,7 +2424,7 @@ async def test_process_raw_flows_with_app_id_returns_source_ref_bindings(monkeyp
         connections=SimpleNamespace(),
     )
 
-    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+    async def mock_validate_connection(clients, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id="conn-123")
 
     async def mock_create_and_upload_wxo_flow_tools(
@@ -2454,7 +2501,7 @@ async def test_process_raw_flows_with_app_id_accepts_typed_provider_data(monkeyp
         connections=SimpleNamespace(),
     )
 
-    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+    async def mock_validate_connection(clients, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id="conn-123")
 
     async def mock_create_and_upload_wxo_flow_tools(
@@ -2507,7 +2554,7 @@ async def test_process_raw_flows_with_app_id_rejects_plain_dict_provider_data(mo
         connections=SimpleNamespace(),
     )
 
-    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+    async def mock_validate_connection(clients, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id="conn-123")
 
     async def mock_create_and_upload_wxo_flow_tools(
@@ -3955,6 +4002,110 @@ async def test_list_llms_returns_normalized_model_names(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_list_llms_local_loopback_merges_env_models_when_catalog_ok(monkeypatch):
+    """Explicit LANGFLOW_WXO_LOCAL_LLM_MODELS augments a successful local catalog (deduped)."""
+    monkeypatch.setenv("LANGFLOW_WXO_LOCAL_LLM_MODELS", "watsonx/ibm/granite-3-8b-instruct,local/custom")
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        instance_url="http://localhost:4321",
+        get_models_raw=lambda _params=None: [{"model_name": "watsonx/existing"}],
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_llms(user_id="user-1", db=object())
+    names = [m["model_name"] for m in result.provider_result["models"]]
+    assert names == ["watsonx/existing", "watsonx/ibm/granite-3-8b-instruct", "local/custom"]
+
+
+@pytest.mark.anyio
+async def test_list_llms_local_loopback_merge_skips_duplicates(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_WXO_LOCAL_LLM_MODELS", "watsonx/existing,watsonx/other")
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        instance_url="http://127.0.0.1:4321",
+        get_models_raw=lambda _params=None: [{"model_name": "watsonx/existing"}],
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_llms(user_id="user-1", db=object())
+    names = [m["model_name"] for m in result.provider_result["models"]]
+    assert names == ["watsonx/existing", "watsonx/other"]
+
+
+@pytest.mark.anyio
+async def test_list_llms_local_loopback_env_unset_does_not_merge_default_string(monkeypatch):
+    monkeypatch.delenv("LANGFLOW_WXO_LOCAL_LLM_MODELS", raising=False)
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        instance_url="http://localhost:4321",
+        get_models_raw=lambda _params=None: [{"model_name": "from-catalog"}],
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_llms(user_id="user-1", db=object())
+    assert result.provider_result["models"] == [{"model_name": "from-catalog"}]
+
+
+@pytest.mark.anyio
+async def test_list_llms_non_local_does_not_merge_env_models(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_WXO_LOCAL_LLM_MODELS", "watsonx/should-not-appear")
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        instance_url="https://api.dl.watson-orchestrate.ibm.com/instances/x",
+        get_models_raw=lambda _params=None: [{"model_name": "only-cloud"}],
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_llms(user_id="user-1", db=object())
+    assert result.provider_result["models"] == [{"model_name": "only-cloud"}]
+
+
+@pytest.mark.anyio
+async def test_list_llms_local_loopback_falls_back_when_models_404(monkeypatch):
+    """Developer Edition often has no /models catalog; loopback should not hang the UI."""
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+
+    class MissingModels:
+        def _get(self, path, params=None):  # noqa: ARG002
+            resp = SimpleNamespace(status_code=404, text="{}")
+            raise ClientAPIException(response=resp)
+
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=MissingModels(),
+            agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+            instance_url="http://localhost:4321",
+        ),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_llms(user_id="user-1", db=object())
+    assert result.provider_result["models"][0]["model_name"] == "watsonx/meta-llama/llama-3-1-70b-instruct"
+
+
+@pytest.mark.anyio
 async def test_list_llms_invalid_payload_raises_invalid_content(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient(
@@ -4663,6 +4814,30 @@ def test_build_langflow_artifact_bytes_structure():
         assert "bundle-format" in names
 
 
+def test_build_langflow_artifact_bytes_unpinned_uses_minimum_lfx_not_exact_pin():
+    """Loopback wxO TRM: avoid lfx== pins from the dev environment (see tools.py)."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+        build_langflow_artifact_bytes,
+    )
+
+    flow_definition = {"data": {"nodes": [], "edges": []}}
+    tool = SimpleNamespace(
+        __tool_spec__=SimpleNamespace(name="t1"),
+        requirements=["lfx>=0.3.0"],
+    )
+
+    artifact_bytes = build_langflow_artifact_bytes(
+        tool=tool,
+        flow_definition=flow_definition,
+        pin_versions=False,
+    )
+    with zipfile.ZipFile(io.BytesIO(artifact_bytes), "r") as zf:
+        req_txt = zf.read("requirements.txt").decode()
+    first = req_txt.strip().split("\n")[0]
+    assert first.startswith("lfx")
+    assert "==" not in first
+
+
 # ---------------------------------------------------------------------------
 # WxOCredentials repr masking
 # ---------------------------------------------------------------------------
@@ -5085,9 +5260,10 @@ async def test_validate_connection_missing_connection():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 
     connections_client = FakeConnectionsClient()  # no existing connections
+    clients = SimpleNamespace(connections=connections_client)
 
     with pytest.raises(InvalidContentError, match="not found"):
-        await validate_connection(connections_client, app_id="missing_app")
+        await validate_connection(clients, app_id="missing_app")
 
 
 @pytest.mark.anyio
@@ -5096,6 +5272,7 @@ async def test_validate_connection_missing_config(monkeypatch):
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 
     connections_client = FakeConnectionsClient(existing_app_id="my_app")
+    clients = SimpleNamespace(connections=connections_client)
 
     def get_config_none(app_id, env):  # noqa: ARG001
         return None
@@ -5103,7 +5280,7 @@ async def test_validate_connection_missing_config(monkeypatch):
     monkeypatch.setattr(connections_client, "get_config", get_config_none)
 
     with pytest.raises(InvalidContentError, match="missing draft config"):
-        await validate_connection(connections_client, app_id="my_app")
+        await validate_connection(clients, app_id="my_app")
 
 
 @pytest.mark.anyio
@@ -5112,6 +5289,7 @@ async def test_validate_connection_wrong_security_scheme(monkeypatch):
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 
     connections_client = FakeConnectionsClient(existing_app_id="my_app")
+    clients = SimpleNamespace(connections=connections_client)
 
     def get_config_wrong_scheme(app_id, env):  # noqa: ARG001
         return SimpleNamespace(security_scheme="oauth2")
@@ -5119,7 +5297,7 @@ async def test_validate_connection_wrong_security_scheme(monkeypatch):
     monkeypatch.setattr(connections_client, "get_config", get_config_wrong_scheme)
 
     with pytest.raises(InvalidContentError, match="key-value credentials"):
-        await validate_connection(connections_client, app_id="my_app")
+        await validate_connection(clients, app_id="my_app")
 
 
 @pytest.mark.anyio
@@ -5129,6 +5307,7 @@ async def test_validate_connection_missing_credentials(monkeypatch):
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 
     connections_client = FakeConnectionsClient(existing_app_id="my_app")
+    clients = SimpleNamespace(connections=connections_client)
 
     def get_config_ok(app_id, env):  # noqa: ARG001
         return SimpleNamespace(security_scheme=ConnectionSecurityScheme.KEY_VALUE)
@@ -5140,7 +5319,31 @@ async def test_validate_connection_missing_credentials(monkeypatch):
     monkeypatch.setattr(connections_client, "get_credentials", get_credentials_none)
 
     with pytest.raises(InvalidContentError, match="missing draft runtime credentials"):
-        await validate_connection(connections_client, app_id="my_app")
+        await validate_connection(clients, app_id="my_app")
+
+
+@pytest.mark.anyio
+async def test_validate_connection_local_loopback_skips_missing_config_and_credentials(monkeypatch):
+    """Developer Edition unified create may omit SaaS-style config/credentials GET endpoints."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
+
+    connections_client = FakeConnectionsClient(existing_app_id="loopapp")
+
+    def get_config_none(app_id, env):  # noqa: ARG001
+        return None
+
+    def get_credentials_none(app_id, env, *, use_app_credentials):  # noqa: ARG001
+        return None
+
+    monkeypatch.setattr(connections_client, "get_config", get_config_none)
+    monkeypatch.setattr(connections_client, "get_credentials", get_credentials_none)
+
+    clients = SimpleNamespace(
+        connections=connections_client,
+        instance_url="http://127.0.0.1:4321",
+    )
+    result = await validate_connection(clients, app_id="loopapp")
+    assert result.connection_id == "conn-1"
 
 
 # ---------------------------------------------------------------------------

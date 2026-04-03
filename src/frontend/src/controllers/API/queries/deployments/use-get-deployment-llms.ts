@@ -27,9 +27,9 @@ export const useGetDeploymentLlms: useQueryFunctionType<
     return data;
   };
 
-  return query(
-    ["useGetDeploymentLlms", { providerId }],
-    getDeploymentLlmsFn,
-    options,
-  );
+  return query(["useGetDeploymentLlms", { providerId }], getDeploymentLlmsFn, {
+    // Avoid long "Loading models..." when the provider is slow or unreachable (global default is 5 retries).
+    retry: 2,
+    ...options,
+  });
 };

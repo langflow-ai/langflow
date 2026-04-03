@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
@@ -97,6 +98,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.update impor
     build_update_payload_from_spec,
     validate_provider_update_request_sections,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.local_dev import is_wxo_local_instance_url
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS,
     WatsonxDeploymentCreatePayload,
@@ -104,6 +106,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentLlmListResultData,
     WatsonxDeploymentUpdatePayload,
     WatsonxDeploymentUpdateResultData,
+    WatsonxModelOut,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     _require_single_deployment_id,
@@ -115,6 +118,53 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
 from langflow.services.deps import get_settings_service
 
 logger = logging.getLogger(__name__)
+
+_LIST_LLMS_TIMEOUT_SECONDS = 25.0
+_LOCAL_LLM_MODELS_ENV = "LANGFLOW_WXO_LOCAL_LLM_MODELS"
+
+
+def _wxo_local_llm_fallback_names() -> list[str]:
+    """Model ids used when the local wxO catalog is missing or unusable."""
+    raw = os.getenv(_LOCAL_LLM_MODELS_ENV, "watsonx/meta-llama/llama-3-1-70b-instruct").strip()
+    names = [s.strip() for s in raw.split(",") if s.strip()]
+    if not names:
+        names = ["watsonx/meta-llama/llama-3-1-70b-instruct"]
+    return names
+
+
+def _wxo_local_llm_merge_names_from_env() -> list[str]:
+    """Extra model ids to append after a successful local catalog fetch.
+
+    Only applies when ``LANGFLOW_WXO_LOCAL_LLM_MODELS`` is **explicitly** set in the
+    environment (including empty), so the default fallback string does not duplicate
+    entries when the env var is unset.
+    """
+    if _LOCAL_LLM_MODELS_ENV not in os.environ:
+        return []
+    raw = os.environ[_LOCAL_LLM_MODELS_ENV].strip()
+    return [s.strip() for s in raw.split(",") if s.strip()]
+
+
+def _wxo_local_merge_catalog_with_env_models(
+    parsed: WatsonxDeploymentLlmListResultData,
+    merge_names: list[str],
+) -> WatsonxDeploymentLlmListResultData:
+    if not merge_names:
+        return parsed
+    existing = {m.model_name for m in parsed.models}
+    extra = [WatsonxModelOut(model_name=n) for n in merge_names if n not in existing]
+    if not extra:
+        return parsed
+    return WatsonxDeploymentLlmListResultData(models=[*parsed.models, *extra])
+
+
+def _wxo_local_fallback_llm_provider_result() -> dict:
+    """Models shown in Langflow when local wxO has no usable /models catalog."""
+    names = _wxo_local_llm_fallback_names()
+    return WatsonxDeploymentLlmListResultData(
+        models=[WatsonxModelOut(model_name=n) for n in names],
+    ).model_dump(exclude_none=True)
+
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -294,24 +344,83 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> DeploymentListLlmsResult:
         """List provider-available LLM model names."""
         client_manager = await self._get_provider_clients(user_id=user_id, db=db)
+        instance_url = str(getattr(client_manager, "instance_url", "") or "")
+        local_loopback = is_wxo_local_instance_url(instance_url)
         try:
-            raw_models = await asyncio.to_thread(client_manager.get_models_raw)
+            raw_models = await asyncio.wait_for(
+                asyncio.to_thread(client_manager.get_models_raw),
+                timeout=_LIST_LLMS_TIMEOUT_SECONDS,
+            )
+        except TimeoutError:
+            if local_loopback:
+                logger.warning(
+                    "wxO model catalog timed out after %ss on local URL; using %s",
+                    _LIST_LLMS_TIMEOUT_SECONDS,
+                    _LOCAL_LLM_MODELS_ENV,
+                )
+                return DeploymentListLlmsResult(provider_result=_wxo_local_fallback_llm_provider_result())
+            msg = f"Timed out listing models from Watsonx Orchestrate after {_LIST_LLMS_TIMEOUT_SECONDS:.0f}s."
+            raise_as_deployment_error(
+                TimeoutError(msg),
+                error_prefix=ErrorPrefix.LIST_LLMS,
+                log_msg="Timeout while listing wxO deployment LLMs",
+                pass_through=(),
+            )
+        except ClientAPIException as exc:
+            if local_loopback and getattr(exc.response, "status_code", None) not in (401, 403):
+                logger.warning(
+                    "wxO model catalog request failed on local URL (status=%s); using %s",
+                    getattr(exc.response, "status_code", None),
+                    _LOCAL_LLM_MODELS_ENV,
+                )
+                return DeploymentListLlmsResult(provider_result=_wxo_local_fallback_llm_provider_result())
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.LIST_LLMS,
+                log_msg="Unexpected provider error while listing wxO deployment LLMs",
+                pass_through=(InvalidContentError,),
+            )
+        except Exception as exc:  # noqa: BLE001
+            if local_loopback:
+                logger.warning("wxO model catalog failed on local URL; using %s (%s)", _LOCAL_LLM_MODELS_ENV, exc)
+                return DeploymentListLlmsResult(provider_result=_wxo_local_fallback_llm_provider_result())
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.LIST_LLMS,
+                log_msg="Unexpected error while listing wxO deployment LLMs",
+                pass_through=(InvalidContentError,),
+            )
+
+        try:
             parsed_models: WatsonxDeploymentLlmListResultData = self._parse_provider_payload(
                 slot=self.payload_schemas.deployment_llm_list_result,
                 slot_name="deployment_llm_list_result",
                 provider_data={"models": raw_models},
                 error_prefix=ErrorPrefix.LIST_LLMS,
             )
-            return DeploymentListLlmsResult(
-                provider_result=parsed_models.model_dump(exclude_none=True),
-            )
         except Exception as exc:  # noqa: BLE001
+            if local_loopback:
+                logger.warning(
+                    "wxO model catalog response could not be parsed; using %s (%s)",
+                    _LOCAL_LLM_MODELS_ENV,
+                    exc,
+                )
+                return DeploymentListLlmsResult(provider_result=_wxo_local_fallback_llm_provider_result())
             raise_as_deployment_error(
                 exc,
                 error_prefix=ErrorPrefix.LIST_LLMS,
-                log_msg="Unexpected error while listing wxO deployment LLMs",
-                pass_through=(InvalidContentError),
+                log_msg="Unexpected error while parsing wxO deployment LLMs",
+                pass_through=(InvalidContentError,),
             )
+
+        if local_loopback:
+            merge_names = _wxo_local_llm_merge_names_from_env()
+            if merge_names:
+                parsed_models = _wxo_local_merge_catalog_with_env_models(parsed_models, merge_names)
+
+        return DeploymentListLlmsResult(
+            provider_result=parsed_models.model_dump(exclude_none=True),
+        )
 
     async def list(
         self,
@@ -1016,6 +1125,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         artifact_bytes = build_langflow_artifact_bytes(
             tool=tool,
             flow_definition=flow_definition,
+            pin_versions=not is_wxo_local_instance_url(clients.instance_url),
         )
         await asyncio.to_thread(
             upload_tool_artifact_bytes,

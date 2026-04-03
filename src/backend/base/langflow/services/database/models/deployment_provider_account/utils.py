@@ -31,13 +31,13 @@ from urllib.parse import urlparse, urlunparse
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+from langflow.services.adapters.deployment.watsonx_orchestrate.local_dev import wxo_local_instance_hostnames
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from langflow.services.database.utils import validate_non_empty_string
 
 _ALLOWED_URL_SCHEMES = frozenset({"https"})
 _MAX_URL_LENGTH = 2048
 _WXO_LOCAL_DEV_ENV = "LANGFLOW_WXO_LOCAL_DEV"
-_LOCAL_HTTP_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
 def _wxo_local_dev_enabled() -> bool:
@@ -47,8 +47,7 @@ def _wxo_local_dev_enabled() -> bool:
 def _http_localhost_allowed(hostname: str) -> bool:
     if not _wxo_local_dev_enabled():
         return False
-    host = (hostname or "").lower()
-    return host in _LOCAL_HTTP_HOSTS
+    return (hostname or "").lower() in wxo_local_instance_hostnames()
 
 
 def validate_provider_url(v: str, info: object) -> str:
@@ -127,7 +126,7 @@ def check_provider_url_allowed(url: str, provider_key: str | DeploymentProviderK
     if (
         key == DeploymentProviderKey.WATSONX_ORCHESTRATE
         and _wxo_local_dev_enabled()
-        and hostname.lower() in _LOCAL_HTTP_HOSTS
+        and hostname.lower() in wxo_local_instance_hostnames()
     ):
         return
     if any(hostname == s.lstrip(".") or hostname.endswith(s) for s in suffixes):

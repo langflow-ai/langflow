@@ -1,5 +1,6 @@
 export const BASENAME = "";
-export const PORT = 3000;
+/** Dev server port (default). WXO / other tools often use 3000; override with VITE_PORT in .env. */
+export const PORT = 3001;
 export const PROXY_TARGET = "http://localhost:7860";
 export const API_ROUTES = ["^/api/v1/", "^/api/v2/", "/health"];
 export const BASE_URL_API = "/api/v1/";

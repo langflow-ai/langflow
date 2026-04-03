@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { useCallback, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -39,11 +40,14 @@ export default function StepType() {
   } = useDeploymentStepper();
 
   const providerId = selectedInstance?.id ?? "";
-  const { data: llmData, isLoading: llmsLoading } = useGetDeploymentLlms(
-    { providerId },
-    { enabled: !!providerId },
-  );
+  const {
+    data: llmData,
+    isLoading: llmsLoading,
+    isError: llmsError,
+  } = useGetDeploymentLlms({ providerId }, { enabled: !!providerId });
   const llmModels = llmData?.provider_data?.models ?? [];
+  const showManualModelEntry =
+    !!providerId && !llmsLoading && (llmsError || llmModels.length === 0);
 
   const [showScrollHint, setShowScrollHint] = useState(true);
   const contentRef = useCallback((node: HTMLDivElement | null) => {
@@ -132,39 +136,58 @@ export default function StepType() {
         )}
       </div>
 
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-2">
         <span className="pb-2 text-sm font-medium">
           Model <span className="text-destructive">*</span>
         </span>
-        <Select value={selectedLlm} onValueChange={setSelectedLlm}>
-          <SelectTrigger className="bg-muted">
-            <SelectValue
-              placeholder={llmsLoading ? "Loading models..." : "Select a model"}
-            />
-          </SelectTrigger>
-          <SelectContent
-            side="bottom"
-            className="relative max-h-60 overflow-y-auto"
-            ref={contentRef}
-            onOpenAutoFocus={() => setShowScrollHint(true)}
-          >
-            {llmModels.map((model) => (
-              <SelectItem key={model.model_name} value={model.model_name}>
-                {model.model_name}
-              </SelectItem>
-            ))}
-            {llmModels.length > 0 && (
-              <div
-                className={cn(
-                  "pointer-events-none sticky -bottom-1 flex justify-center bg-gradient-to-t from-popover from-0% pb-1 pt-2 transition-opacity duration-200",
-                  showScrollHint ? "opacity-100" : "opacity-0",
-                )}
-              >
-                <ChevronDown className="h-4 w-4 animate-bounce text-muted-foreground" />
-              </div>
-            )}
-          </SelectContent>
-        </Select>
+        {llmsError && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              Could not load models from the provider. Enter a model id
+              manually, or fix the provider URL and token and try again.
+            </AlertDescription>
+          </Alert>
+        )}
+        {showManualModelEntry ? (
+          <Input
+            className="bg-muted"
+            placeholder="e.g. watsonx/meta-llama/llama-3-1-70b-instruct"
+            value={selectedLlm}
+            onChange={(e) => setSelectedLlm(e.target.value)}
+          />
+        ) : (
+          <Select value={selectedLlm} onValueChange={setSelectedLlm}>
+            <SelectTrigger className="bg-muted">
+              <SelectValue
+                placeholder={
+                  llmsLoading ? "Loading models..." : "Select a model"
+                }
+              />
+            </SelectTrigger>
+            <SelectContent
+              side="bottom"
+              className="relative max-h-60 overflow-y-auto"
+              ref={contentRef}
+              onOpenAutoFocus={() => setShowScrollHint(true)}
+            >
+              {llmModels.map((model) => (
+                <SelectItem key={model.model_name} value={model.model_name}>
+                  {model.model_name}
+                </SelectItem>
+              ))}
+              {llmModels.length > 0 && (
+                <div
+                  className={cn(
+                    "pointer-events-none sticky -bottom-1 flex justify-center bg-gradient-to-t from-popover from-0% pb-1 pt-2 transition-opacity duration-200",
+                    showScrollHint ? "opacity-100" : "opacity-0",
+                  )}
+                >
+                  <ChevronDown className="h-4 w-4 animate-bounce text-muted-foreground" />
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <div className="flex flex-col">

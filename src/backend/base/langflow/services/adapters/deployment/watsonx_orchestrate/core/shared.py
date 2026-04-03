@@ -168,7 +168,7 @@ async def resolve_connections_for_operations(
 
     if existing_app_ids:
         existing_connections: list[object] = await asyncio.gather(
-            *(retry_create(validate_connection_fn, clients.connections, app_id=app_id) for app_id in existing_app_ids)
+            *(retry_create(validate_connection_fn, clients, app_id=app_id) for app_id in existing_app_ids)
         )
         for app_id, connection in zip(existing_app_ids, existing_connections, strict=True):
             resolved_connections[app_id] = connection.connection_id  # type: ignore[attr-defined]
@@ -211,16 +211,31 @@ async def resolve_connections_for_operations(
     if create_connection_errors:
         raise ConnectionCreateBatchError(created_app_ids=created_app_ids, errors=create_connection_errors)
 
-    validated_created_connections: list[object] = await asyncio.gather(
-        *(
-            retry_create(
-                validate_connection_fn,
-                clients.connections,
-                app_id=create_plan.provider_app_id,
+    try:
+        validated_created_connections: list[object] = await asyncio.gather(
+            *(
+                retry_create(
+                    validate_connection_fn,
+                    clients,
+                    app_id=create_plan.provider_app_id,
+                )
+                for create_plan in raw_connections_to_create
             )
-            for create_plan in raw_connections_to_create
         )
-    )
+    except Exception:
+        # Creates already succeeded on the provider; if validation fails, the outer create
+        # rollback never sees created_app_ids (result not returned). Delete orphans so
+        # retries do not hit "already exists" for the same app_id.
+        for app_id in reversed(created_app_ids):
+            try:
+                await retry_rollback(delete_config_if_exists, clients, app_id=app_id)
+            except Exception:
+                logger.exception(
+                    "Failed to roll back connection app_id=%s after post-create validation failure",
+                    app_id,
+                )
+        raise
+
     for create_plan, connection in zip(raw_connections_to_create, validated_created_connections, strict=True):
         operation_to_provider_app_id[create_plan.operation_app_id] = create_plan.provider_app_id
         resolved_connections[create_plan.provider_app_id] = connection.connection_id  # type: ignore[attr-defined]

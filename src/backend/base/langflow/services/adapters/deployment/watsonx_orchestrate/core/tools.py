@@ -19,6 +19,7 @@ from lfx.services.adapters.deployment.exceptions import InvalidContentError, Inv
 from lfx.utils.flow_requirements import generate_requirements_from_flow
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_create
+from langflow.services.adapters.deployment.watsonx_orchestrate.local_dev import is_wxo_local_instance_url
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxFlowArtifactProviderData,
     WatsonxToolRefBinding,
@@ -190,13 +191,16 @@ def build_langflow_artifact_bytes(
     tool: LangflowTool,
     flow_definition: dict[str, Any],
     flow_filename: str | None = None,
+    pin_versions: bool = True,
 ) -> bytes:
     filename = flow_filename or f"{tool.__tool_spec__.name}.json"
-    lfx_requirement = _resolve_lfx_requirement()
+    # Loopback wxO TRM runs ``uv install`` on Linux; pins from a macOS Langflow dev
+    # machine often make resolution fail (no wheel, Python mismatch).
+    lfx_requirement = _resolve_lfx_requirement() if pin_versions else _LFX_MINIMUM_REQUIREMENT
     requirements = generate_requirements_from_flow(
         flow_definition,
         include_lfx=False,
-        pin_versions=True,
+        pin_versions=pin_versions,
     )
     requirements = [lfx_requirement, *requirements]
     requirements = dedupe_list(requirements)
@@ -228,6 +232,7 @@ def create_wxo_flow_tool(
     *,
     flow_payload: BaseFlowArtifact[WatsonxFlowArtifactProviderData],
     connections: dict[str, str],
+    pin_versions: bool = True,
 ) -> tuple[dict[str, Any], bytes]:
     """Create a Watsonx Orchestrate flow tool specification.
 
@@ -239,6 +244,7 @@ def create_wxo_flow_tool(
     Args:
         flow_payload: The flow payload to create the tool specification for.
         connections: The connections dictionary to create the tool specification for.
+        pin_versions: When False, emit unpinned PyPI specs (used for loopback wxO TRM).
 
     Returns:
         Tuple[dict[str, Any], bytes]: a tuple containing:
@@ -299,6 +305,7 @@ def create_wxo_flow_tool(
     artifacts: bytes = build_langflow_artifact_bytes(
         tool=tool,
         flow_definition=flow_definition,
+        pin_versions=pin_versions,
     )
 
     return tool_payload, artifacts
@@ -341,11 +348,14 @@ async def create_and_upload_wxo_flow_tools_with_bindings(
     *,
     clients: WxOClient,
     tool_bindings: list[FlowToolBindingSpec],
+    pin_versions: bool | None = None,
 ) -> list[str]:
+    resolved_pin = not is_wxo_local_instance_url(clients.instance_url) if pin_versions is None else pin_versions
     specs = [
         create_wxo_flow_tool(
             flow_payload=tool_binding.flow_payload,
             connections=tool_binding.connections,
+            pin_versions=resolved_pin,
         )
         for tool_binding in tool_bindings
     ]
@@ -424,7 +434,7 @@ async def process_raw_flows_with_app_id(
     """Create langflow tools in wxO and connect them to the given app_id."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 
-    connection = await validate_connection(clients.connections, app_id=app_id)
+    connection = await validate_connection(clients, app_id=app_id)
 
     created_tool_ids = await create_and_upload_wxo_flow_tools(
         clients=clients,

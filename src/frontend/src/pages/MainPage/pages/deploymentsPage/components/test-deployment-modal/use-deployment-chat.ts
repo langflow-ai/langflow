@@ -9,7 +9,7 @@ import {
 } from "./watsonx-result-parsers";
 
 const POLL_INTERVAL_MS = 1500;
-const MAX_POLL_ATTEMPTS = 30;
+const MAX_POLL_ATTEMPTS = 60;
 
 const TERMINAL_STATUSES = new Set([
   "completed",

@@ -26,7 +26,7 @@ make run_clic          # Clean build and run (use when frontend issues occur)
 ### Development Mode (Hot Reload)
 ```bash
 make backend           # FastAPI on port 7860 (terminal 1)
-make frontend          # Vite dev server on port 3000 (terminal 2)
+make frontend          # Vite dev server on port 3001 (terminal 2); set VITE_PORT in .env to override
 ```
 
 For component development, enable dynamic loading:

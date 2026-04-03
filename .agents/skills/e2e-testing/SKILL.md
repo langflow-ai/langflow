@@ -61,9 +61,9 @@ npx playwright test --update-snapshots
 | `workers` | 2 | Balances speed and resource usage |
 | `actionTimeout` | 20s | Individual action timeout (click, fill, etc.) |
 | `trace` | `on-first-retry` | Captures trace on failures for debugging |
-| `baseURL` | `http://localhost:3000` | Vite dev server |
+| `baseURL` | `http://localhost:3001` | Vite dev server (see `config-constants.ts` / `VITE_PORT`) |
 
-**WebServer**: Playwright auto-starts backend (uvicorn on 7860) + frontend (npm start on 3000).
+**WebServer**: Playwright auto-starts backend (uvicorn on 7860) + frontend (default port 3001).
 
 ## Directory Structure
 

@@ -19,10 +19,10 @@ alwaysApply: false
 
 ### Frontend Service
 ```bash
-make frontend  # Start Vite dev server on port 3000
+make frontend  # Start Vite dev server on port 3001 (override with VITE_PORT in .env)
 ```
 - Hot-reload enabled for UI changes
-- Access at: http://localhost:3000/
+- Access at: http://localhost:3001/ (default; see VITE_PORT)
 - Frontend source: `src/frontend/`
 
 ---

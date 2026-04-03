@@ -38,7 +38,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: `http://localhost:${PORT || 3000}/`,
+    baseURL: `http://localhost:${PORT || 3001}/`,
 
     actionTimeout: 20000,
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
@@ -129,7 +129,7 @@ export default defineConfig({
     },
     {
       command: "npm start",
-      port: PORT || 3000,
+      port: PORT || 3001,
       env: {
         VITE_PROXY_TARGET: "http://localhost:7860",
       },
