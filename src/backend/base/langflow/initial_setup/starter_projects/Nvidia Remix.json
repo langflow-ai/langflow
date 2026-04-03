@@ -2462,6 +2462,11 @@
               "mcp_server",
               "use_cache",
               "verify_ssl",
+              "use_oauth",
+              "oauth_client_id",
+              "oauth_client_secret",
+              "oauth_redirect_uri",
+              "oauth_client_metadata_url",
               "headers",
               "tool",
               "tool_placeholder"
