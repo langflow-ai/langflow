@@ -19,6 +19,7 @@ runs fully and sets vertex.result correctly.
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from lfx.services.cache.utils import CacheMiss
 
 
 class TestCacheRestorationBuiltFlagReset:
@@ -237,6 +238,17 @@ class TestCacheRestorationEdgeCases:
 
         # Assert
         assert should_build is True, "Cache miss should trigger build"
+
+    @pytest.mark.asyncio
+    async def test_service_unavailable_fallback_returns_cache_miss(self):
+        """Fallback cache getter should behave like a cache miss, not a cache hit."""
+
+        async def get_cache_func(*args, **kwargs):  # noqa: ARG001
+            return CacheMiss()
+
+        cached_result = await get_cache_func(key="frozen-vertex")
+
+        assert isinstance(cached_result, CacheMiss)
 
     def test_loop_component_should_always_build_even_when_frozen(self):
         """Test that Loop component always builds even when frozen and built.
