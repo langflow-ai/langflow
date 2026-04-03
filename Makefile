@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -490,6 +490,38 @@ lfx_docker_test: ## run LFX tests in Docker
 	@echo 'Running LFX tests in Docker'
 	@cd src/lfx && make docker_test
 
+######################
+# SDK PACKAGE
+######################
+
+sdk_build: ## build the SDK package
+	@echo 'Building SDK package'
+	@cd src/sdk && make build
+
+sdk_publish: ## publish SDK package to PyPI
+	@echo 'Publishing SDK package'
+	@cd src/sdk && make publish
+
+sdk_publish_testpypi: ## publish SDK package to test PyPI
+	@echo 'Publishing SDK package to test PyPI'
+	@cd src/sdk && make publish_test
+
+sdk_test: ## run SDK tests
+	@echo 'Running SDK tests'
+	@cd src/sdk && make test
+
+sdk_format: ## format SDK code
+	@echo 'Formatting SDK code'
+	@cd src/sdk && make format
+
+sdk_lint: ## lint SDK code
+	@echo 'Linting SDK code'
+	@cd src/sdk && make lint
+
+sdk_clean: ## clean SDK build artifacts
+	@echo 'Cleaning SDK build artifacts'
+	@cd src/sdk && make clean
+
 # example make alembic-revision message="Add user table"
 alembic-revision: ## generate a new migration
 	@echo 'Generating a new Alembic revision'
@@ -877,6 +909,14 @@ help_backend: ## show backend-specific commands
 	@echo "  $(GREEN)make lfx_docker_dev$(NC)      - Start LFX development environment"
 	@echo "  $(GREEN)make lfx_docker_test$(NC)     - Run LFX tests in Docker"
 	@echo ''
+	@echo "$(GREEN)SDK Package Commands:$(NC)"
+	@echo "  $(GREEN)make sdk_build$(NC)           - Build SDK package"
+	@echo "  $(GREEN)make sdk_test$(NC)            - Run SDK tests"
+	@echo "  $(GREEN)make sdk_format$(NC)          - Format SDK code"
+	@echo "  $(GREEN)make sdk_lint$(NC)            - Lint SDK code"
+	@echo "  $(GREEN)make sdk_clean$(NC)           - Clean SDK build artifacts"
+	@echo "  $(GREEN)make sdk_publish$(NC)         - Publish SDK to PyPI"
+	@echo ''
 	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
 	@echo ''
 
@@ -983,6 +1023,8 @@ help_advanced: ## show advanced and miscellaneous commands
 	@echo "  $(GREEN)make publish_langflow$(NC)    - Publish langflow to PyPI"
 	@echo "  $(GREEN)make lfx_publish$(NC)         - Publish LFX package to PyPI"
 	@echo "  $(GREEN)make lfx_publish_testpypi$(NC) - Publish LFX to test PyPI"
+	@echo "  $(GREEN)make sdk_publish$(NC)         - Publish SDK package to PyPI"
+	@echo "  $(GREEN)make sdk_publish_testpypi$(NC) - Publish SDK to test PyPI"
 	@echo ''
 	@echo "$(GREEN)Lock Files:$(NC)"
 	@echo "  $(GREEN)make lock$(NC)                - Lock all dependencies"
@@ -1029,6 +1071,18 @@ docs_build: docs_install ## build documentation for production
 docs_serve: docs_build ## build and serve documentation locally
 	@echo "$(GREEN)Serving built documentation...$(NC)"
 	@cd docs && npm run serve -- --port $(docs_port)
+
+# Comma-separated list; override e.g. suites=curl,javascript,python
+# Note: $(or $(suites),a,b,c) is wrong here — GNU make's `or` returns only the first non-empty token.
+suites ?= curl,python,javascript
+
+api_examples_local: ## run docs API sample files against a local Langflow server
+	@echo "$(GREEN)Running docs API examples locally...$(NC)"
+	@SUITES="$(suites)" EXECUTE_MODE=true ./scripts/test-api-examples-local.sh
+
+api_examples_local_syntax: ## syntax-check docs API sample files locally without execution
+	@echo "$(GREEN)Running docs API example syntax checks locally...$(NC)"
+	@SUITES="$(suites)" EXECUTE_MODE=false ./scripts/test-api-examples-local.sh
 
 ######################
 # INCLUDE FRONTEND MAKEFILE

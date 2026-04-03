@@ -188,7 +188,7 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | grep -v 'langflow-sdk' | awk '{print $2}' | sed 's/^v//')
           echo "Main version from pyproject.toml: $version"
 
           if [ ${{inputs.pre_release}} == "true" ]; then
