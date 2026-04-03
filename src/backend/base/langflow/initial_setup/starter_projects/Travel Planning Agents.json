@@ -503,11 +503,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.8"
+                    "version": "3.11.7"
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.3"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -1679,7 +1679,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.25"
+                    "version": "1.2.22"
                   }
                 ],
                 "total_dependencies": 3
@@ -2262,7 +2262,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.25"
+                    "version": "1.2.22"
                   }
                 ],
                 "total_dependencies": 3
@@ -2845,7 +2845,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.25"
+                    "version": "1.2.22"
                   }
                 ],
                 "total_dependencies": 3
