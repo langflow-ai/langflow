@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 
 from lfx.cli.common import execute_graph_with_capture, extract_result_data, get_api_key
 from lfx.log.logger import logger
-from lfx.utils.flow_validation import CustomComponentValidationError, validate_flow_for_current_settings
+from lfx.utils.flow_validation import validate_flow_for_current_settings
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable
