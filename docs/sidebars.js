@@ -464,30 +464,15 @@ module.exports = {
       label: "API reference",
       className: "sidebar-category-with-icon sidebar-icon-fileCode",
       items: [
-        {
-          type: "doc",
-          id: "API-Reference/api-reference-api-examples",
-          label: "Get started with the Langflow API",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/typescript-client",
-          label: "Use the TypeScript client"
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-flows-run",
-          label: "Flow trigger endpoints",
-        },
+        "API-Reference/api-reference-api-examples",
+        "API-Reference/typescript-client",
+        "API-Reference/flow-devops-sdk",
+        "API-Reference/api-flows-run",
         {
           type: "category",
           label: "Developer API (Beta)",
           items: [
-            {
-              type: "doc",
-              id: "API-Reference/workflows-api",
-              label: "Workflow API (Beta)",
-            },
+            "API-Reference/workflows-api",
             {
               type: "link",
               label: "Workflow API specification (Beta)",
@@ -495,46 +480,14 @@ module.exports = {
             },
           ],
         },
-        {
-          type: "doc",
-          id: "API-Reference/api-openai-responses",
-          label: "OpenAI Responses endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-flows",
-          label: "Flow management endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-files",
-          label: "Files endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-projects",
-          label: "Projects endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-logs",
-          label: "Logs endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-monitor",
-          label: "Monitor endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-build",
-          label: "Build endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-users",
-          label: "Users endpoints",
-        },
+        "API-Reference/api-openai-responses",
+        "API-Reference/api-flows",
+        "API-Reference/api-files",
+        "API-Reference/api-projects",
+        "API-Reference/api-logs",
+        "API-Reference/api-monitor",
+        "API-Reference/api-build",
+        "API-Reference/api-users",
         {
           type: "link",
           label: "Langflow API specification",
