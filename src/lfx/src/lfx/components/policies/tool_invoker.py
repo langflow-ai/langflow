@@ -9,6 +9,7 @@ from lfx.log.logger import logger
 
 T = TypeVar("T")
 
+
 class ToolInvoker(IToolInvoker):
     _tools: dict[str, BaseTool]
 
@@ -39,5 +40,6 @@ class ToolInvoker(IToolInvoker):
 
         msg = f"unknown tool {toolname}"
         raise ValueError(msg)
+
 
 # Made with Bob
