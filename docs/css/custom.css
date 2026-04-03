@@ -77,7 +77,7 @@ html[data-theme="light"] .navbar__logo {
 }
 
 .theme-doc-sidebar-container nav.menu {
-  padding-left: 0.5rem;
+  padding-left: 0.75rem;
   padding-right: 0.75rem;
 }
 
@@ -644,13 +644,19 @@ html[data-theme="light"] .sidebar-group-label {
 
 .sidebar-category-with-icon > .menu__list-item-collapsible > .menu__link::before {
   content: "";
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
   display: inline-block;
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
+  -webkit-mask-size: 18px 18px;
+  mask-size: 18px 18px;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
   opacity: 0.45;
 }
 
@@ -949,6 +955,38 @@ html[data-theme="light"] .sidebar-group-label {
   margin: 0 calc(-1 * var(--ifm-pre-padding));
   padding: 0 var(--ifm-pre-padding);
   border-left: 3px solid var(--ifm-color-primary);
+}
+
+/* Code Hike + CodeSnippet: Code Hike uses height:100% on .ch-codeblock > * and omits overflow on the
+   wrapper when measured; we shrink-wrap the block (fixes <details>/Collapsible height) and put
+   overflow on <code> only so the copy button stays in the corner while scrolling long lines. */
+.markdown .ch-codeblock {
+  min-width: 0;
+  max-width: 100%;
+  height: fit-content;
+  align-self: flex-start;
+}
+
+.markdown .ch-codeblock .ch-code-wrapper {
+  overflow: visible;
+  min-width: 0;
+  box-sizing: border-box;
+  height: fit-content !important;
+  max-height: none !important;
+  min-height: 0;
+}
+
+.markdown .ch-codeblock .ch-code-wrapper > .ch-code-scroll-parent {
+  display: block;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.markdown .ch-codeblock .ch-code-button {
+  right: calc(10px + 0.75rem);
+  z-index: 2;
 }
 
 /* ========================================
