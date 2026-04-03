@@ -191,3 +191,37 @@ Generate a `requirements.txt` file to capture the minimal Python dependencies, s
    `lfx serve` starts a FastAPI app that exposes your flow as an HTTP API endpoint.
    For more information, see the [Langflow LFX README](https://github.com/langflow-ai/langflow/src/lfx/README.md).
 
+## Manage multiple environments with `environments.yaml`
+
+The `environments.yaml` file created at initialization contains three example entries for deployment environments:
+
+```yaml
+local:
+  url: http://127.0.0.1:7860
+  api_key_env: LANGFLOW_LOCAL_API_KEY
+staging:
+  url: https://staging.example.com
+  api_key_env: LANGFLOW_STAGING_API_KEY
+production:
+  url: https://langflow.example.com
+  api_key_env: LANGFLOW_PRODUCTION_API_KEY
+```
+
+Each entry contains a `url` for the Langflow base URL, and an `api_key_env` field.
+The `api_key_env` field names an environment variable that you either `export` or store in a `.env` file, and does not store the secret string itself, which makes `environments.yaml` safe to commit to version control.
+
+The names `local`, `staging`, and `production` in `environments.yaml` are conventions, and can be named whatever your project requires. You can add more than three entries.
+
+`environments.yaml` is distinct from the Langflow or LFX `.env` file.
+`environments.yaml` controls which remote Langflow instance you're deploying flows to, flow versioning, and environment variable _names_ for API keys.
+The `.env` contains runtime values for the Langflow server, and might also contain _actual secret values_, so the `.env` should not be committed to version control.
+
+Commands that call a Langflow server over HTTP, such as `lfx pull` or `lfx push`, use `--env ENVIRONMENT_NAME` to determine which Langflow instance to send the request to.
+
+For example, to send a `push` request to a server named `local` in `environments.yaml`, run:
+
+```bash
+lfx push --env local
+```
+
+This command will send the request to the Langflow base URL at `http://127.0.0.1:7860` using a Langflow API key named `LANGFLOW_LOCAL_API_KEY`.
