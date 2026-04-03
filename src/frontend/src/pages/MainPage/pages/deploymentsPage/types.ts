@@ -26,9 +26,9 @@ export interface DeploymentProvider {
 export interface ProviderAccount {
   id: string;
   name: string;
-  provider_tenant_id: string | null;
+  tenant_id: string | null;
   provider_key: string;
-  provider_url: string;
+  url: string;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -36,7 +36,7 @@ export interface ProviderAccount {
 export interface ProviderCredentials {
   name: string;
   provider_key: string;
-  provider_url: string;
+  url: string;
   api_key: string;
 }
 

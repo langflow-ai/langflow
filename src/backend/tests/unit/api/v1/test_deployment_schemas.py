@@ -44,7 +44,7 @@ class TestCredentialSecurity:
             id=uuid4(),
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://api.us-south.wxo.cloud.ibm.com",
+            url="https://api.us-south.wxo.cloud.ibm.com",
         )
         dumped = response.model_dump()
         assert "api_key" not in dumped
@@ -61,7 +61,7 @@ class TestProviderAccountName:
         account = DeploymentProviderAccountCreateRequest(
             name="production",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://api.us-south.wxo.cloud.ibm.com",
+            url="https://api.us-south.wxo.cloud.ibm.com",
             provider_data={"api_key": "key"},
         )
         assert account.name == "production"
@@ -70,7 +70,7 @@ class TestProviderAccountName:
         account = DeploymentProviderAccountCreateRequest(
             name="  staging  ",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://api.us-south.wxo.cloud.ibm.com",
+            url="https://api.us-south.wxo.cloud.ibm.com",
             provider_data={"api_key": "key"},
         )
         assert account.name == "staging"
@@ -80,7 +80,7 @@ class TestProviderAccountName:
             DeploymentProviderAccountCreateRequest(
                 name="",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-                provider_url="https://example.com",
+                url="https://example.com",
                 provider_data={"api_key": "key"},
             )
 
@@ -89,7 +89,7 @@ class TestProviderAccountName:
             DeploymentProviderAccountCreateRequest(
                 name="   ",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-                provider_url="https://example.com",
+                url="https://example.com",
                 provider_data={"api_key": "key"},
             )
 
@@ -97,7 +97,7 @@ class TestProviderAccountName:
         with pytest.raises(ValidationError):
             DeploymentProviderAccountCreateRequest(
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-                provider_url="https://example.com",
+                url="https://example.com",
                 provider_data={"api_key": "key"},
             )
 
@@ -114,37 +114,37 @@ class TestProviderAccountName:
 
 
 # ---------------------------------------------------------------------------
-# provider_url URL validation
+# url validation
 # ---------------------------------------------------------------------------
 
 
 class TestProviderUrlSchemaValidation:
-    """URL validation for provider_url on create and update schemas."""
+    """URL validation for create schema."""
 
     def test_create_accepts_valid_https_url(self):
         account = DeploymentProviderAccountCreateRequest(
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://api.us-south.wxo.cloud.ibm.com/v1",
+            url="https://api.us-south.wxo.cloud.ibm.com/v1",
             provider_data={"api_key": "key"},
         )
-        assert account.provider_url == "https://api.us-south.wxo.cloud.ibm.com/v1"
+        assert account.url == "https://api.us-south.wxo.cloud.ibm.com/v1"
 
     def test_create_normalizes_scheme_and_host(self):
         account = DeploymentProviderAccountCreateRequest(
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="HTTPS://API.US-SOUTH.WXO.CLOUD.IBM.COM/v1",
+            url="HTTPS://API.US-SOUTH.WXO.CLOUD.IBM.COM/v1",
             provider_data={"api_key": "key"},
         )
-        assert account.provider_url == "https://api.us-south.wxo.cloud.ibm.com/v1"
+        assert account.url == "https://api.us-south.wxo.cloud.ibm.com/v1"
 
     def test_create_rejects_http(self):
         with pytest.raises(ValidationError, match="https"):
             DeploymentProviderAccountCreateRequest(
                 name="staging",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-                provider_url="http://example.com",
+                url="http://example.com",
                 provider_data={"api_key": "key"},
             )
 
@@ -153,36 +153,17 @@ class TestProviderUrlSchemaValidation:
             DeploymentProviderAccountCreateRequest(
                 name="staging",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-                provider_url="example.com",
+                url="example.com",
                 provider_data={"api_key": "key"},
             )
 
-    def test_update_accepts_valid_https_url(self):
-        update = DeploymentProviderAccountUpdateRequest(provider_url="https://new.example.com/api")
-        assert update.provider_url == "https://new.example.com/api"
+    def test_update_rejects_url_field(self):
+        with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+            DeploymentProviderAccountUpdateRequest(url="https://new.example.com/api")
 
-    def test_update_validate_provider_url_allowed_accepts_provider_hostname(self):
-        update = DeploymentProviderAccountUpdateRequest(
-            provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
-        )
-
-        validated = update.validate_provider_url_allowed(DeploymentProviderKey.WATSONX_ORCHESTRATE)
-
-        assert validated is update
-
-    def test_update_validate_provider_url_allowed_rejects_disallowed_provider_hostname(self):
-        update = DeploymentProviderAccountUpdateRequest(provider_url="https://new.example.com/api")
-
-        with pytest.raises(ValueError, match="not allowed"):
-            update.validate_provider_url_allowed(DeploymentProviderKey.WATSONX_ORCHESTRATE)
-
-    def test_update_rejects_http(self):
-        with pytest.raises(ValidationError, match="https"):
-            DeploymentProviderAccountUpdateRequest(provider_url="http://example.com")
-
-    def test_update_omits_url_without_error(self):
-        update = DeploymentProviderAccountUpdateRequest(name="new-name")
-        assert update.provider_url is None
+    def test_update_rejects_tenant_id_field(self):
+        with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+            DeploymentProviderAccountUpdateRequest(tenant_id="tenant-1")
 
 
 class TestProviderKeyEnum:
@@ -190,7 +171,7 @@ class TestProviderKeyEnum:
         account = DeploymentProviderAccountCreateRequest(
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://api.us-south.wxo.cloud.ibm.com",
+            url="https://api.us-south.wxo.cloud.ibm.com",
             provider_data={"api_key": "key"},
         )
         assert account.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
@@ -199,7 +180,7 @@ class TestProviderKeyEnum:
         account = DeploymentProviderAccountCreateRequest(
             name="staging",
             provider_key="watsonx-orchestrate",
-            provider_url="https://api.us-south.wxo.cloud.ibm.com",
+            url="https://api.us-south.wxo.cloud.ibm.com",
             provider_data={"api_key": "key"},
         )
         assert account.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
@@ -209,7 +190,7 @@ class TestProviderKeyEnum:
             DeploymentProviderAccountCreateRequest(
                 name="staging",
                 provider_key="unknown-provider",
-                provider_url="https://example.com",
+                url="https://example.com",
                 provider_data={"api_key": "key"},
             )
 
@@ -218,7 +199,7 @@ class TestProviderKeyEnum:
             DeploymentProviderAccountCreateRequest(
                 name="staging",
                 provider_key="",
-                provider_url="https://example.com",
+                url="https://example.com",
                 provider_data={"api_key": "key"},
             )
 
@@ -462,7 +443,14 @@ class TestDeploymentListItemAttachment:
 
 class TestDeploymentListItemMatchedAttachments:
     def _make_item(self, **kwargs):
-        defaults = {"id": uuid4(), "name": "dep", "type": "agent", "resource_key": "rk-1"}
+        defaults = {
+            "id": uuid4(),
+            "provider_id": uuid4(),
+            "provider_key": DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            "name": "dep",
+            "type": "agent",
+            "resource_key": "rk-1",
+        }
         defaults.update(kwargs)
         return DeploymentListItem(**defaults)
 

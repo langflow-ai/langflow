@@ -84,7 +84,7 @@ function EnvironmentList({
                   {environment.name}
                 </span>
                 <span className="text-sm leading-tight text-muted-foreground">
-                  {environment.provider_url}
+                  {environment.url}
                 </span>
               </span>
             </RadioSelectItem>

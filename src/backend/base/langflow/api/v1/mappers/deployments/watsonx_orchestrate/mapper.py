@@ -97,7 +97,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS as WXO_ADAPTER_PAYLOAD_SCHEMAS,
 )
-from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.deployment_provider_account.utils import extract_tenant_from_url
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     list_deployment_attachments_for_flow_version_ids,
@@ -169,9 +168,9 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         ),
     )
 
-    def resolve_provider_tenant_id(self, *, provider_url: str, provider_tenant_id: str | None) -> str | None:
-        if provider_tenant_id:
-            return provider_tenant_id
+    def resolve_provider_tenant_id(self, *, provider_url: str, tenant_id: str | None) -> str | None:
+        if tenant_id:
+            return tenant_id
         return extract_tenant_from_url(provider_url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
 
     def format_conflict_detail(self, raw_message: str) -> str:
@@ -216,7 +215,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     ) -> VerifyCredentials:
         validated = self._validate_provider_data(payload.provider_data)
         return VerifyCredentials(
-            base_url=payload.provider_url,
+            base_url=payload.url,
             provider_data=validated,
         )
 
@@ -226,59 +225,19 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         payload: DeploymentProviderAccountUpdateRequest,
         existing_account: DeploymentProviderAccount,
     ) -> VerifyCredentials | None:
-        url_changed = "provider_url" in payload.model_fields_set
         provider_data_changed = "provider_data" in payload.model_fields_set
-        if not url_changed and not provider_data_changed:
+        if not provider_data_changed:
             return None
 
-        effective_url = payload.provider_url if url_changed else existing_account.provider_url
-        if effective_url is None:
-            msg = "'provider_url' cannot be null when provided."
+        if payload.provider_data is None:
+            msg = "'provider_data' cannot be null when provided."
             raise ValueError(msg)
-        if provider_data_changed:
-            if payload.provider_data is None:
-                msg = "'provider_data' cannot be null when provided."
-                raise ValueError(msg)
-            provider_data = self.resolve_credential_fields(provider_data=payload.provider_data)
-        else:
-            decrypted_api_key = auth_utils.decrypt_api_key((existing_account.api_key or "").strip())
-            provider_data = self.resolve_credential_fields(provider_data={"api_key": decrypted_api_key})
+        provider_data = self.resolve_credential_fields(provider_data=payload.provider_data)
 
         return VerifyCredentials(
-            base_url=effective_url,
+            base_url=existing_account.provider_url,
             provider_data=provider_data,
         )
-
-    def resolve_provider_account_update(
-        self,
-        *,
-        payload: DeploymentProviderAccountUpdateRequest,
-        existing_account: DeploymentProviderAccount,
-    ) -> dict[str, Any]:
-        """WXO override: re-derive tenant when provider_url changes.
-
-        For WXO the tenant id is embedded in the URL path, so changing the URL
-        without updating the tenant would create an inconsistent pair.  This
-        override always re-resolves the tenant whenever *either*
-        ``provider_url`` or ``provider_tenant_id`` is in the update set.
-        """
-        update_kwargs = super().resolve_provider_account_update(
-            payload=payload,
-            existing_account=existing_account,
-        )
-        url_changed = "provider_url" in payload.model_fields_set
-        tenant_changed = "provider_tenant_id" in payload.model_fields_set
-        if url_changed or tenant_changed:
-            effective_url = payload.provider_url if url_changed else existing_account.provider_url
-            if effective_url is None:
-                msg = "'provider_url' cannot be null when provided."
-                raise ValueError(msg)
-            effective_tenant = payload.provider_tenant_id if tenant_changed else None
-            update_kwargs["provider_tenant_id"] = self.resolve_provider_tenant_id(
-                provider_url=effective_url,
-                provider_tenant_id=effective_tenant,
-            )
-        return update_kwargs
 
     def util_create_flow_artifact_provider_data(
         self,

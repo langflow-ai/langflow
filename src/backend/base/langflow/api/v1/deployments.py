@@ -267,8 +267,8 @@ async def create_provider_account(
     try:
         resolved_provider_tenant_id = resolve_provider_tenant_id(
             deployment_mapper=deployment_mapper,
-            provider_url=payload.provider_url,
-            provider_tenant_id=payload.provider_tenant_id,
+            provider_url=payload.url,
+            tenant_id=payload.tenant_id,
         )
         credential_kwargs = deployment_mapper.resolve_credential_fields(provider_data=payload.provider_data)
         provider_account = await create_provider_account_row(
@@ -277,7 +277,7 @@ async def create_provider_account(
             name=payload.name,
             provider_tenant_id=resolved_provider_tenant_id,
             provider_key=payload.provider_key,
-            provider_url=payload.provider_url,
+            provider_url=payload.url,
             **credential_kwargs,
         )
     except ValueError as exc:
@@ -368,14 +368,9 @@ async def update_provider_account(
         db=session,
     )
 
-    try:
-        payload.validate_provider_url_allowed(provider_account.provider_key)
-    except ValueError as exc:
-        _raise_http_for_provider_account_value_error(exc)
-
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     verify_input = None
-    if _field_was_explicitly_set(payload, "provider_url") or _field_was_explicitly_set(payload, "provider_data"):
+    if _field_was_explicitly_set(payload, "provider_data"):
         deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
         try:
             verify_input = deployment_mapper.resolve_verify_credentials_for_update(

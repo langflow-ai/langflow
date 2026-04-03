@@ -879,31 +879,40 @@ class TestListDeploymentFlowVersionsRoute:
 
 class TestProviderAccountRoutes:
     @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.to_provider_account_response", return_value={"ok": True})
+    @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    async def test_update_provider_account_rejects_disallowed_url(
+    async def test_update_provider_account_name_only_skips_credential_verification(
         self,
         mock_get_provider_account,
         mock_get_mapper,
         mock_resolve_adapter,
+        mock_update_provider_account,
+        mock_to_provider_response,  # noqa: ARG002
     ):
-        """PATCH rejects provider URLs that do not match the provider allowlist."""
+        """PATCH skips credential verification when only name changes."""
         from langflow.api.v1.deployments import update_provider_account
 
-        mock_get_provider_account.return_value = _fake_provider_account()
+        existing_account = _fake_provider_account()
+        mock_get_provider_account.return_value = existing_account
+        mapper = MagicMock()
+        mapper.resolve_provider_account_update.return_value = {"name": "renamed"}
+        mock_get_mapper.return_value = mapper
+        mock_update_provider_account.return_value = existing_account
 
-        with pytest.raises(HTTPException) as exc_info:
-            await update_provider_account(
-                provider_id=uuid4(),
-                session=AsyncMock(),
-                payload=DeploymentProviderAccountUpdateRequest(provider_url="https://new.example.com/api"),
-                current_user=_fake_user(),
-            )
+        session = AsyncMock()
+        await update_provider_account(
+            provider_id=existing_account.id,
+            session=session,
+            payload=DeploymentProviderAccountUpdateRequest(name="renamed"),
+            current_user=_fake_user(),
+        )
 
-        assert exc_info.value.status_code == 400
-        mock_get_mapper.assert_not_called()
+        mapper.resolve_verify_credentials_for_update.assert_not_called()
         mock_resolve_adapter.assert_not_called()
+        mock_update_provider_account.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
@@ -971,7 +980,7 @@ class TestProviderAccountRoutes:
         payload = DeploymentProviderAccountCreateRequest(
             name="prod",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+            url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
             provider_data={"api_key": "api-key"},  # pragma: allowlist secret
         )
 

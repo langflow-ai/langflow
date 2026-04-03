@@ -402,10 +402,10 @@ class BaseDeploymentMapper:
             provider_data=provider_data,
         )
 
-    def resolve_provider_tenant_id(self, *, provider_url: str, provider_tenant_id: str | None) -> str | None:
+    def resolve_provider_tenant_id(self, *, provider_url: str, tenant_id: str | None) -> str | None:
         """Resolve provider tenant id for provider-account create/update."""
         _ = provider_url
-        return provider_tenant_id
+        return tenant_id
 
     def format_conflict_detail(self, raw_message: str) -> str:
         """Format provider conflict errors for API responses.
@@ -438,24 +438,19 @@ class BaseDeploymentMapper:
         """Assemble DB column-value kwargs for a provider-account update.
 
         Only fields present in ``payload.model_fields_set`` are included so
-        the CRUD layer receives a minimal diff.  Provider mappers may override
-        to add cross-field logic (e.g. re-deriving tenant from URL).
+        the CRUD layer receives a minimal diff. Provider-account update fields
+        are intentionally limited to mutable values (display name and
+        credentials).
         """
+        _ = existing_account
         update_kwargs: dict[str, Any] = {}
         if "name" in payload.model_fields_set:
             update_kwargs["name"] = payload.name
-        if "provider_url" in payload.model_fields_set:
-            update_kwargs["provider_url"] = payload.provider_url
         if "provider_data" in payload.model_fields_set:
             if payload.provider_data is None:
                 msg = "'provider_data' cannot be null when provided."
                 raise ValueError(msg)
             update_kwargs.update(self.resolve_credential_fields(provider_data=payload.provider_data))
-        if "provider_tenant_id" in payload.model_fields_set:
-            update_kwargs["provider_tenant_id"] = self.resolve_provider_tenant_id(
-                provider_url=payload.provider_url or existing_account.provider_url,
-                provider_tenant_id=payload.provider_tenant_id,
-            )
         return update_kwargs
 
     def resolve_verify_credentials(
@@ -470,7 +465,7 @@ class BaseDeploymentMapper:
         provider mapper overrides.
         """
         return VerifyCredentials(
-            base_url=payload.provider_url,
+            base_url=payload.url,
         )
 
     def resolve_verify_credentials_for_update(
@@ -481,12 +476,12 @@ class BaseDeploymentMapper:
     ) -> VerifyCredentials | None:
         """Build adapter verify-credentials input for provider-account updates.
 
-        Returns ``None`` when the update does not touch credentials or URL.
+        Returns ``None`` when the update does not touch credentials.
         Provider-specific mappers must override this when update-time
         verification is supported.
         """
         _ = existing_account
-        if "provider_url" not in payload.model_fields_set and "provider_data" not in payload.model_fields_set:
+        if "provider_data" not in payload.model_fields_set:
             return None
         msg = "Credential verification for provider account updates is not implemented for this provider."
         raise NotImplementedError(msg)
@@ -498,9 +493,9 @@ class BaseDeploymentMapper:
         return DeploymentProviderAccountGetResponse(
             id=provider_account.id,
             name=provider_account.name,
-            provider_tenant_id=provider_account.provider_tenant_id,
+            tenant_id=provider_account.provider_tenant_id,
             provider_key=provider_account.provider_key,
-            provider_url=provider_account.provider_url,
+            url=provider_account.provider_url,
             created_at=provider_account.created_at,
             updated_at=provider_account.updated_at,
         )

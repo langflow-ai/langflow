@@ -9,8 +9,8 @@ import {
   useState,
 } from "react";
 import type { ProviderAccountCreateRequest } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
-import type { DeploymentCreateRequest } from "@/controllers/API/queries/deployments/use-post-deployment";
 import type { DeploymentUpdateRequest } from "@/controllers/API/queries/deployments/use-patch-deployment";
+import type { DeploymentCreateRequest } from "@/controllers/API/queries/deployments/use-post-deployment";
 import type {
   ConnectionItem,
   Deployment,
@@ -118,7 +118,7 @@ export function DeploymentStepperProvider({
   const [credentials, setCredentials] = useState<ProviderCredentials>({
     name: "",
     provider_key: "",
-    provider_url: "",
+    url: "",
     api_key: "",
   });
 
@@ -192,7 +192,7 @@ export function DeploymentStepperProvider({
   const hasValidCredentials =
     credentials.name.trim() !== "" &&
     credentials.api_key.trim() !== "" &&
-    credentials.provider_url.trim() !== "";
+    credentials.url.trim() !== "";
 
   // In edit mode, steps are shifted: 1=Type, 2=Attach, 3=Review.
   const getLogicalStep = useCallback(
@@ -242,7 +242,7 @@ export function DeploymentStepperProvider({
     setCredentials({
       name: "",
       provider_key: "",
-      provider_url: "",
+      url: "",
       api_key: "",
     });
   }, []);
@@ -267,7 +267,7 @@ export function DeploymentStepperProvider({
       return {
         name: credentials.name.trim(),
         provider_key: "watsonx-orchestrate",
-        provider_url: credentials.provider_url.trim(),
+        url: credentials.url.trim(),
         provider_data: { api_key: credentials.api_key.trim() },
       };
     }, [credentials, hasValidCredentials]);

@@ -63,7 +63,7 @@ export default function ProvidersTable({
               </TableCell>
               <TableCell>
                 <span className="max-w-[300px] truncate text-sm text-muted-foreground">
-                  {provider.provider_url}
+                  {provider.url}
                 </span>
               </TableCell>
               <TableCell>

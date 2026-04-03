@@ -691,14 +691,14 @@ def test_base_mapper_resolve_provider_tenant_id_passthrough() -> None:
     assert (
         mapper.resolve_provider_tenant_id(
             provider_url="https://example.com/instances/abc",
-            provider_tenant_id="tenant-1",
+            tenant_id="tenant-1",
         )
         == "tenant-1"
     )
     assert (
         mapper.resolve_provider_tenant_id(
             provider_url="https://example.com/instances/abc",
-            provider_tenant_id=None,
+            tenant_id=None,
         )
         is None
     )
@@ -720,9 +720,9 @@ def test_base_mapper_shapes_provider_account_response() -> None:
     shaped = mapper.shape_provider_account_response(account)
     assert shaped.id == account.id
     assert shaped.name == "staging"
-    assert shaped.provider_tenant_id == "tenant-1"
+    assert shaped.tenant_id == "tenant-1"
     assert shaped.provider_key == "watsonx-orchestrate"
-    assert shaped.provider_url == "https://provider.example"
+    assert shaped.url == "https://provider.example"
 
 
 def test_mapper_registry_returns_default_when_unregistered() -> None:
@@ -771,8 +771,8 @@ def test_mapper_registry_get_returns_cached_instance_for_key() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_base_mapper_resolve_verify_credentials_extracts_provider_url() -> None:
-    """Base mapper builds VerifyCredentials with provider_url only."""
+def test_base_mapper_resolve_verify_credentials_extracts_url() -> None:
+    """Base mapper builds VerifyCredentials with url only."""
     from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
     from lfx.services.adapters.deployment.schema import VerifyCredentials
 
@@ -780,7 +780,7 @@ def test_base_mapper_resolve_verify_credentials_extracts_provider_url() -> None:
     payload = DeploymentProviderAccountCreateRequest(
         name="test-account",
         provider_key="watsonx-orchestrate",
-        provider_url="https://api.us-south.wxo.cloud.ibm.com",
+        url="https://api.us-south.wxo.cloud.ibm.com",
         provider_data={"api_key": "secret-key"},  # pragma: allowlist secret
     )
     result = mapper.resolve_verify_credentials(payload=payload)
@@ -821,36 +821,6 @@ def test_base_mapper_resolve_provider_account_update_name_only() -> None:
         existing_account=_make_existing_account(),
     )
     assert result == {"name": "new-name"}
-
-
-def test_base_mapper_resolve_provider_account_update_url_only() -> None:
-    """Only provider_url is set."""
-    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountUpdateRequest
-
-    mapper = BaseDeploymentMapper()
-    payload = DeploymentProviderAccountUpdateRequest(
-        provider_url="https://api.eu-de.wxo.cloud.ibm.com/instances/new-tenant/agents",
-    )
-    result = mapper.resolve_provider_account_update(
-        payload=payload,
-        existing_account=_make_existing_account(),
-    )
-    assert "provider_url" in result
-    assert "name" not in result
-    assert "provider_tenant_id" not in result
-
-
-def test_base_mapper_resolve_provider_account_update_tenant_uses_existing_url() -> None:
-    """When only tenant is set, resolve uses existing_account.provider_url."""
-    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountUpdateRequest
-
-    mapper = BaseDeploymentMapper()
-    payload = DeploymentProviderAccountUpdateRequest(provider_tenant_id="explicit-tenant")
-    result = mapper.resolve_provider_account_update(
-        payload=payload,
-        existing_account=_make_existing_account(),
-    )
-    assert result["provider_tenant_id"] == "explicit-tenant"
 
 
 def test_base_mapper_resolve_provider_account_update_provider_data_raises() -> None:

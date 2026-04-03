@@ -9,9 +9,9 @@ Two identifier domains coexist in these schemas:
   ``provider_id`` maps to ``deployment_provider_account.id``.
 
 * **Provider-owned (str)** -- ``reference_id``, ``config_id``,
-  ``execution_id``, ``provider_tenant_id``,
-  ``provider_key``, and ``provider_url``. Opaque values assigned or
-  consumed by the external deployment provider.
+  ``execution_id``, and provider-account fields ``tenant_id``, ``provider_key``,
+  and ``url``. Opaque values assigned or consumed by the external deployment
+  provider.
 
 * **Provider-originated but Langflow-owned once persisted** -- ``resource_key``.
   Langflow stores and indexes this as part of its own deployment record.
@@ -40,7 +40,6 @@ from langflow.services.database.models.deployment_provider_account.schemas impor
 from langflow.services.database.models.deployment_provider_account.utils import (
     check_provider_url_allowed,
     validate_provider_url,
-    validate_provider_url_optional,
 )
 
 # ---------------------------------------------------------------------------
@@ -100,9 +99,6 @@ NonEmptyStr = Annotated[str, AfterValidator(_strip_nonempty)]
 ValidatedUrl = Annotated[str, AfterValidator(validate_provider_url)]
 """URL type that enforces HTTPS and normalizes."""
 
-ValidatedUrlOptional = Annotated[str | None, AfterValidator(validate_provider_url_optional)]
-"""Optional URL type that enforces HTTPS and normalizes (None passes through)."""
-
 
 def _validate_flow_version_ids(values: list[str] | None) -> list[str] | None:
     """AfterValidator for optional flow_version_ids query parameter."""
@@ -147,12 +143,12 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
             "User-chosen display name for this provider account. Must be unique per user within a provider_key."
         ),
     )
-    provider_tenant_id: NonEmptyStr | None = Field(
+    tenant_id: NonEmptyStr | None = Field(
         default=None,
         description="Provider-owned tenant/organization id. Langflow persists this opaque value.",
     )
     provider_key: DeploymentProviderKey = Field(description="Deployment provider key.")
-    provider_url: ValidatedUrl = Field(
+    url: ValidatedUrl = Field(
         description="Provider service URL persisted in Langflow DB for provider-account resolution.",
     )
     provider_data: dict[str, Any] = Field(
@@ -166,7 +162,7 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_provider_url_allowed(self) -> DeploymentProviderAccountCreateRequest:
-        check_provider_url_allowed(self.provider_url, self.provider_key)
+        check_provider_url_allowed(self.url, self.provider_key)
         return self
 
 
@@ -176,14 +172,6 @@ class DeploymentProviderAccountUpdateRequest(BaseModel):
     name: NonEmptyStr | None = Field(
         default=None,
         description="User-chosen display name. Omit to keep existing value; cannot be set to null.",
-    )
-    provider_tenant_id: NonEmptyStr | None = Field(
-        default=None,
-        description="Provider-owned tenant/organization id. Omit to keep existing value, null to clear.",
-    )
-    provider_url: ValidatedUrlOptional = Field(
-        default=None,
-        description="Provider service URL. Omit to keep existing value; cannot be set to null.",
     )
     provider_data: dict[str, Any] | None = Field(
         default=None,
@@ -199,30 +187,22 @@ class DeploymentProviderAccountUpdateRequest(BaseModel):
         if not self.model_fields_set:
             msg = "At least one field must be provided for update."
             raise ValueError(msg)
-        for field_name in ("name", "provider_url", "provider_data"):
+        for field_name in ("name", "provider_data"):
             if field_name in self.model_fields_set and getattr(self, field_name) is None:
                 msg = f"'{field_name}' cannot be set to null."
                 raise ValueError(msg)
-        return self
-
-    def validate_provider_url_allowed(
-        self,
-        provider_key: DeploymentProviderKey,
-    ) -> DeploymentProviderAccountUpdateRequest:
-        if "provider_url" in self.model_fields_set and self.provider_url is not None:
-            check_provider_url_allowed(self.provider_url, provider_key)
         return self
 
 
 class DeploymentProviderAccountGetResponse(BaseModel):
     id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
     name: str = Field(description="User-chosen display name for this provider account.")
-    provider_tenant_id: str | None = Field(
+    tenant_id: str | None = Field(
         default=None,
         description="Provider-owned tenant/organization identifier persisted as opaque text.",
     )
     provider_key: DeploymentProviderKey = Field(description="Official provider name used by Langflow.")
-    provider_url: str = Field(description="Provider service URL persisted in Langflow DB.")
+    url: str = Field(description="Provider service URL persisted in Langflow DB.")
     created_at: datetime | None = Field(default=None, description="Langflow DB row creation timestamp.")
     updated_at: datetime | None = Field(default=None, description="Langflow DB row update timestamp.")
 
