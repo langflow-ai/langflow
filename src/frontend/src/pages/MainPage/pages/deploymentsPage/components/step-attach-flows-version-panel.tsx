@@ -1,31 +1,21 @@
 import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import type { FlowType } from "@/types/flow";
 import type { FlowVersionEntry } from "@/types/flow/version";
-import { RadioSelectItem } from "./radio-select-item";
+import { cn } from "@/utils/utils";
 
 export const VersionPanel = memo(function VersionPanel({
   selectedFlow,
   versions,
   isLoadingVersions,
-  pendingVersion,
   selectedVersionByFlow,
-  toolName,
-  onToolNameChange,
-  onSelectPending,
   onAttach,
 }: {
   selectedFlow: FlowType | undefined;
   versions: FlowVersionEntry[];
   isLoadingVersions: boolean;
-  pendingVersion: string | null;
   selectedVersionByFlow: Map<string, { versionId: string; versionTag: string }>;
-  toolName: string;
-  onToolNameChange: (name: string) => void;
-  onSelectPending: (id: string) => void;
-  onAttach: () => void;
+  onAttach: (versionId: string) => void;
 }) {
   if (!selectedFlow) {
     return (
@@ -44,11 +34,7 @@ export const VersionPanel = memo(function VersionPanel({
       </div>
       <div className="flex flex-1 flex-col overflow-hidden px-4 py-2">
         <h3 className="py-2 text-lg font-semibold">{selectedFlow.name}</h3>
-        <div
-          className="flex-1 space-y-3 overflow-y-auto py-3"
-          role="radiogroup"
-          aria-label="Flow versions"
-        >
+        <div className="flex-1 space-y-3 overflow-y-auto py-3">
           {isLoadingVersions ? (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
               Loading versions...
@@ -60,15 +46,18 @@ export const VersionPanel = memo(function VersionPanel({
           ) : (
             versions.map((version) => {
               const isAttachedVersion = attachedEntry?.versionId === version.id;
-              const isSelected = pendingVersion === version.id;
               return (
-                <RadioSelectItem
+                <button
                   key={version.id}
-                  name="flow-version"
-                  value={version.id}
-                  selected={isSelected}
-                  onChange={() => onSelectPending(version.id)}
+                  type="button"
                   data-testid={`version-item-${version.id}`}
+                  onClick={() => onAttach(version.id)}
+                  className={cn(
+                    "flex w-full cursor-pointer items-center gap-4 rounded-xl border p-3 text-left transition-colors",
+                    isAttachedVersion
+                      ? "border-accent-blue-foreground bg-accent-blue-muted/40"
+                      : "border-transparent bg-muted hover:border-border",
+                  )}
                 >
                   <span className="flex flex-col">
                     <span className="flex items-center gap-2 text-sm font-medium leading-tight">
@@ -88,32 +77,11 @@ export const VersionPanel = memo(function VersionPanel({
                       {new Date(version.created_at).toLocaleDateString()}
                     </span>
                   </span>
-                </RadioSelectItem>
+                </button>
               );
             })
           )}
         </div>
-        {pendingVersion && !attachedEntry && (
-          <div className="flex flex-col gap-1 pb-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              Tool Name
-            </span>
-            <Input
-              placeholder={selectedFlow.name}
-              className="bg-muted"
-              value={toolName}
-              onChange={(e) => onToolNameChange(e.target.value)}
-              data-testid="tool-name-input"
-            />
-          </div>
-        )}
-        <Button
-          className="w-full"
-          disabled={!pendingVersion}
-          onClick={onAttach}
-        >
-          Attach Flow
-        </Button>
       </div>
     </>
   );

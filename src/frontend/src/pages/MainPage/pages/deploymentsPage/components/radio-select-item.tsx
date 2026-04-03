@@ -87,15 +87,11 @@ export function RadioSelectItem({
       />
       <span
         className={cn(
-          "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded",
-          selected
-            ? "bg-primary text-primary-foreground"
-            : "border border-muted-foreground bg-background",
+          "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2",
+          selected ? "border-primary" : "border-muted-foreground bg-background",
         )}
       >
-        {selected && (
-          <ForwardedIconComponent name="Check" className="h-3.5 w-3.5" />
-        )}
+        {selected && <span className="h-2.5 w-2.5 rounded-full bg-primary" />}
       </span>
       {children}
     </label>
