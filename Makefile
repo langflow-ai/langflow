@@ -490,6 +490,38 @@ lfx_docker_test: ## run LFX tests in Docker
 	@echo 'Running LFX tests in Docker'
 	@cd src/lfx && make docker_test
 
+######################
+# SDK PACKAGE
+######################
+
+sdk_build: ## build the SDK package
+	@echo 'Building SDK package'
+	@cd src/sdk && make build
+
+sdk_publish: ## publish SDK package to PyPI
+	@echo 'Publishing SDK package'
+	@cd src/sdk && make publish
+
+sdk_publish_testpypi: ## publish SDK package to test PyPI
+	@echo 'Publishing SDK package to test PyPI'
+	@cd src/sdk && make publish_test
+
+sdk_test: ## run SDK tests
+	@echo 'Running SDK tests'
+	@cd src/sdk && make test
+
+sdk_format: ## format SDK code
+	@echo 'Formatting SDK code'
+	@cd src/sdk && make format
+
+sdk_lint: ## lint SDK code
+	@echo 'Linting SDK code'
+	@cd src/sdk && make lint
+
+sdk_clean: ## clean SDK build artifacts
+	@echo 'Cleaning SDK build artifacts'
+	@cd src/sdk && make clean
+
 # example make alembic-revision message="Add user table"
 alembic-revision: ## generate a new migration
 	@echo 'Generating a new Alembic revision'
@@ -877,6 +909,14 @@ help_backend: ## show backend-specific commands
 	@echo "  $(GREEN)make lfx_docker_dev$(NC)      - Start LFX development environment"
 	@echo "  $(GREEN)make lfx_docker_test$(NC)     - Run LFX tests in Docker"
 	@echo ''
+	@echo "$(GREEN)SDK Package Commands:$(NC)"
+	@echo "  $(GREEN)make sdk_build$(NC)           - Build SDK package"
+	@echo "  $(GREEN)make sdk_test$(NC)            - Run SDK tests"
+	@echo "  $(GREEN)make sdk_format$(NC)          - Format SDK code"
+	@echo "  $(GREEN)make sdk_lint$(NC)            - Lint SDK code"
+	@echo "  $(GREEN)make sdk_clean$(NC)           - Clean SDK build artifacts"
+	@echo "  $(GREEN)make sdk_publish$(NC)         - Publish SDK to PyPI"
+	@echo ''
 	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
 	@echo ''
 
@@ -979,6 +1019,8 @@ help_advanced: ## show advanced and miscellaneous commands
 	@echo "  $(GREEN)make publish_langflow$(NC)    - Publish langflow to PyPI"
 	@echo "  $(GREEN)make lfx_publish$(NC)         - Publish LFX package to PyPI"
 	@echo "  $(GREEN)make lfx_publish_testpypi$(NC) - Publish LFX to test PyPI"
+	@echo "  $(GREEN)make sdk_publish$(NC)         - Publish SDK package to PyPI"
+	@echo "  $(GREEN)make sdk_publish_testpypi$(NC) - Publish SDK to test PyPI"
 	@echo ''
 	@echo "$(GREEN)Lock Files:$(NC)"
 	@echo "  $(GREEN)make lock$(NC)                - Lock all dependencies"
