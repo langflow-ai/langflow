@@ -191,9 +191,12 @@ async def _deduplicate_flow_name(session: AsyncSession, name: str, user_id: UUID
     if not (await session.exec(select(Flow).where(Flow.name == name).where(Flow.user_id == user_id))).first():
         return name
 
+    escaped_name = name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     flows = (
         await session.exec(
-            select(Flow).where(Flow.name.like(f"{name} (%")).where(Flow.user_id == user_id)  # type: ignore[attr-defined]
+            select(Flow)
+            .where(Flow.name.like(f"{escaped_name} (%", escape="\\"))  # type: ignore[attr-defined]
+            .where(Flow.user_id == user_id)
         )
     ).all()
 
