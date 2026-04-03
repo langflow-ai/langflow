@@ -2,7 +2,7 @@
 
 Covers:
 - Model: Deployment and DeploymentRead require DeploymentType enum and accept description
-- API responses: to_deployment_create_response surfaces persisted description
+- API responses: shape_deployment_create_result surfaces persisted description
 - Mapper: shape_deployment_update_result reads description from the DB row
 """
 
@@ -13,7 +13,6 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
-from langflow.api.v1.mappers.deployments.helpers import to_deployment_create_response
 from langflow.services.database.models.deployment.model import Deployment, DeploymentRead
 from lfx.services.adapters.deployment.schema import DeploymentCreateResult, DeploymentType, DeploymentUpdateResult
 
@@ -109,7 +108,7 @@ class TestCreateResponse:
             updated_at=now,
         )
         result = DeploymentCreateResult(id="prov-1")
-        response = to_deployment_create_response(result, row)
+        response = BaseDeploymentMapper().shape_deployment_create_result(result, row)
         assert response.description == "my description"
 
     def test_description_none_when_not_set(self):
@@ -123,7 +122,7 @@ class TestCreateResponse:
             updated_at=now,
         )
         result = DeploymentCreateResult(id="prov-1")
-        response = to_deployment_create_response(result, row)
+        response = BaseDeploymentMapper().shape_deployment_create_result(result, row)
         assert response.description is None
 
     def test_uses_enum_type_from_row(self):
@@ -137,7 +136,7 @@ class TestCreateResponse:
             updated_at=now,
         )
         result = DeploymentCreateResult(id="prov-1")
-        response = to_deployment_create_response(result, row)
+        response = BaseDeploymentMapper().shape_deployment_create_result(result, row)
         assert response.type == DeploymentType.AGENT
 
 

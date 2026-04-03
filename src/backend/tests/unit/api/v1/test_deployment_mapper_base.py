@@ -202,7 +202,7 @@ async def test_base_mapper_resolve_deployment_create_validates_provider_data_whe
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
         spec={"name": "create-deploy", "description": "", "type": "agent"},
-        provider_data={"some_key": "some_value"},
+        provider_data={"label": "some_value"},
     )
 
     resolved = await mapper.resolve_deployment_create(
@@ -212,7 +212,7 @@ async def test_base_mapper_resolve_deployment_create_validates_provider_data_whe
         payload=payload,
     )
 
-    assert resolved.provider_data == {"some_key": "some_value"}
+    assert resolved.provider_data == {"label": "some_value"}
 
 
 @pytest.mark.asyncio
@@ -347,7 +347,6 @@ def test_mapper_has_shape_method_for_all_outbound_slots() -> None:
 @pytest.mark.parametrize(
     "method_name",
     [
-        "shape_deployment_create_result",
         "shape_deployment_operation_result",
         "shape_deployment_item_data",
         "shape_deployment_status_data",
