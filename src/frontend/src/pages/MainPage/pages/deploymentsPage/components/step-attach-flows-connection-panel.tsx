@@ -54,9 +54,15 @@ export const ConnectionPanel = memo(function ConnectionPanel({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const filteredConnections = useMemo(() => {
-    if (!searchQuery.trim()) return connections;
+    // Sort newly created connections to the top
+    const sorted = [...connections].sort((a, b) => {
+      if (a.isNew && !b.isNew) return -1;
+      if (!a.isNew && b.isNew) return 1;
+      return 0;
+    });
+    if (!searchQuery.trim()) return sorted;
     const q = searchQuery.toLowerCase();
-    return connections.filter(
+    return sorted.filter(
       (c) => c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q),
     );
   }, [connections, searchQuery]);
@@ -143,13 +149,8 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                         onChange={() => onToggleConnection(conn.id)}
                         data-testid={`connection-item-${conn.id}`}
                       >
-                        <span className="flex flex-col">
-                          <span className="text-sm font-medium leading-tight">
-                            {conn.name}
-                          </span>
-                          <span className="text-sm leading-tight text-muted-foreground">
-                            {conn.variableCount} variables
-                          </span>
+                        <span className="text-sm font-medium leading-tight">
+                          {conn.name}
                         </span>
                       </CheckboxSelectItem>
                     ))
