@@ -1545,6 +1545,49 @@ class TestReadProjectBugFix:
                 f"Error message should mention 'not found' for params: {params}"
             )
 
+    async def test_read_project_paginated_flows_match_current_user_visibility(
+        self, client: AsyncClient, logged_in_headers, basic_case
+    ):
+        project_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+        assert project_response.status_code == status.HTTP_201_CREATED
+        project_id = project_response.json()["id"]
+
+        own_flow_payload = {
+            "name": "Owned flow",
+            "description": "Visible to the project owner",
+            "data": {},
+            "folder_id": project_id,
+        }
+        own_flow_response = await client.post("api/v1/flows/", json=own_flow_payload, headers=logged_in_headers)
+        assert own_flow_response.status_code == status.HTTP_201_CREATED
+        own_flow_id = own_flow_response.json()["id"]
+
+        other_user_flow_id = uuid4()
+        async with session_scope() as session:
+            flow_create = FlowCreate(
+                id=other_user_flow_id,
+                name="Other user's flow",
+                description="Should stay hidden from paginated project reads",
+                data={},
+                folder_id=project_id,
+                user_id=uuid4(),
+            )
+            flow = Flow.model_validate(flow_create, from_attributes=True)
+            session.add(flow)
+            await session.commit()
+
+        response = await client.get(
+            f"api/v1/projects/{project_id}?page=1&size=10",
+            headers=logged_in_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+        result = response.json()
+        flow_ids = {flow["id"] for flow in result["flows"]["items"]}
+
+        assert own_flow_id in flow_ids
+        assert str(other_user_flow_id) not in flow_ids
+
 
 async def test_download_file_starter_project(client: AsyncClient, logged_in_headers, active_user, json_flow):
     """Test downloading a project with multiple flows.

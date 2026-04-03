@@ -268,7 +268,7 @@ async def read_project(
     try:
         # Check if pagination is explicitly requested by the user (both page and size provided)
         if page is not None and size is not None:
-            stmt = select(Flow).where(Flow.folder_id == project_id)
+            stmt = select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id)
 
             if Flow.updated_at is not None:
                 stmt = stmt.order_by(Flow.updated_at.desc())  # type: ignore[attr-defined]
