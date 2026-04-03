@@ -7,7 +7,7 @@ import pytest
 from lfx.__main__ import app
 from typer.testing import CliRunner
 
-runner = CliRunner(mix_stderr=False)
+runner = CliRunner()
 
 
 class TestExecuteRealFlows:
