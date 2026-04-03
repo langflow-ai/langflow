@@ -10,8 +10,8 @@ if TYPE_CHECKING:
     from lfx.components.models_and_agents.language_model import LanguageModelComponent
     from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
     from lfx.components.models_and_agents.memory import MemoryComponent
+    from lfx.components.models_and_agents.policies_component import PoliciesComponent
     from lfx.components.models_and_agents.prompt import PromptComponent
-    from lfx.components.policies import PoliciesComponent
 
 _dynamic_imports = {
     "AgentComponent": "agent",
@@ -20,7 +20,7 @@ _dynamic_imports = {
     "MCPToolsComponent": "mcp_component",
     "MemoryComponent": "memory",
     "PromptComponent": "prompt",
-    "PoliciesComponent": "policies",
+    "PoliciesComponent": "policies_component",
 }
 
 __all__ = [
