@@ -7,14 +7,16 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import type { ProviderAccount } from "@/pages/MainPage/pages/deploymentsPage/types";
-import type { FlowAttachment } from "./types";
+import type {
+  Deployment,
+  ProviderAccount,
+} from "@/pages/MainPage/pages/deploymentsPage/types";
 
 const NEW_DEPLOYMENT_VALUE = "__new__";
 
 interface DeploymentPhaseContentProps {
   selectedProvider: ProviderAccount | null;
-  attachments: FlowAttachment[];
+  deployments: Deployment[];
   selectedDeployment: string;
   onSelectDeployment: (id: string) => void;
   isLoading: boolean;
@@ -29,7 +31,7 @@ export { NEW_DEPLOYMENT_VALUE };
 
 export default function DeploymentPhaseContent({
   selectedProvider,
-  attachments,
+  deployments,
   selectedDeployment,
   onSelectDeployment,
   isLoading,
@@ -62,24 +64,22 @@ export default function DeploymentPhaseContent({
           value={selectedDeployment}
           onValueChange={onSelectDeployment}
         >
-          {attachments.map((attachment) => (
+          {deployments.map((deployment) => (
             <div
-              key={attachment.provider_snapshot_id}
+              key={deployment.id}
               className="flex items-center gap-3 rounded-lg border p-3"
             >
               <RadioGroupItem
-                value={attachment.provider_snapshot_id}
-                id={`deploy-${attachment.provider_snapshot_id}`}
+                value={deployment.id}
+                id={`deploy-${deployment.id}`}
               />
               <Label
-                htmlFor={`deploy-${attachment.provider_snapshot_id}`}
+                htmlFor={`deploy-${deployment.id}`}
                 className="flex flex-1 cursor-pointer flex-col gap-0.5"
               >
-                <span className="text-sm font-medium">
-                  {attachment.deployment_name}
-                </span>
+                <span className="text-sm font-medium">{deployment.name}</span>
                 <span className="text-xs text-muted-foreground">
-                  {attachment.deployment_type} deployment
+                  {deployment.type} deployment
                 </span>
               </Label>
             </div>

@@ -410,13 +410,13 @@ def test_base_mapper_shapes_deployment_list_result() -> None:
     assert shaped.provider_data == {
         "entries": [
             {
-                "resource_key": "dep-1",
+                "id": "dep-1",
                 "name": "Deployment 1",
                 "type": DeploymentType.AGENT,
                 "description": None,
                 "created_at": timestamp,
                 "updated_at": timestamp,
-                "provider_data": {"ok": True},
+                "ok": True,
             }
         ]
     }
@@ -490,7 +490,7 @@ def test_base_mapper_flow_version_item_data_defaults_to_none() -> None:
 
 
 def test_shape_deployment_list_items_without_filter() -> None:
-    """Without a flow filter, matched_attachments is None."""
+    """Without a flow filter, flow_version_ids is omitted."""
     mapper = BaseDeploymentMapper()
     provider_account_id = uuid4()
     row = SimpleNamespace(
@@ -511,11 +511,11 @@ def test_shape_deployment_list_items_without_filter() -> None:
     assert len(items) == 1
     assert items[0].provider_id == provider_account_id
     assert items[0].provider_key == "test-provider"
-    assert items[0].matched_attachments is None
+    assert items[0].flow_version_ids is None
 
 
 def test_shape_deployment_list_items_with_filter() -> None:
-    """With a flow filter, matched_attachments is populated from matched tuples."""
+    """With a flow filter, flow_version_ids is populated from matched tuples."""
     mapper = BaseDeploymentMapper()
     fv_id = uuid4()
     provider_account_id = uuid4()
@@ -537,14 +537,11 @@ def test_shape_deployment_list_items_with_filter() -> None:
     assert len(items) == 1
     assert items[0].provider_id == provider_account_id
     assert items[0].provider_key == "test-provider"
-    assert items[0].matched_attachments is not None
-    assert len(items[0].matched_attachments) == 1
-    assert items[0].matched_attachments[0].flow_version_id == fv_id
-    assert items[0].matched_attachments[0].provider_snapshot_id == "snap-1"
+    assert items[0].flow_version_ids == [fv_id]
 
 
 def test_shape_deployment_list_items_with_filter_empty_matches() -> None:
-    """With a flow filter active but no matches, matched_attachments is an empty list."""
+    """With a flow filter active but no matches, flow_version_ids is empty."""
     mapper = BaseDeploymentMapper()
     provider_account_id = uuid4()
     row = SimpleNamespace(
@@ -565,7 +562,7 @@ def test_shape_deployment_list_items_with_filter_empty_matches() -> None:
     assert len(items) == 1
     assert items[0].provider_id == provider_account_id
     assert items[0].provider_key == "test-provider"
-    assert items[0].matched_attachments == []
+    assert items[0].flow_version_ids == []
 
 
 def test_base_mapper_execution_provider_data_shapers_passthrough() -> None:

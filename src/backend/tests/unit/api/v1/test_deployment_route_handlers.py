@@ -842,12 +842,14 @@ class TestListDeploymentFlowVersionsRoute:
             ],
         )
 
+        flow_id = uuid4()
         response = await list_deployment_flow_versions(
             deployment_id=deployment_row.id,
             session=AsyncMock(),
             current_user=_fake_user(),
             page=2,
             size=5,
+            flow_ids=[flow_id],
         )
 
         assert response.page == 2
@@ -863,6 +865,7 @@ class TestListDeploymentFlowVersionsRoute:
         assert helper_kwargs["deployment_id"] == deployment_row.id
         assert helper_kwargs["page"] == 2
         assert helper_kwargs["size"] == 5
+        assert helper_kwargs["flow_ids"] == [flow_id]
         mapper.shape_flow_version_list_result.assert_called_once_with(
             rows=rows,
             snapshot_result=snapshot_result,

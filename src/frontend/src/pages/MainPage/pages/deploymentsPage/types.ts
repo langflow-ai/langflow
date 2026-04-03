@@ -42,11 +42,6 @@ export interface ProviderCredentials {
 
 export type DeploymentType = "agent" | "mcp";
 
-export interface DeploymentMatchedAttachment {
-  flow_version_id: string;
-  provider_snapshot_id?: string;
-}
-
 export interface Deployment {
   id: string;
   name: string;
@@ -57,7 +52,7 @@ export interface Deployment {
   provider_data?: Record<string, unknown>;
   resource_key: string;
   attached_count: number;
-  matched_attachments?: DeploymentMatchedAttachment[];
+  flow_version_ids?: string[];
   /** Populated client-side when merging deployments from multiple providers. */
   provider_account_id?: string;
 }

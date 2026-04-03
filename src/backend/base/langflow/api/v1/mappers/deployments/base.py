@@ -63,7 +63,6 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentFlowVersionListItem,
     DeploymentFlowVersionListResponse,
     DeploymentListItem,
-    DeploymentListItemAttachment,
     DeploymentListResponse,
     DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
@@ -320,15 +319,7 @@ class BaseDeploymentMapper:
                 attached_count=attached_count,
                 created_at=row.created_at,
                 updated_at=row.updated_at,
-                matched_attachments=[
-                    DeploymentListItemAttachment(
-                        flow_version_id=fv_id,
-                        provider_snapshot_id=snap_id,
-                    )
-                    for fv_id, snap_id in matched_attachments
-                ]
-                if has_flow_filter
-                else None,
+                flow_version_ids=[fv_id for fv_id, _ in matched_attachments] if has_flow_filter else None,
             )
             for row, attached_count, matched_attachments in rows_with_counts
         ]
@@ -653,21 +644,26 @@ class BaseDeploymentMapper:
         self,
         result: DeploymentListResult,
     ) -> DeploymentListResponse:
-        entries = [
-            {
-                "resource_key": str(item.id),
-                "name": item.name,
-                "type": item.type,
-                "description": getattr(item, "description", None),
-                "created_at": item.created_at,
-                "updated_at": item.updated_at,
-                "provider_data": self.shape_deployment_item_data(
-                    item.provider_data if isinstance(item.provider_data, dict) else None
-                ),
-            }
-            for item in result.deployments
-            if str(item.id).strip()
-        ]
+        entries = []
+        for item in result.deployments:
+            item_id = str(item.id).strip()
+            if not item_id:
+                continue
+            item_provider_data = (
+                self.shape_deployment_item_data(item.provider_data if isinstance(item.provider_data, dict) else None)
+                or {}
+            )
+            entries.append(
+                {
+                    "id": item_id,
+                    "name": item.name,
+                    "type": item.type,
+                    "description": getattr(item, "description", None),
+                    "created_at": item.created_at,
+                    "updated_at": item.updated_at,
+                    **item_provider_data,
+                }
+            )
         return DeploymentListResponse(
             deployments=[],
             page=1,

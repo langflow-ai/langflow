@@ -1343,7 +1343,18 @@ async def list_deployment_flow_versions(
     current_user: CurrentActiveUser,
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
+    flow_ids: Annotated[
+        FlowIdsQuery,
+        Query(
+            description=(
+                "Optional flow ids (pass as repeated query params, "
+                "e.g. ?flow_ids=id1). Currently limited to 1 value. "
+                "When provided, only attached flow versions belonging to the specified flow(s) are returned."
+            )
+        ),
+    ] = None,
 ):
+    normalized_flow_ids = normalize_flow_ids_query(flow_ids)
     deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
@@ -1362,6 +1373,7 @@ async def list_deployment_flow_versions(
             db=session,
             page=page,
             size=size,
+            flow_ids=normalized_flow_ids or None,
         )
     return deployment_mapper.shape_flow_version_list_result(
         rows=rows,

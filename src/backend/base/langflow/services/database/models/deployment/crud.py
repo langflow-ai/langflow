@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.adapters.deployment.schema import DEPLOYMENT_DESCRIPTION_MAX_LENGTH
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select
 
@@ -29,6 +30,14 @@ def _strip_or_raise(value: str, field_name: str) -> str:
     return stripped
 
 
+def _validate_description_max_length(description: str | None) -> str | None:
+    """Reject descriptions that exceed the deployment max length."""
+    if description is not None and len(description) > DEPLOYMENT_DESCRIPTION_MAX_LENGTH:
+        msg = f"description must be at most {DEPLOYMENT_DESCRIPTION_MAX_LENGTH} characters"
+        raise ValueError(msg)
+    return description
+
+
 async def create_deployment(
     db: AsyncSession,
     *,
@@ -42,6 +51,7 @@ async def create_deployment(
 ) -> Deployment:
     resource_key_s = _strip_or_raise(resource_key, "resource_key")
     name_s = _strip_or_raise(name, "name")
+    description_s = _validate_description_max_length(description)
 
     row = Deployment(
         user_id=user_id,
@@ -50,7 +60,7 @@ async def create_deployment(
         resource_key=resource_key_s,
         name=name_s,
         deployment_type=deployment_type,
-        description=description,
+        description=description_s,
     )
     db.add(row)
     try:
@@ -127,7 +137,7 @@ async def update_deployment(
     if deployment_type is not _UNSET:
         deployment.deployment_type = deployment_type  # type: ignore[assignment]
     if description is not _UNSET:
-        deployment.description = description  # type: ignore[assignment]
+        deployment.description = _validate_description_max_length(description)  # type: ignore[assignment]
     deployment.updated_at = datetime.now(timezone.utc)
     db.add(deployment)
     try:

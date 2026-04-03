@@ -1631,6 +1631,39 @@ class TestListDeploymentFlowVersionsSynced:
         mock_sync_snapshot_ids.assert_not_awaited()
         mock_count_attachments.assert_awaited_once()
 
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployment_attachments", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.list_deployment_attachments_with_versions", new_callable=AsyncMock, return_value=[])
+    @patch(f"{MODULE}.list_deployment_attachments", new_callable=AsyncMock, return_value=[])
+    async def test_forwards_flow_ids_filter_to_attachment_queries(
+        self,
+        mock_list_attachments,
+        mock_list_with_versions,
+        mock_count_attachments,
+    ):
+        deployment_id = uuid4()
+        flow_id = uuid4()
+        adapter = AsyncMock()
+        mapper = WatsonxOrchestrateDeploymentMapper()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployment_flow_versions_synced
+
+        await list_deployment_flow_versions_synced(
+            deployment_adapter=adapter,
+            deployment_mapper=mapper,
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            deployment_id=deployment_id,
+            db=AsyncMock(),
+            page=1,
+            size=10,
+            flow_ids=[flow_id],
+        )
+
+        assert mock_list_attachments.call_args.kwargs["flow_ids"] == [flow_id]
+        assert mock_list_with_versions.call_args.kwargs["flow_ids"] == [flow_id]
+        assert mock_count_attachments.call_args.kwargs["flow_ids"] == [flow_id]
+
 
 # ---------------------------------------------------------------------------
 # flow_version_deployment_attachment CRUD helpers

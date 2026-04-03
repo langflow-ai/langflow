@@ -31,7 +31,7 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from lfx.services.adapters.deployment.schema import DeploymentType
+from lfx.services.adapters.deployment.schema import DEPLOYMENT_DESCRIPTION_MAX_LENGTH, DeploymentType
 from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, model_validator
 
 from langflow.services.database.models.deployment_provider_account.schemas import (
@@ -128,7 +128,6 @@ def _validate_flow_ids(values: list[UUID] | None) -> list[UUID] | None:
 
 FlowIdsQuery = Annotated[list[UUID] | None, AfterValidator(_validate_flow_ids)]
 """Query parameter type that validates and cleans an optional list of flow id UUIDs (max 1 today)."""
-
 
 # ---------------------------------------------------------------------------
 # Provider sub-resource schemas
@@ -227,8 +226,8 @@ class DeploymentLlmListResponse(BaseModel):
     )
 
 
-class _DeploymentResponseBase(BaseModel):
-    """Shared fields for deployment response schemas."""
+class _DeploymentResponseCommon(BaseModel):
+    """Shared non-provider-data fields for deployment response schemas."""
 
     id: UUID = Field(description="Langflow DB deployment UUID.")
     provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
@@ -238,13 +237,18 @@ class _DeploymentResponseBase(BaseModel):
     type: DeploymentType
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+class _DeploymentResponseWithProviderData(_DeploymentResponseCommon):
+    """Shared fields for responses that include provider_data."""
+
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description="Provider-owned opaque payload returned by the deployment provider.",
     )
 
 
-class DeploymentGetResponse(_DeploymentResponseBase):
+class DeploymentGetResponse(_DeploymentResponseWithProviderData):
     """Full deployment detail.
 
     Intentionally separate from ``DeploymentListItem`` even though both
@@ -257,20 +261,7 @@ class DeploymentGetResponse(_DeploymentResponseBase):
     attached_count: int = Field(default=0, ge=0, description="Number of flow versions attached to this deployment.")
 
 
-class DeploymentListItemAttachment(BaseModel):
-    """A matched flow-version attachment on a deployment list item.
-
-    Populated only when a ``flow_ids`` or ``flow_version_ids`` filter is
-    active, giving the caller the attachment-level detail it needs
-    (e.g. the ``provider_snapshot_id`` required by the snapshot-update
-    endpoint) without a second round-trip.
-    """
-
-    flow_version_id: UUID
-    provider_snapshot_id: str | None = None
-
-
-class DeploymentListItem(_DeploymentResponseBase):
+class DeploymentListItem(_DeploymentResponseCommon):
     """Deployment representation used in list responses.
 
     See ``DeploymentGetResponse`` docstring for rationale on the separate class.
@@ -278,11 +269,11 @@ class DeploymentListItem(_DeploymentResponseBase):
 
     resource_key: str = Field(description="Langflow-persisted stable provider resource identifier.")
     attached_count: int = Field(default=0, ge=0, description="Number of flow versions attached to this deployment.")
-    matched_attachments: list[DeploymentListItemAttachment] | None = Field(
+    flow_version_ids: list[UUID] | None = Field(
         default=None,
         description=(
-            "Flow-version attachments that matched the active flow_ids or "
-            "flow_version_ids filter.  None when no such filter is active."
+            "Flow-version ids that matched the active flow_ids or "
+            "flow_version_ids filter. Omitted when no such filter is active."
         ),
     )
 
@@ -359,15 +350,15 @@ class DeploymentFlowVersionListResponse(_PaginatedResponse):
     flow_versions: list[DeploymentFlowVersionListItem]
 
 
-class DeploymentCreateResponse(_DeploymentResponseBase):
+class DeploymentCreateResponse(_DeploymentResponseWithProviderData):
     """API response for deployment creation."""
 
 
-class DeploymentUpdateResponse(_DeploymentResponseBase):
+class DeploymentUpdateResponse(_DeploymentResponseWithProviderData):
     """API response for deployment update."""
 
 
-class DeploymentStatusResponse(_DeploymentResponseBase):
+class DeploymentStatusResponse(_DeploymentResponseWithProviderData):
     """API response for deployment status/health."""
 
 
@@ -381,7 +372,11 @@ class DeploymentCreateRequest(BaseModel):
 
     provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
     name: NonEmptyStr = Field(description="Deployment display name.")
-    description: str = Field(default="", description="Deployment description.")
+    description: str = Field(
+        default="",
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        description="Deployment description.",
+    )
     type: DeploymentType = Field(description="Deployment type.")
     project_id: UUID | None = Field(
         default=None,
@@ -397,7 +392,11 @@ class DeploymentUpdateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     name: NonEmptyStr | None = Field(default=None, description="Updated deployment display name.")
-    description: str | None = Field(default=None, description="Updated deployment description.")
+    description: str | None = Field(
+        default=None,
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        description="Updated deployment description.",
+    )
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description="Provider-owned opaque update payload.",

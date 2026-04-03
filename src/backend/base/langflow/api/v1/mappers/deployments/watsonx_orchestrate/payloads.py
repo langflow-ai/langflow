@@ -388,13 +388,29 @@ class WatsonxApiDeploymentLlmListResultData(BaseModel):
 class WatsonxApiProviderDeploymentListItem(BaseModel):
     """Provider-only deployment item returned in list provider_data."""
 
-    resource_key: str = Field(min_length=1, description="Provider-owned deployment identifier.")
+    model_config = {"extra": "forbid"}
+
+    id: str = Field(min_length=1, description="Provider-owned deployment identifier.")
     name: str
     type: DeploymentType
     description: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
-    provider_data: dict[str, Any] | None = None
+    tool_ids: list[str] = Field(default_factory=list)
+    environment: str | None = None
+
+    @field_validator("tool_ids", mode="before")
+    @classmethod
+    def normalize_tool_ids(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        return [normalized for tool_id in value if (normalized := str(tool_id).strip())]
+
+    @field_validator("environment", mode="before")
+    @classmethod
+    def normalize_environment(cls, value: Any) -> str | None:
+        normalized = str(value or "").strip()
+        return normalized or None
 
 
 class WatsonxApiDeploymentListProviderData(BaseModel):

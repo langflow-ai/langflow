@@ -358,7 +358,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     data=agent,
                     deployment_type=DeploymentType.AGENT,
                     provider_data={
-                        "snapshot_ids": extract_agent_tool_ids(agent),
+                        "tool_ids": extract_agent_tool_ids(agent),
                         "environment": derive_agent_environment(agent),
                     },
                 )

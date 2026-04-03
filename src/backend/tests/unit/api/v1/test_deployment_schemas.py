@@ -7,12 +7,12 @@ from uuid import uuid4
 
 import pytest
 from langflow.api.v1.schemas.deployments import (
+    DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
     DeploymentConfigListResponse,
     DeploymentCreateRequest,
     DeploymentFlowVersionListItem,
     DeploymentFlowVersionListResponse,
     DeploymentListItem,
-    DeploymentListItemAttachment,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountUpdateRequest,
@@ -217,6 +217,10 @@ class TestDeploymentUpdateRequest:
         with pytest.raises(ValidationError, match="At least one of"):
             DeploymentUpdateRequest(description=None)
 
+    def test_rejects_description_over_max_length(self):
+        with pytest.raises(ValidationError, match="at most"):
+            DeploymentUpdateRequest(description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1))
+
 
 class TestDeploymentSpecPayloadCompatibility:
     def test_create_request_rejects_provider_spec_dict(self):
@@ -238,6 +242,16 @@ class TestDeploymentSpecPayloadCompatibility:
             provider_data={"operations": []},
         )
         assert request.provider_data == {"operations": []}
+
+    def test_create_request_rejects_description_over_max_length(self):
+        with pytest.raises(ValidationError, match="at most"):
+            DeploymentCreateRequest(
+                provider_id=uuid4(),
+                name="deployment",
+                description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1),
+                type="agent",
+                provider_data={"operations": []},
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -420,24 +434,11 @@ class TestFlowIdsQueryValidation:
 
 
 # ---------------------------------------------------------------------------
-# DeploymentListItemAttachment / matched_attachments
+# DeploymentListItem.flow_version_ids
 # ---------------------------------------------------------------------------
 
 
-class TestDeploymentListItemAttachment:
-    def test_basic_construction(self):
-        fv_id = uuid4()
-        att = DeploymentListItemAttachment(flow_version_id=fv_id, provider_snapshot_id="snap-1")
-        assert att.flow_version_id == fv_id
-        assert att.provider_snapshot_id == "snap-1"
-
-    def test_provider_snapshot_id_defaults_to_none(self):
-        fv_id = uuid4()
-        att = DeploymentListItemAttachment(flow_version_id=fv_id)
-        assert att.provider_snapshot_id is None
-
-
-class TestDeploymentListItemMatchedAttachments:
+class TestDeploymentListItemFlowVersionIds:
     def _make_item(self, **kwargs):
         defaults = {
             "id": uuid4(),
@@ -452,18 +453,15 @@ class TestDeploymentListItemMatchedAttachments:
 
     def test_defaults_to_none(self):
         item = self._make_item()
-        assert item.matched_attachments is None
+        assert item.flow_version_ids is None
 
-    def test_accepts_attachment_list(self):
+    def test_accepts_flow_version_ids_list(self):
         fv_id = uuid4()
         item = self._make_item(
-            matched_attachments=[
-                DeploymentListItemAttachment(flow_version_id=fv_id, provider_snapshot_id="snap-1"),
-            ],
+            flow_version_ids=[fv_id],
         )
-        assert len(item.matched_attachments) == 1
-        assert item.matched_attachments[0].flow_version_id == fv_id
+        assert item.flow_version_ids == [fv_id]
 
     def test_accepts_empty_list(self):
-        item = self._make_item(matched_attachments=[])
-        assert item.matched_attachments == []
+        item = self._make_item(flow_version_ids=[])
+        assert item.flow_version_ids == []

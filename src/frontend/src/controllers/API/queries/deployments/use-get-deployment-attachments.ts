@@ -27,21 +27,26 @@ export interface DeploymentFlowVersionListResponse {
 
 interface GetDeploymentAttachmentsParams {
   deploymentId: string;
+  flow_ids?: string;
 }
 
 export const useGetDeploymentAttachments: useQueryFunctionType<
   GetDeploymentAttachmentsParams,
   DeploymentFlowVersionListResponse
-> = ({ deploymentId }, options) => {
+> = ({ deploymentId, flow_ids }, options) => {
   const { query } = UseRequestProcessor();
 
   const fn = async (): Promise<DeploymentFlowVersionListResponse> => {
     const { data } = await api.get<DeploymentFlowVersionListResponse>(
       `${getURL("DEPLOYMENTS")}/${deploymentId}/flows`,
-      { params: { size: 50 } },
+      { params: { size: 50, flow_ids } },
     );
     return data;
   };
 
-  return query(["useGetDeploymentAttachments", { deploymentId }], fn, options);
+  return query(
+    ["useGetDeploymentAttachments", { deploymentId, flow_ids }],
+    fn,
+    options,
+  );
 };

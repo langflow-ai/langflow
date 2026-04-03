@@ -34,6 +34,7 @@ from lfx.services.adapters.payload import (
     PayloadSlotPolicy,
 )
 from lfx.services.adapters.schema import AdapterType
+from pydantic import ValidationError
 
 from langflow.api.v1.mappers.deployments.base import (
     BaseDeploymentMapper,
@@ -68,6 +69,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiDeploymentUpdatePayload,
     WatsonxApiDeploymentUpdateResultData,
     WatsonxApiFlowArtifactProviderData,
+    WatsonxApiProviderDeploymentListItem,
     WatsonxApiRemoveToolByIdOperation,
     WatsonxApiRemoveToolOperation,
     WatsonxApiSnapshotListProviderData,
@@ -1143,15 +1145,28 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         if item_provider_data is not None and not isinstance(item_provider_data, dict):
             msg = "Invalid deployment list item provider_data payload: expected object or null."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        return {
-            "resource_key": str(item.id),
-            "name": item.name,
-            "type": item.type,
-            "description": getattr(item, "description", None),
-            "created_at": item.created_at,
-            "updated_at": item.updated_at,
-            "provider_data": self.shape_deployment_item_data(item_provider_data),
-        }
+        try:
+            return WatsonxApiProviderDeploymentListItem.model_validate(
+                {
+                    "id": str(item.id),
+                    "name": item.name,
+                    "type": item.type,
+                    "description": getattr(item, "description", None),
+                    "created_at": item.created_at,
+                    "updated_at": item.updated_at,
+                    **(item_provider_data or {}),
+                }
+            ).model_dump(
+                mode="json",
+                exclude_none=True,
+            )
+        except ValidationError as exc:
+            first_error = exc.errors()[0] if exc.errors() else {}
+            detail = str(first_error.get("msg") or exc)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Invalid deployment list item provider_data payload: {detail}",
+            ) from exc
 
     def _parse_required_payload_slot(
         self,

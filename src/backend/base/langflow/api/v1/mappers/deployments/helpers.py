@@ -1037,6 +1037,7 @@ async def list_deployment_flow_versions_synced(
     db: DbSession,
     page: int,
     size: int,
+    flow_ids: list[UUID] | None = None,
 ) -> tuple[list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]], int, SnapshotListResult | None]:
     """Return a paginated deployment attachment view synced against provider snapshots.
 
@@ -1048,6 +1049,7 @@ async def list_deployment_flow_versions_synced(
         db,
         user_id=user_id,
         deployment_id=deployment_id,
+        flow_ids=flow_ids,
     )
     snapshot_result: SnapshotListResult | None = None
     snapshot_ids = list(dict.fromkeys(deployment_mapper.util_snapshot_ids_to_verify(attachments)))
@@ -1085,11 +1087,13 @@ async def list_deployment_flow_versions_synced(
         deployment_id=deployment_id,
         offset=page_offset(page, size),
         limit=size,
+        flow_ids=flow_ids,
     )
     total = await count_deployment_attachments(
         db,
         user_id=user_id,
         deployment_id=deployment_id,
+        flow_ids=flow_ids,
     )
     return rows, total, snapshot_result
 

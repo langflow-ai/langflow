@@ -45,6 +45,7 @@ DeploymentProviderName = Annotated[
 
 NormalizedId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 IdLike = UUID | NormalizedId
+DEPLOYMENT_DESCRIPTION_MAX_LENGTH = 500
 
 
 class DeploymentType(str, Enum):
@@ -338,7 +339,11 @@ class BaseDeploymentData(BaseModel):
     """Model representing a data for a deployment."""
 
     name: str = Field(description="The name of the deployment")
-    description: str = Field(default="", description="The description of the deployment")
+    description: str = Field(
+        default="",
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        description="The description of the deployment",
+    )
     type: DeploymentType = Field(description="The type of the deployment")
 
 
@@ -526,7 +531,11 @@ class BaseDeploymentDataUpdate(BaseModel):
     """Deployment base update payload."""
 
     name: str | None = Field(None, description="The name of the deployment")
-    description: str | None = Field(None, description="The description of the deployment")
+    description: str | None = Field(
+        None,
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        description="The description of the deployment",
+    )
 
     @model_validator(mode="after")
     def validate_has_changes(self) -> "BaseDeploymentDataUpdate":
