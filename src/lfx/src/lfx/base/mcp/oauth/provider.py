@@ -152,20 +152,27 @@ class OAuthAuthWrapper(httpx.Auth):
 
         This method wraps the underlying provider's async_auth_flow and
         monitors for 401 responses to clear invalid cached tokens.
+
+        Token clearing is deferred until the SDK's own auth flow has
+        finished (e.g., after attempting a token refresh). Only if the
+        final response is still 401 are the cached tokens removed.
         """
         # Delegate to the underlying provider's async_auth_flow
         flow = self._provider.async_auth_flow(request)
 
         request = await flow.__anext__()
+        response = None
         while True:
             response = yield request
-            # Check for 401 and clear tokens if needed
-            if response.status_code == HTTPStatus.UNAUTHORIZED and not self._tokens_cleared:
-                await self._clear_tokens_on_401(response)
             try:
                 request = await flow.asend(response)
             except StopAsyncIteration:
                 break
+
+        # Only clear tokens after the SDK has exhausted its own
+        # retry/refresh logic and the final response is still 401
+        if response is not None and response.status_code == HTTPStatus.UNAUTHORIZED and not self._tokens_cleared:
+            await self._clear_tokens_on_401(response)
 
     async def _clear_tokens_on_401(self, response: httpx.Response) -> None:
         """Clear cached tokens when a 401 response is received.
