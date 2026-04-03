@@ -22,6 +22,7 @@ GP_INSTANCE = os.getenv("GP_INSTANCE", "langflow-test")
 GP_BUNDLE = os.getenv("GP_BUNDLE", "langflow-ui")
 TARGET_LANGS = ["fr", "ja", "es", "de", "pt", "zh-Hans"]
 REQUEST_TIMEOUT = 30
+VERIFY_SSL = os.getenv("GP_VERIFY_SSL", "true").lower() != "false"
 
 
 def get_headers(url, method, body=None):
@@ -57,7 +58,7 @@ def get_headers(url, method, body=None):
 def list_bundles():
     """List all bundles in the GP instance."""
     url = f"{BASE_URL}/{GP_INSTANCE}/v2/bundles"
-    response = requests.get(url, headers=get_headers(url, "GET"), verify=False, timeout=REQUEST_TIMEOUT)  # noqa: S501
+    response = requests.get(url, headers=get_headers(url, "GET"), verify=VERIFY_SSL, timeout=REQUEST_TIMEOUT)
     response.raise_for_status()
     return response.json()
 
@@ -70,7 +71,7 @@ def create_bundle(source_lang="en"):
         url,
         headers=get_headers(url, "PUT", body),
         json=body,
-        verify=False,  # noqa: S501
+        verify=VERIFY_SSL,
         timeout=REQUEST_TIMEOUT,
     )
     response.raise_for_status()
@@ -84,7 +85,7 @@ def upload_strings(strings, lang="en"):
         url,
         headers=get_headers(url, "PUT", strings),
         json=strings,
-        verify=False,  # noqa: S501
+        verify=VERIFY_SSL,
         timeout=REQUEST_TIMEOUT,
     )
     response.raise_for_status()
@@ -94,6 +95,6 @@ def upload_strings(strings, lang="en"):
 def get_strings(lang):
     """Download translated strings for a language from GP."""
     url = f"{BASE_URL}/{GP_INSTANCE}/v2/bundles/{GP_BUNDLE}/{lang}"
-    response = requests.get(url, headers=get_headers(url, "GET"), verify=False, timeout=REQUEST_TIMEOUT)  # noqa: S501
+    response = requests.get(url, headers=get_headers(url, "GET"), verify=VERIFY_SSL, timeout=REQUEST_TIMEOUT)
     response.raise_for_status()
     return response.json()

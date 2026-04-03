@@ -74,6 +74,7 @@ class Message(Data):
     category: Literal["message", "error", "warning", "info"] | None = "message"
     content_blocks: list[ContentBlock] = Field(default_factory=list)
     duration: int | None = None
+    session_metadata: dict | None = None
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -231,6 +232,7 @@ class Message(Data):
             flow_id=data.flow_id,
             error=data.error,
             edit=data.edit,
+            session_metadata=getattr(data, "session_metadata", None),
         )
 
     @field_serializer("text", mode="plain")
@@ -430,6 +432,7 @@ class MessageResponse(DefaultModel):
     properties: Properties | None = None
     category: str | None = None
     content_blocks: list[ContentBlock] | None = None
+    session_metadata: dict | None = None
 
     @field_validator("content_blocks", mode="before")
     @classmethod
@@ -483,6 +486,7 @@ class MessageResponse(DefaultModel):
             files=message.files or [],
             timestamp=message.timestamp,
             flow_id=flow_id,
+            session_metadata=getattr(message, "session_metadata", None),
         )
 
 
@@ -534,6 +538,7 @@ class ErrorMessage(Message):
         source: Source | None = None,
         trace_name: str | None = None,
         flow_id: UUID | str | None = None,
+        session_metadata: dict | None = None,
     ) -> None:
         # This is done to avoid circular imports
         if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
@@ -580,6 +585,7 @@ class ErrorMessage(Message):
                 )
             ],
             flow_id=flow_id,
+            session_metadata=session_metadata,
         )
 
 

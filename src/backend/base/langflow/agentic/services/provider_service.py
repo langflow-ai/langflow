@@ -20,7 +20,7 @@ PREFERRED_PROVIDERS = ["Anthropic", "OpenAI", "Google Generative AI", "Groq"]
 # Default models per provider
 DEFAULT_MODELS: dict[str, str] = {
     "Anthropic": "claude-sonnet-4-5-20250514",
-    "OpenAI": "gpt-5.2",
+    "OpenAI": "gpt-5.4",
     "Google Generative AI": "gemini-2.0-flash",
     "Groq": "llama-3.3-70b-versatile",
 }

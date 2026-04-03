@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { SidebarSection } from "@/components/ui/sidebar";
+import enTranslations from "@/locales/en.json";
 import SidebarSegmentedNav, { NAV_ITEMS } from "../sidebarSegmentedNav";
 
 const mockNavigate = jest.fn();
@@ -175,7 +176,9 @@ describe("SidebarSegmentedNav", () => {
     NAV_ITEMS.forEach((item) => {
       const tooltips = screen.getAllByTestId("tooltip");
       const itemTooltip = tooltips.find(
-        (tooltip) => tooltip.getAttribute("data-content") === item.tooltip,
+        (tooltip) =>
+          tooltip.getAttribute("data-content") ===
+          enTranslations[item.tooltip as keyof typeof enTranslations],
       );
       expect(itemTooltip).toBeInTheDocument();
       expect(itemTooltip).toHaveAttribute("data-side", "right");
@@ -307,7 +310,9 @@ describe("SidebarSegmentedNav", () => {
       const button = screen.getByTestId(`sidebar-nav-${item.id}`);
       // Check for screen reader only text
       const srOnlySpan = button.querySelector(".sr-only");
-      expect(srOnlySpan).toHaveTextContent(item.label);
+      expect(srOnlySpan).toHaveTextContent(
+        enTranslations[item.label as keyof typeof enTranslations],
+      );
     });
   });
 
@@ -397,32 +402,32 @@ describe("SidebarSegmentedNav", () => {
     expect(NAV_ITEMS[0]).toEqual({
       id: "search",
       icon: "search",
-      label: "Search",
-      tooltip: "Search",
+      label: "sidebar.nav.search",
+      tooltip: "sidebar.nav.search",
     });
     expect(NAV_ITEMS[3]).toEqual({
       id: "bundles",
       icon: "blocks",
-      label: "Bundles",
-      tooltip: "Bundles",
+      label: "sidebar.nav.bundles",
+      tooltip: "sidebar.nav.bundles",
     });
     expect(NAV_ITEMS[4]).toEqual({
       id: "add_note",
       icon: "sticky-note",
-      label: "Sticky Notes",
-      tooltip: "Add Sticky Notes",
+      label: "sidebar.nav.stickyNotes",
+      tooltip: "sidebar.nav.addStickyNotes",
     });
     expect(NAV_ITEMS[5]).toEqual({
       id: "versions",
       icon: "History",
-      label: "Versions",
-      tooltip: "Version History",
+      label: "sidebar.nav.versions",
+      tooltip: "sidebar.nav.versionHistory",
     });
     expect(NAV_ITEMS[6]).toEqual({
       id: "traces",
       icon: "Activity",
-      label: "Traces",
-      tooltip: "Traces",
+      label: "sidebar.nav.traces",
+      tooltip: "sidebar.nav.traces",
     });
   });
 

@@ -1,14 +1,15 @@
 name: GP Download Translations
 
 on:
-  schedule:
-    - cron: "0 6 * * *"  # Daily at 6am UTC
   workflow_dispatch:
 
 jobs:
-  download:
+  frontend:
     runs-on: ubuntu-latest
-    name: Download translations from Globalization Pipeline
+    name: Download frontend translations from GP
+    environment: GP-test
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -22,15 +23,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r scripts/gp/requirements.txt
 
-      - name: Download translations from GP
+      - name: Download frontend translations from GP
         working-directory: scripts/gp
         env:
           GP_ADMIN_USER_ID: ${{ secrets.GP_ADMIN_USER_ID }}
           GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
-          GP_INSTANCE: ${{ secrets.GP_INSTANCE }}
-          GP_BUNDLE: ${{ secrets.GP_BUNDLE }}
-        run: |
-          python download_translations.py --output ../../src/frontend/src/locales/
+          GP_INSTANCE: ${{ vars.GP_INSTANCE }}
+          GP_BUNDLE: ${{ vars.GP_BUNDLE }}
+        run: python download_translations.py --output ../../src/frontend/src/locales/
 
       - name: Commit and push translated files
         run: |
@@ -38,4 +38,42 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add src/frontend/src/locales/*.json
           git diff --staged --quiet || git commit -m "chore: update translations from Globalization Pipeline [skip ci]"
+          git push
+
+  backend:
+    runs-on: ubuntu-latest
+    name: Download backend translations from GP
+    environment: GP-test
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r scripts/gp/requirements.txt
+
+      - name: Download backend translations from GP
+        working-directory: scripts/gp
+        env:
+          GP_ADMIN_USER_ID: ${{ secrets.GP_ADMIN_USER_ID }}
+          GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
+          GP_INSTANCE: ${{ vars.GP_INSTANCE }}
+          GP_BACKEND_BUNDLE: ${{ vars.GP_BACKEND_BUNDLE }}
+        run: python download_backend_translations.py --output ../../src/backend/base/langflow/locales/
+
+      - name: Commit and push translated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/backend/base/langflow/locales/*.json
+          git diff --staged --quiet || git commit -m "chore: update backend translations from Globalization Pipeline [skip ci]"
           git push

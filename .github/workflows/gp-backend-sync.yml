@@ -1,0 +1,125 @@
+name: GP Backend Sync
+
+on:
+  pull_request:
+    paths:
+      - "src/lfx/src/lfx/components/**"
+      - "src/backend/base/langflow/locales/en.json"
+  push:
+    branches:
+      - main
+      - release-**
+    paths:
+      - "src/lfx/src/lfx/components/**"
+      - "src/backend/base/langflow/locales/en.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Runs on PR: extract and auto-commit en.json to the PR branch ──────────
+  auto-commit-pr:
+    if: github.event_name == 'pull_request' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    name: Auto-generate backend locales/en.json on PR
+    environment: GP-test
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.12"
+
+      - name: Install workspace (lfx + langflow-base)
+        run: uv sync --no-dev
+
+      - name: Generate en.json
+        run: uv run python scripts/gp/extract_backend_strings.py
+
+      - name: Check if en.json changed
+        id: diff
+        run: |
+          git diff --quiet src/backend/base/langflow/locales/en.json \
+            && echo "changed=false" >> $GITHUB_OUTPUT \
+            || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit updated en.json to PR branch
+        if: |
+          steps.diff.outputs.changed == 'true' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/backend/base/langflow/locales/en.json
+          git commit -m "chore: auto-regenerate backend locales/en.json"
+          git push
+
+  # ── Runs on push to main/release-**: extract, commit, upload to GP ────────
+  sync-and-upload:
+    if: |
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    name: Generate, commit, and upload backend strings
+    environment: GP-test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.12"
+
+      - name: Install workspace (lfx + langflow-base)
+        run: uv sync --no-dev
+
+      - name: Generate en.json
+        run: uv run python scripts/gp/extract_backend_strings.py
+
+      - name: Check if en.json changed
+        id: diff
+        run: |
+          git diff --quiet src/backend/base/langflow/locales/en.json \
+            && echo "changed=false" >> $GITHUB_OUTPUT \
+            || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit updated en.json
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/backend/base/langflow/locales/en.json
+          git commit -m "chore: auto-regenerate backend locales/en.json"
+          git push
+
+      - name: Set up Python for GP upload
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install GP dependencies
+        run: pip install -r scripts/gp/requirements.txt
+
+      - name: Upload strings to GP
+        working-directory: scripts/gp
+        env:
+          GP_ADMIN_USER_ID: ${{ secrets.GP_ADMIN_USER_ID }}
+          GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
+          GP_INSTANCE: ${{ vars.GP_INSTANCE }}
+          GP_BACKEND_BUNDLE: ${{ vars.GP_BACKEND_BUNDLE }}
+        run: python upload_backend_strings.py
