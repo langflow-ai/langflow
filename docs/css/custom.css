@@ -77,7 +77,7 @@ html[data-theme="light"] .navbar__logo {
 }
 
 .theme-doc-sidebar-container nav.menu {
-  padding-left: 0.5rem;
+  padding-left: 0.75rem;
   padding-right: 0.75rem;
 }
 
@@ -644,13 +644,19 @@ html[data-theme="light"] .sidebar-group-label {
 
 .sidebar-category-with-icon > .menu__list-item-collapsible > .menu__link::before {
   content: "";
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
   display: inline-block;
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
+  -webkit-mask-size: 18px 18px;
+  mask-size: 18px 18px;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
   opacity: 0.45;
 }
 
