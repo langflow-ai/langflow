@@ -57,6 +57,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiAgentExecutionStatusResultData,
     WatsonxApiBindOperation,
     WatsonxApiBindToolOperation,
+    WatsonxApiConfigListProviderData,
     WatsonxApiDeploymentCreatePayload,
     WatsonxApiDeploymentCreateResultData,
     WatsonxApiDeploymentFlowVersionItemData,
@@ -67,6 +68,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiFlowArtifactProviderData,
     WatsonxApiRemoveToolByIdOperation,
     WatsonxApiRemoveToolOperation,
+    WatsonxApiSnapshotListProviderData,
     WatsonxApiToolAppBinding,
     WatsonxApiUnbindOperation,
     WatsonxApiUnbindToolOperation,
@@ -135,6 +137,14 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         ),
         deployment_list_result=PayloadSlot(
             adapter_model=WatsonxApiDeploymentListProviderData,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
+        config_list_result=PayloadSlot(
+            adapter_model=WatsonxApiConfigListProviderData,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
+        snapshot_list_result=PayloadSlot(
+            adapter_model=WatsonxApiSnapshotListProviderData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
         deployment_item_data=PayloadSlot(

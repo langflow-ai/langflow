@@ -713,12 +713,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                         name=config_name,
                         created_at=connection.get("created_at"),
                         updated_at=connection.get("updated_at"),
-                        provider_data=connection,
                     )
                 )
             return ConfigListResult(
                 configs=configs,
-                provider_result={"scope": "tenant"},
+                provider_result=self.payload_schemas.config_list_result.parse({}).model_dump(exclude_none=True),
             )
 
         agent_id = _require_single_deployment_id(params, resource_label="config")
@@ -741,7 +740,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if not tool_ids:
             return ConfigListResult(
                 configs=[],
-                provider_result={"deployment_id": agent_id, "tool_ids": []},
+                provider_result=self.payload_schemas.config_list_result.parse(
+                    {"deployment_id": agent_id, "tool_ids": []}
+                ).model_dump(exclude_none=True),
             )
 
         tools: list[dict]
@@ -766,7 +767,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         return ConfigListResult(
             configs=[ConfigListItem(id=app_id, name=app_id) for app_id in app_ids],
-            provider_result={"deployment_id": agent_id},
+            provider_result=self.payload_schemas.config_list_result.parse({"deployment_id": agent_id}).model_dump(
+                exclude_none=True
+            ),
         )
 
     async def list_snapshots(
@@ -822,7 +825,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             ]
             return SnapshotListResult(
                 snapshots=snapshots,
-                provider_result={"scope": "tenant"},
+                provider_result=self.payload_schemas.snapshot_list_result.parse({}).model_dump(exclude_none=True),
             )
 
         agent_id = _require_single_deployment_id(params, resource_label="snapshot")
@@ -875,7 +878,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         return SnapshotListResult(
             snapshots=snapshots,
-            provider_result={"deployment_id": agent_id},
+            provider_result=self.payload_schemas.snapshot_list_result.parse({"deployment_id": agent_id}).model_dump(
+                exclude_none=True
+            ),
         )
 
     async def _list_snapshots_by_ids(

@@ -320,7 +320,6 @@ class ConfigListItem(BaseModel):
     name: str = Field(description="The name of the config item")
     created_at: datetime.datetime | None = Field(None, description="The created timestamp of the config item")
     updated_at: datetime.datetime | None = Field(None, description="The last updated timestamp of the config item")
-    provider_data: dict | None = Field(None, description="The data of the config item from the provider")
 
 
 class ProviderDataModel(BaseModel, Generic[T_ProviderData]):

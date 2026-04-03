@@ -7,7 +7,6 @@ from uuid import uuid4
 
 import pytest
 from langflow.api.v1.schemas.deployments import (
-    DeploymentConfigListItem,
     DeploymentConfigListResponse,
     DeploymentCreateRequest,
     DeploymentFlowVersionListItem,
@@ -265,57 +264,79 @@ class TestDeploymentSpecPayloadCompatibility:
 
 
 # ---------------------------------------------------------------------------
-# DeploymentConfigListItem / DeploymentConfigListResponse
+# DeploymentConfigListResponse / DeploymentSnapshotListResponse
 # ---------------------------------------------------------------------------
 
 
-class TestDeploymentConfigListItem:
-    def test_accepts_minimal_fields(self):
-        item = DeploymentConfigListItem(id="cfg_1", name="Config")
-        assert item.id == "cfg_1"
-        assert item.name == "Config"
-        assert item.created_at is None
-        assert item.updated_at is None
-        assert item.provider_data is None
-
-    def test_does_not_have_description(self):
-        assert "description" not in DeploymentConfigListItem.model_fields
-
-    def test_accepts_all_fields(self):
-        from datetime import datetime, timezone
-
-        now = datetime.now(tz=timezone.utc)
-        item = DeploymentConfigListItem(
-            id="cfg_1",
-            name="Config",
-            created_at=now,
-            updated_at=now,
-            provider_data={"region": "us-east-1"},
-        )
-        assert item.created_at == now
-        assert item.provider_data == {"region": "us-east-1"}
-
-
 class TestDeploymentConfigListResponse:
-    def test_wraps_items_with_pagination(self):
+    def test_provider_data_contains_configs(self):
         response = DeploymentConfigListResponse(
-            configs=[
-                DeploymentConfigListItem(id="cfg_1", name="Config 1"),
-                DeploymentConfigListItem(id="cfg_2", name="Config 2"),
-            ],
+            provider_data={
+                "configs": [
+                    {"id": "cfg_1", "name": "Config 1"},
+                    {"id": "cfg_2", "name": "Config 2"},
+                ],
+                "scope": "shared",
+            },
             page=1,
             size=20,
             total=2,
         )
-        assert len(response.configs) == 2
+        assert len(response.provider_data["configs"]) == 2
+        assert response.provider_data["scope"] == "shared"
         assert response.page == 1
         assert response.total == 2
 
-    def test_pagination_defaults(self):
-        response = DeploymentConfigListResponse(configs=[])
+    def test_allows_null_provider_data(self):
+        response = DeploymentConfigListResponse()
+        assert response.provider_data is None
         assert response.page == 1
         assert response.size == 20
         assert response.total == 0
+
+    def test_has_provider_data_and_pagination_fields_only(self):
+        assert set(DeploymentConfigListResponse.model_fields.keys()) == {
+            "provider_data",
+            "page",
+            "size",
+            "total",
+        }
+
+
+class TestDeploymentSnapshotListResponse:
+    def test_provider_data_contains_snapshots(self):
+        from langflow.api.v1.schemas.deployments import DeploymentSnapshotListResponse
+
+        response = DeploymentSnapshotListResponse(
+            provider_data={
+                "snapshots": [
+                    {"id": "tool-1", "name": "Tool 1"},
+                    {"id": "tool-2", "name": "Tool 2"},
+                ],
+                "scope": "shared",
+            },
+            page=1,
+            size=20,
+            total=2,
+        )
+        assert len(response.provider_data["snapshots"]) == 2
+        assert response.page == 1
+
+    def test_allows_null_provider_data(self):
+        from langflow.api.v1.schemas.deployments import DeploymentSnapshotListResponse
+
+        response = DeploymentSnapshotListResponse()
+        assert response.provider_data is None
+
+    def test_has_provider_data_and_pagination_fields_only(self):
+        from langflow.api.v1.schemas.deployments import DeploymentSnapshotListResponse
+
+        assert set(DeploymentSnapshotListResponse.model_fields.keys()) == {
+            "provider_data",
+            "page",
+            "size",
+            "total",
+        }
 
 
 class TestDeploymentFlowVersionListSchemas:

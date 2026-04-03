@@ -404,6 +404,51 @@ class WatsonxApiDeploymentListProviderData(BaseModel):
     entries: list[WatsonxApiProviderDeploymentListItem] = Field(default_factory=list)
 
 
+class WatsonxApiConfigListProviderData(BaseModel):
+    """Provider-level metadata attached to DeploymentConfigListResponse.
+
+    ``deployment_id`` is present for deployment-scoped listings and absent for
+    tenant-scoped listings; no explicit scope discriminator is needed because the
+    caller already knows which mode it requested.
+    """
+
+    model_config = {"extra": "forbid"}
+
+    deployment_id: str | None = None
+    tool_ids: list[str] | None = None
+
+    @field_validator("deployment_id", mode="before")
+    @classmethod
+    def normalize_deployment_id(cls, value: Any) -> str | None:
+        normalized = str(value or "").strip()
+        return normalized or None
+
+    @field_validator("tool_ids", mode="before")
+    @classmethod
+    def normalize_tool_ids(cls, value: Any) -> list[str] | None:
+        if value is None:
+            return None
+        return [str(tool_id).strip() for tool_id in value if str(tool_id).strip()]
+
+
+class WatsonxApiSnapshotListProviderData(BaseModel):
+    """Provider-level metadata attached to DeploymentSnapshotListResponse.
+
+    ``deployment_id`` is present for deployment-scoped listings and absent for
+    tenant-scoped listings.
+    """
+
+    model_config = {"extra": "forbid"}
+
+    deployment_id: str | None = None
+
+    @field_validator("deployment_id", mode="before")
+    @classmethod
+    def normalize_deployment_id(cls, value: Any) -> str | None:
+        normalized = str(value or "").strip()
+        return normalized or None
+
+
 class WatsonxApiDeploymentFlowVersionItemData(BaseModel):
     """API-facing provider_data contract for deployment flow-version list items."""
 

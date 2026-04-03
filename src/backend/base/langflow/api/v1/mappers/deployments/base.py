@@ -57,7 +57,6 @@ from lfx.services.adapters.deployment.schema import (
 from lfx.services.adapters.payload import PayloadSlot
 
 from langflow.api.v1.schemas.deployments import (
-    DeploymentConfigListItem,
     DeploymentConfigListResponse,
     DeploymentCreateRequest,
     DeploymentCreateResponse,
@@ -70,7 +69,6 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountUpdateRequest,
-    DeploymentSnapshotListItem,
     DeploymentSnapshotListResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
@@ -680,20 +678,16 @@ class BaseDeploymentMapper:
             self.api_payloads.config_list_result,
             result.provider_result if isinstance(result.provider_result, dict) else None,
         )
-        configs_all = [
-            DeploymentConfigListItem(
-                id=str(item.id),
-                name=item.name,
-                created_at=item.created_at,
-                updated_at=item.updated_at,
-                provider_data=item.provider_data if isinstance(item.provider_data, dict) else None,
-            )
-            for item in result.configs
-        ]
-        total = len(configs_all)
+        items_all = [item.model_dump(mode="json", exclude_none=True) for item in result.configs]
+        total = len(items_all)
         offset = page_offset(page, size)
+        provider_result = result.provider_result if isinstance(result.provider_result, dict) else {}
+        provider_data: dict[str, Any] = {
+            **provider_result,
+            "configs": items_all[offset : offset + size],
+        }
         return DeploymentConfigListResponse(
-            configs=configs_all[offset : offset + size],
+            provider_data=provider_data or None,
             page=page,
             size=size,
             total=total,
@@ -710,20 +704,16 @@ class BaseDeploymentMapper:
             self.api_payloads.snapshot_list_result,
             result.provider_result if isinstance(result.provider_result, dict) else None,
         )
-        snapshots_all = [
-            DeploymentSnapshotListItem(
-                id=str(item.id),
-                name=item.name,
-                created_at=item.created_at,
-                updated_at=item.updated_at,
-                provider_data=item.provider_data if isinstance(item.provider_data, dict) else None,
-            )
-            for item in result.snapshots
-        ]
-        total = len(snapshots_all)
+        items_all = [item.model_dump(mode="json", exclude_none=True) for item in result.snapshots]
+        total = len(items_all)
         offset = page_offset(page, size)
+        provider_result = result.provider_result if isinstance(result.provider_result, dict) else {}
+        provider_data: dict[str, Any] = {
+            **provider_result,
+            "snapshots": items_all[offset : offset + size],
+        }
         return DeploymentSnapshotListResponse(
-            snapshots=snapshots_all[offset : offset + size],
+            provider_data=provider_data or None,
             page=page,
             size=size,
             total=total,

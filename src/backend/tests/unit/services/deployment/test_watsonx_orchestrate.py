@@ -3080,7 +3080,7 @@ async def test_list_configs_without_deployment_id_lists_tenant_scope(monkeypatch
 
     result = await service.list_configs(user_id="user-1", db=object(), params=None)
     assert [config.id for config in result.configs] == ["cfg-1", "cfg-2"]
-    assert result.provider_result == {"scope": "tenant"}
+    assert result.provider_result == {}
 
 
 @pytest.mark.anyio
@@ -3112,7 +3112,7 @@ async def test_list_snapshots_without_deployment_id_lists_tenant_scope(monkeypat
     assert [snapshot.id for snapshot in result.snapshots] == ["tool-1", "tool-2"]
     assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
     assert result.snapshots[1].provider_data == {"connections": {}}
-    assert result.provider_result == {"scope": "tenant"}
+    assert result.provider_result == {}
 
 
 @pytest.mark.anyio

@@ -1139,14 +1139,14 @@ async def get_deployment(
 
     payload = deployment.model_dump(exclude_unset=True)
     provider_data = payload.get("provider_data") if isinstance(payload.get("provider_data"), dict) else {}
-    provider_data = {**provider_data, "resource_key": deployment_row.resource_key}
     return DeploymentGetResponse(
         id=deployment_row.id,
-        name=deployment.name,
-        description=getattr(deployment, "description", None),
-        type=deployment.type,
-        created_at=deployment.created_at,
-        updated_at=deployment.updated_at,
+        name=deployment_row.name,
+        description=deployment_row.description,
+        type=deployment_row.deployment_type,
+        # Timestamps are local DB audit fields, not provider payload fields.
+        created_at=deployment_row.created_at,
+        updated_at=deployment_row.updated_at,
         provider_data=provider_data,
         resource_key=deployment_row.resource_key,
         attached_count=attached_count,

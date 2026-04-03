@@ -9,9 +9,12 @@ Two identifier domains coexist in these schemas:
   ``provider_id`` maps to ``deployment_provider_account.id``.
 
 * **Provider-owned (str)** -- ``reference_id``, ``config_id``,
-  ``resource_key``, ``execution_id``, ``provider_tenant_id``,
+  ``execution_id``, ``provider_tenant_id``,
   ``provider_key``, and ``provider_url``. Opaque values assigned or
   consumed by the external deployment provider.
+
+* **Provider-originated but Langflow-owned once persisted** -- ``resource_key``.
+  Langflow stores and indexes this as part of its own deployment record.
 
 ``provider_data`` dicts are opaque pass-through containers whose contents
 are defined by the provider adapter. Langflow forwards them without
@@ -268,7 +271,7 @@ class DeploymentGetResponse(_DeploymentResponseBase):
     list item stays lean.
     """
 
-    resource_key: str = Field(description="Provider-owned stable resource identifier.")
+    resource_key: str = Field(description="Langflow-persisted stable provider resource identifier.")
     attached_count: int = Field(default=0, ge=0, description="Number of flow versions attached to this deployment.")
 
 
@@ -291,7 +294,7 @@ class DeploymentListItem(_DeploymentResponseBase):
     See ``DeploymentGetResponse`` docstring for rationale on the separate class.
     """
 
-    resource_key: str = Field(description="Provider-owned stable resource identifier.")
+    resource_key: str = Field(description="Langflow-persisted stable provider resource identifier.")
     attached_count: int = Field(default=0, ge=0, description="Number of flow versions attached to this deployment.")
     matched_attachments: list[DeploymentListItemAttachment] | None = Field(
         default=None,
@@ -322,38 +325,28 @@ class DeploymentProviderAccountListResponse(_PaginatedResponse):
     providers: list[DeploymentProviderAccountGetResponse]
 
 
-class DeploymentConfigListItem(BaseModel):
-    """Lean config representation used in list responses."""
-
-    id: str = Field(description="Provider-owned config identifier.")
-    name: str
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    provider_data: dict[str, Any] | None = Field(
-        default=None,
-        description="Provider-owned opaque payload returned by the deployment provider.",
-    )
-
-
 class DeploymentConfigListResponse(_PaginatedResponse):
-    configs: list[DeploymentConfigListItem]
+    """Paginated config list with all provider-owned data in a single opaque blob."""
 
-
-class DeploymentSnapshotListItem(BaseModel):
-    """Lean snapshot/tool representation used in list responses."""
-
-    id: str = Field(description="Provider-owned snapshot/tool identifier.")
-    name: str
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
     provider_data: dict[str, Any] | None = Field(
         default=None,
-        description="Provider-owned opaque payload returned by the deployment provider.",
+        description=(
+            "Provider-owned opaque payload containing the list of configs "
+            "and any response-level metadata supplied by the provider."
+        ),
     )
 
 
 class DeploymentSnapshotListResponse(_PaginatedResponse):
-    snapshots: list[DeploymentSnapshotListItem]
+    """Paginated snapshot list with all provider-owned data in a single opaque blob."""
+
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Provider-owned opaque payload containing the list of snapshots "
+            "and any response-level metadata supplied by the provider."
+        ),
+    )
 
 
 class DeploymentFlowVersionListItem(BaseModel):

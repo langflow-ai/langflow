@@ -77,6 +77,8 @@ def test_watsonx_mapper_is_registered() -> None:
     assert mapper.api_payloads.deployment_create is not None
     assert mapper.api_payloads.deployment_update is not None
     assert mapper.api_payloads.deployment_update_result is not None
+    assert mapper.api_payloads.config_list_result is not None
+    assert mapper.api_payloads.snapshot_list_result is not None
 
 
 def test_watsonx_mapper_provider_list_entry_rejects_non_dict_provider_data() -> None:
