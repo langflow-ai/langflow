@@ -151,7 +151,6 @@ export default function CodeSnippet({
           title="Copy code"
           className="ch-code-button"
           onClick={onCopy}
-          style={{ position: "absolute", top: "10px", right: "10px" }}
         >
           {copied ? (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="1.1em" height="1.1em">
