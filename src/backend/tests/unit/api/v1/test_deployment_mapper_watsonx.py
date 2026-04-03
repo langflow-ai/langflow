@@ -21,6 +21,8 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentUpdateRequest,
 )
 from lfx.services.adapters.deployment.schema import (
+    ConfigListItem,
+    ConfigListResult,
     DeploymentCreateResult,
     DeploymentListLlmsResult,
     DeploymentType,
@@ -247,6 +249,78 @@ def test_watsonx_mapper_flow_version_list_result_degrades_when_required_snapshot
     assert len(shaped.flow_versions) == 1
     assert shaped.flow_versions[0].provider_snapshot_id == "tool-1"
     assert shaped.flow_versions[0].provider_data is None
+
+
+def test_watsonx_mapper_shapes_config_list_result_with_full_slot_validation() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    now = datetime.now(tz=timezone.utc)
+    result = ConfigListResult(
+        configs=[
+            ConfigListItem(
+                id="cfg-1",
+                name="Config 1",
+                created_at=now,
+                updated_at=now,
+            ),
+            ConfigListItem(id="cfg-2", name="Config 2"),
+        ],
+        provider_result={"deployment_id": " dep-1 ", "tool_ids": ["tool-1", "  "]},
+    )
+
+    shaped = mapper.shape_config_list_result(result, page=1, size=1)
+
+    assert shaped.total == 2
+    assert shaped.page == 1
+    assert shaped.size == 1
+    assert shaped.provider_data is not None
+    assert shaped.provider_data["deployment_id"] == "dep-1"
+    assert shaped.provider_data["tool_ids"] == ["tool-1"]
+    assert len(shaped.provider_data["configs"]) == 1
+    assert shaped.provider_data["configs"][0]["id"] == "cfg-1"
+    assert shaped.provider_data["configs"][0]["name"] == "Config 1"
+    assert "provider_data" not in shaped.provider_data["configs"][0]
+
+
+def test_watsonx_mapper_shapes_snapshot_list_result_without_nested_provider_data() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    result = SnapshotListResult(
+        snapshots=[
+            SnapshotItem(
+                id="tool-1",
+                name="Tool 1",
+                provider_data={"connections": {"cfg-1": "conn-1"}},
+            )
+        ],
+        provider_result={"deployment_id": "dep-1"},
+    )
+
+    shaped = mapper.shape_snapshot_list_result(result, page=1, size=20)
+
+    assert shaped.total == 1
+    assert shaped.provider_data is not None
+    assert shaped.provider_data["deployment_id"] == "dep-1"
+    assert shaped.provider_data["snapshots"] == [
+        {
+            "id": "tool-1",
+            "name": "Tool 1",
+            "connections": {"cfg-1": "conn-1"},
+        }
+    ]
+    assert "provider_data" not in shaped.provider_data["snapshots"][0]
+
+
+def test_watsonx_mapper_snapshot_list_result_rejects_malformed_item_payload() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    result = SnapshotListResult(
+        snapshots=[SnapshotItem(id="tool-1", name="Tool 1", provider_data={"connections": {"cfg-1": "conn-1"}})],
+        provider_result={"deployment_id": "dep-1", "unexpected": True},
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        mapper.shape_snapshot_list_result(result, page=1, size=20)
+
+    assert exc.value.status_code == 500
+    assert "Invalid snapshot list provider_data payload:" in str(exc.value.detail)
 
 
 @pytest.mark.parametrize("provider_snapshot_id", [None, "   "])

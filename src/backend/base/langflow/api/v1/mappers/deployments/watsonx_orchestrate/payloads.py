@@ -404,6 +404,26 @@ class WatsonxApiDeploymentListProviderData(BaseModel):
     entries: list[WatsonxApiProviderDeploymentListItem] = Field(default_factory=list)
 
 
+class WatsonxApiConfigListItem(BaseModel):
+    """API-facing config list item payload under config-list provider_data."""
+
+    model_config = {"extra": "forbid"}
+
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    @field_validator("id", "name", mode="before")
+    @classmethod
+    def normalize_required_strings(cls, value: Any) -> str:
+        normalized = str(value or "").strip()
+        if not normalized:
+            msg = "Config list item fields 'id' and 'name' must be non-empty strings."
+            raise ValueError(msg)
+        return normalized
+
+
 class WatsonxApiConfigListProviderData(BaseModel):
     """Provider-level metadata attached to DeploymentConfigListResponse.
 
@@ -416,6 +436,7 @@ class WatsonxApiConfigListProviderData(BaseModel):
 
     deployment_id: str | None = None
     tool_ids: list[str] | None = None
+    configs: list[WatsonxApiConfigListItem] = Field(default_factory=list)
 
     @field_validator("deployment_id", mode="before")
     @classmethod
@@ -431,6 +452,25 @@ class WatsonxApiConfigListProviderData(BaseModel):
         return [str(tool_id).strip() for tool_id in value if str(tool_id).strip()]
 
 
+class WatsonxApiSnapshotListItem(BaseModel):
+    """API-facing snapshot list item payload under snapshot-list provider_data."""
+
+    model_config = {"extra": "forbid"}
+
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    connections: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("id", "name", mode="before")
+    @classmethod
+    def normalize_required_strings(cls, value: Any) -> str:
+        normalized = str(value or "").strip()
+        if not normalized:
+            msg = "Snapshot list item fields 'id' and 'name' must be non-empty strings."
+            raise ValueError(msg)
+        return normalized
+
+
 class WatsonxApiSnapshotListProviderData(BaseModel):
     """Provider-level metadata attached to DeploymentSnapshotListResponse.
 
@@ -441,6 +481,7 @@ class WatsonxApiSnapshotListProviderData(BaseModel):
     model_config = {"extra": "forbid"}
 
     deployment_id: str | None = None
+    snapshots: list[WatsonxApiSnapshotListItem] = Field(default_factory=list)
 
     @field_validator("deployment_id", mode="before")
     @classmethod

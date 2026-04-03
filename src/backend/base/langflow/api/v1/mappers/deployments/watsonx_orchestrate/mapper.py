@@ -10,6 +10,7 @@ from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
+    ConfigListResult,
     DeploymentCreateResult,
     DeploymentListLlmsResult,
     DeploymentListResult,
@@ -50,6 +51,7 @@ from langflow.api.v1.mappers.deployments.contracts import (
 from langflow.api.v1.mappers.deployments.helpers import (
     build_flow_artifacts_from_flow_versions,
     build_project_scoped_flow_artifacts_from_flow_versions,
+    page_offset,
 )
 from langflow.api.v1.mappers.deployments.registry import register_mapper
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
@@ -74,6 +76,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiUnbindToolOperation,
 )
 from langflow.api.v1.schemas.deployments import (
+    DeploymentConfigListResponse,
     DeploymentCreateRequest,
     DeploymentCreateResponse,
     DeploymentFlowVersionListItem,
@@ -82,6 +85,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountUpdateRequest,
+    DeploymentSnapshotListResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
     ExecutionCreateResponse,
@@ -973,6 +977,87 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             size=total,
             total=total,
             provider_data=validated_payload,
+        )
+
+    def shape_config_list_result(
+        self,
+        result: ConfigListResult,
+        *,
+        page: int,
+        size: int,
+    ) -> DeploymentConfigListResponse:
+        slot = self.api_payloads.config_list_result
+        if slot is None:
+            msg = "Watsonx config_list_result payload slot is not configured."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+
+        items_all = [item.model_dump(mode="json", exclude_none=True) for item in result.configs]
+        total = len(items_all)
+        offset = page_offset(page, size)
+        provider_result = result.provider_result if isinstance(result.provider_result, dict) else {}
+        provider_payload = {
+            **provider_result,
+            "configs": items_all[offset : offset + size],
+        }
+        try:
+            validated_payload = slot.parse(provider_payload).model_dump(mode="json", exclude_none=True)
+        except AdapterPayloadValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Invalid config list provider_data payload: {exc.format_first_error()}",
+            ) from exc
+
+        return DeploymentConfigListResponse(
+            provider_data=validated_payload or None,
+            page=page,
+            size=size,
+            total=total,
+        )
+
+    def shape_snapshot_list_result(
+        self,
+        result: SnapshotListResult,
+        *,
+        page: int,
+        size: int,
+    ) -> DeploymentSnapshotListResponse:
+        slot = self.api_payloads.snapshot_list_result
+        if slot is None:
+            msg = "Watsonx snapshot_list_result payload slot is not configured."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+
+        items_all: list[dict[str, Any]] = []
+        for item in result.snapshots:
+            item_provider_data = item.provider_data if isinstance(item.provider_data, dict) else {}
+            connections = item_provider_data.get("connections")
+            items_all.append(
+                {
+                    "id": str(item.id).strip(),
+                    "name": str(item.name or "").strip(),
+                    "connections": connections if isinstance(connections, dict) else {},
+                }
+            )
+
+        total = len(items_all)
+        offset = page_offset(page, size)
+        provider_result = result.provider_result if isinstance(result.provider_result, dict) else {}
+        provider_payload = {
+            **provider_result,
+            "snapshots": items_all[offset : offset + size],
+        }
+        try:
+            validated_payload = slot.parse(provider_payload).model_dump(mode="json", exclude_none=True)
+        except AdapterPayloadValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Invalid snapshot list provider_data payload: {exc.format_first_error()}",
+            ) from exc
+
+        return DeploymentSnapshotListResponse(
+            provider_data=validated_payload or None,
+            page=page,
+            size=size,
+            total=total,
         )
 
     def shape_flow_version_list_result(

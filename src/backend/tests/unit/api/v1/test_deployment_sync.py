@@ -690,8 +690,6 @@ def test_resolve_flow_version_patch_for_update_watsonx_operations():
         payload=DeploymentUpdateRequest(
             provider_data={
                 "llm": "test-llm",
-                "resource_name_prefix": "lf_test_",
-                "connections": {"existing_app_ids": ["app-one"]},
                 "operations": [
                     {"op": "bind", "flow_version_id": str(add_id), "app_ids": ["app-one"]},
                     {"op": "unbind", "flow_version_id": str(remove_id), "app_ids": ["app-one"]},
