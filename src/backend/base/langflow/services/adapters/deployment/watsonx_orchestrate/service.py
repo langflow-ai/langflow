@@ -698,21 +698,26 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             configs: list[ConfigListItem] = []
             seen_ids: set[str] = set()
             for connection in raw_connections or []:
-                if not isinstance(connection, dict):
+                if isinstance(connection, dict):
+                    conn_dict = connection
+                elif hasattr(connection, "model_dump"):
+                    conn_dict = connection.model_dump()
+                else:
                     continue
-                config_id = str(connection.get("app_id") or connection.get("id") or "").strip()
+                config_id = str(conn_dict.get("app_id") or conn_dict.get("id") or "").strip()
                 if not config_id or config_id in seen_ids:
                     continue
                 seen_ids.add(config_id)
                 config_name = (
-                    str(connection.get("name") or connection.get("display_name") or config_id).strip() or config_id
+                    str(conn_dict.get("name") or conn_dict.get("display_name") or config_id).strip() or config_id
                 )
                 configs.append(
                     ConfigListItem(
                         id=config_id,
                         name=config_name,
-                        created_at=connection.get("created_at"),
-                        updated_at=connection.get("updated_at"),
+                        created_at=conn_dict.get("created_at"),
+                        updated_at=conn_dict.get("updated_at"),
+                        provider_data=conn_dict,
                     )
                 )
             return ConfigListResult(

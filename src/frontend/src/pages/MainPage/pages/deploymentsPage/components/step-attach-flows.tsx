@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useGetDeploymentConfigs } from "@/controllers/API/queries/deployments/use-get-deployment-configs";
 import { useGetFlowVersions } from "@/controllers/API/queries/flow-version/use-get-flow-versions";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
@@ -7,7 +8,7 @@ import { usePostDetectEnvVars } from "@/controllers/API/queries/variables/use-po
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
-import type { EnvVarEntry } from "../types";
+import type { ConnectionItem, EnvVarEntry } from "../types";
 import type { ConnectionTab } from "./step-attach-flows-connection-panel";
 import { ConnectionPanel } from "./step-attach-flows-connection-panel";
 import { FlowListPanel } from "./step-attach-flows-flow-list-panel";
@@ -19,6 +20,7 @@ export default function StepAttachFlows() {
   const {
     isEditMode,
     initialFlowId,
+    selectedInstance,
     connections,
     setConnections,
     selectedVersionByFlow,
@@ -52,6 +54,38 @@ export default function StepAttachFlows() {
         (f.folder_id === currentFolderId || f.id === initialFlowId),
     );
   }, [flowsData, currentFolderId, initialFlowId]);
+
+  // Fetch existing connections from the provider (tenant-scoped)
+  const providerId = selectedInstance?.id ?? "";
+  const { data: configsData } = useGetDeploymentConfigs(
+    { providerId },
+    { enabled: !!providerId },
+  );
+
+  // Seed the connections list with existing provider connections (once)
+  const seededExistingConnections = useRef(false);
+  useEffect(() => {
+    if (seededExistingConnections.current || !configsData?.configs?.length)
+      return;
+    seededExistingConnections.current = true;
+
+    const existingConnections: ConnectionItem[] = configsData.configs.map(
+      (cfg) => ({
+        id: cfg.id,
+        name: cfg.name,
+        variableCount: 0,
+        isNew: false,
+        environmentVariables: {},
+      }),
+    );
+
+    setConnections((prev) => {
+      // Avoid duplicates if user already created connections with the same id
+      const existingIds = new Set(prev.map((c) => c.id));
+      const toAdd = existingConnections.filter((c) => !existingIds.has(c.id));
+      return [...toAdd, ...prev];
+    });
+  }, [configsData, setConnections]);
 
   const [selectedFlowId, setSelectedFlowId] = useState<string | null>(
     initialFlowId ?? null,

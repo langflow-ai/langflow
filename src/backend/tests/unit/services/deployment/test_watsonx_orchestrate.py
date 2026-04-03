@@ -3084,6 +3084,127 @@ async def test_list_configs_without_deployment_id_lists_tenant_scope(monkeypatch
 
 
 @pytest.mark.anyio
+async def test_list_configs_tenant_scope_handles_pydantic_models(monkeypatch):
+    """SDK ConnectionsClient.list() returns Pydantic model objects, not dicts."""
+    from pydantic import BaseModel
+
+    class FakeListConfigsResponse(BaseModel):
+        app_id: str = ""
+        name: str = ""
+        connection_id: str | None = None
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    connections_client = FakeConnectionsClient()
+    connections_client._list_entries = [
+        FakeListConfigsResponse(app_id="cfg-pydantic-1", name="Pydantic One"),
+        FakeListConfigsResponse(app_id="cfg-pydantic-2", name="Pydantic Two"),
+    ]
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(user_id="user-1", db=object(), params=None)
+    assert [config.id for config in result.configs] == ["cfg-pydantic-1", "cfg-pydantic-2"]
+    assert [config.name for config in result.configs] == ["Pydantic One", "Pydantic Two"]
+    assert result.provider_result == {"scope": "tenant"}
+
+
+@pytest.mark.anyio
+async def test_list_configs_tenant_scope_mixed_dicts_and_models(monkeypatch):
+    """list_configs handles a mix of dicts and Pydantic models in the same response."""
+    from pydantic import BaseModel
+
+    class FakeListConfigsResponse(BaseModel):
+        app_id: str = ""
+        name: str = ""
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    connections_client = FakeConnectionsClient()
+    connections_client._list_entries = [
+        {"app_id": "dict-cfg", "name": "Dict Config"},
+        FakeListConfigsResponse(app_id="model-cfg", name="Model Config"),
+    ]
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(user_id="user-1", db=object(), params=None)
+    assert [config.id for config in result.configs] == ["dict-cfg", "model-cfg"]
+    assert [config.name for config in result.configs] == ["Dict Config", "Model Config"]
+
+
+@pytest.mark.anyio
+async def test_list_configs_tenant_scope_deduplicates(monkeypatch):
+    """Duplicate app_ids are deduplicated in tenant-scope listing."""
+    from pydantic import BaseModel
+
+    class FakeListConfigsResponse(BaseModel):
+        app_id: str = ""
+        name: str = ""
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    connections_client = FakeConnectionsClient()
+    connections_client._list_entries = [
+        FakeListConfigsResponse(app_id="cfg-dup", name="First"),
+        FakeListConfigsResponse(app_id="cfg-dup", name="Second"),
+        {"app_id": "cfg-dup", "name": "Third"},
+        {"app_id": "cfg-unique", "name": "Unique"},
+    ]
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(user_id="user-1", db=object(), params=None)
+    assert [config.id for config in result.configs] == ["cfg-dup", "cfg-unique"]
+
+
+@pytest.mark.anyio
+async def test_list_configs_tenant_scope_skips_non_dict_non_model(monkeypatch):
+    """Objects without model_dump and that aren't dicts are skipped."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    connections_client = FakeConnectionsClient()
+    connections_client._list_entries = [
+        "just-a-string",
+        42,
+        {"app_id": "valid-cfg", "name": "Valid"},
+    ]
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(user_id="user-1", db=object(), params=None)
+    assert [config.id for config in result.configs] == ["valid-cfg"]
+
+
+@pytest.mark.anyio
 async def test_list_snapshots_without_deployment_id_lists_tenant_scope(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_base = FakeBaseClient(

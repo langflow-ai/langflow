@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,15 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   onCreateConnection: () => void;
   isDuplicateName?: boolean;
 }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredConnections = useMemo(() => {
+    if (!searchQuery.trim()) return connections;
+    const q = searchQuery.toLowerCase();
+    return connections.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q),
+    );
+  }, [connections, searchQuery]);
+
   return (
     <>
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
@@ -108,24 +117,44 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                   </button>
                 </div>
               ) : (
-                connections.map((conn) => (
-                  <CheckboxSelectItem
-                    key={conn.id}
-                    value={conn.id}
-                    checked={selectedConnections.has(conn.id)}
-                    onChange={() => onToggleConnection(conn.id)}
-                    data-testid={`connection-item-${conn.id}`}
-                  >
-                    <span className="flex flex-col">
-                      <span className="text-sm font-medium leading-tight">
-                        {conn.name}
-                      </span>
-                      <span className="text-sm leading-tight text-muted-foreground">
-                        {conn.variableCount} variables
-                      </span>
-                    </span>
-                  </CheckboxSelectItem>
-                ))
+                <>
+                  <div className="relative">
+                    <ForwardedIconComponent
+                      name="Search"
+                      className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                    />
+                    <Input
+                      placeholder="Search connections..."
+                      className="bg-muted pl-9"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  {filteredConnections.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">
+                      No connections match &ldquo;{searchQuery}&rdquo;
+                    </p>
+                  ) : (
+                    filteredConnections.map((conn) => (
+                      <CheckboxSelectItem
+                        key={conn.id}
+                        value={conn.id}
+                        checked={selectedConnections.has(conn.id)}
+                        onChange={() => onToggleConnection(conn.id)}
+                        data-testid={`connection-item-${conn.id}`}
+                      >
+                        <span className="flex flex-col">
+                          <span className="text-sm font-medium leading-tight">
+                            {conn.name}
+                          </span>
+                          <span className="text-sm leading-tight text-muted-foreground">
+                            {conn.variableCount} variables
+                          </span>
+                        </span>
+                      </CheckboxSelectItem>
+                    ))
+                  )}
+                </>
               )}
             </div>
           ) : (

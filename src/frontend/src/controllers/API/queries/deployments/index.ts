@@ -1,6 +1,7 @@
 export * from "./use-delete-deployment";
 export * from "./use-get-deployment";
 export * from "./use-get-deployment-attachments";
+export * from "./use-get-deployment-configs";
 export * from "./use-get-deployment-execution";
 export * from "./use-get-deployment-llms";
 export * from "./use-get-deployments";
