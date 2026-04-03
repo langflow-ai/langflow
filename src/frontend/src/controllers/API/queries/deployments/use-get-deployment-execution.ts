@@ -5,8 +5,8 @@ import { UseRequestProcessor } from "../../services/request-processor";
 import type { DeploymentExecutionResponse } from "./use-post-deployment-execution";
 
 export interface GetDeploymentExecutionParams {
+  deployment_id: string;
   execution_id: string;
-  provider_id: string;
 }
 
 export const useGetDeploymentExecution: useMutationFunctionType<
@@ -17,12 +17,11 @@ export const useGetDeploymentExecution: useMutationFunctionType<
   const { mutate } = UseRequestProcessor();
 
   const fn = async ({
+    deployment_id,
     execution_id,
-    provider_id,
   }: GetDeploymentExecutionParams): Promise<DeploymentExecutionResponse> => {
     const res = await api.get<DeploymentExecutionResponse>(
-      `${getURL("DEPLOYMENTS")}/executions/${encodeURIComponent(execution_id)}`,
-      { params: { provider_id } },
+      `${getURL("DEPLOYMENTS")}/${encodeURIComponent(deployment_id)}/executions/${encodeURIComponent(execution_id)}`,
     );
     return res.data;
   };

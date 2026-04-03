@@ -376,36 +376,13 @@ class DeploymentStatusResponse(_DeploymentResponseBase):
 # ---------------------------------------------------------------------------
 
 
-class DeploymentSpec(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    name: NonEmptyStr = Field(description="Deployment display name.")
-    description: str = Field(default="", description="Deployment description.")
-    type: DeploymentType = Field(description="Deployment type.")
-
-
-class DeploymentSpecUpdate(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    name: NonEmptyStr | None = Field(default=None, description="Updated deployment display name.")
-    description: str | None = Field(default=None, description="Updated deployment description.")
-
-    @model_validator(mode="after")
-    def ensure_any_field_provided(self) -> DeploymentSpecUpdate:
-        if not self.model_fields_set:
-            msg = "At least one of 'name' or 'description' must be provided in 'spec'."
-            raise ValueError(msg)
-        if self.name is None and self.description is None:
-            msg = "At least one of 'name' or 'description' must be provided in 'spec'."
-            raise ValueError(msg)
-        return self
-
-
 class DeploymentCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
-    spec: DeploymentSpec = Field(description="Deployment metadata.")
+    name: NonEmptyStr = Field(description="Deployment display name.")
+    description: str = Field(default="", description="Deployment description.")
+    type: DeploymentType = Field(description="Deployment type.")
     project_id: UUID | None = Field(
         default=None,
         description="Langflow DB project id to persist the deployment under. Defaults to user's Starter Project.",
@@ -419,7 +396,8 @@ class DeploymentCreateRequest(BaseModel):
 class DeploymentUpdateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    spec: DeploymentSpecUpdate | None = Field(default=None, description="Deployment metadata updates.")
+    name: NonEmptyStr | None = Field(default=None, description="Updated deployment display name.")
+    description: str | None = Field(default=None, description="Updated deployment description.")
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description="Provider-owned opaque update payload.",
@@ -428,10 +406,10 @@ class DeploymentUpdateRequest(BaseModel):
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentUpdateRequest:
         if not self.model_fields_set:
-            msg = "At least one of 'spec' or 'provider_data' must be provided."
+            msg = "At least one of 'name', 'description', or 'provider_data' must be provided."
             raise ValueError(msg)
-        if self.spec is None and self.provider_data is None:
-            msg = "At least one of 'spec' or 'provider_data' must be provided."
+        if self.name is None and self.description is None and self.provider_data is None:
+            msg = "At least one of 'name', 'description', or 'provider_data' must be provided."
             raise ValueError(msg)
         return self
 

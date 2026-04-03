@@ -5,10 +5,8 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface DeploymentUpdateRequest {
   deployment_id: string;
-  spec?: {
-    name?: string;
-    description?: string;
-  };
+  name?: string;
+  description?: string;
   provider_data?: Record<string, unknown>;
 }
 

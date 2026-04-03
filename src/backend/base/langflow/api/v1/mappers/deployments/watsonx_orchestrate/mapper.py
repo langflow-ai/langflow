@@ -413,9 +413,9 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         return AdapterDeploymentCreate(
             spec=BaseDeploymentData(
-                name=payload.spec.name,
-                description=payload.spec.description,
-                type=payload.spec.type,
+                name=payload.name,
+                description=payload.description,
+                type=payload.type,
             ),
             provider_data=provider_payload,
         )
@@ -438,8 +438,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         return AdapterDeploymentUpdate(
             spec=BaseDeploymentDataUpdate(
-                name=payload.spec.name,
-                description=payload.spec.description,
+                name=payload.name,
+                description=payload.description,
             ),
             provider_data=provider_payload,
         )
@@ -454,10 +454,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     ) -> AdapterDeploymentUpdate:
         adapter_spec = (
             BaseDeploymentDataUpdate(
-                name=payload.spec.name,
-                description=payload.spec.description,
+                name=payload.name,
+                description=payload.description,
             )
-            if payload.spec is not None
+            if payload.name is not None or payload.description is not None
             else None
         )
         if payload.provider_data is None:  # pure metadata update, e.g., name, description

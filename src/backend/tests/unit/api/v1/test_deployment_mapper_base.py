@@ -180,7 +180,9 @@ async def test_base_mapper_resolve_deployment_create_passthrough_without_flow_ve
     mapper = BaseDeploymentMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        spec={"name": "create-deploy", "description": "", "type": "agent"},
+        name="create-deploy",
+        description="",
+        type="agent",
         provider_data={"some_key": "some_value"},
     )
 
@@ -201,7 +203,9 @@ async def test_base_mapper_resolve_deployment_create_validates_provider_data_whe
     mapper = _TypedMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        spec={"name": "create-deploy", "description": "", "type": "agent"},
+        name="create-deploy",
+        description="",
+        type="agent",
         provider_data={"label": "some_value"},
     )
 
@@ -220,7 +224,9 @@ async def test_base_mapper_resolve_deployment_create_rejects_invalid_provider_da
     mapper = _TypedMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        spec={"name": "create-deploy", "description": "", "type": "agent"},
+        name="create-deploy",
+        description="",
+        type="agent",
         provider_data={"invalid": "value"},
     )
 

@@ -425,11 +425,11 @@ async def create_deployment(
         session,
         user_id=current_user.id,
         deployment_provider_account_id=provider_id,
-        name=payload.spec.name,
+        name=payload.name,
     ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"A deployment named '{payload.spec.name}' already exists. "
+            detail=f"A deployment named '{payload.name}' already exists. "
             "Please choose a different name or delete the existing deployment first.",
         )
 
@@ -507,9 +507,9 @@ async def create_deployment(
             project_id=project_id,
             deployment_provider_account_id=provider_id,
             resource_key=str(provider_create_result.id),
-            name=payload.spec.name,
-            deployment_type=payload.spec.type,
-            description=payload.spec.description or None,
+            name=payload.name,
+            deployment_type=payload.type,
+            description=payload.description or None,
         )
 
         snapshot_id_by_flow_version_id: dict[UUID, str] = {}
@@ -560,7 +560,15 @@ async def create_deployment(
     )
 
 
-@router.get("", response_model=DeploymentListResponse)
+# exclude none as its associated with
+# irrelevant fields. If in the future
+# we want to include nulls, we can always
+# transisiton to that.
+@router.get(
+    "",
+    response_model=DeploymentListResponse,
+    response_model_exclude_none=True,
+)
 async def list_deployments(
     provider_id: DeploymentProviderAccountIdQuery,
     session: DbSession,
@@ -703,7 +711,7 @@ async def list_deployment_llms(
 
 
 @router.post(
-    "/deployments/{deployment_id}/executions",
+    "/{deployment_id}/executions",
     response_model=ExecutionCreateResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -739,7 +747,7 @@ async def create_deployment_execution(
     )
 
 
-@router.get("/deployments/{deployment_id}/executions/{execution_id}", response_model=ExecutionStatusResponse)
+@router.get("/{deployment_id}/executions/{execution_id}", response_model=ExecutionStatusResponse)
 async def get_deployment_execution(
     deployment_id: DeploymentIdPath,
     execution_id: Annotated[str, Path(min_length=1, description="Provider-owned opaque execution identifier.")],
@@ -1034,7 +1042,12 @@ async def update_snapshot(
     )
 
 
-@router.get("/{deployment_id}", response_model=DeploymentGetResponse)
+# Internal note: keep exclude-none for lean responses; use explicit nulls only for intentional tri-state fields.
+@router.get(
+    "/{deployment_id}",
+    response_model=DeploymentGetResponse,
+    response_model_exclude_none=True,
+)
 async def get_deployment(
     deployment_id: DeploymentIdPath,
     session: DbSession,
@@ -1126,7 +1139,8 @@ async def get_deployment(
                 attached_count = 0
 
     payload = deployment.model_dump(exclude_unset=True)
-    provider_data = payload.get("provider_data") if isinstance(payload.get("provider_data"), dict) else {}
+    raw_provider_data = payload.get("provider_data")
+    provider_data = raw_provider_data if isinstance(raw_provider_data, dict) and raw_provider_data else None
     return DeploymentGetResponse(
         id=deployment_row.id,
         provider_id=deployment_row.deployment_provider_account_id,
@@ -1206,21 +1220,20 @@ async def update_deployment(
             db=session,
         )
 
-        if payload.spec is not None:
-            update_kwargs: dict = {}
-            if payload.spec.name is not None and payload.spec.name != deployment_row.name:
-                update_kwargs["name"] = payload.spec.name
-            if _field_was_explicitly_set(payload.spec, "description"):
-                if payload.spec.description != deployment_row.description:
-                    update_kwargs["description"] = payload.spec.description
-            elif payload.spec.description is not None and payload.spec.description != deployment_row.description:
-                update_kwargs["description"] = payload.spec.description
-            if update_kwargs:
-                deployment_row = await update_deployment_db(
-                    session,
-                    deployment=deployment_row,
-                    **update_kwargs,
-                )
+        update_kwargs: dict = {}
+        if payload.name is not None and payload.name != deployment_row.name:
+            update_kwargs["name"] = payload.name
+        if _field_was_explicitly_set(payload, "description"):
+            if payload.description != deployment_row.description:
+                update_kwargs["description"] = payload.description
+        elif payload.description is not None and payload.description != deployment_row.description:
+            update_kwargs["description"] = payload.description
+        if update_kwargs:
+            deployment_row = await update_deployment_db(
+                session,
+                deployment=deployment_row,
+                **update_kwargs,
+            )
 
         await session.commit()
     except Exception:

@@ -44,20 +44,20 @@ export type DeploymentType = "agent" | "mcp";
 
 export interface DeploymentMatchedAttachment {
   flow_version_id: string;
-  provider_snapshot_id: string | null;
+  provider_snapshot_id?: string;
 }
 
 export interface Deployment {
   id: string;
   name: string;
-  description: string | null;
+  description?: string;
   type: DeploymentType;
   created_at: string;
   updated_at: string;
-  provider_data: Record<string, unknown> | null;
+  provider_data?: Record<string, unknown>;
   resource_key: string;
   attached_count: number;
-  matched_attachments: DeploymentMatchedAttachment[] | null;
+  matched_attachments?: DeploymentMatchedAttachment[];
   /** Populated client-side when merging deployments from multiple providers. */
   provider_account_id?: string;
 }

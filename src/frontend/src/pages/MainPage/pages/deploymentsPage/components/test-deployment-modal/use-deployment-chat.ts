@@ -97,7 +97,6 @@ export function useDeploymentChat({
 
       try {
         const createResponse = await postExecution({
-          provider_id: providerId,
           deployment_id: deploymentId,
           provider_data: {
             input: text,
@@ -183,8 +182,8 @@ export function useDeploymentChat({
 
           try {
             const statusResponse = await getExecution({
+              deployment_id: deploymentId,
               execution_id: currentExecutionId,
-              provider_id: providerId,
             });
 
             if (!isMountedRef.current) return;

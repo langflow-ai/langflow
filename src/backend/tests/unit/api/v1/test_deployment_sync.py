@@ -1214,6 +1214,7 @@ class TestWxoResolveRollbackUpdate:
         )
 
         assert result is not None
+        assert result.spec is not None
         assert result.spec.name == "test-dep"
         assert result.spec.description == "desc"
         provider_data = result.provider_data
@@ -1241,6 +1242,7 @@ class TestWxoResolveRollbackUpdate:
 
         assert result is not None
         assert result.provider_data["put_tools"] == []
+        assert result.spec is not None
         assert result.spec.description == ""
 
 

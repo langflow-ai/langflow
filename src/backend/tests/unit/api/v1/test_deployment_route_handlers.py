@@ -144,9 +144,9 @@ class TestCreateDeploymentRollback:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "test"
-        payload.spec.type = "agent"
-        payload.spec.description = None
+        payload.name = "test"
+        payload.type = "agent"
+        payload.description = None
 
         with pytest.raises(RuntimeError, match="DB commit failed"):
             await create_deployment(session=session, payload=payload, current_user=_fake_user())
@@ -202,9 +202,9 @@ class TestCreateDeploymentRollback:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "test"
-        payload.spec.type = "agent"
-        payload.spec.description = None
+        payload.name = "test"
+        payload.type = "agent"
+        payload.description = None
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
         await create_deployment(session=session, payload=payload, current_user=_fake_user())
@@ -263,9 +263,9 @@ class TestCreateDeploymentRollback:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "existing"
-        payload.spec.type = "agent"
-        payload.spec.description = "desc"
+        payload.name = "existing"
+        payload.type = "agent"
+        payload.description = "desc"
 
         with pytest.raises(RuntimeError, match="DB commit failed"):
             await create_deployment(session=session, payload=payload, current_user=_fake_user())
@@ -324,9 +324,9 @@ class TestCreateDeploymentExistingAgent:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "existing"
-        payload.spec.type = "agent"
-        payload.spec.description = None
+        payload.name = "existing"
+        payload.type = "agent"
+        payload.description = None
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
         await create_deployment(session=session, payload=payload, current_user=_fake_user())
@@ -385,9 +385,9 @@ class TestCreateDeploymentExistingAgent:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "existing"
-        payload.spec.type = "agent"
-        payload.spec.description = "desc"
+        payload.name = "existing"
+        payload.type = "agent"
+        payload.description = "desc"
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
         await create_deployment(session=session, payload=payload, current_user=_fake_user())
@@ -449,9 +449,9 @@ class TestCreateDeploymentExistingAgent:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "existing"
-        payload.spec.type = "agent"
-        payload.spec.description = "desc"
+        payload.name = "existing"
+        payload.type = "agent"
+        payload.description = "desc"
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
         await create_deployment(session=session, payload=payload, current_user=_fake_user())
@@ -500,9 +500,9 @@ class TestCreateDeploymentExistingAgent:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "existing"
-        payload.spec.type = "agent"
-        payload.spec.description = None
+        payload.name = "existing"
+        payload.type = "agent"
+        payload.description = None
 
         with pytest.raises(HTTPException) as exc_info:
             await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
@@ -1148,7 +1148,8 @@ class TestUpdateDeploymentRollback:
         session.commit.side_effect = RuntimeError("DB commit failed")
 
         payload = MagicMock()
-        payload.spec = None
+        payload.name = None
+        payload.description = None
 
         with pytest.raises(RuntimeError, match="DB commit failed"):
             await update_deployment(
@@ -1199,7 +1200,8 @@ class TestUpdateDeploymentRollback:
         session.commit.return_value = None
 
         payload = MagicMock()
-        payload.spec = None
+        payload.name = None
+        payload.description = None
 
         await update_deployment(
             deployment_id=dep_row.id,
@@ -1262,7 +1264,8 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         session.commit.return_value = None
 
         payload = MagicMock()
-        payload.spec = None
+        payload.name = None
+        payload.description = None
 
         await update_deployment(
             deployment_id=dep_row.id,
@@ -1320,7 +1323,8 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         session.commit.return_value = None
 
         payload = MagicMock()
-        payload.spec = None
+        payload.name = None
+        payload.description = None
 
         await update_deployment(
             deployment_id=dep_row.id,
@@ -1370,7 +1374,8 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         session.commit.return_value = None
 
         payload = MagicMock()
-        payload.spec = None
+        payload.name = None
+        payload.description = None
 
         await update_deployment(
             deployment_id=dep_row.id,
@@ -1426,10 +1431,8 @@ class TestUpdateDeploymentMetadataPersistence:
 
         payload = DeploymentUpdateRequest.model_validate(
             {
-                "spec": {
-                    "name": "renamed",
-                    "description": None,
-                }
+                "name": "renamed",
+                "description": None,
             }
         )
 
@@ -1898,7 +1901,7 @@ class TestCreateDeploymentDuplicateName:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "duplicate-name"
+        payload.name = "duplicate-name"
 
         with pytest.raises(HTTPException) as exc_info:
             await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
@@ -1924,7 +1927,7 @@ class TestCreateDeploymentDuplicateName:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "taken"
+        payload.name = "taken"
 
         with pytest.raises(HTTPException):
             await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
@@ -2018,9 +2021,9 @@ class TestCreateDeploymentProjectValidation:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "test"
-        payload.spec.type = "agent"
-        payload.spec.description = None
+        payload.name = "test"
+        payload.type = "agent"
+        payload.description = None
 
         session = AsyncMock()
         session.commit.return_value = None

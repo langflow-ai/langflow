@@ -215,7 +215,7 @@ class TestDeploymentUpdateRequest:
 
     def test_rejects_explicit_null_only_payload(self):
         with pytest.raises(ValidationError, match="At least one of"):
-            DeploymentUpdateRequest(spec=None)
+            DeploymentUpdateRequest(description=None)
 
 
 class TestDeploymentSpecPayloadCompatibility:
@@ -223,22 +223,18 @@ class TestDeploymentSpecPayloadCompatibility:
         with pytest.raises(ValidationError, match="provider_spec"):
             DeploymentCreateRequest(
                 provider_id=uuid4(),
-                spec={
-                    "name": "deployment",
-                    "description": "",
-                    "type": "agent",
-                    "provider_spec": {"region": "us-east-1", "size": "small"},
-                },
+                name="deployment",
+                description="",
+                type="agent",
+                provider_spec={"region": "us-east-1", "size": "small"},
             )
 
     def test_create_request_accepts_provider_data_payload(self):
         request = DeploymentCreateRequest(
             provider_id=uuid4(),
-            spec={
-                "name": "deployment",
-                "description": "",
-                "type": "agent",
-            },
+            name="deployment",
+            description="",
+            type="agent",
             provider_data={"operations": []},
         )
         assert request.provider_data == {"operations": []}

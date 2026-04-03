@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from lfx.services.adapters.deployment.schema import DeploymentType
+from lfx.services.adapters.deployment.schema import DeploymentType, EnvVarKey, EnvVarValueSpec
 from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
 
 from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
@@ -146,8 +146,7 @@ class WatsonxApiUpdateConnectionRawPayload(BaseModel):
     model_config = {"extra": "forbid"}
 
     app_id: str = Field(min_length=1)
-    environment_variables: dict[str, Any] | None = None
-    provider_config: dict[str, Any] | None = None
+    environment_variables: dict[EnvVarKey, EnvVarValueSpec] | None = None
 
 
 class WatsonxApiUpdateConnections(BaseModel):

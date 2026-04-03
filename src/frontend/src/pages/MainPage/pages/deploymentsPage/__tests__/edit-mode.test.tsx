@@ -24,10 +24,8 @@ const mockDeployment: Deployment = {
   type: "agent",
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-02T00:00:00Z",
-  provider_data: null,
   resource_key: "my-agent-key",
   attached_count: 2,
-  matched_attachments: null,
 };
 
 const initialVersions = new Map([
@@ -133,18 +131,18 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     expect(payload.deployment_id).toBe("deploy-1");
   });
 
-  it("sends description change in spec", () => {
+  it("sends description change at top level", () => {
     const { result } = renderEditHook();
     act(() => result.current.setDeploymentDescription("Updated description"));
     const payload = result.current.buildDeploymentUpdatePayload();
-    expect(payload.spec).toEqual({ description: "Updated description" });
+    expect(payload.description).toBe("Updated description");
   });
 
-  it("does NOT include name in spec", () => {
+  it("does NOT include name on update payload", () => {
     const { result } = renderEditHook();
     act(() => result.current.setDeploymentDescription("Updated"));
     const payload = result.current.buildDeploymentUpdatePayload();
-    expect(payload.spec?.name).toBeUndefined();
+    expect(payload.name).toBeUndefined();
   });
 
   it("sends LLM in provider_data", () => {
@@ -204,7 +202,7 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     expect(ops.filter((o) => o.op === "remove_tool")).toHaveLength(0);
   });
 
-  it("sends fallback spec when nothing changed", () => {
+  it("sends fallback description when nothing changed", () => {
     const { result } = renderEditHook();
     const payload = result.current.buildDeploymentUpdatePayload();
     // LLM is set so provider_data exists, but also check spec fallback logic

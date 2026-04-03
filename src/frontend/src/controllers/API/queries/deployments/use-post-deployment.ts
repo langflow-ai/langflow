@@ -5,11 +5,9 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface DeploymentCreateRequest {
   provider_id: string;
-  spec: {
-    name: string;
-    description: string;
-    type: string;
-  };
+  name: string;
+  description: string;
+  type: string;
   provider_data: {
     llm: string;
     operations: Array<{

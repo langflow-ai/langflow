@@ -153,9 +153,9 @@ class BaseDeploymentMapper:
         provider_data = self._validate_slot(self.api_payloads.deployment_create, payload.provider_data)
         return AdapterDeploymentCreate(
             spec=BaseDeploymentData(
-                name=payload.spec.name,
-                description=payload.spec.description,
-                type=payload.spec.type,
+                name=payload.name,
+                description=payload.description,
+                type=payload.type,
             ),
             provider_data=provider_data,
         )
@@ -177,8 +177,8 @@ class BaseDeploymentMapper:
         )
         return AdapterDeploymentUpdate(
             spec=BaseDeploymentDataUpdate(
-                name=payload.spec.name,
-                description=payload.spec.description,
+                name=payload.name,
+                description=payload.description,
             ),
             provider_data=create_payload.provider_data,
         )
@@ -194,10 +194,10 @@ class BaseDeploymentMapper:
         _ = (user_id, deployment_db_id)
         adapter_spec = (
             BaseDeploymentDataUpdate(
-                name=payload.spec.name,
-                description=payload.spec.description,
+                name=payload.name,
+                description=payload.description,
             )
-            if payload.spec is not None
+            if payload.name is not None or payload.description is not None
             else None
         )
         provider_data = self._validate_slot(self.api_payloads.deployment_update, payload.provider_data)

@@ -323,11 +323,9 @@ export function DeploymentStepperProvider({
 
       return {
         provider_id: providerId,
-        spec: {
-          name: deploymentName,
-          description: deploymentDescription,
-          type: deploymentType,
-        },
+        name: deploymentName,
+        description: deploymentDescription,
+        type: deploymentType,
         provider_data: {
           llm: selectedLlm,
           operations,
@@ -361,11 +359,11 @@ export function DeploymentStepperProvider({
         deployment_id: editingDeployment.id,
       };
 
-      // Spec changes (description only — name is not editable after creation).
+      // Metadata changes (description only — name is not editable after creation).
       const descriptionChanged =
         deploymentDescription !== (editingDeployment.description ?? "");
       if (descriptionChanged) {
-        result.spec = { description: deploymentDescription };
+        result.description = deploymentDescription;
       }
 
       // Build provider_data with operations for attach/detach + LLM.
@@ -462,8 +460,8 @@ export function DeploymentStepperProvider({
       }
 
       // Backend requires at least one field.
-      if (!result.spec && !result.provider_data) {
-        result.spec = { description: deploymentDescription };
+      if (result.description === undefined && !result.provider_data) {
+        result.description = deploymentDescription;
       }
 
       return result;
