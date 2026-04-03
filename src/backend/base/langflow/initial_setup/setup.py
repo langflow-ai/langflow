@@ -62,15 +62,9 @@ from langflow.services.deps import (
 
 def update_projects_components_with_latest_component_versions(project_data, all_types_dict):
     # Flatten the all_types_dict for easy access
-    all_types_dict_flat = {}
-    for category in all_types_dict.values():
-        for key, component in category.items():
-            # Strip hash_history from component metadata before using in flows
-            # hash_history is internal metadata for tracking component evolution
-            # and should only exist in component_index.json, not in saved flows
-            if "metadata" in component and "hash_history" in component["metadata"]:
-                del component["metadata"]["hash_history"]
-            all_types_dict_flat[key] = component
+    all_types_dict_flat = {
+        key: component for category in all_types_dict.values() for key, component in category.items()
+    }
 
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
@@ -82,7 +76,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
-            node_data["template"]["code"] = latest_template["code"]
+            node_data["template"]["code"] = deepcopy(latest_template["code"])
             # skip components that are having dynamic values that need to be persisted for templates
 
             if node_type in SKIPPED_COMPONENTS:
@@ -119,7 +113,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
                 if node_type != "Prompt":
-                    node_data["template"] = latest_template
+                    node_data["template"] = deepcopy(latest_template)
                 else:
                     for key, value in latest_template.items():
                         if key not in node_data["template"]:
@@ -130,7 +124,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                     "new_value": value,
                                 }
                             )
-                            node_data["template"][key] = value
+                            node_data["template"][key] = deepcopy(value)
                         elif isinstance(value, dict) and value.get("value"):
                             node_changes_log[node_type].append(
                                 {
@@ -164,11 +158,11 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                 "new_value": latest_node[attr],
                             }
                         )
-                        node_data[attr] = latest_node[attr]
+                        node_data[attr] = deepcopy(latest_node[attr])
 
                 for field_name, field_dict in latest_template.items():
                     if field_name not in node_data["template"]:
-                        node_data["template"][field_name] = field_dict
+                        node_data["template"][field_name] = deepcopy(field_dict)
                         continue
                     # The idea here is to update some attributes of the field
                     to_check_attributes = FIELD_FORMAT_ATTRIBUTES
@@ -195,7 +189,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                     "new_value": field_dict[attr],
                                 }
                             )
-                            node_data["template"][field_name][attr] = field_dict[attr]
+                            node_data["template"][field_name][attr] = deepcopy(field_dict[attr])
             # Remove fields that are not in the latest template
             if node_type != "Prompt":
                 for field_name in list(node_data["template"].keys()):
@@ -347,11 +341,11 @@ def update_edges_with_latest_component_versions(project_data):
 
         # Find the corresponding source and target nodes
         source_node = next(
-            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("source")),
+            (node for node in project_data_copy.get("nodes", []) if node.get("id") == edge.get("source")),
             None,
         )
         target_node = next(
-            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("target")),
+            (node for node in project_data_copy.get("nodes", []) if node.get("id") == edge.get("target")),
             None,
         )
 
@@ -371,7 +365,7 @@ def update_edges_with_latest_component_versions(project_data):
 
                 # Find the new source node
                 source_node = next(
-                    (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
+                    (node for node in project_data_copy.get("nodes", []) if node.get("id") == new_node_id),
                     None,
                 )
 
@@ -400,7 +394,7 @@ def update_edges_with_latest_component_versions(project_data):
 
                     # Find the new target node
                     target_node = next(
-                        (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
+                        (node for node in project_data_copy.get("nodes", []) if node.get("id") == new_node_id),
                         None,
                     )
 
@@ -725,7 +719,7 @@ def create_new_project(
         gradient=project_gradient,
         tags=project_tags,
     )
-    db_flow = Flow.model_validate(new_project, from_attributes=True)
+    db_flow = Flow.model_validate(new_project.model_dump(exclude={"id"}))
     session.add(db_flow)
 
 
@@ -901,7 +895,7 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
                         tags=flow_tags,
                         endpoint_name=flow_endpoint_name,  # Set endpoint_name from JSON
                     )
-                    db_flow = Flow.model_validate(new_project, from_attributes=True)
+                    db_flow = Flow.model_validate(new_project.model_dump(exclude={"id"}))
 
                     # Set the ID from JSON if provided
                     if flow_id:

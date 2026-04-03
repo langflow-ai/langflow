@@ -1,8 +1,8 @@
 # mypy: disable-error-code="attr-defined"
 import json
 
-from langchain.chains.query_constructor.base import AttributeInfo
-from langchain.retrievers.self_query.base import SelfQueryRetriever
+from langchain_classic.chains.query_constructor.base import AttributeInfo
+from langchain_classic.retrievers.self_query.base import SelfQueryRetriever
 
 from lfx.base.vectorstores.model import check_cached_vector_store
 from lfx.custom.custom_component.custom_component import CustomComponent
