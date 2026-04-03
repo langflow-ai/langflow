@@ -63,6 +63,7 @@ That's it! You're ready to build with Langflow! 🎉
 ## 📦 Other install options
 
 ### Run from source
+
 If you've cloned this repository and want to contribute, run this command from the repository root:
 ```shell
 make run_cli
@@ -70,6 +71,7 @@ make run_cli
 For more information, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ### Docker
+
 Start a Langflow container with default settings:
 ```shell
 docker run -p 7860:7860 langflowai/langflow:latest
