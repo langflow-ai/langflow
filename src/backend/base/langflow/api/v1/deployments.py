@@ -257,7 +257,7 @@ async def create_provider_account(
     deployment_mapper = get_deployment_mapper(payload.provider_key)
     deployment_adapter = resolve_deployment_adapter(payload.provider_key)
 
-    with handle_adapter_errors():
+    with handle_adapter_errors(mapper=deployment_mapper):
         verify_input = deployment_mapper.resolve_verify_credentials(payload=payload)
         await deployment_adapter.verify_credentials(
             user_id=current_user.id,
@@ -390,7 +390,7 @@ async def update_provider_account(
                 detail="This operation is not supported by the deployment provider.",
             ) from exc
         if verify_input is not None:
-            with handle_adapter_errors():
+            with handle_adapter_errors(mapper=deployment_mapper):
                 await deployment_adapter.verify_credentials(
                     user_id=current_user.id,
                     payload=verify_input,
@@ -474,7 +474,7 @@ async def create_deployment(
             db=session,
             payload=payload,
         )
-        with handle_adapter_errors(), deployment_provider_scope(provider_id):
+        with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
             provider_create_result = await deployment_adapter.create(
                 user_id=current_user.id,
                 payload=adapter_payload,
@@ -491,7 +491,7 @@ async def create_deployment(
                 db=session,
                 payload=payload,
             )
-            with handle_adapter_errors(), deployment_provider_scope(provider_id):
+            with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
                 provider_update_result: DeploymentUpdateResult = await deployment_adapter.update(
                     deployment_id=existing_resource_key,
                     payload=adapter_payload,
@@ -634,7 +634,7 @@ async def list_deployments(
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     if load_from_provider:
-        with handle_adapter_errors(), deployment_provider_scope(provider_id):
+        with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
             provider_view = await deployment_adapter.list(
                 user_id=current_user.id,
                 db=session,
@@ -642,7 +642,7 @@ async def list_deployments(
             )
         return deployment_mapper.shape_deployment_list_result(provider_view)
 
-    with handle_adapter_errors(), deployment_provider_scope(provider_id):
+    with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
         rows_with_counts, total = await list_deployments_synced(
             deployment_adapter=deployment_adapter,
             deployment_mapper=deployment_mapper,
@@ -699,7 +699,7 @@ async def list_deployment_llms(
     )
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
-    with handle_adapter_errors(), deployment_provider_scope(provider_id):
+    with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
         llm_list_result = await deployment_adapter.list_llms(
             user_id=current_user.id,
             db=session,
@@ -728,7 +728,10 @@ async def create_deployment_execution(
         db=session,
         payload=payload,
     )
-    with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+    with (
+        handle_adapter_errors(mapper=deployment_mapper),
+        deployment_provider_scope(deployment_row.deployment_provider_account_id),
+    ):
         execution_result = await deployment_adapter.create_execution(
             payload=adapter_execution_payload,
             user_id=current_user.id,
@@ -754,7 +757,10 @@ async def get_deployment_execution(
         db=session,
     )
     execution_lookup_id = execution_id.strip()
-    with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+    with (
+        handle_adapter_errors(mapper=deployment_mapper),
+        deployment_provider_scope(deployment_row.deployment_provider_account_id),
+    ):
         execution_result = await deployment_adapter.get_execution(
             execution_id=execution_lookup_id,
             user_id=current_user.id,
@@ -829,7 +835,7 @@ async def list_deployment_configs(
         provider_params=None,
         db=session,
     )
-    with handle_adapter_errors(), deployment_provider_scope(provider_account.id):
+    with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_account.id):
         config_result = await deployment_adapter.list_configs(
             user_id=current_user.id,
             params=adapter_params,
@@ -875,7 +881,7 @@ async def list_deployment_snapshots(
         provider_params=None,
         db=session,
     )
-    with handle_adapter_errors(), deployment_provider_scope(provider_account.id):
+    with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_account.id):
         snapshot_result = await deployment_adapter.list_snapshots(
             user_id=current_user.id,
             params=adapter_params,
@@ -969,7 +975,10 @@ async def update_snapshot(
         deployment=deployment,
     )
 
-    with handle_adapter_errors(), deployment_provider_scope(deployment.deployment_provider_account_id):
+    with (
+        handle_adapter_errors(mapper=deployment_mapper),
+        deployment_provider_scope(deployment.deployment_provider_account_id),
+    ):
         await deployment_adapter.update_snapshot(
             user_id=current_user.id,
             db=session,
@@ -1173,7 +1182,7 @@ async def update_deployment(
         project_id=deployment_row.project_id,
         db=session,
     )
-    with handle_adapter_errors(), deployment_provider_scope(deployment_provider_account_id):
+    with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(deployment_provider_account_id):
         update_result: DeploymentUpdateResult = await deployment_adapter.update(
             deployment_id=deployment_resource_key,
             payload=adapter_payload,
@@ -1332,7 +1341,10 @@ async def list_deployment_flow_versions(
         user_id=current_user.id,
         db=session,
     )
-    with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+    with (
+        handle_adapter_errors(mapper=deployment_mapper),
+        deployment_provider_scope(deployment_row.deployment_provider_account_id),
+    ):
         rows, total, snapshot_result = await list_deployment_flow_versions_synced(
             deployment_adapter=deployment_adapter,
             deployment_mapper=deployment_mapper,

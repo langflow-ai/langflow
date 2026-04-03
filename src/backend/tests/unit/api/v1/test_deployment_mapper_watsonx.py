@@ -102,6 +102,37 @@ def test_watsonx_mapper_provider_list_entry_rejects_non_dict_provider_data() -> 
     assert exc_info.value.detail == "Invalid deployment list item provider_data payload: expected object or null."
 
 
+@pytest.mark.parametrize(
+    ("raw_message", "expected"),
+    [
+        (
+            "Agent already exists in provider",
+            "An agent with this name already exists in the provider. "
+            "Please choose a different name or delete the existing agent first.",
+        ),
+        (
+            "connection conflict for app_id xyz",
+            "A connection referenced in this request already exists in the provider. "
+            "Reference it as an existing connection instead of creating a new one.",
+        ),
+        (
+            "tool already exists",
+            "A tool with this name already exists in the provider. Please choose a different name.",
+        ),
+        (
+            "unexpected conflict",
+            "A resource with this name already exists in the provider. unexpected conflict",
+        ),
+    ],
+)
+def test_watsonx_mapper_formats_conflict_detail(raw_message: str, expected: str) -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+
+    detail = mapper.format_conflict_detail(raw_message)
+
+    assert detail == expected
+
+
 def test_watsonx_mapper_shapes_flow_version_item_data_from_connections() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
 

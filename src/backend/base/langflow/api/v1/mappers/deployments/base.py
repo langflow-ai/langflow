@@ -407,6 +407,14 @@ class BaseDeploymentMapper:
         _ = provider_url
         return provider_tenant_id
 
+    def format_conflict_detail(self, raw_message: str) -> str:
+        """Format provider conflict errors for API responses.
+
+        Provider-specific mappers may override this to map provider-native
+        conflict wording to clearer end-user guidance.
+        """
+        return f"A resource with this name already exists in the provider. {raw_message}"
+
     def resolve_credential_fields(
         self,
         *,

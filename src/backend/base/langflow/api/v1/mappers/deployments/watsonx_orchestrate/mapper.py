@@ -174,6 +174,22 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             return provider_tenant_id
         return extract_tenant_from_url(provider_url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
 
+    def format_conflict_detail(self, raw_message: str) -> str:
+        lower = raw_message.lower()
+        if "agent" in lower and ("already exists" in lower or "conflict" in lower):
+            return (
+                "An agent with this name already exists in the provider. "
+                "Please choose a different name or delete the existing agent first."
+            )
+        if "connection" in lower or "app_id" in lower:
+            return (
+                "A connection referenced in this request already exists in the provider. "
+                "Reference it as an existing connection instead of creating a new one."
+            )
+        if "tool" in lower and ("already exists" in lower or "conflict" in lower):
+            return "A tool with this name already exists in the provider. Please choose a different name."
+        return super().format_conflict_detail(raw_message)
+
     def _validate_provider_data(self, provider_data: dict[str, Any]) -> dict[str, Any]:
         verify_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.verify_credentials
         if verify_slot:

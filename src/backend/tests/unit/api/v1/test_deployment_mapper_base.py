@@ -570,6 +570,14 @@ def test_base_mapper_execution_provider_data_shapers_passthrough() -> None:
     assert mapper.shape_execution_status_provider_data(payload) is payload
 
 
+def test_base_mapper_formats_conflict_detail_with_generic_fallback() -> None:
+    mapper = BaseDeploymentMapper()
+
+    detail = mapper.format_conflict_detail("provider conflict detail")
+
+    assert detail == "A resource with this name already exists in the provider. provider conflict detail"
+
+
 def test_base_mapper_shapes_deployment_update_result() -> None:
     mapper = BaseDeploymentMapper()
     deployment_id = uuid4()

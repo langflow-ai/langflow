@@ -25,6 +25,7 @@ from langflow.api.v1.schemas.deployments import (
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
+    DeploymentConflictError,
     DeploymentNotFoundError,
     ServiceUnavailableError,
 )
@@ -2284,6 +2285,28 @@ class TestHandleAdapterErrors:
             raise DeploymentNotFoundError(message="gone")
 
         assert exc_info.value.status_code == 404
+
+    def test_maps_conflict_with_mapper_formatter(self):
+        from langflow.api.v1.mappers.deployments.helpers import handle_adapter_errors
+
+        deployment_mapper = MagicMock()
+        deployment_mapper.format_conflict_detail.return_value = "friendly detail"
+
+        with pytest.raises(HTTPException) as exc_info, handle_adapter_errors(mapper=deployment_mapper):
+            raise DeploymentConflictError(message="raw provider conflict")
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == "friendly detail"
+        deployment_mapper.format_conflict_detail.assert_called_once_with("raw provider conflict")
+
+    def test_maps_conflict_without_mapper_passthrough(self):
+        from langflow.api.v1.mappers.deployments.helpers import handle_adapter_errors
+
+        with pytest.raises(HTTPException) as exc_info, handle_adapter_errors():
+            raise DeploymentConflictError(message="raw provider conflict")
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == "raw provider conflict"
 
     def test_passes_through_http_exception(self):
         from langflow.api.v1.mappers.deployments.helpers import handle_adapter_errors
