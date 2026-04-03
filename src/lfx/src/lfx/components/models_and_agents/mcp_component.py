@@ -901,6 +901,8 @@ class MCPToolsComponent(ComponentWithCache):
 
         # Get backend URL from settings
         try:
+            from lfx.services.deps import get_settings_service
+
             settings = get_settings_service().settings
             if getattr(settings, "backend_url", None):
                 base_url = settings.backend_url.rstrip("/")
