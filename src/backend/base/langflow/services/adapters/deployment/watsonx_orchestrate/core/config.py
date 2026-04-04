@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import TYPE_CHECKING
+
+logger = logging.getLogger(__name__)
 
 from ibm_watsonx_orchestrate_core.types.connections import (
     ConnectionConfiguration,
@@ -36,6 +39,8 @@ async def create_config(
 ) -> str:
     """Create/update a wxO draft key-value connection config plus runtime credentials."""
     app_id = validate_wxo_name(config.name)
+    env_var_keys = list((config.environment_variables or {}).keys())
+    logger.debug("create_config: app_id='%s', env_var_keys=%s", app_id, env_var_keys)
 
     await asyncio.to_thread(clients.connections.create, payload={"app_id": app_id})
 
@@ -64,6 +69,7 @@ async def create_config(
         use_app_credentials=False,
         payload={"runtime_credentials": runtime_credentials.model_dump()},
     )
+    logger.debug("create_config: completed for app_id='%s'", app_id)
 
     return app_id
 
@@ -124,6 +130,8 @@ def resolve_create_app_id(
 
 
 async def validate_connection(connections_client: ConnectionsClient, *, app_id: str) -> GetConnectionResponse:
+    logger.debug("validate_connection: app_id='%s'", app_id)
+
     connection = await asyncio.to_thread(connections_client.get_draft_by_app_id, app_id=app_id)
     if not connection:
         msg = f"Connection '{app_id}' not found. Ensure the connection exists with a draft configuration."
@@ -149,4 +157,5 @@ async def validate_connection(connections_client: ConnectionsClient, *, app_id: 
         msg = f"Connection '{app_id}' is missing draft runtime credentials."
         raise InvalidContentError(message=msg)
 
+    logger.debug("validate_connection: passed for app_id='%s', connection_id='%s'", app_id, getattr(connection, 'connection_id', 'unknown'))
     return connection

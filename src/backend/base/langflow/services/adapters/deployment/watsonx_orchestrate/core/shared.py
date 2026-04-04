@@ -119,6 +119,7 @@ async def create_connection_with_conflict_mapping(
 ) -> str:
     from lfx.services.adapters.deployment.schema import DeploymentConfig
 
+    logger.debug("create_connection_with_conflict_mapping: app_id='%s'", app_id)
     config_payload = DeploymentConfig(
         name=app_id,
         description=None,
@@ -126,13 +127,14 @@ async def create_connection_with_conflict_mapping(
         provider_config=payload.provider_config,
     )
     try:
-        return await retry_create(
+        result = await retry_create(
             create_config,
             clients=clients,
             config=config_payload,
             user_id=user_id,
             db=db,
         )
+        return result
     except (ClientAPIException, HTTPException) as exc:
         if isinstance(exc, ClientAPIException):
             status_code = exc.response.status_code
@@ -142,6 +144,7 @@ async def create_connection_with_conflict_mapping(
             error_detail = str(extract_error_detail(str(exc.detail)))
         is_conflict = status_code == status.HTTP_409_CONFLICT or "already exists" in error_detail.lower()
         if is_conflict:
+            logger.debug("create_connection_with_conflict_mapping: conflict for app_id='%s': %s", app_id, error_detail)
             prefix = f"{error_prefix}: " if error_prefix else ""
             msg = (
                 f"{prefix}A connection with app_id '{app_id}' already exists in the provider. "
@@ -163,6 +166,7 @@ async def resolve_connections_for_operations(
     validate_connection_fn: Callable[..., Awaitable[object]] = validate_connection,
     create_connection_fn: Callable[..., Awaitable[str]] = create_connection_with_conflict_mapping,
 ) -> ConnectionResolutionResult:
+    logger.debug("resolve_connections_for_operations: existing_app_ids=%s, raw_to_create=%d", existing_app_ids, len(raw_connections_to_create))
     operation_to_provider_app_id = {app_id: app_id for app_id in existing_app_ids}
     resolved_connections: dict[str, str] = {}
 
@@ -209,6 +213,7 @@ async def resolve_connections_for_operations(
         created_app_ids_journal.append(result)
     created_app_ids = list(dict.fromkeys(created_app_ids_journal))
     if create_connection_errors:
+        logger.debug("resolve_connections_for_operations: %d errors, created_app_ids=%s", len(create_connection_errors), created_app_ids)
         raise ConnectionCreateBatchError(created_app_ids=created_app_ids, errors=create_connection_errors)
 
     validated_created_connections: list[object] = await asyncio.gather(
@@ -224,6 +229,8 @@ async def resolve_connections_for_operations(
     for create_plan, connection in zip(raw_connections_to_create, validated_created_connections, strict=True):
         operation_to_provider_app_id[create_plan.operation_app_id] = create_plan.provider_app_id
         resolved_connections[create_plan.provider_app_id] = connection.connection_id  # type: ignore[attr-defined]
+
+    logger.debug("resolve_connections_for_operations: resolved_connections=%s, created_app_ids=%s", resolved_connections, created_app_ids)
 
     return ConnectionResolutionResult(
         operation_to_provider_app_id=operation_to_provider_app_id,
