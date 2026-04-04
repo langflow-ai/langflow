@@ -86,13 +86,13 @@ from langflow.api.v1.schemas.deployments import (
     ExecutionCreateResponse,
     ExecutionStatusResponse,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.utils import normalize_wxo_name
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS as WXO_ADAPTER_PAYLOAD_SCHEMAS,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.utils import normalize_wxo_name
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.deployment_provider_account.utils import extract_tenant_from_url
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
@@ -528,8 +528,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         # so that an invalid flow name doesn't block a user who provided a
         # valid custom tool_name for that flow.
         raw_name_by_flow_version_id: dict[str, str] = {
-            flow_version_id: artifact.name
-            for flow_version_id, _version_number, _project_id, artifact in flow_artifacts
+            flow_version_id: artifact.name for flow_version_id, _version_number, _project_id, artifact in flow_artifacts
         }
         for op in api_provider_payload.operations:
             if isinstance(op, WatsonxApiBindOperation) and op.tool_name:

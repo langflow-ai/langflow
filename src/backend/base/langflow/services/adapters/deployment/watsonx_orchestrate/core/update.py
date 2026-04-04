@@ -208,7 +208,9 @@ def build_provider_update_plan(
         if isinstance(operation, WatsonxRenameToolOperation):
             tool_renames[operation.tool.tool_id] = operation.new_name
             existing_tool_refs.append(
-                WatsonxResultToolRefBinding(source_ref=operation.tool.source_ref, tool_id=operation.tool.tool_id, created=False)
+                WatsonxResultToolRefBinding(
+                    source_ref=operation.tool.source_ref, tool_id=operation.tool.tool_id, created=False
+                )
             )
             continue
 
@@ -373,10 +375,7 @@ async def _apply_tool_renames(
         tool_updates.append((tool_id, writable))
 
     await asyncio.gather(
-        *(
-            retry_update(asyncio.to_thread, clients.tool.update, tool_id, writable)
-            for tool_id, writable in tool_updates
-        )
+        *(retry_update(asyncio.to_thread, clients.tool.update, tool_id, writable) for tool_id, writable in tool_updates)
     )
     logger.debug("_apply_tool_renames: renamed %d tools: %s", len(tool_updates), tool_renames)
 

@@ -157,5 +157,9 @@ async def validate_connection(connections_client: ConnectionsClient, *, app_id: 
         msg = f"Connection '{app_id}' is missing draft runtime credentials."
         raise InvalidContentError(message=msg)
 
-    logger.debug("validate_connection: passed for app_id='%s', connection_id='%s'", app_id, getattr(connection, 'connection_id', 'unknown'))
+    logger.debug(
+        "validate_connection: passed for app_id='%s', connection_id='%s'",
+        app_id,
+        getattr(connection, "connection_id", "unknown"),
+    )
     return connection

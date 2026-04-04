@@ -166,7 +166,11 @@ async def resolve_connections_for_operations(
     validate_connection_fn: Callable[..., Awaitable[object]] = validate_connection,
     create_connection_fn: Callable[..., Awaitable[str]] = create_connection_with_conflict_mapping,
 ) -> ConnectionResolutionResult:
-    logger.debug("resolve_connections_for_operations: existing_app_ids=%s, raw_to_create=%d", existing_app_ids, len(raw_connections_to_create))
+    logger.debug(
+        "resolve_connections_for_operations: existing_app_ids=%s, raw_to_create=%d",
+        existing_app_ids,
+        len(raw_connections_to_create),
+    )
     operation_to_provider_app_id = {app_id: app_id for app_id in existing_app_ids}
     resolved_connections: dict[str, str] = {}
 
@@ -213,7 +217,11 @@ async def resolve_connections_for_operations(
         created_app_ids_journal.append(result)
     created_app_ids = list(dict.fromkeys(created_app_ids_journal))
     if create_connection_errors:
-        logger.debug("resolve_connections_for_operations: %d errors, created_app_ids=%s", len(create_connection_errors), created_app_ids)
+        logger.debug(
+            "resolve_connections_for_operations: %d errors, created_app_ids=%s",
+            len(create_connection_errors),
+            created_app_ids,
+        )
         raise ConnectionCreateBatchError(created_app_ids=created_app_ids, errors=create_connection_errors)
 
     validated_created_connections: list[object] = await asyncio.gather(
@@ -230,7 +238,11 @@ async def resolve_connections_for_operations(
         operation_to_provider_app_id[create_plan.operation_app_id] = create_plan.provider_app_id
         resolved_connections[create_plan.provider_app_id] = connection.connection_id  # type: ignore[attr-defined]
 
-    logger.debug("resolve_connections_for_operations: resolved_connections=%s, created_app_ids=%s", resolved_connections, created_app_ids)
+    logger.debug(
+        "resolve_connections_for_operations: resolved_connections=%s, created_app_ids=%s",
+        resolved_connections,
+        created_app_ids,
+    )
 
     return ConnectionResolutionResult(
         operation_to_provider_app_id=operation_to_provider_app_id,

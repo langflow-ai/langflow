@@ -268,7 +268,12 @@ def create_wxo_flow_tool(
     """
     # provider_data might break tool runtime expectations with unexpected top-level keys
     flow_definition = flow_payload.model_dump(exclude={"provider_data"})
-    logger.debug("create_wxo_flow_tool: flow name='%s', id='%s', connections=%s", flow_definition.get("name"), flow_definition.get("id"), connections)
+    logger.debug(
+        "create_wxo_flow_tool: flow name='%s', id='%s', connections=%s",
+        flow_definition.get("name"),
+        flow_definition.get("id"),
+        connections,
+    )
 
     flow_provider_data = flow_payload.provider_data
     if not isinstance(flow_provider_data, WatsonxFlowArtifactProviderData):
@@ -316,7 +321,12 @@ def create_wxo_flow_tool(
         tool_payload["name"] = normalize_wxo_name(current_name)
 
     (tool_payload.setdefault("binding", {}).setdefault("langflow", {})["project_id"]) = project_id
-    logger.debug("create_wxo_flow_tool: tool name='%s', project_id='%s', binding=%s", tool_payload.get("name"), project_id, tool_payload.get("binding", {}).get("langflow"))
+    logger.debug(
+        "create_wxo_flow_tool: tool name='%s', project_id='%s', binding=%s",
+        tool_payload.get("name"),
+        project_id,
+        tool_payload.get("binding", {}).get("langflow"),
+    )
 
     artifacts: bytes = build_langflow_artifact_bytes(
         tool=tool,
@@ -409,7 +419,9 @@ async def upload_wxo_flow_tool(
 ) -> str:
     tool_response = await retry_create(asyncio.to_thread, clients.tool.create, tool_payload)
     tool_id = require_tool_id(tool_response)
-    logger.debug("upload_wxo_flow_tool: created tool_id='%s', uploading artifact (%d bytes)", tool_id, len(artifact_bytes))
+    logger.debug(
+        "upload_wxo_flow_tool: created tool_id='%s', uploading artifact (%d bytes)", tool_id, len(artifact_bytes)
+    )
     if created_tool_ids_journal is not None:
         created_tool_ids_journal.append(tool_id)
 

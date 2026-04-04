@@ -274,7 +274,11 @@ class WatsonxAttachToolOperation(BaseModel):
 
 
 WatsonxUpdateOperation = Annotated[
-    WatsonxBindOperation | WatsonxUnbindOperation | WatsonxRenameToolOperation | WatsonxRemoveToolOperation | WatsonxAttachToolOperation,
+    WatsonxBindOperation
+    | WatsonxUnbindOperation
+    | WatsonxRenameToolOperation
+    | WatsonxRemoveToolOperation
+    | WatsonxAttachToolOperation,
     Field(discriminator="op"),
 ]
 
