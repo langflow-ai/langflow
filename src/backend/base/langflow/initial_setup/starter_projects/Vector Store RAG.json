@@ -4968,12 +4968,12 @@
       "zoom": 0.42672383342079184
     }
   },
-  "description": "Load your data for chat context with Retrieval Augmented Generation.",
+  "description": "사내 기술 문서를 벡터 DB에 저장하고 RAG로 검색하는 시스템입니다.",
   "endpoint_name": null,
   "id": "4bcefe77-4a90-4884-bef2-98fde72704f4",
   "is_component": false,
   "last_tested_version": "1.7.1",
-  "name": "Vector Store RAG",
+  "name": "사내 문서 검색",
   "tags": [
     "openai",
     "astradb",

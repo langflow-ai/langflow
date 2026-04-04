@@ -1571,12 +1571,12 @@
       "zoom": 0.8960810767526934
     }
   },
-  "description": "Perform basic prompting with an OpenAI model.",
+  "description": "반도체 제조 공정에 대한 질문에 답변하는 AI 어시스턴트입니다.",
   "endpoint_name": null,
   "id": "c1cb7b3c-2589-4754-ac61-8cf88df4a07e",
   "is_component": false,
   "last_tested_version": "1.8.0",
-  "name": "Basic Prompting",
+  "name": "반도체 공정 도우미",
   "tags": [
     "chatbots"
   ]

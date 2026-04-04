@@ -2237,12 +2237,12 @@
       "zoom": 0.7755583291049821
     }
   },
-  "description": "A simple but powerful starter agent.",
+  "description": "데이터를 수집·분석하고 인사이트를 도출하는 자율형 에이전트입니다.",
   "endpoint_name": null,
   "id": "5ead1bd5-bd5a-4b40-a0bb-20c15a72f561",
   "is_component": false,
   "last_tested_version": "1.8.0",
-  "name": "Simple Agent",
+  "name": "데이터 분석 에이전트",
   "tags": [
     "assistants",
     "agents"

@@ -31,34 +31,36 @@ export default function GetStartedComponent({
     {
       bgImage: memoryChatbot,
       bgHorizontalImage: memoryChatbotHorizontal,
-      icon: "MessagesSquare",
-      category: "prompting",
+      icon: "Cpu",
+      category: "반도체",
       flow: filteredExamples.find(
-        (example) => example.name === "Basic Prompting",
+        (example) => example.name === "반도체 공정 도우미",
       ),
     },
     {
       bgImage: vectorRag,
       bgHorizontalImage: vectorRagHorizontal,
-      icon: "Database",
-      category: "RAG",
+      icon: "FileSearch",
+      category: "문서검색",
       flow: filteredExamples.find(
-        (example) => example.name === "Vector Store RAG",
+        (example) => example.name === "사내 문서 검색",
       ),
     },
     {
       bgImage: multiAgent,
       bgHorizontalImage: multiAgentHorizontal,
-      icon: "Bot",
-      category: "Agents",
-      flow: filteredExamples.find((example) => example.name === "Simple Agent"),
+      icon: "BarChart3",
+      category: "데이터분석",
+      flow: filteredExamples.find(
+        (example) => example.name === "데이터 분석 에이전트",
+      ),
     },
   ];
 
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-8">
-      <BaseModal.Header description="Start with templates showcasing Langflow's Prompting, RAG, and Agent use cases.">
-        Get started
+      <BaseModal.Header description="SK하이닉스 맞춤형 템플릿으로 시작하세요. 반도체 공정, 문서 검색, 데이터 분석을 바로 활용할 수 있습니다.">
+        시작하기
       </BaseModal.Header>
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
         {cardData.map((card, index) => (
