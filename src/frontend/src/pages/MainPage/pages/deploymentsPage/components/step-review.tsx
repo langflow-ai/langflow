@@ -1,9 +1,89 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
+
+function EditableToolName({
+  value,
+  placeholder,
+  onSave,
+}: {
+  value: string;
+  placeholder: string;
+  onSave: (name: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+
+  const confirm = useCallback(() => {
+    onSave(draft);
+    setEditing(false);
+  }, [draft, onSave]);
+
+  const cancel = useCallback(() => {
+    setDraft(value);
+    setEditing(false);
+  }, [value]);
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <Input
+          ref={inputRef}
+          className="h-7 w-48 text-sm"
+          value={draft}
+          placeholder={placeholder}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") confirm();
+            if (e.key === "Escape") cancel();
+          }}
+          data-testid="tool-name-input"
+        />
+        <button
+          type="button"
+          onClick={confirm}
+          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          title="Confirm"
+        >
+          <ForwardedIconComponent name="Check" className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-sm font-medium text-foreground">
+        {value || placeholder}
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          setDraft(value);
+          setEditing(true);
+        }}
+        className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+        title="Edit tool name"
+        data-testid="edit-tool-name"
+      >
+        <ForwardedIconComponent name="Pencil" className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
 
 export default function StepReview() {
   const {
@@ -14,6 +94,7 @@ export default function StepReview() {
     connections,
     selectedVersionByFlow,
     toolNameByFlow,
+    setToolNameByFlow,
     attachedConnectionByFlow,
     removedFlowIds,
   } = useDeploymentStepper();
@@ -48,7 +129,7 @@ export default function StepReview() {
               masked: "••••••••",
             }))
           : [];
-        return { name: conn.name, envVars };
+        return { name: conn.name, isNew: conn.isNew ?? false, envVars };
       });
 
       const flowName = flow?.name ?? "Unknown";
@@ -156,9 +237,21 @@ export default function StepReview() {
                       name="Wrench"
                       className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
                     />
-                    <span className="text-sm font-medium text-foreground">
-                      {item.toolName}
-                    </span>
+                    <EditableToolName
+                      value={toolNameByFlow.get(item.flowId)?.trim() ?? ""}
+                      placeholder={item.flowName}
+                      onSave={(name) => {
+                        setToolNameByFlow((prev) => {
+                          const next = new Map(prev);
+                          if (name.trim()) {
+                            next.set(item.flowId, name.trim());
+                          } else {
+                            next.delete(item.flowId);
+                          }
+                          return next;
+                        });
+                      }}
+                    />
                   </div>
                   <div className="flex items-center gap-2 pl-5">
                     <ForwardedIconComponent
@@ -178,44 +271,73 @@ export default function StepReview() {
                   </div>
                 </div>
 
-                {item.connectionDetails.length > 0 && (
-                  <div className="flex flex-col gap-3">
-                    {item.connectionDetails.map((conn) => (
-                      <div key={conn.name} className="flex flex-col gap-1.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-muted-foreground">
-                            Connection:
-                          </span>
-                          <span className="text-xs font-medium text-foreground">
-                            {conn.name}
-                          </span>
-                        </div>
-                        {conn.envVars.length > 0 && (
-                          <div className="flex flex-col divide-y divide-border overflow-hidden rounded-md border border-border">
-                            {conn.envVars.map(({ key, masked }) => (
-                              <div
-                                key={key}
-                                className="flex items-center justify-between bg-muted/40 px-3 py-1.5"
+                {item.connectionDetails.length > 0 &&
+                  (() => {
+                    const newConns = item.connectionDetails.filter(
+                      (c) => c.isNew,
+                    );
+                    const existingConns = item.connectionDetails.filter(
+                      (c) => !c.isNew,
+                    );
+                    return (
+                      <div className="flex flex-col gap-4">
+                        {existingConns.length > 0 && (
+                          <div className="flex flex-col gap-2">
+                            <span className="text-xs font-medium text-muted-foreground">
+                              Existing Connections
+                            </span>
+                            {existingConns.map((conn) => (
+                              <span
+                                key={conn.name}
+                                className="text-xs font-medium text-foreground"
                               >
-                                <span className="font-mono text-xs text-foreground">
-                                  {key}
+                                {conn.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {newConns.length > 0 && (
+                          <div className="flex flex-col gap-2">
+                            <span className="text-xs font-medium text-muted-foreground">
+                              New Connections
+                            </span>
+                            {newConns.map((conn) => (
+                              <div
+                                key={conn.name}
+                                className="flex flex-col gap-1.5"
+                              >
+                                <span className="text-xs font-medium text-foreground">
+                                  {conn.name}
                                 </span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-muted-foreground">
-                                    =
-                                  </span>
-                                  <span className="font-mono text-xs text-muted-foreground">
-                                    {masked}
-                                  </span>
-                                </div>
+                                {conn.envVars.length > 0 && (
+                                  <div className="flex flex-col divide-y divide-border overflow-hidden rounded-md border border-border">
+                                    {conn.envVars.map(({ key, masked }) => (
+                                      <div
+                                        key={key}
+                                        className="flex items-center justify-between bg-muted/40 px-3 py-1.5"
+                                      >
+                                        <span className="font-mono text-xs text-foreground">
+                                          {key}
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-muted-foreground">
+                                            =
+                                          </span>
+                                          <span className="font-mono text-xs text-muted-foreground">
+                                            {masked}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    );
+                  })()}
               </div>
             </div>
           ))}
