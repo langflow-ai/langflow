@@ -17,6 +17,15 @@ jest.mock("@/controllers/API/queries/deployments/use-patch-deployment", () => ({
   usePatchDeployment: jest.fn(),
 }));
 
+const initialToolNames = new Map([
+  ["flow-1", "custom_tool_one"],
+  ["flow-2", "custom_tool_two"],
+]);
+
+const initialConnections = new Map([
+  ["flow-1", ["app-1"]],
+]);
+
 const mockDeployment: Deployment = {
   id: "deploy-1",
   name: "My Agent",
@@ -42,6 +51,8 @@ function renderEditHook() {
         editingDeployment: mockDeployment,
         selectedVersionByFlow: initialVersions,
         initialLlm: "test-model",
+        initialToolNameByFlow: initialToolNames,
+        initialConnectionsByFlow: initialConnections,
       }}
     >
       {children}
@@ -259,5 +270,83 @@ describe("Edit mode — throws outside edit mode", () => {
     expect(() => result.current.buildDeploymentUpdatePayload()).toThrow(
       "buildDeploymentUpdatePayload called outside edit mode",
     );
+  });
+});
+
+describe("Edit mode — pre-populated provider data", () => {
+  it("pre-fills toolNameByFlow from initialToolNameByFlow", () => {
+    const { result } = renderEditHook();
+    expect(result.current.toolNameByFlow.get("flow-1")).toBe(
+      "custom_tool_one",
+    );
+    expect(result.current.toolNameByFlow.get("flow-2")).toBe(
+      "custom_tool_two",
+    );
+  });
+
+  it("pre-fills attachedConnectionByFlow from initialConnectionsByFlow", () => {
+    const { result } = renderEditHook();
+    expect(result.current.attachedConnectionByFlow.get("flow-1")).toEqual([
+      "app-1",
+    ]);
+  });
+
+  it("preExistingFlowIds contains initially attached flows", () => {
+    const { result } = renderEditHook();
+    expect(result.current.preExistingFlowIds.has("flow-1")).toBe(true);
+    expect(result.current.preExistingFlowIds.has("flow-2")).toBe(true);
+    expect(result.current.preExistingFlowIds.has("flow-new")).toBe(false);
+  });
+});
+
+describe("Edit mode — rename_tool operations", () => {
+  it("sends rename_tool when pre-existing flow tool name changes", () => {
+    const { result } = renderEditHook();
+
+    act(() => {
+      result.current.setToolNameByFlow(
+        new Map([
+          ["flow-1", "renamed_tool"],
+          ["flow-2", "custom_tool_two"],
+        ]),
+      );
+    });
+
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const ops =
+      (payload.provider_data?.operations as Array<{
+        op: string;
+        flow_version_id?: string;
+        tool_name?: string;
+      }>) ?? [];
+    const renameOps = ops.filter((o) => o.op === "rename_tool");
+    expect(renameOps).toHaveLength(1);
+    expect(renameOps[0].flow_version_id).toBe("ver-1");
+    expect(renameOps[0].tool_name).toBe("renamed_tool");
+  });
+
+  it("does NOT send rename_tool when name is unchanged", () => {
+    const { result } = renderEditHook();
+    // toolNameByFlow is pre-filled with initialToolNames, no changes
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const ops =
+      (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
+    expect(ops.filter((o) => o.op === "rename_tool")).toHaveLength(0);
+  });
+
+  it("does NOT send rename_tool when name is cleared (falls back to flow name)", () => {
+    const { result } = renderEditHook();
+
+    act(() => {
+      result.current.setToolNameByFlow(
+        new Map([["flow-2", "custom_tool_two"]]),
+      ); // flow-1 removed from map
+    });
+
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const ops =
+      (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
+    // Empty string !== original, but we only send rename when currentName is truthy
+    expect(ops.filter((o) => o.op === "rename_tool")).toHaveLength(0);
   });
 });

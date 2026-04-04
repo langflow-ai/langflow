@@ -38,6 +38,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     create_and_upload_wxo_flow_tools_with_bindings,
     ensure_langflow_connections_binding,
     to_writable_tool_payload,
+    verify_langflow_owned,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxAttachToolOperation,
@@ -361,7 +362,10 @@ async def _bind_existing_tools_for_create(
 
     tool_updates: list[tuple[str, dict[str, Any]]] = []
     for tool_id in tool_ids:
-        original_tool = to_writable_tool_payload(tool_by_id[tool_id])
+        tool = tool_by_id[tool_id]
+        verify_langflow_owned(tool, tool_id=tool_id)
+
+        original_tool = to_writable_tool_payload(tool)
         original_tools[tool_id] = original_tool
         writable_tool = copy.deepcopy(original_tool)
         connections = ensure_langflow_connections_binding(writable_tool)

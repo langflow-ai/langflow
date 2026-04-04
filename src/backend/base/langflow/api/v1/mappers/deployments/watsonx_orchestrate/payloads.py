@@ -55,6 +55,21 @@ class WatsonxApiUnbindOperation(BaseModel):
     app_ids: list[str] = Field(min_length=1)
 
 
+class WatsonxApiRenameToolOperation(BaseModel):
+    """Rename a Langflow-managed tool on the provider.
+
+    Resolves tool_id from flow_version_deployment_attachment, verifies the
+    tool is Langflow-managed (has ``binding.langflow``), and updates its
+    name on the provider.  Does not modify the attachment record.
+    """
+
+    model_config = {"extra": "forbid"}
+
+    op: Literal["rename_tool"]
+    flow_version_id: UUID
+    tool_name: str = Field(min_length=1, description="New tool name.")
+
+
 class WatsonxApiRemoveToolOperation(BaseModel):
     """Remove-tool operation for an attached flow-version tool.
 
@@ -132,6 +147,7 @@ class WatsonxApiRemoveToolByIdOperation(BaseModel):
 WatsonxApiUpdateOperation = Annotated[
     WatsonxApiBindOperation
     | WatsonxApiUnbindOperation
+    | WatsonxApiRenameToolOperation
     | WatsonxApiRemoveToolOperation
     | WatsonxApiBindToolOperation
     | WatsonxApiUnbindToolOperation

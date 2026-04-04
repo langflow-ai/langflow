@@ -35,7 +35,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     ToolUploadBatchError,
     create_and_upload_wxo_flow_tools_with_bindings,
     ensure_langflow_connections_binding,
+    extract_langflow_connections_binding,
     to_writable_tool_payload,
+    verify_langflow_owned,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxAttachToolOperation,
@@ -43,6 +45,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentUpdatePayload,
     WatsonxProviderUpdateApplyResult,
     WatsonxRemoveToolOperation,
+    WatsonxRenameToolOperation,
     WatsonxResultToolRefBinding,
     WatsonxUnbindOperation,
 )
@@ -88,6 +91,7 @@ class ProviderUpdatePlan:
     raw_connections_to_create: list[RawConnectionCreatePlan]
     existing_tool_deltas: dict[str, ToolConnectionOps]
     raw_tools_to_create: list[RawToolCreatePlan]
+    tool_renames: dict[str, str]  # tool_id → new_name
     final_existing_tool_ids: list[str]
     added_existing_tool_refs: list[WatsonxResultToolRefBinding]
     removed_existing_tool_refs: list[WatsonxResultToolRefBinding]
@@ -118,6 +122,7 @@ def build_provider_update_plan(
             raw_connections_to_create=[],
             existing_tool_deltas={},
             raw_tools_to_create=[],
+            tool_renames={},
             final_existing_tool_ids=list(dict.fromkeys(provider_update.put_tools)),
             added_existing_tool_refs=[],
             removed_existing_tool_refs=[],
@@ -151,6 +156,8 @@ def build_provider_update_plan(
     #   then merged directly into the update result alongside newly-created
     #   snapshot bindings.
     existing_tool_refs: list[WatsonxResultToolRefBinding] = []
+    # tool_renames: tool_id → new_name for rename_tool operations.
+    tool_renames: dict[str, str] = {}
 
     for operation in provider_update.operations:
         if isinstance(operation, WatsonxBindOperation):
@@ -196,6 +203,13 @@ def build_provider_update_plan(
             )
             delta = _get_or_create_tool_connection_ops(existing_tool_deltas, tool_id=tool_id)
             delta.unbind.extend(operation.app_ids)
+            continue
+
+        if isinstance(operation, WatsonxRenameToolOperation):
+            tool_renames[operation.tool.tool_id] = operation.new_name
+            existing_tool_refs.append(
+                WatsonxResultToolRefBinding(source_ref=operation.tool.source_ref, tool_id=operation.tool.tool_id, created=False)
+            )
             continue
 
         if isinstance(operation, WatsonxRemoveToolOperation):
@@ -247,6 +261,7 @@ def build_provider_update_plan(
         raw_connections_to_create=raw_connections_to_create,
         existing_tool_deltas=existing_tool_deltas,
         raw_tools_to_create=raw_tools_to_create,
+        tool_renames=tool_renames,
         final_existing_tool_ids=final_existing_tool_ids.to_list(),
         added_existing_tool_refs=deduped_added_existing_tool_refs,
         removed_existing_tool_refs=deduped_removed_existing_tool_refs,
@@ -276,8 +291,11 @@ async def _update_existing_tool_connection_deltas(
 
     tool_updates: list[tuple[str, dict[str, Any]]] = []
     for tool_id in tool_ids:
+        tool = tool_by_id[tool_id]
+        verify_langflow_owned(tool, tool_id=tool_id)
+
         delta = existing_tool_deltas[tool_id]
-        original_tool = to_writable_tool_payload(tool_by_id[tool_id])
+        original_tool = to_writable_tool_payload(tool)
         original_tools[tool_id] = original_tool
         writable_tool = copy.deepcopy(original_tool)
         connections = ensure_langflow_connections_binding(writable_tool)
@@ -303,6 +321,64 @@ async def _update_existing_tool_connection_deltas(
             for tool_id, writable_tool in tool_updates
         )
     )
+
+
+async def _apply_tool_renames(
+    *,
+    clients: WxOClient,
+    agent_tool_ids: list[str],
+    tool_renames: dict[str, str],
+    original_tools: dict[str, dict[str, Any]],
+) -> None:
+    """Rename tools on the provider with safety checks.
+
+    Guards against destructive operations on tools we don't own:
+    1. Tool must be attached to this agent (tool_id in agent_tool_ids).
+    2. Tool must be a Langflow-managed tool (has ``binding.langflow``).
+    3. Tool must exist on the provider.
+
+    Captures original tool payloads in ``original_tools`` for rollback.
+    """
+    if not tool_renames:
+        return
+
+    # Verify all tools belong to this agent before fetching
+    for tool_id in tool_renames:
+        if tool_id not in agent_tool_ids:
+            msg = f"Cannot rename tool '{tool_id}': not attached to this agent."
+            raise InvalidContentError(message=msg)
+
+    tool_ids = list(tool_renames.keys())
+    tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, tool_ids)
+    tool_by_id = {str(t.get("id")): t for t in tools if isinstance(t, dict) and t.get("id")}
+
+    missing = [tid for tid in tool_ids if tid not in tool_by_id]
+    if missing:
+        msg = f"Cannot rename tool(s) not found in provider: {', '.join(missing)}"
+        raise InvalidContentError(message=msg)
+
+    tool_updates: list[tuple[str, dict[str, Any]]] = []
+    for tool_id, new_name in tool_renames.items():
+        tool = tool_by_id[tool_id]
+
+        verify_langflow_owned(tool, tool_id=tool_id)
+
+        # Capture original for rollback (if not already captured by delta updates)
+        if tool_id not in original_tools:
+            original_tools[tool_id] = to_writable_tool_payload(tool)
+
+        writable = copy.deepcopy(original_tools[tool_id])
+        writable["name"] = new_name
+        writable["display_name"] = new_name
+        tool_updates.append((tool_id, writable))
+
+    await asyncio.gather(
+        *(
+            retry_update(asyncio.to_thread, clients.tool.update, tool_id, writable)
+            for tool_id, writable in tool_updates
+        )
+    )
+    logger.debug("_apply_tool_renames: renamed %d tools: %s", len(tool_updates), tool_renames)
 
 
 def _build_agent_rollback_payload(*, agent: dict[str, Any], final_update_payload: dict[str, Any]) -> dict[str, Any]:
@@ -372,6 +448,48 @@ async def apply_provider_update_plan_with_rollback(
     final_update_payload = dict(update_payload)
     rollback_agent_payload: dict[str, Any] = {}
 
+    # Pre-seed resolved_connections with bindings already attached to the
+    # agent's existing tools.  This lets new tools reuse the same connections
+    # without the caller having to redeclare them in the update payload, and
+    # ensures they are checked first during resolution.
+    #
+    # Edge cases:
+    # - Connection deleted in wxO but still in tool binding: the stale
+    #   connection_id is pre-seeded here. If a new operation explicitly
+    #   references this app_id, resolve_connections_for_operations will
+    #   re-validate it and fail fast. If no operation references it, the
+    #   stale entry is harmless (unused).
+    # - Tool deleted in wxO but still in agent.tools: get_drafts_by_ids
+    #   silently omits missing tools, so we just get fewer bindings.
+    # - Multiple tools share the same app_id: setdefault keeps the first
+    #   connection_id seen. All tools should agree on the mapping, but if
+    #   they diverge, the explicit operation result will overwrite it.
+    agent_tool_ids = extract_agent_tool_ids(agent)
+    logger.debug("apply_provider_update_plan: agent_tool_ids=%s", agent_tool_ids)
+    if agent_tool_ids:
+        existing_tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, agent_tool_ids)
+        logger.debug("apply_provider_update_plan: fetched %d existing tools", len(existing_tools or []))
+        for tool in existing_tools or []:
+            if not isinstance(tool, dict):
+                logger.debug("apply_provider_update_plan: skipping non-dict tool: %s", type(tool).__name__)
+                continue
+            tool_id = tool.get("id", "?")
+            bindings = extract_langflow_connections_binding(tool)
+            logger.debug(
+                "apply_provider_update_plan: tool_id='%s', binding.langflow.connections=%s, raw binding=%s",
+                tool_id,
+                bindings,
+                tool.get("binding"),
+            )
+            for app_id, connection_id in bindings.items():
+                if app_id and connection_id:
+                    operation_to_provider_app_id.setdefault(app_id, app_id)
+                    resolved_connections.setdefault(app_id, connection_id)
+        logger.debug(
+            "apply_provider_update_plan: pre-seeded resolved_connections=%s",
+            resolved_connections,
+        )
+
     try:
         try:
             connection_result = await resolve_connections_for_operations(
@@ -384,7 +502,7 @@ async def apply_provider_update_plan_with_rollback(
                 validate_connection_fn=validate_connection,
                 create_connection_fn=create_connection_with_conflict_mapping,
             )
-            operation_to_provider_app_id = connection_result.operation_to_provider_app_id
+            operation_to_provider_app_id.update(connection_result.operation_to_provider_app_id)
             resolved_connections.update(connection_result.resolved_connections)
             created_app_ids.extend(connection_result.created_app_ids)
         except ConnectionCreateBatchError as exc:
@@ -417,6 +535,14 @@ async def apply_provider_update_plan_with_rollback(
                 existing_tool_deltas=plan.existing_tool_deltas,
                 resolved_connections=resolved_connections,
                 operation_to_provider_app_id=operation_to_provider_app_id,
+                original_tools=original_tools,
+            )
+
+        if plan.tool_renames:
+            await _apply_tool_renames(
+                clients=clients,
+                agent_tool_ids=extract_agent_tool_ids(agent),
+                tool_renames=plan.tool_renames,
                 original_tools=original_tools,
             )
 

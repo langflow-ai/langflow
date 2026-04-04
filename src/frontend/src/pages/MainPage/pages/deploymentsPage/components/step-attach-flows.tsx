@@ -48,12 +48,21 @@ export default function StepAttachFlows() {
   );
   const flows = useMemo(() => {
     const list = Array.isArray(flowsData) ? flowsData : [];
-    return list.filter(
+    const filtered = list.filter(
       (f) =>
         !f.is_component &&
         (f.folder_id === currentFolderId || f.id === initialFlowId),
     );
-  }, [flowsData, currentFolderId, initialFlowId]);
+    // In edit mode, sort already-attached flows to the top.
+    if (selectedVersionByFlow.size > 0) {
+      filtered.sort((a, b) => {
+        const aAttached = selectedVersionByFlow.has(a.id) ? 0 : 1;
+        const bAttached = selectedVersionByFlow.has(b.id) ? 0 : 1;
+        return aAttached - bAttached;
+      });
+    }
+    return filtered;
+  }, [flowsData, currentFolderId, initialFlowId, selectedVersionByFlow]);
 
   // Fetch existing connections from the provider (tenant-scoped)
   const providerId = selectedInstance?.id ?? "";

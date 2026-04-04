@@ -103,6 +103,19 @@ def ensure_langflow_connections_binding(tool_payload: dict[str, Any]) -> dict[st
     return _ensure_dict(langflow, "connections")
 
 
+def verify_langflow_owned(tool: dict[str, Any], *, tool_id: str) -> None:
+    """Raise ``InvalidContentError`` if the tool lacks ``binding.langflow``.
+
+    Call before any mutating operation on an existing tool to ensure
+    Langflow created it.  Tools created manually in the wxO console or
+    by other integrations will not have this marker.
+    """
+    binding = tool.get("binding")
+    if not isinstance(binding, dict) or "langflow" not in binding:
+        msg = f"Cannot modify tool '{tool_id}': it does not have a Langflow binding and may not be managed by Langflow."
+        raise InvalidContentError(message=msg)
+
+
 def extract_langflow_connections_binding(tool_payload: dict[str, Any]) -> dict[str, str]:
     """Extract ``binding.langflow.connections`` from a provider tool payload.
 
@@ -144,7 +157,10 @@ async def update_existing_tool_connection_bindings(
 
     tool_updates: list[tuple[str, dict[str, Any]]] = []
     for tool_id in existing_target_tool_ids:
-        original_tool = to_writable_tool_payload(tool_by_id[tool_id])
+        tool = tool_by_id[tool_id]
+        verify_langflow_owned(tool, tool_id=tool_id)
+
+        original_tool = to_writable_tool_payload(tool)
         original_tools[tool_id] = original_tool
         writable_tool = copy.deepcopy(original_tool)
         connections = ensure_langflow_connections_binding(writable_tool)
