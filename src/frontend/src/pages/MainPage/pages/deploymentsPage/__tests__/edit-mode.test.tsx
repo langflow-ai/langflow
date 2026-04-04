@@ -22,9 +22,7 @@ const initialToolNames = new Map([
   ["flow-2", "custom_tool_two"],
 ]);
 
-const initialConnections = new Map([
-  ["flow-1", ["app-1"]],
-]);
+const initialConnections = new Map([["flow-1", ["app-1"]]]);
 
 const mockDeployment: Deployment = {
   id: "deploy-1",
@@ -276,12 +274,8 @@ describe("Edit mode — throws outside edit mode", () => {
 describe("Edit mode — pre-populated provider data", () => {
   it("pre-fills toolNameByFlow from initialToolNameByFlow", () => {
     const { result } = renderEditHook();
-    expect(result.current.toolNameByFlow.get("flow-1")).toBe(
-      "custom_tool_one",
-    );
-    expect(result.current.toolNameByFlow.get("flow-2")).toBe(
-      "custom_tool_two",
-    );
+    expect(result.current.toolNameByFlow.get("flow-1")).toBe("custom_tool_one");
+    expect(result.current.toolNameByFlow.get("flow-2")).toBe("custom_tool_two");
   });
 
   it("pre-fills attachedConnectionByFlow from initialConnectionsByFlow", () => {
