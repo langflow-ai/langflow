@@ -1726,6 +1726,8 @@ async def update_tools(
                 coroutine=create_tool_coroutine(tool.name, args_schema, client),
                 tags=[tool.name],
                 metadata={"server_name": server_name},
+                handle_validation_error=True,
+                handle_tool_error=True,
             )
 
             tool_list.append(tool_obj)
