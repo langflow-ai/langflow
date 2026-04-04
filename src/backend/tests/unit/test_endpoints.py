@@ -934,6 +934,57 @@ async def test_openai_responses_nonexistent_flow_uuid(client: AsyncClient, creat
     assert "not found" in json_response["error"]["message"].lower()
 
 
+async def test_openai_responses_cannot_access_other_users_flow(client: AsyncClient, simple_api_test, user_two_api_key):
+    """Test that a user cannot execute another user's flow via the OpenAI responses endpoint."""
+    headers = {"x-api-key": user_two_api_key}
+    payload = {
+        "model": simple_api_test["id"],
+        "input": "Hello",
+        "stream": False,
+    }
+
+    response = await client.post("/api/v1/responses", json=payload, headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    json_response = response.json()
+    assert "error" in json_response
+    assert json_response["error"]["type"] == "invalid_request_error"
+    assert json_response["error"]["code"] == "flow_not_found"
+
+
+async def test_openai_responses_cannot_access_other_users_flow_by_endpoint_name(
+    client: AsyncClient, logged_in_headers, user_two_api_key, json_simple_api_test
+):
+    """Test that a user cannot execute another user's flow by endpoint_name via the OpenAI responses endpoint."""
+    flow_payload = orjson.loads(json_simple_api_test)
+    flow_create = FlowCreate(
+        name="Simple API Test Endpoint Owner",
+        data=flow_payload["data"],
+        description="Simple API Test",
+        endpoint_name=f"owner-endpoint-{uuid4().hex[:8]}",
+    )
+    create_response = await client.post("api/v1/flows/", json=flow_create.model_dump(), headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+
+    created_flow = create_response.json()
+    headers = {"x-api-key": user_two_api_key}
+    payload = {
+        "model": created_flow["endpoint_name"],
+        "input": "Hello",
+        "stream": False,
+    }
+
+    response = await client.post("/api/v1/responses", json=payload, headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    json_response = response.json()
+    assert "error" in json_response
+    assert json_response["error"]["type"] == "invalid_request_error"
+    assert json_response["error"]["code"] == "flow_not_found"
+
+    await client.delete(f"api/v1/flows/{created_flow['id']}", headers=logged_in_headers)
+
+
 async def test_openai_responses_response_schema_has_usage_field(client: AsyncClient, simple_api_test, created_api_key):
     """Test that OpenAI Responses response schema includes usage field (even if None)."""
     headers = {"x-api-key": created_api_key.api_key}
