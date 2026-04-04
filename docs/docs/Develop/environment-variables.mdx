@@ -315,101 +315,56 @@ To run Langflow using the above VSCode `tasks.json` file, in the VSCode command 
 
 Environment variables set in your terminal aren't automatically available to GUI-based applications like Langflow Desktop when you launch them from the Windows or macOS GUI.
 
-For Windows, this means any GUI-based app launched from the Start menu, desktop shortcuts, or Windows Explorer.
-
-For macOS, this means any GUI-based app launched from Finder, Spotlight, Launchpad, or the Dock.
-
-To set environment variables for Langflow Desktop, you need to use specific commands or files, depending on your OS.
+To modify environment variables for Langflow Desktop, set environment variables in a Desktop `.env` file, and then restart the app.
 
 <Tabs>
 <TabItem value="macos" label="macOS" default>
 
-Langflow Desktop for macOS cannot automatically use variables set in your terminal, such as those in`.zshrc` or `.bash_profile`, when launched from the macOS GUI.
+To modify the macOS `.env` file, do the following:
 
-To make environment variables available to GUI apps on macOS, you need to use `launchctl` with a `plist` file:
+1. Create or edit `~/.langflow/data/.env`.
+2. Add your Langflow environment variables, for example:
 
-1. Create the `LaunchAgents` directory if it doesn't exist:
-
-    ```bash
-    mkdir -p ~/Library/LaunchAgents
+    ```text
+    LANGFLOW_LOG_LEVEL=info
+    LANGFLOW_DOCLING=true
     ```
 
-2. In the `LaunchAgents` directory, create a `.plist` file called `dev.langflow.env`.
-
-3. Add the following content to `dev.langflow.env.plist`, and then add, change, or remove Langflow environment variables as needed for your configuration.
-
-    This example sets multiple environmental variables for all GUI apps launched from the macOS GUI.
-
-    ```xml
-     <?xml version="1.0" encoding="UTF-8"?>
-     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-     <plist version="1.0">
-     <dict>
-       <key>Label</key>
-       <string>dev.langflow.env</string>
-       <key>ProgramArguments</key>
-       <array>
-         <string>/bin/sh</string>
-         <string>-c</string>
-          <string>
-            launchctl setenv LANGFLOW_CONFIG_DIR /Users/your_user/custom/config ;
-            launchctl setenv LANGFLOW_PORT 7860 ;
-            launchctl setenv LANGFLOW_HOST localhost ;
-            launchctl setenv ARIZE_API_KEY ak-...
-          </string>
-       </array>
-       <key>RunAtLoad</key>
-       <true/>
-     </dict>
-     </plist>
-    ```
-4. Load the file with `launchctl`:
-
-    ```bash
-    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.langflow.env.plist
-    ```
+3. Save the file.
+4. Restart Langflow Desktop.
 
 </TabItem>
-<TabItem value="windows1" label="Window System Properties">
+<TabItem value="windows" label="Windows .env file">
 
-Langflow Desktop for Windows cannot automatically use variables set in your terminal, such as those defined with `set` in `cmd` or `$env:VAR=...` in PowerShell, when launched from the Windows GUI.
+To modify the Windows `.env` file, do the following:
 
-To make environment variables available to the Langflow Desktop app, you must set them at the user or system level using the **System Properties** interface or the Terminal.
+1. Create or edit `%APPDATA%\com.LangflowDesktop\data\.env`.
+2. Add your Langflow environment variables, for example:
 
-To set environment variables using the System Properties interface, do the following:
-
-1. Press <kbd>Win + R</kbd>, enter `SystemPropertiesAdvanced`, and then press <kbd>Enter</kbd>.
-2. Click **Environment Variables**.
-3. Under **User variables**, click **New**.
-
-    :::tip
-    To apply the setting to all users, select **System variables**.
-    :::
-
-4. Enter the name of the Langflow variable you want to set, such as `LANGFLOW_CONFIG_DIR`, and the desired value, such as `C:\Users\your_user\.langflow_config`.
-5. Click **OK** to save the variable.
-6. Repeat until you have set all necessary Langflow environment variables.
-7. Launch or restart Langflow Desktop to apply the environment variables.
-
-</TabItem>
-<TabItem value="windows2" label="Powershell">
-
-To define environment variables for Windows using PowerShell, do the following:
-
-1. Enter the name of the Langflow variable you want to set, such as `LANGFLOW_CONFIG_DIR`, and the desired value, such as `C:\Users\your_user\.langflow_config`.
-
-    To set an environment variable for the current user:
-    ```powershell
-    [System.Environment]::SetEnvironmentVariable("LANGFLOW_CONFIG_DIR", "C:\Users\your_user\.langflow_config", "User")
+    ```text
+    LANGFLOW_LOG_LEVEL=info
+    LANGFLOW_DOCLING=true
     ```
 
-   To set an environment variable for all users (you must have Administrator priveleges):
-   ```powershell
-   [System.Environment]::SetEnvironmentVariable("LANGFLOW_CONFIG_DIR", "C:\Langflow\Config", "Machine")
-   ```
+3. Save the file.
+4. Restart Langflow Desktop.
 
-2. Repeat until you have set all necessary Langflow environment variables.
-3. Launch or restart Langflow Desktop to apply the environment variables.
+</TabItem>
+<TabItem value="windows-user-vars" label="Windows user environment variables">
+
+Windows supports two sources for Langflow Desktop environment variables: a Langflow application `.env` file, and Windows user environment variables.
+
+The `.env` file at `%APPDATA%\com.LangflowDesktop\data\.env` is the recommended approach, but
+Windows user variables are useful for single-sourcing API keys between Langflow and other Windows applications.
+If the same variable is defined in both the Langflow application `.env` file and as a Windows user environment variable, the `.env` file takes precedence.
+
+To modify the Windows user environment variables, do the following:
+
+1. Press <kbd>Win + R</kbd>, enter `sysdm.cpl`, and then press <kbd>Enter</kbd>.
+2. Click the **Advanced** tab, and then click **Environment Variables**.
+3. In **User variables**, click **New**.
+4. Enter the variable name, such as `OPENAI_API_KEY`, and its value.
+5. Click **OK**, and then **restart Langflow Desktop**.
 
 </TabItem>
 </Tabs>
