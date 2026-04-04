@@ -33,7 +33,7 @@ import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
-import useSaveFlow from "@/hooks/flows/use-save-flow";
+
 import { useFlowEvents } from "@/hooks/flows/use-flow-events";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
@@ -99,7 +99,7 @@ export default function Page({
 }): JSX.Element {
   const uploadFlow = useUploadFlow();
   const autoSaveFlow = useAutoSaveFlow();
-  const saveFlow = useSaveFlow();
+
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
@@ -361,8 +361,8 @@ export default function Page({
   }, [showCanvas]);
 
   useEffect(() => {
-    useFlowStore.setState({ autoSaveFlow, saveFlow });
-  }, [autoSaveFlow, saveFlow]);
+    useFlowStore.setState({ autoSaveFlow });
+  }, [autoSaveFlow]);
 
   function handleUndo(e: KeyboardEvent) {
     if (isPreviewActive || effectiveLocked) return;

@@ -138,7 +138,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
   },
   autoSaveFlow: undefined,
-  saveFlow: undefined,
   componentsToUpdate: [],
   setComponentsToUpdate: (change) => {
     const newChange =
@@ -832,21 +831,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // Wait for any in-progress component updates (e.g. user clicked "Update"
     // then immediately clicked "Run") before checking outdated state.
     await waitForNodeUpdates();
-
-    // Flush the flow to the DB so the backend sees updated node code.
-    // autoSaveFlow is debounced, so a recent setNode may not have saved yet.
-    if (get().saveFlow) {
-      try {
-        await get().saveFlow!();
-      } catch (e) {
-        // Save failure shouldn't block the build — the backend will
-        // validate the DB data and report its own error if needed.
-        console.warn(
-          "Flow save failed before build, proceeding with potentially stale data:",
-          e,
-        );
-      }
-    }
 
     // Block build when custom components are disabled and there are outdated components
     // Recalculate from current nodes to avoid stale componentsToUpdate
