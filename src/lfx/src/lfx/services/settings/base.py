@@ -112,6 +112,10 @@ class Settings(BaseSettings):
     """Frequency (in seconds) at which the background cleanup task wakes up to
     reap idle sessions."""
 
+    mcp_tool_timeout: int = 30  # seconds
+    """How long (in seconds) to wait for a single MCP tool call to complete before
+    raising a TimeoutError. Increase for long-running tools like page generators."""
+
     # sqlite configuration
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL", "busy_timeout": 30000}
     """SQLite pragmas to use when connecting to the database."""

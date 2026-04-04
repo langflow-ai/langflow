@@ -65,6 +65,11 @@ def get_session_cleanup_interval() -> int:
     return _get_mcp_setting("mcp_session_cleanup_interval")
 
 
+def get_tool_timeout() -> int:
+    """Get per-tool call timeout in seconds."""
+    return _get_mcp_setting("mcp_tool_timeout")
+
+
 # RFC 7230 compliant header name pattern: token = 1*tchar
 # tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
 #         "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
@@ -1166,7 +1171,7 @@ class MCPStdioClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=get_tool_timeout(),
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
@@ -1438,7 +1443,7 @@ class MCPStreamableHttpClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=get_tool_timeout(),
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
