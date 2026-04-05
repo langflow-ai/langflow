@@ -373,7 +373,7 @@ class TestCreateDeploymentExistingAgent:
         mapper.util_should_mutate_provider_for_existing_deployment_create.return_value = True
         mapper.util_create_flow_version_ids.return_value = []
         mapper.resolve_deployment_update_for_existing_create = AsyncMock(
-            return_value=MagicMock(provider_data={"operations": [{}]})
+            return_value=MagicMock(provider_data={"upsert_flows": []})
         )
         mock_get_mapper.return_value = mapper
         mock_resolve_project.return_value = uuid4()
@@ -435,7 +435,7 @@ class TestCreateDeploymentExistingAgent:
         mapper.util_should_mutate_provider_for_existing_deployment_create.return_value = True
         mapper.util_create_flow_version_ids.return_value = []
         mapper.resolve_deployment_update_for_existing_create = AsyncMock(
-            return_value=MagicMock(provider_data={"operations": [{}]})
+            return_value=MagicMock(provider_data={"upsert_flows": []})
         )
         mapped_create_result = DeploymentCreateResult(id="existing-agent-1", provider_result={"ok": True})
         mapper.util_create_result_from_existing_update.return_value = mapped_create_result

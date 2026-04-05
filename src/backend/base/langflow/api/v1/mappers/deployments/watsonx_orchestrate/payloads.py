@@ -26,14 +26,14 @@ class WatsonxApiFlowArtifactProviderData(CreateFlowArtifactProviderData):
     project_id: str = Field(min_length=1)
 
 
-class WatsonxApiBindOperation(BaseModel):
-    """Bind operation using a flow-version reference."""
+class WatsonxApiAddFlowItem(BaseModel):
+    """Create-time flow item (tool is created/attached if absent)."""
 
     model_config = {"extra": "forbid"}
 
-    op: Literal["bind"]
     flow_version_id: UUID
     app_ids: list[str] = Field(
+        default_factory=list,
         description=(
             "Connection app ids to bind. Use an empty list to create/attach "
             "the flow version as a tool with no connection bindings."
@@ -45,99 +45,52 @@ class WatsonxApiBindOperation(BaseModel):
     )
 
 
-class WatsonxApiUnbindOperation(BaseModel):
-    """Unbind operation for an attached flow-version tool."""
+class WatsonxApiUpsertFlowItem(BaseModel):
+    """Update-time flow item with per-item add/remove app-id deltas."""
 
     model_config = {"extra": "forbid"}
 
-    op: Literal["unbind"]
     flow_version_id: UUID
-    app_ids: list[str] = Field(min_length=1)
-
-
-class WatsonxApiRemoveToolOperation(BaseModel):
-    """Remove-tool operation for an attached flow-version tool.
-
-    Resolves tool_id from flow_version_deployment_attachment and detaches
-    the tool from the agent.  The attachment record is also deleted.
-    """
-
-    model_config = {"extra": "forbid"}
-
-    op: Literal["remove_tool"]
-    flow_version_id: UUID
-
-
-# ---------------------------------------------------------------------------
-# Tool-id-based operations
-#
-# These operations give clients direct control over WXO tools by provider
-# tool_id, without requiring a Langflow flow_version_id.  They run in
-# parallel to the flow-version-id operations above:
-#
-# - flow_version_id ops are convenient: Langflow resolves the tool_id
-#   from internal attachment state and manages the attachment lifecycle.
-# - tool_id ops are explicit: the client supplies the provider tool_id
-#   directly.  These operations do NOT create or modify
-#   flow_version_deployment_attachment records -- they are purely
-#   provider-side agent composition changes.
-# ---------------------------------------------------------------------------
-
-
-class WatsonxApiBindToolOperation(BaseModel):
-    """Attach an existing tool to the agent and optionally bind connections.
-
-    Subsumes a separate "add_tool" operation: at the adapter level, a bind
-    with ``tool_id_with_ref`` handles both "add tool to agent if not
-    present" and "bind connections" in a single code path.  Empty
-    ``app_ids`` means attach-only (no connection bindings).
-    """
-
-    model_config = {"extra": "forbid"}
-
-    op: Literal["bind_tool"]
-    tool_id: str = Field(min_length=1, description="Provider-owned tool identifier.")
-    app_ids: list[str] = Field(
+    add_app_ids: list[str] = Field(
         default_factory=list,
-        description=(
-            "Connection app ids to bind.  Use an empty list to attach "
-            "the tool to the agent without binding connections."
-        ),
+        description=("Connection app ids to bind. Use an empty list to avoid adding new bindings."),
+    )
+    remove_app_ids: list[str] = Field(
+        default_factory=list,
+        description=("Connection app ids to unbind. Use an empty list to avoid removing bindings."),
+    )
+    tool_name: str | None = Field(
+        default=None,
+        description=("Optional user-provided tool name. When omitted, the tool name is derived from the flow name."),
     )
 
 
-class WatsonxApiUnbindToolOperation(BaseModel):
-    """Unbind connections from an existing tool (tool stays attached).
-
-    Only modifies connection bindings on the tool; does not detach
-    the tool from the agent.
-    """
+class WatsonxApiCreateUpsertToolItem(BaseModel):
+    """Create-time existing provider tool item (add connections only)."""
 
     model_config = {"extra": "forbid"}
 
-    op: Literal["unbind_tool"]
     tool_id: str = Field(min_length=1, description="Provider-owned tool identifier.")
-    app_ids: list[str] = Field(min_length=1)
+    add_app_ids: list[str] = Field(
+        default_factory=list,
+        description=("Connection app ids to bind. Use an empty list to attach the tool without connection bindings."),
+    )
 
 
-class WatsonxApiRemoveToolByIdOperation(BaseModel):
-    """Detach a tool from the agent by provider tool_id."""
+class WatsonxApiUpsertToolItem(BaseModel):
+    """Update-time existing provider tool item with per-item add/remove app-id deltas."""
 
     model_config = {"extra": "forbid"}
 
-    op: Literal["remove_tool_by_id"]
     tool_id: str = Field(min_length=1, description="Provider-owned tool identifier.")
-
-
-WatsonxApiUpdateOperation = Annotated[
-    WatsonxApiBindOperation
-    | WatsonxApiUnbindOperation
-    | WatsonxApiRemoveToolOperation
-    | WatsonxApiBindToolOperation
-    | WatsonxApiUnbindToolOperation
-    | WatsonxApiRemoveToolByIdOperation,
-    Field(discriminator="op"),
-]
+    add_app_ids: list[str] = Field(
+        default_factory=list,
+        description=("Connection app ids to bind. Use an empty list to avoid adding new bindings."),
+    )
+    remove_app_ids: list[str] = Field(
+        default_factory=list,
+        description=("Connection app ids to unbind. Use an empty list to avoid removing bindings."),
+    )
 
 
 class WatsonxApiConnectionCredentialItem(BaseModel):
@@ -186,50 +139,53 @@ class WatsonxApiUpdateConnections(BaseModel):
     key_value: list[WatsonxApiKeyValueConnectionPayload] | None = None
 
 
-def _collect_api_referenced_app_ids(operations: list[Any]) -> set[str]:
+def _collect_api_referenced_app_ids(operations: list[Any], *, attr_name: str = "app_ids") -> set[str]:
     referenced_app_ids: set[str] = set()
     for operation in operations:
-        operation_app_ids = getattr(operation, "app_ids", None)
+        operation_app_ids = getattr(operation, attr_name, None)
         if not operation_app_ids:
             continue
         referenced_app_ids.update(operation_app_ids)
     return referenced_app_ids
 
 
-def _validate_api_unbind_not_raw(*, operations: list[Any], raw_app_ids: set[str]) -> None:
+def _validate_api_remove_not_raw(*, operations: list[Any], raw_app_ids: set[str], attr_name: str, label: str) -> None:
     for operation in operations:
-        if isinstance(operation, WatsonxApiUnbindOperation):
-            invalid_raw = sorted(raw_app_ids.intersection(set(operation.app_ids)))
-            if invalid_raw:
-                msg = f"unbind.operation app_ids must not reference connections.key_value app_ids: {invalid_raw}"
-                raise ValueError(msg)
+        remove_app_ids = getattr(operation, attr_name, None)
+        if not remove_app_ids:
             continue
-        if isinstance(operation, WatsonxApiUnbindToolOperation):
-            invalid_raw = sorted(raw_app_ids.intersection(set(operation.app_ids)))
-            if invalid_raw:
-                msg = f"unbind_tool.operation app_ids must not reference connections.key_value app_ids: {invalid_raw}"
-                raise ValueError(msg)
+        invalid_raw = sorted(raw_app_ids.intersection(set(remove_app_ids)))
+        if invalid_raw:
+            msg = f"{label} must not reference connections.key_value app_ids: {invalid_raw}"
+            raise ValueError(msg)
 
 
-def _validate_api_tool_id_operations(operations: list[Any]) -> None:
-    bind_tool_ids: set[str] = set()
-    unbind_tool_ids: set[str] = set()
-    remove_tool_ids: set[str] = set()
+def _validate_api_add_remove_overlap(*, operations: list[Any], label: str) -> None:
     for operation in operations:
-        if isinstance(operation, WatsonxApiBindToolOperation):
-            bind_tool_ids.add(operation.tool_id.strip())
-            continue
-        if isinstance(operation, WatsonxApiUnbindToolOperation):
-            unbind_tool_ids.add(operation.tool_id.strip())
-            continue
-        if isinstance(operation, WatsonxApiRemoveToolByIdOperation):
-            remove_tool_ids.add(operation.tool_id.strip())
-    remove_conflicts = remove_tool_ids.intersection(bind_tool_ids | unbind_tool_ids)
-    if remove_conflicts:
-        msg = (
-            "remove_tool_by_id cannot be combined with bind_tool/unbind_tool "
-            f"for the same tool_id: {sorted(remove_conflicts)}"
-        )
+        add_app_ids = set(getattr(operation, "add_app_ids", []) or [])
+        remove_app_ids = set(getattr(operation, "remove_app_ids", []) or [])
+        overlap = sorted(add_app_ids.intersection(remove_app_ids))
+        if overlap:
+            msg = f"{label} add_app_ids and remove_app_ids must not overlap: {overlap}"
+            raise ValueError(msg)
+
+
+def _validate_api_remove_conflicts(
+    *,
+    remove_ids: list[Any],
+    upsert_operations: list[Any],
+    remove_label: str,
+    upsert_attr_name: str,
+) -> None:
+    normalized_remove_ids = {str(remove_id).strip() for remove_id in remove_ids if str(remove_id).strip()}
+    normalized_upsert_ids = {
+        str(getattr(operation, upsert_attr_name, "")).strip()
+        for operation in upsert_operations
+        if str(getattr(operation, upsert_attr_name, "")).strip()
+    }
+    conflicts = sorted(normalized_remove_ids.intersection(normalized_upsert_ids))
+    if conflicts:
+        msg = f"{remove_label} cannot be combined with upsert for the same id: {conflicts}"
         raise ValueError(msg)
 
 
@@ -243,31 +199,53 @@ def _validate_api_unused_raw_app_ids(*, raw_app_ids: set[str], referenced_app_id
 class WatsonxApiDeploymentUpdatePayload(BaseModel):
     """Watsonx provider_data API contract for deployment update operations.
 
-    ``operations`` defaults to an empty list so that LLM-only updates
+    All operation fields default to empty lists so LLM-only updates
     (changing the model without any tool/connection changes) can be
-    expressed without providing operations.
+    expressed without providing operation entries.
     """
 
     model_config = {"extra": "forbid"}
 
     llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
     connections: WatsonxApiUpdateConnections = Field(default_factory=WatsonxApiUpdateConnections)
-    operations: list[WatsonxApiUpdateOperation] = Field(default_factory=list)
+    upsert_flows: list[WatsonxApiUpsertFlowItem] = Field(default_factory=list)
+    upsert_tools: list[WatsonxApiUpsertToolItem] = Field(default_factory=list)
+    remove_flows: list[UUID] = Field(default_factory=list)
+    remove_tools: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_operation_references(self) -> WatsonxApiDeploymentUpdatePayload:
         raw_app_ids = {raw.app_id for raw in (self.connections.key_value or [])}
-        referenced_app_ids = _collect_api_referenced_app_ids(self.operations)
-        _validate_api_unbind_not_raw(operations=self.operations, raw_app_ids=raw_app_ids)
-        _validate_api_tool_id_operations(self.operations)
+        referenced_app_ids = _collect_api_referenced_app_ids(self.upsert_flows, attr_name="add_app_ids")
+        referenced_app_ids.update(_collect_api_referenced_app_ids(self.upsert_tools, attr_name="add_app_ids"))
+        _validate_api_remove_not_raw(
+            operations=self.upsert_flows,
+            raw_app_ids=raw_app_ids,
+            attr_name="remove_app_ids",
+            label="upsert_flows.remove_app_ids",
+        )
+        _validate_api_remove_not_raw(
+            operations=self.upsert_tools,
+            raw_app_ids=raw_app_ids,
+            attr_name="remove_app_ids",
+            label="upsert_tools.remove_app_ids",
+        )
+        _validate_api_add_remove_overlap(operations=self.upsert_flows, label="upsert_flows")
+        _validate_api_add_remove_overlap(operations=self.upsert_tools, label="upsert_tools")
+        _validate_api_remove_conflicts(
+            remove_ids=self.remove_flows,
+            upsert_operations=self.upsert_flows,
+            remove_label="remove_flows",
+            upsert_attr_name="flow_version_id",
+        )
+        _validate_api_remove_conflicts(
+            remove_ids=self.remove_tools,
+            upsert_operations=self.upsert_tools,
+            remove_label="remove_tools",
+            upsert_attr_name="tool_id",
+        )
         _validate_api_unused_raw_app_ids(raw_app_ids=raw_app_ids, referenced_app_ids=referenced_app_ids)
         return self
-
-
-WatsonxApiCreateOperation = Annotated[
-    WatsonxApiBindOperation | WatsonxApiBindToolOperation,
-    Field(discriminator="op"),
-]
 
 
 class WatsonxApiDeploymentCreatePayload(BaseModel):
@@ -277,12 +255,13 @@ class WatsonxApiDeploymentCreatePayload(BaseModel):
 
     llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
     connections: WatsonxApiUpdateConnections = Field(default_factory=WatsonxApiUpdateConnections)
-    operations: list[WatsonxApiCreateOperation] = Field(default_factory=list)
+    add_flows: list[WatsonxApiAddFlowItem] = Field(default_factory=list)
+    upsert_tools: list[WatsonxApiCreateUpsertToolItem] = Field(default_factory=list)
     existing_agent_id: str | None = Field(
         default=None,
         description=(
             "Provider-owned agent id to update/reuse instead of creating a new agent. "
-            "When provided, operations are optional and may be empty for DB-only onboarding."
+            "When provided, add_flows/upsert_tools are optional and may be empty for DB-only onboarding."
         ),
     )
 
@@ -299,12 +278,13 @@ class WatsonxApiDeploymentCreatePayload(BaseModel):
 
     @model_validator(mode="after")
     def validate_create_operation_requirements(self) -> WatsonxApiDeploymentCreatePayload:
-        has_operations = bool(self.operations)
+        has_operations = bool(self.add_flows or self.upsert_tools)
         if self.existing_agent_id is None and not has_operations:
-            msg = "operations must include at least one bind or bind_tool operation for new agent creation."
+            msg = "provider_data must include at least one add_flows or upsert_tools item for new agent creation."
             raise ValueError(msg)
         raw_app_ids = {raw.app_id for raw in (self.connections.key_value or [])}
-        referenced_app_ids = _collect_api_referenced_app_ids(self.operations)
+        referenced_app_ids = _collect_api_referenced_app_ids(self.add_flows, attr_name="app_ids")
+        referenced_app_ids.update(_collect_api_referenced_app_ids(self.upsert_tools, attr_name="add_app_ids"))
         _validate_api_unused_raw_app_ids(raw_app_ids=raw_app_ids, referenced_app_ids=referenced_app_ids)
         return self
 

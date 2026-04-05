@@ -684,16 +684,26 @@ def test_resolve_flow_version_patch_for_update_watsonx_operations():
     from langflow.api.v1.mappers.deployments.helpers import resolve_flow_version_patch_for_update
 
     add_id = uuid4()
+    unbind_only_id = uuid4()
     remove_id = uuid4()
     add_ids, remove_ids = resolve_flow_version_patch_for_update(
         deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
         payload=DeploymentUpdateRequest(
             provider_data={
                 "llm": "test-llm",
-                "operations": [
-                    {"op": "bind", "flow_version_id": str(add_id), "app_ids": ["app-one"]},
-                    {"op": "unbind", "flow_version_id": str(remove_id), "app_ids": ["app-one"]},
+                "upsert_flows": [
+                    {
+                        "flow_version_id": str(add_id),
+                        "add_app_ids": ["app-one"],
+                        "remove_app_ids": [],
+                    },
+                    {
+                        "flow_version_id": str(unbind_only_id),
+                        "add_app_ids": [],
+                        "remove_app_ids": ["app-one"],
+                    },
                 ],
+                "remove_flows": [str(remove_id)],
             }
         ),
     )
