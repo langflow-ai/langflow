@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from toolguard.buildtime import (
+    PolicySpecOptions,
     ToolGuardsCodeGenerationResult,
     ToolGuardSpec,
     generate_guard_specs,
@@ -177,7 +178,9 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             shutil.rmtree(out_dir)
         policy_text = "\n * ".join(self.policies)
         open_api = langchain_tools_to_openapi(self.in_tools)
-        specs = await generate_guard_specs(policy_text=policy_text, tools=open_api, llm=llm, work_dir=out_dir)
+
+        options = PolicySpecOptions(example_number=4)
+        specs = await generate_guard_specs(policy_text=policy_text, tools=open_api, llm=llm, work_dir=out_dir, options=options)
         logger.debug("Step 1 Done")
         return specs
 
