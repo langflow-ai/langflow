@@ -87,10 +87,10 @@ class LCVectorStoreComponent(Component):
             method="search_documents",
             info=(
                 "Performs semantic similarity search in the vector store to find relevant documents/files. "
-                "Input: A natural language search query (str) describing the content you're looking for. "
-                "Example: 'machine learning tutorials' or 'financial reports from 2023'. "
-                "Returns: A list of Data objects containing the most relevant documents/files "
-                "based on semantic similarity, limited by the number of results parameter."
+                "Input: A natural language search query (str). "
+                "Returns: A list of dicts. Each dict has a 'data' key containing a nested dict. "
+                "result['data']['text'] always contains the matched document text. "
+                "Other keys under 'data' depend on what was indexed (common: 'file_path', 'source')."
             ),
         ),
         Output(
@@ -99,11 +99,10 @@ class LCVectorStoreComponent(Component):
             method="as_dataframe",
             info=(
                 "Performs semantic similarity search in the vector store to find relevant documents/files "
-                "and returns results as a DataFrame table. "
-                "Input: A natural language search query (str) describing the content you're looking for. "
-                "Example: 'machine learning tutorials' or 'financial reports from 2023'. "
-                "Returns: A DataFrame containing the matching documents/files with their content "
-                "and metadata in tabular format."
+                "and returns results as a pandas DataFrame. "
+                "Input: A natural language search query (str). "
+                "Returns: A DataFrame with columns from the matched documents' metadata and content. "
+                "Use standard pandas operations (.shape, .columns, .head(), etc.) on the result."
             ),
         ),
     ]

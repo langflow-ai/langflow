@@ -10,7 +10,6 @@ from langchain_core.runnables import Runnable, RunnableConfig
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.inputs.inputs import BoolInput, DataInput, DropdownInput, MessageTextInput, MultilineInput
 from lfx.io import HandleInput, IntInput
-from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.template.field.base import RangeSpec
 
@@ -65,7 +64,7 @@ class OpenDsStarAgentRunnable(Runnable):
 
         Yields intermediate results as each node in the graph executes,
         allowing real-time display of the agent's progress.
-        
+
         Note: LangGraph's stream() is synchronous, so we wrap it in an async generator.
         """
         import asyncio
@@ -122,7 +121,7 @@ class OpenDsStarAgentRunnable(Runnable):
         **kwargs: Any,
     ) -> AsyncIterator[dict[str, Any]]:
         """Async stream events in LangChain format for Langflow compatibility.
-        
+
         This converts LangGraph's stream output to LangChain's astream_events format
         so it works with Langflow's process_agent_events().
         """
@@ -234,10 +233,12 @@ class OpenDsStarAgentRunnable(Runnable):
                     }
 
                 # Also emit a chain stream chunk summarizing notes for backwards compatibility
-                trajectory_text = "\n".join([
-                    f"[{self._normalize_node_name(event.get('event_type', 'unknown'))}] {self._normalize_node_name(event.get('note', ''))}"
-                    for event in new_events
-                ])
+                trajectory_text = "\n".join(
+                    [
+                        f"[{self._normalize_node_name(event.get('event_type', 'unknown'))}] {self._normalize_node_name(event.get('note', ''))}"
+                        for event in new_events
+                    ]
+                )
 
                 formatted_chunk = {"output": trajectory_text}
 
@@ -263,14 +264,13 @@ class OpenDsStarAgentRunnable(Runnable):
             "name": "OpenDsStarAgent",
             "tags": [],
             "metadata": {},
-            "data": {
-                "output": AgentFinish(return_values={"output": final_output}, log=final_output)
-            },
+            "data": {"output": AgentFinish(return_values={"output": final_output}, log=final_output)},
         }
 
     async def _async_generator_wrapper(self, sync_gen):
         """Wrap a synchronous generator to make it async."""
         import asyncio
+
         loop = asyncio.get_event_loop()
 
         while True:
@@ -342,6 +342,14 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             value=True,
             advanced=True,
             info="Should the Agent fix errors when reading user input for better processing?",
+        ),
+        IntInput(
+            name="code_timeout",
+            display_name="Code Timeout (seconds)",
+            value=60,
+            advanced=True,
+            range_spec=RangeSpec(min=10, max=300, step=10),
+            info="Maximum execution time in seconds for each code step.",
         ),
         BoolInput(name="verbose", display_name="Verbose", value=True, advanced=True),
         DataInput(
@@ -463,11 +471,13 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
 
             # Get the actual OpenDsStarAgent from the runnable wrapper
             from typing import cast
+
             actual_agent = cast("Any", agent).agent if hasattr(agent, "agent") else agent
             exec_logger = logging.getLogger(__name__)
 
             try:
                 from agents.ds_star.ds_star_execute_env import set_main_event_loop
+
                 set_main_event_loop(asyncio.get_running_loop())
             except Exception:
                 pass
@@ -485,7 +495,7 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
                     "max_debug_tries": actual_agent.max_debug_tries,
                 },
                 config={"recursion_limit": recursion_limit},
-                stream_mode="values"
+                stream_mode="values",
             )
 
             while True:
@@ -536,7 +546,9 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
                         router_explanation = event.get("explanation", "") if "n_route" in node_name_lower else ""
                         fix_idx = event.get("fix_index") if "n_route" in node_name_lower else None
                         finalizer = event.get("finalizer", "") if "n_finalize" in node_name_lower else ""
-                        execution_error = event.get("had_error", last_step.get("execution_error", "")) if is_execute_node else ""
+                        execution_error = (
+                            event.get("had_error", last_step.get("execution_error", "")) if is_execute_node else ""
+                        )
                         fatal_error = event.get("fatal_error", "")
 
                         def clean_logs(logs_text: str) -> str:
@@ -696,7 +708,9 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
 
                         if verifier_explanation and verifier_explanation.strip():
                             verifier_text_parts = []
-                            verifier_text_parts.append(f"Sufficient: {verifier_sufficient if verifier_sufficient is not None else False}")
+                            verifier_text_parts.append(
+                                f"Sufficient: {verifier_sufficient if verifier_sufficient is not None else False}"
+                            )
                             if verifier_explanation:
                                 verifier_text_parts.append(f"\nExplanation: {verifier_explanation}")
 
@@ -777,7 +791,6 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
         self.status = agent_message
         return agent_message
 
-
     def _add_media_from_text(self, agent_message: Message, text: str) -> str:
         """Extract image URLs/data‑URIs from text and add MediaContent blocks.
 
@@ -793,9 +806,7 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
         pattern = re.compile(r"(data:image/[^\s]+|https?://\S+?\.(?:png|jpg|jpeg|gif))")
         matches = pattern.findall(text)
         for url in matches:
-            agent_message.content_blocks[0].contents.append(
-                MediaContent(urls=[url], caption=None)
-            )
+            agent_message.content_blocks[0].contents.append(MediaContent(urls=[url], caption=None))
             # remove url from text
             text = text.replace(url, "").strip()
         return text
@@ -824,7 +835,7 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
     def validate_tool_names(self) -> None:
         """Override parent's validate_tool_names to provide better error messages for OpenDsStar Agent."""
         pattern = re.compile(r"^[a-zA-Z0-9_-]+$")
-        
+
         # Clean up tools list - remove empty strings or None which Langflow sometimes passes
         if hasattr(self, "tools"):
             if isinstance(self.tools, list):
@@ -908,12 +919,12 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             # If a single tool was provided, wrap it in a list
             tools = [tools]
 
-        print(f"DEBUG OPEN_DS_STAR_AGENT: RAW TOOLS RECEIVED = {repr(tools)}")
+        print(f"DEBUG OPEN_DS_STAR_AGENT: RAW TOOLS RECEIVED = {tools!r}")
 
         # Clean up empty strings or None which Langflow sometimes passes when the input is functionally empty
         tools = [t for t in tools if t and not (isinstance(t, str) and not t.strip())]
-        
-        print(f"DEBUG OPEN_DS_STAR_AGENT: CLEANED TOOLS = {repr(tools)}")
+
+        print(f"DEBUG OPEN_DS_STAR_AGENT: CLEANED TOOLS = {tools!r}")
 
         # Add debug logging
 
@@ -959,6 +970,7 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
         max_iterations = getattr(self, "max_iterations", 10)
         system_prompt = getattr(self, "system_prompt", None)
         code_mode = getattr(self, "code_mode", "stepwise")
+        code_timeout = getattr(self, "code_timeout", 60)
 
         logger.info(
             f"OpenDsStarAgent - Creating agent with model={self.llm}, max_steps={max_iterations}, code_mode={code_mode}, system_prompt length={len(system_prompt) if system_prompt else 0}"
@@ -972,6 +984,7 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             system_prompt=system_prompt if system_prompt else "You are a helpful data science assistant.",
             max_steps=max_iterations,
             code_mode=code_mode,
+            code_timeout=code_timeout,
         )
 
         logger.info(f"OpenDsStarAgent - Agent created successfully with {len(agent.tools)} tools")

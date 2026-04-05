@@ -37,7 +37,7 @@ class FileContentRetrieverComponent(Component):
         HandleInput(
             name="file_data",
             display_name="File Data",
-            input_types=["Data", "DataFrame", "Message"],
+            input_types=["Data", "DataFrame"],
             is_list=True,
             info="Output from a Read File component.",
         ),
@@ -78,26 +78,6 @@ class FileContentRetrieverComponent(Component):
         ),
     ]
 
-    def _is_likely_file_content(self, text: str, file_path: str) -> bool:
-        """Heuristically determine whether Data.text is actual file content or metadata/summary text."""
-        if not text:
-            return False
-
-        file_ext = Path(file_path).suffix.lower()
-        stripped = text.lstrip()
-
-        if stripped.startswith("## File Name") and "## File Path" in stripped and "## Overview" in stripped:
-            return False
-
-        if file_ext in {".csv", ".tsv"}:
-            first_line = stripped.splitlines()[0] if stripped.splitlines() else ""
-            return "," in first_line or "\t" in first_line
-
-        if file_ext == ".json":
-            return stripped.startswith(("{", "["))
-
-        return True
-
     def _get_file_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:
         """Get cached file maps or build them if not cached.
 
@@ -113,8 +93,6 @@ class FileContentRetrieverComponent(Component):
             )
             return self._cached_text_map, self._cached_dataframe_map
 
-        from lfx.schema.dataframe import DataFrame
-
         logger.debug(f"FileContentRetriever: Building file maps from {len(self.file_data)} input items")
         text_map: dict[str, str] = {}
         dataframe_map: dict[str, DataFrame] = {}
@@ -124,28 +102,51 @@ class FileContentRetrieverComponent(Component):
                 fp = item.attrs.get("source_file_path", "")
                 if fp:
                     dataframe_map[fp] = item
-                    if fp not in text_map:
-                        text_map[fp] = item.to_csv(index=False)
                 elif not item.empty and "file_path" in item.columns:
-                    unique_paths = item["file_path"].dropna().unique()
-                    for path in unique_paths:
-                        path_str = str(path)
-                        if path_str:
-                            dataframe_map[path_str] = item
+                    # Multi-file DataFrame: one row per file with file_path and text columns.
+                    # Extract each file's text content into text_map instead of mapping
+                    # each path to the summary DataFrame (which is just the file index,
+                    # not the actual file data).
+                    has_text_col = "text" in item.columns
+                    for _, row in item.iterrows():
+                        path_str = str(row.get("file_path", ""))
+                        if not path_str:
+                            continue
+                        if has_text_col and path_str not in text_map:
+                            text = str(row["text"]) if pd.notna(row["text"]) else ""
+                            if text:
+                                text_map[path_str] = text
             elif isinstance(item, Data):
                 fp = item.data.get("file_path", "")
                 text = item.get_text() or ""
                 if not fp:
                     continue
 
-                if self._is_likely_file_content(text, fp):
+                if text:
                     text_map[fp] = text
-                else:
-                    logger.debug(
-                        "FileContentRetriever: Skipping Data text for '%s'"
-                        " because it looks like metadata/summary, not file content",
-                        fp,
-                    )
+            else:
+                logger.warning(
+                    "FileContentRetriever: Unsupported input type %s, skipping",
+                    type(item).__name__,
+                )
+
+        # For text entries that don't have a pre-built DataFrame, try to parse
+        # CSV/TSV content into a DataFrame eagerly so it's ready for tool calls.
+        tabular_extensions = {".csv": ",", ".tsv": "\t"}
+        for fp, text in text_map.items():
+            if fp in dataframe_map:
+                continue
+            ext = Path(fp).suffix.lower()
+            sep = tabular_extensions.get(ext)
+            if sep is None:
+                continue
+            try:
+                from io import StringIO
+
+                dataframe_map[fp] = DataFrame(pd.read_csv(StringIO(text), sep=sep))
+                logger.debug(f"FileContentRetriever: Parsed text into DataFrame for '{fp}'")
+            except (ValueError, pd.errors.ParserError):
+                logger.debug(f"FileContentRetriever: Could not parse text as DataFrame for '{fp}'")
 
         self._cached_text_map = text_map
         self._cached_dataframe_map = dataframe_map
@@ -182,17 +183,24 @@ class FileContentRetrieverComponent(Component):
         )
 
         if not query:
-            # Return empty result when no path is provided (e.g., during tool building)
+            # Eagerly build maps so they're cached before deepcopy in tool calls
+            self._get_file_maps()
             logger.info("FileContentRetriever: No file path provided, returning empty Message")
             return Message(text="")
 
         # Get cached maps (built once and reused)
-        text_map, _ = self._get_file_maps()
+        text_map, dataframe_map = self._get_file_maps()
         content = text_map.get(query)
 
+        # Fall back to CSV representation of DataFrame if no text content
+        if content is None and query in dataframe_map:
+            content = dataframe_map[query].to_csv(index=False)
+
         if content is None:
-            available = list(text_map.keys())
-            msg = f"File '{query}' not found. Available files: {available}"
+            available = sorted({*text_map.keys(), *dataframe_map.keys()})
+            preview = available[:5]
+            extra = f" (and {len(available) - 5} more)" if len(available) > 5 else ""  # noqa: PLR2004
+            msg = f"File '{query}' not found. Available files: {preview}{extra}"
             logger.error(f"FileContentRetriever: {msg}")
             raise ValueError(msg)
 
@@ -224,7 +232,8 @@ class FileContentRetrieverComponent(Component):
         )
 
         if not query:
-            # Return empty DataFrame when no path is provided (e.g., during tool building)
+            # Eagerly build maps so they're cached before deepcopy in tool calls
+            self._get_file_maps()
             logger.info("FileContentRetriever: No file path provided, returning empty DataFrame")
             return DataFrame(pd.DataFrame())
 
@@ -241,7 +250,7 @@ class FileContentRetrieverComponent(Component):
             raise ValueError(msg)
 
         # Get cached maps (built once and reused)
-        _text_map, dataframe_map = self._get_file_maps()
+        text_map, dataframe_map = self._get_file_maps()
 
         # Check if we have a DataFrame for this file
         if query in dataframe_map:
@@ -252,19 +261,12 @@ class FileContentRetrieverComponent(Component):
             )
             return df
 
-        available_prepared = list(dataframe_map.keys())
-        if available_prepared:
-            msg = (
-                f"File '{query}' does not have a prepared DataFrame available. "
-                "This component does not build DataFrames during tool calls. "
-                "Prepare the DataFrame upstream and pass it through file_data. "
-                f"Prepared DataFrame files: {available_prepared}"
-            )
+        available = sorted({*text_map.keys(), *dataframe_map.keys()})
+        preview = available[:5]
+        extra = f" (and {len(available) - 5} more)" if len(available) > 5 else ""
+        if available:
+            msg = f"File '{query}' not found. Available: {preview}{extra}"
         else:
-            msg = (
-                f"File '{query}' does not have a prepared DataFrame available. "
-                "No prepared DataFrames were provided in file_data. "
-                "Prepare the DataFrame upstream and pass it through file_data."
-            )
+            msg = f"File '{query}' not found. No files were provided in file_data."
         logger.error(f"FileContentRetriever: {msg}")
         raise ValueError(msg)
