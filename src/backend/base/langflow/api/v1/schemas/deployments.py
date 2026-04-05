@@ -281,13 +281,13 @@ class DeploymentListItem(_DeploymentResponseCommon):
 class _PaginatedResponse(BaseModel):
     """Shared pagination fields for list responses."""
 
-    page: int = Field(default=1, ge=1)
-    size: int = Field(default=20, ge=1)
-    total: int = Field(default=0, ge=0)
+    page: int | None = Field(default=None, ge=1)
+    size: int | None = Field(default=None, ge=1)
+    total: int | None = Field(default=None, ge=0)
 
 
 class DeploymentListResponse(_PaginatedResponse):
-    deployments: list[DeploymentListItem]
+    deployments: list[DeploymentListItem] | None = None
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description="Provider-owned opaque payload for list-specific provider metadata.",
@@ -304,7 +304,7 @@ class DeploymentConfigListResponse(_PaginatedResponse):
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description=(
-            "Provider-owned opaque payload containing the list of configs "
+            "Provider-owned opaque payload containing the list of connections "
             "and any response-level metadata supplied by the provider."
         ),
     )

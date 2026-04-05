@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from lfx.services.adapters.deployment.schema import DeploymentType, EnvVarKey, EnvVarValueSpec
+from lfx.services.adapters.deployment.schema import DeploymentType
 from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
 
 from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
@@ -140,13 +140,42 @@ WatsonxApiUpdateOperation = Annotated[
 ]
 
 
-class WatsonxApiUpdateConnectionRawPayload(BaseModel):
-    """Raw connection payload for app id."""
+class WatsonxApiConnectionCredentialItem(BaseModel):
+    """API-facing connection credential declaration."""
+
+    model_config = {"extra": "forbid"}
+
+    key: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    value: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    source: Literal["raw", "variable"] = "variable"
+
+
+class WatsonxApiKeyValueConnectionPayload(BaseModel):
+    """API-facing key-value connection payload for app id."""
 
     model_config = {"extra": "forbid"}
 
     app_id: str = Field(min_length=1)
-    environment_variables: dict[EnvVarKey, EnvVarValueSpec] | None = None
+    credentials: list[WatsonxApiConnectionCredentialItem] | None = None
+
+    @field_validator("credentials")
+    @classmethod
+    def validate_unique_credential_keys(
+        cls,
+        value: list[WatsonxApiConnectionCredentialItem] | None,
+    ) -> list[WatsonxApiConnectionCredentialItem] | None:
+        if value is None:
+            return None
+        seen: set[str] = set()
+        duplicates: set[str] = set()
+        for item in value:
+            if item.key in seen:
+                duplicates.add(item.key)
+            seen.add(item.key)
+        if duplicates:
+            msg = f"credentials contains duplicate key values: {sorted(duplicates)}"
+            raise ValueError(msg)
+        return value
 
 
 class WatsonxApiUpdateConnections(BaseModel):
@@ -154,7 +183,7 @@ class WatsonxApiUpdateConnections(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    raw_payloads: list[WatsonxApiUpdateConnectionRawPayload] | None = None
+    key_value: list[WatsonxApiKeyValueConnectionPayload] | None = None
 
 
 def _collect_api_referenced_app_ids(operations: list[Any]) -> set[str]:
@@ -172,15 +201,13 @@ def _validate_api_unbind_not_raw(*, operations: list[Any], raw_app_ids: set[str]
         if isinstance(operation, WatsonxApiUnbindOperation):
             invalid_raw = sorted(raw_app_ids.intersection(set(operation.app_ids)))
             if invalid_raw:
-                msg = f"unbind.operation app_ids must not reference connections.raw_payloads app_ids: {invalid_raw}"
+                msg = f"unbind.operation app_ids must not reference connections.key_value app_ids: {invalid_raw}"
                 raise ValueError(msg)
             continue
         if isinstance(operation, WatsonxApiUnbindToolOperation):
             invalid_raw = sorted(raw_app_ids.intersection(set(operation.app_ids)))
             if invalid_raw:
-                msg = (
-                    f"unbind_tool.operation app_ids must not reference connections.raw_payloads app_ids: {invalid_raw}"
-                )
+                msg = f"unbind_tool.operation app_ids must not reference connections.key_value app_ids: {invalid_raw}"
                 raise ValueError(msg)
 
 
@@ -209,7 +236,7 @@ def _validate_api_tool_id_operations(operations: list[Any]) -> None:
 def _validate_api_unused_raw_app_ids(*, raw_app_ids: set[str], referenced_app_ids: set[str]) -> None:
     unused_raw_app_ids = sorted(raw_app_ids.difference(referenced_app_ids))
     if unused_raw_app_ids:
-        msg = f"connections.raw_payloads contains app_id values not referenced by operations: {unused_raw_app_ids}"
+        msg = f"connections.key_value contains app_id values not referenced by operations: {unused_raw_app_ids}"
         raise ValueError(msg)
 
 
@@ -229,7 +256,7 @@ class WatsonxApiDeploymentUpdatePayload(BaseModel):
 
     @model_validator(mode="after")
     def validate_operation_references(self) -> WatsonxApiDeploymentUpdatePayload:
-        raw_app_ids = {raw.app_id for raw in (self.connections.raw_payloads or [])}
+        raw_app_ids = {raw.app_id for raw in (self.connections.key_value or [])}
         referenced_app_ids = _collect_api_referenced_app_ids(self.operations)
         _validate_api_unbind_not_raw(operations=self.operations, raw_app_ids=raw_app_ids)
         _validate_api_tool_id_operations(self.operations)
@@ -276,7 +303,7 @@ class WatsonxApiDeploymentCreatePayload(BaseModel):
         if self.existing_agent_id is None and not has_operations:
             msg = "operations must include at least one bind or bind_tool operation for new agent creation."
             raise ValueError(msg)
-        raw_app_ids = {raw.app_id for raw in (self.connections.raw_payloads or [])}
+        raw_app_ids = {raw.app_id for raw in (self.connections.key_value or [])}
         referenced_app_ids = _collect_api_referenced_app_ids(self.operations)
         _validate_api_unused_raw_app_ids(raw_app_ids=raw_app_ids, referenced_app_ids=referenced_app_ids)
         return self
@@ -416,7 +443,7 @@ class WatsonxApiProviderDeploymentListItem(BaseModel):
 class WatsonxApiDeploymentListProviderData(BaseModel):
     """Provider-level metadata attached to DeploymentListResponse.provider_data."""
 
-    entries: list[WatsonxApiProviderDeploymentListItem] = Field(default_factory=list)
+    deployments: list[WatsonxApiProviderDeploymentListItem] = Field(default_factory=list)
 
 
 class WatsonxApiConfigListItem(BaseModel):
@@ -440,24 +467,15 @@ class WatsonxApiConfigListItem(BaseModel):
 
 
 class WatsonxApiConfigListProviderData(BaseModel):
-    """Provider-level metadata attached to DeploymentConfigListResponse.
-
-    ``deployment_id`` is present for deployment-scoped listings and absent for
-    tenant-scoped listings; no explicit scope discriminator is needed because the
-    caller already knows which mode it requested.
-    """
+    """Provider-level metadata attached to DeploymentConfigListResponse."""
 
     model_config = {"extra": "forbid"}
 
-    deployment_id: str | None = None
     tool_ids: list[str] | None = None
-    configs: list[WatsonxApiConfigListItem] = Field(default_factory=list)
-
-    @field_validator("deployment_id", mode="before")
-    @classmethod
-    def normalize_deployment_id(cls, value: Any) -> str | None:
-        normalized = str(value or "").strip()
-        return normalized or None
+    connections: list[WatsonxApiConfigListItem] = Field(default_factory=list)
+    page: int | None = Field(default=None, ge=1)
+    size: int | None = Field(default=None, ge=1)
+    total: int | None = Field(default=None, ge=0)
 
     @field_validator("tool_ids", mode="before")
     @classmethod
@@ -487,22 +505,14 @@ class WatsonxApiSnapshotListItem(BaseModel):
 
 
 class WatsonxApiSnapshotListProviderData(BaseModel):
-    """Provider-level metadata attached to DeploymentSnapshotListResponse.
-
-    ``deployment_id`` is present for deployment-scoped listings and absent for
-    tenant-scoped listings.
-    """
+    """Provider-level metadata attached to DeploymentSnapshotListResponse."""
 
     model_config = {"extra": "forbid"}
 
-    deployment_id: str | None = None
-    snapshots: list[WatsonxApiSnapshotListItem] = Field(default_factory=list)
-
-    @field_validator("deployment_id", mode="before")
-    @classmethod
-    def normalize_deployment_id(cls, value: Any) -> str | None:
-        normalized = str(value or "").strip()
-        return normalized or None
+    tools: list[WatsonxApiSnapshotListItem] = Field(default_factory=list)
+    page: int | None = Field(default=None, ge=1)
+    size: int | None = Field(default=None, ge=1)
+    total: int | None = Field(default=None, ge=0)
 
 
 class WatsonxApiDeploymentFlowVersionItemData(BaseModel):

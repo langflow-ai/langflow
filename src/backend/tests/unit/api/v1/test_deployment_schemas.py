@@ -13,6 +13,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentFlowVersionListItem,
     DeploymentFlowVersionListResponse,
     DeploymentListItem,
+    DeploymentListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountUpdateRequest,
@@ -260,10 +261,10 @@ class TestDeploymentSpecPayloadCompatibility:
 
 
 class TestDeploymentConfigListResponse:
-    def test_provider_data_contains_configs(self):
+    def test_provider_data_contains_connections(self):
         response = DeploymentConfigListResponse(
             provider_data={
-                "configs": [
+                "connections": [
                     {"id": "cfg_1", "name": "Config 1"},
                     {"id": "cfg_2", "name": "Config 2"},
                 ],
@@ -273,7 +274,7 @@ class TestDeploymentConfigListResponse:
             size=20,
             total=2,
         )
-        assert len(response.provider_data["configs"]) == 2
+        assert len(response.provider_data["connections"]) == 2
         assert response.provider_data["scope"] == "shared"
         assert response.page == 1
         assert response.total == 2
@@ -281,9 +282,9 @@ class TestDeploymentConfigListResponse:
     def test_allows_null_provider_data(self):
         response = DeploymentConfigListResponse()
         assert response.provider_data is None
-        assert response.page == 1
-        assert response.size == 20
-        assert response.total == 0
+        assert response.page is None
+        assert response.size is None
+        assert response.total is None
 
     def test_has_provider_data_and_pagination_fields_only(self):
         assert set(DeploymentConfigListResponse.model_fields.keys()) == {
@@ -295,12 +296,12 @@ class TestDeploymentConfigListResponse:
 
 
 class TestDeploymentSnapshotListResponse:
-    def test_provider_data_contains_snapshots(self):
+    def test_provider_data_contains_tools(self):
         from langflow.api.v1.schemas.deployments import DeploymentSnapshotListResponse
 
         response = DeploymentSnapshotListResponse(
             provider_data={
-                "snapshots": [
+                "tools": [
                     {"id": "tool-1", "name": "Tool 1"},
                     {"id": "tool-2", "name": "Tool 2"},
                 ],
@@ -310,7 +311,7 @@ class TestDeploymentSnapshotListResponse:
             size=20,
             total=2,
         )
-        assert len(response.provider_data["snapshots"]) == 2
+        assert len(response.provider_data["tools"]) == 2
         assert response.page == 1
 
     def test_allows_null_provider_data(self):
@@ -371,6 +372,16 @@ class TestDeploymentFlowVersionListSchemas:
         assert response.page == 2
         assert response.size == 5
         assert response.total == 9
+
+
+class TestDeploymentListResponse:
+    def test_allows_provider_only_shape(self):
+        response = DeploymentListResponse(provider_data={"deployments": []})
+        assert response.deployments is None
+        assert response.page is None
+        assert response.size is None
+        assert response.total is None
+        assert response.provider_data == {"deployments": []}
 
 
 # ---------------------------------------------------------------------------

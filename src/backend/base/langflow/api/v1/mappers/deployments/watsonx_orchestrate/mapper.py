@@ -938,7 +938,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         result: DeploymentListResult,
     ) -> DeploymentListResponse:
         provider_result = {
-            "entries": [
+            "deployments": [
                 self._shape_provider_deployment_list_entry(item) for item in result.deployments if str(item.id).strip()
             ]
         }
@@ -955,12 +955,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Invalid deployment list provider_data payload: {detail}",
             ) from exc
-        total = len(validated_payload.get("entries", []))
         return DeploymentListResponse(
-            deployments=[],
-            page=1,
-            size=total,
-            total=total,
+            deployments=None,
             provider_data=validated_payload,
         )
 
@@ -979,10 +975,17 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         items_all = [item.model_dump(mode="json", exclude_none=True) for item in result.configs]
         total = len(items_all)
         offset = page_offset(page, size)
-        provider_result = result.provider_result if isinstance(result.provider_result, dict) else {}
+        provider_result = (
+            {key: value for key, value in result.provider_result.items() if key != "deployment_id"}
+            if isinstance(result.provider_result, dict)
+            else {}
+        )
         provider_payload = {
             **provider_result,
-            "configs": items_all[offset : offset + size],
+            "connections": items_all[offset : offset + size],
+            "page": page,
+            "size": size,
+            "total": total,
         }
         try:
             validated_payload = slot.parse(provider_payload).model_dump(mode="json", exclude_none=True)
@@ -992,12 +995,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 detail=f"Invalid config list provider_data payload: {exc.format_first_error()}",
             ) from exc
 
-        return DeploymentConfigListResponse(
-            provider_data=validated_payload or None,
-            page=page,
-            size=size,
-            total=total,
-        )
+        return DeploymentConfigListResponse(provider_data=validated_payload or None)
 
     def shape_snapshot_list_result(
         self,
@@ -1025,10 +1023,17 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
 
         total = len(items_all)
         offset = page_offset(page, size)
-        provider_result = result.provider_result if isinstance(result.provider_result, dict) else {}
+        provider_result = (
+            {key: value for key, value in result.provider_result.items() if key != "deployment_id"}
+            if isinstance(result.provider_result, dict)
+            else {}
+        )
         provider_payload = {
             **provider_result,
-            "snapshots": items_all[offset : offset + size],
+            "tools": items_all[offset : offset + size],
+            "page": page,
+            "size": size,
+            "total": total,
         }
         try:
             validated_payload = slot.parse(provider_payload).model_dump(mode="json", exclude_none=True)
@@ -1038,12 +1043,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 detail=f"Invalid snapshot list provider_data payload: {exc.format_first_error()}",
             ) from exc
 
-        return DeploymentSnapshotListResponse(
-            provider_data=validated_payload or None,
-            page=page,
-            size=size,
-            total=total,
-        )
+        return DeploymentSnapshotListResponse(provider_data=validated_payload or None)
 
     def shape_flow_version_list_result(
         self,
@@ -1405,7 +1405,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 "raw_payloads": raw_tool_payloads or None,
             },
             "connections": {
-                "raw_payloads": self._dump_raw_connection_payloads(connections.raw_payloads),
+                "raw_payloads": self._dump_key_value_connection_payloads(connections.key_value),
             },
             "operations": operations,
         }
@@ -1458,10 +1458,28 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             )
         return api_bindings
 
-    def _dump_raw_connection_payloads(self, raw_payloads: list[Any] | None) -> list[dict[str, Any]] | None:
-        if not raw_payloads:
+    def _dump_key_value_connection_payloads(self, key_value_payloads: list[Any] | None) -> list[dict[str, Any]] | None:
+        if not key_value_payloads:
             return None
-        return [raw_payload.model_dump(exclude_none=True) for raw_payload in raw_payloads]
+        normalized: list[dict[str, Any]] = []
+        for payload in key_value_payloads:
+            item: dict[str, Any] = {"app_id": payload.app_id}
+            environment_variables = self._to_adapter_environment_variables(payload.credentials)
+            if environment_variables is not None:
+                item["environment_variables"] = environment_variables
+            normalized.append(item)
+        return normalized
+
+    def _to_adapter_environment_variables(self, credentials: list[Any] | None) -> dict[str, dict[str, Any]] | None:
+        if not credentials:
+            return None
+        return {
+            credential.key: {
+                "value": credential.value,
+                "source": credential.source,
+            }
+            for credential in credentials
+        }
 
     async def _lookup_snapshot_ids(
         self,

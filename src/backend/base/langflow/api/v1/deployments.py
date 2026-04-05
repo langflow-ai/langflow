@@ -781,7 +781,7 @@ async def get_deployment_execution(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/configs", response_model=DeploymentConfigListResponse)
+@router.get("/configs", response_model=DeploymentConfigListResponse, response_model_exclude_none=True)
 async def list_deployment_configs(
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
@@ -851,7 +851,7 @@ async def list_deployment_configs(
     )
 
 
-@router.get("/snapshots", response_model=DeploymentSnapshotListResponse)
+@router.get("/snapshots", response_model=DeploymentSnapshotListResponse, response_model_exclude_none=True)
 async def list_deployment_snapshots(
     provider_id: DeploymentProviderAccountIdQuery,
     session: DbSessionReadOnly,

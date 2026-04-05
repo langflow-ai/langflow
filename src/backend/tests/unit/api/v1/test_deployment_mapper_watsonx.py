@@ -150,8 +150,12 @@ def test_watsonx_mapper_shapes_deployment_list_result_with_flattened_entries() -
 
     shaped = mapper.shape_deployment_list_result(result)
 
+    assert shaped.deployments is None
+    assert shaped.page is None
+    assert shaped.size is None
+    assert shaped.total is None
     assert shaped.provider_data is not None
-    assert shaped.provider_data["entries"] == [
+    assert shaped.provider_data["deployments"] == [
         {
             "id": "agent-1",
             "name": "Agent 1",
@@ -385,16 +389,19 @@ def test_watsonx_mapper_shapes_config_list_result_with_full_slot_validation() ->
 
     shaped = mapper.shape_config_list_result(result, page=1, size=1)
 
-    assert shaped.total == 2
-    assert shaped.page == 1
-    assert shaped.size == 1
+    assert shaped.total is None
+    assert shaped.page is None
+    assert shaped.size is None
     assert shaped.provider_data is not None
-    assert shaped.provider_data["deployment_id"] == "dep-1"
+    assert "deployment_id" not in shaped.provider_data
     assert shaped.provider_data["tool_ids"] == ["tool-1"]
-    assert len(shaped.provider_data["configs"]) == 1
-    assert shaped.provider_data["configs"][0]["id"] == "cfg-1"
-    assert shaped.provider_data["configs"][0]["name"] == "Config 1"
-    assert "provider_data" not in shaped.provider_data["configs"][0]
+    assert shaped.provider_data["page"] == 1
+    assert shaped.provider_data["size"] == 1
+    assert shaped.provider_data["total"] == 2
+    assert len(shaped.provider_data["connections"]) == 1
+    assert shaped.provider_data["connections"][0]["id"] == "cfg-1"
+    assert shaped.provider_data["connections"][0]["name"] == "Config 1"
+    assert "provider_data" not in shaped.provider_data["connections"][0]
 
 
 def test_watsonx_mapper_shapes_snapshot_list_result_without_nested_provider_data() -> None:
@@ -412,17 +419,22 @@ def test_watsonx_mapper_shapes_snapshot_list_result_without_nested_provider_data
 
     shaped = mapper.shape_snapshot_list_result(result, page=1, size=20)
 
-    assert shaped.total == 1
+    assert shaped.total is None
+    assert shaped.page is None
+    assert shaped.size is None
     assert shaped.provider_data is not None
-    assert shaped.provider_data["deployment_id"] == "dep-1"
-    assert shaped.provider_data["snapshots"] == [
+    assert "deployment_id" not in shaped.provider_data
+    assert shaped.provider_data["page"] == 1
+    assert shaped.provider_data["size"] == 20
+    assert shaped.provider_data["total"] == 1
+    assert shaped.provider_data["tools"] == [
         {
             "id": "tool-1",
             "name": "Tool 1",
             "connections": {"cfg-1": "conn-1"},
         }
     ]
-    assert "provider_data" not in shaped.provider_data["snapshots"][0]
+    assert "provider_data" not in shaped.provider_data["tools"][0]
 
 
 def test_watsonx_mapper_snapshot_list_result_rejects_malformed_item_payload() -> None:
@@ -1470,7 +1482,7 @@ def test_wxo_mapper_resolve_verify_credentials_rejects_extra_fields() -> None:
 
 @pytest.mark.asyncio
 async def test_watsonx_mapper_create_preserves_env_var_source_in_connection_payloads() -> None:
-    """Connections with environment_variables should preserve source.
+    """Connections with credentials should preserve source.
 
     Preserve raw-vs-variable semantics all the way to the adapter payload.
     """
@@ -1486,13 +1498,17 @@ async def test_watsonx_mapper_create_preserves_env_var_source_in_connection_payl
         provider_data={
             "llm": TEST_WXO_LLM,
             "connections": {
-                "raw_payloads": [
+                "key_value": [
                     {
                         "app_id": "app-new",
-                        "environment_variables": {
-                            "RAW_TOKEN": {"value": "literal-secret", "source": "raw"},  # pragma: allowlist secret
-                            "VAR_REF": {"value": "MY_GLOBAL_VAR", "source": "variable"},
-                        },
+                        "credentials": [
+                            {
+                                "key": "RAW_TOKEN",
+                                "value": "literal-secret",
+                                "source": "raw",
+                            },  # pragma: allowlist secret
+                            {"key": "VAR_REF", "value": "MY_GLOBAL_VAR", "source": "variable"},
+                        ],
                     }
                 ],
             },
@@ -1788,17 +1804,40 @@ def test_watsonx_api_payload_rejects_conflicting_tool_id_operations() -> None:
         )
 
 
-def test_watsonx_api_payload_unbind_tool_rejects_raw_app_ids() -> None:
-    """unbind_tool referencing raw app_ids should be rejected."""
-    with pytest.raises(ValidationError, match=r"must not reference connections\.raw_payloads app_ids"):
+def test_watsonx_api_payload_unbind_tool_rejects_key_value_app_ids() -> None:
+    """unbind_tool referencing key_value app_ids should be rejected."""
+    with pytest.raises(ValidationError, match=r"must not reference connections\.key_value app_ids"):
         WatsonxApiDeploymentUpdatePayload.model_validate(
             {
                 "llm": TEST_WXO_LLM,
                 "connections": {
-                    "raw_payloads": [{"app_id": "app-new"}],
+                    "key_value": [{"app_id": "app-new"}],
                 },
                 "operations": [
                     {"op": "unbind_tool", "tool_id": "tid", "app_ids": ["app-new"]},
+                ],
+            }
+        )
+
+
+def test_watsonx_api_payload_rejects_duplicate_credential_keys() -> None:
+    with pytest.raises(ValidationError, match="duplicate key values"):
+        WatsonxApiDeploymentUpdatePayload.model_validate(
+            {
+                "llm": TEST_WXO_LLM,
+                "connections": {
+                    "key_value": [
+                        {
+                            "app_id": "app-new",
+                            "credentials": [
+                                {"key": "TOKEN", "value": "secret-a", "source": "raw"},  # pragma: allowlist secret
+                                {"key": "TOKEN", "value": "secret-b", "source": "raw"},  # pragma: allowlist secret
+                            ],
+                        }
+                    ]
+                },
+                "operations": [
+                    {"op": "bind_tool", "tool_id": "tid", "app_ids": ["app-new"]},
                 ],
             }
         )
