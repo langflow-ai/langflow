@@ -171,6 +171,14 @@ async def apply_provider_create_plan_with_rollback(
     plan: ProviderCreatePlan,
 ) -> WatsonxProviderCreateApplyResult:
     """Apply provider create operations with rollback protection."""
+    logger.debug(
+        "apply_provider_create_plan: name='%s', %d existing tools, %d raw tools, %d raw connections, %d existing app_ids",
+        plan.deployment_name,
+        len(plan.existing_tool_ids),
+        len(plan.raw_tools_to_create),
+        len(plan.raw_connections_to_create),
+        len(plan.existing_app_ids),
+    )
     # Rollback journals — tracked so partial failures can undo side-effects:
     # - created_tool_ids: provider tool ids created during this operation.
     # - created_app_ids: provider app ids (connections) created during this operation.
@@ -290,6 +298,12 @@ async def apply_provider_create_plan_with_rollback(
         msg = f"{ErrorPrefix.CREATE.value} Deployment response was empty."
         raise DeploymentError(message=msg, error_code="deployment_error")
 
+    logger.debug(
+        "apply_provider_create_plan: created agent_id='%s', %d tools, %d connections",
+        agent_create_response.id,
+        len(created_tool_ids),
+        len(created_app_ids),
+    )
     return WatsonxProviderCreateApplyResult(
         agent_id=str(agent_create_response.id),
         app_ids=created_app_ids,

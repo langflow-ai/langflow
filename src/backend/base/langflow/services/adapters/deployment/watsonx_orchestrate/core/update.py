@@ -415,6 +415,14 @@ async def apply_provider_update_plan_with_rollback(
     plan: ProviderUpdatePlan,
 ) -> WatsonxProviderUpdateApplyResult:
     """Apply provider_data update operations with rollback protection."""
+    logger.debug(
+        "apply_provider_update_plan: agent_id='%s', %d raw tools, %d renames, %d connection deltas, %d raw connections",
+        agent_id,
+        len(plan.raw_tools_to_create),
+        len(plan.tool_renames),
+        len(plan.existing_tool_deltas),
+        len(plan.raw_connections_to_create),
+    )
     # Rollback journals — tracked so partial failures can undo side-effects:
     # - created_tool_ids: provider tool ids created during this update.
     # - created_app_ids: provider app ids created during this update.
@@ -464,29 +472,19 @@ async def apply_provider_update_plan_with_rollback(
     #   connection_id seen. All tools should agree on the mapping, but if
     #   they diverge, the explicit operation result will overwrite it.
     agent_tool_ids = extract_agent_tool_ids(agent)
-    logger.debug("apply_provider_update_plan: agent_tool_ids=%s", agent_tool_ids)
     if agent_tool_ids:
         existing_tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, agent_tool_ids)
-        logger.debug("apply_provider_update_plan: fetched %d existing tools", len(existing_tools or []))
         for tool in existing_tools or []:
             if not isinstance(tool, dict):
-                logger.debug("apply_provider_update_plan: skipping non-dict tool: %s", type(tool).__name__)
                 continue
-            tool_id = tool.get("id", "?")
-            bindings = extract_langflow_connections_binding(tool)
-            logger.debug(
-                "apply_provider_update_plan: tool_id='%s', binding.langflow.connections=%s, raw binding=%s",
-                tool_id,
-                bindings,
-                tool.get("binding"),
-            )
-            for app_id, connection_id in bindings.items():
+            for app_id, connection_id in extract_langflow_connections_binding(tool).items():
                 if app_id and connection_id:
                     operation_to_provider_app_id.setdefault(app_id, app_id)
                     resolved_connections.setdefault(app_id, connection_id)
         logger.debug(
-            "apply_provider_update_plan: pre-seeded resolved_connections=%s",
-            resolved_connections,
+            "apply_provider_update_plan: pre-seeded %d connections from %d agent tools",
+            len(resolved_connections),
+            len(agent_tool_ids),
         )
 
     try:
