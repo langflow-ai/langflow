@@ -2,7 +2,7 @@ import datetime
 import json
 from enum import Enum
 from functools import lru_cache
-from typing import Annotated, Generic
+from typing import Annotated, Any, Generic
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
@@ -321,6 +321,7 @@ class ConfigListItem(BaseModel):
     name: str = Field(description="The name of the config item")
     created_at: datetime.datetime | None = Field(None, description="The created timestamp of the config item")
     updated_at: datetime.datetime | None = Field(None, description="The last updated timestamp of the config item")
+    provider_data: dict[str, Any] | None = Field(None, description="Provider-specific data for the config item")
 
 
 class ProviderDataModel(BaseModel, Generic[T_ProviderData]):

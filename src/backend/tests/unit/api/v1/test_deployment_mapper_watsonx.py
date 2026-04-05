@@ -381,6 +381,7 @@ def test_watsonx_mapper_shapes_config_list_result_with_full_slot_validation() ->
                 name="Config 1",
                 created_at=now,
                 updated_at=now,
+                provider_data={"security_scheme": "key_value_creds"},
             ),
             ConfigListItem(id="cfg-2", name="Config 2"),
         ],
@@ -394,14 +395,54 @@ def test_watsonx_mapper_shapes_config_list_result_with_full_slot_validation() ->
     assert shaped.size is None
     assert shaped.provider_data is not None
     assert "deployment_id" not in shaped.provider_data
-    assert shaped.provider_data["tool_ids"] == ["tool-1"]
+    assert "tool_ids" not in shaped.provider_data
     assert shaped.provider_data["page"] == 1
     assert shaped.provider_data["size"] == 1
     assert shaped.provider_data["total"] == 2
     assert len(shaped.provider_data["connections"]) == 1
     assert shaped.provider_data["connections"][0]["id"] == "cfg-1"
     assert shaped.provider_data["connections"][0]["name"] == "Config 1"
+    assert shaped.provider_data["connections"][0]["type"] == "key_value_creds"
     assert "provider_data" not in shaped.provider_data["connections"][0]
+
+
+def test_watsonx_mapper_config_list_fails_fast_on_missing_security_scheme() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    result = ConfigListResult(
+        configs=[
+            ConfigListItem(
+                id="cfg-bad",
+                name="Bad Config",
+                provider_data={"app_id": "cfg-bad"},
+            ),
+        ],
+        provider_result={},
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        mapper.shape_config_list_result(result, page=1, size=10)
+
+    assert exc_info.value.status_code == 500
+    assert "cfg-bad" in exc_info.value.detail
+    assert "security_scheme" in exc_info.value.detail
+
+
+def test_watsonx_mapper_config_list_omits_type_when_no_provider_data() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    result = ConfigListResult(
+        configs=[
+            ConfigListItem(id="cfg-dep", name="Dep Config"),
+        ],
+        provider_result={},
+    )
+
+    shaped = mapper.shape_config_list_result(result, page=1, size=10)
+
+    assert shaped.provider_data is not None
+    assert "tool_ids" not in shaped.provider_data
+    assert len(shaped.provider_data["connections"]) == 1
+    assert "type" not in shaped.provider_data["connections"][0]
+    assert shaped.provider_data["connections"][0]["id"] == "cfg-dep"
 
 
 def test_watsonx_mapper_shapes_snapshot_list_result_without_nested_provider_data() -> None:
@@ -437,18 +478,18 @@ def test_watsonx_mapper_shapes_snapshot_list_result_without_nested_provider_data
     assert "provider_data" not in shaped.provider_data["tools"][0]
 
 
-def test_watsonx_mapper_snapshot_list_result_rejects_malformed_item_payload() -> None:
+def test_watsonx_mapper_snapshot_list_result_ignores_extra_provider_result_fields() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     result = SnapshotListResult(
         snapshots=[SnapshotItem(id="tool-1", name="Tool 1", provider_data={"connections": {"cfg-1": "conn-1"}})],
         provider_result={"deployment_id": "dep-1", "unexpected": True},
     )
 
-    with pytest.raises(HTTPException) as exc:
-        mapper.shape_snapshot_list_result(result, page=1, size=20)
+    shaped = mapper.shape_snapshot_list_result(result, page=1, size=20)
 
-    assert exc.value.status_code == 500
-    assert "Invalid snapshot list provider_data payload:" in str(exc.value.detail)
+    assert shaped.provider_data is not None
+    assert "unexpected" not in shaped.provider_data
+    assert "deployment_id" not in shaped.provider_data
 
 
 @pytest.mark.parametrize("provider_snapshot_id", [None, "   "])

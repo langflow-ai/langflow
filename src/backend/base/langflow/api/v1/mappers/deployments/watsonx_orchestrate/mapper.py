@@ -10,6 +10,7 @@ from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
+    ConfigListItem,
     ConfigListResult,
     DeploymentCreateResult,
     DeploymentListLlmsResult,
@@ -972,16 +973,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             msg = "Watsonx config_list_result payload slot is not configured."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
 
-        items_all = [item.model_dump(mode="json", exclude_none=True) for item in result.configs]
+        items_all = [self._shape_config_list_item(item) for item in result.configs]
         total = len(items_all)
         offset = page_offset(page, size)
-        provider_result = (
-            {key: value for key, value in result.provider_result.items() if key != "deployment_id"}
-            if isinstance(result.provider_result, dict)
-            else {}
-        )
         provider_payload = {
-            **provider_result,
             "connections": items_all[offset : offset + size],
             "page": page,
             "size": size,
@@ -1023,13 +1018,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
 
         total = len(items_all)
         offset = page_offset(page, size)
-        provider_result = (
-            {key: value for key, value in result.provider_result.items() if key != "deployment_id"}
-            if isinstance(result.provider_result, dict)
-            else {}
-        )
         provider_payload = {
-            **provider_result,
             "tools": items_all[offset : offset + size],
             "page": page,
             "size": size,
@@ -1167,6 +1156,19 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Invalid deployment list item provider_data payload: {detail}",
             ) from exc
+
+    def _shape_config_list_item(self, item: ConfigListItem) -> dict[str, Any]:
+        dumped = item.model_dump(mode="json", exclude_none=True)
+        item_provider_data = dumped.pop("provider_data", None)
+        if not isinstance(item_provider_data, dict):
+            return dumped
+        scheme = str(item_provider_data.get("security_scheme", "")).strip()
+        if not scheme:
+            item_id = dumped.get("id")
+            msg = f"Config list item '{item_id}' is missing required security_scheme in provider_data."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        dumped["type"] = scheme
+        return dumped
 
     def _parse_required_payload_slot(
         self,

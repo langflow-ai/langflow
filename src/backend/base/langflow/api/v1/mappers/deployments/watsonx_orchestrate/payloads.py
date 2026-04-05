@@ -453,6 +453,7 @@ class WatsonxApiConfigListItem(BaseModel):
 
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
+    type: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -471,18 +472,10 @@ class WatsonxApiConfigListProviderData(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    tool_ids: list[str] | None = None
     connections: list[WatsonxApiConfigListItem] = Field(default_factory=list)
     page: int | None = Field(default=None, ge=1)
     size: int | None = Field(default=None, ge=1)
     total: int | None = Field(default=None, ge=0)
-
-    @field_validator("tool_ids", mode="before")
-    @classmethod
-    def normalize_tool_ids(cls, value: Any) -> list[str] | None:
-        if value is None:
-            return None
-        return [str(tool_id).strip() for tool_id in value if str(tool_id).strip()]
 
 
 class WatsonxApiSnapshotListItem(BaseModel):
