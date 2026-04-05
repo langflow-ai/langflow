@@ -97,17 +97,26 @@ class FileDescriptionGeneratorComponent(Component):
             _dbg(f"self.file_data repr: {self.file_data!r}")
 
             # Extract file paths from inputs.
-            # DataFrames carry the source file path in attrs; Data objects use the "file_path" key.
+            # DataFrames/Tables have file_path as a column; Data objects use the "file_path" key.
             file_paths: list[str] = []
             for i, item in enumerate(self.file_data):
                 _dbg(f"  item[{i}] type: {type(item).__name__}")
                 if isinstance(item, DataFrame):
+                    # First try attrs (legacy), then check for file_path column
                     fp = item.attrs.get("source_file_path", "")
-                    _dbg(f"  item[{i}] DataFrame source_file_path={fp!r}")
                     if fp:
+                        _dbg(f"  item[{i}] DataFrame source_file_path from attrs={fp!r}")
                         file_paths.append(str(Path(fp)))
+                    elif "file_path" in item.columns and not item.empty:
+                        # Extract unique file paths from the file_path column
+                        unique_paths = item["file_path"].dropna().unique().tolist()
+                        _dbg(f"  item[{i}] DataFrame found {len(unique_paths)} file_path(s) in column")
+                        file_paths.extend(str(Path(path)) for path in unique_paths if path)
                     else:
-                        _dbg(f"  WARNING: item[{i}] DataFrame has no source_file_path in attrs, skipping")
+                        _dbg(
+                            f"  WARNING: item[{i}] DataFrame has no source_file_path"
+                            " in attrs or file_path column, skipping"
+                        )
                 elif isinstance(item, Data):
                     fp = item.data.get("file_path", "")
                     _dbg(f"  item[{i}] Data file_path={fp!r}")
