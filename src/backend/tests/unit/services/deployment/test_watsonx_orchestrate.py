@@ -66,6 +66,12 @@ WxOCredentials = importlib.import_module(
     "langflow.services.adapters.deployment.watsonx_orchestrate.types"
 ).WxOCredentials
 
+# Aliases for classes used in tests (module-level to satisfy N806).
+ToolConnectionOps = update_core_module.ToolConnectionOps
+OrderedUniqueStrs = shared_core_module.OrderedUniqueStrs
+WatsonxDeploymentUpdatePayload = payloads_module.WatsonxDeploymentUpdatePayload
+WatsonxRenameToolOperation = payloads_module.WatsonxRenameToolOperation
+
 TEST_WXO_LLM = "ibm/granite-3.3-8b"
 
 
@@ -5842,3 +5848,429 @@ async def test_verify_credentials_provider_unreachable(monkeypatch):
     )
     with pytest.raises(DeploymentError, match="failed unexpectedly"):
         await svc.verify_credentials(user_id="u1", payload=payload)
+
+
+# ---------------------------------------------------------------------------
+# Ownership checks: binding.langflow verification
+# ---------------------------------------------------------------------------
+
+
+def _make_langflow_tool(tool_id: str, *, connections: dict[str, str] | None = None) -> dict[str, Any]:
+    """Build a tool dict that looks Langflow-managed (has binding.langflow)."""
+    return {
+        "id": tool_id,
+        "name": f"tool_{tool_id}",
+        "binding": {
+            "langflow": {
+                "project_id": "proj-1",
+                "connections": connections or {},
+            }
+        },
+    }
+
+
+def _make_external_tool(tool_id: str) -> dict[str, Any]:
+    """Build a tool dict that is NOT Langflow-managed (no binding.langflow)."""
+    return {
+        "id": tool_id,
+        "name": f"external_{tool_id}",
+        "binding": {"some_other_platform": {}},
+    }
+
+
+def _make_unbound_tool(tool_id: str) -> dict[str, Any]:
+    """Build a tool dict with no binding at all."""
+    return {"id": tool_id, "name": f"bare_{tool_id}"}
+
+
+@pytest.mark.anyio
+async def test_update_connection_deltas_rejects_non_langflow_tool():
+    """_update_existing_tool_connection_deltas must refuse to modify tools without binding.langflow."""
+    _update_deltas = update_core_module._update_existing_tool_connection_deltas
+
+    external_tool = _make_external_tool("ext-1")
+    clients = FakeWXOClients(tool=FakeToolClient([external_tool]))
+
+    ops = ToolConnectionOps(bind=OrderedUniqueStrs.from_values(["app-1"]))
+    with pytest.raises(InvalidContentError, match="does not have a Langflow binding"):
+        await _update_deltas(
+            clients=clients,
+            existing_tool_deltas={"ext-1": ops},
+            resolved_connections={"app-1": "conn-1"},
+            operation_to_provider_app_id={"app-1": "app-1"},
+            original_tools={},
+        )
+
+
+@pytest.mark.anyio
+async def test_update_connection_deltas_accepts_langflow_tool():
+    """_update_existing_tool_connection_deltas succeeds for tools with binding.langflow."""
+    _update_deltas = update_core_module._update_existing_tool_connection_deltas
+
+    lf_tool = _make_langflow_tool("lf-1")
+    clients = FakeWXOClients(tool=FakeToolClient([lf_tool]))
+
+    ops = ToolConnectionOps(bind=OrderedUniqueStrs.from_values(["app-1"]))
+    original_tools: dict[str, dict] = {}
+    await _update_deltas(
+        clients=clients,
+        existing_tool_deltas={"lf-1": ops},
+        resolved_connections={"app-1": "conn-1"},
+        operation_to_provider_app_id={"app-1": "app-1"},
+        original_tools=original_tools,
+    )
+    assert "lf-1" in original_tools
+    assert clients.tool.update_calls
+
+
+@pytest.mark.anyio
+async def test_bind_existing_tools_for_create_rejects_non_langflow_tool():
+    """_bind_existing_tools_for_create must refuse to modify tools without binding.langflow."""
+    _bind_existing = create_core_module._bind_existing_tools_for_create
+
+    external_tool = _make_external_tool("ext-1")
+    clients = FakeWXOClients(tool=FakeToolClient([external_tool]))
+
+    with pytest.raises(InvalidContentError, match="does not have a Langflow binding"):
+        await _bind_existing(
+            clients=clients,
+            existing_tool_bindings={"ext-1": ["app-1"]},
+            operation_to_provider_app_id={"app-1": "app-1"},
+            resolved_connections={"app-1": "conn-1"},
+            original_tools={},
+        )
+
+
+@pytest.mark.anyio
+async def test_bind_existing_tools_for_create_accepts_langflow_tool():
+    """_bind_existing_tools_for_create succeeds for tools with binding.langflow."""
+    _bind_existing = create_core_module._bind_existing_tools_for_create
+
+    lf_tool = _make_langflow_tool("lf-1")
+    clients = FakeWXOClients(tool=FakeToolClient([lf_tool]))
+
+    original_tools: dict[str, dict] = {}
+    await _bind_existing(
+        clients=clients,
+        existing_tool_bindings={"lf-1": ["app-1"]},
+        operation_to_provider_app_id={"app-1": "app-1"},
+        resolved_connections={"app-1": "conn-1"},
+        original_tools=original_tools,
+    )
+    assert "lf-1" in original_tools
+    assert clients.tool.update_calls
+
+
+@pytest.mark.anyio
+async def test_update_existing_tool_connection_bindings_rejects_non_langflow_tool():
+    """update_existing_tool_connection_bindings must refuse to modify tools without binding.langflow."""
+    _update_bindings = tools_module.update_existing_tool_connection_bindings
+
+    external_tool = _make_external_tool("ext-1")
+    clients = FakeWXOClients(tool=FakeToolClient([external_tool]))
+
+    with pytest.raises(InvalidContentError, match="does not have a Langflow binding"):
+        await _update_bindings(
+            clients=clients,
+            existing_target_tool_ids=["ext-1"],
+            resolved_connections={"app-1": "conn-1"},
+            original_tools={},
+        )
+
+
+@pytest.mark.anyio
+async def test_update_existing_tool_connection_bindings_rejects_unbound_tool():
+    """update_existing_tool_connection_bindings must refuse tools with no binding at all."""
+    _update_bindings = tools_module.update_existing_tool_connection_bindings
+
+    bare_tool = _make_unbound_tool("bare-1")
+    clients = FakeWXOClients(tool=FakeToolClient([bare_tool]))
+
+    with pytest.raises(InvalidContentError, match="does not have a Langflow binding"):
+        await _update_bindings(
+            clients=clients,
+            existing_target_tool_ids=["bare-1"],
+            resolved_connections={"app-1": "conn-1"},
+            original_tools={},
+        )
+
+
+# ---------------------------------------------------------------------------
+# Tool rename safety
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_apply_tool_renames_succeeds_for_langflow_tool():
+    """_apply_tool_renames renames a Langflow-owned tool on the agent."""
+    _apply_renames = update_core_module._apply_tool_renames
+
+    lf_tool = _make_langflow_tool("lf-1")
+    clients = FakeWXOClients(tool=FakeToolClient([lf_tool]))
+
+    original_tools: dict[str, dict] = {}
+    await _apply_renames(
+        clients=clients,
+        agent_tool_ids=["lf-1"],
+        tool_renames={"lf-1": "new_name"},
+        original_tools=original_tools,
+    )
+    assert clients.tool.update_calls
+    tool_id, payload = clients.tool.update_calls[0]
+    assert tool_id == "lf-1"
+    assert payload["name"] == "new_name"
+    assert payload["display_name"] == "new_name"
+    assert "lf-1" in original_tools
+
+
+@pytest.mark.anyio
+async def test_apply_tool_renames_rejects_non_langflow_tool():
+    """_apply_tool_renames must refuse to rename tools without binding.langflow."""
+    _apply_renames = update_core_module._apply_tool_renames
+
+    external_tool = _make_external_tool("ext-1")
+    clients = FakeWXOClients(tool=FakeToolClient([external_tool]))
+
+    with pytest.raises(InvalidContentError, match="does not have a Langflow binding"):
+        await _apply_renames(
+            clients=clients,
+            agent_tool_ids=["ext-1"],
+            tool_renames={"ext-1": "stolen_name"},
+            original_tools={},
+        )
+    assert not clients.tool.update_calls
+
+
+@pytest.mark.anyio
+async def test_apply_tool_renames_rejects_tool_not_on_agent():
+    """_apply_tool_renames must refuse to rename tools not attached to the agent."""
+    _apply_renames = update_core_module._apply_tool_renames
+
+    lf_tool = _make_langflow_tool("lf-1")
+    clients = FakeWXOClients(tool=FakeToolClient([lf_tool]))
+
+    with pytest.raises(InvalidContentError, match="not attached to this agent"):
+        await _apply_renames(
+            clients=clients,
+            agent_tool_ids=["other-tool"],
+            tool_renames={"lf-1": "new_name"},
+            original_tools={},
+        )
+    assert not clients.tool.update_calls
+
+
+@pytest.mark.anyio
+async def test_apply_tool_renames_rejects_missing_tool():
+    """_apply_tool_renames must fail if tool doesn't exist on provider."""
+    _apply_renames = update_core_module._apply_tool_renames
+
+    clients = FakeWXOClients(tool=FakeToolClient([]))
+
+    with pytest.raises(InvalidContentError, match="not found in provider"):
+        await _apply_renames(
+            clients=clients,
+            agent_tool_ids=["ghost-1"],
+            tool_renames={"ghost-1": "new_name"},
+            original_tools={},
+        )
+
+
+@pytest.mark.anyio
+async def test_apply_tool_renames_captures_original_for_rollback():
+    """_apply_tool_renames must capture original payload before renaming for rollback."""
+    _apply_renames = update_core_module._apply_tool_renames
+
+    lf_tool = _make_langflow_tool("lf-1")
+    lf_tool["name"] = "original_name"
+    lf_tool["display_name"] = "original_name"
+    clients = FakeWXOClients(tool=FakeToolClient([lf_tool]))
+
+    original_tools: dict[str, dict] = {}
+    await _apply_renames(
+        clients=clients,
+        agent_tool_ids=["lf-1"],
+        tool_renames={"lf-1": "new_name"},
+        original_tools=original_tools,
+    )
+    assert original_tools["lf-1"]["name"] == "original_name"
+
+
+# ---------------------------------------------------------------------------
+# Tool name validation
+# ---------------------------------------------------------------------------
+
+
+def test_validate_tool_name_accepts_valid_name():
+    """_validate_tool_name accepts a name that normalizes to a valid wxO identifier."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import _validate_tool_name
+
+    assert _validate_tool_name("My Flow") == "My_Flow"
+    assert _validate_tool_name("hello_world") == "hello_world"
+    assert _validate_tool_name("flow-with-dashes") == "flow_with_dashes"
+
+
+def test_validate_tool_name_rejects_empty():
+    """_validate_tool_name rejects names that normalize to empty string."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import _validate_tool_name
+
+    with pytest.raises(HTTPException) as exc_info:
+        _validate_tool_name("!@#$%")
+    assert exc_info.value.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+def test_validate_tool_name_rejects_leading_digit():
+    """_validate_tool_name rejects names that start with a digit after normalization."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import _validate_tool_name
+
+    with pytest.raises(HTTPException) as exc_info:
+        _validate_tool_name("123flow")
+    assert exc_info.value.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+def test_validate_tool_name_is_idempotent():
+    """Running _validate_tool_name twice produces the same result."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import _validate_tool_name
+
+    first = _validate_tool_name("My Flow!")
+    second = _validate_tool_name(first)
+    assert first == second
+
+
+# ---------------------------------------------------------------------------
+# Rename operation in plan builder
+# ---------------------------------------------------------------------------
+
+
+def test_build_update_plan_includes_rename():
+    """build_provider_update_plan collects rename_tool operations into tool_renames."""
+    build_plan = update_core_module.build_provider_update_plan
+
+    agent = {"id": "agent-1", "tools": ["tool-1"]}
+    payload = WatsonxDeploymentUpdatePayload(
+        llm=TEST_WXO_LLM,
+        operations=[
+            {
+                "op": "rename_tool",
+                "tool": {"source_ref": "fv-1", "tool_id": "tool-1"},
+                "new_name": "better_name",
+            },
+        ],
+    )
+    plan = build_plan(agent=agent, provider_update=payload)
+    assert plan.tool_renames == {"tool-1": "better_name"}
+
+
+def test_build_update_plan_without_renames_has_empty_dict():
+    """build_provider_update_plan returns empty tool_renames when no renames present."""
+    build_plan = update_core_module.build_provider_update_plan
+
+    agent = {"id": "agent-1", "tools": ["tool-1"]}
+    payload = WatsonxDeploymentUpdatePayload(
+        llm=TEST_WXO_LLM,
+        operations=[
+            {
+                "op": "remove_tool",
+                "tool": {"source_ref": "fv-1", "tool_id": "tool-1"},
+            },
+        ],
+    )
+    plan = build_plan(agent=agent, provider_update=payload)
+    assert plan.tool_renames == {}
+
+
+# ---------------------------------------------------------------------------
+# WXO_LFX_REQUIREMENT_OVERRIDE
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_lfx_requirement_uses_override(monkeypatch):
+    """_resolve_lfx_requirement returns the env var value when set."""
+    _resolve = tools_module._resolve_lfx_requirement
+
+    monkeypatch.setenv("WXO_LFX_REQUIREMENT_OVERRIDE", "lfx-nightly==0.4.0.dev32")
+    assert _resolve() == "lfx-nightly==0.4.0.dev32"
+
+
+def test_resolve_lfx_requirement_ignores_blank_override(monkeypatch):
+    """_resolve_lfx_requirement ignores empty/whitespace-only override."""
+    _resolve = tools_module._resolve_lfx_requirement
+
+    monkeypatch.setenv("WXO_LFX_REQUIREMENT_OVERRIDE", "   ")
+    # Should not return blank — should fall through to installed version or raise
+    result = _resolve()
+    assert result.strip()
+    assert result != "   "
+
+
+# ---------------------------------------------------------------------------
+# Rename operation API payload parsing
+# ---------------------------------------------------------------------------
+
+
+def test_rename_tool_api_payload_parses():
+    """WatsonxApiRenameToolOperation parses correctly."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import WatsonxApiRenameToolOperation
+
+    op = WatsonxApiRenameToolOperation(
+        op="rename_tool",
+        flow_version_id="00000000-0000-0000-0000-000000000001",
+        tool_name="new_tool_name",
+    )
+    assert op.op == "rename_tool"
+    assert op.tool_name == "new_tool_name"
+
+
+def test_rename_tool_api_payload_rejects_empty_name():
+    """WatsonxApiRenameToolOperation rejects empty tool_name."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import WatsonxApiRenameToolOperation
+
+    with pytest.raises(ValidationError):
+        WatsonxApiRenameToolOperation(
+            op="rename_tool",
+            flow_version_id="00000000-0000-0000-0000-000000000001",
+            tool_name="",
+        )
+
+
+def test_rename_tool_provider_payload_parses():
+    """WatsonxRenameToolOperation parses correctly at provider level."""
+    op = WatsonxRenameToolOperation(
+        op="rename_tool",
+        tool={"source_ref": "fv-1", "tool_id": "tool-1"},
+        new_name="better_name",
+    )
+    assert op.new_name == "better_name"
+    assert op.tool.tool_id == "tool-1"
+
+
+# ---------------------------------------------------------------------------
+# DeploymentFlowVersionListItem includes tool_name
+# ---------------------------------------------------------------------------
+
+
+def test_flow_version_list_item_includes_tool_name():
+    """DeploymentFlowVersionListItem accepts and serializes tool_name."""
+    from langflow.api.v1.schemas.deployments import DeploymentFlowVersionListItem
+
+    item = DeploymentFlowVersionListItem(
+        id="00000000-0000-0000-0000-000000000001",
+        flow_id="00000000-0000-0000-0000-000000000002",
+        flow_name="My Flow",
+        version_number=1,
+        tool_name="my_custom_tool",
+    )
+    assert item.tool_name == "my_custom_tool"
+    data = item.model_dump()
+    assert data["tool_name"] == "my_custom_tool"
+
+
+def test_flow_version_list_item_tool_name_defaults_to_none():
+    """DeploymentFlowVersionListItem defaults tool_name to None."""
+    from langflow.api.v1.schemas.deployments import DeploymentFlowVersionListItem
+
+    item = DeploymentFlowVersionListItem(
+        id="00000000-0000-0000-0000-000000000001",
+        flow_id="00000000-0000-0000-0000-000000000002",
+        version_number=1,
+    )
+    assert item.tool_name is None

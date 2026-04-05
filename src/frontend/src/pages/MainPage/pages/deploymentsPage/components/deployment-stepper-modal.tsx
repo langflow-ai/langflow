@@ -66,6 +66,17 @@ export default function DeploymentStepperModal({
     );
 
   // Build initial maps from attachments for the stepper context.
+  // Tool names and connection bindings come from the provider (wxO) via
+  // the /flows endpoint, NOT from the Langflow database. This means:
+  //
+  // - If a user renames a tool in the wxO console, the new name appears
+  //   here on the next edit. Langflow doesn't cache tool names locally.
+  // - If a tool is deleted in wxO, its tool_name will be null and the
+  //   review page falls back to the Langflow flow name.
+  // - If a connection is deleted in wxO but the tool still references it,
+  //   the app_id will appear in connectionsByFlow. The backend will fail
+  //   fast during the update if the caller tries to bind a new tool to
+  //   that stale connection.
   const editInitialState = useMemo(() => {
     if (!isEditMode || !attachmentsData?.flow_versions) return null;
 
@@ -73,11 +84,23 @@ export default function DeploymentStepperModal({
       string,
       { versionId: string; versionTag: string }
     >();
+    const toolNames = new Map<string, string>();
+    const connectionsByFlow = new Map<string, string[]>();
+
     for (const fv of attachmentsData.flow_versions) {
       versionMap.set(fv.flow_id, {
         versionId: fv.id,
         versionTag: `v${fv.version_number}`,
       });
+      // Pre-populate tool names from the provider (may differ from flow name).
+      if (fv.tool_name) {
+        toolNames.set(fv.flow_id, fv.tool_name);
+      }
+      // Pre-populate attached connections from existing tool bindings.
+      const appIds = fv.provider_data?.app_ids;
+      if (appIds && appIds.length > 0) {
+        connectionsByFlow.set(fv.flow_id, appIds);
+      }
     }
 
     const llm =
@@ -85,7 +108,7 @@ export default function DeploymentStepperModal({
         ? (deploymentDetail.provider_data.llm as string)
         : "";
 
-    return { versionMap, llm };
+    return { versionMap, llm, toolNames, connectionsByFlow };
   }, [isEditMode, attachmentsData, deploymentDetail]);
 
   const isLoadingEditData =
@@ -125,6 +148,8 @@ export default function DeploymentStepperModal({
                   : 1,
               editingDeployment: editingDeployment ?? undefined,
               initialLlm: editInitialState?.llm,
+              initialToolNameByFlow: editInitialState?.toolNames,
+              initialConnectionsByFlow: editInitialState?.connectionsByFlow,
             }}
           >
             <DeploymentStepperModalContent

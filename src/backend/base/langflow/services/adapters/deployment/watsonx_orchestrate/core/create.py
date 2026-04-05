@@ -38,6 +38,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     create_and_upload_wxo_flow_tools_with_bindings,
     ensure_langflow_connections_binding,
     to_writable_tool_payload,
+    verify_langflow_owned,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxAttachToolOperation,
@@ -170,6 +171,15 @@ async def apply_provider_create_plan_with_rollback(
     plan: ProviderCreatePlan,
 ) -> WatsonxProviderCreateApplyResult:
     """Apply provider create operations with rollback protection."""
+    logger.debug(
+        "apply_provider_create_plan: name='%s', %d existing tools, %d raw tools, "
+        "%d raw connections, %d existing app_ids",
+        plan.deployment_name,
+        len(plan.existing_tool_ids),
+        len(plan.raw_tools_to_create),
+        len(plan.raw_connections_to_create),
+        len(plan.existing_app_ids),
+    )
     # Rollback journals — tracked so partial failures can undo side-effects:
     # - created_tool_ids: provider tool ids created during this operation.
     # - created_app_ids: provider app ids (connections) created during this operation.
@@ -289,6 +299,12 @@ async def apply_provider_create_plan_with_rollback(
         msg = f"{ErrorPrefix.CREATE.value} Deployment response was empty."
         raise DeploymentError(message=msg, error_code="deployment_error")
 
+    logger.debug(
+        "apply_provider_create_plan: created agent_id='%s', %d tools, %d connections",
+        agent_create_response.id,
+        len(created_tool_ids),
+        len(created_app_ids),
+    )
     return WatsonxProviderCreateApplyResult(
         agent_id=str(agent_create_response.id),
         app_ids=created_app_ids,
@@ -361,7 +377,10 @@ async def _bind_existing_tools_for_create(
 
     tool_updates: list[tuple[str, dict[str, Any]]] = []
     for tool_id in tool_ids:
-        original_tool = to_writable_tool_payload(tool_by_id[tool_id])
+        tool = tool_by_id[tool_id]
+        verify_langflow_owned(tool, tool_id=tool_id)
+
+        original_tool = to_writable_tool_payload(tool)
         original_tools[tool_id] = original_tool
         writable_tool = copy.deepcopy(original_tool)
         connections = ensure_langflow_connections_binding(writable_tool)

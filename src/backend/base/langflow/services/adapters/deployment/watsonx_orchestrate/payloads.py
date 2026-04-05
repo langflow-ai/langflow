@@ -239,6 +239,18 @@ class WatsonxUnbindOperation(BaseModel):
         return list(dict.fromkeys(value))
 
 
+class WatsonxRenameToolOperation(BaseModel):
+    """Rename a Langflow-managed tool on the provider."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    op: Literal["rename_tool"]
+    tool: WatsonxToolRefBinding = Field(
+        description="Existing provider tool reference with source_ref correlation.",
+    )
+    new_name: str = Field(min_length=1, description="Validated wxO tool name.")
+
+
 class WatsonxRemoveToolOperation(BaseModel):
     """Detach an existing tool from the deployment."""
 
@@ -262,7 +274,11 @@ class WatsonxAttachToolOperation(BaseModel):
 
 
 WatsonxUpdateOperation = Annotated[
-    WatsonxBindOperation | WatsonxUnbindOperation | WatsonxRemoveToolOperation | WatsonxAttachToolOperation,
+    WatsonxBindOperation
+    | WatsonxUnbindOperation
+    | WatsonxRenameToolOperation
+    | WatsonxRemoveToolOperation
+    | WatsonxAttachToolOperation,
     Field(discriminator="op"),
 ]
 
