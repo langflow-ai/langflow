@@ -172,7 +172,8 @@ async def apply_provider_create_plan_with_rollback(
 ) -> WatsonxProviderCreateApplyResult:
     """Apply provider create operations with rollback protection."""
     logger.debug(
-        "apply_provider_create_plan: name='%s', %d existing tools, %d raw tools, %d raw connections, %d existing app_ids",
+        "apply_provider_create_plan: name='%s', %d existing tools, %d raw tools, "
+        "%d raw connections, %d existing app_ids",
         plan.deployment_name,
         len(plan.existing_tool_ids),
         len(plan.raw_tools_to_create),

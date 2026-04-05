@@ -409,8 +409,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         for op in api_provider_payload.operations:
             if isinstance(op, WatsonxApiBindOperation) and op.tool_name:
                 raw_name_by_flow_version_id[op.flow_version_id] = op.tool_name
-        for fv_id in raw_name_by_flow_version_id:
-            raw_name_by_flow_version_id[fv_id] = _validate_tool_name(raw_name_by_flow_version_id[fv_id])
+        for fv_id, name in raw_name_by_flow_version_id.items():
+            raw_name_by_flow_version_id[fv_id] = _validate_tool_name(name)
         provider_operations = self._build_provider_operations(
             operations=api_provider_payload.operations,
             raw_name_by_flow_version_id=raw_name_by_flow_version_id,
@@ -532,8 +532,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         for op in api_provider_payload.operations:
             if isinstance(op, WatsonxApiBindOperation) and op.tool_name:
                 raw_name_by_flow_version_id[op.flow_version_id] = op.tool_name
-        for fv_id in raw_name_by_flow_version_id:
-            raw_name_by_flow_version_id[fv_id] = _validate_tool_name(raw_name_by_flow_version_id[fv_id])
+        for fv_id, name in raw_name_by_flow_version_id.items():
+            raw_name_by_flow_version_id[fv_id] = _validate_tool_name(name)
         raw_payloads = [
             artifact.model_copy(
                 update={
