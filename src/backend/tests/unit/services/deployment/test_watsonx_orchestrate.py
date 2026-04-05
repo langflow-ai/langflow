@@ -588,29 +588,32 @@ async def test_update_provider_data_llm_only_updates_agent(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_update_provider_data_rejects_missing_llm(monkeypatch):
+async def test_update_provider_data_accepts_missing_llm(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_tool = FakeToolClient([{"id": "tool-1", "name": "tool-1", "binding": {"langflow": {"connections": {}}}}])
+    fake_connections = FakeConnectionsClient(existing_app_id="cfg-1")
 
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return SimpleNamespace(agent=fake_agent)
+        return SimpleNamespace(agent=fake_agent, tool=fake_tool, connections=fake_connections)
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    with pytest.raises(InvalidContentError, match="llm is required for deployment update operations"):
-        await service.update(
-            user_id="user-1",
-            deployment_id="dep-1",
-            payload=DeploymentUpdate(
-                provider_data={
-                    "connections": {},
-                    "operations": [
-                        {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-1")}, "app_ids": ["cfg-1"]}
-                    ],
-                }
-            ),
-            db=object(),
-        )
+    result = await service.update(
+        user_id="user-1",
+        deployment_id="dep-1",
+        payload=DeploymentUpdate(
+            provider_data={
+                "connections": {},
+                "operations": [{"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-1")}, "app_ids": ["cfg-1"]}],
+            }
+        ),
+        db=object(),
+    )
+
+    assert result.id == "dep-1"
+    assert fake_agent.update_calls
+    assert all("llm" not in payload for _, payload in fake_agent.update_calls)
 
 
 def test_update_payload_rejects_connections_without_bind_or_unbind_operations():

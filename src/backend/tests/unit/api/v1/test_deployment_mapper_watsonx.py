@@ -599,21 +599,21 @@ def test_watsonx_api_payload_accepts_llm_only_update_contract() -> None:
     assert payload.remove_tools == []
 
 
-def test_watsonx_api_payload_rejects_update_without_llm() -> None:
+def test_watsonx_api_payload_accepts_update_without_llm() -> None:
     flow_version_id = uuid4()
-    with pytest.raises(ValidationError, match="llm"):
-        WatsonxApiDeploymentUpdatePayload.model_validate(
-            {
-                "connections": [],
-                "upsert_flows": [
-                    {
-                        "flow_version_id": str(flow_version_id),
-                        "add_app_ids": ["app-one"],
-                        "remove_app_ids": [],
-                    }
-                ],
-            }
-        )
+    payload = WatsonxApiDeploymentUpdatePayload.model_validate(
+        {
+            "connections": [],
+            "upsert_flows": [
+                {
+                    "flow_version_id": str(flow_version_id),
+                    "add_app_ids": ["app-one"],
+                    "remove_app_ids": [],
+                }
+            ],
+        }
+    )
+    assert payload.llm is None
 
 
 def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -> None:

@@ -213,7 +213,13 @@ class WatsonxApiDeploymentUpdatePayload(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
+    llm: WatsonxApiLlmName | None = Field(
+        default=None,
+        description=(
+            "Optional provider model identifier to use for the deployment agent. "
+            "When omitted, the current model is preserved."
+        ),
+    )
     connections: list[WatsonxApiKeyValueConnectionPayload] = Field(default_factory=list)
     upsert_flows: list[WatsonxApiUpsertFlowItem] = Field(default_factory=list)
     upsert_tools: list[WatsonxApiUpsertToolItem] = Field(default_factory=list)

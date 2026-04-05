@@ -1408,13 +1408,12 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     def _build_provider_payload_body(
         self,
         *,
-        llm: str,
+        llm: str | None,
         raw_tool_payloads: list[dict[str, Any]],
         connections: list[Any],
         operations: list[AdapterPayload],
     ) -> dict[str, Any]:
-        return {
-            "llm": llm,
+        payload = {
             "tools": {
                 "raw_payloads": raw_tool_payloads or None,
             },
@@ -1423,6 +1422,9 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             },
             "operations": operations,
         }
+        if llm is not None:
+            payload["llm"] = llm
+        return payload
 
     def _to_api_created_tools(
         self,
