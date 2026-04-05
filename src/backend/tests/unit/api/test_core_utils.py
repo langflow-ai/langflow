@@ -4,8 +4,10 @@ import pytest
 
 from langflow.api.utils.core import (
     _get_provider_from_template,
+    _get_validated_path_segment,
     _join_code_from_lines,
     _split_code_to_lines,
+    extract_global_variables_from_headers,
     format_elapsed_time,
     format_exception_message,
     format_syntax_error_message,
@@ -419,3 +421,60 @@ class TestGetIsComponentFromData:
 
     def test_without_is_component(self):
         assert get_is_component_from_data({}) is None
+
+
+class TestExtractGlobalVariablesFromHeaders:
+    def test_extracts_prefixed_headers(self):
+        headers = {
+            "X-Langflow-Global-Var-API-KEY": "secret123",
+            "Content-Type": "application/json",
+        }
+        result = extract_global_variables_from_headers(headers)
+        assert "API-KEY" in result
+        assert result["API-KEY"] == "secret123"
+
+    def test_multiple_variables(self):
+        headers = {
+            "X-Langflow-Global-Var-KEY1": "val1",
+            "X-Langflow-Global-Var-KEY2": "val2",
+        }
+        result = extract_global_variables_from_headers(headers)
+        assert len(result) == 2
+
+    def test_no_matching_headers(self):
+        headers = {"Content-Type": "application/json"}
+        result = extract_global_variables_from_headers(headers)
+        assert result == {}
+
+    def test_empty_headers(self):
+        result = extract_global_variables_from_headers({})
+        assert result == {}
+
+    def test_case_insensitive(self):
+        headers = {"x-langflow-global-var-myvar": "value"}
+        result = extract_global_variables_from_headers(headers)
+        assert "MYVAR" in result
+
+
+class TestGetValidatedPathSegment:
+    def test_valid_name(self):
+        result = _get_validated_path_segment("my-file")
+        assert result == "my-file"
+
+    def test_path_traversal_rejected(self):
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException):
+            _get_validated_path_segment("../secret")
+
+    def test_forward_slash_rejected(self):
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException):
+            _get_validated_path_segment("path/to/file")
+
+    def test_backslash_rejected(self):
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException):
+            _get_validated_path_segment("path\\to\\file")
