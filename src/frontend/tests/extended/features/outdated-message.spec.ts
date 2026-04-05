@@ -44,6 +44,6 @@ test("user must be able outdated message on error", async ({ page }) => {
   await page.getByTestId("button_run_chat output").click();
 
   await expect(
-    page.getByText("there are outdated components in the flow"),
+    page.getByText(/outdated components in the flow/i),
   ).toBeVisible({ timeout: 30000 });
 });
