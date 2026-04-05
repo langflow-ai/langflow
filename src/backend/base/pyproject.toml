@@ -267,7 +267,6 @@ youtube = ["youtube-transcript-api>=1.0.0,<2.0.0"]
 markdown = ["Markdown>=3.8.0"]
 kubernetes = ["kubernetes==31.0.0"]
 json-repair = ["json_repair==0.30.3"]
-astra = ["astra-assistants[tools]>=2.2.13,<3.0.0"]
 composio = [
     "composio==0.9.2",
     "composio-langchain==0.9.2"
@@ -411,7 +410,6 @@ complete = [
     "langflow-base[markdown]",
     "langflow-base[kubernetes]",
     "langflow-base[json-repair]",
-    "langflow-base[astra]",
     "langflow-base[composio]",
     "langflow-base[ragstack]",
     "langflow-base[opensearch]",
