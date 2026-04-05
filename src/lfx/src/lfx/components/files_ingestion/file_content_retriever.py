@@ -6,13 +6,13 @@ a specific file's content by providing its path.
 
 from __future__ import annotations
 
-import io
 from pathlib import Path
 
 import pandas as pd
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import HandleInput, Output, QueryInput
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
@@ -78,6 +78,26 @@ class FileContentRetrieverComponent(Component):
         ),
     ]
 
+    def _is_likely_file_content(self, text: str, file_path: str) -> bool:
+        """Heuristically determine whether Data.text is actual file content or metadata/summary text."""
+        if not text:
+            return False
+
+        file_ext = Path(file_path).suffix.lower()
+        stripped = text.lstrip()
+
+        if stripped.startswith("## File Name") and "## File Path" in stripped and "## Overview" in stripped:
+            return False
+
+        if file_ext in {".csv", ".tsv"}:
+            first_line = stripped.splitlines()[0] if stripped.splitlines() else ""
+            return "," in first_line or "\t" in first_line
+
+        if file_ext == ".json":
+            return stripped.startswith(("{", "["))
+
+        return True
+
     def _get_file_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:
         """Get cached file maps or build them if not cached.
 
@@ -86,91 +106,126 @@ class FileContentRetrieverComponent(Component):
                 - text_map: file_path -> text content
                 - dataframe_map: file_path -> DataFrame
         """
-        # Return cached maps if available
         if self._cached_text_map is not None and self._cached_dataframe_map is not None:
+            logger.debug(
+                f"FileContentRetriever: Using cached maps - "
+                f"{len(self._cached_text_map)} text files, {len(self._cached_dataframe_map)} dataframes"
+            )
             return self._cached_text_map, self._cached_dataframe_map
 
-        # Build maps
         from lfx.schema.dataframe import DataFrame
 
+        logger.debug(f"FileContentRetriever: Building file maps from {len(self.file_data)} input items")
         text_map: dict[str, str] = {}
         dataframe_map: dict[str, DataFrame] = {}
 
         for item in self.file_data:
             if isinstance(item, DataFrame):
-                # Check attrs first
                 fp = item.attrs.get("source_file_path", "")
                 if fp:
-                    # Store DataFrame directly for efficient retrieval
                     dataframe_map[fp] = item
-                    # Convert to CSV format for text representation (not to_string() which is formatted output)
-                    text_map[fp] = item.to_csv(index=False)
-                # Also check file_path column in DataFrame data
+                    if fp not in text_map:
+                        text_map[fp] = item.to_csv(index=False)
                 elif not item.empty and "file_path" in item.columns:
-                    # Get unique file paths from the DataFrame
                     unique_paths = item["file_path"].dropna().unique()
                     for path in unique_paths:
                         path_str = str(path)
                         if path_str:
                             dataframe_map[path_str] = item
-                            text_map[path_str] = item.to_csv(index=False)
             elif isinstance(item, Data):
                 fp = item.data.get("file_path", "")
                 text = item.get_text() or ""
-                if fp:
-                    text_map[fp] = text
+                if not fp:
+                    continue
 
-        # Cache the maps
+                if self._is_likely_file_content(text, fp):
+                    text_map[fp] = text
+                else:
+                    logger.debug(
+                        "FileContentRetriever: Skipping Data text for '%s'"
+                        " because it looks like metadata/summary, not file content",
+                        fp,
+                    )
+
         self._cached_text_map = text_map
         self._cached_dataframe_map = dataframe_map
 
+        _max_display = 5
+        all_keys = {*text_map.keys(), *dataframe_map.keys()}
+        logger.info(
+            f"FileContentRetriever: Built and cached maps - "
+            f"{len(text_map)} text files, {len(dataframe_map)} dataframes. "
+            f"Available files: {list(all_keys)[:_max_display]}"
+            f"{'...' if len(all_keys) > _max_display else ''}"
+        )
+
         return text_map, dataframe_map
 
-    def retrieve_content(self) -> Message:
+    def retrieve_content(self, file_path: str = "") -> Message:
         """Retrieve file content as text.
 
+        Args:
+            file_path: The full file path as a string (e.g., '/path/to/file.txt').
+
         Returns:
-            Message: The file content as text.
+            Message: The file content as text, or empty Message if no path provided.
 
         Raises:
-            ValueError: If file not found (only when called as a tool with a path).
+            ValueError: If file not found.
         """
-        text_map, _ = self._get_file_maps()
-        query = self.file_path
+        # Use explicit argument, fallback to self.file_path for backward compatibility
+        query = file_path or self.file_path
+
+        logger.debug(
+            f"FileContentRetriever.retrieve_content called - "
+            f"arg file_path='{file_path}', self.file_path='{self.file_path}', query='{query}'"
+        )
 
         if not query:
-            # During build phase, file_path may not be set yet
-            # Return empty message to allow build to complete
-            # When called as a tool, file_path will be provided by the agent
+            # Return empty result when no path is provided (e.g., during tool building)
+            logger.info("FileContentRetriever: No file path provided, returning empty Message")
             return Message(text="")
 
+        # Get cached maps (built once and reused)
+        text_map, _ = self._get_file_maps()
         content = text_map.get(query)
 
         if content is None:
             available = list(text_map.keys())
             msg = f"File '{query}' not found. Available files: {available}"
+            logger.error(f"FileContentRetriever: {msg}")
             raise ValueError(msg)
 
+        logger.info(f"FileContentRetriever: Successfully retrieved content for '{query}' ({len(content)} chars)")
         return Message(text=content)
 
-    def retrieve_content_as_dataframe(self) -> DataFrame:
+    def retrieve_content_as_dataframe(self, file_path: str = "") -> DataFrame:
         """Retrieve file content as a DataFrame for tabular data files.
 
+        Args:
+            file_path: The full file path as a string (e.g., '/path/to/file.csv').
+
         Returns:
-            DataFrame: The file content as a pandas DataFrame.
+            DataFrame: The file content as a pandas DataFrame, or empty DataFrame if no path provided.
 
         Raises:
-            ValueError: If no file path provided, file not found, or file type is not supported.
+            ValueError: If file not found or file type is not supported.
         """
         # Supported tabular file extensions
         tabular_extensions = {".csv", ".xlsx", ".xls", ".parquet", ".json", ".tsv"}
 
-        query = self.file_path
+        # Use explicit argument, fallback to self.file_path for backward compatibility
+        query = file_path or self.file_path
+
+        logger.debug(
+            f"FileContentRetriever.retrieve_content_as_dataframe called - "
+            f"arg file_path='{file_path}', self.file_path='{self.file_path}', query='{query}', "
+            f"type(file_path)={type(file_path)}, repr(file_path)={file_path!r}"
+        )
 
         if not query:
-            # During build phase, file_path may not be set yet
-            # Return empty DataFrame to allow build to complete
-            # When called as a tool, file_path will be provided by the agent
+            # Return empty DataFrame when no path is provided (e.g., during tool building)
+            logger.info("FileContentRetriever: No file path provided, returning empty DataFrame")
             return DataFrame(pd.DataFrame())
 
         # Check file extension
@@ -182,46 +237,34 @@ class FileContentRetrieverComponent(Component):
                 f"Supported formats: {supported}. "
                 f"File: '{query}'"
             )
+            logger.error(f"FileContentRetriever: {msg}")
             raise ValueError(msg)
 
         # Get cached maps (built once and reused)
-        text_map, dataframe_map = self._get_file_maps()
+        _text_map, dataframe_map = self._get_file_maps()
 
         # Check if we have a DataFrame for this file
         if query in dataframe_map:
-            return dataframe_map[query]
+            df = dataframe_map[query]
+            logger.info(
+                f"FileContentRetriever: Successfully retrieved DataFrame for '{query}' "
+                f"({len(df)} rows, {len(df.columns)} columns)"
+            )
+            return df
 
-        # If not found as DataFrame, try to find as text and convert
-        file_content = text_map.get(query)
-
-        if file_content is None:
-            available = list(text_map.keys())
-            if available:
-                msg = f"File '{query}' not found. Available files: {available}"
-            else:
-                msg = f"File '{query}' not found. No files available in the input data."
-            raise ValueError(msg)
-
-        # Convert file content to DataFrame based on file type
-        try:
-            if file_ext == ".csv":
-                df = pd.read_csv(io.StringIO(file_content))
-            elif file_ext == ".tsv":
-                df = pd.read_csv(io.StringIO(file_content), sep="\t")
-            elif file_ext in {".xlsx", ".xls"}:
-                df = pd.read_excel(io.BytesIO(file_content.encode()))
-            elif file_ext == ".parquet":
-                df = pd.read_parquet(io.BytesIO(file_content.encode()))
-            elif file_ext == ".json":
-                df = pd.read_json(io.StringIO(file_content))
-            else:
-                msg = f"Unexpected file extension '{file_ext}' passed validation."
-                raise ValueError(msg)
-        except Exception as e:
-            msg = f"Failed to parse file '{query}' as {file_ext.upper()} format. Error: {e!s}"
-            raise ValueError(msg) from e
-
-        # Convert to Langflow DataFrame and preserve file path in attrs
-        result = DataFrame(df)
-        result.attrs["source_file_path"] = query
-        return result
+        available_prepared = list(dataframe_map.keys())
+        if available_prepared:
+            msg = (
+                f"File '{query}' does not have a prepared DataFrame available. "
+                "This component does not build DataFrames during tool calls. "
+                "Prepare the DataFrame upstream and pass it through file_data. "
+                f"Prepared DataFrame files: {available_prepared}"
+            )
+        else:
+            msg = (
+                f"File '{query}' does not have a prepared DataFrame available. "
+                "No prepared DataFrames were provided in file_data. "
+                "Prepare the DataFrame upstream and pass it through file_data."
+            )
+        logger.error(f"FileContentRetriever: {msg}")
+        raise ValueError(msg)

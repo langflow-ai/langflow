@@ -1535,7 +1535,17 @@ class Component(CustomComponent):
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
         if self.tracing_service and self._vertex:
-            self.tracing_service.add_log(trace_name=self.trace_name, log=log)
+            try:
+                self.tracing_service.add_log(trace_name=self.trace_name, log=log)
+            except RuntimeError as e:
+                # No component context available (e.g., when called as a tool outside normal execution)
+                # Logs are still stored in self._logs for later retrieval
+                from lfx.log.logger import logger
+
+                logger.warning(
+                    f"Component '{self.display_name}' logging outside execution context: {e}. "
+                    "Log stored locally but not sent to tracing service."
+                )
         if self._event_manager is not None and self._current_output:
             data = log.model_dump()
             data["output"] = self._current_output

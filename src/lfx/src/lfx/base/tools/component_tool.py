@@ -86,7 +86,7 @@ def _patch_send_message_decorator(component, func):
 def _build_output_function(component: Component, output_method: Callable, event_manager: EventManager | None = None):
     method_name = output_method.__name__
 
-    def output_function(*args, **kwargs):
+    def output_function(*args, **kwargs):  # noqa: ARG001
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
@@ -94,7 +94,7 @@ def _build_output_function(component: Component, output_method: Callable, event_
         try:
             if event_manager:
                 event_manager.on_build_start(data={"id": comp.get_id()})
-            comp.set(*args, **kwargs)
+            comp.set(**kwargs)
             result = local_method()
             if event_manager:
                 event_manager.on_build_end(data={"id": comp.get_id()})

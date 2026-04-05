@@ -5,6 +5,8 @@ Tests focus on critical logic and edge cases:
 - DataFrame conversion for various file formats
 - Error handling for missing files and invalid formats
 - Edge cases with mixed inputs and malformed data
+- Tool invocation with explicit arguments
+- Serialization of results
 """
 
 import pandas as pd
@@ -13,6 +15,7 @@ from lfx.components.files_ingestion.file_content_retriever import FileContentRet
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.serialization.serialization import serialize
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -50,28 +53,58 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         assert result.text == "content1"
 
+    def test_retrieve_content_with_explicit_argument(self, component_class, default_kwargs):
+        """Test file content retrieval using explicit file_path argument."""
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        # Call with explicit argument (tool invocation style)
+        result = component.retrieve_content(file_path="file2.txt")
+
+        assert isinstance(result, Message)
+        assert result.text == "content2"
+
+    def test_retrieve_content_argument_overrides_attribute(self, component_class, default_kwargs):
+        """Test that explicit argument takes precedence over self.file_path."""
+        component = component_class()
+        default_kwargs["file_path"] = "file1.txt"
+        component.set_attributes(default_kwargs)
+
+        # Explicit argument should override
+        result = component.retrieve_content(file_path="file2.txt")
+        assert result.text == "content2"
+
     def test_retrieve_content_file_not_found(self, component_class, default_kwargs):
         """Test error raised when file not found - lists available files."""
         component = component_class()
-        default_kwargs["file_path"] = "nonexistent.txt"
         component.set_attributes(default_kwargs)
 
         with pytest.raises(ValueError, match="not found") as exc_info:
-            component.retrieve_content()
+            component.retrieve_content(file_path="nonexistent.txt")
 
         error_msg = str(exc_info.value)
         assert "file1.txt" in error_msg
         assert "file2.txt" in error_msg
 
-    def test_retrieve_content_empty_path(self, component_class, default_kwargs):
-        """Test handling of empty file path - returns empty message during build."""
+    def test_retrieve_content_empty_path_raises_error(self, component_class):
+        """Test that empty file path raises ValueError with helpful message."""
         component = component_class()
-        default_kwargs["file_path"] = ""
-        component.set_attributes(default_kwargs)
-        result = component.retrieve_content()
+        # Don't set file_path attribute, and pass empty string as argument
+        component.set_attributes({"file_data": [Data(text="content", data={"file_path": "file.txt"})]})
 
-        assert isinstance(result, Message)
-        assert result.text == ""
+        with pytest.raises(ValueError, match="No file path provided") as exc_info:
+            component.retrieve_content(file_path="")
+
+        error_msg = str(exc_info.value)
+        assert "retrieve_content(file_path=" in error_msg
+
+    def test_retrieve_content_no_argument_no_attribute_raises(self, component_class):
+        """Test that missing file_path in both argument and attribute raises error."""
+        component = component_class()
+        component.set_attributes({"file_data": [Data(text="content", data={"file_path": "file.txt"})]})
+        # Don't set file_path attribute
+
+        with pytest.raises(ValueError, match="No file path provided"):
+            component.retrieve_content()
 
     def test_retrieve_content_with_dataframe_input(self, component_class):
         """Test retrieving content from DataFrame input - converts to string."""
@@ -80,8 +113,8 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         langflow_df.attrs["source_file_path"] = "data.csv"
 
         component = component_class()
-        component.set_attributes({"file_data": [langflow_df], "file_path": "data.csv"})
-        result = component.retrieve_content()
+        component.set_attributes({"file_data": [langflow_df]})
+        result = component.retrieve_content(file_path="data.csv")
 
         assert isinstance(result, Message)
         assert "col1" in result.text
@@ -96,8 +129,8 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         data_obj = Data(text="text content", data={"file_path": "file.txt"})
 
         component = component_class()
-        component.set_attributes({"file_data": [langflow_df, data_obj], "file_path": "file.txt"})
-        result = component.retrieve_content()
+        component.set_attributes({"file_data": [langflow_df, data_obj]})
+        result = component.retrieve_content(file_path="file.txt")
 
         assert result.text == "text content"
 
@@ -110,10 +143,9 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
                     Data(text="no path", data={}),
                     Data(text="has path", data={"file_path": "valid.txt"}),
                 ],
-                "file_path": "valid.txt",
             }
         )
-        result = component.retrieve_content()
+        result = component.retrieve_content(file_path="valid.txt")
 
         assert result.text == "has path"
 
@@ -126,8 +158,8 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         df2.attrs["source_file_path"] = "valid.csv"
 
         component = component_class()
-        component.set_attributes({"file_data": [df1, df2], "file_path": "valid.csv"})
-        result = component.retrieve_content()
+        component.set_attributes({"file_data": [df1, df2]})
+        result = component.retrieve_content(file_path="valid.csv")
 
         assert "col" in result.text
         assert "2" in result.text
@@ -141,10 +173,9 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
                     "not a Data or DataFrame",
                     Data(text="valid content", data={"file_path": "file.txt"}),
                 ],
-                "file_path": "file.txt",
             }
         )
-        result = component.retrieve_content()
+        result = component.retrieve_content(file_path="file.txt")
 
         assert result.text == "valid content"
 
@@ -154,11 +185,9 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         """Test converting CSV content to DataFrame."""
         csv_content = "col1,col2\n1,a\n2,b"
         component = component_class()
-        component.set_attributes(
-            {"file_data": [Data(text=csv_content, data={"file_path": "data.csv"})], "file_path": "data.csv"}
-        )
+        component.set_attributes({"file_data": [Data(text=csv_content, data={"file_path": "data.csv"})]})
 
-        result = component.retrieve_content_as_dataframe()
+        result = component.retrieve_content_as_dataframe(file_path="data.csv")
 
         assert isinstance(result, DataFrame)
         assert len(result) == 2
@@ -166,15 +195,44 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         assert result["col1"].tolist() == [1, 2]
         assert result.attrs["source_file_path"] == "data.csv"
 
+    def test_as_dataframe_with_explicit_argument(self, component_class):
+        """Test DataFrame retrieval using explicit file_path argument."""
+        csv_content = "col1,col2\n1,a\n2,b"
+        component = component_class()
+        component.set_attributes({"file_data": [Data(text=csv_content, data={"file_path": "data.csv"})]})
+
+        # Call with explicit argument (tool invocation style)
+        result = component.retrieve_content_as_dataframe(file_path="data.csv")
+
+        assert isinstance(result, DataFrame)
+        assert len(result) == 2
+
+    def test_as_dataframe_argument_overrides_attribute(self, component_class):
+        """Test that explicit argument takes precedence over self.file_path."""
+        csv1 = "col1\n1"
+        csv2 = "col2\n2"
+        component = component_class()
+        component.set_attributes(
+            {
+                "file_data": [
+                    Data(text=csv1, data={"file_path": "file1.csv"}),
+                    Data(text=csv2, data={"file_path": "file2.csv"}),
+                ],
+                "file_path": "file1.csv",
+            }
+        )
+
+        # Explicit argument should override
+        result = component.retrieve_content_as_dataframe(file_path="file2.csv")
+        assert "col2" in result.columns
+
     def test_as_dataframe_tsv_content(self, component_class):
         """Test converting TSV content to DataFrame."""
         tsv_content = "col1\tcol2\n1\ta\n2\tb"
         component = component_class()
-        component.set_attributes(
-            {"file_data": [Data(text=tsv_content, data={"file_path": "data.tsv"})], "file_path": "data.tsv"}
-        )
+        component.set_attributes({"file_data": [Data(text=tsv_content, data={"file_path": "data.tsv"})]})
 
-        result = component.retrieve_content_as_dataframe()
+        result = component.retrieve_content_as_dataframe(file_path="data.tsv")
 
         assert isinstance(result, DataFrame)
         assert len(result) == 2
@@ -184,11 +242,9 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         """Test converting JSON content to DataFrame."""
         json_content = '[{"col1": 1, "col2": "a"}, {"col1": 2, "col2": "b"}]'
         component = component_class()
-        component.set_attributes(
-            {"file_data": [Data(text=json_content, data={"file_path": "data.json"})], "file_path": "data.json"}
-        )
+        component.set_attributes({"file_data": [Data(text=json_content, data={"file_path": "data.json"})]})
 
-        result = component.retrieve_content_as_dataframe()
+        result = component.retrieve_content_as_dataframe(file_path="data.json")
 
         assert isinstance(result, DataFrame)
         assert len(result) == 2
@@ -202,9 +258,9 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         langflow_df.attrs["source_file_path"] = "data.csv"
 
         component = component_class()
-        component.set_attributes({"file_data": [langflow_df], "file_path": "data.csv"})
+        component.set_attributes({"file_data": [langflow_df]})
 
-        result = component.retrieve_content_as_dataframe()
+        result = component.retrieve_content_as_dataframe(file_path="data.csv")
 
         assert result is langflow_df
         assert len(result) == 3
@@ -224,9 +280,9 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         # Note: NO source_file_path in attrs, only in columns
 
         component = component_class()
-        component.set_attributes({"file_data": [langflow_df], "file_path": "/path/to/data.csv"})
+        component.set_attributes({"file_data": [langflow_df]})
 
-        result = component.retrieve_content_as_dataframe()
+        result = component.retrieve_content_as_dataframe(file_path="/path/to/data.csv")
 
         assert isinstance(result, DataFrame)
         assert result is langflow_df
@@ -234,25 +290,33 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         assert "file_path" in result.columns
         assert (result["file_path"] == "/path/to/data.csv").all()
 
-    def test_as_dataframe_empty_file_path_returns_empty_dataframe(self, component_class):
-        """Test that empty file_path returns empty DataFrame (for build phase)."""
+    def test_as_dataframe_empty_file_path_raises_error(self, component_class):
+        """Test that empty file_path raises ValueError with helpful message."""
         component = component_class()
-        component.set_attributes({"file_data": [Data(text="content", data={"file_path": "file.csv"})], "file_path": ""})
+        component.set_attributes({"file_data": [Data(text="content", data={"file_path": "file.csv"})]})
 
-        result = component.retrieve_content_as_dataframe()
+        with pytest.raises(ValueError, match="No file path provided") as exc_info:
+            component.retrieve_content_as_dataframe(file_path="")
 
-        assert isinstance(result, DataFrame)
-        assert len(result) == 0
+        error_msg = str(exc_info.value)
+        assert "retrieve_content_as_dataframe(file_path=" in error_msg
+
+    def test_as_dataframe_no_argument_no_attribute_raises(self, component_class):
+        """Test that missing file_path in both argument and attribute raises error."""
+        component = component_class()
+        component.set_attributes({"file_data": [Data(text="col1\n1", data={"file_path": "file.csv"})]})
+        # Don't set file_path attribute
+
+        with pytest.raises(ValueError, match="No file path provided"):
+            component.retrieve_content_as_dataframe()
 
     def test_as_dataframe_unsupported_extension_raises(self, component_class):
         """Test that unsupported file extension raises ValueError with supported formats."""
         component = component_class()
-        component.set_attributes(
-            {"file_data": [Data(text="content", data={"file_path": "file.txt"})], "file_path": "file.txt"}
-        )
+        component.set_attributes({"file_data": [Data(text="content", data={"file_path": "file.txt"})]})
 
         with pytest.raises(ValueError, match="not supported for DataFrame conversion"):
-            component.retrieve_content_as_dataframe()
+            component.retrieve_content_as_dataframe(file_path="file.txt")
 
     def test_as_dataframe_file_not_found_raises(self, component_class):
         """Test that missing file raises ValueError with available files."""
@@ -263,49 +327,44 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
                     Data(text="content1", data={"file_path": "file1.csv"}),
                     Data(text="content2", data={"file_path": "file2.csv"}),
                 ],
-                "file_path": "missing.csv",
             }
         )
 
         with pytest.raises(ValueError, match=r"not found.*Available files"):
-            component.retrieve_content_as_dataframe()
+            component.retrieve_content_as_dataframe(file_path="missing.csv")
 
     def test_as_dataframe_no_files_available_raises(self, component_class):
         """Test error message when no files available in input data."""
         component = component_class()
-        component.set_attributes({"file_data": [], "file_path": "missing.csv"})
+        component.set_attributes({"file_data": []})
 
         with pytest.raises(ValueError, match="No files available in the input data"):
-            component.retrieve_content_as_dataframe()
+            component.retrieve_content_as_dataframe(file_path="missing.csv")
 
     def test_as_dataframe_malformed_json_raises(self, component_class):
         """Test that malformed JSON raises ValueError with parse error."""
         malformed_json = '{"col1": 1, "col2": "unclosed'
         component = component_class()
-        component.set_attributes(
-            {"file_data": [Data(text=malformed_json, data={"file_path": "bad.json"})], "file_path": "bad.json"}
-        )
+        component.set_attributes({"file_data": [Data(text=malformed_json, data={"file_path": "bad.json"})]})
 
         with pytest.raises(ValueError, match=r"Failed to parse file.*JSON"):
-            component.retrieve_content_as_dataframe()
+            component.retrieve_content_as_dataframe(file_path="bad.json")
 
     def test_as_dataframe_case_insensitive_extension(self, component_class):
         """Test that file extensions are case-insensitive."""
         csv_content = "col1,col2\n1,a"
         component = component_class()
-        component.set_attributes(
-            {"file_data": [Data(text=csv_content, data={"file_path": "file.CSV"})], "file_path": "file.CSV"}
-        )
+        component.set_attributes({"file_data": [Data(text=csv_content, data={"file_path": "file.CSV"})]})
 
-        result = component.retrieve_content_as_dataframe()
+        result = component.retrieve_content_as_dataframe(file_path="file.CSV")
         assert isinstance(result, DataFrame)
 
-    # ========== _build_file_map Tests ==========
+    # ========== _get_file_maps Tests ==========
 
     def test_build_file_map_empty_input(self, component_class):
         """Test building file map with empty input."""
         component = component_class()
-        component.set_attributes({"file_data": [], "file_path": ""})
+        component.set_attributes({"file_data": []})
 
         text_map, dataframe_map = component._get_file_maps()
         assert text_map == {}
@@ -320,7 +379,6 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
                     Data(text="content1", data={"file_path": "file1.txt"}),
                     Data(text="content2", data={"file_path": "file2.txt"}),
                 ],
-                "file_path": "",
             }
         )
 
@@ -339,7 +397,7 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         df2.attrs["source_file_path"] = "data2.csv"
 
         component = component_class()
-        component.set_attributes({"file_data": [df1, df2], "file_path": ""})
+        component.set_attributes({"file_data": [df1, df2]})
 
         text_map, dataframe_map = component._get_file_maps()
         assert len(text_map) == 2
@@ -348,6 +406,26 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         assert len(dataframe_map) == 2
         assert "data1.csv" in dataframe_map
         assert "data2.csv" in dataframe_map
+
+    def test_build_file_map_caching(self, component_class):
+        """Test that file maps are cached and reused."""
+        component = component_class()
+        component.set_attributes(
+            {
+                "file_data": [
+                    Data(text="content", data={"file_path": "file.txt"}),
+                ],
+            }
+        )
+
+        # First call builds the cache
+        text_map1, df_map1 = component._get_file_maps()
+
+        # Second call should return the same cached objects
+        text_map2, df_map2 = component._get_file_maps()
+
+        assert text_map1 is text_map2
+        assert df_map1 is df_map2
 
     def test_build_file_map_duplicate_paths_last_wins(self, component_class):
         """Test that duplicate file paths use the last occurrence."""
@@ -358,7 +436,6 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
                     Data(text="first", data={"file_path": "dup.txt"}),
                     Data(text="second", data={"file_path": "dup.txt"}),
                 ],
-                "file_path": "",
             }
         )
 
@@ -382,7 +459,6 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
                     df_with_path,
                     df_without_path,
                 ],
-                "file_path": "",
             }
         )
 
@@ -403,13 +479,110 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
                     Data(text="valid", data={"file_path": "file.txt"}),
                     123,
                 ],
-                "file_path": "",
             }
         )
 
         text_map, _ = component._get_file_maps()
         assert len(text_map) == 1
         assert "file.txt" in text_map
+
+    # ========== Serialization Tests ==========
+
+    def test_serialization_of_message_result(self, component_class):
+        """Test that Message result serializes correctly."""
+        component = component_class()
+        component.set_attributes({"file_data": [Data(text="test content", data={"file_path": "file.txt"})]})
+
+        result = component.retrieve_content(file_path="file.txt")
+        serialized = serialize(result)
+
+        # Message should serialize to its text content
+        assert isinstance(serialized, dict)
+        assert "text" in serialized
+
+    def test_serialization_of_dataframe_result(self, component_class):
+        """Test that DataFrame result serializes correctly (not to empty list)."""
+        csv_content = "col1,col2\n1,a\n2,b"
+        component = component_class()
+        component.set_attributes({"file_data": [Data(text=csv_content, data={"file_path": "data.csv"})]})
+
+        result = component.retrieve_content_as_dataframe(file_path="data.csv")
+        serialized = serialize(result)
+
+        # DataFrame should serialize to list of dicts (records)
+        assert isinstance(serialized, list)
+        assert len(serialized) == 2
+        assert serialized[0]["col1"] == 1
+        assert serialized[0]["col2"] == "a"
+
+    def test_serialization_empty_dataframe_is_empty_list(self, component_class):  # noqa: ARG002
+        """Test that empty DataFrame serializes to empty list."""
+        empty_df = DataFrame(pd.DataFrame())
+        serialized = serialize(empty_df)
+
+        assert isinstance(serialized, list)
+        assert len(serialized) == 0
+
+    def test_serialization_preserves_data_types(self, component_class):
+        """Test that serialization preserves data types correctly."""
+        csv_content = "int_col,float_col,str_col\n1,1.5,text\n2,2.5,more"
+        component = component_class()
+        component.set_attributes({"file_data": [Data(text=csv_content, data={"file_path": "data.csv"})]})
+
+        result = component.retrieve_content_as_dataframe(file_path="data.csv")
+        serialized = serialize(result)
+
+        assert isinstance(serialized[0]["int_col"], int)
+        assert isinstance(serialized[0]["float_col"], float)
+        assert isinstance(serialized[0]["str_col"], str)
+
+    # ========== Tool Invocation Simulation Tests ==========
+
+    def test_tool_invocation_pattern(self, component_class):
+        """Test the pattern used when component is invoked as a tool by an agent."""
+        # Simulate tool setup
+        component = component_class()
+        component.set_attributes(
+            {
+                "file_data": [
+                    Data(text="col1,col2\n1,a\n2,b", data={"file_path": "/path/to/airbnb.csv"}),
+                ],
+            }
+        )
+
+        # Simulate agent calling the tool with explicit argument
+        result = component.retrieve_content_as_dataframe(file_path="/path/to/airbnb.csv")
+
+        # Verify result is correct
+        assert isinstance(result, DataFrame)
+        assert len(result) == 2
+        assert "col1" in result.columns
+
+        # Verify serialization works
+        serialized = serialize(result)
+        assert isinstance(serialized, list)
+        assert len(serialized) == 2
+
+    def test_tool_invocation_with_deepcopy(self, component_class):
+        """Test that tool invocation works correctly with deepcopy (as done in component_tool.py)."""
+        from copy import deepcopy
+
+        # Setup original component
+        original = component_class()
+        original.set_attributes(
+            {
+                "file_data": [
+                    Data(text="content", data={"file_path": "file.txt"}),
+                ],
+            }
+        )
+
+        # Simulate tool invocation with deepcopy
+        component_copy = deepcopy(original)
+        result = component_copy.retrieve_content(file_path="file.txt")
+
+        assert isinstance(result, Message)
+        assert result.text == "content"
 
 
 # Made with Bob
