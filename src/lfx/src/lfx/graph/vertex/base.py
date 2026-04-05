@@ -348,6 +348,26 @@ class Vertex:
         # Process field parameters
         field_params, load_from_db_fields = param_handler.process_field_parameters()
 
+        # When a model-type input is connected via edge (e.g. Ollama connected to Agent),
+        # remove provider-specific fields (like api_key) from load_from_db_fields.
+        # Without this, the backend tries to load the provider's API key (e.g. OPENAI_API_KEY)
+        # from the database even though no API key is needed for the externally connected model.
+        if load_from_db_fields and edge_params:
+            template = self.data.get("node", {}).get("template", {})
+            has_external_model = any(
+                isinstance(template.get(field_name), dict)
+                and template[field_name].get("type") == "model"
+                for field_name in edge_params
+            )
+            if has_external_model:
+                try:
+                    from lfx.base.models.unified_models import _get_all_provider_specific_field_names
+
+                    provider_fields = _get_all_provider_specific_field_names()
+                    load_from_db_fields = [f for f in load_from_db_fields if f not in provider_fields]
+                except ImportError:
+                    pass
+
         # Combine parameters, edge_params take precedence
         self.params = {**field_params, **edge_params}
         self.load_from_db_fields = load_from_db_fields
