@@ -5,6 +5,7 @@ import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
+import { useUtilityStore } from "@/stores/utilityStore";
 
 const SidebarMenuButtons = ({
   customComponent,
@@ -14,10 +15,21 @@ const SidebarMenuButtons = ({
   const { activeSection } = useSidebar();
   const [addMcpOpen, setAddMcpOpen] = useState(false);
   const navigate = useCustomNavigate();
+  const allowCustomComponents = useUtilityStore(
+    (state) => state.allowCustomComponents,
+  );
 
   const handleAddMcpServerClick = () => {
     setAddMcpOpen(true);
   };
+
+  // Hide custom component button when custom components are blocked
+  if (
+    !allowCustomComponents &&
+    !(ENABLE_NEW_SIDEBAR && activeSection === "mcp")
+  ) {
+    return null;
+  }
 
   return ENABLE_NEW_SIDEBAR && activeSection === "mcp" ? (
     <>

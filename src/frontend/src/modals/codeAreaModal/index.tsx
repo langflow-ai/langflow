@@ -1,5 +1,6 @@
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { clearHandlesFromAdvancedFields } from "@/utils/reactflowUtils";
 import "ace-builds/src-noconflict/ace";
 import "ace-builds/src-noconflict/ext-language_tools";
@@ -45,6 +46,11 @@ export default function CodeAreaModal({
   componentId,
   size = "x-large",
 }: codeAreaModalPropsType): JSX.Element {
+  const allowCustomComponents = useUtilityStore(
+    (state) => state.allowCustomComponents,
+  );
+  const isBlocked = !allowCustomComponents;
+
   const [code, setCode] = useState(value);
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
@@ -229,7 +235,7 @@ export default function CodeAreaModal({
           <div className="h-full w-full">
             <AceEditor
               ref={codeRef}
-              readOnly={readonly}
+              readOnly={readonly || isBlocked}
               value={code}
               mode="python"
               setOptions={{ fontFamily: "monospace" }}
@@ -242,7 +248,9 @@ export default function CodeAreaModal({
               theme={dark ? "monokai" : "github"}
               name="CodeEditor"
               onChange={(value) => {
-                setCode(value);
+                if (!isBlocked) {
+                  setCode(value);
+                }
               }}
               className="h-full min-w-full rounded-lg border-[1px] border-border custom-scroll"
             />
@@ -283,6 +291,7 @@ export default function CodeAreaModal({
                 onClick={processCode}
                 type="submit"
                 id="checkAndSaveBtn"
+                disabled={isBlocked}
                 data-testid="checkAndSaveBtn"
               >
                 Check & Save
