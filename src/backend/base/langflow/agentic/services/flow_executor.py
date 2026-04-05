@@ -14,6 +14,7 @@ from lfx.cli.script_loader import extract_structured_result
 from lfx.events.event_manager import EventManager, create_default_event_manager
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
+from lfx.utils.flow_validation import CustomComponentValidationError
 
 from langflow.agentic.services.flow_types import (
     STREAMING_QUEUE_MAX_SIZE,
@@ -133,9 +134,14 @@ async def execute_flow_file(
 
     except HTTPException:
         raise
+    except CustomComponentValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except ValueError as e:
+        logger.error(f"Flow execution error: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while executing the flow.") from e
     except Exception as e:
         logger.error(f"Flow execution error: {e}")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail="An internal error occurred while executing the flow.") from e
 
 
 async def execute_flow_file_streaming(
@@ -189,6 +195,9 @@ async def execute_flow_file_streaming(
             api_key_var,
             provider_vars=global_variables,
         )
+    except CustomComponentValidationError as e:
+        logger.error(f"Flow preparation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except (json.JSONDecodeError, OSError, ValueError) as e:
         logger.error(f"Flow preparation error: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while preparing the flow.") from e
@@ -236,12 +245,10 @@ async def execute_flow_file_streaming(
         return
 
     if execution_result.has_error:
-        error_detail = (
-            str(execution_result.error) if execution_result.error else "An error occurred while executing the flow."
-        )
+        logger.error(f"Flow execution error: {execution_result.error}")
         raise HTTPException(
             status_code=500,
-            detail=error_detail,
+            detail="An internal error occurred while executing the flow.",
         ) from execution_result.error
 
     yield ("end", execution_result.result if execution_result.has_result else {})
