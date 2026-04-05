@@ -127,14 +127,13 @@ async def create_connection_with_conflict_mapping(
         provider_config=payload.provider_config,
     )
     try:
-        result = await retry_create(
+        return await retry_create(
             create_config,
             clients=clients,
             config=config_payload,
             user_id=user_id,
             db=db,
         )
-        return result
     except (ClientAPIException, HTTPException) as exc:
         if isinstance(exc, ClientAPIException):
             status_code = exc.response.status_code

@@ -510,11 +510,11 @@ def _resolve_lfx_requirement() -> str:
         return override
     try:
         return _pin_requirement_name("lfx")
-    except (md.PackageNotFoundError, ValueError):
+    except (md.PackageNotFoundError, ValueError) as exc:
         # Prefer failing fast here instead of falling back, as wxO does not
         # return useful error messages on dependency failures during deployment.
         message = "Could not determine installed lfx version. Failing deployment."
-        raise ValueError(message)
+        raise ValueError(message) from exc
 
 
 async def verify_tools_by_ids(

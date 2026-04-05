@@ -66,6 +66,12 @@ WxOCredentials = importlib.import_module(
     "langflow.services.adapters.deployment.watsonx_orchestrate.types"
 ).WxOCredentials
 
+# Aliases for classes used in tests (module-level to satisfy N806).
+ToolConnectionOps = update_core_module.ToolConnectionOps
+OrderedUniqueStrs = shared_core_module.OrderedUniqueStrs
+WatsonxDeploymentUpdatePayload = payloads_module.WatsonxDeploymentUpdatePayload
+WatsonxRenameToolOperation = payloads_module.WatsonxRenameToolOperation
+
 TEST_WXO_LLM = "ibm/granite-3.3-8b"
 
 
@@ -5881,8 +5887,6 @@ def _make_unbound_tool(tool_id: str) -> dict[str, Any]:
 async def test_update_connection_deltas_rejects_non_langflow_tool():
     """_update_existing_tool_connection_deltas must refuse to modify tools without binding.langflow."""
     _update_deltas = update_core_module._update_existing_tool_connection_deltas
-    ToolConnectionOps = update_core_module.ToolConnectionOps
-    OrderedUniqueStrs = shared_core_module.OrderedUniqueStrs
 
     external_tool = _make_external_tool("ext-1")
     clients = FakeWXOClients(tool=FakeToolClient([external_tool]))
@@ -5902,8 +5906,6 @@ async def test_update_connection_deltas_rejects_non_langflow_tool():
 async def test_update_connection_deltas_accepts_langflow_tool():
     """_update_existing_tool_connection_deltas succeeds for tools with binding.langflow."""
     _update_deltas = update_core_module._update_existing_tool_connection_deltas
-    ToolConnectionOps = update_core_module.ToolConnectionOps
-    OrderedUniqueStrs = shared_core_module.OrderedUniqueStrs
 
     lf_tool = _make_langflow_tool("lf-1")
     clients = FakeWXOClients(tool=FakeToolClient([lf_tool]))
@@ -6142,7 +6144,6 @@ def test_validate_tool_name_is_idempotent():
 def test_build_update_plan_includes_rename():
     """build_provider_update_plan collects rename_tool operations into tool_renames."""
     build_plan = update_core_module.build_provider_update_plan
-    WatsonxDeploymentUpdatePayload = payloads_module.WatsonxDeploymentUpdatePayload
 
     agent = {"id": "agent-1", "tools": ["tool-1"]}
     payload = WatsonxDeploymentUpdatePayload(
@@ -6162,7 +6163,6 @@ def test_build_update_plan_includes_rename():
 def test_build_update_plan_without_renames_has_empty_dict():
     """build_provider_update_plan returns empty tool_renames when no renames present."""
     build_plan = update_core_module.build_provider_update_plan
-    WatsonxDeploymentUpdatePayload = payloads_module.WatsonxDeploymentUpdatePayload
 
     agent = {"id": "agent-1", "tools": ["tool-1"]}
     payload = WatsonxDeploymentUpdatePayload(
@@ -6234,8 +6234,6 @@ def test_rename_tool_api_payload_rejects_empty_name():
 
 def test_rename_tool_provider_payload_parses():
     """WatsonxRenameToolOperation parses correctly at provider level."""
-    WatsonxRenameToolOperation = payloads_module.WatsonxRenameToolOperation
-
     op = WatsonxRenameToolOperation(
         op="rename_tool",
         tool={"source_ref": "fv-1", "tool_id": "tool-1"},

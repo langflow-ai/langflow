@@ -403,15 +403,14 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         # overrides replace them. Validation runs on the final map so that an
         # invalid flow name doesn't block a user who provided a valid custom
         # tool_name for that flow.
-        raw_name_by_flow_version_id: dict[str, str] = {
+        raw_name_by_flow_version_id: dict[UUID, str] = {
             flow_version_id: artifact.name for flow_version_id, artifact in flow_artifacts
         }
         for op in api_provider_payload.operations:
             if isinstance(op, WatsonxApiBindOperation) and op.tool_name:
                 raw_name_by_flow_version_id[op.flow_version_id] = op.tool_name
-        raw_name_by_flow_version_id = {
-            fv_id: _validate_tool_name(name) for fv_id, name in raw_name_by_flow_version_id.items()
-        }
+        for fv_id in raw_name_by_flow_version_id:
+            raw_name_by_flow_version_id[fv_id] = _validate_tool_name(raw_name_by_flow_version_id[fv_id])
         provider_operations = self._build_provider_operations(
             operations=api_provider_payload.operations,
             raw_name_by_flow_version_id=raw_name_by_flow_version_id,
@@ -527,15 +526,14 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         # tool_name overrides replace them. Validation runs on the final map
         # so that an invalid flow name doesn't block a user who provided a
         # valid custom tool_name for that flow.
-        raw_name_by_flow_version_id: dict[str, str] = {
+        raw_name_by_flow_version_id: dict[UUID, str] = {
             flow_version_id: artifact.name for flow_version_id, _version_number, _project_id, artifact in flow_artifacts
         }
         for op in api_provider_payload.operations:
             if isinstance(op, WatsonxApiBindOperation) and op.tool_name:
                 raw_name_by_flow_version_id[op.flow_version_id] = op.tool_name
-        raw_name_by_flow_version_id = {
-            fv_id: _validate_tool_name(name) for fv_id, name in raw_name_by_flow_version_id.items()
-        }
+        for fv_id in raw_name_by_flow_version_id:
+            raw_name_by_flow_version_id[fv_id] = _validate_tool_name(raw_name_by_flow_version_id[fv_id])
         raw_payloads = [
             artifact.model_copy(
                 update={

@@ -6,8 +6,6 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING
 
-logger = logging.getLogger(__name__)
-
 from ibm_watsonx_orchestrate_core.types.connections import (
     ConnectionConfiguration,
     ConnectionEnvironment,
@@ -22,6 +20,8 @@ from lfx.services.adapters.deployment.schema import ConfigItem, DeploymentConfig
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.client import resolve_runtime_credentials
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient, GetConnectionResponse
