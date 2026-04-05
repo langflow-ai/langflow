@@ -340,7 +340,16 @@ export async function buildFlowVertices({
       if (buildResponse.status === 404) {
         throw new Error("Flow not found");
       }
-      throw new Error("Error starting build process");
+      let errorDetail = "Error starting build process";
+      try {
+        const errorData = await buildResponse.json();
+        if (errorData.detail) {
+          errorDetail = errorData.detail;
+        }
+      } catch (parseError) {
+        console.debug("Could not parse error response body:", parseError);
+      }
+      throw new Error(errorDetail);
     }
 
     const { job_id } = await buildResponse.json();

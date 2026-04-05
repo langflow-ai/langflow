@@ -16,6 +16,7 @@ from langflow.agentic.services.helpers.flow_loader import (
     load_graph_for_execution,
     resolve_flow_path,
 )
+from lfx.utils.flow_validation import CustomComponentValidationError
 
 
 class TestTemporarySysPath:
@@ -148,6 +149,7 @@ class TestLoadGraphFromPython:
             patch("importlib.util.spec_from_file_location") as mock_spec_from_file,
             patch("importlib.util.module_from_spec") as mock_module_from_spec,
             patch("langflow.agentic.services.helpers.flow_loader._temporary_sys_path"),
+            patch("langflow.agentic.services.helpers.flow_loader.validate_flow_for_current_settings") as mock_validate,
         ):
             mock_spec = MagicMock()
             mock_spec.loader = MagicMock()
@@ -158,6 +160,7 @@ class TestLoadGraphFromPython:
 
             assert result == mock_graph
             mock_module.get_graph.assert_called_once()
+            mock_validate.assert_called_once_with(mock_graph)
 
     @pytest.mark.asyncio
     async def test_should_pass_provider_params_to_get_graph(self):
@@ -180,6 +183,7 @@ class TestLoadGraphFromPython:
             patch("importlib.util.spec_from_file_location") as mock_spec_from_file,
             patch("importlib.util.module_from_spec") as mock_module_from_spec,
             patch("langflow.agentic.services.helpers.flow_loader._temporary_sys_path"),
+            patch("langflow.agentic.services.helpers.flow_loader.validate_flow_for_current_settings"),
             patch.object(inspect, "signature", return_value=inspect.signature(mock_get_graph)),
         ):
             mock_spec = MagicMock()
@@ -211,6 +215,7 @@ class TestLoadGraphFromPython:
             patch("importlib.util.spec_from_file_location") as mock_spec_from_file,
             patch("importlib.util.module_from_spec") as mock_module_from_spec,
             patch("langflow.agentic.services.helpers.flow_loader._temporary_sys_path"),
+            patch("langflow.agentic.services.helpers.flow_loader.validate_flow_for_current_settings"),
         ):
             mock_spec = MagicMock()
             mock_spec.loader = MagicMock()
@@ -232,6 +237,7 @@ class TestLoadGraphFromPython:
             patch("importlib.util.spec_from_file_location") as mock_spec_from_file,
             patch("importlib.util.module_from_spec") as mock_module_from_spec,
             patch("langflow.agentic.services.helpers.flow_loader._temporary_sys_path"),
+            patch("langflow.agentic.services.helpers.flow_loader.validate_flow_for_current_settings") as mock_validate,
         ):
             mock_spec = MagicMock()
             mock_spec.loader = MagicMock()
@@ -241,6 +247,33 @@ class TestLoadGraphFromPython:
             result = await _load_graph_from_python(Path("/test/flow.py"))
 
             assert result == mock_graph
+            mock_validate.assert_called_once_with(mock_graph)
+
+    @pytest.mark.asyncio
+    async def test_should_raise_validation_error_for_blocked_python_graph(self):
+        """Should propagate custom-component validation errors for Python flows."""
+        mock_graph = MagicMock()
+        mock_module = MagicMock()
+        mock_module.get_graph = MagicMock(return_value=mock_graph)
+
+        with (
+            patch("importlib.util.spec_from_file_location") as mock_spec_from_file,
+            patch("importlib.util.module_from_spec") as mock_module_from_spec,
+            patch("langflow.agentic.services.helpers.flow_loader._temporary_sys_path"),
+            patch(
+                "langflow.agentic.services.helpers.flow_loader.validate_flow_for_current_settings",
+                side_effect=CustomComponentValidationError(
+                    "Flow build blocked: custom components are not allowed: Bad (node)"
+                ),
+            ),
+        ):
+            mock_spec = MagicMock()
+            mock_spec.loader = MagicMock()
+            mock_spec_from_file.return_value = mock_spec
+            mock_module_from_spec.return_value = mock_module
+
+            with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
+                await _load_graph_from_python(Path("/test/flow.py"))
 
     @pytest.mark.asyncio
     async def test_should_raise_500_when_no_get_graph_or_graph(self):
@@ -303,6 +336,7 @@ class TestLoadGraphFromPython:
             patch("importlib.util.spec_from_file_location") as mock_spec_from_file,
             patch("importlib.util.module_from_spec") as mock_module_from_spec,
             patch("langflow.agentic.services.helpers.flow_loader._temporary_sys_path"),
+            patch("langflow.agentic.services.helpers.flow_loader.validate_flow_for_current_settings"),
             patch.dict(sys.modules, {}, clear=False),
         ):
             mock_spec = MagicMock()
