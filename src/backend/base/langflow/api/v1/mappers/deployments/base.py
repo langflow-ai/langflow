@@ -370,6 +370,7 @@ class BaseDeploymentMapper:
             type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
             updated_at=deployment_row.updated_at,
+            resource_key=deployment_row.resource_key,
             provider_data=provider_data,
         )
 
@@ -390,6 +391,7 @@ class BaseDeploymentMapper:
             type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
             updated_at=deployment_row.updated_at,
+            resource_key=deployment_row.resource_key,
             provider_data=provider_data,
         )
 

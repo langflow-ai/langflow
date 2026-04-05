@@ -523,7 +523,7 @@ def test_watsonx_api_payload_accepts_flow_version_create_bind_contract() -> None
     payload = WatsonxApiDeploymentCreatePayload.model_validate(
         {
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "add_flows": [
                 {
                     "flow_version_id": str(flow_version_id),
@@ -540,7 +540,7 @@ def test_watsonx_api_payload_accepts_flow_version_bind_contract() -> None:
     payload = WatsonxApiDeploymentUpdatePayload.model_validate(
         {
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "upsert_flows": [
                 {
                     "flow_version_id": str(flow_version_id),
@@ -575,7 +575,7 @@ def test_watsonx_api_payload_rejects_create_without_llm() -> None:
     with pytest.raises(ValidationError, match="llm"):
         WatsonxApiDeploymentCreatePayload.model_validate(
             {
-                "connections": {},
+                "connections": [],
                 "add_flows": [
                     {
                         "flow_version_id": str(flow_version_id),
@@ -604,7 +604,7 @@ def test_watsonx_api_payload_rejects_update_without_llm() -> None:
     with pytest.raises(ValidationError, match="llm"):
         WatsonxApiDeploymentUpdatePayload.model_validate(
             {
-                "connections": {},
+                "connections": [],
                 "upsert_flows": [
                     {
                         "flow_version_id": str(flow_version_id),
@@ -622,7 +622,7 @@ def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -
     payload = WatsonxApiDeploymentUpdatePayload.model_validate(
         {
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "upsert_flows": [
                 {
                     "flow_version_id": str(flow_version_id),
@@ -644,14 +644,13 @@ def test_watsonx_mapper_create_result_from_existing_update_normalizes_slot_paylo
         {
             "created_app_ids": ["app-one"],
             "created_snapshot_ids": ["tool-1"],
-            "added_snapshot_bindings": [
+            "created_snapshot_bindings": [
                 {
                     "source_ref": str(flow_version_id),
                     "tool_id": "tool-1",
                     "created": True,
                 }
             ],
-            "tool_app_bindings": [{"tool_id": "tool-1", "app_ids": ["app-one"]}],
         }
     )
     update_result = SimpleNamespace(provider_result=provider_result)
@@ -665,7 +664,7 @@ def test_watsonx_mapper_create_result_from_existing_update_normalizes_slot_paylo
     assert create_result.provider_result == {
         "app_ids": ["app-one"],
         "tools_with_refs": [{"source_ref": str(flow_version_id), "tool_id": "tool-1"}],
-        "tool_app_bindings": [{"tool_id": "tool-1", "app_ids": ["app-one"]}],
+        "tool_app_bindings": [],
     }
 
 
@@ -742,7 +741,7 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
         type="agent",
         provider_data={
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "add_flows": [
                 {
                     "flow_version_id": str(flow_version_id),
@@ -791,7 +790,7 @@ async def test_watsonx_mapper_translates_existing_create_bind_into_update_payloa
         provider_data={
             "llm": TEST_WXO_LLM,
             "existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46",
-            "connections": {},
+            "connections": [],
             "add_flows": [
                 {
                     "flow_version_id": str(flow_version_id),
@@ -835,7 +834,7 @@ async def test_watsonx_mapper_maps_create_adapter_payload_validation_errors_to_4
         type="agent",
         provider_data={
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "add_flows": [
                 {
                     "flow_version_id": str(flow_version_id),
@@ -882,7 +881,7 @@ async def test_watsonx_mapper_create_reports_missing_llm_field_name() -> None:
         description="",
         type="agent",
         provider_data={
-            "connections": {},
+            "connections": [],
             "add_flows": [
                 {
                     "flow_version_id": str(uuid4()),
@@ -1003,7 +1002,7 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
     payload = DeploymentUpdateRequest(
         provider_data={
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "upsert_flows": [
                 {
                     "flow_version_id": str(flow_version_id),
@@ -1062,7 +1061,7 @@ async def test_watsonx_mapper_skips_empty_bind_operations_but_keeps_raw_tools() 
     payload = DeploymentUpdateRequest(
         provider_data={
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "upsert_flows": [
                 {
                     "flow_version_id": str(flow_version_id_unbound),
@@ -1123,7 +1122,7 @@ async def test_watsonx_mapper_translates_unbind_and_remove_via_attachment_snapsh
     payload = DeploymentUpdateRequest(
         provider_data={
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "upsert_flows": [
                 {
                     "flow_version_id": str(flow_version_id_unbind),
@@ -1166,18 +1165,17 @@ def test_watsonx_update_result_data_normalizes_fields() -> None:
     data = WatsonxApiDeploymentUpdateResultData.from_provider_result(
         {
             "created_app_ids": ["  app-one  ", "", "app-two"],
-            "tool_app_bindings": [
-                {"flow_version_id": str(flow_version_id), "tool_id": "tool-1", "app_ids": [" app-a ", "", "app-b"]},
+            "created_tools": [
+                {"flow_version_id": str(flow_version_id), "tool_id": "tool-1"},
             ],
             "ignored_key": True,
         }
     )
 
     assert data.created_app_ids == ["app-one", "app-two"]
-    assert data.tool_app_bindings is not None
-    assert data.tool_app_bindings[0].flow_version_id == flow_version_id
-    assert data.tool_app_bindings[0].tool_id == "tool-1"
-    assert data.tool_app_bindings[0].app_ids == ["app-a", "app-b"]
+    assert data.created_tools is not None
+    assert data.created_tools[0].flow_version_id == flow_version_id
+    assert data.created_tools[0].tool_id == "tool-1"
 
 
 def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
@@ -1188,6 +1186,7 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
     deployment_row = SimpleNamespace(
         id=deployment_id,
         deployment_provider_account_id=provider_account_id,
+        resource_key="agent-123",
         name="WXO Deployment",
         description="updated",
         deployment_type=DeploymentType.AGENT,
@@ -1195,21 +1194,12 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
         updated_at=timestamp,
     )
     new_flow_version_id = uuid4()
-    existing_flow_version_id = uuid4()
     result = DeploymentUpdateResult(
         id="provider-id",
         provider_result={
             "created_app_ids": ["created-app-1"],
-            "added_snapshot_bindings": [
+            "created_snapshot_bindings": [
                 {"source_ref": str(new_flow_version_id), "tool_id": "new-tool-1", "created": True}
-            ],
-            "referenced_snapshot_bindings": [
-                {"source_ref": str(new_flow_version_id), "tool_id": "new-tool-1", "created": True},
-                {"source_ref": str(existing_flow_version_id), "tool_id": "existing-tool-1", "created": False},
-            ],
-            "tool_app_bindings": [
-                {"tool_id": "new-tool-1", "app_ids": ["app-a"]},
-                {"tool_id": "existing-tool-1", "app_ids": ["app-b"]},
             ],
         },
     )
@@ -1219,23 +1209,24 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
     assert shaped.id == deployment_id
     assert shaped.provider_id == provider_account_id
     assert shaped.provider_key == "watsonx-orchestrate"
+    assert shaped.resource_key == "agent-123"
     assert shaped.provider_data == {
         "created_app_ids": ["created-app-1"],
-        "tool_app_bindings": [
-            {"flow_version_id": str(new_flow_version_id), "tool_id": "new-tool-1", "app_ids": ["app-a"]},
-            {"flow_version_id": str(existing_flow_version_id), "tool_id": "existing-tool-1", "app_ids": ["app-b"]},
+        "created_tools": [
+            {"flow_version_id": str(new_flow_version_id), "tool_id": "new-tool-1"},
         ],
     }
 
 
-def test_watsonx_mapper_update_response_tolerates_non_uuid_source_ref() -> None:
-    """Non-UUID source_ref (from tool_id ops) produces flow_version_id=None."""
+def test_watsonx_mapper_update_response_rejects_non_uuid_source_ref() -> None:
+    """Non-UUID source_ref in created_snapshot_bindings raises HTTP 500."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     timestamp = datetime.now(tz=timezone.utc)
     provider_account_id = uuid4()
     deployment_row = SimpleNamespace(
         id=uuid4(),
         deployment_provider_account_id=provider_account_id,
+        resource_key="agent-123",
         name="WXO Deployment",
         description="updated",
         deployment_type=DeploymentType.AGENT,
@@ -1246,49 +1237,8 @@ def test_watsonx_mapper_update_response_tolerates_non_uuid_source_ref() -> None:
         id="provider-id",
         provider_result={
             "created_app_ids": [],
-            "referenced_snapshot_bindings": [
-                {"source_ref": "not-a-uuid", "tool_id": "tool-1", "created": False},
-            ],
-            "tool_app_bindings": [
-                {"tool_id": "tool-1", "app_ids": ["app-a"]},
-            ],
-        },
-    )
-
-    shaped = mapper.shape_deployment_update_result(result, deployment_row, provider_key="watsonx-orchestrate")
-    assert shaped.provider_id == provider_account_id
-    assert shaped.provider_key == "watsonx-orchestrate"
-    bindings = shaped.provider_data["tool_app_bindings"]
-    assert len(bindings) == 1
-    assert "flow_version_id" not in bindings[0]
-    assert bindings[0]["tool_id"] == "tool-1"
-
-
-def test_watsonx_mapper_update_response_raises_on_unmapped_tool_binding() -> None:
-    """tool_app_binding whose tool_id has no matching snapshot ref raises HTTP 500."""
-    mapper = WatsonxOrchestrateDeploymentMapper()
-    timestamp = datetime.now(tz=timezone.utc)
-    mapped_fv_id = uuid4()
-    provider_account_id = uuid4()
-    deployment_row = SimpleNamespace(
-        id=uuid4(),
-        deployment_provider_account_id=provider_account_id,
-        name="WXO Deployment",
-        description="updated",
-        deployment_type=DeploymentType.AGENT,
-        created_at=timestamp,
-        updated_at=timestamp,
-    )
-    result = DeploymentUpdateResult(
-        id="provider-id",
-        provider_result={
-            "created_app_ids": [],
-            "referenced_snapshot_bindings": [
-                {"source_ref": str(mapped_fv_id), "tool_id": "mapped-tool", "created": True},
-            ],
-            "tool_app_bindings": [
-                {"tool_id": "mapped-tool", "app_ids": ["app-a"]},
-                {"tool_id": "orphan-tool", "app_ids": ["app-b"]},
+            "created_snapshot_bindings": [
+                {"source_ref": "not-a-uuid", "tool_id": "tool-1", "created": True},
             ],
         },
     )
@@ -1296,8 +1246,39 @@ def test_watsonx_mapper_update_response_raises_on_unmapped_tool_binding() -> Non
     with pytest.raises(HTTPException) as exc:
         mapper.shape_deployment_update_result(result, deployment_row, provider_key="watsonx-orchestrate")
     assert exc.value.status_code == 500
+    assert "non-UUID source_ref" in exc.value.detail
+
+
+def test_watsonx_mapper_create_response_rejects_non_uuid_source_ref_in_created_tools() -> None:
+    """Create result must reject non-UUID source_ref in created tools."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    timestamp = datetime.now(tz=timezone.utc)
+    provider_account_id = uuid4()
+    deployment_row = SimpleNamespace(
+        id=uuid4(),
+        deployment_provider_account_id=provider_account_id,
+        resource_key="agent-123",
+        name="WXO Deployment",
+        description="updated",
+        deployment_type=DeploymentType.AGENT,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+    result = DeploymentCreateResult(
+        id="provider-id",
+        provider_result={
+            "app_ids": [],
+            "tools_with_refs": [
+                {"source_ref": "not-a-uuid", "tool_id": "orphan-tool"},
+            ],
+        },
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        mapper.shape_deployment_create_result(result, deployment_row, provider_key="watsonx-orchestrate")
+    assert exc.value.status_code == 500
     assert "orphan-tool" in exc.value.detail
-    assert "no matching snapshot binding" in exc.value.detail
+    assert "non-UUID source_ref" in exc.value.detail
 
 
 def test_watsonx_mapper_shapes_llm_list_result() -> None:
@@ -1342,7 +1323,7 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
         DeploymentUpdateRequest(
             provider_data={
                 "llm": TEST_WXO_LLM,
-                "connections": {},
+                "connections": [],
                 "upsert_flows": [
                     {
                         "flow_version_id": str(add_id),
@@ -1537,21 +1518,19 @@ async def test_watsonx_mapper_create_preserves_env_var_source_in_connection_payl
         type="agent",
         provider_data={
             "llm": TEST_WXO_LLM,
-            "connections": {
-                "key_value": [
-                    {
-                        "app_id": "app-new",
-                        "credentials": [
-                            {
-                                "key": "RAW_TOKEN",
-                                "value": "literal-secret",
-                                "source": "raw",
-                            },  # pragma: allowlist secret
-                            {"key": "VAR_REF", "value": "MY_GLOBAL_VAR", "source": "variable"},
-                        ],
-                    }
-                ],
-            },
+            "connections": [
+                {
+                    "app_id": "app-new",
+                    "credentials": [
+                        {
+                            "key": "RAW_TOKEN",
+                            "value": "literal-secret",
+                            "source": "raw",
+                        },  # pragma: allowlist secret
+                        {"key": "VAR_REF", "value": "MY_GLOBAL_VAR", "source": "variable"},
+                    ],
+                }
+            ],
             "add_flows": [
                 {
                     "flow_version_id": str(flow_version_id),
@@ -1637,7 +1616,7 @@ async def test_watsonx_mapper_bind_reuses_existing_tool_when_attachment_exists()
     payload = DeploymentUpdateRequest(
         provider_data={
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "upsert_flows": [
                 {
                     "flow_version_id": str(flow_version_id),
@@ -1685,7 +1664,7 @@ async def test_watsonx_mapper_bind_creates_new_tool_when_no_attachment() -> None
     payload = DeploymentUpdateRequest(
         provider_data={
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "upsert_flows": [
                 {
                     "flow_version_id": str(flow_version_id),
@@ -1768,7 +1747,7 @@ def test_watsonx_api_payload_accepts_bind_tool_operation() -> None:
     WatsonxApiDeploymentUpdatePayload.model_validate(
         {
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "upsert_tools": [
                 {
                     "tool_id": "some-tool-id",
@@ -1801,7 +1780,7 @@ def test_watsonx_api_payload_accepts_unbind_tool_operation() -> None:
     WatsonxApiDeploymentUpdatePayload.model_validate(
         {
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "upsert_tools": [
                 {
                     "tool_id": "some-tool-id",
@@ -1829,7 +1808,7 @@ def test_watsonx_api_payload_rejects_conflicting_tool_id_operations() -> None:
         WatsonxApiDeploymentUpdatePayload.model_validate(
             {
                 "llm": TEST_WXO_LLM,
-                "connections": {},
+                "connections": [],
                 "upsert_tools": [
                     {
                         "tool_id": "tid",
@@ -1842,15 +1821,13 @@ def test_watsonx_api_payload_rejects_conflicting_tool_id_operations() -> None:
         )
 
 
-def test_watsonx_api_payload_unbind_tool_rejects_key_value_app_ids() -> None:
-    """unbind_tool referencing key_value app_ids should be rejected."""
-    with pytest.raises(ValidationError, match=r"must not reference connections\.key_value app_ids"):
+def test_watsonx_api_payload_unbind_tool_rejects_connection_app_ids() -> None:
+    """unbind_tool referencing raw connections app_ids should be rejected."""
+    with pytest.raises(ValidationError, match=r"must not reference connections app_ids"):
         WatsonxApiDeploymentUpdatePayload.model_validate(
             {
                 "llm": TEST_WXO_LLM,
-                "connections": {
-                    "key_value": [{"app_id": "app-new"}],
-                },
+                "connections": [{"app_id": "app-new"}],
                 "upsert_tools": [
                     {
                         "tool_id": "tid",
@@ -1867,17 +1844,15 @@ def test_watsonx_api_payload_rejects_duplicate_credential_keys() -> None:
         WatsonxApiDeploymentUpdatePayload.model_validate(
             {
                 "llm": TEST_WXO_LLM,
-                "connections": {
-                    "key_value": [
-                        {
-                            "app_id": "app-new",
-                            "credentials": [
-                                {"key": "TOKEN", "value": "secret-a", "source": "raw"},  # pragma: allowlist secret
-                                {"key": "TOKEN", "value": "secret-b", "source": "raw"},  # pragma: allowlist secret
-                            ],
-                        }
-                    ]
-                },
+                "connections": [
+                    {
+                        "app_id": "app-new",
+                        "credentials": [
+                            {"key": "TOKEN", "value": "secret-a", "source": "raw"},  # pragma: allowlist secret
+                            {"key": "TOKEN", "value": "secret-b", "source": "raw"},  # pragma: allowlist secret
+                        ],
+                    }
+                ],
                 "upsert_tools": [
                     {
                         "tool_id": "tid",
@@ -1896,7 +1871,7 @@ async def test_watsonx_mapper_translates_bind_tool_into_provider_operations() ->
     payload = DeploymentUpdateRequest(
         provider_data={
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "upsert_tools": [
                 {"tool_id": "external-tool", "add_app_ids": ["app-one"], "remove_app_ids": []},
             ],
@@ -1924,7 +1899,7 @@ async def test_watsonx_mapper_translates_unbind_tool_into_provider_operations() 
     payload = DeploymentUpdateRequest(
         provider_data={
             "llm": TEST_WXO_LLM,
-            "connections": {},
+            "connections": [],
             "upsert_tools": [
                 {"tool_id": "external-tool", "add_app_ids": [], "remove_app_ids": ["app-one"]},
             ],
@@ -1971,32 +1946,27 @@ async def test_watsonx_mapper_translates_remove_tool_by_id_into_provider_operati
 
 
 # ---------------------------------------------------------------------------
-# tool_id in WatsonxApiToolAppBinding response
+# tool_id in WatsonxApiCreatedTool response
 # ---------------------------------------------------------------------------
 
 
-def test_watsonx_tool_app_binding_includes_tool_id() -> None:
-    """WatsonxApiToolAppBinding now requires tool_id and makes flow_version_id optional."""
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import WatsonxApiToolAppBinding
+def test_watsonx_created_tool_includes_tool_id() -> None:
+    """WatsonxApiCreatedTool requires tool_id and non-null flow_version_id."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import WatsonxApiCreatedTool
 
-    binding = WatsonxApiToolAppBinding(
+    binding = WatsonxApiCreatedTool(
         flow_version_id=uuid4(),
         tool_id="tool-123",
-        app_ids=["app-one"],
     )
     assert binding.tool_id == "tool-123"
     assert binding.flow_version_id is not None
 
-    binding_no_fv = WatsonxApiToolAppBinding(
-        tool_id="tool-456",
-        app_ids=[],
-    )
-    assert binding_no_fv.flow_version_id is None
-    assert binding_no_fv.tool_id == "tool-456"
+    with pytest.raises(ValidationError):
+        WatsonxApiCreatedTool(tool_id="tool-456")
 
 
 def test_watsonx_mapper_shapes_update_response_with_tool_id() -> None:
-    """shape_deployment_update_result should include tool_id in bindings."""
+    """shape_deployment_update_result should include tool_id in created_tools."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     timestamp = datetime.now(tz=timezone.utc)
     deployment_id = uuid4()
@@ -2005,6 +1975,7 @@ def test_watsonx_mapper_shapes_update_response_with_tool_id() -> None:
     deployment_row = SimpleNamespace(
         id=deployment_id,
         deployment_provider_account_id=provider_account_id,
+        resource_key="agent-123",
         name="WXO Deployment",
         description="test",
         deployment_type=DeploymentType.AGENT,
@@ -2021,11 +1992,8 @@ def test_watsonx_mapper_shapes_update_response_with_tool_id() -> None:
         provider_result=WXO_SCHEMAS.deployment_update_result.apply(
             WatsonxDeploymentUpdateResultData(
                 created_app_ids=[],
-                referenced_snapshot_bindings=[
+                created_snapshot_bindings=[
                     {"source_ref": str(flow_version_id), "tool_id": "tool-1", "created": True},
-                ],
-                tool_app_bindings=[
-                    {"tool_id": "tool-1", "app_ids": ["app-one"]},
                 ],
             )
         ),
@@ -2034,20 +2002,22 @@ def test_watsonx_mapper_shapes_update_response_with_tool_id() -> None:
     response = mapper.shape_deployment_update_result(result, deployment_row, provider_key="watsonx-orchestrate")
     assert response.provider_id == provider_account_id
     assert response.provider_key == "watsonx-orchestrate"
-    bindings = response.provider_data["tool_app_bindings"]
+    assert response.resource_key == "agent-123"
+    bindings = response.provider_data["created_tools"]
     assert len(bindings) == 1
     assert bindings[0]["tool_id"] == "tool-1"
     assert bindings[0]["flow_version_id"] == str(flow_version_id)
 
 
 def test_watsonx_mapper_shapes_update_response_with_non_uuid_source_ref() -> None:
-    """Non-UUID source_ref (from tool_id ops) should produce flow_version_id=None."""
+    """Non-UUID source_ref in created_snapshot_bindings should fail."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     timestamp = datetime.now(tz=timezone.utc)
     provider_account_id = uuid4()
     deployment_row = SimpleNamespace(
         id=uuid4(),
         deployment_provider_account_id=provider_account_id,
+        resource_key="agent-123",
         name="WXO Deployment",
         description="test",
         deployment_type=DeploymentType.AGENT,
@@ -2064,23 +2034,17 @@ def test_watsonx_mapper_shapes_update_response_with_non_uuid_source_ref() -> Non
         provider_result=WXO_SCHEMAS.deployment_update_result.apply(
             WatsonxDeploymentUpdateResultData(
                 created_app_ids=[],
-                referenced_snapshot_bindings=[
-                    {"source_ref": "external-tool-id", "tool_id": "external-tool-id", "created": False},
-                ],
-                tool_app_bindings=[
-                    {"tool_id": "external-tool-id", "app_ids": ["app-one"]},
+                created_snapshot_bindings=[
+                    {"source_ref": "external-tool-id", "tool_id": "external-tool-id", "created": True},
                 ],
             )
         ),
     )
 
-    response = mapper.shape_deployment_update_result(result, deployment_row, provider_key="watsonx-orchestrate")
-    assert response.provider_id == provider_account_id
-    assert response.provider_key == "watsonx-orchestrate"
-    bindings = response.provider_data["tool_app_bindings"]
-    assert len(bindings) == 1
-    assert bindings[0]["tool_id"] == "external-tool-id"
-    assert "flow_version_id" not in bindings[0]
+    with pytest.raises(HTTPException) as exc:
+        mapper.shape_deployment_update_result(result, deployment_row, provider_key="watsonx-orchestrate")
+    assert exc.value.status_code == 500
+    assert "non-UUID source_ref" in exc.value.detail
 
 
 # ---------------------------------------------------------------------------

@@ -61,6 +61,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiAgentExecutionCreateResultData,
     WatsonxApiAgentExecutionStatusResultData,
     WatsonxApiConfigListProviderData,
+    WatsonxApiCreatedTool,
     WatsonxApiCreateUpsertToolItem,
     WatsonxApiDeploymentCreatePayload,
     WatsonxApiDeploymentCreateResultData,
@@ -72,7 +73,6 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiFlowArtifactProviderData,
     WatsonxApiProviderDeploymentListItem,
     WatsonxApiSnapshotListProviderData,
-    WatsonxApiToolAppBinding,
     WatsonxApiUpsertFlowItem,
     WatsonxApiUpsertToolItem,
 )
@@ -310,11 +310,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                     "app_ids": list(adapter_provider_result.created_app_ids),
                     "tools_with_refs": [
                         {"source_ref": binding.source_ref, "tool_id": binding.tool_id}
-                        for binding in adapter_provider_result.added_snapshot_bindings
-                    ],
-                    "tool_app_bindings": [
-                        {"tool_id": binding.tool_id, "app_ids": list(binding.app_ids)}
-                        for binding in (adapter_provider_result.tool_app_bindings or [])
+                        for binding in adapter_provider_result.created_snapshot_bindings
                     ],
                 }
             )
@@ -639,14 +635,11 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         *,
         provider_key: str,
     ) -> DeploymentCreateResponse:
-        """Shape create result provider_data with explicit ref-domain semantics.
+        """Shape create result provider_data with created-tools semantics.
 
-        ``tools_with_refs[*].source_ref`` can come from two domains:
-        - flow-version-id operations: ``source_ref`` is a Langflow flow_version UUID.
-        - tool-id operations: ``source_ref`` is the provider tool_id (non-UUID).
-
-        The API response normalizes this into ``tool_app_bindings[*].flow_version_id``:
-        UUID source_ref -> parsed UUID, non-UUID source_ref -> None.
+        ``created_tools`` is populated directly from ``tools_with_refs``. Each
+        entry must carry a flow-version UUID ``source_ref`` and a non-empty
+        provider ``tool_id``.
         """
         adapter_provider_result = self._parse_required_payload_slot(
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create_result,
@@ -655,7 +648,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             missing_payload_detail="Deployment provider create result is missing provider_result payload.",
             malformed_payload_detail="Deployment provider create result contains invalid provider_result payload.",
         )
-        tool_id_to_flow_version: dict[str, UUID | None] = {}
+        created_tools: list[WatsonxApiCreatedTool] = []
         for binding in adapter_provider_result.tools_with_refs:
             tool_id = str(binding.tool_id or "").strip()
             source_ref = str(binding.source_ref or "").strip()
@@ -669,30 +662,20 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 )
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
             try:
-                tool_id_to_flow_version[tool_id] = UUID(source_ref)
-            except ValueError:
-                # Non-UUID source_ref is expected for tool-id-based operations.
-                tool_id_to_flow_version[tool_id] = None
-
-        tool_app_bindings: list[WatsonxApiToolAppBinding] = []
-        for binding in adapter_provider_result.tool_app_bindings:
-            raw_tool_id = str(binding.tool_id or "").strip()
-            if raw_tool_id not in tool_id_to_flow_version:
+                created_tool = WatsonxApiCreatedTool(
+                    flow_version_id=source_ref,
+                    tool_id=tool_id,
+                )
+            except ValidationError as exc:
                 msg = (
-                    f"Deployment provider create result has tool_app_binding tool_id={raw_tool_id!r} "
-                    "with no matching tools_with_refs entry."
+                    "Deployment provider create result contains a created tool binding with a non-UUID "
+                    f"source_ref={source_ref!r} for tool_id={tool_id!r}. A flow version id was expected."
                 )
-                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-            tool_app_bindings.append(
-                WatsonxApiToolAppBinding(
-                    flow_version_id=tool_id_to_flow_version[raw_tool_id],
-                    tool_id=raw_tool_id,
-                    app_ids=list(binding.app_ids),
-                )
-            )
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg) from exc
+            created_tools.append(created_tool)
         provider_api_result = WatsonxApiDeploymentCreateResultData(
             created_app_ids=list(adapter_provider_result.app_ids),
-            tool_app_bindings=tool_app_bindings or None,
+            created_tools=created_tools,
         )
         return DeploymentCreateResponse(
             id=deployment_row.id,
@@ -703,6 +686,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
             updated_at=deployment_row.updated_at,
+            resource_key=deployment_row.resource_key,
             provider_data=provider_api_result.to_api_provider_data(),
         )
 
@@ -720,17 +704,12 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             missing_payload_detail="Deployment provider update result is missing provider_result payload.",
             malformed_payload_detail="Deployment provider update result contains invalid provider_result payload.",
         )
-        tool_app_bindings = (
-            self._to_api_tool_app_bindings(
-                adapter_tool_app_bindings=adapter_provider_result.tool_app_bindings,
-                adapter_snapshot_bindings=adapter_provider_result.referenced_snapshot_bindings,
-            )
-            if adapter_provider_result.tool_app_bindings is not None
-            else None
+        created_tools = self._to_api_created_tools(
+            adapter_created_snapshot_bindings=adapter_provider_result.created_snapshot_bindings
         )
         provider_api_result = WatsonxApiDeploymentUpdateResultData(
             created_app_ids=list(adapter_provider_result.created_app_ids),
-            tool_app_bindings=tool_app_bindings,
+            created_tools=created_tools,
         )
         return DeploymentUpdateResponse(
             id=deployment_row.id,
@@ -741,6 +720,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
             updated_at=deployment_row.updated_at,
+            resource_key=deployment_row.resource_key,
             provider_data=provider_api_result.model_dump(mode="json", exclude_none=True),
         )
 
@@ -1430,7 +1410,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         *,
         llm: str,
         raw_tool_payloads: list[dict[str, Any]],
-        connections: Any,
+        connections: list[Any],
         operations: list[AdapterPayload],
     ) -> dict[str, Any]:
         return {
@@ -1439,58 +1419,37 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 "raw_payloads": raw_tool_payloads or None,
             },
             "connections": {
-                "raw_payloads": self._dump_key_value_connection_payloads(connections.key_value),
+                "raw_payloads": self._dump_key_value_connection_payloads(connections),
             },
             "operations": operations,
         }
 
-    def _to_api_tool_app_bindings(
+    def _to_api_created_tools(
         self,
         *,
-        adapter_tool_app_bindings: list[Any],
-        adapter_snapshot_bindings: list[Any],
-    ) -> list[WatsonxApiToolAppBinding]:
-        """Map adapter-level tool bindings to API response shapes.
-
-        ``flow_version_id`` is populated by attempting to parse the
-        snapshot binding's ``source_ref`` as a UUID.  For tool-id-based
-        operations the ``source_ref`` is the provider tool_id (not a UUID),
-        so ``flow_version_id`` will be ``None`` -- this is intentional.
-        """
-        tool_id_to_flow_version: dict[str, UUID | None] = {}
-        for binding in adapter_snapshot_bindings:
+        adapter_created_snapshot_bindings: list[Any],
+    ) -> list[WatsonxApiCreatedTool]:
+        """Map adapter created snapshot bindings to API ``created_tools``."""
+        created_tools: list[WatsonxApiCreatedTool] = []
+        for binding in adapter_created_snapshot_bindings:
             tool_id = str(binding.tool_id or "").strip()
             source_ref = str(binding.source_ref or "").strip()
             if not tool_id or not source_ref:
                 msg = (
-                    f"Snapshot binding has empty tool_id={binding.tool_id!r} or "
+                    f"Created snapshot binding has empty tool_id={binding.tool_id!r} or "
                     f"source_ref={binding.source_ref!r}; cannot map tool binding."
                 )
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
             try:
-                tool_id_to_flow_version[tool_id] = UUID(source_ref)
-            except ValueError:
-                # Non-UUID source_ref means this is a tool-id-based binding;
-                # flow_version_id will be None in the response.
-                tool_id_to_flow_version[tool_id] = None
-
-        api_bindings: list[WatsonxApiToolAppBinding] = []
-        for binding in adapter_tool_app_bindings:
-            raw_tool_id = str(binding.tool_id or "").strip()
-            if raw_tool_id not in tool_id_to_flow_version:
-                msg = (
-                    f"tool_app_binding tool_id={raw_tool_id!r} has no matching snapshot "
-                    f"binding source_ref; available refs: {sorted(tool_id_to_flow_version)}."
+                created_tool = WatsonxApiCreatedTool(
+                    flow_version_id=source_ref,
+                    tool_id=tool_id,
                 )
-                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-            api_bindings.append(
-                WatsonxApiToolAppBinding(
-                    flow_version_id=tool_id_to_flow_version[raw_tool_id],
-                    tool_id=raw_tool_id,
-                    app_ids=list(binding.app_ids),
-                )
-            )
-        return api_bindings
+            except ValidationError as exc:
+                msg = f"Created snapshot binding has non-UUID source_ref={source_ref!r} for tool_id={tool_id!r}."
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg) from exc
+            created_tools.append(created_tool)
+        return created_tools
 
     def _dump_key_value_connection_payloads(self, key_value_payloads: list[Any] | None) -> list[dict[str, Any]] | None:
         if not key_value_payloads:

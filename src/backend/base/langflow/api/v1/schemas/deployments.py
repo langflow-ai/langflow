@@ -353,9 +353,13 @@ class DeploymentFlowVersionListResponse(_PaginatedResponse):
 class DeploymentCreateResponse(_DeploymentResponseWithProviderData):
     """API response for deployment creation."""
 
+    resource_key: str = Field(description="Langflow-persisted stable provider resource identifier.")
+
 
 class DeploymentUpdateResponse(_DeploymentResponseWithProviderData):
     """API response for deployment update."""
+
+    resource_key: str = Field(description="Langflow-persisted stable provider resource identifier.")
 
 
 class DeploymentStatusResponse(_DeploymentResponseWithProviderData):
