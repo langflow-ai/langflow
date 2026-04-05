@@ -97,6 +97,7 @@ class LCVectorStoreComponent(Component):
             display_name="Table",
             name="dataframe",
             method="as_dataframe",
+            tool_mode=False,
             info=(
                 "Performs semantic similarity search in the vector store to find relevant documents/files "
                 "and returns results as a pandas DataFrame. "
