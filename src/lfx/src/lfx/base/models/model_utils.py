@@ -110,26 +110,34 @@ async def get_ollama_models(
                 models = await models
             await logger.adebug(f"Available models: {models}")
 
-            # Filter models that are NOT embedding models
-            model_ids = []
+            # Collect model names to check
+            model_names = []
             for model in models.get(json_models_key, []):
-                model_name = model.get(json_name_key)
-                if not model_name:
-                    continue
-                await logger.adebug(f"Checking model: {model_name}")
+                name = model.get(json_name_key)
+                if name:
+                    model_names.append(name)
 
-                payload = {"model": model_name}
-                show_response = await client.post(url=show_url, json=payload)
-                show_response.raise_for_status()
-                json_data = show_response.json()
-                if asyncio.iscoroutine(json_data):
-                    json_data = await json_data
+            # Fetch capabilities for all models in parallel
+            async def _fetch_capabilities(model_name: str) -> tuple[str, list]:
+                """Fetch capabilities for a single model, returning (name, capabilities)."""
+                try:
+                    payload = {"model": model_name}
+                    show_response = await client.post(url=show_url, json=payload)
+                    show_response.raise_for_status()
+                    json_data = show_response.json()
+                    if asyncio.iscoroutine(json_data):
+                        json_data = await json_data
+                    capabilities = json_data.get(json_capabilities_key, [])
+                    await logger.adebug(f"Model: {model_name}, Capabilities: {capabilities}")
+                    return (model_name, capabilities)
+                except (httpx.RequestError, httpx.HTTPStatusError):
+                    await logger.adebug(f"Failed to fetch capabilities for model: {model_name}, skipping")
+                    return (model_name, [])
 
-                capabilities = json_data.get(json_capabilities_key, [])
-                await logger.adebug(f"Model: {model_name}, Capabilities: {capabilities}")
+            results = await asyncio.gather(*[_fetch_capabilities(name) for name in model_names])
 
-                if desired_capability in capabilities:
-                    model_ids.append(model_name)
+            # Filter models that have the desired capability
+            model_ids = [name for name, caps in results if desired_capability in caps]
 
             return sorted(model_ids)
 
