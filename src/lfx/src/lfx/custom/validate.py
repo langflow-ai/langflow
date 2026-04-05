@@ -1,6 +1,7 @@
 import ast
 import contextlib
 import importlib
+import sys
 import warnings
 from types import FunctionType
 from typing import Optional, Union
@@ -162,12 +163,13 @@ def execute_function(code, function_name, *args, **kwargs):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 try:
-                    exec(
-                        f"{alias.asname or alias.name} = importlib.import_module('{alias.name}')",
-                        exec_globals,
-                        locals(),
-                    )
-                    exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
+                    imported = importlib.import_module(alias.name)
+                    if alias.asname:
+                        variable_name = alias.asname
+                        exec_globals[variable_name] = imported
+                    else:
+                        variable_name = alias.name.split(".")[0]
+                        exec_globals[variable_name] = sys.modules.get(variable_name, imported)
                 except ModuleNotFoundError as e:
                     msg = f"Module {alias.name} not found. Please install it and try again."
                     raise ModuleNotFoundError(msg) from e
@@ -212,7 +214,12 @@ def create_function(code, function_name):
                         )
                     else:
                         module_name = alias.name
-                        exec_globals[alias.asname or alias.name] = importlib.import_module(module_name)
+                        imported = importlib.import_module(module_name)
+                        if alias.asname:
+                            exec_globals[alias.asname] = imported
+                        else:
+                            top_level = module_name.split(".")[0]
+                            exec_globals[top_level] = sys.modules.get(top_level, imported)
                 except ModuleNotFoundError as e:
                     msg = f"Module {alias.name} not found. Please install it and try again."
                     raise ModuleNotFoundError(msg) from e
@@ -337,6 +344,22 @@ def _handle_module_attributes(imported_module, node, module_name, exec_globals):
         exec_globals[alias.name] = _resolve_attribute(imported_module, module_name, alias.name)
 
 
+class _MissingModulePlaceholder:
+    """Placeholder for modules unavailable on the current platform (e.g. jq on Windows).
+
+    Allows class creation and update_build_config to succeed. Any attribute
+    access raises ModuleNotFoundError so that actual usage at runtime fails
+    with a clear error.
+    """
+
+    def __init__(self, module_name: str) -> None:
+        self._module_name = module_name
+
+    def __getattr__(self, name: str):
+        msg = f"No module named '{self._module_name}'"
+        raise ModuleNotFoundError(msg)
+
+
 def _get_module_fallbacks(module_name: str) -> list[str]:
     """Return a list of module names to try, including compatibility fallbacks.
 
@@ -393,7 +416,17 @@ def prepare_global_scope(module):
                     continue
 
             if module_obj is None:
-                # Fall back to original name to get the proper error
+                if sys.platform == "win32":
+                    # Some C-extension packages (e.g. jq) have no Windows
+                    # wheels.  Insert a lazy placeholder so that class creation
+                    # succeeds and update_build_config can run.  Any real usage
+                    # of the module at runtime will raise ModuleNotFoundError.
+                    variable_name = alias.asname or module_name.split(".")[0]
+                    exec_globals[variable_name] = _MissingModulePlaceholder(module_name)
+                    logger.debug("Module '%s' unavailable on Windows — inserted placeholder", module_name)
+                    continue
+                # On other platforms the package should be installable, so
+                # raise to surface the real error.
                 module_obj = importlib.import_module(module_name)
 
             # Determine the variable name
@@ -402,9 +435,11 @@ def prepare_global_scope(module):
                 variable_name = alias.asname
                 exec_globals[variable_name] = module_obj
             else:
-                # For dotted imports like "urllib.request", set the variable to the top-level package
+                # For dotted imports like "urllib.request", set the variable to the top-level package.
+                # importlib.import_module returns the *leaf* module, but Python's import statement
+                # binds the top-level package name. Retrieve it from sys.modules instead.
                 variable_name = module_name.split(".")[0]
-                exec_globals[variable_name] = module_obj
+                exec_globals[variable_name] = sys.modules.get(variable_name, module_obj)
 
     for node in import_froms:
         module_names_to_try = _get_module_fallbacks(node.module)
