@@ -31,6 +31,27 @@ The shareable playground had three critical gaps:
 2. **No session persistence**: All messages were stored exclusively in `window.sessionStorage`. Sessions were lost on page refresh, couldn't be recovered across browser tabs, and provided no continuity for logged-in users.
 3. **No metadata visibility**: Bot messages showed no token usage or build duration, giving users zero visibility into LLM consumption or response times — unlike the regular playground.
 
+### Behavior Matrix — AUTO_LOGIN=TRUE vs AUTO_LOGIN=FALSE
+
+| Capability | AUTO_LOGIN=TRUE (anonymous) | AUTO_LOGIN=FALSE + not logged in | AUTO_LOGIN=FALSE + logged in |
+|------------|---------------------------|----------------------------------|------------------------------|
+| **Access** | Immediate (no login) | Redirect to `/login` | Immediate |
+| **Message storage** | `sessionStorage` (browser only) | N/A (redirected) | Database (persistent) |
+| **Session persistence on refresh** | Lost | N/A | Preserved |
+| **Session persistence across tabs** | No (per-tab sessionStorage) | N/A | Yes (shared via DB) |
+| **User isolation** | Per client_id cookie | N/A | Per user_id (deterministic UUID v5) |
+| **Token usage display** | Yes (in-memory) | N/A | Yes (persisted) |
+| **Build duration display** | Tokens only (duration not persisted) | N/A | Yes (tokens + duration, persisted) |
+| **Session rename/delete** | sessionStorage operation | N/A | DB operation via `/shared` API |
+| **Virtual Flow ID seed** | `client_id` (from cookie) | N/A | `user_id` (from auth) |
+| **API endpoints used** | `build_public_tmp` only | N/A | `build_public_tmp` + `/monitor/messages/shared/*` |
+| **Build duration on refresh** | Lost (not persisted to DB) | N/A | Preserved (persisted via `/shared` PUT) |
+
+### Known Limitations
+
+- **AUTO_LOGIN=TRUE**: Build duration is displayed during the current session (set in memory) but is NOT persisted to the database. On page refresh, only token counts survive (they are set by the backend during flow execution). This is because the standard `/monitor/messages/{id}` PUT endpoint requires Flow ownership via JOIN, and the virtual `flow_id` doesn't exist in the Flow table. The `/shared` PUT endpoint is only used for authenticated users (`AUTO_LOGIN=FALSE`).
+- **AUTO_LOGIN=TRUE**: Sessions are per-tab (`sessionStorage`), so opening the same playground in two tabs creates independent sessions.
+
 ### Bounded Context
 **Playground Messaging** — Encompasses authentication gating, message storage, retrieval, session management, and metadata display for both the regular flow editor playground and the shareable public playground.
 
