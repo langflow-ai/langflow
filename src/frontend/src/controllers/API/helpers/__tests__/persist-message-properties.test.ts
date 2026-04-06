@@ -17,6 +17,13 @@ jest.mock("@/modals/IOModal/helpers/playground-auth", () => ({
   isAuthenticatedPlayground: jest.fn(),
 }));
 
+jest.mock("@/stores/flowStore", () => ({
+  __esModule: true,
+  default: {
+    getState: jest.fn(() => ({ playgroundPage: false })),
+  },
+}));
+
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
   default: {
@@ -24,8 +31,10 @@ jest.mock("@/stores/flowsManagerStore", () => ({
   },
 }));
 
+import useFlowStore from "@/stores/flowStore";
 import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 
+const mockFlowStore = useFlowStore as unknown as { getState: jest.Mock };
 const mockIsAuth = isAuthenticatedPlayground as jest.MockedFunction<
   typeof isAuthenticatedPlayground
 >;
@@ -37,11 +46,14 @@ describe("persistMessageProperties", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockPut.mockResolvedValue({ data: {} });
+    mockFlowStore.getState.mockReturnValue({ playgroundPage: false });
+    mockIsAuth.mockReturnValue(false);
   });
 
   // --- Happy path ---
 
-  it("should_use_standard_endpoint_when_not_authenticated_playground", () => {
+  it("should_use_standard_endpoint_when_not_playground", () => {
+    mockFlowStore.getState.mockReturnValue({ playgroundPage: false });
     mockIsAuth.mockReturnValue(false);
 
     persistMessageProperties(MESSAGE_ID, PAYLOAD);
@@ -54,6 +66,7 @@ describe("persistMessageProperties", () => {
   });
 
   it("should_use_shared_endpoint_when_authenticated_playground", () => {
+    mockFlowStore.getState.mockReturnValue({ playgroundPage: true });
     mockIsAuth.mockReturnValue(true);
 
     persistMessageProperties(MESSAGE_ID, PAYLOAD);
@@ -66,9 +79,19 @@ describe("persistMessageProperties", () => {
     );
   });
 
+  it("should_skip_api_call_when_anonymous_playground", () => {
+    mockFlowStore.getState.mockReturnValue({ playgroundPage: true });
+    mockIsAuth.mockReturnValue(false);
+
+    persistMessageProperties(MESSAGE_ID, PAYLOAD);
+
+    expect(mockPut).not.toHaveBeenCalled();
+  });
+
   // --- Error handling ---
 
   it("should_not_throw_when_standard_endpoint_fails", () => {
+    mockFlowStore.getState.mockReturnValue({ playgroundPage: false });
     mockIsAuth.mockReturnValue(false);
     mockPut.mockRejectedValue(new Error("Network error"));
 
@@ -76,6 +99,7 @@ describe("persistMessageProperties", () => {
   });
 
   it("should_not_throw_when_shared_endpoint_fails", () => {
+    mockFlowStore.getState.mockReturnValue({ playgroundPage: true });
     mockIsAuth.mockReturnValue(true);
     mockPut.mockRejectedValue(new Error("404 Not Found"));
 
@@ -85,6 +109,7 @@ describe("persistMessageProperties", () => {
   // --- Edge cases ---
 
   it("should_pass_arbitrary_payload_through_unchanged", () => {
+    mockFlowStore.getState.mockReturnValue({ playgroundPage: false });
     mockIsAuth.mockReturnValue(false);
     const complexPayload = {
       text: "hello",
