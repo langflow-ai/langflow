@@ -344,7 +344,7 @@ export async function buildFlowVertices({
 
     const { job_id } = await buildResponse.json();
 
-    const cancelBuildUrl = customCancelBuildUrl(job_id);
+    const cancelBuildUrl = customCancelBuildUrl(job_id, playgroundPage);
 
     // Get the buildController from flowStore
     const buildController = new AbortController();
@@ -363,7 +363,7 @@ export async function buildFlowVertices({
     });
     useFlowStore.getState().setBuildController(buildController);
     // Then stream the events
-    const eventsUrl = customEventsUrl(job_id);
+    const eventsUrl = customEventsUrl(job_id, playgroundPage);
     const buildResults: Array<boolean> = [];
 
     if (eventDelivery === EventDeliveryType.STREAMING) {
