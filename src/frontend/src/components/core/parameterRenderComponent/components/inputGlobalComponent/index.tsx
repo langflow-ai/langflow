@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
+import { looksLikeVariableName } from "../../../../../utils/reactflowUtils";
 import { cn } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { CommandItem } from "../../../../ui/command";
 import GlobalVariableModal from "../../../GlobalVariableModal/GlobalVariableModal";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputGlobalComponentType, InputProps } from "../../types";
-import { looksLikeVariableName } from "../../../../../utils/reactflowUtils";
 import InputComponent from "../inputComponent";
 import {
   useGlobalVariableValue,
@@ -30,7 +30,8 @@ export default function InputGlobalComponent({
   hasRefreshButton = false,
   showParameter = true,
 }: InputProps<string, InputGlobalComponentType>): JSX.Element | null {
-  const { data: globalVariables } = useGetGlobalVariables();
+  const { data: globalVariables, isFetched: isGlobalVariablesFetched } =
+    useGetGlobalVariables();
 
   // // Safely cast the data to our typed interface
   const typedGlobalVariables: GlobalVariable[] = globalVariables ?? [];
@@ -49,20 +50,37 @@ export default function InputGlobalComponent({
     isDisabled,
     loadFromDb,
     typedGlobalVariables,
+    isGlobalVariablesFetched,
     valueExists,
     unavailableField,
     handleOnNewValue,
   );
 
-  // Clean up when selected variable no longer exists
+  // Clean up when selected variable no longer exists.
+  // Guard on isGlobalVariablesFetched to avoid clearing values during the
+  // initial fetch — otherwise a race condition on first flow load wipes every
+  // global-variable reference before the query has resolved.
   useEffect(() => {
-    if (loadFromDb && currentValue && !valueExists && !isDisabled) {
+    if (
+      isGlobalVariablesFetched &&
+      loadFromDb &&
+      currentValue &&
+      !valueExists &&
+      !isDisabled
+    ) {
       handleOnNewValue(
         { value: "", load_from_db: false },
         { skipSnapshot: true },
       );
     }
-  }, [loadFromDb, currentValue, valueExists, isDisabled, handleOnNewValue]);
+  }, [
+    isGlobalVariablesFetched,
+    loadFromDb,
+    currentValue,
+    valueExists,
+    isDisabled,
+    handleOnNewValue,
+  ]);
 
   // Create handlers object for better organization
   const handlers: GlobalVariableHandlers = {
