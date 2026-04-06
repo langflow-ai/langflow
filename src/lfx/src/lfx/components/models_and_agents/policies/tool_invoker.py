@@ -31,9 +31,7 @@ class ToolInvoker(IToolInvoker):
 
             # Only try to extract "result" key if res_dict is a dictionary
             if isinstance(res_dict, dict):
-                result_val = res_dict.get("result")
-                if isinstance(result_val, dict):
-                    res_dict = result_val
+                res_dict = res_dict.get("result", res_dict)
 
             if isinstance(res_dict, BaseModel):
                 res_dict = res_dict.model_dump()

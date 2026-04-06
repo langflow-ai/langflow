@@ -46,8 +46,8 @@ TOOLGUARD_WORK_DIR = Path(os.getenv("TOOLGUARD_WORK_DIR") or "tmp_toolguard")
 BUILDTIME_MODELS = ["gpt-5", "claude-sonnet"]  # currently inactive, we recommend but do not enforce
 STEP1 = "Step_1"
 STEP2 = "Step_2"
-BUILD_MODE_GENERATE = "Generate"
-BUILD_MODE_CACHE = "Use Cache"
+MODE_GENERATE = "🛠️ Generate"
+MODE_GUARD = "🛡️ Guard"
 GENERATED_GUARD_INFO_PREFIX = "Auto-generated ToolGuard code for "
 
 
@@ -63,7 +63,7 @@ class PoliciesComponent(LCModelComponent):
     description = """Component for building tool protection code from textual business policies and instructions.
 Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
     documentation: str = "https://github.com/AgentToolkit/toolguard"
-    icon = "clipboard-check"  # consider also file-text
+    icon = "shield-check"
     name = "policies"
     beta = True
 
@@ -71,17 +71,20 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         "list[InputTypes]",
         [
             BoolInput(
-                name="active",
-                display_name="Active",
-                info="If `true` - invokes ToolGuard code prior to tool execution. If `false`, skip policy validation.",
+                name="enabled",
+                display_name="Enabled",
+                info="If `true` - guards tool calls. If `false`, skip policy validation.",
                 value=True,
             ),
             TabInput(
-                name="build_mode",
-                display_name="Build Mode",
-                options=[BUILD_MODE_GENERATE, BUILD_MODE_CACHE],
-                info="Generate new guard code or use cached. Review generated files in the details panel on the right.",
-                value=BUILD_MODE_GENERATE,
+                name="mode",
+                display_name="Activity",
+                options=[MODE_GENERATE, MODE_GUARD],
+                info=(
+                    "Generate new guard code or apply existing guard. "
+                    "Review generated files in the details panel on the right."
+                ),
+                value=MODE_GENERATE,
                 real_time_refresh=True,
                 tool_mode=True,
             ),
@@ -292,30 +295,27 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         return result
 
     async def guard_tools(self) -> list[Tool]:
-        if self.active:
-            build_mode = getattr(self, "build_mode", BUILD_MODE_GENERATE)
-            if build_mode == BUILD_MODE_GENERATE:
+        if self.enabled:
+            mode = getattr(self, "mode", MODE_GENERATE)
+            if mode == MODE_GENERATE:
                 self.log(f"Start generating guard code at {self.work_dir}", name="info")
                 self.validate_before_generate()
                 await self.generate()
                 self.log(f"Policies code generation saved to {self.work_dir}", name="info")
                 self.log("Review the generated files in the details panel on the right.", name="info")
 
-            else:  # build_mode == "use cache"
-                self.log(f"using cache from XX {self.work_dir}", name="info")
-
-            code_dir = self.work_dir / STEP2
-            self._validate_before_using_cache(code_dir)
-            # tg_runtime = load_toolguards(code_dir)
-            try:
-                tg_result = self.make_toolguard_result()
-                tg_runtime = load_toolguards_from_memory(tg_result)
-
-                return cast("list[Tool]", [GuardedTool(tool, self.in_tools, tg_runtime) for tool in self.in_tools])
-
-            except Exception as e:
-                logger.exception(e)
-                raise
+            else:  # mode == "guard"
+                self.log(f"using cache from {self.work_dir}", name="info")
+                code_dir = self.work_dir / STEP2
+                self._validate_before_using_cache(code_dir)
+                try:
+                    tg_result = self.make_toolguard_result()
+                    tg_runtime = load_toolguards_from_memory(tg_result)
+                    guarded_tools = [GuardedTool(tool, self.in_tools, tg_runtime) for tool in self.in_tools]
+                    return cast("list[Tool]", guarded_tools)
+                except Exception as e:
+                    logger.exception(e)
+                    raise
 
         return self.in_tools
 

@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.components.models_and_agents.policies_component import (
-    BUILD_MODE_CACHE,
-    BUILD_MODE_GENERATE,
+    MODE_GENERATE,
+    MODE_GUARD,
     STEP2,
     PoliciesComponent,
 )
@@ -32,7 +32,7 @@ def mock_component(mock_tool):
         component.model = [{"name": "gpt-5.1", "provider": "OpenAI"}]
         component.api_key = "test_api_key"  # pragma: allowlist secret
         component.active = True
-        component.build_mode = BUILD_MODE_CACHE
+        component.build_mode = MODE_GUARD
         return component
 
 
@@ -162,7 +162,7 @@ async def test_inactive_returns_original_tools(mock_component, mock_tool):
 @pytest.mark.asyncio
 async def test_generate_mode_validation_errors(mock_component):
     """Test PoliciesComponent in generate mode with validation errors."""
-    mock_component.build_mode = BUILD_MODE_GENERATE
+    mock_component.build_mode = MODE_GENERATE
 
     # Test empty project
     mock_component.project = ""
