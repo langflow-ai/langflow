@@ -44,8 +44,10 @@ export default function DocItemLayout({ children }) {
         <div className={styles.docItemContainer}>
           <article>
             <DocBreadcrumbs />
-            <CopyPageButton />
-            <DocVersionBadge />
+            <div className={styles.docMetaRow}>
+              <CopyPageButton />
+              <DocVersionBadge />
+            </div>
             {docTOC.mobile}
             <DocItemContent>{children}</DocItemContent>
             <DocItemFooter />

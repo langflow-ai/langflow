@@ -1,12 +1,38 @@
-"""Deployment API mapper registry and base contracts."""
+"""Deployment mapper package exports."""
 
-from .base import BaseDeploymentMapper, DeploymentApiPayloads, DeploymentMapperRegistry
+from __future__ import annotations
 
-deployment_mapper_registry = DeploymentMapperRegistry()
+from .base import BaseDeploymentMapper, DeploymentApiPayloads
+from .contracts import (
+    CreatedSnapshotIds,
+    CreateFlowArtifactProviderData,
+    CreateSnapshotBinding,
+    CreateSnapshotBindings,
+    FlowVersionPatch,
+    UpdateSnapshotBinding,
+    UpdateSnapshotBindings,
+)
+from .registry import (
+    DeploymentMapperRegistry,
+    get_deployment_mapper,
+    get_mapper,
+    get_mapper_registry,
+    register_mapper,
+)
 
 __all__ = [
     "BaseDeploymentMapper",
+    "CreateFlowArtifactProviderData",
+    "CreateSnapshotBinding",
+    "CreateSnapshotBindings",
+    "CreatedSnapshotIds",
     "DeploymentApiPayloads",
     "DeploymentMapperRegistry",
-    "deployment_mapper_registry",
+    "FlowVersionPatch",
+    "UpdateSnapshotBinding",
+    "UpdateSnapshotBindings",
+    "get_deployment_mapper",
+    "get_mapper",
+    "get_mapper_registry",
+    "register_mapper",
 ]

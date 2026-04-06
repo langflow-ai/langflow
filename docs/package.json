@@ -55,6 +55,7 @@
   },
   "overrides": {
     "lodash": "4.17.21",
+    "fast-xml-parser": "4.5.4",
     "openapi-to-postmanv2": {
       "lodash": "4.17.21"
     },

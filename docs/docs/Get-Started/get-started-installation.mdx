@@ -5,20 +5,28 @@ slug: /get-started-installation
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import Cards from "@site/src/components/Cards";
+import Card from "@site/src/components/Card";
+import Icon from "@site/src/components/icon";
 
-Langflow can be installed in multiple ways:
+Langflow can be installed in multiple ways. Choose an option below to jump to the steps.
 
-* [**Langflow Desktop (Recommended)**](#install-and-run-langflow-desktop): Download and install the standalone desktop application for the least complicated setup experience.
-This option includes dependency management and facilitated upgrades.
+<Cards cols={2}>
+  <Card icon={<Icon name="Monitor" size={20} />} title="Langflow Desktop (recommended)" href="#install-and-run-langflow-desktop">
+    Standalone app with dependency management and simple upgrades.
+  </Card>
+  <Card icon={<Icon name="Container" size={20} />} title="Docker" href="#install-and-run-langflow-docker">
+    Run Langflow in a container in isolation.
+  </Card>
+  <Card icon={<Icon name="Package" size={20} />} title="Python package" href="#install-and-run-the-langflow-oss-python-package">
+    Full control over environment, dependencies, and versioning.
+  </Card>
+  <Card icon={<Icon name="GitFork" size={20} />} title="Install from source" href="/contributing-how-to-contribute#install-langflow-from-source">
+    Contribute to Langflow or work from a local clone.
+  </Card>
+</Cards>
 
-* [**Docker**](#install-and-run-langflow-docker): Pull and run the Langflow Docker image to start a Langflow container and run Langflow in isolation.
-
-* [**Python package**](#install-and-run-the-langflow-oss-python-package): Install and run the Langflow OSS Python package.
-This option offers more control over the environment, dependencies, and versioning.
-
-* [**Install from source**](/contributing-how-to-contribute#install-langflow-from-source): Use this option if you want to contribute to the Langflow codebase or documentation.
-
-## Install and run Langflow Desktop
+## Install and run Langflow Desktop {#install-and-run-langflow-desktop}
 
 Langflow Desktop is a desktop version of Langflow that simplifies dependency management and upgrades.
 However, some features aren't available for Langflow Desktop, such as the **Shareable Playground** and **Voice Mode**.
@@ -76,7 +84,7 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
 4. Create your first flow with the [Quickstart](/get-started-quickstart).
 
-## Install and run the Langflow OSS Python package
+## Install and run the Langflow OSS Python package {#install-and-run-the-langflow-oss-python-package}
 
 1. Make sure you have the required dependencies and infrastructure:
 
