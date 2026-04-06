@@ -671,6 +671,8 @@ class MCPToolsComponent(ComponentWithCache):
         """Process the output of a tool."""
         if item_dict.get("type") == "text":
             text = item_dict.get("text")
+            if not isinstance(text, str):
+                return item_dict
             try:
                 parsed = json.loads(text)
                 # Ensure we always return a dictionary for DataFrame compatibility
@@ -680,7 +682,7 @@ class MCPToolsComponent(ComponentWithCache):
                     return [item if isinstance(item, dict) else {"value": item} for item in parsed]
                 # Wrap non-dict parsed values in a dictionary
                 return {"text": text, "parsed_value": parsed, "type": "text"}  # noqa: TRY300
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, TypeError):
                 return item_dict
         return item_dict
 
