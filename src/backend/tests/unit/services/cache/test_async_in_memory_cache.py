@@ -1,12 +1,10 @@
 """Tests for AsyncInMemoryCache."""
 
-import time
-from unittest.mock import patch
+import asyncio
 
 import pytest
-from lfx.services.cache.utils import CACHE_MISS
-
 from langflow.services.cache.service import AsyncInMemoryCache
+from lfx.services.cache.utils import CACHE_MISS
 
 pytestmark = pytest.mark.asyncio
 
@@ -88,12 +86,11 @@ class TestAsyncInMemoryCacheExpiration:
     """Tests for expiration in async cache."""
 
     async def test_expired_item_returns_cache_miss(self):
-        cache = AsyncInMemoryCache(expiration_time=1)
+        cache = AsyncInMemoryCache(expiration_time=0.1)
         await cache.set("key1", "value1")
-        with patch("langflow.services.cache.service.time") as mock_time:
-            mock_time.time.return_value = time.time() + 2
-            result = await cache.get("key1")
-            assert result is CACHE_MISS
+        await asyncio.sleep(0.5)
+        result = await cache.get("key1")
+        assert result is CACHE_MISS
 
 
 class TestAsyncInMemoryCacheUpsert:

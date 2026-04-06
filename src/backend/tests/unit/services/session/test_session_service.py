@@ -1,16 +1,11 @@
 """Tests for SessionService and session utilities."""
 
-import hashlib
 import re
 
 import pytest
-from lfx.services.cache.utils import CacheMiss
-
 from langflow.services.cache.service import AsyncInMemoryCache, ThreadingInMemoryCache
 from langflow.services.session.service import SessionService
 from langflow.services.session.utils import compute_dict_hash, session_id_generator
-
-pytestmark = pytest.mark.asyncio
 
 
 class TestSessionIdGenerator:
@@ -105,6 +100,8 @@ class TestSessionServiceGenerateKey:
 
 class TestSessionServiceWithSyncCache:
     """Tests for SessionService with ThreadingInMemoryCache."""
+
+    pytestmark = pytest.mark.asyncio
 
     async def test_update_and_clear_session(self):
         cache = AsyncInMemoryCache()

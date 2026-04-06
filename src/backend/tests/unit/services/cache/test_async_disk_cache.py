@@ -1,11 +1,10 @@
 """Tests for langflow.services.cache.disk.AsyncDiskCache."""
 
 import asyncio
-import time
 
 import pytest
-
 from langflow.services.cache.disk import AsyncDiskCache
+from lfx.services.cache.utils import CACHE_MISS
 
 pytestmark = pytest.mark.asyncio
 
@@ -13,8 +12,7 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture
 def cache(tmp_path):
     """Create a fresh AsyncDiskCache for each test."""
-    c = AsyncDiskCache(str(tmp_path / "cache"), max_size=10, expiration_time=3600)
-    return c
+    return AsyncDiskCache(str(tmp_path / "cache"), max_size=10, expiration_time=3600)
 
 
 @pytest.fixture
@@ -47,8 +45,6 @@ class TestAsyncDiskCacheSetGet:
         assert result == 42
 
     async def test_get_missing_key(self, cache):
-        from lfx.services.cache.utils import CACHE_MISS
-
         result = await cache.get("nonexistent")
         assert result is CACHE_MISS
 
@@ -117,7 +113,7 @@ class TestAsyncDiskCacheExpiration:
         from lfx.services.cache.utils import CACHE_MISS
 
         await short_expiry_cache.set("key1", "value1")
-        await asyncio.sleep(0.2)  # Wait for expiration
+        await asyncio.sleep(0.5)  # Wait for expiration (margin for slow CI)
         result = await short_expiry_cache.get("key1")
         assert result is CACHE_MISS
 

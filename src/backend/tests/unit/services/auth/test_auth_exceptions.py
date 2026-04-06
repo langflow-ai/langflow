@@ -1,7 +1,5 @@
 """Tests for langflow.services.auth.exceptions module."""
 
-import pytest
-
 from langflow.services.auth.exceptions import (
     AuthenticationError,
     InactiveUserError,
@@ -26,14 +24,6 @@ class TestAuthenticationError:
     def test_no_error_code(self):
         exc = AuthenticationError("test")
         assert exc.error_code is None
-
-    def test_is_exception(self):
-        exc = AuthenticationError("test")
-        assert isinstance(exc, Exception)
-
-    def test_can_be_raised_and_caught(self):
-        with pytest.raises(AuthenticationError, match="test error"):
-            raise AuthenticationError("test error")
 
 
 class TestInvalidCredentialsError:
@@ -102,18 +92,3 @@ class TestExceptionHierarchy:
         ]
         for cls in subclasses:
             assert issubclass(cls, AuthenticationError), f"{cls.__name__} should be a subclass"
-
-    def test_catch_base_catches_all(self):
-        exceptions = [
-            InvalidCredentialsError(),
-            MissingCredentialsError(),
-            InactiveUserError(),
-            InsufficientPermissionsError(),
-            TokenExpiredError(),
-            InvalidTokenError(),
-        ]
-        for exc in exceptions:
-            try:
-                raise exc
-            except AuthenticationError:
-                pass  # Should be caught

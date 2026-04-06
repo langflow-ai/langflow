@@ -4,10 +4,7 @@ import asyncio
 from uuid import uuid4
 
 import pytest
-
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
-
-pytestmark = pytest.mark.asyncio
 
 
 class TestJobQueueNotFoundError:
@@ -42,6 +39,8 @@ class TestJobQueueServiceInit:
 class TestJobQueueServiceCreateQueue:
     """Tests for create_queue."""
 
+    pytestmark = pytest.mark.asyncio
+
     async def test_create_queue(self):
         service = JobQueueService()
         service._closed = False
@@ -65,6 +64,8 @@ class TestJobQueueServiceCreateQueue:
 
 class TestJobQueueServiceStartJob:
     """Tests for start_job."""
+
+    pytestmark = pytest.mark.asyncio
 
     async def test_start_job(self):
         service = JobQueueService()
@@ -123,6 +124,8 @@ class TestJobQueueServiceStartJob:
 class TestJobQueueServiceGetQueueData:
     """Tests for get_queue_data."""
 
+    pytestmark = pytest.mark.asyncio
+
     async def test_get_queue_data(self):
         service = JobQueueService()
         service.create_queue("job1")
@@ -171,6 +174,8 @@ class TestJobQueueServiceJobOwnership:
 class TestJobQueueServiceCleanupJob:
     """Tests for cleanup_job."""
 
+    pytestmark = pytest.mark.asyncio
+
     async def test_cleanup_nonexistent_job(self):
         service = JobQueueService()
         # Should not raise
@@ -215,6 +220,8 @@ class TestJobQueueServiceCleanupJob:
 
 class TestJobQueueServiceLifecycle:
     """Tests for start/stop lifecycle."""
+
+    pytestmark = pytest.mark.asyncio
 
     async def test_start(self):
         service = JobQueueService()
@@ -270,6 +277,8 @@ class TestJobQueueServiceEventManager:
 
 class TestJobQueueServiceCleanupOldQueues:
     """Tests for _cleanup_old_queues logic."""
+
+    pytestmark = pytest.mark.asyncio
 
     async def test_marks_orphaned_queues_for_cleanup(self):
         service = JobQueueService()

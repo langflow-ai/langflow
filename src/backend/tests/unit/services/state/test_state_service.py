@@ -1,14 +1,35 @@
 """Tests for InMemoryStateService."""
 
-from unittest.mock import MagicMock, call
-
 from langflow.services.state.service import InMemoryStateService
 
 
+class _FakeSettings:
+    """Minimal stand-in for SettingsService (only stored, never called)."""
+
+
 def _create_service():
-    """Create an InMemoryStateService with a mock settings service."""
-    mock_settings = MagicMock()
-    return InMemoryStateService(settings_service=mock_settings)
+    """Create an InMemoryStateService with a fake settings service."""
+    return InMemoryStateService(settings_service=_FakeSettings())
+
+
+def _make_observer():
+    """Return a callable observer that records every call it receives."""
+    calls = []
+
+    def observer(key, value, *, append=False):
+        calls.append((key, value, append))
+
+    return calls, observer
+
+
+def _make_failing_observer():
+    """Return an observer that raises an exception when called."""
+
+    def observer(_key, _value, *, append=False):  # noqa: ARG001
+        msg = "observer error"
+        raise RuntimeError(msg)
+
+    return observer
 
 
 class TestStateServiceGetUpdateState:
@@ -97,64 +118,68 @@ class TestStateServiceObservers:
 
     def test_subscribe_and_notify(self):
         service = _create_service()
-        observer = MagicMock()
+        calls, observer = _make_observer()
         service.subscribe("key1", observer)
         service.update_state("key1", "new_value", run_id="run1")
-        observer.assert_called_once_with("key1", "new_value", append=False)
+        assert len(calls) == 1
+        assert calls[0] == ("key1", "new_value", False)
 
     def test_multiple_observers(self):
         service = _create_service()
-        observer1 = MagicMock()
-        observer2 = MagicMock()
+        calls1, observer1 = _make_observer()
+        calls2, observer2 = _make_observer()
         service.subscribe("key1", observer1)
         service.subscribe("key1", observer2)
         service.update_state("key1", "value", run_id="run1")
-        observer1.assert_called_once_with("key1", "value", append=False)
-        observer2.assert_called_once_with("key1", "value", append=False)
+        assert len(calls1) == 1
+        assert calls1[0] == ("key1", "value", False)
+        assert len(calls2) == 1
+        assert calls2[0] == ("key1", "value", False)
 
     def test_unsubscribe(self):
         service = _create_service()
-        observer = MagicMock()
+        calls, observer = _make_observer()
         service.subscribe("key1", observer)
         service.unsubscribe("key1", observer)
         service.update_state("key1", "value", run_id="run1")
-        observer.assert_not_called()
+        assert len(calls) == 0
 
     def test_subscribe_duplicate_ignored(self):
         service = _create_service()
-        observer = MagicMock()
+        calls, observer = _make_observer()
         service.subscribe("key1", observer)
         service.subscribe("key1", observer)  # Duplicate
         service.update_state("key1", "value", run_id="run1")
         # Should be called only once
-        observer.assert_called_once()
+        assert len(calls) == 1
 
     def test_unsubscribe_nonexistent(self):
         service = _create_service()
-        observer = MagicMock()
+        _, observer = _make_observer()
         # Should not raise
         service.unsubscribe("key1", observer)
 
     def test_append_notifies_with_append_true(self):
         service = _create_service()
-        observer = MagicMock()
+        calls, observer = _make_observer()
         service.subscribe("key1", observer)
         service.append_state("key1", "appended", run_id="run1")
-        observer.assert_called_once_with("key1", "appended", append=True)
+        assert len(calls) == 1
+        assert calls[0] == ("key1", "appended", True)
 
     def test_notify_append_handles_observer_exception(self):
         service = _create_service()
-        bad_observer = MagicMock(side_effect=Exception("observer error"))
+        bad_observer = _make_failing_observer()
         service.subscribe("key1", bad_observer)
         # Should not raise even when observer fails
         service.append_state("key1", "value", run_id="run1")
 
     def test_observers_for_different_keys(self):
         service = _create_service()
-        observer1 = MagicMock()
-        observer2 = MagicMock()
+        calls1, observer1 = _make_observer()
+        calls2, observer2 = _make_observer()
         service.subscribe("key1", observer1)
         service.subscribe("key2", observer2)
         service.update_state("key1", "v1", run_id="run1")
-        observer1.assert_called_once()
-        observer2.assert_not_called()
+        assert len(calls1) == 1
+        assert len(calls2) == 0

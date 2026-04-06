@@ -1,10 +1,9 @@
 """Tests for cache utility functions."""
 
 import base64
-from unittest.mock import MagicMock
 
 import pytest
-
+from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.cache.utils import (
     CACHE_DIR,
     PREFIX,
@@ -86,35 +85,52 @@ class TestSaveBinaryFile:
             save_binary_file("", "test.txt", [".txt"])
 
     def test_saves_valid_file(self, tmp_path):
-        """Test saving a valid binary file."""
+        """Test saving a valid binary file using tmp_path directly."""
+        import langflow.services.cache.utils as cache_utils_module
+
         encoded = base64.b64encode(b"hello world").decode()
         content = f"data:text/plain;base64,{encoded}"
 
-        from unittest.mock import patch
-
-        with patch("langflow.services.cache.utils.CACHE_DIR", str(tmp_path)):
+        # Temporarily swap the CACHE_DIR constant on the module
+        original_cache_dir = cache_utils_module.CACHE_DIR
+        try:
+            cache_utils_module.CACHE_DIR = str(tmp_path)
             result = save_binary_file(content, "test.txt", [".txt"])
             assert result.endswith("test.txt")
+            # Verify file was actually written
+            from pathlib import Path
+
+            saved = Path(result)
+            assert saved.exists()
+            assert saved.read_bytes() == b"hello world"
+        finally:
+            cache_utils_module.CACHE_DIR = original_cache_dir
 
 
 class TestUpdateBuildStatus:
     """Tests for update_build_status function."""
 
     def test_updates_status(self):
-        mock_cache = MagicMock()
-        mock_cache.__getitem__ = MagicMock(return_value={"status": "building"})
-        mock_cache.__setitem__ = MagicMock()
+        cache = ThreadingInMemoryCache()
+        cache["flow1"] = {"status": "building"}
 
-        update_build_status(mock_cache, "flow1", "completed")
+        update_build_status(cache, "flow1", "completed")
 
-        mock_cache.__setitem__.assert_called()
+        result = cache["flow1"]
+        assert result["status"] == "completed"
 
     def test_raises_when_flow_not_found(self):
-        mock_cache = MagicMock()
-        mock_cache.__getitem__ = MagicMock(return_value=None)
+        # update_build_status checks `if cached_flow is None`, so use a plain dict
+        # which returns None for missing keys via .get() but raises KeyError for [].
+        # A dict subclass that returns None for missing keys matches the expected behavior.
+        class NoneDefaultDict(dict):
+            def __getitem__(self, key):
+                return self.get(key, None)
+
+        cache = NoneDefaultDict()
 
         with pytest.raises(ValueError, match="not found in cache"):
-            update_build_status(mock_cache, "flow1", "completed")
+            update_build_status(cache, "flow1", "completed")
 
 
 class TestConstants:

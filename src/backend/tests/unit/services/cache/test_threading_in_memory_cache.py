@@ -1,11 +1,9 @@
 """Tests for ThreadingInMemoryCache."""
 
 import time
-from unittest.mock import patch
-
-from lfx.services.cache.utils import CACHE_MISS
 
 from langflow.services.cache.service import ThreadingInMemoryCache
+from lfx.services.cache.utils import CACHE_MISS
 
 
 class TestThreadingInMemoryCacheBasic:
@@ -123,13 +121,11 @@ class TestThreadingInMemoryCacheExpiration:
     """Tests for expiration behavior."""
 
     def test_expired_item_returns_cache_miss(self):
-        cache = ThreadingInMemoryCache(expiration_time=1)
+        cache = ThreadingInMemoryCache(expiration_time=0.1)
         cache.set("key1", "value1")
-        # Mock time to simulate expiration
-        with patch("langflow.services.cache.service.time") as mock_time:
-            mock_time.time.return_value = time.time() + 2  # 2 seconds later
-            result = cache.get("key1")
-            assert result is CACHE_MISS
+        time.sleep(0.5)
+        result = cache.get("key1")
+        assert result is CACHE_MISS
 
     def test_non_expired_item_returns_value(self):
         cache = ThreadingInMemoryCache(expiration_time=3600)
@@ -211,8 +207,10 @@ class TestThreadingInMemoryCacheDataTypes:
 
     def test_store_boolean(self):
         cache = ThreadingInMemoryCache()
-        cache.set("true_key", True)
-        cache.set("false_key", False)
+        true_val = True
+        false_val = False
+        cache.set("true_key", true_val)
+        cache.set("false_key", false_val)
         assert cache.get("true_key") is True
         # False is falsy, so cache item check might fail
         # But the item dict itself is truthy

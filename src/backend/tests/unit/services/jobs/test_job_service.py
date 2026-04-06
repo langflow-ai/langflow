@@ -2,15 +2,14 @@
 
 Since JobService methods mostly delegate to DB CRUD functions, we focus on
 testing execute_with_status which has complex status-management logic that
-can be tested with mocking.
+can be tested by replacing the update_job_status method with a simple
+recording function.
 """
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.jobs.service import JobService
 
@@ -19,10 +18,8 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture
 def job_service():
-    """Create a JobService with mocked dependencies."""
-    with patch("langflow.services.jobs.service.session_scope"):
-        svc = JobService()
-    return svc
+    """Create a JobService instance."""
+    return JobService()
 
 
 @pytest.fixture
@@ -30,17 +27,23 @@ def job_id():
     return uuid4()
 
 
+def _make_status_recorder():
+    """Create an async function that records status updates in a list."""
+    status_updates = []
+
+    async def record_update(_jid, status, *, finished_timestamp=False):
+        status_updates.append((status, finished_timestamp))
+
+    return status_updates, record_update
+
+
 class TestExecuteWithStatus:
     """Tests for JobService.execute_with_status method."""
 
     async def test_successful_execution(self, job_service, job_id):
         """On success, status should go IN_PROGRESS -> COMPLETED."""
-        status_updates = []
-
-        async def mock_update(jid, status, *, finished_timestamp=False):
-            status_updates.append((status, finished_timestamp))
-
-        job_service.update_job_status = mock_update
+        status_updates, record_update = _make_status_recorder()
+        job_service.update_job_status = record_update
 
         async def my_coro(x, y):
             return x + y
@@ -51,12 +54,8 @@ class TestExecuteWithStatus:
         assert status_updates[1] == (JobStatus.COMPLETED, True)
 
     async def test_assertion_error_sets_failed(self, job_service, job_id):
-        status_updates = []
-
-        async def mock_update(jid, status, *, finished_timestamp=False):
-            status_updates.append((status, finished_timestamp))
-
-        job_service.update_job_status = mock_update
+        status_updates, record_update = _make_status_recorder()
+        job_service.update_job_status = record_update
 
         async def failing_coro():
             msg = "bad assertion"
@@ -68,12 +67,8 @@ class TestExecuteWithStatus:
         assert status_updates[-1] == (JobStatus.FAILED, True)
 
     async def test_timeout_error_sets_timed_out(self, job_service, job_id):
-        status_updates = []
-
-        async def mock_update(jid, status, *, finished_timestamp=False):
-            status_updates.append((status, finished_timestamp))
-
-        job_service.update_job_status = mock_update
+        status_updates, record_update = _make_status_recorder()
+        job_service.update_job_status = record_update
 
         async def timeout_coro():
             raise asyncio.TimeoutError
@@ -84,15 +79,12 @@ class TestExecuteWithStatus:
         assert status_updates[-1] == (JobStatus.TIMED_OUT, True)
 
     async def test_user_cancelled_sets_cancelled(self, job_service, job_id):
-        status_updates = []
-
-        async def mock_update(jid, status, *, finished_timestamp=False):
-            status_updates.append((status, finished_timestamp))
-
-        job_service.update_job_status = mock_update
+        status_updates, record_update = _make_status_recorder()
+        job_service.update_job_status = record_update
 
         async def user_cancel_coro():
-            raise asyncio.CancelledError("LANGFLOW_USER_CANCELLED")
+            cancel_msg = "LANGFLOW_USER_CANCELLED"
+            raise asyncio.CancelledError(cancel_msg)
 
         with pytest.raises(asyncio.CancelledError):
             await job_service.execute_with_status(job_id, user_cancel_coro)
@@ -100,15 +92,12 @@ class TestExecuteWithStatus:
         assert status_updates[-1] == (JobStatus.CANCELLED, True)
 
     async def test_system_cancelled_sets_failed(self, job_service, job_id):
-        status_updates = []
-
-        async def mock_update(jid, status, *, finished_timestamp=False):
-            status_updates.append((status, finished_timestamp))
-
-        job_service.update_job_status = mock_update
+        status_updates, record_update = _make_status_recorder()
+        job_service.update_job_status = record_update
 
         async def system_cancel_coro():
-            raise asyncio.CancelledError("system shutdown")
+            cancel_msg = "system shutdown"
+            raise asyncio.CancelledError(cancel_msg)
 
         with pytest.raises(asyncio.CancelledError):
             await job_service.execute_with_status(job_id, system_cancel_coro)
@@ -116,12 +105,8 @@ class TestExecuteWithStatus:
         assert status_updates[-1] == (JobStatus.FAILED, True)
 
     async def test_generic_exception_sets_failed(self, job_service, job_id):
-        status_updates = []
-
-        async def mock_update(jid, status, *, finished_timestamp=False):
-            status_updates.append((status, finished_timestamp))
-
-        job_service.update_job_status = mock_update
+        status_updates, record_update = _make_status_recorder()
+        job_service.update_job_status = record_update
 
         async def error_coro():
             msg = "something went wrong"
@@ -136,10 +121,10 @@ class TestExecuteWithStatus:
         """Ensure args and kwargs are correctly forwarded to the coroutine."""
         received = {}
 
-        async def mock_update(jid, status, *, finished_timestamp=False):
+        async def noop_update(jid, status, *, finished_timestamp=False):
             pass
 
-        job_service.update_job_status = mock_update
+        job_service.update_job_status = noop_update
 
         async def capture_coro(*args, **kwargs):
             received["args"] = args
@@ -152,12 +137,8 @@ class TestExecuteWithStatus:
 
     async def test_cancelled_without_args_sets_failed(self, job_service, job_id):
         """CancelledError with no args should set FAILED (system-initiated)."""
-        status_updates = []
-
-        async def mock_update(jid, status, *, finished_timestamp=False):
-            status_updates.append((status, finished_timestamp))
-
-        job_service.update_job_status = mock_update
+        status_updates, record_update = _make_status_recorder()
+        job_service.update_job_status = record_update
 
         async def cancel_no_args():
             raise asyncio.CancelledError
