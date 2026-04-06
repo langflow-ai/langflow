@@ -147,7 +147,7 @@ class LangchainModelWrapper(LanguageModelBase):
             msg = "Malformed response from language model"
             raise ValueError(msg)
 
-        chunk = self._extract_content(choice0.message.content)
+        chunk = self._extract_content(choice0.text)
 
         # Check if we need to continue due to max tokens
         generation_info = getattr(choice0, "generation_info", None)

@@ -1,3 +1,4 @@
+import os
 import re
 import shutil
 from pathlib import Path
@@ -42,7 +43,7 @@ if TYPE_CHECKING:
 
 
 BUILDTIME_MODELS = ["gpt-5.1", "claude-sonnet-4"]
-TOOLGUARD_WORK_DIR = Path("tmp_toolguard")
+TOOLGUARD_WORK_DIR = Path(os.getenv("TOOLGUARD_WORK_DIR") or "tmp_toolguard")
 STEP1 = "Step_1"
 STEP2 = "Step_2"
 BUILD_MODE_GENERATE = "Generate"
@@ -180,7 +181,9 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         open_api = langchain_tools_to_openapi(self.in_tools)
 
         options = PolicySpecOptions(example_number=4)
-        specs = await generate_guard_specs(policy_text=policy_text, tools=open_api, llm=llm, work_dir=out_dir, options=options)
+        specs = await generate_guard_specs(
+            policy_text=policy_text, tools=open_api, llm=llm, work_dir=out_dir, options=options
+        )
         logger.debug("Step 1 Done")
         return specs
 
