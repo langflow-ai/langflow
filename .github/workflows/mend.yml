@@ -53,4 +53,4 @@ jobs:
           WS_PRODUCTNAME: ${{ secrets.WS_PRODUCTNAME }}
           WS_PROJECTNAME: ${{ secrets.WS_PROJECTNAME }}
         run: |
-          java -jar wss-unified-agent.jar -d src/frontend -logLevel debug
+          java -jar wss-unified-agent.jar -d src -logLevel debug
