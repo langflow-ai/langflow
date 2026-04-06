@@ -696,11 +696,7 @@ async def build_public_tmp(
         # When AUTO_LOGIN=TRUE, the frontend uses client_id for UUID v5,
         # so the backend must match to avoid flow_id mismatch.
         auth_settings = get_settings_service().auth_settings
-        authenticated_user_id = (
-            authenticated_user.id
-            if authenticated_user and not auth_settings.AUTO_LOGIN
-            else None
-        )
+        authenticated_user_id = authenticated_user.id if authenticated_user and not auth_settings.AUTO_LOGIN else None
         owner_user, new_flow_id = await verify_public_flow_and_get_user(
             flow_id=flow_id,
             client_id=client_id,
