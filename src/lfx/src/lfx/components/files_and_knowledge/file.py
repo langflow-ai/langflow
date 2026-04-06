@@ -81,7 +81,6 @@ class FileComponent(BaseFileComponent):
 
     # Extensions handled by pandas for structured data (not text parsing, not Docling)
     STRUCTURED_DATA_EXTENSIONS = [
-        "csv",
         "xlsx",
         "xls",
     ]
@@ -449,10 +448,7 @@ class FileComponent(BaseFileComponent):
                 self._disable_docling_fields_in_cloud(build_config)
             else:
                 # If all files can be processed by docling, do so
-                allow_advanced = all(
-                    Path(file_path).suffix.lower().lstrip(".") not in self.STRUCTURED_DATA_EXTENSIONS
-                    for file_path in paths
-                )
+                allow_advanced = all(not file_path.endswith((".csv", ".xlsx", ".parquet")) for file_path in paths)
                 build_config["advanced_mode"]["show"] = allow_advanced
                 if not allow_advanced:
                     build_config["advanced_mode"]["value"] = False
@@ -512,7 +508,7 @@ class FileComponent(BaseFileComponent):
         frontend_node["outputs"] = []
         if len(paths) == 1:
             file_path = paths[0] if field_name == "path" else frontend_node["template"]["path"]["file_path"][0]
-            if Path(file_path).suffix.lower().lstrip(".") in self.STRUCTURED_DATA_EXTENSIONS:
+            if file_path.endswith((".csv", ".xlsx", ".parquet")):
                 frontend_node["outputs"].append(
                     Output(
                         display_name="Structured Content",
