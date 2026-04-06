@@ -316,7 +316,12 @@ class FileComponent(BaseFileComponent):
         async def read_files_tool() -> str:
             """Read the content of uploaded files."""
             try:
-                result = self.load_files_message()
+                # In advanced mode, use Docling-based markdown export to avoid triggering
+                # a redundant standard-parsing pass alongside the Docling processing path.
+                if getattr(self, "advanced_mode", False):
+                    result = self.load_files_markdown()
+                else:
+                    result = self.load_files_message()
                 if hasattr(result, "get_text"):
                     return result.get_text()
                 if hasattr(result, "text"):

@@ -501,6 +501,45 @@ class TestFileComponentToolMode:
 
         assert test_content in result
 
+    @pytest.mark.asyncio
+    async def test_tool_uses_markdown_in_advanced_mode(self, tmp_path):
+        """In advanced mode the tool coroutine should call load_files_markdown, not
+        load_files_message, to avoid triggering a redundant standard-parsing pass
+        alongside the Docling processing path (fixes #12269)."""
+        test_file = tmp_path / "doc.txt"
+        test_file.write_text("hello advanced")
+
+        component = FileComponent()
+        component._attributes["path"] = [str(test_file)]
+        component.path = [str(test_file)]
+        component._attributes["advanced_mode"] = True
+        component.advanced_mode = True
+
+        called = {"load_files_message": 0, "load_files_markdown": 0}
+
+        original_message = component.load_files_message
+        original_markdown = component.load_files_markdown
+
+        def patched_message():
+            called["load_files_message"] += 1
+            return original_message()
+
+        def patched_markdown():
+            called["load_files_markdown"] += 1
+            return original_markdown()
+
+        component.load_files_message = patched_message
+        component.load_files_markdown = patched_markdown
+
+        tools = await component._get_tools()
+        tool = tools[0]
+        await tool.coroutine()
+
+        assert called["load_files_message"] == 0, (
+            "load_files_message must not be called in advanced mode (causes duplicate processing)"
+        )
+        assert called["load_files_markdown"] == 1, "load_files_markdown should be called once in advanced mode"
+
     # ==================== Error Handling Tests ====================
 
     @pytest.mark.asyncio
