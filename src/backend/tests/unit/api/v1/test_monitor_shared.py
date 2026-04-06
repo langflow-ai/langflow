@@ -104,6 +104,15 @@ async def test_rename_shared_session_requires_auth(client: AsyncClient):
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+async def test_update_shared_message_requires_auth(client: AsyncClient):
+    fake_msg_id = "00000000-0000-0000-0000-000000000002"
+    response = await client.put(
+        f"api/v1/monitor/messages/shared/{fake_msg_id}?source_flow_id={FAKE_FLOW_ID}",
+        json={"text": "updated"},
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
 # --- Functional tests with authenticated users ---
 
 
@@ -274,6 +283,73 @@ async def test_shared_messages_isolated_between_users(
     )
     assert response_b_sessions.status_code == status.HTTP_200_OK
     assert response_b_sessions.json() == []
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_update_shared_message_updates_properties(
+    client: AsyncClient, logged_in_headers, shared_messages_setup
+):
+    """PUT /messages/shared/{id} should update message properties."""
+    source_flow_id = shared_messages_setup["source_flow_id"]
+
+    # Get a message to update
+    response = await client.get(
+        f"api/v1/monitor/messages/shared?source_flow_id={source_flow_id}&session_id=test-session-1",
+        headers=logged_in_headers,
+    )
+    messages = response.json()
+    assert len(messages) > 0
+    message_id = messages[0]["id"]
+
+    # Update the message properties with build_duration
+    response = await client.put(
+        f"api/v1/monitor/messages/shared/{message_id}?source_flow_id={source_flow_id}",
+        headers=logged_in_headers,
+        json={"properties": {"build_duration": 1500}},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    updated = response.json()
+    assert updated["properties"]["build_duration"] == 1500
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_update_shared_message_returns_404_for_wrong_flow(
+    client: AsyncClient, logged_in_headers, shared_messages_setup
+):
+    """PUT with wrong source_flow_id should return 404."""
+    source_flow_id = shared_messages_setup["source_flow_id"]
+
+    # Get a real message ID
+    response = await client.get(
+        f"api/v1/monitor/messages/shared?source_flow_id={source_flow_id}",
+        headers=logged_in_headers,
+    )
+    message_id = response.json()[0]["id"]
+
+    # Try to update with a different source_flow_id
+    wrong_flow_id = uuid.uuid4()
+    response = await client.put(
+        f"api/v1/monitor/messages/shared/{message_id}?source_flow_id={wrong_flow_id}",
+        headers=logged_in_headers,
+        json={"properties": {"build_duration": 9999}},
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_update_shared_message_returns_404_for_nonexistent_id(
+    client: AsyncClient, logged_in_headers, shared_messages_setup
+):
+    """PUT with nonexistent message ID should return 404."""
+    source_flow_id = shared_messages_setup["source_flow_id"]
+    fake_msg_id = uuid.uuid4()
+
+    response = await client.put(
+        f"api/v1/monitor/messages/shared/{fake_msg_id}?source_flow_id={source_flow_id}",
+        headers=logged_in_headers,
+        json={"text": "should not work"},
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_compute_virtual_flow_id_differs_between_users():

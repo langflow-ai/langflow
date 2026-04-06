@@ -387,6 +387,44 @@ async def delete_shared_messages_session(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+@router.put("/messages/shared/{message_id}", response_model=MessageRead)
+async def update_shared_message(
+    message_id: UUID,
+    message: MessageUpdate,
+    session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
+):
+    """Update a message on a shared/public flow, scoped to the authenticated user."""
+    try:
+        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        db_message = (
+            await session.exec(
+                select(MessageTable).where(
+                    MessageTable.id == message_id,
+                    MessageTable.flow_id == virtual_flow_id,
+                )
+            )
+        ).first()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    if not db_message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    try:
+        message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
+        if "text" in message_dict and message_dict["text"] != db_message.text:
+            message_dict["edit"] = True
+        db_message.sqlmodel_update(message_dict)
+        session.add(db_message)
+        await session.flush()
+        await session.refresh(db_message)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return db_message
+
+
 @router.patch("/messages/shared/session/{old_session_id}")
 async def rename_shared_session(
     old_session_id: str,
