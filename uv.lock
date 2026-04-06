@@ -3012,7 +3012,7 @@ wheels = [
 
 [[package]]
 name = "fastmcp"
-version = "3.1.0"
+version = "3.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "authlib" },
@@ -3037,9 +3037,9 @@ dependencies = [
     { name = "watchfiles" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0a/70/862026c4589441f86ad3108f05bfb2f781c6b322ad60a982f40b303b47d7/fastmcp-3.1.0.tar.gz", hash = "sha256:e25264794c734b9977502a51466961eeecff92a0c2f3b49c40c070993628d6d0", size = 17347083, upload-time = "2026-03-03T02:43:11.283Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d0/32/4f1b2cfd7b50db89114949f90158b1dcc2c92a1917b9f57c0ff24e47a2f4/fastmcp-3.2.0.tar.gz", hash = "sha256:d4830b8ffc3592d3d9c76dc0f398904cf41f04910e41a0de38cc1004e0903bef", size = 26318581, upload-time = "2026-03-30T20:25:37.692Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/17/07/516f5b20d88932e5a466c2216b628e5358a71b3a9f522215607c3281de05/fastmcp-3.1.0-py3-none-any.whl", hash = "sha256:b1f73b56fd3b0cb2bd9e2a144fc650d5cc31587ed129d996db7710e464ae8010", size = 633749, upload-time = "2026-03-03T02:43:09.06Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/67/684fa2d2de1e7504549d4ca457b4f854ccec3cd3be03bd86b33b599fbf58/fastmcp-3.2.0-py3-none-any.whl", hash = "sha256:e71aba3df16f86f546a4a9e513261d3233bcc92bef0dfa647bac3fa33623f681", size = 705550, upload-time = "2026-03-30T20:25:35.499Z" },
 ]
 
 [[package]]
@@ -6677,7 +6677,7 @@ requires-dist = [
     { name = "fastapi-pagination", specifier = ">=0.13.1,<1.0.0" },
     { name = "fastavro", marker = "python_full_version >= '3.13' and extra == 'fastavro'", specifier = ">=1.9.8,<2.0.0" },
     { name = "fastavro", marker = "python_full_version < '3.13' and extra == 'fastavro'", specifier = "==1.9.7" },
-    { name = "fastmcp", marker = "extra == 'fastmcp'", specifier = ">=2.14.0" },
+    { name = "fastmcp", marker = "extra == 'fastmcp'", specifier = ">=3.2.0" },
     { name = "fastparquet", marker = "extra == 'fastparquet'", specifier = ">=2024.11.0,<2025.0.0" },
     { name = "filelock", specifier = ">=3.20.1,<4.0.0" },
     { name = "firecrawl-py", specifier = ">=1.0.16,<2.0.0" },
