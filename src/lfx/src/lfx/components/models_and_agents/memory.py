@@ -115,8 +115,20 @@ class MemoryComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Message", name="messages_text", method="retrieve_messages_as_text", dynamic=True),
-        Output(display_name="Table", name="dataframe", method="retrieve_messages_dataframe", dynamic=True),
+        Output(
+            display_name="Message",
+            name="messages_text",
+            method="retrieve_messages_as_text",
+            types=["Message"],
+            selected="Message",
+        ),
+        Output(
+            display_name="Table",
+            name="dataframe",
+            method="retrieve_messages_dataframe",
+            types=["Table"],
+            selected="Table",
+        ),
     ]
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
@@ -133,7 +145,6 @@ class MemoryComponent(Component):
                         types=["Message"],
                         selected="Message",
                         hidden=True,
-                        dynamic=True,
                     )
                 ]
             if field_value == "Retrieve":
@@ -144,7 +155,6 @@ class MemoryComponent(Component):
                         method="retrieve_messages_as_text",
                         types=["Message"],
                         selected="Message",
-                        dynamic=True,
                     ),
                     Output(
                         display_name="Table",
@@ -152,7 +162,6 @@ class MemoryComponent(Component):
                         method="retrieve_messages_dataframe",
                         types=["Table"],
                         selected="Table",
-                        dynamic=True,
                     ),
                 ]
         return frontend_node
