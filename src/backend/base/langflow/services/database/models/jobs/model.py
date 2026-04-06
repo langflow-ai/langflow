@@ -29,6 +29,7 @@ class JobType(str, Enum):
     WORKFLOW = "workflow"
     INGESTION = "ingestion"
     EVALUATION = "evaluation"
+    SCHEDULED = "scheduled"
 
 
 class JobBase(SQLModel):

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useDragStart from "@/components/core/cardComponent/hooks/use-on-drag-start";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +11,9 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
+import { useGetSchedule } from "@/controllers/API/queries/schedules/use-get-schedule";
+import { useToggleSchedule } from "@/controllers/API/queries/schedules/use-toggle-schedule";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
@@ -24,6 +28,55 @@ import useDescriptionModal from "../../hooks/use-description-modal";
 import { useGetTemplateStyle } from "../../utils/get-template-style";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
+
+const ScheduleToggle = ({ flowId }: { flowId: string }) => {
+  const { data: schedule } = useGetSchedule(flowId);
+  const { mutateAsync: toggleSchedule } = useToggleSchedule();
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  if (!schedule) return null;
+
+  const handleToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await toggleSchedule({ id: schedule.id, flow_id: flowId });
+    } catch (error: any) {
+      setErrorData({
+        title: "Failed to toggle schedule",
+        list: [error?.message || "Unknown error"],
+      });
+    }
+  };
+
+  return (
+    <ShadTooltip
+      content={
+        schedule.is_active
+          ? "Schedule is active. Click to disable."
+          : "Schedule is inactive. Click to enable."
+      }
+    >
+      <div
+        className="flex items-center gap-1.5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ForwardedIconComponent
+          name="Clock"
+          className={cn(
+            "h-4 w-4",
+            schedule.is_active ? "text-primary" : "text-muted-foreground",
+          )}
+        />
+        <Switch
+          checked={schedule.is_active}
+          onClick={handleToggle}
+          className="scale-[75%]"
+          data-testid={`schedule-toggle-${flowId}`}
+        />
+      </div>
+    </ShadTooltip>
+  );
+};
 
 const ListComponent = ({
   flowData,
@@ -178,6 +231,7 @@ const ListComponent = ({
         </div>
 
         <div className="ml-5 flex items-center gap-2">
+          {!isComponent && <ScheduleToggle flowId={flowData.id} />}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

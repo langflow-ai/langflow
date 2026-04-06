@@ -254,6 +254,17 @@ def get_auth_service() -> BaseAuthService:
     return get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
 
 
+def get_scheduler_service():
+    """Retrieves the SchedulerService instance from the service manager.
+
+    Returns:
+        SchedulerService: The SchedulerService instance.
+    """
+    from langflow.services.scheduler.factory import SchedulerServiceFactory
+
+    return get_service(ServiceType.SCHEDULER_SERVICE, SchedulerServiceFactory())
+
+
 def get_job_service():
     """Retrieves the JobService instance from the service manager.
 
