@@ -28,13 +28,11 @@ export type MemoryDetailsProps = {
     documents?: MemoryDocumentItem[];
   };
   docsLoading: boolean;
-  searchQuery: string;
-  setSearchQuery: (value: string) => void;
-  activeSearch: string;
-  setActiveSearch: (value: string) => void;
+  fetchNextMessagesPage: () => void;
+  hasNextMessagesPage?: boolean;
+  isFetchingNextMessagesPage?: boolean;
   selectedSession: string | null;
   setSelectedSession: (value: string | null) => void;
-  handleSearch: () => void;
   groupedBySession: Map<string, MemoryDocumentItem[]>;
   handleOpenDocumentPanel: (doc: MemoryDocumentItem) => void;
   deleteMutation: MemoryActionMutation;
@@ -68,20 +66,20 @@ export type MemoryKnowledgeBaseSectionProps = {
     documents?: MemoryDocumentItem[];
   };
   docsLoading: boolean;
-  searchQuery: string;
-  setSearchQuery: (value: string) => void;
-  activeSearch: string;
-  setActiveSearch: (value: string) => void;
+  fetchNextMessagesPage: () => void;
+  hasNextMessagesPage?: boolean;
+  isFetchingNextMessagesPage?: boolean;
   selectedSession: string | null;
   setSelectedSession: (value: string | null) => void;
-  handleSearch: () => void;
   groupedBySession: Map<string, MemoryDocumentItem[]>;
   handleOpenDocumentPanel: (doc: MemoryDocumentItem) => void;
-  totalChunks: number;
 };
 
 export type MemoryDetailsHeaderProps = {
   memory: MemoryInfo;
+  sessions?: string[];
+  selectedSession: string | null;
+  setSelectedSession: (value: string | null) => void;
   deleteMutation: MemoryActionMutation;
   handleToggleActive: (nextIsActive: boolean) => void;
 };

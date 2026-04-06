@@ -1,6 +1,5 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import { cn } from "@/utils/utils";
 import { statusBgColors, statusColors } from "../helpers";
@@ -8,6 +7,9 @@ import type { MemoryDetailsHeaderProps } from "../types";
 
 export function MemoryDetailsHeader({
   memory,
+  sessions,
+  selectedSession,
+  setSelectedSession,
   deleteMutation,
   handleToggleActive,
 }: MemoryDetailsHeaderProps) {
@@ -23,33 +25,34 @@ export function MemoryDetailsHeader({
             </p>
           )}
         </div>
-        <span
-          className={cn(
-            "rounded-full px-2 py-0.5 text-xs font-medium",
-            statusBgColors[memory.status] || "bg-muted",
-            statusColors[memory.status] || "text-muted-foreground",
-          )}
-        >
-          {memory.status}
-        </span>
-        <div className="ml-2 flex items-center gap-2">
-          <Switch
-            checked={memory.is_active}
-            onCheckedChange={handleToggleActive}
-            aria-label="Auto-capture for this memory"
-          />
-          <span
-            className={cn(
-              "text-xs font-medium",
-              memory.is_active ? "text-primary" : "text-muted-foreground",
-            )}
-          >
-            {memory.is_active ? "Enabled" : "Disabled"}
-          </span>
-        </div>
       </div>
 
       <div className="flex items-center gap-2">
+        {sessions && sessions.length > 1 && (
+          <select
+            aria-label="Session filter"
+            className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+            value={selectedSession ?? sessions[0] ?? ""}
+            onChange={(e) => setSelectedSession(e.target.value)}
+          >
+            {sessions.map((sid) => (
+              <option key={sid} value={sid}>
+                {sid.length > 20 ? `${sid.slice(0, 20)}...` : sid}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleToggleActive(!memory.is_active)}
+          aria-pressed={memory.is_active}
+          aria-label="Toggle auto-capture"
+        >
+          Auto-capture: {memory.is_active ? "Enabled" : "Disabled"}
+        </Button>
+
         <DeleteConfirmationModal
           description={`memory \"${memory.name}\"`}
           onConfirm={(e) => {

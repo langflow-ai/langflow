@@ -8,13 +8,11 @@ export function MemoryDetails({
   memory,
   docsData,
   docsLoading,
-  searchQuery,
-  setSearchQuery,
-  activeSearch,
-  setActiveSearch,
+  fetchNextMessagesPage,
+  hasNextMessagesPage,
+  isFetchingNextMessagesPage,
   selectedSession,
   setSelectedSession,
-  handleSearch,
   groupedBySession,
   handleOpenDocumentPanel,
   deleteMutation,
@@ -24,6 +22,9 @@ export function MemoryDetails({
     <>
       <MemoryDetailsHeader
         memory={memory}
+        sessions={docsData?.sessions}
+        selectedSession={selectedSession}
+        setSelectedSession={setSelectedSession}
         deleteMutation={deleteMutation}
         handleToggleActive={handleToggleActive}
       />
@@ -34,16 +35,6 @@ export function MemoryDetails({
             label="Messages Processed"
             value={memory.total_messages_processed}
             icon="MessageSquare"
-          />
-          <SummaryCard
-            label="Total Chunks"
-            value={memory.total_chunks}
-            icon="Layers"
-          />
-          <SummaryCard
-            label="Sessions Captured"
-            value={memory.sessions_count}
-            icon="Users"
           />
           <SummaryCard
             label="Pending Messages"
@@ -66,11 +57,15 @@ export function MemoryDetails({
             <span className="font-medium text-foreground">Model:</span>{" "}
             {memory.embedding_model}
           </span>
-          <span>&middot;</span>
-          <span>
-            <span className="font-medium text-foreground">Provider:</span>{" "}
-            {memory.embedding_provider}
-          </span>
+          {memory.embedding_provider && (
+            <>
+              <span>&middot;</span>
+              <span>
+                <span className="font-medium text-foreground">Provider:</span>{" "}
+                {memory.embedding_provider}
+              </span>
+            </>
+          )}
           {memory.batch_size > 1 && (
             <>
               <span>&middot;</span>
@@ -96,16 +91,13 @@ export function MemoryDetails({
         <MemoryKnowledgeBaseSection
           docsData={docsData}
           docsLoading={docsLoading}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          activeSearch={activeSearch}
-          setActiveSearch={setActiveSearch}
+          fetchNextMessagesPage={fetchNextMessagesPage}
+          hasNextMessagesPage={hasNextMessagesPage}
+          isFetchingNextMessagesPage={isFetchingNextMessagesPage}
           selectedSession={selectedSession}
           setSelectedSession={setSelectedSession}
-          handleSearch={handleSearch}
           groupedBySession={groupedBySession}
           handleOpenDocumentPanel={handleOpenDocumentPanel}
-          totalChunks={memory.total_chunks}
         />
       </div>
     </>

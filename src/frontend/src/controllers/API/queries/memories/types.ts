@@ -1,4 +1,3 @@
-export type MemoryStatus = "idle" | "generating" | "updating" | "failed";
 
 export interface MemoryApiDTO {
   id: string;
@@ -31,10 +30,7 @@ export interface MemoryInfo {
   embedding_model: string;
   embedding_provider: string;
   is_active: boolean;
-  status: MemoryStatus;
-  error_message?: string;
   total_messages_processed: number;
-  total_chunks: number;
   sessions_count: number;
   batch_size: number;
   preprocessing_enabled: boolean;
@@ -44,11 +40,7 @@ export interface MemoryInfo {
   user_id: string;
   flow_id: string;
   created_at?: string;
-  updated_at?: string;
   last_generated_at?: string;
-  documents?: MemoryDocumentItem[];
-  documents_total?: number;
-  document_sessions?: string[];
 }
 
 export interface MemoryDocumentItem {
@@ -57,6 +49,16 @@ export interface MemoryDocumentItem {
   session_id: string;
   timestamp: string;
   message_id: string;
+}
+
+export interface MemorySessionInfo {
+  session_id: string;
+  cursor_id: string | null;
+  total_processed: number;
+  last_sync_at: string | null;
+  id: string;
+  memory_base_id: string;
+  pending_count: number;
 }
 
 export interface CreateMemoryPayload {

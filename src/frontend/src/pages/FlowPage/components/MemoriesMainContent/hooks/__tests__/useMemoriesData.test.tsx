@@ -1,14 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { useMemoriesData } from "../useMemoriesData";
 
-jest.mock("@tanstack/react-query", () => {
-  const actual = jest.requireActual("@tanstack/react-query");
-  return {
-    ...actual,
-    useQuery: () => ({ data: [] }),
-  };
-});
-
 const mockSetErrorData = jest.fn();
 const mockSetSuccessData = jest.fn();
 
@@ -61,11 +53,6 @@ let memoryQueryData: any = {
   id: "m1",
   status: "idle",
   is_active: true,
-  documents: [
-    { message_id: "msg1", session_id: "s1", content: "hello", sender: "user" },
-  ],
-  document_sessions: ["s1"],
-  documents_total: 1,
 };
 let memoryQueryIsLoading = false;
 let memoryQueryIsError = false;
@@ -78,6 +65,91 @@ jest.mock("@/controllers/API/queries/memories/use-get-memory", () => ({
   }),
 }));
 
+let memorySessionsData: any[] = [
+  {
+    session_id: "s1",
+    cursor_id: null,
+    total_processed: 0,
+    last_sync_at: "2026-04-01T00:00:00.000Z",
+    id: "s1",
+    memory_base_id: "m1",
+    pending_count: 0,
+  },
+  {
+    session_id: "s2",
+    cursor_id: null,
+    total_processed: 0,
+    last_sync_at: "2026-03-01T00:00:00.000Z",
+    id: "s2",
+    memory_base_id: "m1",
+    pending_count: 0,
+  },
+];
+
+jest.mock("@/controllers/API/queries/memories/use-get-memory-sessions", () => ({
+  useGetMemorySessions: () => ({
+    data: memorySessionsData,
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
+let messagesBySession: Record<string, any[]> = {
+  s1: [
+    {
+      timestamp: "2026-04-01T19:29:07",
+      sender: "User",
+      sender_name: "User",
+      ingestion_job_id: "job-1",
+      ingestion_timestamp: "2026-04-02T20:51:06.951803",
+      session_id: "s1",
+      text: "Hello.",
+      content_blocks: [],
+    },
+  ],
+  s2: [
+    {
+      timestamp: "2026-04-01T19:29:08",
+      sender: "Machine",
+      sender_name: "AI",
+      ingestion_job_id: "job-2",
+      ingestion_timestamp: "2026-04-02T20:51:06.951803",
+      session_id: "s2",
+      text: "Hi.",
+      content_blocks: [],
+    },
+  ],
+};
+
+jest.mock(
+  "@/controllers/API/queries/memories/use-get-memory-session-messages",
+  () => ({
+    useGetMemorySessionMessages: (params: any) => {
+      const sessionId = params?.sessionId;
+      const items = sessionId ? messagesBySession[sessionId] ?? [] : [];
+      return {
+        data: {
+          pages: [
+            {
+              items,
+              total: items.length,
+              page: 1,
+              size: 50,
+              pages: 1,
+            },
+          ],
+          pageParams: [1],
+        },
+        isLoading: false,
+        fetchNextPage: jest.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      };
+    },
+  }),
+);
+
+const manualUpdateMutation = { mutate: jest.fn(), isPending: false };
 const deleteMutation = { mutate: jest.fn(), isPending: false };
 const updateMemoryMutation = { mutate: jest.fn(), isPending: false };
 jest.mock("@/controllers/API/queries/memories/use-delete-memory", () => ({
@@ -110,19 +182,57 @@ describe("useMemoriesData", () => {
       id: "m1",
       status: "idle",
       is_active: true,
-      documents: [
-        {
-          message_id: "msg1",
-          session_id: "s1",
-          content: "hello",
-          sender: "user",
-        },
-      ],
-      document_sessions: ["s1"],
-      documents_total: 1,
     };
     memoryQueryIsLoading = false;
     memoryQueryIsError = false;
+
+    memorySessionsData = [
+      {
+        session_id: "s1",
+        cursor_id: null,
+        total_processed: 0,
+        last_sync_at: "2026-04-01T00:00:00.000Z",
+        id: "s1",
+        memory_base_id: "m1",
+        pending_count: 0,
+      },
+      {
+        session_id: "s2",
+        cursor_id: null,
+        total_processed: 0,
+        last_sync_at: "2026-03-01T00:00:00.000Z",
+        id: "s2",
+        memory_base_id: "m1",
+        pending_count: 0,
+      },
+    ];
+
+    messagesBySession = {
+      s1: [
+        {
+          timestamp: "2026-04-01T19:29:07",
+          sender: "User",
+          sender_name: "User",
+          ingestion_job_id: "job-1",
+          ingestion_timestamp: "2026-04-02T20:51:06.951803",
+          session_id: "s1",
+          text: "Hello.",
+          content_blocks: [],
+        },
+      ],
+      s2: [
+        {
+          timestamp: "2026-04-01T19:29:08",
+          sender: "Machine",
+          sender_name: "AI",
+          ingestion_job_id: "job-2",
+          ingestion_timestamp: "2026-04-02T20:51:06.951803",
+          session_id: "s2",
+          text: "Hi.",
+          content_blocks: [],
+        },
+      ],
+    };
   });
 
   it("auto-selects first memory when no selection", () => {
@@ -224,31 +334,6 @@ describe("useMemoriesData", () => {
     jest.useRealTimers();
   });
 
-  it("commits search and clears selected session", () => {
-    const { result } = renderHook(() =>
-      useMemoriesData({
-        currentFlowId: "flow-1",
-        selectedMemoryId: "m1",
-        onSelectMemory: jest.fn(),
-      }),
-    );
-
-    act(() => {
-      result.current.setSearchQuery("hello");
-    });
-
-    act(() => {
-      result.current.setSelectedSession("s1");
-    });
-
-    act(() => {
-      result.current.handleSearch();
-    });
-
-    expect(result.current.activeSearch).toBe("hello");
-    expect(result.current.selectedSession).toBeNull();
-  });
-
   it("clears selected memory when selected memory fetch errors", () => {
     memoryQueryIsError = true;
     const onSelectMemory = jest.fn();
@@ -264,21 +349,7 @@ describe("useMemoriesData", () => {
     expect(onSelectMemory).toHaveBeenCalledWith(null);
   });
 
-  it("groups docs by session and respects selectedSession filter", () => {
-    memoryQueryData = {
-      ...memoryQueryData,
-      documents: [
-        { message_id: "a", session_id: "s1", content: "hello", sender: "user" },
-        {
-          message_id: "b",
-          session_id: "s2",
-          content: "world",
-          sender: "assistant",
-        },
-      ],
-      document_sessions: ["s1", "s2"],
-    };
-
+  it("shows messages for the default session and switches when selectedSession changes", () => {
     const { result } = renderHook(() =>
       useMemoriesData({
         currentFlowId: "flow-1",
@@ -287,10 +358,7 @@ describe("useMemoriesData", () => {
       }),
     );
 
-    expect(Array.from(result.current.groupedBySession.keys())).toEqual([
-      "s1",
-      "s2",
-    ]);
+    expect(Array.from(result.current.groupedBySession.keys())).toEqual(["s1"]);
 
     act(() => {
       result.current.setSelectedSession("s2");

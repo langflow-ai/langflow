@@ -106,14 +106,25 @@ export function MemoriesSidebar({
                 >
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-2">
-                      {memoryItem.is_active && (
-                        <span
-                          className="h-2 w-2 shrink-0 rounded-full bg-accent-emerald-foreground"
-                          role="img"
-                          aria-label="Auto-capture enabled"
-                          title="Auto-capture enabled"
-                        />
-                      )}
+                      <span
+                        className={cn(
+                          "h-2 w-2 shrink-0 rounded-full",
+                          memoryItem.is_active
+                            ? "bg-accent-emerald-foreground"
+                            : "bg-muted-foreground",
+                        )}
+                        role="img"
+                        aria-label={
+                          memoryItem.is_active
+                            ? "Auto-capture enabled"
+                            : "Auto-capture disabled"
+                        }
+                        title={
+                          memoryItem.is_active
+                            ? "Auto-capture enabled"
+                            : "Auto-capture disabled"
+                        }
+                      />
                       <div className="truncate text-sm font-medium">
                         {memoryItem.name}
                       </div>
@@ -124,16 +135,6 @@ export function MemoriesSidebar({
                       </div>
                     )}
                   </div>
-                  <span
-                    className={cn(
-                      "ml-2 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
-                      statusBgColors[memoryItem.status] || "bg-muted",
-                      statusColors[memoryItem.status] ||
-                        "text-muted-foreground",
-                    )}
-                  >
-                    {memoryItem.status}
-                  </span>
                 </button>
               );
             })}

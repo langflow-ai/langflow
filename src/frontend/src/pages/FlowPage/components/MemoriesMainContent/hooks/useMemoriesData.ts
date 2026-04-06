@@ -1,21 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import useAlertStore from "@/stores/alertStore";
 import { useGetMemories } from "@/controllers/API/queries/memories/use-get-memories";
 import { useGetMemory } from "@/controllers/API/queries/memories/use-get-memory";
+import { useGetMemorySessions } from "@/controllers/API/queries/memories/use-get-memory-sessions";
 import { useDeleteMemory } from "@/controllers/API/queries/memories/use-delete-memory";
 import { useUpdateMemory } from "@/controllers/API/queries/memories/use-update-memory";
-import { api } from "@/controllers/API/api";
-import { getURL } from "@/controllers/API/helpers/constants";
+import { useGetMemorySessionMessages } from "@/controllers/API/queries/memories/use-get-memory-session-messages";
 import { UseMemoriesDataProps } from "../types";
 import type {
   MemoryDocumentItem,
   MemoryInfo,
+  MemorySessionInfo,
 } from "@/controllers/API/queries/memories/types";
-import {
-  FIXED_PREFILL_MESSAGES,
-  type PrefillFlowMessage,
-} from "./fixedPrefillMessages";
 
 const EMPTY_MEMORIES: MemoryInfo[] = [];
 
@@ -34,8 +30,6 @@ export function useMemoriesData({
 
   const [memoriesSearch, setMemoriesSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeSearch, setActiveSearch] = useState("");
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [documentPanelOpen, setDocumentPanelOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] =
@@ -98,28 +92,68 @@ export function useMemoriesData({
     { memoryId: selectedMemoryId ?? "" },
     {
       enabled: !!selectedMemoryId,
-      refetchInterval: (query) => {
-        const data = query.state.data as MemoryInfo | undefined;
-        return data?.status === "generating" || data?.status === "updating"
-          ? 2000
-          : false;
-      },
       retry: false,
     },
   );
 
-  const { data: flowMessages = [] } = useQuery({
-    queryKey: ["useGetFlowMessagesForMemoriesPrefill", currentFlowId],
-    enabled: !!currentFlowId,
-    queryFn: async () => {
-      const res = await api.get<PrefillFlowMessage[]>(getURL("MESSAGES"), {
-        params: { flow_id: currentFlowId },
-      });
-      return Array.isArray(res.data) ? res.data : [];
+  const { data: memorySessions = [] } = useGetMemorySessions(
+    { memoryId: selectedMemoryId ?? "" },
+    {
+      enabled: !!selectedMemoryId,
+      retry: false,
     },
-    refetchOnWindowFocus: false,
-    retry: false,
-  });
+  );
+
+  const resolveDefaultSessionId = (sessions: MemorySessionInfo[]) => {
+    if (!sessions.length) return null;
+    const toTime = (value: string | null | undefined) =>
+      value ? new Date(value).getTime() : 0;
+
+    const sorted = [...sessions].sort((a, b) => {
+      const timeDiff = toTime(b.last_sync_at) - toTime(a.last_sync_at);
+      if (timeDiff !== 0) return timeDiff;
+      const pendingDiff = (b.pending_count ?? 0) - (a.pending_count ?? 0);
+      if (pendingDiff !== 0) return pendingDiff;
+      return (a.session_id ?? "").localeCompare(b.session_id ?? "");
+    });
+    return sorted[0]?.session_id ?? null;
+  };
+
+  const effectiveSessionId = useMemo(() => {
+    return selectedSession ?? resolveDefaultSessionId(memorySessions);
+  }, [selectedSession, memorySessions]);
+
+  const {
+    data: memoryMessagesInfinite,
+    isLoading: memoryMessagesLoading,
+    fetchNextPage: fetchNextMessagesPage,
+    hasNextPage: hasNextMessagesPage,
+    isFetchingNextPage: isFetchingNextMessagesPage,
+  } = useGetMemorySessionMessages(
+    {
+      memoryId: selectedMemoryId ?? "",
+      sessionId: effectiveSessionId ?? "",
+      size: 50,
+    },
+    {
+      enabled: !!selectedMemoryId && !!effectiveSessionId,
+    },
+  );
+
+  useEffect(() => {
+    if (!selectedMemoryId) return;
+    if (!memorySessions.length) return;
+
+    const sessionIds = memorySessions
+      .map((s) => s.session_id)
+      .filter((sid): sid is string => !!sid);
+    if (!sessionIds.length) return;
+
+    setSelectedSession((prev) => {
+      if (prev && sessionIds.includes(prev)) return prev;
+      return resolveDefaultSessionId(memorySessions);
+    });
+  }, [selectedMemoryId, memorySessions]);
 
   useEffect(() => {
     if (isError && selectedMemoryId) {
@@ -135,8 +169,6 @@ export function useMemoriesData({
     setSelectedSession(null);
     setSelectedDocument(null);
     setDocumentPanelOpen(false);
-    setActiveSearch("");
-    setSearchQuery("");
 
     setAutoCaptureDraft(null);
     committedIsActiveRef.current = null;
@@ -156,59 +188,58 @@ export function useMemoriesData({
   }, []);
 
   const docsData = useMemo(() => {
-    const memoryDocuments = Array.isArray((memory as any)?.documents)
-      ? (((memory as any).documents as MemoryDocumentItem[]) ?? [])
-      : null;
+    const pages = memoryMessagesInfinite?.pages ?? [];
+    const rawDocuments: MemoryDocumentItem[] = pages
+      .flatMap((p) => p?.items ?? [])
+      .map((m) => {
+        const ingestionJobId = String(m?.ingestion_job_id ?? "");
+        const timestamp = String(m?.timestamp ?? "");
+        const sender = String(m?.sender ?? "");
+        const sessionId = String(m?.session_id ?? "");
+        const messageId =
+          ingestionJobId || timestamp || sender
+            ? [ingestionJobId, timestamp, sender].filter(Boolean).join(":" )
+            : "";
 
-    const prefillMessages = FIXED_PREFILL_MESSAGES;
+        return {
+          message_id: messageId,
+          session_id: sessionId,
+          sender,
+          content: String(m?.text ?? ""),
+          timestamp,
+        };
+      })
+      .filter((d) => d.content);
 
-    const rawDocuments: MemoryDocumentItem[] =
-      memoryDocuments && memoryDocuments.length > 0
-        ? memoryDocuments
-        : prefillMessages
-            .filter((m) => m && typeof m === "object")
-            .map((m) => ({
-              message_id: String(m.id ?? ""),
-              session_id: String(m.session_id ?? ""),
-              sender: String(m.sender ?? ""),
-              content: String(m.text ?? ""),
-              timestamp: String(m.timestamp ?? ""),
-            }))
-            .filter((d) => d.message_id && d.content);
+    const sessionScopedDocuments = effectiveSessionId
+      ? rawDocuments.filter((doc) => doc.session_id === effectiveSessionId)
+      : rawDocuments;
 
-    const q = activeSearch.trim().toLowerCase();
-
-    const filteredDocuments = !q
-      ? rawDocuments
-      : rawDocuments.filter((doc) => {
-          const content = (doc.content ?? "").toLowerCase();
-          const sender = (doc.sender ?? "").toLowerCase();
-          const sessionId = (doc.session_id ?? "").toLowerCase();
-          const messageId = (doc.message_id ?? "").toLowerCase();
-          return (
-            content.includes(q) ||
-            sender.includes(q) ||
-            sessionId.includes(q) ||
-            messageId.includes(q)
-          );
-        });
-
-    const sessions = Array.from(
+    const sessionsFromApi = Array.from(
       new Set(
-        rawDocuments
-          .map((d) => d.session_id)
+        (memorySessions ?? [])
+          .map((s) => s.session_id)
           .filter((sid): sid is string => !!sid && sid !== "(no session)"),
       ),
     );
 
+    const sessions = sessionsFromApi;
+
+    const totalFromApi =
+      memoryMessagesInfinite?.pages?.[0]?.total ?? sessionScopedDocuments.length;
+
     return {
-      documents: filteredDocuments,
-      total: filteredDocuments.length,
+      documents: sessionScopedDocuments,
+      total: totalFromApi,
       sessions,
     };
-  }, [memory, flowMessages, activeSearch]);
+  }, [
+    memoryMessagesInfinite,
+    memorySessions,
+    effectiveSessionId,
+  ]);
 
-  const docsLoading = isLoading;
+  const docsLoading = isLoading || memoryMessagesLoading;
 
   const deleteMutation = useDeleteMemory({
     onSuccess: () => {
@@ -235,9 +266,25 @@ export function useMemoriesData({
 
   const resolvedMemory = useMemo(() => {
     if (!memory) return memory;
-    if (autoCaptureDraft === null) return memory;
-    return { ...memory, is_active: autoCaptureDraft };
-  }, [memory, autoCaptureDraft]);
+
+    const selectedStats = effectiveSessionId
+      ? (memorySessions ?? []).find((s) => s.session_id === effectiveSessionId)
+      : null;
+
+    const nextMemory: MemoryInfo = {
+      ...memory,
+      ...(autoCaptureDraft === null ? {} : { is_active: autoCaptureDraft }),
+      ...(selectedStats
+        ? {
+            total_messages_processed: selectedStats.total_processed ?? 0,
+            pending_messages_count: selectedStats.pending_count ?? 0,
+            last_generated_at: selectedStats.last_sync_at ?? undefined,
+          }
+        : {}),
+    };
+
+    return nextMemory;
+  }, [memory, autoCaptureDraft, effectiveSessionId, memorySessions]);
 
   const handleToggleActive = (nextIsActive: boolean) => {
     if (!memory) return;
@@ -274,11 +321,6 @@ export function useMemoriesData({
     }, AUTO_CAPTURE_DEBOUNCE_MS);
   };
 
-  const handleSearch = () => {
-    setActiveSearch(searchQuery);
-    setSelectedSession(null);
-  };
-
   const handleOpenDocumentPanel = (doc: MemoryDocumentItem) => {
     setSelectedDocument(doc);
     setDocumentPanelOpen(true);
@@ -289,13 +331,13 @@ export function useMemoriesData({
     const map = new Map<string, MemoryDocumentItem[]>();
     for (const doc of docsData.documents) {
       const sid = doc.session_id || "(no session)";
-      if (selectedSession && sid !== selectedSession) continue;
+      if (effectiveSessionId && sid !== effectiveSessionId) continue;
       const list = map.get(sid) || [];
       list.push(doc);
       map.set(sid, list);
     }
     return map;
-  }, [docsData, selectedSession]);
+  }, [docsData, effectiveSessionId]);
 
   return {
     memories,
@@ -309,13 +351,11 @@ export function useMemoriesData({
     isLoading,
     docsData,
     docsLoading,
-    searchQuery,
-    setSearchQuery,
-    activeSearch,
-    setActiveSearch,
+    fetchNextMessagesPage,
+    hasNextMessagesPage,
+    isFetchingNextMessagesPage,
     selectedSession,
     setSelectedSession,
-    handleSearch,
     groupedBySession,
     documentPanelOpen,
     setDocumentPanelOpen,

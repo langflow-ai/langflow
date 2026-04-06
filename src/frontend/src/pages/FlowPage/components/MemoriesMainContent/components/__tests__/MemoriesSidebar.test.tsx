@@ -25,7 +25,6 @@ describe("MemoriesSidebar", () => {
   it("renders memory and status", () => {
     render(<MemoriesSidebar {...baseProps} />);
     expect(screen.getByText("Memory One")).toBeInTheDocument();
-    expect(screen.getByText("idle")).toBeInTheDocument();
   });
 
   it("calls onSelectMemory when memory item is clicked", () => {

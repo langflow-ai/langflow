@@ -13,21 +13,14 @@ const DEFAULTS: Omit<
   description: undefined,
   embedding_provider: "",
   is_active: true,
-  status: "idle",
-  error_message: undefined,
   total_messages_processed: 0,
-  total_chunks: 0,
   sessions_count: 0,
   batch_size: 1,
   preprocessing_enabled: false,
   preprocessing_model: undefined,
   preproc_instructions: undefined,
   pending_messages_count: 0,
-  updated_at: undefined,
   last_generated_at: undefined,
-  documents: [],
-  documents_total: 0,
-  document_sessions: [],
 };
 
 export const mapMemoryApiToMemoryInfo = (dto: MemoryApiDTO): MemoryInfo => {

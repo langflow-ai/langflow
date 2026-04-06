@@ -30,16 +30,12 @@ describe("MemoryKnowledgeBaseSection", () => {
         documents,
       },
       docsLoading: false,
-      searchQuery: "",
-      setSearchQuery: jest.fn(),
-      activeSearch: "",
-      setActiveSearch: jest.fn(),
-      selectedSession: null,
+      fetchNextMessagesPage: jest.fn(),
+      hasNextMessagesPage: false,
+      isFetchingNextMessagesPage: false,
       setSelectedSession: jest.fn(),
-      handleSearch: jest.fn(),
       groupedBySession: new Map([["session-1", documents]]),
       handleOpenDocumentPanel: jest.fn(),
-      totalChunks: 1,
     } as any;
   };
 
@@ -55,21 +51,5 @@ describe("MemoryKnowledgeBaseSection", () => {
 
     fireEvent.click(screen.getByText("hello"));
     expect(props.handleOpenDocumentPanel).toHaveBeenCalled();
-  });
-
-  it("clears active search", () => {
-    const props = makeBaseProps();
-    render(
-      <MemoryKnowledgeBaseSection
-        {...props}
-        activeSearch="abc"
-        searchQuery="abc"
-      />,
-    );
-
-    const clearButton = screen.getByRole("button", { name: /clear/i });
-    fireEvent.click(clearButton);
-    expect(props.setSearchQuery).toHaveBeenCalledWith("");
-    expect(props.setActiveSearch).toHaveBeenCalledWith("");
   });
 });

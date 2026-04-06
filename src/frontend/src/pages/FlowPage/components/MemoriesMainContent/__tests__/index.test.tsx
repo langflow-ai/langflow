@@ -73,13 +73,8 @@ describe("MemoriesMainContent", () => {
       isLoading: false,
       docsData: { total: 0, sessions: [], documents: [] },
       docsLoading: false,
-      searchQuery: "",
-      setSearchQuery: jest.fn(),
-      activeSearch: "",
-      setActiveSearch: jest.fn(),
       selectedSession: null,
       setSelectedSession: jest.fn(),
-      handleSearch: jest.fn(),
       groupedBySession: new Map(),
       documentPanelOpen: true,
       setDocumentPanelOpen: mockSetDocumentPanelOpen,
@@ -91,6 +86,9 @@ describe("MemoriesMainContent", () => {
       handleToggleActive: jest.fn(),
       createModalOpen: false,
       setCreateModalOpen: mockSetCreateModalOpen,
+      fetchNextMessagesPage: jest.fn(),
+      hasNextMessagesPage: false,
+      isFetchingNextMessagesPage: false,
     };
   });
 

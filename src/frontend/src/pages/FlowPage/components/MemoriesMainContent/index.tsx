@@ -35,13 +35,11 @@ export default function MemoriesMainContent() {
     isLoading,
     docsData,
     docsLoading,
-    searchQuery,
-    setSearchQuery,
-    activeSearch,
-    setActiveSearch,
+    fetchNextMessagesPage,
+    hasNextMessagesPage,
+    isFetchingNextMessagesPage,
     selectedSession,
     setSelectedSession,
-    handleSearch,
     groupedBySession,
     documentPanelOpen,
     setDocumentPanelOpen,
@@ -88,13 +86,11 @@ export default function MemoriesMainContent() {
             memory={memory}
             docsData={docsData}
             docsLoading={docsLoading}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            activeSearch={activeSearch}
-            setActiveSearch={setActiveSearch}
+            fetchNextMessagesPage={fetchNextMessagesPage}
+            hasNextMessagesPage={hasNextMessagesPage}
+            isFetchingNextMessagesPage={isFetchingNextMessagesPage}
             selectedSession={selectedSession}
             setSelectedSession={setSelectedSession}
-            handleSearch={handleSearch}
             groupedBySession={groupedBySession}
             handleOpenDocumentPanel={handleOpenDocumentPanel}
             deleteMutation={deleteMutation}
