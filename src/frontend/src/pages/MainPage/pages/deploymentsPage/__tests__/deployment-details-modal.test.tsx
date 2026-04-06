@@ -42,7 +42,7 @@ jest.mock(
 );
 
 let mockConfigsData: {
-  configs: Array<{ id: string; name: string }>;
+  configs: Array<{ app_id: string; connection_id: string }>;
 } | null = null;
 let mockIsFetchingConfigs = false;
 
@@ -76,7 +76,6 @@ const makeDeployment = (overrides: Partial<Deployment> = {}): Deployment => ({
   provider_data: { llm: "granite-13b-chat" },
   resource_key: "rk-1",
   attached_count: 2,
-  matched_attachments: null,
   provider_account_id: "prov-1",
   ...overrides,
 });
@@ -121,8 +120,8 @@ beforeEach(() => {
   mockIsFetchingAttachments = false;
   mockConfigsData = {
     configs: [
-      { id: "cfg-1", name: "Production Config" },
-      { id: "cfg-2", name: "Staging Config" },
+      { app_id: "cfg-1", connection_id: "conn-1" },
+      { app_id: "cfg-2", connection_id: "conn-2" },
     ],
   };
   mockIsFetchingConfigs = false;
@@ -200,8 +199,9 @@ describe("Flow list with versions and connections", () => {
 
   it("maps connection IDs to names via configMap", () => {
     renderModal();
-    expect(screen.getByText("Production Config")).toBeInTheDocument();
-    expect(screen.getByText("Staging Config")).toBeInTheDocument();
+    // Configs matched by app_id — the app_id strings are rendered as connection names
+    expect(screen.getByText("cfg-1")).toBeInTheDocument();
+    expect(screen.getByText("cfg-2")).toBeInTheDocument();
   });
 
   it("shows 'No flows attached' when flow list is empty", () => {
@@ -210,11 +210,11 @@ describe("Flow list with versions and connections", () => {
     expect(screen.getByText("No flows attached")).toBeInTheDocument();
   });
 
-  it("shows flow_id as fallback when config not found", () => {
+  it("shows nothing for connections when config not found", () => {
     mockConfigsData = { configs: [] };
     renderModal();
-    // app_ids that aren't in configMap appear as-is
-    expect(screen.getByText("cfg-1")).toBeInTheDocument();
+    // app_ids not in configMap are filtered out, so no connection labels appear
+    expect(screen.queryByText("cfg-1")).not.toBeInTheDocument();
   });
 });
 

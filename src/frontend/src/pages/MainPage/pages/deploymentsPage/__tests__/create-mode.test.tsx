@@ -31,9 +31,8 @@ const mockProvider: DeploymentProvider = {
 const mockInstance: ProviderAccount = {
   id: "instance-1",
   name: "My WxO Instance",
-  provider_tenant_id: "tenant-1",
   provider_key: "watsonx-orchestrate",
-  provider_url: "https://api.example.com",
+  url: "https://api.example.com",
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z",
 };
@@ -136,7 +135,7 @@ describe("Create mode — canGoNext validation", () => {
         result.current.setCredentials({
           name: "New Account",
           provider_key: "watsonx-orchestrate",
-          provider_url: "https://api.example.com",
+          url: "https://api.example.com",
           api_key: "my-secret-key", // pragma: allowlist secret
         });
       });
@@ -153,7 +152,7 @@ describe("Create mode — canGoNext validation", () => {
         result.current.setCredentials({
           name: "New Account",
           provider_key: "watsonx-orchestrate",
-          provider_url: "",
+          url: "",
           api_key: "my-secret-key", // pragma: allowlist secret
         });
       });
@@ -369,7 +368,7 @@ describe("Create mode — provider selection", () => {
     expect(result.current.credentials).toEqual({
       name: "",
       provider_key: "",
-      provider_url: "",
+      url: "",
       api_key: "",
     });
   });
@@ -383,7 +382,7 @@ describe("Create mode — provider selection", () => {
       result.current.setCredentials({
         name: "New Account",
         provider_key: "watsonx-orchestrate",
-        provider_url: "https://api.example.com",
+        url: "https://api.example.com",
         api_key: "my-secret-key", // pragma: allowlist secret
       });
     });
@@ -511,7 +510,7 @@ describe("Create mode — buildProviderAccountPayload", () => {
       result.current.setCredentials({
         name: "Account",
         provider_key: "watsonx-orchestrate",
-        provider_url: "",
+        url: "",
         api_key: "key-123", // pragma: allowlist secret
       });
     });
@@ -526,7 +525,7 @@ describe("Create mode — buildProviderAccountPayload", () => {
       result.current.setCredentials({
         name: "  My Account  ",
         provider_key: "watsonx-orchestrate",
-        provider_url: "  https://api.example.com  ",
+        url: "  https://api.example.com  ",
         api_key: "  secret-key-123  ", // pragma: allowlist secret
       });
     });
@@ -535,7 +534,7 @@ describe("Create mode — buildProviderAccountPayload", () => {
     expect(payload).toEqual({
       name: "My Account",
       provider_key: "watsonx-orchestrate",
-      provider_url: "https://api.example.com",
+      url: "https://api.example.com",
       provider_data: { api_key: "secret-key-123" }, // pragma: allowlist secret
     });
   });
@@ -547,7 +546,7 @@ describe("Create mode — buildProviderAccountPayload", () => {
       result.current.setCredentials({
         name: "  padded  ",
         provider_key: "watsonx-orchestrate",
-        provider_url: "  https://padded.com  ",
+        url: "  https://padded.com  ",
         api_key: "  padded-key  ", // pragma: allowlist secret
       });
     });
@@ -556,7 +555,7 @@ describe("Create mode — buildProviderAccountPayload", () => {
     expect(payload).toBeDefined();
     if (!payload) return;
     expect(payload.name).toBe("padded");
-    expect(payload.provider_url).toBe("https://padded.com");
+    expect(payload.url).toBe("https://padded.com");
     expect(payload.provider_data.api_key).toBe("padded-key"); // pragma: allowlist secret
   });
 });
@@ -579,11 +578,9 @@ describe("Create mode — buildDeploymentPayload", () => {
 
     const payload = result.current.buildDeploymentPayload("provider-1");
     expect(payload.provider_id).toBe("provider-1");
-    expect(payload.spec).toEqual({
-      name: "Test Agent",
-      description: "Agent description",
-      type: "agent",
-    });
+    expect(payload.name).toBe("Test Agent");
+    expect(payload.description).toBe("Agent description");
+    expect(payload.type).toBe("agent");
   });
 
   it("includes LLM in provider_data", () => {
@@ -610,9 +607,9 @@ describe("Create mode — buildDeploymentPayload", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    expect(payload.provider_data.operations).toHaveLength(2);
-    expect(payload.provider_data.operations[0].op).toBe("bind");
-    expect(payload.provider_data.operations[1].op).toBe("bind");
+    expect(payload.provider_data.add_flows).toHaveLength(2);
+    expect(payload.provider_data.add_flows[0].flow_version_id).toBeDefined();
+    expect(payload.provider_data.add_flows[1].flow_version_id).toBeDefined();
   });
 
   it("includes app_ids from attachedConnectionByFlow", () => {
@@ -628,8 +625,8 @@ describe("Create mode — buildDeploymentPayload", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    const bindOp = payload.provider_data.operations[0];
-    expect(bindOp.app_ids).toEqual(["app-1", "app-2"]);
+    const addFlow = payload.provider_data.add_flows[0];
+    expect(addFlow.app_ids).toEqual(["app-1", "app-2"]);
   });
 
   it("includes raw_payloads only for new connections", () => {
@@ -661,9 +658,9 @@ describe("Create mode — buildDeploymentPayload", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    const rawPayloads = payload.provider_data.connections.raw_payloads;
-    expect(rawPayloads).toHaveLength(1);
-    expect(rawPayloads[0].app_id).toBe("conn-new");
+    const connections = payload.provider_data.connections;
+    expect(connections).toHaveLength(1);
+    expect(connections[0].app_id).toBe("conn-new");
   });
 
   it("wraps env vars with source: raw by default", () => {
@@ -688,9 +685,13 @@ describe("Create mode — buildDeploymentPayload", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    const envVars =
-      payload.provider_data.connections.raw_payloads[0].environment_variables;
-    expect(envVars.DB_HOST).toEqual({ value: "localhost", source: "raw" });
+    const credentials = payload.provider_data.connections[0].credentials;
+    const dbHostCred = credentials.find((c) => c.key === "DB_HOST");
+    expect(dbHostCred).toEqual({
+      key: "DB_HOST",
+      value: "localhost",
+      source: "raw",
+    });
   });
 
   it("wraps global var keys with source: variable", () => {
@@ -719,10 +720,16 @@ describe("Create mode — buildDeploymentPayload", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    const envVars =
-      payload.provider_data.connections.raw_payloads[0].environment_variables;
-    expect(envVars.DB_HOST).toEqual({ value: "localhost", source: "raw" });
-    expect(envVars.SECRET_KEY).toEqual({
+    const credentials = payload.provider_data.connections[0].credentials;
+    const dbHostCred = credentials.find((c) => c.key === "DB_HOST");
+    const secretKeyCred = credentials.find((c) => c.key === "SECRET_KEY");
+    expect(dbHostCred).toEqual({
+      key: "DB_HOST",
+      value: "localhost",
+      source: "raw",
+    });
+    expect(secretKeyCred).toEqual({
+      key: "SECRET_KEY",
       value: "my-global-var",
       source: "variable",
     });
@@ -738,7 +745,7 @@ describe("Create mode — buildDeploymentPayload", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    expect(payload.provider_data.connections.raw_payloads).toEqual([]);
+    expect(payload.provider_data.connections).toEqual([]);
   });
 
   it("returns empty operations when no flows attached", () => {
@@ -750,7 +757,7 @@ describe("Create mode — buildDeploymentPayload", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    expect(payload.provider_data.operations).toEqual([]);
+    expect(payload.provider_data.add_flows).toEqual([]);
   });
 });
 
@@ -801,26 +808,26 @@ describe("Create mode — multi-flow scenarios", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    const ops = payload.provider_data.operations;
+    const addFlows = payload.provider_data.add_flows;
 
-    expect(ops).toHaveLength(3);
+    expect(addFlows).toHaveLength(3);
 
-    const flow1Op = ops.find((o) => o.flow_version_id === "ver-1");
+    const flow1Op = addFlows.find((o) => o.flow_version_id === "ver-1");
     expect(flow1Op?.tool_name).toBe("Tool Alpha");
     expect(flow1Op?.app_ids).toEqual(["conn-a"]);
 
-    const flow2Op = ops.find((o) => o.flow_version_id === "ver-2");
+    const flow2Op = addFlows.find((o) => o.flow_version_id === "ver-2");
     expect(flow2Op?.tool_name).toBe("Tool Beta");
     expect(flow2Op?.app_ids).toEqual(["conn-b"]);
 
-    const flow3Op = ops.find((o) => o.flow_version_id === "ver-3");
+    const flow3Op = addFlows.find((o) => o.flow_version_id === "ver-3");
     expect(flow3Op?.tool_name).toBeUndefined();
     expect(flow3Op?.app_ids).toEqual(["conn-a", "conn-b"]);
 
-    // Both connections are new, so both appear in raw_payloads
-    const rawPayloads = payload.provider_data.connections.raw_payloads;
-    expect(rawPayloads).toHaveLength(2);
-    const appIds = rawPayloads.map((r) => r.app_id).sort();
+    // Both connections are new, so both appear in connections
+    const connections = payload.provider_data.connections;
+    expect(connections).toHaveLength(2);
+    const appIds = connections.map((r) => r.app_id).sort();
     expect(appIds).toEqual(["conn-a", "conn-b"]);
   });
 
@@ -851,10 +858,8 @@ describe("Create mode — multi-flow scenarios", () => {
 
     const payload = result.current.buildDeploymentPayload("p-1");
     // Even though both flows reference the same connection, it should only appear once
-    expect(payload.provider_data.connections.raw_payloads).toHaveLength(1);
-    expect(payload.provider_data.connections.raw_payloads[0].app_id).toBe(
-      "conn-shared",
-    );
+    expect(payload.provider_data.connections).toHaveLength(1);
+    expect(payload.provider_data.connections[0].app_id).toBe("conn-shared");
   });
 });
 
@@ -872,7 +877,7 @@ describe("Create mode — edge cases", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    expect(payload.spec.description).toBe("");
+    expect(payload.description).toBe("");
   });
 
   it("buildDeploymentPayload works with MCP deployment type", () => {
@@ -885,7 +890,7 @@ describe("Create mode — edge cases", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    expect(payload.spec.type).toBe("mcp");
+    expect(payload.type).toBe("mcp");
   });
 
   it("connection with empty environmentVariables produces empty object", () => {
@@ -910,9 +915,7 @@ describe("Create mode — edge cases", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    expect(
-      payload.provider_data.connections.raw_payloads[0].environment_variables,
-    ).toEqual({});
+    expect(payload.provider_data.connections[0].credentials).toEqual([]);
   });
 
   it("buildDeploymentUpdatePayload throws in create mode", () => {

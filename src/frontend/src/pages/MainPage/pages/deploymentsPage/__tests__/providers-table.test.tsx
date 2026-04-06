@@ -20,9 +20,8 @@ const makeProvider = (
 ): ProviderAccount => ({
   id: "prov-1",
   name: "Production WxO",
-  provider_tenant_id: "tenant-1",
   provider_key: "watsonx-orchestrate",
-  provider_url: "https://api.example.com",
+  url: "https://api.example.com",
   created_at: "2025-05-01T00:00:00Z",
   updated_at: "2025-05-10T00:00:00Z",
   ...overrides,

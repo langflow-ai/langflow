@@ -297,11 +297,11 @@ describe("Edit mode — no-op and partial update payloads", () => {
     act(() => result.current.setDeploymentDescription("New description only"));
 
     const payload = result.current.buildDeploymentUpdatePayload();
-    expect(payload.spec).toEqual({ description: "New description only" });
-    // No operations since no flows changed
-    const ops =
-      (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
-    expect(ops).toHaveLength(0);
+    expect(payload.description).toBe("New description only");
+    // No upsert_flows since no flows changed
+    const upsertFlows =
+      (payload.provider_data?.upsert_flows as Array<unknown>) ?? [];
+    expect(upsertFlows).toHaveLength(0);
   });
 
   it("sends only LLM change without spec when description unchanged", () => {
@@ -311,7 +311,7 @@ describe("Edit mode — no-op and partial update payloads", () => {
 
     const payload = result.current.buildDeploymentUpdatePayload();
     expect(payload.provider_data?.llm).toBe("new-model");
-    expect(payload.spec).toBeUndefined();
+    expect(payload.description).toBeUndefined();
   });
 
   it("sends only flow operations when only flows changed", () => {
@@ -322,16 +322,14 @@ describe("Edit mode — no-op and partial update payloads", () => {
     });
 
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops =
-      (payload.provider_data?.operations as Array<{
-        op: string;
+    const upsertFlows =
+      (payload.provider_data?.upsert_flows as Array<{
         flow_version_id?: string;
       }>) ?? [];
-    const bindOps = ops.filter((o) => o.op === "bind");
-    expect(bindOps).toHaveLength(1);
-    expect(bindOps[0].flow_version_id).toBe("ver-new");
-    // Description didn't change → no spec
-    expect(payload.spec).toBeUndefined();
+    expect(upsertFlows).toHaveLength(1);
+    expect(upsertFlows[0].flow_version_id).toBe("ver-new");
+    // Description didn't change → no description field
+    expect(payload.description).toBeUndefined();
   });
 });
 
@@ -352,14 +350,17 @@ describe("Edit mode — detach then re-attach same flow", () => {
       versionTag: "v1",
     });
 
-    // Payload should have no remove_tool or bind for flow-1 (it's back to original)
+    // Payload should have no remove_flows or upsert_flows for flow-1 (it's back to original)
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops =
-      (payload.provider_data?.operations as Array<{
-        op: string;
+    const upsertFlows =
+      (payload.provider_data?.upsert_flows as Array<{
         flow_version_id?: string;
       }>) ?? [];
-    expect(ops.filter((o) => o.flow_version_id === "ver-1")).toHaveLength(0);
+    const removeFlows = (payload.provider_data?.remove_flows as string[]) ?? [];
+    expect(
+      upsertFlows.filter((o) => o.flow_version_id === "ver-1"),
+    ).toHaveLength(0);
+    expect(removeFlows.includes("ver-1")).toBe(false);
   });
 
   it("detaching all flows then re-attaching one produces correct ops", () => {
@@ -376,20 +377,21 @@ describe("Edit mode — detach then re-attach same flow", () => {
     act(() => result.current.handleUndoRemoveFlow("flow-2"));
 
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops =
-      (payload.provider_data?.operations as Array<{
-        op: string;
+    const removeFlows = (payload.provider_data?.remove_flows as string[]) ?? [];
+    const upsertFlows =
+      (payload.provider_data?.upsert_flows as Array<{
         flow_version_id?: string;
       }>) ?? [];
 
-    // flow-1 should have remove_tool
-    expect(ops.filter((o) => o.op === "remove_tool")).toHaveLength(1);
-    expect(ops.find((o) => o.op === "remove_tool")?.flow_version_id).toBe(
-      "ver-1",
-    );
+    // flow-1 should be in remove_flows
+    expect(removeFlows).toHaveLength(1);
+    expect(removeFlows[0]).toBe("ver-1");
 
-    // flow-2 was undone, so no remove_tool and no bind (it's pre-existing)
-    expect(ops.filter((o) => o.flow_version_id === "ver-2")).toHaveLength(0);
+    // flow-2 was undone, so it should not be in remove_flows or upsert_flows
+    expect(removeFlows.includes("ver-2")).toBe(false);
+    expect(
+      upsertFlows.filter((o) => o.flow_version_id === "ver-2"),
+    ).toHaveLength(0);
   });
 });
 

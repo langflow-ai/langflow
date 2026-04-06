@@ -92,7 +92,7 @@ describe("Custom tool naming", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
-    expect(payload.provider_data.operations[0].tool_name).toBe(
+    expect(payload.provider_data.add_flows[0].tool_name).toBe(
       "my-tool_v2.0 (beta) [test]",
     );
   });
@@ -110,7 +110,7 @@ describe("Custom tool naming", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
-    expect(payload.provider_data.operations[0].tool_name).toBe(
+    expect(payload.provider_data.add_flows[0].tool_name).toBe(
       "ferramenta_análise",
     );
   });
@@ -127,8 +127,8 @@ describe("Custom tool naming", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
-    expect(payload.provider_data.operations[0].tool_name).toBe(longName);
-    expect(payload.provider_data.operations[0].tool_name).toHaveLength(500);
+    expect(payload.provider_data.add_flows[0].tool_name).toBe(longName);
+    expect(payload.provider_data.add_flows[0].tool_name).toHaveLength(500);
   });
 
   it("two flows can have the same tool name (no client-side collision check)", () => {
@@ -148,10 +148,10 @@ describe("Custom tool naming", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
-    const ops = payload.provider_data.operations;
-    expect(ops).toHaveLength(2);
-    expect(ops[0].tool_name).toBe("Same Name");
-    expect(ops[1].tool_name).toBe("Same Name");
+    const addFlows = payload.provider_data.add_flows;
+    expect(addFlows).toHaveLength(2);
+    expect(addFlows[0].tool_name).toBe("Same Name");
+    expect(addFlows[1].tool_name).toBe("Same Name");
   });
 
   it("each flow can have its own tool name", () => {

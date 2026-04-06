@@ -10,7 +10,9 @@ const mockSetSelectedProvider = jest.fn();
 const mockSetSelectedInstance = jest.fn();
 const mockSetCredentials = jest.fn();
 
-let mockProviderAccountsData: { providers: ProviderAccount[] } | undefined;
+let mockProviderAccountsData:
+  | { provider_accounts: ProviderAccount[] }
+  | undefined;
 
 jest.mock(
   "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts",
@@ -29,7 +31,7 @@ jest.mock("../contexts/deployment-stepper-context", () => ({
     credentials: {
       name: "",
       provider_key: "watsonx-orchestrate",
-      provider_url: "",
+      url: "",
       api_key: "",
     } as ProviderCredentials,
     setCredentials: mockSetCredentials,
@@ -51,9 +53,8 @@ const makeEnvironment = (
 ): ProviderAccount => ({
   id: "env-1",
   name: "Prod Environment",
-  provider_tenant_id: "tenant-1",
   provider_key: "watsonx-orchestrate",
-  provider_url: "https://api.prod.example.com",
+  url: "https://api.prod.example.com",
   created_at: "2025-05-01T00:00:00Z",
   updated_at: "2025-05-01T00:00:00Z",
   ...overrides,
@@ -97,7 +98,7 @@ describe("Basic rendering", () => {
 
 describe("No existing environments", () => {
   it("shows the credentials form directly", () => {
-    mockProviderAccountsData = { providers: [] };
+    mockProviderAccountsData = { provider_accounts: [] };
     render(<StepProvider />);
     expect(screen.getByPlaceholderText("e.g. Production")).toBeInTheDocument();
     expect(
@@ -106,7 +107,7 @@ describe("No existing environments", () => {
   });
 
   it("does not show the environment tab toggle", () => {
-    mockProviderAccountsData = { providers: [] };
+    mockProviderAccountsData = { provider_accounts: [] };
     render(<StepProvider />);
     expect(
       screen.queryByText("Choose existing environment"),
@@ -121,12 +122,12 @@ describe("No existing environments", () => {
 describe("With existing environments", () => {
   beforeEach(() => {
     mockProviderAccountsData = {
-      providers: [
+      provider_accounts: [
         makeEnvironment({ id: "env-1", name: "Prod Environment" }),
         makeEnvironment({
           id: "env-2",
           name: "Staging",
-          provider_url: "https://api.staging.example.com",
+          url: "https://api.staging.example.com",
         }),
       ],
     };
