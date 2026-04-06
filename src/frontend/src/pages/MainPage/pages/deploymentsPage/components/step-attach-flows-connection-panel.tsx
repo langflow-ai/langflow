@@ -244,10 +244,18 @@ export const ConnectionPanel = memo(function ConnectionPanel({
 
         {/* Footer buttons */}
         <div className="flex items-center gap-3 pt-4">
-          <Button variant="outline" onClick={onChangeFlow}>
+          <Button
+            variant="outline"
+            onClick={onChangeFlow}
+            data-testid="connection-change-flow"
+          >
             Change Flow
           </Button>
-          <Button variant="outline" onClick={onSkipConnection}>
+          <Button
+            variant="outline"
+            onClick={onSkipConnection}
+            data-testid="connection-skip"
+          >
             Skip
           </Button>
           {connectionTab === "available" ? (
@@ -255,6 +263,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
               className="flex-1"
               disabled={selectedConnections.size === 0}
               onClick={onAttachConnection}
+              data-testid="connection-attach"
             >
               Attach Connection to Flow
             </Button>
@@ -263,6 +272,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
               className="flex-1"
               disabled={newConnectionName.trim() === "" || isDuplicateName}
               onClick={onCreateConnection}
+              data-testid="connection-create"
             >
               Create Connection
             </Button>

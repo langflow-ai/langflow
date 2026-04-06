@@ -106,7 +106,11 @@ export default function DeploymentDetailsModal({
         )}
 
         <div className="flex justify-end border-t px-6 py-4">
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            data-testid="deployment-details-close"
+          >
             Close
           </Button>
         </div>

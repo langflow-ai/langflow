@@ -89,10 +89,19 @@ export default function AddProviderModal({
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-4">
-          <Button variant="outline" onClick={handleClose} disabled={isSaving}>
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSaving}
+            data-testid="add-provider-cancel"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!canSave || isSaving}>
+          <Button
+            onClick={handleSave}
+            disabled={!canSave || isSaving}
+            data-testid="add-provider-save"
+          >
             {isSaving ? "Saving..." : "Save"}
           </Button>
         </div>
