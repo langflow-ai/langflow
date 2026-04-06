@@ -207,7 +207,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 "An agent with this name already exists in the provider. "
                 "Please choose a different name or delete the existing agent first."
             )
-        if "connection" in lower or "app_id" in lower:
+        if ("connection" in lower or "app_id" in lower) and ("already exists" in lower or "conflict" in lower):
             return (
                 "A connection referenced in this request already exists in the provider. "
                 "Reference it as an existing connection instead of creating a new one."

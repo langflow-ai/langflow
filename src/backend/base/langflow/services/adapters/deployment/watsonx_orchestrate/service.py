@@ -740,26 +740,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
 
             configs: list[ConfigListItem] = []
-            seen_ids: set[str] = set()
             for connection in raw_connections or []:
                 if not isinstance(connection, ListConfigsResponse):
-                    logger.debug(
-                        "list_configs: skipping unexpected connection entry type: %s",
-                        type(connection).__name__,
-                    )
-                    continue
-                config_id = str(connection.connection_id or "").strip()
-                config_name = str(connection.app_id or "").strip()
-                if not config_id or not config_name:
-                    logger.debug(
-                        "list_configs: skipping config with missing connection_id/app_id: connection_id=%s app_id=%s",
-                        connection.connection_id,
-                        connection.app_id,
-                    )
-                    continue
-                if config_id in seen_ids:
-                    continue
-                seen_ids.add(config_id)
+                    msg = f"wxO list_configs returned an unexpected connection entry type: {type(connection).__name__}."
+                    raise InvalidContentError(message=msg)
+                config_id = connection.connection_id
+                config_name = connection.app_id
                 config_type = self._normalize_optional_text(connection.security_scheme)
                 configs.append(
                     self._build_config_list_item(
@@ -817,14 +803,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             if not connections:
                 continue
             for app_id, connection_id in connections.items():
-                normalized_app_id = str(app_id).strip()
-                normalized_connection_id = str(connection_id).strip()
-                if not normalized_app_id:
-                    continue
-                app_to_connection_id.setdefault(
-                    normalized_app_id,
-                    normalized_connection_id or normalized_app_id,
-                )
+                app_to_connection_id.setdefault(app_id, connection_id)
 
         connection_type_by_id: dict[str, str] = {}
         connection_ids = dedupe_list(
@@ -842,7 +821,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 for connection in detailed_connections or []:
                     if not isinstance(connection, ListConfigsResponse):
                         continue
-                    connection_id = str(connection.connection_id or "").strip()
+                    connection_id = connection.connection_id
                     if not connection_id:
                         continue
                     config_type = self._normalize_optional_text(connection.security_scheme)

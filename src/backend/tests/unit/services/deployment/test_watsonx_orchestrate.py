@@ -3357,8 +3357,8 @@ async def test_list_configs_tenant_scope_preserves_type_metadata(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_list_configs_tenant_scope_ignores_dict_entries(monkeypatch):
-    """list_configs ignores dict entries and accepts only SDK models."""
+async def test_list_configs_tenant_scope_fails_fast_on_dict_entries(monkeypatch):
+    """Tenant-scope list_configs raises when wxO returns unexpected entry types."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
@@ -3376,14 +3376,13 @@ async def test_list_configs_tenant_scope_ignores_dict_entries(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert [config.id for config in result.configs] == ["model-conn"]
-    assert [config.name for config in result.configs] == ["model-cfg"]
+    with pytest.raises(InvalidContentError, match="unexpected connection entry type: dict"):
+        await service.list_configs(user_id="user-1", db=object(), params=None)
 
 
 @pytest.mark.anyio
-async def test_list_configs_tenant_scope_deduplicates(monkeypatch):
-    """Duplicate app_ids are deduplicated in tenant-scope listing."""
+async def test_list_configs_tenant_scope_preserves_duplicates(monkeypatch):
+    """Tenant-scope list_configs keeps duplicate wxO entries as returned."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
@@ -3403,13 +3402,13 @@ async def test_list_configs_tenant_scope_deduplicates(monkeypatch):
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
     result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert [config.id for config in result.configs] == ["conn-dup", "conn-unique"]
-    assert [config.name for config in result.configs] == ["cfg-dup", "cfg-unique"]
+    assert [config.id for config in result.configs] == ["conn-dup", "conn-dup", "conn-unique"]
+    assert [config.name for config in result.configs] == ["cfg-dup", "cfg-dup", "cfg-unique"]
 
 
 @pytest.mark.anyio
-async def test_list_configs_tenant_scope_skips_non_sdk_entries(monkeypatch):
-    """Objects that are not SDK ListConfigsResponse are skipped."""
+async def test_list_configs_tenant_scope_fails_fast_on_non_sdk_entries(monkeypatch):
+    """Tenant-scope list_configs raises on the first non-SDK entry."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
@@ -3431,9 +3430,8 @@ async def test_list_configs_tenant_scope_skips_non_sdk_entries(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert [config.id for config in result.configs] == ["valid-conn"]
-    assert [config.name for config in result.configs] == ["valid-cfg"]
+    with pytest.raises(InvalidContentError, match="unexpected connection entry type: str"):
+        await service.list_configs(user_id="user-1", db=object(), params=None)
 
 
 @pytest.mark.anyio
