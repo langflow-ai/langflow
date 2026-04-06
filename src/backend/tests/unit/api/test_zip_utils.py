@@ -4,12 +4,10 @@ import io
 import zipfile
 
 import pytest
-
 from langflow.api.utils.zip_utils import (
-    MAX_ENTRY_UNCOMPRESSED_BYTES,
     MAX_ZIP_ENTRIES,
-    _ZipExtractionResult,
     _extract_flows_sync,
+    _ZipExtractionResult,
 )
 
 
@@ -31,28 +29,34 @@ class TestExtractFlowsSync:
         assert result.warnings == []
 
     def test_multiple_json_files(self):
-        content = _make_zip({
-            "a.json": b'{"id": 1}',
-            "b.json": b'{"id": 2}',
-            "c.json": b'{"id": 3}',
-        })
+        content = _make_zip(
+            {
+                "a.json": b'{"id": 1}',
+                "b.json": b'{"id": 2}',
+                "c.json": b'{"id": 3}',
+            }
+        )
         result = _extract_flows_sync(content)
         assert len(result.flows) == 3
 
     def test_non_json_files_ignored(self):
-        content = _make_zip({
-            "flow.json": b'{"name": "test"}',
-            "readme.txt": b"just text",
-            "image.png": b"\x89PNG\r\n",
-        })
+        content = _make_zip(
+            {
+                "flow.json": b'{"name": "test"}',
+                "readme.txt": b"just text",
+                "image.png": b"\x89PNG\r\n",
+            }
+        )
         result = _extract_flows_sync(content)
         assert len(result.flows) == 1
 
     def test_invalid_json_skipped_with_warning(self):
-        content = _make_zip({
-            "good.json": b'{"name": "test"}',
-            "bad.json": b"not valid json {{{",
-        })
+        content = _make_zip(
+            {
+                "good.json": b'{"name": "test"}',
+                "bad.json": b"not valid json {{{",
+            }
+        )
         result = _extract_flows_sync(content)
         assert len(result.flows) == 1
         assert len(result.warnings) == 1
@@ -69,17 +73,21 @@ class TestExtractFlowsSync:
         assert result.warnings == []
 
     def test_case_insensitive_json_extension(self):
-        content = _make_zip({
-            "FLOW.JSON": b'{"name": "upper"}',
-            "Flow.Json": b'{"name": "mixed"}',
-        })
+        content = _make_zip(
+            {
+                "FLOW.JSON": b'{"name": "upper"}',
+                "Flow.Json": b'{"name": "mixed"}',
+            }
+        )
         result = _extract_flows_sync(content)
         assert len(result.flows) == 2
 
     def test_nested_json_in_directories(self):
-        content = _make_zip({
-            "dir/flow.json": b'{"nested": true}',
-        })
+        content = _make_zip(
+            {
+                "dir/flow.json": b'{"nested": true}',
+            }
+        )
         result = _extract_flows_sync(content)
         assert len(result.flows) == 1
         assert result.flows[0]["nested"] is True
@@ -89,18 +97,6 @@ class TestExtractFlowsSync:
         content = _make_zip(files)
         with pytest.raises(ValueError, match="exceeding the limit"):
             _extract_flows_sync(content)
-
-    def test_oversized_entry_skipped_with_warning(self):
-        # Create a zip with a json entry that reports a large file_size
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w") as zf:
-            zf.writestr("good.json", b'{"ok": true}')
-            # We can't easily fake file_size in a real zip, so we test
-            # the actual-size check path by creating content that's small
-            # (the file_size metadata check won't trigger for small files)
-        content = buf.getvalue()
-        result = _extract_flows_sync(content)
-        assert len(result.flows) == 1
 
 
 class TestZipExtractionResult:

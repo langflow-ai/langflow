@@ -1,7 +1,6 @@
 """Tests for pure utility functions in langflow.api.utils.core module."""
 
 import pytest
-
 from langflow.api.utils.core import (
     _get_provider_from_template,
     _get_validated_path_segment,
@@ -69,16 +68,18 @@ class TestRemoveApiKeys:
     def test_removes_api_key(self):
         flow = {
             "data": {
-                "nodes": [{
-                    "data": {
-                        "node": {
-                            "template": {
-                                "api_key": {"name": "api_key", "password": True, "value": "secret123"},
-                                "model_name": {"name": "model_name", "value": "gpt-4"},
+                "nodes": [
+                    {
+                        "data": {
+                            "node": {
+                                "template": {
+                                    "api_key": {"name": "api_key", "password": True, "value": "secret123"},
+                                    "model_name": {"name": "model_name", "value": "gpt-4"},
+                                }
                             }
                         }
                     }
-                }]
+                ]
             }
         }
         result = remove_api_keys(flow)
@@ -100,37 +101,62 @@ class TestRemoveApiKeys:
         result = remove_api_keys(flow)
         assert result == flow
 
+    def test_api_name_without_password_flag_not_cleared(self):
+        """When a field has an API-related name but password=False, its value should be kept."""
+        flow = {
+            "data": {
+                "nodes": [
+                    {
+                        "data": {
+                            "node": {
+                                "template": {
+                                    "api_key": {"name": "api_key", "password": False, "value": "keep-me"},
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+        result = remove_api_keys(flow)
+        assert result["data"]["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] == "keep-me"
+
 
 class TestSplitCodeToLines:
     def test_splits_code_string(self):
         flow = {
             "data": {
-                "nodes": [{
-                    "data": {
-                        "node": {
-                            "template": {
-                                "code_field": {"type": "code", "value": "line1\nline2\nline3"},
+                "nodes": [
+                    {
+                        "data": {
+                            "node": {
+                                "template": {
+                                    "code_field": {"type": "code", "value": "line1\nline2\nline3"},
+                                }
                             }
                         }
                     }
-                }]
+                ]
             }
         }
         _split_code_to_lines(flow)
-        assert flow["data"]["nodes"][0]["data"]["node"]["template"]["code_field"]["value"] == ["line1", "line2", "line3"]
+        expected = ["line1", "line2", "line3"]
+        assert flow["data"]["nodes"][0]["data"]["node"]["template"]["code_field"]["value"] == expected
 
     def test_ignores_non_code_type(self):
         flow = {
             "data": {
-                "nodes": [{
-                    "data": {
-                        "node": {
-                            "template": {
-                                "text_field": {"type": "text", "value": "line1\nline2"},
+                "nodes": [
+                    {
+                        "data": {
+                            "node": {
+                                "template": {
+                                    "text_field": {"type": "text", "value": "line1\nline2"},
+                                }
                             }
                         }
                     }
-                }]
+                ]
             }
         }
         _split_code_to_lines(flow)
@@ -139,15 +165,17 @@ class TestSplitCodeToLines:
     def test_already_list_ignored(self):
         flow = {
             "data": {
-                "nodes": [{
-                    "data": {
-                        "node": {
-                            "template": {
-                                "code_field": {"type": "code", "value": ["already", "split"]},
+                "nodes": [
+                    {
+                        "data": {
+                            "node": {
+                                "template": {
+                                    "code_field": {"type": "code", "value": ["already", "split"]},
+                                }
                             }
                         }
                     }
-                }]
+                ]
             }
         }
         _split_code_to_lines(flow)
@@ -158,15 +186,17 @@ class TestJoinCodeFromLines:
     def test_joins_lines(self):
         flow = {
             "data": {
-                "nodes": [{
-                    "data": {
-                        "node": {
-                            "template": {
-                                "code_field": {"type": "code", "value": ["line1", "line2"]},
+                "nodes": [
+                    {
+                        "data": {
+                            "node": {
+                                "template": {
+                                    "code_field": {"type": "code", "value": ["line1", "line2"]},
+                                }
                             }
                         }
                     }
-                }]
+                ]
             }
         }
         _join_code_from_lines(flow)
@@ -175,15 +205,17 @@ class TestJoinCodeFromLines:
     def test_string_value_unchanged(self):
         flow = {
             "data": {
-                "nodes": [{
-                    "data": {
-                        "node": {
-                            "template": {
-                                "code_field": {"type": "code", "value": "already string"},
+                "nodes": [
+                    {
+                        "data": {
+                            "node": {
+                                "template": {
+                                    "code_field": {"type": "code", "value": "already string"},
+                                }
                             }
                         }
                     }
-                }]
+                ]
             }
         }
         _join_code_from_lines(flow)
@@ -195,15 +227,17 @@ class TestSplitJoinRoundTrip:
         original_code = "def hello():\n    return 'hi'\n"
         flow = {
             "data": {
-                "nodes": [{
-                    "data": {
-                        "node": {
-                            "template": {
-                                "code_field": {"type": "code", "value": original_code},
+                "nodes": [
+                    {
+                        "data": {
+                            "node": {
+                                "template": {
+                                    "code_field": {"type": "code", "value": original_code},
+                                }
                             }
                         }
                     }
-                }]
+                ]
             }
         }
         _split_code_to_lines(flow)
@@ -232,13 +266,15 @@ class TestNormalizeFlowForExport:
     def test_strips_node_ui_state(self):
         flow = {
             "data": {
-                "nodes": [{
-                    "id": "1",
-                    "positionAbsolute": {"x": 0, "y": 0},
-                    "dragging": False,
-                    "selected": True,
-                    "data": {"node": {"template": {}}},
-                }]
+                "nodes": [
+                    {
+                        "id": "1",
+                        "positionAbsolute": {"x": 0, "y": 0},
+                        "dragging": False,
+                        "selected": True,
+                        "data": {"node": {"template": {}}},
+                    }
+                ]
             }
         }
         result = normalize_flow_for_export(flow)
@@ -258,15 +294,17 @@ class TestNormalizeCodeForImport:
     def test_joins_code_lines(self):
         flow = {
             "data": {
-                "nodes": [{
-                    "data": {
-                        "node": {
-                            "template": {
-                                "code": {"type": "code", "value": ["a", "b"]},
+                "nodes": [
+                    {
+                        "data": {
+                            "node": {
+                                "template": {
+                                    "code": {"type": "code", "value": ["a", "b"]},
+                                }
                             }
                         }
                     }
-                }]
+                ]
             }
         }
         result = normalize_code_for_import(flow)
@@ -454,6 +492,12 @@ class TestExtractGlobalVariablesFromHeaders:
         headers = {"x-langflow-global-var-myvar": "value"}
         result = extract_global_variables_from_headers(headers)
         assert "MYVAR" in result
+
+    def test_mixed_case_variable_name_uppercased(self):
+        headers = {"X-Langflow-Global-Var-MyVar": "value"}
+        result = extract_global_variables_from_headers(headers)
+        assert "MYVAR" in result
+        assert result["MYVAR"] == "value"
 
 
 class TestGetValidatedPathSegment:

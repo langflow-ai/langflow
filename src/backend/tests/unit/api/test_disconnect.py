@@ -1,10 +1,6 @@
 """Tests for DisconnectHandlerStreamingResponse."""
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock
-
 import pytest
-
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
 
 pytestmark = pytest.mark.asyncio
@@ -25,7 +21,9 @@ class TestDisconnectHandlerStreamingResponse:
         async def gen():
             yield b"data"
 
-        callback = MagicMock()
+        def callback():
+            pass
+
         response = DisconnectHandlerStreamingResponse(content=gen(), on_disconnect=callback)
         assert response.on_disconnect is callback
 
@@ -49,27 +47,35 @@ class TestDisconnectHandlerStreamingResponse:
         async def gen():
             yield b"data"
 
-        callback = MagicMock(return_value=None)
+        called = []
+
+        def callback():
+            called.append(True)
+
         response = DisconnectHandlerStreamingResponse(content=gen(), on_disconnect=callback)
 
         async def mock_receive():
             return {"type": "http.disconnect"}
 
         await response.listen_for_disconnect(mock_receive)
-        callback.assert_called_once()
+        assert len(called) == 1
 
     async def test_listen_for_disconnect_calls_async_callback(self):
         async def gen():
             yield b"data"
 
-        callback = AsyncMock()
+        called = []
+
+        async def callback():
+            called.append(True)
+
         response = DisconnectHandlerStreamingResponse(content=gen(), on_disconnect=callback)
 
         async def mock_receive():
             return {"type": "http.disconnect"}
 
         await response.listen_for_disconnect(mock_receive)
-        callback.assert_called_once()
+        assert len(called) == 1
 
     async def test_listen_for_disconnect_no_callback(self):
         async def gen():
@@ -87,7 +93,11 @@ class TestDisconnectHandlerStreamingResponse:
         async def gen():
             yield b"data"
 
-        callback = MagicMock(return_value=None)
+        called = []
+
+        def callback():
+            called.append(True)
+
         response = DisconnectHandlerStreamingResponse(content=gen(), on_disconnect=callback)
 
         call_count = 0
@@ -100,5 +110,5 @@ class TestDisconnectHandlerStreamingResponse:
             return {"type": "http.disconnect"}
 
         await response.listen_for_disconnect(mock_receive)
-        callback.assert_called_once()
+        assert len(called) == 1
         assert call_count == 3
