@@ -768,12 +768,59 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
     provider_data = resolved.provider_data or {}
 
     assert provider_data["llm"] == TEST_WXO_LLM
-    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow A"
+    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow_A"
     assert provider_data["tools"]["raw_payloads"][0]["provider_data"] == {
         "project_id": str(project_id),
         "source_ref": str(flow_version_id),
     }
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow A"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow_A"
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_translates_create_bind_with_tool_name_override() -> None:
+    """Create bind should use tool_name override directly in raw tool and bind selector."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    flow_version_id = uuid4()
+    flow_id = uuid4()
+    project_id = uuid4()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        name="create-deploy",
+        description="",
+        type="agent",
+        provider_data={
+            "llm": TEST_WXO_LLM,
+            "connections": [],
+            "add_flows": [
+                {
+                    "flow_version_id": str(flow_version_id),
+                    "tool_name": "My Create Tool",
+                    "app_ids": ["app-one"],
+                }
+            ],
+        },
+    )
+    row = SimpleNamespace(
+        flow_version_id=flow_version_id,
+        flow_version_data={"nodes": [], "edges": []},
+        flow_id=flow_id,
+        flow_name="Flow A",
+        flow_description="desc",
+        flow_tags=["tag"],
+    )
+
+    resolved = await mapper.resolve_deployment_create(
+        user_id=uuid4(),
+        project_id=project_id,
+        db=_FakeDb([row]),
+        payload=payload,
+    )
+    provider_data = resolved.provider_data or {}
+
+    assert provider_data["tools"]["raw_payloads"][0]["name"] == "My_Create_Tool"
+    assert provider_data["operations"][0]["op"] == "bind"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "My_Create_Tool"
+    assert all(op["op"] != "rename_tool" for op in provider_data["operations"])
 
 
 @pytest.mark.asyncio
@@ -818,8 +865,57 @@ async def test_watsonx_mapper_translates_existing_create_bind_into_update_payloa
 
     assert resolved.spec is not None
     assert resolved.spec.name == "existing-create"
-    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow A"
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow A"
+    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow_A"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow_A"
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_existing_create_bind_with_tool_name_override() -> None:
+    """Existing-create update path should keep bind behavior with tool_name override and no rename op."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    flow_version_id = uuid4()
+    flow_id = uuid4()
+    project_id = uuid4()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        name="existing-create",
+        description="desc",
+        type="agent",
+        provider_data={
+            "llm": TEST_WXO_LLM,
+            "existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46",
+            "connections": [],
+            "add_flows": [
+                {
+                    "flow_version_id": str(flow_version_id),
+                    "tool_name": "Existing Create Tool",
+                    "app_ids": ["app-one"],
+                }
+            ],
+        },
+    )
+    row = SimpleNamespace(
+        flow_version_id=flow_version_id,
+        flow_version_data={"nodes": [], "edges": []},
+        flow_id=flow_id,
+        flow_name="Flow A",
+        flow_description="desc",
+        flow_tags=["tag"],
+    )
+
+    resolved = await mapper.resolve_deployment_update_for_existing_create(
+        user_id=uuid4(),
+        project_id=project_id,
+        db=_FakeDb([row]),
+        payload=payload,
+    )
+    provider_data = resolved.provider_data or {}
+    ops = provider_data["operations"]
+
+    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Existing_Create_Tool"
+    assert [op["op"] for op in ops] == ["bind"]
+    assert ops[0]["tool"]["name_of_raw"] == "Existing_Create_Tool"
+    assert all(op["op"] != "rename_tool" for op in ops)
 
 
 @pytest.mark.asyncio
@@ -976,7 +1072,7 @@ async def test_watsonx_mapper_create_skips_empty_bind_operations_but_keeps_raw_t
     assert provider_data["llm"] == TEST_WXO_LLM
     assert provider_data["operations"] == []
     assert len(provider_data["tools"]["raw_payloads"]) == 1
-    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow A"
+    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow_A"
     assert provider_data["tools"]["raw_payloads"][0]["provider_data"] == {
         "project_id": str(project_id),
         "source_ref": str(flow_version_id),
@@ -1024,12 +1120,12 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
     provider_data = resolved.provider_data or {}
 
     assert provider_data["llm"] == TEST_WXO_LLM
-    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow A"
+    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow_A"
     assert provider_data["tools"]["raw_payloads"][0]["provider_data"] == {
         "project_id": str(project_id),
         "source_ref": str(flow_version_id),
     }
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow A"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow_A"
 
 
 @pytest.mark.asyncio
@@ -1087,9 +1183,9 @@ async def test_watsonx_mapper_skips_empty_bind_operations_but_keeps_raw_tools() 
     provider_data = resolved.provider_data or {}
 
     assert len(provider_data["tools"]["raw_payloads"]) == 2
-    assert sorted(item["name"] for item in provider_data["tools"]["raw_payloads"]) == ["Flow Bound", "Flow Unbound"]
+    assert sorted(item["name"] for item in provider_data["tools"]["raw_payloads"]) == ["Flow_Bound", "Flow_Unbound"]
     assert len(provider_data["operations"]) == 1
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow Bound"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow_Bound"
     assert provider_data["operations"][0]["app_ids"] == ["app-one"]
 
 
@@ -1685,7 +1781,7 @@ async def test_watsonx_mapper_bind_creates_new_tool_when_no_attachment() -> None
     )
     provider_data = resolved.provider_data or {}
 
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow B"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow_B"
 
 
 @pytest.mark.asyncio
@@ -1735,6 +1831,254 @@ async def test_watsonx_mapper_bind_reuse_with_empty_app_ids_emits_attach_tool() 
 
     assert provider_data["operations"][0]["op"] == "attach_tool"
     assert provider_data["operations"][0]["tool"]["tool_id"] == "existing-tool-id"
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_upsert_flow_with_tool_name_emits_rename_for_existing_attachment() -> None:
+    """tool_name on upsert_flows should become rename_tool for existing attachments."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    flow_version_id = uuid4()
+    project_id = uuid4()
+
+    flow_row = SimpleNamespace(
+        flow_version_id=flow_version_id,
+        flow_version_number=1,
+        flow_version_data={"nodes": [], "edges": []},
+        flow_id=uuid4(),
+        flow_name="Flow C",
+        flow_description="desc",
+        flow_tags=["tag"],
+        project_id=project_id,
+    )
+    attachment_row = SimpleNamespace(
+        flow_version_id=flow_version_id,
+        provider_snapshot_id="existing-tool-id",
+    )
+
+    payload = DeploymentUpdateRequest(
+        provider_data={
+            "llm": TEST_WXO_LLM,
+            "upsert_flows": [
+                {
+                    "flow_version_id": str(flow_version_id),
+                    "add_app_ids": [],
+                    "remove_app_ids": [],
+                    "tool_name": "My Better Tool",
+                }
+            ],
+        }
+    )
+
+    db = _MultiQueryFakeDb(flow_rows=[flow_row], attachment_rows=[attachment_row])
+
+    resolved = await mapper.resolve_deployment_update(
+        user_id=uuid4(),
+        deployment_db_id=uuid4(),
+        db=db,
+        payload=payload,
+    )
+    provider_data = resolved.provider_data or {}
+
+    assert provider_data["operations"][0]["op"] == "attach_tool"
+    assert provider_data["operations"][1]["op"] == "rename_tool"
+    assert provider_data["operations"][1]["tool"]["tool_id"] == "existing-tool-id"
+    assert provider_data["operations"][1]["new_name"] == "My_Better_Tool"
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_upsert_flow_with_add_remove_and_tool_name_emits_bind_unbind_rename() -> None:
+    """upsert_flows with add/remove + tool_name should emit bind, unbind, and rename for existing attachments."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    flow_version_id = uuid4()
+    project_id = uuid4()
+
+    flow_row = SimpleNamespace(
+        flow_version_id=flow_version_id,
+        flow_version_number=1,
+        flow_version_data={"nodes": [], "edges": []},
+        flow_id=uuid4(),
+        flow_name="Flow D",
+        flow_description="desc",
+        flow_tags=["tag"],
+        project_id=project_id,
+    )
+    attachment_row = SimpleNamespace(
+        flow_version_id=flow_version_id,
+        provider_snapshot_id="existing-tool-id",
+    )
+
+    payload = DeploymentUpdateRequest(
+        provider_data={
+            "llm": TEST_WXO_LLM,
+            "upsert_flows": [
+                {
+                    "flow_version_id": str(flow_version_id),
+                    "add_app_ids": ["app-add-1", "app-add-2"],
+                    "remove_app_ids": ["app-remove-1"],
+                    "tool_name": "My Mixed Tool",
+                }
+            ],
+        }
+    )
+
+    db = _MultiQueryFakeDb(flow_rows=[flow_row], attachment_rows=[attachment_row])
+
+    resolved = await mapper.resolve_deployment_update(
+        user_id=uuid4(),
+        deployment_db_id=uuid4(),
+        db=db,
+        payload=payload,
+    )
+    provider_data = resolved.provider_data or {}
+
+    assert provider_data["operations"][0]["op"] == "bind"
+    assert provider_data["operations"][0]["tool"]["tool_id_with_ref"]["tool_id"] == "existing-tool-id"
+    assert provider_data["operations"][0]["app_ids"] == ["app-add-1", "app-add-2"]
+
+    assert provider_data["operations"][1]["op"] == "unbind"
+    assert provider_data["operations"][1]["tool"]["tool_id"] == "existing-tool-id"
+    assert provider_data["operations"][1]["app_ids"] == ["app-remove-1"]
+
+    assert provider_data["operations"][2]["op"] == "rename_tool"
+    assert provider_data["operations"][2]["tool"]["tool_id"] == "existing-tool-id"
+    assert provider_data["operations"][2]["new_name"] == "My_Mixed_Tool"
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_tool_name_rename_compatible_with_all_update_operation_families() -> None:
+    """tool_name/rename should coexist with flow removals, tool upserts/removals, and spec updates."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    flow_version_id_upsert = uuid4()
+    flow_version_id_remove = uuid4()
+    project_id = uuid4()
+
+    flow_row = SimpleNamespace(
+        flow_version_id=flow_version_id_upsert,
+        flow_version_number=1,
+        flow_version_data={"nodes": [], "edges": []},
+        flow_id=uuid4(),
+        flow_name="Flow E",
+        flow_description="desc",
+        flow_tags=["tag"],
+        project_id=project_id,
+    )
+    attachment_rows = [
+        SimpleNamespace(
+            flow_version_id=flow_version_id_upsert,
+            provider_snapshot_id="existing-tool-upsert",
+        ),
+        SimpleNamespace(
+            flow_version_id=flow_version_id_remove,
+            provider_snapshot_id="existing-tool-remove",
+        ),
+    ]
+
+    payload = DeploymentUpdateRequest(
+        name="updated-name",
+        description="updated-description",
+        provider_data={
+            "llm": TEST_WXO_LLM,
+            "connections": [],
+            "upsert_flows": [
+                {
+                    "flow_version_id": str(flow_version_id_upsert),
+                    "add_app_ids": ["app-add"],
+                    "remove_app_ids": ["app-remove"],
+                    "tool_name": "My Combined Tool",
+                }
+            ],
+            "remove_flows": [str(flow_version_id_remove)],
+            "upsert_tools": [
+                {
+                    "tool_id": "external-tool-upsert",
+                    "add_app_ids": ["external-app-add"],
+                    "remove_app_ids": [],
+                }
+            ],
+            "remove_tools": ["external-tool-remove"],
+        },
+    )
+
+    db = _MultiQueryFakeDb(flow_rows=[flow_row], attachment_rows=attachment_rows)
+
+    resolved = await mapper.resolve_deployment_update(
+        user_id=uuid4(),
+        deployment_db_id=uuid4(),
+        db=db,
+        payload=payload,
+    )
+    provider_data = resolved.provider_data or {}
+
+    assert resolved.spec is not None
+    assert resolved.spec.name == "updated-name"
+    assert resolved.spec.description == "updated-description"
+    assert provider_data["llm"] == TEST_WXO_LLM
+    assert provider_data["tools"]["raw_payloads"] is None
+
+    ops = provider_data["operations"]
+    assert [op["op"] for op in ops] == ["bind", "unbind", "rename_tool", "remove_tool", "bind", "remove_tool"]
+
+    assert ops[0]["tool"]["tool_id_with_ref"]["tool_id"] == "existing-tool-upsert"
+    assert ops[0]["app_ids"] == ["app-add"]
+
+    assert ops[1]["tool"]["tool_id"] == "existing-tool-upsert"
+    assert ops[1]["app_ids"] == ["app-remove"]
+
+    assert ops[2]["tool"]["tool_id"] == "existing-tool-upsert"
+    assert ops[2]["new_name"] == "My_Combined_Tool"
+
+    assert ops[3]["tool"]["tool_id"] == "existing-tool-remove"
+
+    assert ops[4]["tool"]["tool_id_with_ref"]["tool_id"] == "external-tool-upsert"
+    assert ops[4]["app_ids"] == ["external-app-add"]
+
+    assert ops[5]["tool"]["tool_id"] == "external-tool-remove"
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_tool_name_override_defers_invalid_flow_name_validation() -> None:
+    """A valid tool_name override should win over an invalid underlying flow name."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    flow_version_id = uuid4()
+    project_id = uuid4()
+
+    flow_row = SimpleNamespace(
+        flow_version_id=flow_version_id,
+        flow_version_number=1,
+        flow_version_data={"nodes": [], "edges": []},
+        flow_id=uuid4(),
+        flow_name="123 bad flow",
+        flow_description="desc",
+        flow_tags=["tag"],
+        project_id=project_id,
+    )
+
+    payload = DeploymentUpdateRequest(
+        provider_data={
+            "llm": TEST_WXO_LLM,
+            "upsert_flows": [
+                {
+                    "flow_version_id": str(flow_version_id),
+                    "add_app_ids": ["app-one"],
+                    "remove_app_ids": [],
+                    "tool_name": "valid_name",
+                }
+            ],
+        }
+    )
+
+    db = _MultiQueryFakeDb(flow_rows=[flow_row], attachment_rows=[])
+
+    resolved = await mapper.resolve_deployment_update(
+        user_id=uuid4(),
+        deployment_db_id=uuid4(),
+        db=db,
+        payload=payload,
+    )
+    provider_data = resolved.provider_data or {}
+
+    assert provider_data["operations"][0]["op"] == "bind"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "valid_name"
 
 
 # ---------------------------------------------------------------------------

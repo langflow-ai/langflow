@@ -323,7 +323,24 @@ class DeploymentSnapshotListResponse(_PaginatedResponse):
 
 
 class DeploymentFlowVersionListItem(BaseModel):
-    """Flow version metadata attached to a deployment."""
+    """Flow version metadata attached to a deployment.
+
+    **Identity model:** Langflow tracks provider tools by their immutable
+    ``provider_snapshot_id`` (the wxO tool_id), never by name.  This
+    distinguishes the following cases:
+
+    * **Tool renamed in provider** — Same ``provider_snapshot_id``, different
+      ``tool_name``.  Langflow picks up the new name on the next fetch.
+    * **Tool deleted in provider** — ``provider_snapshot_id`` no longer
+      resolves.  ``tool_name`` and ``provider_data`` will be ``None``.
+    * **Tool deleted + new tool created with same name** — The new tool has
+      a different ID.  Langflow's attachment still points to the old
+      (missing) ID.  The new tool is invisible to Langflow until explicitly
+      attached via an update operation.
+
+    Frontends should use ``tool_name`` for display and
+    ``provider_snapshot_id`` for identity / operations.
+    """
 
     id: UUID = Field(description="Langflow flow version UUID (`flow_version.id`).")
     flow_id: UUID = Field(description="Langflow flow UUID (`flow.id`) for this version.")
@@ -339,6 +356,15 @@ class DeploymentFlowVersionListItem(BaseModel):
     provider_snapshot_id: str | None = Field(
         default=None,
         description="Provider-owned snapshot/tool identifier linked by the attachment.",
+    )
+    tool_name: str | None = Field(
+        default=None,
+        description=(
+            "Provider tool name for this snapshot. May differ from ``flow_name`` "
+            "if the user set a custom name at deploy time or renamed the tool in "
+            "the provider console. ``None`` when the provider is unreachable or "
+            "the tool has been deleted — frontends should fall back to ``flow_name``."
+        ),
     )
     provider_data: dict[str, Any] | None = Field(
         default=None,

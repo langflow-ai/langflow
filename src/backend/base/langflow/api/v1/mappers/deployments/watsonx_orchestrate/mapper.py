@@ -98,6 +98,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS as WXO_ADAPTER_PAYLOAD_SCHEMAS,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.utils import normalize_wxo_name
 from langflow.services.database.models.deployment_provider_account.utils import extract_tenant_from_url
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     list_deployment_attachments_for_flow_version_ids,
@@ -120,6 +121,31 @@ class _NormalizedAttachmentRow:
     flow_version: FlowVersion
     flow_name: str | None
     snapshot_id: str
+
+
+def _validate_tool_name(name: str) -> str:
+    """Normalize and validate a wxO tool name at the API boundary.
+
+    Called for both flow-name-derived defaults and user-provided
+    ``tool_name`` overrides on bind operations.  Normalization is
+    idempotent (``normalize_wxo_name`` applied downstream in
+    ``create_wxo_flow_tool`` is a no-op on already-normalized input).
+
+    Raises ``HTTPException(422)`` when the name cannot produce a valid
+    wxO identifier (e.g. empty after sanitisation, starts with a digit).
+    This surfaces a clear error to the caller rather than letting the
+    ADK or wxO API reject it with a less actionable message.
+    """
+    normalized = normalize_wxo_name(name)
+    if not normalized or not normalized[0].isalpha():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Tool name derived from '{name}' is not valid for watsonx Orchestrate. "
+                "Names must contain at least one alphanumeric character and start with a letter."
+            ),
+        )
+    return normalized
 
 
 @register_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
@@ -352,11 +378,18 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             project_id=project_id,
             reference_ids=flow_version_ids,
         )
-        raw_name_by_flow_version_id = {flow_version_id: artifact.name for flow_version_id, artifact in flow_artifacts}
-        # Override with user-provided tool names when present
+        # Start with flow names as defaults, then let user-provided tool_name
+        # overrides replace them. Validation runs on the final map so that an
+        # invalid flow name doesn't block a user who provided a valid custom
+        # tool_name for that flow.
+        raw_name_by_flow_version_id: dict[UUID, str] = {
+            flow_version_id: artifact.name for flow_version_id, artifact in flow_artifacts
+        }
         for item in api_provider_payload.add_flows:
             if item.tool_name:
                 raw_name_by_flow_version_id[item.flow_version_id] = item.tool_name
+        for fv_id, name in raw_name_by_flow_version_id.items():
+            raw_name_by_flow_version_id[fv_id] = _validate_tool_name(name)
         provider_operations = self._build_provider_operations(
             add_flows=api_provider_payload.add_flows,
             upsert_tools=api_provider_payload.upsert_tools,
@@ -479,13 +512,19 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             deployment_db_id=deployment_db_id,
             flow_version_ids=ordered_flow_version_ids,
         )
-        raw_name_by_flow_version_id = {
+        # Start with normalized flow names as defaults, then let user-provided
+        # tool_name overrides replace them. Validation runs on the final map
+        # so that an invalid flow name doesn't block a user who provided a
+        # valid custom tool_name for that flow.
+        raw_name_by_flow_version_id: dict[UUID, str] = {
             flow_version_id: artifact.name for flow_version_id, _version_number, _project_id, artifact in flow_artifacts
         }
         # Override with user-provided tool names when present
         for item in api_provider_payload.upsert_flows:
             if item.tool_name and item.flow_version_id in raw_name_by_flow_version_id:
                 raw_name_by_flow_version_id[item.flow_version_id] = item.tool_name
+        for fv_id, name in raw_name_by_flow_version_id.items():
+            raw_name_by_flow_version_id[fv_id] = _validate_tool_name(name)
         raw_payloads = [
             artifact.model_copy(
                 update={
@@ -1029,6 +1068,9 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         snapshot_data_by_id = self._resolve_snapshot_data_by_id(
             snapshot_result=snapshot_result,
         )
+        snapshot_name_by_id = self._resolve_snapshot_name_by_id(
+            snapshot_result=snapshot_result,
+        )
 
         flow_versions = [
             DeploymentFlowVersionListItem(
@@ -1038,6 +1080,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 version_number=row.flow_version.version_number,
                 attached_at=row.attachment.created_at,
                 provider_snapshot_id=row.snapshot_id,
+                tool_name=snapshot_name_by_id.get(row.snapshot_id),
                 provider_data=self.shape_deployment_flow_version_item_data(snapshot_data_by_id.get(row.snapshot_id)),
             )
             for row in normalized_rows
@@ -1089,6 +1132,36 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             snapshot_data_by_id[snapshot_id] = provider_data if isinstance(provider_data, dict) else None
 
         return snapshot_data_by_id
+
+    @staticmethod
+    def _resolve_snapshot_name_by_id(
+        *,
+        snapshot_result: SnapshotListResult | None,
+    ) -> dict[str, str]:
+        """Map snapshot IDs to their provider tool names.
+
+        The tool name is the wxO-side name, which may differ from the
+        Langflow flow name if the user provided a custom ``tool_name``
+        at deploy time or renamed the tool directly in the wxO console.
+
+        Edge cases:
+        - Provider unreachable / snapshot_result is None: returns ``{}``.
+          The ``tool_name`` field in the response will be ``None`` and the
+          frontend falls back to the Langflow flow name for display.
+        - Tool renamed in wxO console: the new name is returned here since
+          ``snapshot_result`` is fetched fresh on each request.
+        - Tool deleted in wxO: missing from ``snapshot_result.snapshots``,
+          so no entry in the returned dict. ``tool_name`` will be ``None``.
+        """
+        if not snapshot_result or not snapshot_result.snapshots:
+            return {}
+        result: dict[str, str] = {}
+        for snapshot in snapshot_result.snapshots:
+            snapshot_id = str(snapshot.id).strip()
+            name = str(snapshot.name or "").strip()
+            if snapshot_id and name:
+                result[snapshot_id] = name
+        return result
 
     def shape_deployment_flow_version_item_data(
         self,
@@ -1331,6 +1404,17 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                             source_ref=str(flow_version_id),
                             app_ids=item.remove_app_ids,
                         )
+                    )
+                if item.tool_name:
+                    provider_operations.append(
+                        {
+                            "op": "rename_tool",
+                            "tool": {
+                                "source_ref": str(flow_version_id),
+                                "tool_id": existing_tool_id,
+                            },
+                            "new_name": _validate_tool_name(item.tool_name),
+                        }
                     )
                 continue
 

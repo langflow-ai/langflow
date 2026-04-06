@@ -103,6 +103,19 @@ def ensure_langflow_connections_binding(tool_payload: dict[str, Any]) -> dict[st
     return _ensure_dict(langflow, "connections")
 
 
+def verify_langflow_owned(tool: dict[str, Any], *, tool_id: str) -> None:
+    """Raise ``InvalidContentError`` if the tool lacks ``binding.langflow``.
+
+    Call before any mutating operation on an existing tool to ensure
+    Langflow created it.  Tools created manually in the wxO console or
+    by other integrations will not have this marker.
+    """
+    binding = tool.get("binding")
+    if not isinstance(binding, dict) or "langflow" not in binding:
+        msg = f"Cannot modify tool '{tool_id}': it does not have a Langflow binding and may not be managed by Langflow."
+        raise InvalidContentError(message=msg)
+
+
 def extract_langflow_connections_binding(tool_payload: dict[str, Any]) -> dict[str, str]:
     """Extract ``binding.langflow.connections`` from a provider tool payload.
 
@@ -144,7 +157,10 @@ async def update_existing_tool_connection_bindings(
 
     tool_updates: list[tuple[str, dict[str, Any]]] = []
     for tool_id in existing_target_tool_ids:
-        original_tool = to_writable_tool_payload(tool_by_id[tool_id])
+        tool = tool_by_id[tool_id]
+        verify_langflow_owned(tool, tool_id=tool_id)
+
+        original_tool = to_writable_tool_payload(tool)
         original_tools[tool_id] = original_tool
         writable_tool = copy.deepcopy(original_tool)
         connections = ensure_langflow_connections_binding(writable_tool)
@@ -252,7 +268,12 @@ def create_wxo_flow_tool(
     """
     # provider_data might break tool runtime expectations with unexpected top-level keys
     flow_definition = flow_payload.model_dump(exclude={"provider_data"})
-    logger.debug("create_wxo_flow_tool: flow name='%s', id='%s', connections=%s", flow_definition.get("name"), flow_definition.get("id"), connections)
+    logger.debug(
+        "create_wxo_flow_tool: flow name='%s', id='%s', connections=%s",
+        flow_definition.get("name"),
+        flow_definition.get("id"),
+        connections,
+    )
 
     flow_provider_data = flow_payload.provider_data
     if not isinstance(flow_provider_data, WatsonxFlowArtifactProviderData):
@@ -300,7 +321,12 @@ def create_wxo_flow_tool(
         tool_payload["name"] = normalize_wxo_name(current_name)
 
     (tool_payload.setdefault("binding", {}).setdefault("langflow", {})["project_id"]) = project_id
-    logger.debug("create_wxo_flow_tool: tool name='%s', project_id='%s', binding=%s", tool_payload.get("name"), project_id, tool_payload.get("binding", {}).get("langflow"))
+    logger.debug(
+        "create_wxo_flow_tool: tool name='%s', project_id='%s', binding=%s",
+        tool_payload.get("name"),
+        project_id,
+        tool_payload.get("binding", {}).get("langflow"),
+    )
 
     artifacts: bytes = build_langflow_artifact_bytes(
         tool=tool,
@@ -393,7 +419,9 @@ async def upload_wxo_flow_tool(
 ) -> str:
     tool_response = await retry_create(asyncio.to_thread, clients.tool.create, tool_payload)
     tool_id = require_tool_id(tool_response)
-    logger.debug("upload_wxo_flow_tool: created tool_id='%s', uploading artifact (%d bytes)", tool_id, len(artifact_bytes))
+    logger.debug(
+        "upload_wxo_flow_tool: created tool_id='%s', uploading artifact (%d bytes)", tool_id, len(artifact_bytes)
+    )
     if created_tool_ids_journal is not None:
         created_tool_ids_journal.append(tool_id)
 
@@ -482,11 +510,11 @@ def _resolve_lfx_requirement() -> str:
         return override
     try:
         return _pin_requirement_name("lfx")
-    except (md.PackageNotFoundError, ValueError):
+    except (md.PackageNotFoundError, ValueError) as exc:
         # Prefer failing fast here instead of falling back, as wxO does not
         # return useful error messages on dependency failures during deployment.
         message = "Could not determine installed lfx version. Failing deployment."
-        raise ValueError(message)
+        raise ValueError(message) from exc
 
 
 async def verify_tools_by_ids(

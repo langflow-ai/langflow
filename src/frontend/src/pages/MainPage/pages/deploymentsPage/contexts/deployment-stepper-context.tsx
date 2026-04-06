@@ -9,8 +9,15 @@ import {
   useState,
 } from "react";
 import type { ProviderAccountCreateRequest } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
-import type { DeploymentUpdateRequest } from "@/controllers/API/queries/deployments/use-patch-deployment";
-import type { DeploymentCreateRequest } from "@/controllers/API/queries/deployments/use-post-deployment";
+import type {
+  DeploymentUpdateFlowItem,
+  DeploymentUpdateProviderData,
+  DeploymentUpdateRequest,
+} from "@/controllers/API/queries/deployments/use-patch-deployment";
+import type {
+  DeploymentConnectionPayload,
+  DeploymentCreateRequest,
+} from "@/controllers/API/queries/deployments/use-post-deployment";
 import type {
   ConnectionItem,
   Deployment,
@@ -33,6 +40,10 @@ interface DeploymentStepperInitialState {
   editingDeployment?: Deployment;
   /** Pre-populated initial LLM from provider (edit mode). */
   initialLlm?: string;
+  /** Pre-populated tool names from provider (edit mode). Key = flowId. */
+  initialToolNameByFlow?: Map<string, string>;
+  /** Pre-populated connection bindings from provider (edit mode). Key = flowId. */
+  initialConnectionsByFlow?: Map<string, string[]>;
 }
 
 interface DeploymentStepperContextType {
@@ -81,6 +92,8 @@ interface DeploymentStepperContextType {
   /** User-provided tool names per flow. Key = flowId. */
   toolNameByFlow: Map<string, string>;
   setToolNameByFlow: Dispatch<SetStateAction<Map<string, string>>>;
+  /** Flow IDs that were already attached before this edit session (edit mode). */
+  preExistingFlowIds: Set<string>;
   /** Flow IDs that were originally attached but the user chose to detach (edit mode). */
   removedFlowIds: Set<string>;
   handleRemoveAttachedFlow: (flowId: string) => void;
@@ -141,17 +154,26 @@ export function DeploymentStepperProvider({
   >(initialState?.selectedVersionByFlow ?? new Map());
   const [connections, setConnections] = useState<ConnectionItem[]>([]);
   const [toolNameByFlow, setToolNameByFlow] = useState<Map<string, string>>(
-    new Map(),
+    initialState?.initialToolNameByFlow ?? new Map(),
   );
   const [attachedConnectionByFlow, setAttachedConnectionByFlow] = useState<
     Map<string, string[]>
-  >(new Map());
+  >(initialState?.initialConnectionsByFlow ?? new Map());
 
   // Edit mode: track which pre-existing flows the user wants to detach.
   const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(new Set());
   // Cache removed flow data so undo can restore it.
   const initialVersionByFlow = useMemo(
     () => initialState?.selectedVersionByFlow ?? new Map(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  const preExistingFlowIds = useMemo(
+    () => new Set(initialVersionByFlow.keys()),
+    [initialVersionByFlow],
+  );
+  const initialToolNameByFlow = useMemo(
+    () => initialState?.initialToolNameByFlow ?? new Map<string, string>(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -272,6 +294,39 @@ export function DeploymentStepperProvider({
       };
     }, [credentials, hasValidCredentials]);
 
+  const buildConnectionPayloads = useCallback(
+    (
+      connectionIds: Iterable<string>,
+    ): DeploymentCreateRequest["provider_data"]["connections"] => {
+      const payloads: DeploymentCreateRequest["provider_data"]["connections"] =
+        [];
+      const uniqueIds = Array.from(new Set(connectionIds));
+
+      for (const id of uniqueIds) {
+        const conn = connections.find((item) => item.id === id);
+        if (!conn?.isNew) continue;
+
+        const credentials: DeploymentConnectionPayload["credentials"] =
+          Object.entries(conn.environmentVariables).map(([key, value]) => {
+            const isGlobalVar = conn.globalVarKeys?.has(key) ?? false;
+            return {
+              key,
+              value,
+              source: isGlobalVar ? "variable" : "raw",
+            };
+          });
+
+        payloads.push({
+          app_id: id,
+          credentials,
+        });
+      }
+
+      return payloads;
+    },
+    [connections],
+  );
+
   const buildDeploymentPayload = useCallback(
     (providerId: string): DeploymentCreateRequest => {
       const allConnectionIds = new Set<string>();
@@ -279,47 +334,19 @@ export function DeploymentStepperProvider({
         ids.forEach((id) => allConnectionIds.add(id));
       });
 
-      const rawPayloads: Array<{
-        app_id: string;
-        environment_variables: Record<
-          string,
-          { value: string; source: "raw" | "variable" }
-        >;
-      }> = [];
-
-      Array.from(allConnectionIds).forEach((id) => {
-        const conn = connections.find((c) => c.id === id);
-        if (conn?.isNew) {
-          const envVarsWrapped: Record<
-            string,
-            { value: string; source: "raw" | "variable" }
-          > = {};
-          Object.entries(conn.environmentVariables).forEach(([k, v]) => {
-            const isGlobalVar = conn.globalVarKeys?.has(k) ?? false;
-            envVarsWrapped[k] = {
-              value: v,
-              source: isGlobalVar ? "variable" : "raw",
-            };
-          });
-          rawPayloads.push({
-            app_id: id,
-            environment_variables: envVarsWrapped,
-          });
-        }
-      });
-
-      const operations: DeploymentCreateRequest["provider_data"]["operations"] =
+      const addFlows: DeploymentCreateRequest["provider_data"]["add_flows"] =
         [];
       for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
         const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
         const customToolName = toolNameByFlow.get(flowId)?.trim();
-        operations.push({
-          op: "bind",
+        addFlows.push({
           flow_version_id: versionEntry.versionId,
           app_ids: connectionIds,
           ...(customToolName && { tool_name: customToolName }),
         });
       }
+
+      const connectionPayloads = buildConnectionPayloads(allConnectionIds);
 
       return {
         provider_id: providerId,
@@ -328,16 +355,14 @@ export function DeploymentStepperProvider({
         type: deploymentType,
         provider_data: {
           llm: selectedLlm,
-          operations,
-          connections: {
-            raw_payloads: rawPayloads,
-          },
+          add_flows: addFlows,
+          connections: connectionPayloads,
         },
       };
     },
     [
       attachedConnectionByFlow,
-      connections,
+      buildConnectionPayloads,
       deploymentDescription,
       deploymentName,
       deploymentType,
@@ -366,97 +391,67 @@ export function DeploymentStepperProvider({
         result.description = deploymentDescription;
       }
 
-      // Build provider_data with operations for attach/detach + LLM.
-      const operations: Array<Record<string, unknown>> = [];
+      const upsertFlows: DeploymentUpdateFlowItem[] = [];
 
       // New flows attached during this edit session.
       for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
-        if (initialVersionByFlow.has(flowId)) continue; // pre-existing, skip
+        if (initialVersionByFlow.has(flowId)) continue;
         const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
         const customToolName = toolNameByFlow.get(flowId)?.trim();
-        operations.push({
-          op: "bind",
+        upsertFlows.push({
           flow_version_id: versionEntry.versionId,
-          app_ids: connectionIds,
+          add_app_ids: connectionIds,
+          remove_app_ids: [],
           ...(customToolName && { tool_name: customToolName }),
         });
       }
 
-      // Detached flows.
+      // Renamed tools on pre-existing flows.
+      for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
+        if (!initialVersionByFlow.has(flowId)) continue;
+        const currentName = toolNameByFlow.get(flowId)?.trim() ?? "";
+        const originalName = initialToolNameByFlow.get(flowId)?.trim() ?? "";
+        if (currentName && currentName !== originalName) {
+          upsertFlows.push({
+            flow_version_id: versionEntry.versionId,
+            add_app_ids: [],
+            remove_app_ids: [],
+            tool_name: currentName,
+          });
+        }
+      }
+
+      const removeFlows: string[] = [];
       for (const flowId of Array.from(removedFlowIds)) {
         const originalVersion = initialVersionByFlow.get(flowId);
         if (originalVersion) {
-          operations.push({
-            op: "remove_tool",
-            flow_version_id: originalVersion.versionId,
-          });
+          removeFlows.push(originalVersion.versionId);
         }
       }
 
-      // Collect connection details for new binds.
+      // Collect connection details for newly added binds only.
       const newConnectionIds = new Set<string>();
-      const bindFlowVersionIds = new Set(
-        operations
-          .filter((o) => o.op === "bind")
-          .map((o) => o.flow_version_id as string),
-      );
-      for (const [flowId, connectionIds] of Array.from(
-        attachedConnectionByFlow,
-      )) {
-        const versionEntry = selectedVersionByFlow.get(flowId);
-        if (!versionEntry || !bindFlowVersionIds.has(versionEntry.versionId))
-          continue;
-        connectionIds.forEach((id) => newConnectionIds.add(id));
-      }
-
-      const existingAppIds: string[] = [];
-      const rawPayloads: Array<{
-        app_id: string;
-        environment_variables: Record<
-          string,
-          { value: string; source: "raw" | "variable" }
-        >;
-      }> = [];
-
-      Array.from(newConnectionIds).forEach((id) => {
-        const conn = connections.find((c) => c.id === id);
-        if (conn?.isNew) {
-          const envVarsWrapped: Record<
-            string,
-            { value: string; source: "raw" | "variable" }
-          > = {};
-          Object.entries(conn.environmentVariables).forEach(([k, v]) => {
-            const isGlobalVar = conn.globalVarKeys?.has(k) ?? false;
-            envVarsWrapped[k] = {
-              value: v,
-              source: isGlobalVar ? "variable" : "raw",
-            };
-          });
-          rawPayloads.push({
-            app_id: id,
-            environment_variables: envVarsWrapped,
-          });
-        } else {
-          existingAppIds.push(id);
-        }
+      upsertFlows.forEach((flowItem) => {
+        flowItem.add_app_ids.forEach((id) => newConnectionIds.add(id));
       });
+      const connectionPayloads = buildConnectionPayloads(newConnectionIds);
 
-      const hasOperations = operations.length > 0;
-      const hasConnections =
-        existingAppIds.length > 0 || rawPayloads.length > 0;
       const llmToSend = selectedLlm;
-
-      if (llmToSend || hasOperations || hasConnections) {
-        result.provider_data = {
+      if (
+        llmToSend ||
+        upsertFlows.length > 0 ||
+        removeFlows.length > 0 ||
+        connectionPayloads.length > 0
+      ) {
+        const providerData: DeploymentUpdateProviderData = {
           ...(llmToSend && { llm: llmToSend }),
-          ...(hasOperations && { operations }),
-          ...(hasConnections && {
-            connections: {
-              existing_app_ids: existingAppIds,
-              raw_payloads: rawPayloads,
-            },
+          ...(upsertFlows.length > 0 && { upsert_flows: upsertFlows }),
+          ...(removeFlows.length > 0 && { remove_flows: removeFlows }),
+          ...(connectionPayloads.length > 0 && {
+            connections: connectionPayloads,
           }),
         };
+        result.provider_data = providerData;
       }
 
       // Backend requires at least one field.
@@ -470,11 +465,12 @@ export function DeploymentStepperProvider({
       deploymentDescription,
       selectedLlm,
       initialVersionByFlow,
+      initialToolNameByFlow,
       removedFlowIds,
       selectedVersionByFlow,
       toolNameByFlow,
       attachedConnectionByFlow,
-      connections,
+      buildConnectionPayloads,
     ]);
 
   const value = useMemo<DeploymentStepperContextType>(
@@ -510,6 +506,7 @@ export function DeploymentStepperProvider({
       setToolNameByFlow,
       attachedConnectionByFlow,
       setAttachedConnectionByFlow,
+      preExistingFlowIds,
       removedFlowIds,
       handleRemoveAttachedFlow,
       handleUndoRemoveFlow,
@@ -540,6 +537,7 @@ export function DeploymentStepperProvider({
       handleSelectVersion,
       toolNameByFlow,
       attachedConnectionByFlow,
+      preExistingFlowIds,
       removedFlowIds,
       handleRemoveAttachedFlow,
       handleUndoRemoveFlow,
