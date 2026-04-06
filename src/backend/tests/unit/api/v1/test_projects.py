@@ -1,5 +1,6 @@
 import io
 import json
+import uuid
 import zipfile
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
@@ -176,6 +177,197 @@ async def test_create_and_read_project_cyrillic(client: AsyncClient, logged_in_h
 
     assert fetched["name"] == CYRILLIC_NAME
     assert fetched["description"] == CYRILLIC_DESC
+
+
+# PUT endpoint tests (upsert)
+async def test_upsert_project_creates_new_project_with_specified_id(client: AsyncClient, logged_in_headers):
+    """Test that PUT creates a new project with the specified ID and returns 201."""
+    specified_id = str(uuid.uuid4())
+    project_data = {
+        "name": "upsert_new_project",
+        "description": "Created via upsert",
+    }
+
+    response = await client.put(f"api/v1/projects/{specified_id}", json=project_data, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_201_CREATED
+    result = response.json()
+    assert result["id"] == specified_id
+    assert result["name"] == "upsert_new_project"
+    assert result["description"] == "Created via upsert"
+
+
+async def test_upsert_project_updates_existing_project(client: AsyncClient, logged_in_headers, basic_case):
+    """Test that PUT updates an existing project and returns 200."""
+    # First create a project via POST
+    create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    project_id = create_response.json()["id"]
+
+    # Now update via PUT
+    updated_project = {
+        "name": "updated_project_name",
+        "description": "updated description",
+    }
+    response = await client.put(f"api/v1/projects/{project_id}", json=updated_project, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["id"] == project_id
+    assert result["name"] == "updated_project_name"
+    assert result["description"] == "updated description"
+
+
+async def test_upsert_project_returns_404_for_other_users_project(client: AsyncClient, logged_in_headers):
+    """Test that PUT returns 404 when trying to upsert another user's project (avoids leaking existence)."""
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.user.model import User
+
+    # Create another user
+    other_user_id = uuid.uuid4()
+    async with session_scope() as session:
+        other_user = User(
+            id=other_user_id,
+            username="other_user_for_project_upsert_test",
+            password=get_password_hash("testpassword"),
+            is_active=True,
+            is_superuser=False,
+        )
+        session.add(other_user)
+        await session.commit()
+
+    # Login as other user and create a project
+    login_data = {
+        "username": "other_user_for_project_upsert_test",
+        "password": "testpassword",  # pragma: allowlist secret
+    }
+    login_response = await client.post("api/v1/login", data=login_data)
+    assert login_response.status_code == status.HTTP_200_OK, f"Login failed: {login_response.text}"
+    other_user_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+    project_data = {"name": "other_user_project", "description": ""}
+    create_response = await client.post("api/v1/projects/", json=project_data, headers=other_user_headers)
+    other_user_project_id = create_response.json()["id"]
+
+    # Try to upsert other user's project with original user's credentials
+    update_data = {"name": "trying_to_steal", "description": ""}
+    response = await client.put(f"api/v1/projects/{other_user_project_id}", json=update_data, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert "not found" in response.json()["detail"].lower()
+
+    # Cleanup
+    async with session_scope() as session:
+        user = await session.get(User, other_user_id)
+        if user:
+            await session.delete(user)
+            await session.commit()
+
+
+async def test_upsert_project_returns_409_for_name_conflict_on_create(client: AsyncClient, logged_in_headers):
+    """Test that PUT returns 409 when name conflicts during CREATE."""
+    # First create a project with a specific name
+    first_project = {
+        "name": "unique_project_name",
+        "description": "",
+    }
+    await client.post("api/v1/projects/", json=first_project, headers=logged_in_headers)
+
+    # Try to create new project via PUT with same name
+    specified_id = str(uuid.uuid4())
+    second_project = {
+        "name": "unique_project_name",  # Same name
+        "description": "",
+    }
+
+    response = await client.put(f"api/v1/projects/{specified_id}", json=second_project, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert "name" in response.json()["detail"].lower()
+
+
+async def test_upsert_project_returns_409_for_name_conflict_on_update(client: AsyncClient, logged_in_headers):
+    """Test that PUT returns 409 when name conflicts with another project during UPDATE."""
+    # Create two projects
+    first_project = {"name": "first_project", "description": ""}
+    second_project = {"name": "second_project", "description": ""}
+
+    await client.post("api/v1/projects/", json=first_project, headers=logged_in_headers)
+    create_second = await client.post("api/v1/projects/", json=second_project, headers=logged_in_headers)
+    second_project_id = create_second.json()["id"]
+
+    # Try to update second project to have first project's name
+    update_data = {"name": "first_project", "description": ""}
+    response = await client.put(f"api/v1/projects/{second_project_id}", json=update_data, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert "name" in response.json()["detail"].lower()
+
+
+async def test_upsert_project_allows_updating_own_project_name(client: AsyncClient, logged_in_headers, basic_case):
+    """Test that PUT allows updating a project to keep its own name (no self-conflict)."""
+    # Create a project
+    create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    project_id = create_response.json()["id"]
+    project_name = create_response.json()["name"]
+
+    # Update the project with the same name (should work)
+    update_data = {"name": project_name, "description": "updated description only"}
+    response = await client.put(f"api/v1/projects/{project_id}", json=update_data, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["name"] == project_name
+    assert result["description"] == "updated description only"
+
+
+async def test_upsert_project_with_flows_list_on_create(client: AsyncClient, logged_in_headers):
+    """Test that PUT creates a new project and associates flows on create."""
+    # First create a flow in the default project
+    flow_data = {"name": "test_flow_for_upsert", "data": {}}
+    flow_response = await client.post("api/v1/flows/", json=flow_data, headers=logged_in_headers)
+    assert flow_response.status_code == status.HTTP_201_CREATED
+    flow_id = flow_response.json()["id"]
+
+    # Create a new project via PUT with the flow
+    specified_id = str(uuid.uuid4())
+    project_data = {
+        "name": "project_with_flows",
+        "description": "Project created via PUT with flows",
+        "flows_list": [flow_id],
+    }
+
+    response = await client.put(f"api/v1/projects/{specified_id}", json=project_data, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_201_CREATED
+    result = response.json()
+    assert result["id"] == specified_id
+
+    # Verify the flow was moved to the new project
+    flow_get = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert flow_get.json()["folder_id"] == specified_id
+
+
+async def test_upsert_project_with_parent_id(client: AsyncClient, logged_in_headers):
+    """Test that PUT creates a project with a parent_id."""
+    # Create a parent project
+    parent_data = {"name": "parent_project", "description": ""}
+    parent_response = await client.post("api/v1/projects/", json=parent_data, headers=logged_in_headers)
+    parent_id = parent_response.json()["id"]
+
+    # Create child project via PUT
+    specified_id = str(uuid.uuid4())
+    child_data = {
+        "name": "child_project",
+        "description": "Child project",
+        "parent_id": parent_id,
+    }
+
+    response = await client.put(f"api/v1/projects/{specified_id}", json=child_data, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_201_CREATED
+    result = response.json()
+    assert result["parent_id"] == parent_id
 
 
 async def test_update_project_preserves_flows(client: AsyncClient, logged_in_headers):
