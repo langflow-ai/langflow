@@ -682,6 +682,7 @@ async def build_public_tmp(
         flow_name: Optional name for the flow
         request: FastAPI request object (needed for cookie access)
         queue_service: Queue service for job management
+        authenticated_user: Optional authenticated user (resolved from cookie/token if present)
         event_delivery: Optional event delivery type - default is streaming
 
     Returns:

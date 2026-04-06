@@ -173,8 +173,8 @@ async def test_get_shared_messages_returns_messages(client: AsyncClient, logged_
     assert len(messages) == 3
 
 
-@pytest.mark.usefixtures("active_user")
-async def test_get_shared_messages_empty_for_wrong_flow(client: AsyncClient, logged_in_headers, shared_messages_setup):
+@pytest.mark.usefixtures("active_user", "shared_messages_setup")
+async def test_get_shared_messages_empty_for_wrong_flow(client: AsyncClient, logged_in_headers):
     """Requesting messages for a flow the user hasn't interacted with returns empty."""
     random_flow_id = uuid.uuid4()
     response = await client.get(

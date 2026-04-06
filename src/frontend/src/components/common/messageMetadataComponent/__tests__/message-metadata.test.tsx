@@ -52,7 +52,8 @@ describe("MessageMetadata", () => {
     );
 
     expect(screen.getByText("49")).toBeInTheDocument();
-    expect(screen.getByText("1.8s")).toBeInTheDocument();
+    // Duration appears in both tooltip and inline badge
+    expect(screen.getAllByText("1.8s")).toHaveLength(2);
     expect(screen.getByText("|")).toBeInTheDocument();
   });
 
@@ -71,7 +72,8 @@ describe("MessageMetadata", () => {
   it("should_render_only_duration_when_no_tokens", () => {
     render(<MessageMetadata duration={2500} usage={undefined} />);
 
-    expect(screen.getByText("2.5s")).toBeInTheDocument();
+    // Duration appears in both tooltip and inline badge
+    expect(screen.getAllByText("2.5s")).toHaveLength(2);
     expect(screen.queryByText("|")).not.toBeInTheDocument();
     expect(screen.queryByTestId("icon-Coins")).not.toBeInTheDocument();
   });
