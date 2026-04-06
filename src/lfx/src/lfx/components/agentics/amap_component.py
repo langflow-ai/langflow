@@ -131,6 +131,13 @@ class AMapComponent(BaseAgenticComponent):
                 output = AG(atype=atype, states=appended_states)
 
             elif self.append_to_input_columns:
+                output_field_names = set(output.atype.model_fields.keys())
+                source_field_names = set(source.atype.model_fields.keys())
+                overlapping = source_field_names & output_field_names
+                if overlapping:
+                    non_overlapping = source_field_names - overlapping
+                    deduplicated_atype = source.subset_atype(non_overlapping)
+                    source = source.rebind_atype(deduplicated_atype)
                 output = source.merge_states(output)
 
             return DataFrame(output.to_dataframe().to_dict(orient="records"))
