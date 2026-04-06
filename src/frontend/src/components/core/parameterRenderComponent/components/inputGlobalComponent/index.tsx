@@ -30,8 +30,12 @@ export default function InputGlobalComponent({
   hasRefreshButton = false,
   showParameter = true,
 }: InputProps<string, InputGlobalComponentType>): JSX.Element | null {
-  const { data: globalVariables, isFetched: isGlobalVariablesFetched } =
-    useGetGlobalVariables();
+  const {
+    data: globalVariables,
+    isFetchedAfterMount: isGlobalVariablesFetchedAfterMount,
+    isFetching: isGlobalVariablesFetching,
+    isSuccess: isGlobalVariablesFetchSuccessful,
+  } = useGetGlobalVariables();
 
   // // Safely cast the data to our typed interface
   const typedGlobalVariables: GlobalVariable[] = globalVariables ?? [];
@@ -45,24 +49,28 @@ export default function InputGlobalComponent({
     typedGlobalVariables,
   );
   const unavailableField = useUnavailableField(display_name, currentValue);
+  const canValidateMissingVariable =
+    isGlobalVariablesFetchSuccessful &&
+    !isGlobalVariablesFetching &&
+    isGlobalVariablesFetchedAfterMount;
 
   useInitialLoad(
     isDisabled,
     loadFromDb,
     typedGlobalVariables,
-    isGlobalVariablesFetched,
+    canValidateMissingVariable,
     valueExists,
     unavailableField,
     handleOnNewValue,
   );
 
   // Clean up when selected variable no longer exists.
-  // Guard on isGlobalVariablesFetched to avoid clearing values during the
-  // initial fetch — otherwise a race condition on first flow load wipes every
-  // global-variable reference before the query has resolved.
+  // Only validate against a successful, settled query result for this mount.
+  // This avoids clearing values during the initial fetch, during background
+  // refetches against cached data, or after failed requests.
   useEffect(() => {
     if (
-      isGlobalVariablesFetched &&
+      canValidateMissingVariable &&
       loadFromDb &&
       currentValue &&
       !valueExists &&
@@ -74,7 +82,7 @@ export default function InputGlobalComponent({
       );
     }
   }, [
-    isGlobalVariablesFetched,
+    canValidateMissingVariable,
     loadFromDb,
     currentValue,
     valueExists,

@@ -41,7 +41,7 @@ export const useInitialLoad = (
   disabled: boolean,
   loadFromDb: boolean,
   globalVariables: GlobalVariable[],
-  isGlobalVariablesFetched: boolean,
+  canValidateMissingVariable: boolean,
   valueExists: boolean,
   unavailableField: string | null,
   handleOnNewValue: (
@@ -56,13 +56,14 @@ export const useInitialLoad = (
   handleOnNewValueRef.current = handleOnNewValue;
 
   // Handle database loading when value doesn't exist.
-  // Guard on isGlobalVariablesFetched so we don't clear values while the
-  // global variables query is still in flight (race condition on first flow).
+  // Guard on the settled query state so we don't clear values while the
+  // global variables query is still in flight, during background refetches,
+  // or after failed fetches.
   useEffect(() => {
     if (
       disabled ||
       !loadFromDb ||
-      !isGlobalVariablesFetched ||
+      !canValidateMissingVariable ||
       !globalVariables.length ||
       valueExists
     ) {
@@ -76,7 +77,7 @@ export const useInitialLoad = (
   }, [
     disabled,
     loadFromDb,
-    isGlobalVariablesFetched,
+    canValidateMissingVariable,
     globalVariables.length,
     valueExists,
   ]);
