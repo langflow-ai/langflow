@@ -126,7 +126,7 @@ jest.mock(
   () => ({
     useGetMemorySessionMessages: (params: any) => {
       const sessionId = params?.sessionId;
-      const items = sessionId ? messagesBySession[sessionId] ?? [] : [];
+      const items = sessionId ? (messagesBySession[sessionId] ?? []) : [];
       return {
         data: {
           pages: [

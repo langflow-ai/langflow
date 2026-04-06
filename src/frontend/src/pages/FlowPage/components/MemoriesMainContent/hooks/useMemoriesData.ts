@@ -233,18 +233,15 @@ export function useMemoriesData({
     const sessions = sessionsFromApi;
 
     const totalFromApi =
-      memoryMessagesInfinite?.pages?.[0]?.total ?? sessionScopedDocuments.length;
+      memoryMessagesInfinite?.pages?.[0]?.total ??
+      sessionScopedDocuments.length;
 
     return {
       documents: sessionScopedDocuments,
       total: totalFromApi,
       sessions,
     };
-  }, [
-    memoryMessagesInfinite,
-    memorySessions,
-    effectiveSessionId,
-  ]);
+  }, [memoryMessagesInfinite, memorySessions, effectiveSessionId]);
 
   const docsLoading = isLoading || memoryMessagesLoading;
 

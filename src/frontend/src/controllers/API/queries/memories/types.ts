@@ -1,4 +1,3 @@
-
 export interface MemoryApiDTO {
   id: string;
   name: string;

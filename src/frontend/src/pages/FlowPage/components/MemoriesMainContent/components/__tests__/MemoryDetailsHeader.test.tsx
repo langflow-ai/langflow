@@ -80,7 +80,9 @@ describe("MemoryDetailsHeader", () => {
   it("toggles auto-capture", () => {
     const props = makeProps();
     render(<MemoryDetailsHeader {...props} />);
-    fireEvent.click(screen.getByRole("button", { name: "Toggle auto-capture" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Toggle auto-capture" }),
+    );
     expect(props.handleToggleActive).toHaveBeenCalledWith(false);
   });
 });
