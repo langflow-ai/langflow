@@ -36,7 +36,7 @@ from langflow.agentic.services.provider_service import (
 )
 from langflow.api.utils.core import CurrentActiveUser, DbSession
 
-router = APIRouter(prefix="/agentic", tags=["Agentic"])
+router = APIRouter(prefix="/agentic", tags=["Agentic"], include_in_schema=False)
 
 
 @dataclass(frozen=True)

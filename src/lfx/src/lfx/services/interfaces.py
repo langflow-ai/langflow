@@ -33,6 +33,8 @@ if TYPE_CHECKING:
         RedeployResult,
         SnapshotListParams,
         SnapshotListResult,
+        VerifyCredentials,
+        VerifyCredentialsResult,
     )
     from lfx.services.settings.base import Settings
 
@@ -241,8 +243,9 @@ class DeploymentServiceProtocol(Protocol):
     Adapter-specific or advanced operations are defined on concrete deployment
     service classes.
 
-    ``deployment_type`` is accepted as an optional routing hint by all
-    operations that act on a specific deployment (including executions).
+    ``deployment_type`` is accepted as an optional routing hint by operations
+    that act on a specific deployment. For execution creation, it is provided
+    in the ``ExecutionCreate`` payload.
     """
 
     @abstractmethod
@@ -300,6 +303,8 @@ class DeploymentServiceProtocol(Protocol):
         db: AsyncSession,
     ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
+        # TODO: Add a rollback-update interface contract for adapters so callers
+        # can compensate provider-side updates when downstream local sync fails.
         ...
 
     @abstractmethod
@@ -355,7 +360,6 @@ class DeploymentServiceProtocol(Protocol):
         self,
         *,
         user_id: IdLike,
-        deployment_type: DeploymentType | None = None,
         payload: ExecutionCreate,
         db: AsyncSession,
     ) -> ExecutionCreateResult:
@@ -394,6 +398,16 @@ class DeploymentServiceProtocol(Protocol):
         db: AsyncSession,
     ) -> SnapshotListResult:
         """List snapshots visible to this adapter."""
+        ...
+
+    @abstractmethod
+    async def verify_credentials(
+        self,
+        *,
+        user_id: IdLike,
+        payload: VerifyCredentials,
+    ) -> VerifyCredentialsResult:
+        """Verify provider credentials before account creation."""
         ...
 
     @abstractmethod

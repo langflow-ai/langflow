@@ -47,6 +47,30 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.9.x
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### Breaking changes
+
+### New features and enhancements
+
+- Renamed `Data` and `DataFrame` types
+
+    The `Data` object is now named `JSON`, and the `DataFrame` object is now named `Table`.
+    Flows using `Data` or `DataFrame` are backwards compatible.
+    For more information, see [Langflow data types](/data-types).
+
+- Renamed **Data Operations** and **DataFrame Operations** components
+
+    The **Data Operations** component is now the [**JSON Operations** component](/data-operations), and the **DataFrame Operations** component is now the [**Table Operations** component](/dataframe-operations).
+
+- Enabled tool calling for Gemini 3 preview models
+
+    Tool calling is enabled for the following Google Gemini 3 preview models:
+    `gemini-3.1-pro-preview`, `gemini-3-pro-preview`, `gemini-3-flash-preview`, and `gemini-3-pro-image-preview`.
+
 ## 1.8.x
 
 Highlights of this release include the following changes.

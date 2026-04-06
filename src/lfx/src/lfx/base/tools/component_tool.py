@@ -270,19 +270,13 @@ class ComponentToolkit:
             tool.name = _format_tool_name(str(tool_name)) or tool.name
             tool.description = tool_description or tool.description
             tool.tags = [tool.name]
-        elif flow_mode_inputs and (tool_name or tool_description):
+        elif (tool_name or tool_description) and (flow_mode_inputs or len(tools) > 1):
             for tool in tools:
                 tool.name = _format_tool_name(str(tool_name) + "_" + str(tool.name)) or tool.name
                 tool.description = (
                     str(tool_description) + " Output details: " + str(tool.description)
                 ) or tool.description
                 tool.tags = [tool.name]
-        elif tool_name or tool_description:
-            msg = (
-                "When passing a tool name or description, there must be only one tool, "
-                f"but {len(tools)} tools were found."
-            )
-            raise ValueError(msg)
         return tools
 
     def get_tools_metadata_dictionary(self) -> dict:
