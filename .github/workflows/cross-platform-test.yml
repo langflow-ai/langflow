@@ -40,6 +40,7 @@ jobs:
     outputs:
       base-artifact-name: ${{ steps.set-names.outputs.base-artifact-name }}
       main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
+      lfx-artifact-name: ${{ steps.set-names.outputs.lfx-artifact-name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -62,8 +63,17 @@ jobs:
           # Base package builds to dist/ but should be in src/backend/base/dist/
           mkdir -p src/backend/base/dist
           mv dist/langflow_base*.whl src/backend/base/dist/
+      - name: Build LFX package
+        run: |
+          cd src/lfx
+          uv build --wheel --out-dir dist
       - name: Build main package
         run: make build_langflow args="--wheel"
+      - name: Upload lfx artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: adhoc-dist-lfx
+          path: src/lfx/dist
       - name: Upload base artifact
         uses: actions/upload-artifact@v6
         with:
@@ -79,6 +89,7 @@ jobs:
         run: |
           echo "base-artifact-name=adhoc-dist-base" >> $GITHUB_OUTPUT
           echo "main-artifact-name=adhoc-dist-main" >> $GITHUB_OUTPUT
+          echo "lfx-artifact-name=adhoc-dist-lfx" >> $GITHUB_OUTPUT
 
   test-installation-stable:
     name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }}
@@ -173,10 +184,10 @@ jobs:
           path: ./sdk-dist
 
       - name: Download LFX package artifact
-        if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '')
         uses: actions/download-artifact@v7
         with:
-          name: ${{ inputs.lfx-artifact-name }}
+          name: ${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name || 'adhoc-dist-lfx' }}
           path: ./lfx-dist
 
       - name: Download base package artifact
@@ -229,7 +240,7 @@ jobs:
         shell: bash
 
       - name: Install LFX package from wheel (Windows)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && inputs.lfx-artifact-name != '' && inputs.sdk-artifact-name == ''
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '') && inputs.sdk-artifact-name == ''
         run: |
           ls -la ./lfx-dist/
           find ./lfx-dist -name "*.whl" -type f
@@ -300,7 +311,7 @@ jobs:
         shell: bash
 
       - name: Install LFX package from wheel (Unix)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && inputs.lfx-artifact-name != '' && inputs.sdk-artifact-name == ''
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '') && inputs.sdk-artifact-name == ''
         run: |
           ls -la ./lfx-dist/
           find ./lfx-dist -name "*.whl" -type f
@@ -537,10 +548,10 @@ jobs:
           path: ./sdk-dist
 
       - name: Download LFX package artifact
-        if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '')
         uses: actions/download-artifact@v7
         with:
-          name: ${{ inputs.lfx-artifact-name }}
+          name: ${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name || 'adhoc-dist-lfx' }}
           path: ./lfx-dist
 
       - name: Download base package artifact
@@ -588,7 +599,7 @@ jobs:
         shell: bash
 
       - name: Install LFX package from wheel (Windows)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && inputs.lfx-artifact-name != ''
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '')
         run: |
           ls -la ./lfx-dist/
           find ./lfx-dist -name "*.whl" -type f
@@ -630,7 +641,7 @@ jobs:
         shell: bash
 
       - name: Install LFX package from wheel (Unix)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && inputs.lfx-artifact-name != ''
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '')
         run: |
           ls -la ./lfx-dist/
           find ./lfx-dist -name "*.whl" -type f
@@ -675,7 +686,7 @@ jobs:
         if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows'
         run: |
           # Reinstall LFX if it was provided
-          if [ -n "${{ inputs.lfx-artifact-name }}" ]; then
+          if [ -n "${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name }}" ]; then
             LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
             if [ -n "$LFX_WHEEL" ]; then
               echo "Force reinstalling LFX: $LFX_WHEEL"
@@ -703,7 +714,7 @@ jobs:
         if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
         run: |
           # Reinstall LFX if it was provided
-          if [ -n "${{ inputs.lfx-artifact-name }}" ]; then
+          if [ -n "${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name }}" ]; then
             LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
             if [ -n "$LFX_WHEEL" ]; then
               echo "Force reinstalling LFX: $LFX_WHEEL"

@@ -20,6 +20,7 @@ interface BaseConfig {
   event_delivery: EventDeliveryType;
   voice_mode_available: boolean;
   allow_custom_components: boolean;
+  mcp_base_url: string;
 }
 
 // Public config = base config (unauthenticated users get only base fields)
@@ -82,6 +83,7 @@ export const useGetConfig: useQueryFunctionType<
   const setAllowCustomComponents = useUtilityStore(
     (state) => state.setAllowCustomComponents,
   );
+  const setMcpBaseUrl = useUtilityStore((state) => state.setMcpBaseUrl);
 
   const { query } = UseRequestProcessor();
 
@@ -104,6 +106,7 @@ export const useGetConfig: useQueryFunctionType<
       setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
       const allowCustomComponents = data.allow_custom_components ?? true;
       setAllowCustomComponents(allowCustomComponents);
+      setMcpBaseUrl(data.mcp_base_url ?? "");
       recomputeComponentsToUpdateIfNeeded();
 
       // Set authenticated-only fields if present (full config)
