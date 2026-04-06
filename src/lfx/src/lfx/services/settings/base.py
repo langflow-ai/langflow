@@ -151,6 +151,8 @@ class Settings(BaseSettings):
     """The cache type can be 'async' or 'redis'."""
     cache_expire: int = 3600
     """The cache expire in seconds."""
+    cache_dir: str | None = None
+    """The directory to store disk cache. Defaults to config_dir if not set."""
     variable_store: str = "db"
     """The store can be 'db' or 'kubernetes'."""
 
@@ -497,6 +499,26 @@ class Settings(BaseSettings):
             # Create a .langflow directory inside the cache directory
             value = Path(cache_dir)
             value.mkdir(parents=True, exist_ok=True)
+
+        if isinstance(value, str):
+            value = Path(value)
+        # Resolve to absolute path to handle relative paths correctly
+        value = value.resolve()
+        if not value.exists():
+            value.mkdir(parents=True, exist_ok=True)
+
+        return str(value)
+
+    @field_validator("cache_dir", mode="before")
+    @classmethod
+    def validate_cache_dir(cls, value):
+        """Validate and normalize cache_dir path.
+
+        If not set, returns None and the factory will fall back to config_dir.
+        If set, resolves to an absolute path and creates the directory if needed.
+        """
+        if not value:
+            return None
 
         if isinstance(value, str):
             value = Path(value)
