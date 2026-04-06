@@ -20,7 +20,7 @@ class TestFileComponentDynamicOutputs:
         assert "dataframe" in output_names  # Structured content
         assert "message" in output_names  # Raw content
         assert "path" in output_names  # File path
-    
+
     def test_update_outputs_single_xlsx_file(self):
         """Test single XLSX file shows structured + raw outputs."""
         component = FileComponent()
@@ -141,7 +141,7 @@ class TestFileComponentDynamicOutputs:
 
         assert result["advanced_mode"]["show"] is False
         assert result["advanced_mode"]["value"] is False
-    
+
     def test_advanced_mode_not_available_for_xlsx(self):
         """Test advanced mode is hidden for XLSX files."""
         component = FileComponent()
