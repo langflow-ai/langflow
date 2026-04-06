@@ -8,7 +8,10 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from fastapi import status
+from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.services.adapters.deployment.exceptions import (
+    DeploymentConflictError,
     DeploymentError,
     InvalidContentError,
     InvalidDeploymentOperationError,
@@ -51,6 +54,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_agent_payload_from_values,
     dedupe_list,
+    extract_error_detail,
     resolve_resource_name_prefix,
     validate_wxo_name,
 )
@@ -268,19 +272,20 @@ async def apply_provider_create_plan_with_rollback(
             llm=plan.llm,
         )
     except Exception:
+        # Log root cause with traceback before rollback side-effects.
+        logger.exception(
+            "wxO create failed; rolling back agent_id=%s, tool_ids=%s, app_ids=%s, mutated_tool_ids=%s",
+            getattr(agent_create_response, "id", None),
+            created_tool_ids,
+            created_app_ids,
+            list(original_tools.keys()),
+        )
         # undo tool<->connection bindings of existing tools
         await rollback_update_resources(
             clients=clients,
             created_tool_ids=[],
             created_app_id=None,
             original_tools=original_tools,
-        )
-        logger.warning(
-            "wxO create failed; rolling back agent_id=%s, tool_ids=%s, app_ids=%s, mutated_tool_ids=%s",
-            getattr(agent_create_response, "id", None),
-            created_tool_ids,
-            created_app_ids,
-            list(original_tools.keys()),
         )
         await rollback_created_resources(
             clients=clients,
@@ -411,7 +416,14 @@ async def create_agent_deployment(
         tool_ids=tool_ids,
         llm=llm,
     )
-    return await asyncio.to_thread(clients.agent.create, payload)
+    try:
+        return await asyncio.to_thread(clients.agent.create, payload)
+    except ClientAPIException as exc:
+        if exc.response is not None and exc.response.status_code == status.HTTP_409_CONFLICT:
+            detail = extract_error_detail(exc.response.text)
+            msg = f"{ErrorPrefix.CREATE.value} error details: {detail}"
+            raise DeploymentConflictError(message=msg) from exc
+        raise
 
 
 def validate_create_flow_provider_data(
