@@ -142,12 +142,7 @@ describe("MessageMetadata", () => {
   });
 
   it("should_omit_timestamp_line_when_not_provided", () => {
-    render(
-      <MessageMetadata
-        duration={1000}
-        usage={{ total_tokens: 10 }}
-      />,
-    );
+    render(<MessageMetadata duration={1000} usage={{ total_tokens: 10 }} />);
 
     const tooltipContent = screen.getByTestId("tooltip-content");
     expect(tooltipContent).not.toHaveTextContent("Last run:");

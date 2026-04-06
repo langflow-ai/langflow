@@ -72,18 +72,14 @@ describe("persistMessageProperties", () => {
     mockIsAuth.mockReturnValue(false);
     mockPut.mockRejectedValue(new Error("Network error"));
 
-    expect(() =>
-      persistMessageProperties(MESSAGE_ID, PAYLOAD),
-    ).not.toThrow();
+    expect(() => persistMessageProperties(MESSAGE_ID, PAYLOAD)).not.toThrow();
   });
 
   it("should_not_throw_when_shared_endpoint_fails", () => {
     mockIsAuth.mockReturnValue(true);
     mockPut.mockRejectedValue(new Error("404 Not Found"));
 
-    expect(() =>
-      persistMessageProperties(MESSAGE_ID, PAYLOAD),
-    ).not.toThrow();
+    expect(() => persistMessageProperties(MESSAGE_ID, PAYLOAD)).not.toThrow();
   });
 
   // --- Edge cases ---
