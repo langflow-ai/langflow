@@ -961,15 +961,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             for tool in (tools or [])
             if isinstance(tool, dict) and tool.get("id")
         ]
-        if not snapshots and requested_tool_ids:
-            snapshots = [
-                SnapshotItem(
-                    id=tool_id,
-                    name=tool_id,
-                    provider_data=self._validate_snapshot_item_provider_data({"connections": {}}),
-                )
-                for tool_id in requested_tool_ids
-            ]
+        resolved_ids = {s.id for s in snapshots}
+        stale_ids = [tid for tid in requested_tool_ids if tid not in resolved_ids]
+        if stale_ids:
+            logger.warning(
+                "list_snapshots: agent '%s' references tool IDs that no longer exist on the provider: %s",
+                agent_id,
+                stale_ids,
+            )
 
         return SnapshotListResult(
             snapshots=snapshots,

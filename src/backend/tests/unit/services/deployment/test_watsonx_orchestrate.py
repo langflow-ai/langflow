@@ -3160,7 +3160,12 @@ async def test_list_snapshots_single_deployment_scope(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1", "tool-2"]}),
-        tool=FakeToolClient([]),
+        tool=FakeToolClient(
+            [
+                {"id": "tool-1", "name": "Tool One"},
+                {"id": "tool-2", "name": "Tool Two"},
+            ]
+        ),
         connections=FakeConnectionsClient(),
     )
 
@@ -3176,8 +3181,60 @@ async def test_list_snapshots_single_deployment_scope(monkeypatch):
     )
 
     assert [snapshot.id for snapshot in result.snapshots] == ["tool-1", "tool-2"]
-    assert result.snapshots[0].provider_data == {"connections": {}}
-    assert result.snapshots[1].provider_data == {"connections": {}}
+    assert [snapshot.name for snapshot in result.snapshots] == ["Tool One", "Tool Two"]
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_stale_tool_ids_returns_empty(monkeypatch):
+    """When the agent references tool IDs that no longer exist, return no snapshots."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["deleted-tool-1", "deleted-tool-2"]}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_snapshots(
+        user_id="user-1",
+        db=object(),
+        params=SnapshotListParams(deployment_ids=["dep-1"]),
+    )
+
+    assert result.snapshots == []
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_partial_resolution_logs_stale_ids(monkeypatch, caplog):
+    """When some tool IDs resolve and others don't, return only resolved ones and log the stale IDs."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1", "deleted-tool"]}),
+        tool=FakeToolClient([{"id": "tool-1", "name": "Tool One"}]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        result = await service.list_snapshots(
+            user_id="user-1",
+            db=object(),
+            params=SnapshotListParams(deployment_ids=["dep-1"]),
+        )
+
+    assert [snapshot.id for snapshot in result.snapshots] == ["tool-1"]
+    assert "deleted-tool" in caplog.text
+    assert "dep-1" in caplog.text
 
 
 @pytest.mark.anyio
