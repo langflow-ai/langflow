@@ -1,5 +1,6 @@
 import copy
 import json
+from types import SimpleNamespace
 
 import pytest
 from lfx.graph import Graph
@@ -13,6 +14,8 @@ from lfx.graph.graph.utils import (
     update_template,
 )
 from lfx.graph.vertex.base import Vertex
+from lfx.interface.components import component_cache
+from lfx.utils.flow_validation import CustomComponentValidationError
 
 # Test cases for the graph module
 
@@ -56,6 +59,35 @@ def sample_nodes():
     ]
 
 
+def _settings_service(*, allow_custom_components: bool = False):
+    return SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=allow_custom_components,
+        )
+    )
+
+
+def _blocked_custom_flow() -> dict:
+    return {
+        "nodes": [
+            {
+                "id": "node-1",
+                "data": {
+                    "id": "node-1",
+                    "type": "TotallyCustom",
+                    "node": {
+                        "display_name": "Blocked Node",
+                        "template": {
+                            "code": {"value": "print('blocked')"},
+                        },
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+
+
 def get_node_by_type(graph, node_type: type[Vertex]) -> Vertex | None:
     """Get a node by type."""
     return next((node for node in graph.vertices if isinstance(node, node_type)), None)
@@ -81,6 +113,18 @@ def test_invalid_node_types():
     g = Graph()
     with pytest.raises(KeyError):
         g.add_nodes_and_edges(graph_data["nodes"], graph_data["edges"])
+
+
+def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: _settings_service(allow_custom_components=False),
+    )
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {"ChatInput": {"known-hash"}})
+    monkeypatch.setattr(component_cache, "all_types_dict", None)
+
+    with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
+        Graph.from_payload(_blocked_custom_flow())
 
 
 def test_find_last_node(grouped_chat_json_flow):

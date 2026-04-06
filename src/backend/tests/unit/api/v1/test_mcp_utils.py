@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 from langflow.api.v1 import mcp_utils
+from lfx.interface.components import component_cache
 
 
 class FakeResult:
@@ -80,3 +81,44 @@ async def test_handle_list_resources_includes_flow_and_user_files(monkeypatch):
     uris = {str(resource.uri) for resource in resources}
     assert f"http://localhost:4000/api/v1/files/download/{flow_id}/flow-doc.docx" in uris
     assert f"http://localhost:4000/api/v1/files/download/{user_id}/uploaded-summary.pdf" in uris
+
+
+@pytest.mark.asyncio
+async def test_handle_list_tools_skips_blocked_custom_flows(monkeypatch):
+    blocked_flow = SimpleNamespace(
+        id="flow-1",
+        user_id="user-1",
+        name="Blocked Flow",
+        description="Contains custom code",
+        data={
+            "nodes": [
+                {
+                    "id": "node-1",
+                    "data": {
+                        "id": "node-1",
+                        "type": "TotallyCustom",
+                        "node": {
+                            "display_name": "Blocked Node",
+                            "template": {
+                                "code": {"value": "print('blocked')"},
+                            },
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    )
+    fake_session = FakeSession(flows=[blocked_flow], user_files=[])
+
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(fake_session))
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False)),
+    )
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {"ChatInput": "known-hash"})
+    monkeypatch.setattr(component_cache, "all_types_dict", None)
+
+    tools = await mcp_utils.handle_list_tools()
+
+    assert tools == []

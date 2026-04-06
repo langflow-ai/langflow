@@ -47,6 +47,9 @@ COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 # Copy lfx metadata files since it's a workspace member
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY ./src/lfx/README.md /app/src/lfx/README.md
+# Copy sdk metadata files since it's a workspace member
+COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+COPY ./src/sdk/README.md /app/src/sdk/README.md
 
 # Install the project's dependencies using the lockfile and settings
 # We need to mount the root uv.lock and pyproject.toml to build the base with uv because we're still using uv workspaces

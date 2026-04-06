@@ -7,6 +7,7 @@ from langflow.api.v1 import (
     chat_router,
     endpoints_router,
     files_router,
+    flow_events_router,
     flow_version_router,
     flows_router,
     folders_router,
@@ -14,6 +15,7 @@ from langflow.api.v1 import (
     login_router,
     mcp_projects_router,
     mcp_router,
+    memories_router,
     model_options_router,
     models_router,
     monitor_router,
@@ -54,6 +56,7 @@ router_v1.include_router(endpoints_router)
 router_v1.include_router(validate_router)
 router_v1.include_router(store_router)
 router_v1.include_router(flows_router)
+router_v1.include_router(flow_events_router)
 router_v1.include_router(flow_version_router)
 router_v1.include_router(users_router)
 router_v1.include_router(api_key_router)
@@ -66,6 +69,7 @@ router_v1.include_router(folders_router)
 router_v1.include_router(projects_router)
 router_v1.include_router(starter_projects_router)
 router_v1.include_router(knowledge_bases_router)
+router_v1.include_router(memories_router)
 router_v1.include_router(mcp_router)
 router_v1.include_router(voice_mode_router)
 router_v1.include_router(mcp_projects_router)

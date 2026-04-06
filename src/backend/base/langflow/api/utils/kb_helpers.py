@@ -215,8 +215,13 @@ class KBAnalysisHelper:
 
         missing_keys = not all(k in metadata for k in defaults)
         has_unknowns = metadata.get("embedding_provider") == "Unknown" or metadata.get("embedding_model") == "Unknown"
+        # Detect stale zero-chunk metadata: the file claims 0 chunks but
+        # Chroma data exists on disk, meaning data was ingested without updating
+        # the metrics (e.g. via the KnowledgeIngestionComponent before the fix).
+        has_chroma_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
+        stale_chunks = metadata.get("chunks", 0) == 0 and has_chroma_data
 
-        if fast and not missing_keys:
+        if fast and not missing_keys and not stale_chunks:
             return metadata
 
         backfill_needed = not metadata_file.exists() or missing_keys or (not fast and has_unknowns)
@@ -236,6 +241,15 @@ class KBAnalysisHelper:
                 metadata_file.write_text(json.dumps(metadata, indent=2))
             except (OSError, ValueError, TypeError, json.JSONDecodeError) as e:
                 logger.debug(f"Metadata backfill failed for {kb_path}: {e}")
+
+        # Recount metrics from Chroma if metadata claims 0 chunks but data exists
+        if stale_chunks:
+            try:
+                KBAnalysisHelper.update_text_metrics(kb_path, metadata)
+                metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
+                metadata_file.write_text(json.dumps(metadata, indent=2))
+            except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
+                logger.debug(f"Stale metrics recount failed for {kb_path}: {e}")
 
         return metadata
 
@@ -431,7 +445,7 @@ class KBIngestionHelper:
                 splitter_kwargs["separators"] = [resolved_separator]
             text_splitter = RecursiveCharacterTextSplitter(**splitter_kwargs)
 
-            embeddings = await KBIngestionHelper._build_embeddings(embedding_provider, embedding_model, current_user)
+            embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, current_user)
 
             client = KBStorageHelper.get_fresh_chroma_client(kb_path)
             chroma = Chroma(
@@ -448,40 +462,30 @@ class KBIngestionHelper:
                     continue
 
                 chunks = text_splitter.split_text(content)
-                for i in range(0, len(chunks), INGESTION_BATCH_SIZE):
-                    if await KBIngestionHelper._is_job_cancelled(job_service, task_job_id):
-                        raise IngestionCancelledError
+                docs = [
+                    Document(
+                        page_content=c,
+                        metadata={
+                            "source": source_name or file_name,
+                            "file_name": file_name,
+                            "chunk_index": i,
+                            "total_chunks": len(chunks),
+                            "ingested_at": datetime.now(timezone.utc).isoformat(),
+                            "job_id": job_id_str,
+                        },
+                    )
+                    for i, c in enumerate(chunks)
+                ]
 
-                    batch = chunks[i : i + INGESTION_BATCH_SIZE]
-                    docs = [
-                        Document(
-                            page_content=c,
-                            metadata={
-                                "source": source_name or file_name,
-                                "file_name": file_name,
-                                "chunk_index": i + j,
-                                "total_chunks": len(chunks),
-                                "ingested_at": datetime.now(timezone.utc).isoformat(),
-                                "job_id": job_id_str,
-                            },
-                        )
-                        for j, c in enumerate(batch)
-                    ]
-
-                    for attempt in range(MAX_RETRY_ATTEMPTS):
-                        if await KBIngestionHelper._is_job_cancelled(job_service, task_job_id):
-                            raise IngestionCancelledError
-                        try:
-                            await chroma.aadd_documents(docs)
-                            break
-                        except Exception as e:
-                            if attempt == MAX_RETRY_ATTEMPTS - 1:
-                                raise
-                            wait = (attempt + 1) * EXPONENTIAL_BACKOFF_MULTIPLIER
-                            await logger.awarning("Write failed, retrying in %ds: %s", wait, e)
-                            await asyncio.sleep(wait)
-
-                    await asyncio.sleep(0.01)
+                written = await KBIngestionHelper.write_documents_to_chroma(
+                    documents=docs,
+                    chroma=chroma,
+                    task_job_id=task_job_id,
+                    job_service=job_service,
+                )
+                if written < len(docs):
+                    # Job was cancelled mid-file
+                    raise IngestionCancelledError
 
                 total_chunks_created += len(chunks)
                 processed_files.append(file_name)
@@ -541,13 +545,69 @@ class KBIngestionHelper:
             KBStorageHelper.release_chroma_resources(kb_path)
 
     @staticmethod
-    async def _is_job_cancelled(job_service: JobService, job_id: uuid.UUID) -> bool:
+    async def write_documents_to_chroma(
+        *,
+        documents: list[Document],
+        chroma: Chroma,
+        task_job_id: uuid.UUID,
+        job_service: JobService,
+    ) -> int:
+        """Write pre-built Documents into an open Chroma collection.
+
+        This is the shared primitive used by both file-based KB ingestion
+        (``perform_ingestion``) and message-based Memory Base ingestion.
+
+        Documents must already be chunked and have their metadata populated
+        by the caller — this method only handles the batched write, cancellation
+        checking, and retry logic.
+
+        Args:
+            documents: LangChain Document objects ready for embedding.
+            chroma: An already-constructed ``Chroma`` instance pointing at the
+                target collection.
+            task_job_id: Job ID used to poll for cancellation.
+            job_service: Service for checking job status.
+
+        Returns:
+            Number of documents successfully written.  If the job is cancelled
+            mid-batch this will be less than ``len(documents)``.
+
+        Raises:
+            Exception: Re-raises any non-cancellation write failure after the
+                retry budget is exhausted.
+        """
+        written = 0
+        for i in range(0, len(documents), INGESTION_BATCH_SIZE):
+            if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
+                return written
+
+            batch = documents[i : i + INGESTION_BATCH_SIZE]
+            for attempt in range(MAX_RETRY_ATTEMPTS):
+                if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
+                    return written
+                try:
+                    await chroma.aadd_documents(batch)
+                    break
+                except Exception as e:
+                    if attempt == MAX_RETRY_ATTEMPTS - 1:
+                        raise
+                    wait = (attempt + 1) * EXPONENTIAL_BACKOFF_MULTIPLIER
+                    await logger.awarning("Write failed, retrying in %ds: %s", wait, e)
+                    await asyncio.sleep(wait)
+
+            written += len(batch)
+            await asyncio.sleep(0.01)
+
+        return written
+
+    @staticmethod
+    async def is_job_cancelled(job_service: JobService, job_id: uuid.UUID) -> bool:
         """Internal helper to check if a job has been cancelled."""
         job = await job_service.get_job_by_job_id(job_id)
         return job is not None and job.status == JobStatus.CANCELLED
 
     @staticmethod
-    async def _build_embeddings(provider: str, model: str, current_user):
+    async def build_embeddings(provider: str, model: str, current_user):
         """Internal helper to build embeddings object."""
         options = get_embedding_model_options(user_id=current_user.id)
         selected_option = next((o for o in options if o["provider"] == provider and o["name"] == model), None)

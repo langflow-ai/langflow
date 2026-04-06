@@ -22,9 +22,15 @@ from lfx.custom.utils import (
 )
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
+from lfx.interface.components import component_cache
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 from lfx.services.settings.service import SettingsService
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    code_hash_matches_any_template,
+    get_component_hash_lookups_for_validation,
+)
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
@@ -56,7 +62,14 @@ from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_auth_service, get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import (
+    get_auth_service,
+    get_memory_base_service,
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+    get_telemetry_service,
+)
 from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
@@ -199,6 +212,18 @@ async def simple_run_flow(
             stream=stream,
             event_manager=event_manager,
         )
+
+        # Fire memory-base auto-capture hook — non-blocking background effect.
+        try:
+            _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
+            await get_task_service().fire_and_forget_task(
+                get_memory_base_service().on_flow_output,
+                flow_id=flow.id,
+                session_id=session_id,
+                _run_id=_run_id_uuid,
+            )
+        except (RuntimeError, ValueError, OSError):
+            await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         return RunResponse(outputs=task_result, session_id=session_id)
 
@@ -521,6 +546,8 @@ async def _run_flow_internal(
         )
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        if isinstance(exc, CustomComponentValidationError):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         if "not found" in str(exc):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
@@ -919,6 +946,8 @@ async def experimental_run_flow(
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
             graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
+        except CustomComponentValidationError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
@@ -933,6 +962,18 @@ async def experimental_run_flow(
         )
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    # Fire memory-base auto-capture hook — non-blocking background effect.
+    try:
+        _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
+        await get_task_service().fire_and_forget_task(
+            get_memory_base_service().on_flow_output,
+            flow_id=flow.id,
+            session_id=session_id,
+            _run_id=_run_id_uuid,
+        )
+    except (RuntimeError, ValueError, OSError):
+        await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
     return RunResponse(outputs=task_result, session_id=session_id)
 
@@ -1009,6 +1050,25 @@ async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
 ) -> CustomComponentResponse:
+    settings_service = get_settings_service()
+    if not settings_service.settings.allow_custom_components:
+        # Lazily compute hash lookups if they haven't been built yet
+        # (e.g. during startup before the cache is fully populated).
+        get_component_hash_lookups_for_validation()
+        all_known = component_cache.all_known_hashes
+        if all_known is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Component templates are still initializing. Please try again in a few seconds.",
+            )
+        # Allow updating to a known server template (core component update),
+        # but block truly custom code.
+        if not code_hash_matches_any_template(raw_code.code, all_known):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Custom component creation is disabled",
+            )
+
     component = Component(_code=raw_code.code)
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
@@ -1041,6 +1101,21 @@ async def custom_component_update(
         HTTPException: If an error occurs during component building or updating.
         SerializationError: If serialization of the updated component node fails.
     """
+    settings_service = get_settings_service()
+    if not settings_service.settings.allow_custom_components:
+        get_component_hash_lookups_for_validation()
+        all_known = component_cache.all_known_hashes
+        if all_known is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Component templates are still initializing. Please try again in a few seconds.",
+            )
+        if not code_hash_matches_any_template(code_request.code, all_known):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Custom component creation is disabled",
+            )
+
     try:
         component = Component(_code=code_request.code)
         component_node, cc_instance = build_custom_component_template(

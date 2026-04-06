@@ -60,6 +60,58 @@ import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables"
 import { filterSingletonComponent } from "./helpers/filter-singleton-component";
 import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
+import { useUtilityStore } from "./utilityStore";
+
+// Tracks in-progress node update operations (e.g. validateComponentCode calls).
+// buildFlow awaits these so "Run" doesn't race against a pending "Update".
+const pendingNodeUpdates = new Map<
+  string,
+  { promise: Promise<void>; resolve: () => void }
+>();
+
+export function registerNodeUpdate(nodeId: string): void {
+  // If there's already a pending update for this node, leave it
+  if (pendingNodeUpdates.has(nodeId)) return;
+  let resolveRef: () => void;
+  const promise = new Promise<void>((r) => {
+    resolveRef = r;
+  });
+  pendingNodeUpdates.set(nodeId, { promise, resolve: resolveRef! });
+}
+
+export function completeNodeUpdate(nodeId: string): void {
+  const entry = pendingNodeUpdates.get(nodeId);
+  if (entry) {
+    entry.resolve();
+    pendingNodeUpdates.delete(nodeId);
+  }
+}
+
+export async function waitForNodeUpdates(
+  timeoutMs: number = 10_000,
+): Promise<void> {
+  if (pendingNodeUpdates.size === 0) return;
+  const pendingIds = Array.from(pendingNodeUpdates.keys());
+  const promises = Array.from(pendingNodeUpdates.values()).map(
+    (e) => e.promise,
+  );
+  let timedOut = false;
+  await Promise.race([
+    Promise.all(promises),
+    new Promise<void>((resolve) =>
+      setTimeout(() => {
+        timedOut = true;
+        resolve();
+      }, timeoutMs),
+    ),
+  ]);
+  if (timedOut) {
+    console.warn(
+      `waitForNodeUpdates timed out after ${timeoutMs}ms. ` +
+        `${pendingNodeUpdates.size} updates still pending: ${pendingIds.join(", ")}`,
+    );
+  }
+}
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
@@ -95,15 +147,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateComponentsToUpdate: (nodes) => {
     const outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
+    const allowCustomComponents =
+      useUtilityStore.getState().allowCustomComponents;
     nodes.forEach((node) => {
       if (node.type === "genericNode") {
-        const codeValidity = checkCodeValidity(node.data, templates);
-        if (codeValidity && codeValidity.outdated)
+        const codeValidity = checkCodeValidity(
+          node.data,
+          templates,
+          allowCustomComponents,
+        );
+        if (codeValidity && (codeValidity.outdated || codeValidity.blocked))
           outdatedNodes.push({
             id: node.id,
             icon: node.data.node?.icon,
             display_name: node.data.node?.display_name,
             outdated: codeValidity.outdated,
+            blocked: codeValidity.blocked,
             breakingChange: codeValidity.breakingChange,
             userEdited: codeValidity.userEdited,
           });
@@ -769,6 +828,56 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       throw new Error("Invalid components");
     }
 
+    // Wait for any in-progress component updates (e.g. user clicked "Update"
+    // then immediately clicked "Run") before checking outdated state.
+    await waitForNodeUpdates();
+
+    // Block build when custom components are disabled and there are outdated components
+    // Recalculate from current nodes to avoid stale componentsToUpdate
+    // (setNode does not trigger updateComponentsToUpdate, only setNodes does)
+    get().updateComponentsToUpdate(get().nodes);
+    const allowCustomComponents =
+      useUtilityStore.getState().allowCustomComponents;
+    if (!allowCustomComponents && get().componentsToUpdate.length > 0) {
+      const blockedComponents = get().componentsToUpdate.filter(
+        (component) => component.blocked,
+      );
+      const outdatedComponents = get().componentsToUpdate.filter(
+        (component) => component.outdated,
+      );
+      const errorList: string[] = [];
+
+      if (blockedComponents.length > 0) {
+        errorList.push(
+          `The following custom components cannot run while custom components are disabled: ${blockedComponents
+            .map((component) => component.display_name ?? component.id)
+            .join(", ")}`,
+        );
+      }
+
+      if (outdatedComponents.length > 0) {
+        errorList.push(
+          `The following components are outdated and must be updated: ${outdatedComponents
+            .map((component) => component.display_name ?? component.id)
+            .join(", ")}`,
+        );
+      }
+
+      setErrorData({
+        title:
+          blockedComponents.length > 0
+            ? "Custom components are blocked while custom components are disabled"
+            : "Outdated components must be updated before building",
+        list: errorList,
+      });
+      get().setIsBuilding(false);
+      throw new Error(
+        blockedComponents.length > 0
+          ? "Custom components are blocked while custom components are disabled"
+          : "Outdated components must be updated",
+      );
+    }
+
     function validateSubgraph() {}
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
@@ -902,10 +1011,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             ?.map((element) => element.id)
             .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
-        if (get().componentsToUpdate.length > 0)
+        const isCustomComponentBlocked = list.some((msg) =>
+          msg.toLowerCase().includes("custom components are not allowed"),
+        );
+        if (!isCustomComponentBlocked && get().componentsToUpdate.length > 0)
           setErrorData({
             title:
-              "There are outdated components in the flow. The error could be related to them.",
+              "There are blocked or outdated components in the flow. The error could be related to them.",
           });
         get().updateEdgesRunningByNodes(
           get().nodes.map((n) => n.id),
@@ -1177,5 +1289,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ stopNodeId: nodeId });
   },
 }));
+
+export function recomputeComponentsToUpdateIfNeeded(): void {
+  const { nodes, updateComponentsToUpdate } = useFlowStore.getState();
+  if (nodes.length > 0) {
+    updateComponentsToUpdate(nodes);
+  }
+}
 
 export default useFlowStore;

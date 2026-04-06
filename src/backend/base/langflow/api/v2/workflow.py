@@ -29,6 +29,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 from lfx.graph.graph.base import Graph
+from lfx.log.logger import logger
 from lfx.schema.workflow import (
     WORKFLOW_EXECUTION_RESPONSES,
     WORKFLOW_STATUS_RESPONSES,
@@ -65,7 +66,7 @@ from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.deps import get_job_service, get_task_service
+from langflow.services.deps import get_job_service, get_memory_base_service, get_task_service
 
 # Configuration constants
 EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution
@@ -378,7 +379,7 @@ async def execute_sync_workflow(
 
     # Execute graph - component errors are caught and returned in response body
     job_service = get_job_service()
-    await job_service.create_job(job_id=job_id, flow_id=flow_id_str)
+    await job_service.create_job(job_id=job_id, flow_id=flow_id_str, user_id=api_key_user.id)
     try:
         task_result, execution_session_id = await job_service.execute_with_status(
             job_id=job_id,
@@ -390,6 +391,18 @@ async def execute_sync_workflow(
             outputs=terminal_node_ids,
             stream=False,
         )
+
+        # Fire memory-base auto-capture hook — non-blocking background effect.
+        try:
+            _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
+            await get_task_service().fire_and_forget_task(
+                get_memory_base_service().on_flow_output,
+                flow_id=flow.id,
+                session_id=execution_session_id,
+                _run_id=_run_id_uuid,
+            )
+        except (RuntimeError, ValueError, OSError):
+            await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         # Build RunResponse
         run_response = RunResponse(outputs=task_result, session_id=execution_session_id)
@@ -467,12 +480,37 @@ async def execute_workflow_background(
         await job_service.create_job(
             job_id=job_id,
             flow_id=flow_id_str,
+            user_id=api_key_user.id,
         )
+
+        # Closure captures flow identity for the memory-base hook.
+        # run_id is the same as job_id — graph.set_run_id(job_id) was called above.
+        _hook_flow_id = flow.id
+        _hook_run_id = job_id
+
+        async def _run_and_notify(**kwargs):
+            """Thin wrapper: execute graph then fire memory-base hook as a background effect.
+
+            The hook is dispatched non-blocking after graph completion.  Any failure in
+            the hook is swallowed so it never affects the job status of the graph run.
+            """
+            result = await run_graph_internal(**kwargs)
+            _, _effective_session_id = result
+            try:
+                await get_task_service().fire_and_forget_task(
+                    get_memory_base_service().on_flow_output,
+                    flow_id=_hook_flow_id,
+                    session_id=_effective_session_id,
+                    _run_id=_hook_run_id,
+                )
+            except (RuntimeError, ValueError, OSError):
+                await logger.awarning("Memory base hook scheduling failed for flow %s", _hook_flow_id, exc_info=True)
+            return result
 
         await task_service.fire_and_forget_task(
             job_service.execute_with_status,
             job_id=job_id,
-            run_coro_func=run_graph_internal,
+            run_coro_func=_run_and_notify,
             graph=graph,
             flow_id=flow_id_str,
             session_id=session_id,
@@ -486,6 +524,8 @@ async def execute_workflow_background(
     except (WorkflowResourceError, WorkflowServiceUnavailableError, WorkflowQueueFullError):
         # Re-raise infrastructure/resource errors to be handled by the endpoint
         raise
+    except ValueError as exc:
+        raise WorkflowValidationError(str(exc)) from exc
     except MemoryError as exc:
         raise WorkflowResourceError from exc
 
@@ -533,7 +573,7 @@ async def get_workflow_status(
 
     job_service = get_job_service()
     try:
-        job = await job_service.get_job_by_job_id(job_id=job_id)
+        job = await job_service.get_job_by_job_id(job_id=job_id, user_id=api_key_user.id)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -646,7 +686,7 @@ async def get_workflow_status(
 )
 async def stop_workflow(
     request: WorkflowStopRequest,
-    api_key_user: Annotated[UserRead, Depends(api_key_security)],  # noqa: ARG001
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
 ) -> WorkflowStopResponse:
     """Stop a running workflow execution by job_id.
 
@@ -670,8 +710,8 @@ async def stop_workflow(
     task_service = get_task_service()
 
     try:
-        # 1. Fetch Job
-        job = await job_service.get_job_by_job_id(job_id)
+        # 1. Fetch Job and verify ownership
+        job = await job_service.get_job_by_job_id(job_id, user_id=api_key_user.id)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -689,6 +729,18 @@ async def stop_workflow(
                 "error": "Job not found",
                 "code": "JOB_NOT_FOUND",
                 "message": f"Job {job_id} not found",
+                "job_id": str(job_id),
+            },
+        )
+
+    # Verify this is a workflow job
+    if job.type != JobType.WORKFLOW:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Job not found",
+                "code": "JOB_NOT_FOUND",
+                "message": f"Job {job_id} is not a workflow job (type: {job.type})",
                 "job_id": str(job_id),
             },
         )
