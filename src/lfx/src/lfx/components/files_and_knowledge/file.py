@@ -42,6 +42,10 @@ def _get_storage_location_options():
     return [{"name": "Local", "icon": "hard-drive"}, *all_options]
 
 
+_STRUCTURED_DATA_EXTENSIONS = ["csv", "xls", "xlsx"]
+_TEXT_EXTENSIONS = [ext for ext in TEXT_FILE_TYPES if ext not in _STRUCTURED_DATA_EXTENSIONS]
+
+
 class FileComponent(BaseFileComponent):
     """File component with optional Docling processing (isolated in a subprocess)."""
 
@@ -54,7 +58,7 @@ class FileComponent(BaseFileComponent):
     add_tool_output = True  # Enable tool mode toggle without requiring tool_mode inputs
 
     # Extensions that can be processed without Docling (using standard text parsing)
-    TEXT_EXTENSIONS = TEXT_FILE_TYPES
+    TEXT_EXTENSIONS = _TEXT_EXTENSIONS
 
     # Extensions that require Docling for processing (images, advanced office formats, etc.)
     DOCLING_ONLY_EXTENSIONS = [
@@ -80,10 +84,7 @@ class FileComponent(BaseFileComponent):
     ]
 
     # Extensions handled by pandas for structured data (not text parsing, not Docling)
-    STRUCTURED_DATA_EXTENSIONS = [
-        "xlsx",
-        "xls",
-    ]
+    STRUCTURED_DATA_EXTENSIONS = _STRUCTURED_DATA_EXTENSIONS
 
     VALID_EXTENSIONS = [
         *TEXT_EXTENSIONS,
@@ -448,7 +449,10 @@ class FileComponent(BaseFileComponent):
                 self._disable_docling_fields_in_cloud(build_config)
             else:
                 # If all files can be processed by docling, do so
-                allow_advanced = all(not file_path.endswith((".csv", ".xlsx", ".parquet")) for file_path in paths)
+                allow_advanced = all(
+                    Path(file_path).suffix.lower().lstrip(".") not in self.STRUCTURED_DATA_EXTENSIONS
+                    for file_path in paths
+                )
                 build_config["advanced_mode"]["show"] = allow_advanced
                 if not allow_advanced:
                     build_config["advanced_mode"]["value"] = False
@@ -508,7 +512,7 @@ class FileComponent(BaseFileComponent):
         frontend_node["outputs"] = []
         if len(paths) == 1:
             file_path = paths[0] if field_name == "path" else frontend_node["template"]["path"]["file_path"][0]
-            if file_path.endswith((".csv", ".xlsx", ".parquet")):
+            if Path(file_path).suffix.lower().lstrip(".") in self.STRUCTURED_DATA_EXTENSIONS:
                 frontend_node["outputs"].append(
                     Output(
                         display_name="Structured Content",
