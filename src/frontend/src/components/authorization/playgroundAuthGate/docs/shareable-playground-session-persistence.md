@@ -558,37 +558,49 @@ order_by: string (optional, default: "timestamp") — Allowed: timestamp, sender
 ### 9.1 Context Diagram (Level 1)
 
 ```mermaid
-C4Context
-  title System Context - Shareable Playground
+graph TD
+  subgraph Users
+    AU["Authenticated User\n(logged in, AUTO_LOGIN=FALSE)"]
+    AN["Anonymous User\n(AUTO_LOGIN=TRUE)"]
+    OW["Flow Owner\n(creates and shares flows)"]
+  end
 
-  Person(authUser, "Authenticated User", "Logged-in user accessing a shared flow")
-  Person(anonUser, "Anonymous User", "Auto-login user accessing a shared flow")
-  Person(owner, "Flow Owner", "User who created and shared the flow")
+  LF["Langflow\nAI flow builder with\nshareable playground"]
+  LLM["LLM Provider\n(OpenAI, Anthropic, etc.)"]
 
-  System(langflow, "Langflow", "AI flow builder with shareable playground")
-  System_Ext(llm, "LLM Provider", "OpenAI, Anthropic, etc.")
-
-  Rel(authUser, langflow, "Sends messages, views sessions", "HTTPS")
-  Rel(anonUser, langflow, "Sends messages (sessionStorage)", "HTTPS")
-  Rel(owner, langflow, "Creates and shares flows", "HTTPS")
-  Rel(langflow, llm, "Executes LLM calls during flow build", "HTTPS")
+  AU -->|"Sessions persisted to DB\n/shared endpoints"| LF
+  AN -->|"Sessions in sessionStorage\nbuild_public_tmp only"| LF
+  OW -->|"Creates flows, sets PUBLIC access"| LF
+  LF -->|"Executes LLM calls\nduring flow build"| LLM
 ```
 
 ### 9.2 Container Diagram (Level 2)
 
 ```mermaid
-C4Container
-  title Container Diagram - Shareable Playground
+graph TD
+  subgraph Frontend ["Frontend SPA (React + TypeScript)"]
+    GATE["PlaygroundAuthGate\nAuth check + redirect"]
+    PM["PlaygroundModal\nChat UI + session sidebar"]
+    HOOKS["Query Hooks\nuseGetMessagesQuery\nuseGetSessionsFromFlowQuery"]
+    META["MessageMetadata\nShared token/duration display"]
+  end
 
-  Person(user, "User")
+  subgraph Backend ["Backend API (FastAPI + Python)"]
+    BUILD["build_public_tmp\n+ get_current_user_optional"]
+    SHARED["/monitor/messages/shared/*\n6 endpoints"]
+    AUTH["/session + /auto_login\nAuth validation"]
+  end
 
-  Container(frontend, "Frontend SPA", "React + TypeScript", "Playground UI, auth gate, message display")
-  Container(api, "Backend API", "FastAPI + Python", "Flow execution, message CRUD, auth")
-  ContainerDb(db, "PostgreSQL", "Database", "Stores messages, flows, users")
+  DB[("PostgreSQL\nMessageTable\n(virtual flow_id)")]
 
-  Rel(user, frontend, "Interacts with playground", "HTTPS")
-  Rel(frontend, api, "build_public_tmp, /shared endpoints, /session, /auto_login", "REST API")
-  Rel(api, db, "Reads/writes messages with virtual flow_id", "SQLModel")
+  GATE -->|"validates session"| AUTH
+  PM --> HOOKS
+  PM --> META
+  HOOKS -->|"authenticated"| SHARED
+  HOOKS -->|"anonymous"| SS["sessionStorage\n(browser only)"]
+  PM -->|"send message"| BUILD
+  BUILD --> DB
+  SHARED --> DB
 ```
 
 ### 9.3 Component Diagram (Level 3) — Auth Flow
