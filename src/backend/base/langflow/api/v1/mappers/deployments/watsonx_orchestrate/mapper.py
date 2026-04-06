@@ -1213,17 +1213,15 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             ) from exc
 
     def _shape_config_list_item(self, item: ConfigListItem) -> dict[str, Any]:
-        dumped = item.model_dump(mode="json", exclude_none=True)
-        item_provider_data = dumped.pop("provider_data", None)
-        if not isinstance(item_provider_data, dict):
-            return dumped
-        scheme = str(item_provider_data.get("security_scheme", "")).strip()
-        if not scheme:
-            item_id = dumped.get("id")
-            msg = f"Config list item '{item_id}' is missing required security_scheme in provider_data."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        dumped["type"] = scheme
-        return dumped
+        payload: dict[str, Any] = {
+            "connection_id": str(item.id).strip(),
+            "app_id": str(item.name).strip(),
+        }
+        item_provider_data = item.provider_data if isinstance(item.provider_data, dict) else {}
+        config_type = str(item_provider_data.get("type") or "").strip()
+        if config_type:
+            payload["type"] = config_type
+        return payload
 
     def _parse_required_payload_slot(
         self,

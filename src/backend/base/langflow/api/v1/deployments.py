@@ -296,7 +296,7 @@ async def list_provider_accounts(
     provider_accounts = await list_provider_account_rows(session, user_id=current_user.id, offset=offset, limit=size)
     total = await count_provider_account_rows(session, user_id=current_user.id)
     return DeploymentProviderAccountListResponse(
-        providers=[to_provider_account_response(item) for item in provider_accounts],
+        provider_accounts=[to_provider_account_response(item) for item in provider_accounts],
         page=page,
         size=size,
         total=total,

@@ -295,7 +295,7 @@ class DeploymentListResponse(_PaginatedResponse):
 
 
 class DeploymentProviderAccountListResponse(_PaginatedResponse):
-    providers: list[DeploymentProviderAccountGetResponse]
+    provider_accounts: list[DeploymentProviderAccountGetResponse]
 
 
 class DeploymentConfigListResponse(_PaginatedResponse):

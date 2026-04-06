@@ -104,7 +104,7 @@ export default function StepProvider() {
     setCredentials,
   } = useDeploymentStepper();
   const { data: providerAccountsData } = useGetProviderAccounts({});
-  const environments = providerAccountsData?.providers ?? [];
+  const environments = providerAccountsData?.provider_accounts ?? [];
 
   useEffect(() => {
     setSelectedProvider(PROVIDERS[0]);

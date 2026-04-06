@@ -71,6 +71,9 @@ ToolConnectionOps = update_core_module.ToolConnectionOps
 OrderedUniqueStrs = shared_core_module.OrderedUniqueStrs
 WatsonxDeploymentUpdatePayload = payloads_module.WatsonxDeploymentUpdatePayload
 WatsonxRenameToolOperation = payloads_module.WatsonxRenameToolOperation
+ListConfigsResponse = importlib.import_module(
+    "ibm_watsonx_orchestrate_clients.connections.connections_client"
+).ListConfigsResponse
 
 TEST_WXO_LLM = "ibm/granite-3.3-8b"
 
@@ -208,6 +211,7 @@ class FakeConnectionsClient:
         self.delete_calls: list[str] = []
         self.delete_credentials_calls: list[tuple[str, object, bool]] = []
         self._list_entries: list[dict] = []
+        self._draft_entries_by_id: list[object] = []
         self.create_calls: list[dict] = []
         self.create_config_calls: list[tuple[str, dict]] = []
         self.create_credentials_calls: list[tuple[str, object, bool, dict]] = []
@@ -245,6 +249,15 @@ class FakeConnectionsClient:
 
     def list(self):
         return self._list_entries
+
+    def get_drafts_by_ids(self, conn_ids: list[str]):
+        requested = set(conn_ids)
+        entries = []
+        for entry in self._draft_entries_by_id:
+            connection_id = str(getattr(entry, "connection_id", "") or "")
+            if connection_id in requested:
+                entries.append(entry)
+        return entries
 
 
 class FakeBaseClient:
@@ -3061,10 +3074,20 @@ async def test_list_configs_single_deployment_scope(monkeypatch):
             }
         ]
     )
+    connections_client = FakeConnectionsClient()
+    connections_client._draft_entries_by_id = [
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-1",
+                "app_id": "cfg-1",
+                "security_scheme": "key_value_creds",
+            }
+        )
+    ]
     fake_clients = SimpleNamespace(
         agent=fake_agent,
         tool=fake_tool,
-        connections=FakeConnectionsClient(),
+        connections=connections_client,
     )
 
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
@@ -3079,8 +3102,57 @@ async def test_list_configs_single_deployment_scope(monkeypatch):
     )
 
     assert len(result.configs) == 1
-    assert result.configs[0].id == "cfg-1"
+    assert result.configs[0].id == "conn-1"
     assert result.configs[0].name == "cfg-1"
+    assert result.configs[0].provider_data == {"type": "key_value_creds"}
+
+
+@pytest.mark.anyio
+async def test_list_configs_scopes_return_same_normalized_item_shape(monkeypatch):
+    """Tenant-scope and deployment-scope must return the same ConfigListItem shape, including type metadata."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    connections_client = FakeConnectionsClient()
+    connections_client._list_entries = [
+        ListConfigsResponse.model_validate(
+            {"connection_id": "conn-1", "app_id": "cfg-1", "name": "Config One", "security_scheme": "key_value_creds"}
+        )
+    ]
+    connections_client._draft_entries_by_id = [
+        ListConfigsResponse.model_validate(
+            {"connection_id": "conn-1", "app_id": "cfg-1", "security_scheme": "key_value_creds"}
+        )
+    ]
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=FakeToolClient(
+            [
+                {
+                    "id": "tool-1",
+                    "name": "Tool One",
+                    "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+                }
+            ]
+        ),
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    tenant_result = await service.list_configs(user_id="user-1", db=object(), params=None)
+    deployment_result = await service.list_configs(
+        user_id="user-1",
+        db=object(),
+        params=ConfigListParams(deployment_ids=["dep-1"]),
+    )
+
+    expected = {"id": "conn-1", "name": "cfg-1", "provider_data": {"type": "key_value_creds"}}
+    assert len(tenant_result.configs) == 1
+    assert len(deployment_result.configs) == 1
+    assert tenant_result.configs[0].model_dump(exclude_none=True) == expected
+    assert deployment_result.configs[0].model_dump(exclude_none=True) == expected
 
 
 @pytest.mark.anyio
@@ -3145,8 +3217,8 @@ async def test_list_configs_without_deployment_id_lists_tenant_scope(monkeypatch
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
-        {"app_id": "cfg-1", "name": "Config One"},
-        {"app_id": "cfg-2", "display_name": "Config Two"},
+        ListConfigsResponse.model_validate({"connection_id": "conn-1", "app_id": "cfg-1", "name": "Config One"}),
+        ListConfigsResponse.model_validate({"connection_id": "conn-2", "app_id": "cfg-2", "name": "Config Two"}),
     ]
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}),
@@ -3160,25 +3232,23 @@ async def test_list_configs_without_deployment_id_lists_tenant_scope(monkeypatch
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
     result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert [config.id for config in result.configs] == ["cfg-1", "cfg-2"]
+    assert [config.id for config in result.configs] == ["conn-1", "conn-2"]
+    assert [config.name for config in result.configs] == ["cfg-1", "cfg-2"]
     assert result.provider_result == {}
 
 
 @pytest.mark.anyio
-async def test_list_configs_tenant_scope_handles_pydantic_models(monkeypatch):
-    """SDK ConnectionsClient.list() returns Pydantic model objects, not dicts."""
-    from pydantic import BaseModel
-
-    class FakeListConfigsResponse(BaseModel):
-        app_id: str = ""
-        name: str = ""
-        connection_id: str | None = None
-
+async def test_list_configs_tenant_scope_handles_sdk_models(monkeypatch):
+    """SDK ConnectionsClient.list() returns ListConfigsResponse objects."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
-        FakeListConfigsResponse(app_id="cfg-pydantic-1", name="Pydantic One"),
-        FakeListConfigsResponse(app_id="cfg-pydantic-2", name="Pydantic Two"),
+        ListConfigsResponse.model_validate(
+            {"connection_id": "conn-pydantic-1", "app_id": "cfg-pydantic-1", "name": "Pydantic One"}
+        ),
+        ListConfigsResponse.model_validate(
+            {"connection_id": "conn-pydantic-2", "app_id": "cfg-pydantic-2", "name": "Pydantic Two"}
+        ),
     ]
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}),
@@ -3192,25 +3262,24 @@ async def test_list_configs_tenant_scope_handles_pydantic_models(monkeypatch):
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
     result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert [config.id for config in result.configs] == ["cfg-pydantic-1", "cfg-pydantic-2"]
-    assert [config.name for config in result.configs] == ["Pydantic One", "Pydantic Two"]
-    assert result.provider_result == {"scope": "tenant"}
+    assert [config.id for config in result.configs] == ["conn-pydantic-1", "conn-pydantic-2"]
+    assert [config.name for config in result.configs] == ["cfg-pydantic-1", "cfg-pydantic-2"]
+    assert result.provider_result == {}
 
 
 @pytest.mark.anyio
-async def test_list_configs_tenant_scope_mixed_dicts_and_models(monkeypatch):
-    """list_configs handles a mix of dicts and Pydantic models in the same response."""
-    from pydantic import BaseModel
-
-    class FakeListConfigsResponse(BaseModel):
-        app_id: str = ""
-        name: str = ""
-
+async def test_list_configs_tenant_scope_preserves_type_metadata(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
-        {"app_id": "dict-cfg", "name": "Dict Config"},
-        FakeListConfigsResponse(app_id="model-cfg", name="Model Config"),
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-auth",
+                "app_id": "cfg-auth",
+                "name": "Auth Config",
+                "security_scheme": "key_value_creds",
+            }
+        )
     ]
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}),
@@ -3224,26 +3293,46 @@ async def test_list_configs_tenant_scope_mixed_dicts_and_models(monkeypatch):
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
     result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert [config.id for config in result.configs] == ["dict-cfg", "model-cfg"]
-    assert [config.name for config in result.configs] == ["Dict Config", "Model Config"]
+    assert len(result.configs) == 1
+    assert result.configs[0].id == "conn-auth"
+    assert result.configs[0].name == "cfg-auth"
+    assert result.configs[0].provider_data == {"type": "key_value_creds"}
+
+
+@pytest.mark.anyio
+async def test_list_configs_tenant_scope_ignores_dict_entries(monkeypatch):
+    """list_configs ignores dict entries and accepts only SDK models."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    connections_client = FakeConnectionsClient()
+    connections_client._list_entries = [
+        {"connection_id": "dict-conn", "app_id": "dict-cfg", "name": "Dict Config"},
+        ListConfigsResponse.model_validate({"connection_id": "model-conn", "app_id": "model-cfg", "name": "Model"}),
+    ]
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(user_id="user-1", db=object(), params=None)
+    assert [config.id for config in result.configs] == ["model-conn"]
+    assert [config.name for config in result.configs] == ["model-cfg"]
 
 
 @pytest.mark.anyio
 async def test_list_configs_tenant_scope_deduplicates(monkeypatch):
     """Duplicate app_ids are deduplicated in tenant-scope listing."""
-    from pydantic import BaseModel
-
-    class FakeListConfigsResponse(BaseModel):
-        app_id: str = ""
-        name: str = ""
-
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
-        FakeListConfigsResponse(app_id="cfg-dup", name="First"),
-        FakeListConfigsResponse(app_id="cfg-dup", name="Second"),
-        {"app_id": "cfg-dup", "name": "Third"},
-        {"app_id": "cfg-unique", "name": "Unique"},
+        ListConfigsResponse.model_validate({"connection_id": "conn-dup", "app_id": "cfg-dup", "name": "First"}),
+        ListConfigsResponse.model_validate({"connection_id": "conn-dup", "app_id": "cfg-dup", "name": "Second"}),
+        ListConfigsResponse.model_validate({"connection_id": "conn-unique", "app_id": "cfg-unique", "name": "Unique"}),
     ]
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}),
@@ -3257,18 +3346,22 @@ async def test_list_configs_tenant_scope_deduplicates(monkeypatch):
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
     result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert [config.id for config in result.configs] == ["cfg-dup", "cfg-unique"]
+    assert [config.id for config in result.configs] == ["conn-dup", "conn-unique"]
+    assert [config.name for config in result.configs] == ["cfg-dup", "cfg-unique"]
 
 
 @pytest.mark.anyio
-async def test_list_configs_tenant_scope_skips_non_dict_non_model(monkeypatch):
-    """Objects without model_dump and that aren't dicts are skipped."""
+async def test_list_configs_tenant_scope_skips_non_sdk_entries(monkeypatch):
+    """Objects that are not SDK ListConfigsResponse are skipped."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
         "just-a-string",
         42,
-        {"app_id": "valid-cfg", "name": "Valid"},
+        {"connection_id": "dict-conn", "app_id": "dict-cfg"},
+        ListConfigsResponse.model_validate({"connection_id": "valid-conn", "app_id": "valid-cfg", "name": "Valid"}),
+        ListConfigsResponse.model_validate({"connection_id": "", "app_id": "missing-connection-id"}),
+        ListConfigsResponse.model_validate({"connection_id": "missing-app-id", "app_id": ""}),
     ]
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}),
@@ -3282,7 +3375,8 @@ async def test_list_configs_tenant_scope_skips_non_dict_non_model(monkeypatch):
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
     result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert [config.id for config in result.configs] == ["valid-cfg"]
+    assert [config.id for config in result.configs] == ["valid-conn"]
+    assert [config.name for config in result.configs] == ["valid-cfg"]
 
 
 @pytest.mark.anyio

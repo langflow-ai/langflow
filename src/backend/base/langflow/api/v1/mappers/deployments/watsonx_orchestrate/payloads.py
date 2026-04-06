@@ -8,7 +8,14 @@ from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from lfx.services.adapters.deployment.schema import DeploymentType
-from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    StringConstraints,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
 
@@ -445,20 +452,25 @@ class WatsonxApiConfigListItem(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    id: str = Field(min_length=1)
-    name: str = Field(min_length=1)
+    connection_id: str = Field(min_length=1)
+    app_id: str = Field(min_length=1)
     type: str | None = None
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
 
-    @field_validator("id", "name", mode="before")
+    @field_validator("connection_id", "app_id", mode="before")
     @classmethod
-    def normalize_required_strings(cls, value: Any) -> str:
+    def normalize_required_strings(cls, value: Any, info: ValidationInfo) -> str:
         normalized = str(value or "").strip()
         if not normalized:
-            msg = "Config list item fields 'id' and 'name' must be non-empty strings."
+            field_name = str(info.field_name)
+            msg = f"Config list item field '{field_name}' must be a non-empty string."
             raise ValueError(msg)
         return normalized
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def normalize_optional_type(cls, value: Any) -> str | None:
+        normalized = str(value or "").strip()
+        return normalized or None
 
 
 class WatsonxApiConfigListProviderData(BaseModel):
