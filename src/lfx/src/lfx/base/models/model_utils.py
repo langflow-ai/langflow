@@ -129,10 +129,11 @@ async def get_ollama_models(
                         json_data = await json_data
                     capabilities = json_data.get(json_capabilities_key, [])
                     await logger.adebug(f"Model: {model_name}, Capabilities: {capabilities}")
-                    return (model_name, capabilities)
                 except (httpx.RequestError, httpx.HTTPStatusError):
                     await logger.adebug(f"Failed to fetch capabilities for model: {model_name}, skipping")
                     return (model_name, [])
+                else:
+                    return (model_name, capabilities)
 
             results = await asyncio.gather(*[_fetch_capabilities(name) for name in model_names])
 
