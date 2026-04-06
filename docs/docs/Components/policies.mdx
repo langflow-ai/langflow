@@ -23,7 +23,7 @@ The component operates in two modes:
 | `ToolGuard Project` | `str` | Name for the ToolGuard project. Used to organize automatically generated ToolGuards code. Default: "my_project" | Both |
 | `Tools` | `List[Tool]` | List of tools that the agent can use. These tools will be wrapped with policy guards. | Both |
 | `Policies` | `List[str]` | One or more clear, well-defined and self-contained business policies. Accepts multiple policy strings. | Generate |
-| `Language Model` | `Model` | Language model provider selection for policy processing.| Generate |
+| `Language Model` | `Model` | Language model provider selection for policy processing. We recommend using Anthropic Claude-Sonnet series for this task: high-performance models designed for code (among others).",| Generate |
 | `API key` | `str` | API key for the selected model provider. | Generate |
 
 ## Output

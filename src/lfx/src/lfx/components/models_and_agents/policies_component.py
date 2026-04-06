@@ -42,8 +42,8 @@ if TYPE_CHECKING:
     from lfx.inputs.inputs import InputTypes
 
 
-BUILDTIME_MODELS = ["gpt-5.1", "claude-sonnet-4"]
 TOOLGUARD_WORK_DIR = Path(os.getenv("TOOLGUARD_WORK_DIR") or "tmp_toolguard")
+BUILDTIME_MODELS = ["gpt-5", "claude-sonnet"]  # currently inactive, we recommend but do not enforce
 STEP1 = "Step_1"
 STEP2 = "Step_2"
 BUILD_MODE_GENERATE = "Generate"
@@ -113,7 +113,10 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             ModelInput(
                 name="model",
                 display_name="Language Model",
-                info="Select your model provider",
+                info=(
+                    "Select LLM for Policies buildtime. We recommend using "
+                    "Anthropic Claude-Sonnet series for this task."
+                ),
                 real_time_refresh=True,
                 required=True,
             ),
@@ -223,9 +226,10 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             msg = "Policies: model or api_key cannot be empty!"
             raise ValueError(msg)
 
-        if not self.in_recommended_models(self.model[0]["name"]):
-            msg = f"Policies: model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}"
-            raise ValueError(msg)
+        # uncomment if willing to enforce certain models for buildtime
+        # if not self.in_recommended_models(self.model[0]["name"]):
+        #     msg = f"Policies: model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}"
+        #     raise ValueError(msg)
 
     async def generate(self):
         specs = await self._generate_guard_specs()
@@ -308,6 +312,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 tg_runtime = load_toolguards_from_memory(tg_result)
 
                 return cast("list[Tool]", [GuardedTool(tool, self.in_tools, tg_runtime) for tool in self.in_tools])
+
             except Exception as e:
                 logger.exception(e)
                 raise
