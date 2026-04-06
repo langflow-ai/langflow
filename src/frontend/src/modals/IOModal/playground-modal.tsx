@@ -127,7 +127,7 @@ export default function IOModal({
 
     // Delete the session (which will delete all associated messages on the backend)
     deleteSessionFunction(
-      { sessionId: session_id },
+      { sessionId: session_id, flowId: currentFlowId },
       {
         onSuccess: () => {
           // Remove the session from local state

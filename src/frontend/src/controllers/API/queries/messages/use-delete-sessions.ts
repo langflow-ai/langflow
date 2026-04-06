@@ -1,4 +1,5 @@
 import type { UseMutationResult } from "@tanstack/react-query";
+import useFlowStore from "@/stores/flowStore";
 import type {
   DeleteSessionError,
   DeleteSessionParams,
@@ -26,7 +27,20 @@ export const useDeleteSession = (options?: {
 
   const deleteSession = async ({
     sessionId,
+    flowId,
   }: DeleteSessionParams): Promise<DeleteSessionResponse> => {
+    const isPlayground = useFlowStore.getState().playgroundPage;
+
+    if (isPlayground && flowId) {
+      const stored = window.sessionStorage.getItem(flowId) || "[]";
+      const messages = JSON.parse(stored);
+      const filtered = messages.filter(
+        (msg: { session_id?: string }) => msg.session_id !== sessionId,
+      );
+      window.sessionStorage.setItem(flowId, JSON.stringify(filtered));
+      return { message: "Session deleted from local storage" };
+    }
+
     const response = await api.delete(
       `${getURL("MESSAGES")}/session/${sessionId}`,
     );
