@@ -6,6 +6,7 @@ import {
   useGetAutoLogin,
 } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
+import type { Users } from "@/types/api";
 import { LoadingPage } from "@/pages/LoadingPage";
 
 export function PlaygroundAuthGate({
@@ -30,7 +31,12 @@ export function PlaygroundAuthGate({
     if (!isSessionFetched) return;
 
     if (sessionData?.authenticated && sessionData.user) {
-      setUserData(sessionData.user);
+      // Set in both AuthContext (for components using useContext) and Zustand
+      // store (for hooks like useGetFlowId and isAuthenticatedPlayground).
+      // Both must be kept in sync — clearing one without the other causes stale state.
+      const user = sessionData.user as Users;
+      setUserData(user);
+      useAuthStore.getState().setUserData(user);
       setIsAuthenticated(true);
       setIsAdmin(sessionData.user.is_superuser || false);
       if (sessionData.store_api_key) {

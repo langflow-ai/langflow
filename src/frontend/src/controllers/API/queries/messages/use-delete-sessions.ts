@@ -1,5 +1,7 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import type {
   DeleteSessionError,
   DeleteSessionParams,
@@ -32,6 +34,17 @@ export const useDeleteSession = (options?: {
     const isPlayground = useFlowStore.getState().playgroundPage;
 
     if (isPlayground && flowId) {
+      // Authenticated users on playground: delete from DB via shared endpoint
+      if (isAuthenticatedPlayground()) {
+        const sourceFlowId = useFlowsManagerStore.getState().currentFlowId;
+        const response = await api.delete(
+          `${getURL("MESSAGES")}/shared/session/${sessionId}`,
+          { params: { source_flow_id: sourceFlowId } },
+        );
+        return response.data;
+      }
+
+      // Anonymous/auto-login: delete from sessionStorage (original behavior)
       const stored = window.sessionStorage.getItem(flowId) || "[]";
       const messages = JSON.parse(stored);
       const filtered = messages.filter(
