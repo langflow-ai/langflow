@@ -24,6 +24,7 @@ export const HIDDEN_FIELDS: Record<string, string[]> = {
   "Smart Transform": ["api_key"],
   StructuredOutput: ["api_key", "system_prompt", "schema_name"],
   KnowledgeBase: ["api_key", "include_embeddings"],
+  DynamicCreateData: ["include_metadata"],
   SplitText: ["keep_separator"],
   File: [
     "silent_errors",
