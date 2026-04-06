@@ -54,15 +54,18 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiAgentExecutionCreateResultData,
     WatsonxApiAgentExecutionStatusResultData,
     WatsonxApiBindOperation,
+    WatsonxApiBindToolOperation,
     WatsonxApiDeploymentCreatePayload,
     WatsonxApiDeploymentListProviderData,
     WatsonxApiDeploymentLlmListResultData,
     WatsonxApiDeploymentUpdatePayload,
     WatsonxApiDeploymentUpdateResultData,
     WatsonxApiFlowArtifactProviderData,
+    WatsonxApiRemoveToolByIdOperation,
     WatsonxApiRemoveToolOperation,
     WatsonxApiToolAppBinding,
     WatsonxApiUnbindOperation,
+    WatsonxApiUnbindToolOperation,
 )
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
@@ -475,17 +478,47 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             for flow_version_id, _version_number, project_id, artifact in flow_artifacts
         ]
 
-        existing_tool_flow_version_ids = [
-            operation.flow_version_id
-            for operation in api_provider_payload.operations
-            if isinstance(operation, (WatsonxApiUnbindOperation, WatsonxApiRemoveToolOperation))
+        # Single DB query for all flow_version_ids across operation types,
+        # then selective strict validation for unbind/remove only.
+        #
+        # - bind: missing attachment = "create new tool" (expected)
+        # - unbind: missing = error (tool must exist to modify connections)
+        # - remove_tool: missing = error (tool must exist to detach)
+        bind_fv_ids = [
+            op.flow_version_id for op in api_provider_payload.operations if isinstance(op, WatsonxApiBindOperation)
         ]
-        flow_version_snapshot_id_map = await self._resolve_existing_tool_snapshot_ids(
+        unbind_fv_ids = [
+            op.flow_version_id for op in api_provider_payload.operations if isinstance(op, WatsonxApiUnbindOperation)
+        ]
+        remove_fv_ids = [
+            op.flow_version_id
+            for op in api_provider_payload.operations
+            if isinstance(op, WatsonxApiRemoveToolOperation)
+        ]
+        all_fv_ids = list(dict.fromkeys(bind_fv_ids + unbind_fv_ids + remove_fv_ids))
+        flow_version_snapshot_id_map = await self._lookup_snapshot_ids(
             user_id=user_id,
             deployment_db_id=deployment_db_id,
             db=db,
-            flow_version_ids=list(dict.fromkeys(existing_tool_flow_version_ids)),
+            flow_version_ids=all_fv_ids,
         )
+        strict_fv_ids = list(dict.fromkeys(unbind_fv_ids + remove_fv_ids))
+        missing_strict = [str(fv) for fv in strict_fv_ids if fv not in flow_version_snapshot_id_map]
+        if missing_strict:
+            msg = f"Cannot resolve provider snapshot ids for flow_version_ids in watsonx operations: {missing_strict}"
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+
+        reused_fv_ids = {fv for fv in bind_fv_ids if fv in flow_version_snapshot_id_map}
+        filtered_raw_payloads = (
+            [
+                artifact
+                for flow_version_id, _version_number, _project_id, artifact in flow_artifacts
+                if flow_version_id not in reused_fv_ids
+            ]
+            if reused_fv_ids
+            else raw_payloads
+        )
+
         provider_operations = self._build_provider_operations(
             operations=api_provider_payload.operations,
             raw_name_by_flow_version_id=raw_name_by_flow_version_id,
@@ -501,7 +534,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 self._build_provider_payload_body(
                     llm=api_provider_payload.llm,
                     resource_name_prefix=api_provider_payload.resource_name_prefix,
-                    raw_tool_payloads=[artifact.model_dump(exclude_none=True) for artifact in raw_payloads],
+                    raw_tool_payloads=[artifact.model_dump(exclude_none=True) for artifact in filtered_raw_payloads],
                     connections=api_provider_payload.connections,
                     operations=provider_operations,
                 )
@@ -685,6 +718,14 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         *,
         result: DeploymentUpdateResult,
     ) -> UpdateSnapshotBindings:
+        """Extract snapshot bindings for attachment reconciliation.
+
+        Only bindings whose ``source_ref`` is a valid UUID are included.
+        Tool-id-based operations produce bindings with non-UUID
+        ``source_ref`` values (the provider tool_id itself); these are
+        excluded because they do not create or modify
+        ``flow_version_deployment_attachment`` records.
+        """
         slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update_result
         parsed = self._parse_required_payload_slot(
             slot=slot,
@@ -696,15 +737,20 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         if not parsed.created_snapshot_ids and not parsed.added_snapshot_bindings:
             msg = "Deployment provider update result is missing required snapshot reconciliation bindings."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        return UpdateSnapshotBindings(
-            snapshot_bindings=[
+
+        flow_version_bindings: list[UpdateSnapshotBinding] = []
+        for binding in parsed.added_snapshot_bindings:
+            try:
+                UUID(binding.source_ref)
+            except (ValueError, AttributeError):
+                continue
+            flow_version_bindings.append(
                 UpdateSnapshotBinding(
                     source_ref=binding.source_ref,
                     snapshot_id=binding.tool_id,
                 )
-                for binding in parsed.added_snapshot_bindings
-            ]
-        )
+            )
+        return UpdateSnapshotBindings(snapshot_bindings=flow_version_bindings)
 
     def util_flow_version_patch(self, payload: DeploymentUpdateRequest) -> FlowVersionPatch:
         if payload.add_flow_version_ids is not None or payload.remove_flow_version_ids is not None:
@@ -906,6 +952,27 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             "app_ids": app_ids,
         }
 
+    def _to_bind_existing_tool_provider_operation(
+        self,
+        *,
+        tool_id: str,
+        source_ref: str,
+        app_ids: list[str],
+    ) -> AdapterPayload:
+        """Bind operation that reuses an existing tool via tool_id_with_ref."""
+        return {
+            "op": "bind",
+            "tool": {"tool_id_with_ref": {"source_ref": source_ref, "tool_id": tool_id}},
+            "app_ids": app_ids,
+        }
+
+    def _to_attach_tool_provider_operation(self, *, tool_id: str, source_ref: str) -> AdapterPayload:
+        """Attach an existing tool to the agent without connection bindings."""
+        return {
+            "op": "attach_tool",
+            "tool": {"source_ref": source_ref, "tool_id": tool_id},
+        }
+
     def _to_unbind_provider_operation(
         self,
         *,
@@ -936,20 +1003,42 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         for operation in operations:
             if isinstance(operation, WatsonxApiBindOperation):
                 flow_version_id = operation.flow_version_id
-                if flow_version_id not in raw_name_by_flow_version_id:
-                    msg = f"bind.flow_version_id not found: [{flow_version_id}]"
-                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
-                if not operation.app_ids:
-                    # Empty app_ids means "create/attach raw tool with no connection bindings";
-                    # no provider bind operation is needed for this flow version.
-                    continue
-                provider_operations.append(
-                    self._to_bind_provider_operation(
-                        raw_name=raw_name_by_flow_version_id[flow_version_id],
-                        app_ids=operation.app_ids,
+                existing_tool_id = (flow_version_snapshot_id_map or {}).get(flow_version_id)
+
+                if existing_tool_id:
+                    # Reuse existing tool -- no new artifact creation needed.
+                    if operation.app_ids:
+                        provider_operations.append(
+                            self._to_bind_existing_tool_provider_operation(
+                                tool_id=existing_tool_id,
+                                source_ref=str(flow_version_id),
+                                app_ids=operation.app_ids,
+                            )
+                        )
+                    else:
+                        provider_operations.append(
+                            self._to_attach_tool_provider_operation(
+                                tool_id=existing_tool_id,
+                                source_ref=str(flow_version_id),
+                            )
+                        )
+                else:
+                    # No existing tool -- create new via raw payload (current behavior).
+                    if flow_version_id not in raw_name_by_flow_version_id:
+                        msg = f"bind.flow_version_id not found: [{flow_version_id}]"
+                        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+                    if not operation.app_ids:
+                        # Raw tool is still created via tools.raw_payloads;
+                        # no provider bind operation needed.
+                        continue
+                    provider_operations.append(
+                        self._to_bind_provider_operation(
+                            raw_name=raw_name_by_flow_version_id[flow_version_id],
+                            app_ids=operation.app_ids,
+                        )
                     )
-                )
                 continue
+
             if isinstance(operation, WatsonxApiUnbindOperation):
                 flow_version_id = operation.flow_version_id
                 if flow_version_snapshot_id_map is None:
@@ -963,6 +1052,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                     )
                 )
                 continue
+
             if isinstance(operation, WatsonxApiRemoveToolOperation):
                 flow_version_id = operation.flow_version_id
                 if flow_version_snapshot_id_map is None:
@@ -974,6 +1064,51 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                         source_ref=str(flow_version_id),
                     )
                 )
+                continue
+
+            # Tool-id-based operations: use tool_id as source_ref.
+            # These do not create/modify flow_version_deployment_attachment
+            # records -- they are purely provider-side agent composition.
+            if isinstance(operation, WatsonxApiBindToolOperation):
+                tool_id = operation.tool_id.strip()
+                if operation.app_ids:
+                    provider_operations.append(
+                        self._to_bind_existing_tool_provider_operation(
+                            tool_id=tool_id,
+                            source_ref=tool_id,
+                            app_ids=operation.app_ids,
+                        )
+                    )
+                else:
+                    provider_operations.append(
+                        self._to_attach_tool_provider_operation(
+                            tool_id=tool_id,
+                            source_ref=tool_id,
+                        )
+                    )
+                continue
+
+            if isinstance(operation, WatsonxApiUnbindToolOperation):
+                tool_id = operation.tool_id.strip()
+                provider_operations.append(
+                    self._to_unbind_provider_operation(
+                        tool_id=tool_id,
+                        source_ref=tool_id,
+                        app_ids=operation.app_ids,
+                    )
+                )
+                continue
+
+            if isinstance(operation, WatsonxApiRemoveToolByIdOperation):
+                tool_id = operation.tool_id.strip()
+                provider_operations.append(
+                    self._to_remove_tool_provider_operation(
+                        tool_id=tool_id,
+                        source_ref=tool_id,
+                    )
+                )
+                continue
+
         return provider_operations
 
     def _build_provider_payload_body(
@@ -1004,30 +1139,34 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         adapter_tool_app_bindings: list[Any],
         adapter_snapshot_bindings: list[Any],
     ) -> list[WatsonxApiToolAppBinding]:
-        tool_id_to_flow_version: dict[str, UUID] = {}
+        """Map adapter-level tool bindings to API response shapes.
+
+        ``flow_version_id`` is populated by attempting to parse the
+        snapshot binding's ``source_ref`` as a UUID.  For tool-id-based
+        operations the ``source_ref`` is the provider tool_id (not a UUID),
+        so ``flow_version_id`` will be ``None`` -- this is intentional.
+        """
+        tool_id_to_flow_version: dict[str, UUID | None] = {}
         for binding in adapter_snapshot_bindings:
             tool_id = str(binding.tool_id or "").strip()
             source_ref = str(binding.source_ref or "").strip()
             if not tool_id or not source_ref:
                 msg = (
                     f"Snapshot binding has empty tool_id={binding.tool_id!r} or "
-                    f"source_ref={binding.source_ref!r}; cannot map tool to flow version."
+                    f"source_ref={binding.source_ref!r}; cannot map tool binding."
                 )
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
             try:
                 tool_id_to_flow_version[tool_id] = UUID(source_ref)
-            except ValueError as err:
-                msg = (
-                    f"Snapshot binding source_ref={source_ref!r} is not a valid UUID "
-                    f"for tool_id={tool_id!r}; cannot map tool to flow version."
-                )
-                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg) from err
+            except ValueError:
+                # Non-UUID source_ref means this is a tool-id-based binding;
+                # flow_version_id will be None in the response.
+                tool_id_to_flow_version[tool_id] = None
 
         api_bindings: list[WatsonxApiToolAppBinding] = []
         for binding in adapter_tool_app_bindings:
             raw_tool_id = str(binding.tool_id or "").strip()
-            flow_version_id = tool_id_to_flow_version.get(raw_tool_id)
-            if flow_version_id is None:
+            if raw_tool_id not in tool_id_to_flow_version:
                 msg = (
                     f"tool_app_binding tool_id={raw_tool_id!r} has no matching snapshot "
                     f"binding source_ref; available refs: {sorted(tool_id_to_flow_version)}."
@@ -1035,7 +1174,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
             api_bindings.append(
                 WatsonxApiToolAppBinding(
-                    flow_version_id=flow_version_id,
+                    flow_version_id=tool_id_to_flow_version[raw_tool_id],
+                    tool_id=raw_tool_id,
                     app_ids=list(binding.app_ids),
                 )
             )
@@ -1046,7 +1186,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             return None
         return [raw_payload.model_dump(exclude_none=True) for raw_payload in raw_payloads]
 
-    async def _resolve_existing_tool_snapshot_ids(
+    async def _lookup_snapshot_ids(
         self,
         *,
         user_id: UUID,
@@ -1054,6 +1194,12 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         db: AsyncSession,
         flow_version_ids: list[UUID],
     ) -> dict[UUID, str]:
+        """Raw DB lookup of flow_version -> provider_snapshot_id.
+
+        Returns a partial map -- only entries with a non-empty
+        ``provider_snapshot_id`` are included.  Callers decide whether
+        missing entries are an error or expected.
+        """
         if not flow_version_ids:
             return {}
         attachments = await list_deployment_attachments_for_flow_version_ids(
@@ -1062,15 +1208,29 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             deployment_id=deployment_db_id,
             flow_version_ids=flow_version_ids,
         )
-        flow_version_snapshot_id_map = {
+        return {
             attachment.flow_version_id: str(attachment.provider_snapshot_id).strip()
             for attachment in attachments
             if isinstance(attachment.provider_snapshot_id, str) and attachment.provider_snapshot_id.strip()
         }
+
+    async def _resolve_existing_tool_snapshot_ids(
+        self,
+        *,
+        user_id: UUID,
+        deployment_db_id: UUID,
+        db: AsyncSession,
+        flow_version_ids: list[UUID],
+    ) -> dict[UUID, str]:
+        """Strict lookup: raises 422 if any flow_version_id is missing."""
+        snapshot_map = await self._lookup_snapshot_ids(
+            user_id=user_id,
+            deployment_db_id=deployment_db_id,
+            db=db,
+            flow_version_ids=flow_version_ids,
+        )
         missing_flow_versions = [
-            str(flow_version_id)
-            for flow_version_id in flow_version_ids
-            if flow_version_id not in flow_version_snapshot_id_map
+            str(flow_version_id) for flow_version_id in flow_version_ids if flow_version_id not in snapshot_map
         ]
         if missing_flow_versions:
             msg = (
@@ -1078,4 +1238,4 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 f"{missing_flow_versions}"
             )
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
-        return flow_version_snapshot_id_map
+        return snapshot_map
