@@ -102,8 +102,8 @@ class TestSerializeDispatcher:
         assert result == [1, 2]
 
     def test_bool(self):
-        assert _serialize_dispatcher(True, None, None) is True
-        assert _serialize_dispatcher(False, None, None) is False
+        assert _serialize_dispatcher(obj=True, max_length=None, max_items=None) is True
+        assert _serialize_dispatcher(obj=False, max_length=None, max_items=None) is False
 
     def test_int(self):
         assert _serialize_dispatcher(42, None, None) == 42

@@ -133,8 +133,9 @@ class TestExpandNode:
         assert template["new_field"] == {"value": "new_value"}
 
     def test_template_key_copied(self):
-        """Verify that expanding a node copies the template dict (shallow) so the
-        flat_components lookup table can be reused for another node of the same type.
+        """Verify that expanding a node copies the template dict (shallow).
+
+        So the flat_components lookup table can be reused for another node of the same type.
         """
         flat = {
             "MyComp": {"template": {"field": {"value": "original"}}},
