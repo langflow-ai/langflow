@@ -279,13 +279,10 @@ async def get_current_user_optional(
     Used by endpoints that support both authenticated and unauthenticated access.
     """
     token = request.cookies.get("access_token_lf")
-    api_key = (
-        request.query_params.get("x-api-key")
-        or request.headers.get("x-api-key")
-    )
+    api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
-        token = token or auth_header[len("Bearer "):]
+        token = token or auth_header[len("Bearer ") :]
 
     if not token and not api_key:
         return None

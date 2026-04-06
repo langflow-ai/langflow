@@ -43,9 +43,9 @@ from langflow.api.v1.schemas import (
 )
 from langflow.exceptions.component import ComponentBuildError
 from langflow.services.auth.utils import get_current_active_user, get_current_user_optional
-from langflow.services.database.models.user.model import User
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,

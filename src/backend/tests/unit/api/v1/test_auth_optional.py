@@ -11,9 +11,7 @@ from httpx import AsyncClient
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_optional_auth_returns_user_with_valid_bearer(
-    client: AsyncClient, logged_in_headers
-):
+async def test_optional_auth_returns_user_with_valid_bearer(client: AsyncClient, logged_in_headers):
     """Valid Bearer token should resolve the user (build returns job_id or error, not 403)."""
     # We test indirectly via build_public_tmp: if auth resolves,
     # the endpoint proceeds (may fail on flow validation, but NOT on auth)
