@@ -1,7 +1,6 @@
 """Tests for langflow.schema.dotdict module."""
 
 import pytest
-
 from langflow.schema.dotdict import dotdict
 
 

@@ -3,7 +3,6 @@
 from datetime import datetime, timezone
 
 import pytest
-
 from langflow.schema.validators import (
     str_to_timestamp,
     timestamp_to_str,
@@ -88,15 +87,15 @@ class TestTimestampWithFractionalSeconds:
 
     def test_string_iso_with_microseconds(self):
         result = timestamp_with_fractional_seconds("2024-01-15T10:30:45.123456")
-        assert "2024-01-15 10:30:45.123456 UTC" == result
+        assert result == "2024-01-15 10:30:45.123456 UTC"
 
     def test_string_without_fractional(self):
         result = timestamp_with_fractional_seconds("2024-01-15 10:30:45 UTC")
-        assert "2024-01-15 10:30:45.000000 UTC" == result
+        assert result == "2024-01-15 10:30:45.000000 UTC"
 
     def test_string_without_timezone_no_fractional(self):
         result = timestamp_with_fractional_seconds("2024-01-15 10:30:45")
-        assert "2024-01-15 10:30:45.000000 UTC" == result
+        assert result == "2024-01-15 10:30:45.000000 UTC"
 
     def test_invalid_format_raises(self):
         with pytest.raises(ValueError, match="Invalid timestamp format"):

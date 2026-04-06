@@ -1,6 +1,6 @@
 """Tests for langflow.schema.playground_events module."""
 
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from langflow.schema.playground_events import (
     ErrorEvent,
@@ -122,17 +122,36 @@ class TestCreateMessage:
         assert result.category == "message"
 
     def test_with_error(self):
-        result = create_message("err", error=True, category="error", timestamp=self._TS, sender=self._SENDER, sender_name=self._SENDER_NAME)
+        result = create_message(
+            "err",
+            error=True,
+            category="error",
+            timestamp=self._TS,
+            sender=self._SENDER,
+            sender_name=self._SENDER_NAME,
+        )
         assert result.error is True
         assert result.category == "error"
 
     def test_with_session_id(self):
-        result = create_message("hi", session_id="s1", timestamp=self._TS, sender=self._SENDER, sender_name=self._SENDER_NAME)
+        result = create_message(
+            "hi",
+            session_id="s1",
+            timestamp=self._TS,
+            sender=self._SENDER,
+            sender_name=self._SENDER_NAME,
+        )
         assert result.session_id == "s1"
 
     def test_with_flow_id(self):
         uid = uuid4()
-        result = create_message("hi", flow_id=uid, timestamp=self._TS, sender=self._SENDER, sender_name=self._SENDER_NAME)
+        result = create_message(
+            "hi",
+            flow_id=uid,
+            timestamp=self._TS,
+            sender=self._SENDER,
+            sender_name=self._SENDER_NAME,
+        )
         assert result.flow_id == str(uid)
 
 
@@ -205,6 +224,13 @@ class TestCreateEventByType:
         assert result == {"foo": "bar"}
 
     def test_extra_params_filtered(self):
-        result = create_event_by_type("message", text="hi", unknown_param="x", sender="User", sender_name="User", timestamp="2024-01-15 10:30:45 UTC")
+        result = create_event_by_type(
+            "message",
+            text="hi",
+            unknown_param="x",
+            sender="User",
+            sender_name="User",
+            timestamp="2024-01-15 10:30:45 UTC",
+        )
         assert isinstance(result, MessageEvent)
         assert result.text == "hi"

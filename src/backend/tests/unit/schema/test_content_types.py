@@ -1,7 +1,6 @@
 """Tests for langflow.schema.content_types module."""
 
 from langflow.schema.content_types import (
-    BaseContent,
     CodeContent,
     ErrorContent,
     JSONContent,

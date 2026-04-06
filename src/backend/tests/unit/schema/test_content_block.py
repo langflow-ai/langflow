@@ -1,15 +1,13 @@
 """Tests for langflow.schema.content_block module."""
 
 import pytest
-from pydantic import BaseModel
-
 from langflow.schema.content_block import ContentBlock, _get_type
 from langflow.schema.content_types import (
     CodeContent,
     ErrorContent,
     TextContent,
-    ToolContent,
 )
+from pydantic import BaseModel, ValidationError
 
 
 class TestGetType:
@@ -24,7 +22,6 @@ class TestGetType:
         assert _get_type(ec) == "error"
 
     def test_model_without_type(self):
-
         class NoType(BaseModel):
             name: str = "test"
 
@@ -50,7 +47,7 @@ class TestContentBlock:
         assert len(cb.contents) == 2
 
     def test_contents_must_be_list(self):
-        with pytest.raises(TypeError):
+        with pytest.raises(ValidationError):
             ContentBlock(title="T", contents={"type": "error"})
 
     def test_single_content_wrapped_in_list(self):

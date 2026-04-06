@@ -1,11 +1,10 @@
 """Tests for langflow.schema.artifact module."""
 
 from enum import Enum
-from unittest.mock import MagicMock
-
-import pytest
 
 from langflow.schema.artifact import ArtifactType, _to_list_of_dicts, get_artifact_type, post_process_raw
+from langflow.schema.data import Data
+from pydantic import BaseModel
 
 
 class TestArtifactType:
@@ -57,9 +56,6 @@ class TestGetArtifactType:
         assert get_artifact_type(None, build_result=gen) == "stream"
 
     def test_message_with_string_text(self):
-        msg = MagicMock()
-        msg.__class__.__name__ = "Message"
-        # We need to match on the Message class, so use the real class
         from langflow.schema.message import Message
 
         m = Message(text="hello")
@@ -73,28 +69,28 @@ class TestGetArtifactType:
         assert get_artifact_type(m) == "stream"
 
     def test_data_with_dict(self):
-        from langflow.schema.data import Data
-
         d = Data(data={"key": "value"})
         assert get_artifact_type(d) == "object"
 
     def test_data_with_string(self):
-        from langflow.schema.data import Data
-
         d = Data(data={"text_key": "hello"})
         result = get_artifact_type(d)
-        assert result in ("object", "text")  # Data.data is always a dict
+        assert result == "object"
+
+
+class _SimpleModel(BaseModel):
+    key: str = "value"
 
 
 class TestToListOfDicts:
     """Tests for _to_list_of_dicts function."""
 
     def test_items_with_model_dump(self):
-        item = MagicMock()
-        item.model_dump.return_value = {"key": "value"}
-        # _to_list_of_dicts checks hasattr for model_dump, then calls serialize
+        item = _SimpleModel(key="value")
         result = _to_list_of_dicts([item])
         assert len(result) == 1
+        assert isinstance(result[0], dict)
+        assert result[0]["key"] == "value"
 
     def test_items_without_model_dump(self):
         result = _to_list_of_dicts([1, 2, "hello"])
@@ -105,9 +101,11 @@ class TestToListOfDicts:
         assert result == []
 
     def test_mixed_items(self):
-        item_with_dump = MagicMock(spec=["model_dump"])
+        item_with_dump = _SimpleModel(key="test")
         result = _to_list_of_dicts([item_with_dump, 42])
         assert len(result) == 2
+        assert isinstance(result[0], dict)
+        assert result[0]["key"] == "test"
         assert result[1] == "42"
 
 
