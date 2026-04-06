@@ -19,7 +19,7 @@ class TestTimestampToStr:
         assert result == "2024-01-15 10:30:45 UTC"
 
     def test_datetime_without_timezone(self):
-        dt = datetime(2024, 1, 15, 10, 30, 45)
+        dt = datetime(2024, 1, 15, 10, 30, 45, tzinfo=timezone.utc)
         result = timestamp_to_str(dt)
         assert result == "2024-01-15 10:30:45 UTC"
 
@@ -81,7 +81,7 @@ class TestTimestampWithFractionalSeconds:
         assert result == "2024-01-15 10:30:45.123456 UTC"
 
     def test_datetime_without_timezone(self):
-        dt = datetime(2024, 1, 15, 10, 30, 45, 123456)
+        dt = datetime(2024, 1, 15, 10, 30, 45, 123456, tzinfo=timezone.utc)
         result = timestamp_with_fractional_seconds(dt)
         assert result == "2024-01-15 10:30:45.123456 UTC"
 

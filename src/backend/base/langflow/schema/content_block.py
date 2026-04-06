@@ -47,7 +47,7 @@ class ContentBlock(BaseModel):
     def validate_contents(cls, v) -> list[ContentType]:
         if isinstance(v, dict):
             msg = "Contents must be a list of ContentTypes"
-            raise ValueError(msg)
+            raise TypeError(msg)
         return [v] if isinstance(v, BaseModel) else v
 
     @field_serializer("contents")
