@@ -78,6 +78,7 @@ function EnvironmentList({
               value={environment.id}
               selected={isSelected}
               onChange={() => onSelectEnvironment(environment)}
+              data-testid={`provider-item-${environment.id}`}
             >
               <span className="flex flex-col">
                 <span className="text-sm font-medium leading-tight">

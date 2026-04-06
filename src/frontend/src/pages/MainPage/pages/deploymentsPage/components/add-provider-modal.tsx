@@ -68,7 +68,9 @@ export default function AddProviderModal({
   return (
     <Dialog open={open} onOpenChange={(value) => !value && handleClose()}>
       <DialogContent className="sm:max-w-[500px]">
-        <DialogTitle>Add Environment</DialogTitle>
+        <DialogTitle data-testid="add-provider-modal-title">
+          Add Environment
+        </DialogTitle>
         <DialogDescription>
           Configure your watsonx Orchestrate credentials below.
         </DialogDescription>

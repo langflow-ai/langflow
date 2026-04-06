@@ -8,8 +8,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { usePostProviderAccount } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
-import { useGetDeploymentAttachments } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 import { useGetDeployment } from "@/controllers/API/queries/deployments/use-get-deployment";
+import { useGetDeploymentAttachments } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 import { usePatchDeployment } from "@/controllers/API/queries/deployments/use-patch-deployment";
 import { usePostDeployment } from "@/controllers/API/queries/deployments/use-post-deployment";
 import {
@@ -299,7 +299,10 @@ function DeploymentStepperModalContent({
 
       {/* Title + Stepper */}
       <div className="flex flex-col gap-4 px-6 pt-6">
-        <h2 className="text-center text-2xl font-semibold">
+        <h2
+          className="text-center text-2xl font-semibold"
+          data-testid="stepper-modal-title"
+        >
           {isEditMode ? "Update Deployment" : "Create New Deployment"}
         </h2>
         <DeploymentStepper />
