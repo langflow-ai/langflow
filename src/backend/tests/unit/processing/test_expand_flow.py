@@ -1,7 +1,6 @@
 """Tests for langflow.processing.expand_flow module."""
 
 import pytest
-
 from langflow.processing.expand_flow import (
     CompactEdge,
     CompactFlowData,
@@ -12,6 +11,7 @@ from langflow.processing.expand_flow import (
     _get_flat_components,
     expand_compact_flow,
 )
+from pydantic import ValidationError
 
 
 class TestCompactNode:
@@ -134,7 +134,8 @@ class TestExpandNode:
 
     def test_template_key_copied(self):
         """Verify that expanding a node copies the template dict (shallow) so the
-        flat_components lookup table can be reused for another node of the same type."""
+        flat_components lookup table can be reused for another node of the same type.
+        """
         flat = {
             "MyComp": {"template": {"field": {"value": "original"}}},
         }
@@ -201,5 +202,5 @@ class TestExpandCompactFlow:
         assert len(result["nodes"]) == 2
 
     def test_invalid_compact_data_raises(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             expand_compact_flow({"nodes": "invalid"}, {})

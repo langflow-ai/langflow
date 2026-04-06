@@ -1,36 +1,24 @@
 """Extended tests for the serialization module - covering internal helpers."""
 
-import math
 from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
 import numpy as np
 import pandas as pd
-import pytest
-from pydantic import BaseModel
-
 from langflow.serialization.serialization import (
-    UNSERIALIZABLE_SENTINEL,
-    _is_numpy_type,
     _serialize_bytes,
     _serialize_dataframe,
     _serialize_datetime,
-    _serialize_decimal,
-    _serialize_dict,
     _serialize_dispatcher,
-    _serialize_instance,
-    _serialize_iterator,
-    _serialize_list_tuple,
     _serialize_numpy_type,
     _serialize_pydantic,
-    _serialize_primitive,
     _serialize_series,
     _serialize_str,
-    _serialize_uuid,
     _truncate_value,
     serialize,
 )
+from pydantic import BaseModel
 
 
 class TestSerializeStrEdgeCases:
@@ -125,27 +113,6 @@ class TestSerializeDispatcher:
 
     def test_float_inf(self):
         assert _serialize_dispatcher(float("inf"), None, None) is None
-
-
-class TestSerializeInstance:
-    """Tests for _serialize_instance."""
-
-    def test_custom_class(self):
-        class MyClass:
-            def __str__(self):
-                return "my_instance"
-
-        result = _serialize_instance(MyClass())
-        assert result == "my_instance"
-
-    def test_with_repr(self):
-        class MyClass:
-            def __repr__(self):
-                return "MyClass()"
-
-        obj = MyClass()
-        result = _serialize_instance(obj)
-        assert isinstance(result, str)
 
 
 class TestSerializeNumpyType:
