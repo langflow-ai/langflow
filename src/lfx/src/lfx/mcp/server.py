@@ -12,7 +12,11 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import re
-from typing import Any
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 from mcp.server.fastmcp import Context, FastMCP
 
@@ -72,6 +76,21 @@ _shared_client: LangflowClient | None = None
 _shared_registry: dict[str, dict] | None = None
 _telemetry: TelemetryService | None = None
 
+
+@asynccontextmanager
+async def _telemetry_lifespan(_server: FastMCP) -> AsyncIterator[dict]:
+    """Start/stop the telemetry service with the MCP server lifecycle."""
+    global _telemetry  # noqa: PLW0603
+    svc = TelemetryService()
+    svc.start()
+    _telemetry = svc
+    try:
+        yield {}
+    finally:
+        await svc.stop()
+        _telemetry = None
+
+
 mcp = FastMCP(
     "langflow-mcp",
     instructions=(
@@ -91,6 +110,7 @@ mcp = FastMCP(
         "- search_component_types with no args returns all available types\n"
         "- Use batch to send multiple actions in one call with $N.field references"
     ),
+    lifespan=_telemetry_lifespan,
 )
 
 
@@ -123,11 +143,7 @@ async def _get_registry() -> dict[str, dict]:
     return _shared_registry
 
 
-def _get_telemetry() -> TelemetryService:
-    global _telemetry  # noqa: PLW0603
-    if _telemetry is None:
-        _telemetry = TelemetryService()
-        _telemetry.start()
+def _get_telemetry() -> TelemetryService | None:
     return _telemetry
 
 
@@ -143,19 +159,23 @@ def _tracked(fn):
             result = await fn(*args, **kwargs)
         except Exception as exc:
             with contextlib.suppress(BaseException):
-                await _get_telemetry().log_mcp_tool(
-                    MCPToolPayload(
-                        tool=fn.__name__,
-                        success=False,
-                        seconds=int(time.monotonic() - t0),
-                        error=str(exc)[:200],
+                svc = _get_telemetry()
+                if svc is not None:
+                    await svc.log_mcp_tool(
+                        MCPToolPayload(
+                            tool=fn.__name__,
+                            success=False,
+                            ms=int((time.monotonic() - t0) * 1000),
+                            error=type(exc).__name__,
+                        )
                     )
-                )
             raise
         with contextlib.suppress(BaseException):
-            await _get_telemetry().log_mcp_tool(
-                MCPToolPayload(tool=fn.__name__, success=True, seconds=int(time.monotonic() - t0))
-            )
+            svc = _get_telemetry()
+            if svc is not None:
+                await svc.log_mcp_tool(
+                    MCPToolPayload(tool=fn.__name__, success=True, ms=int((time.monotonic() - t0) * 1000))
+                )
         return result
 
     return wrapper

@@ -53,5 +53,5 @@ class MCPToolPayload(BasePayload):
 
     tool: str
     success: bool
-    seconds: int = 0
+    ms: int = Field(0, serialization_alias="ms")
     error: str | None = None
