@@ -6,24 +6,24 @@ export const PROVIDER = {
   id: "prov-1",
   name: "My Env",
   provider_key: "watsonx-orchestrate",
-  provider_url: "https://example.com",
+  url: "https://example.com",
   created_at: "2026-04-06T00:00:00Z",
 };
 
 export const PROVIDERS_MOCK = {
-  providers: [PROVIDER],
+  provider_accounts: [PROVIDER],
   page: 1,
   size: 20,
   total: 1,
 };
 
-export const EMPTY_PROVIDERS_MOCK = { providers: [] };
+export const EMPTY_PROVIDERS_MOCK = { provider_accounts: [] };
 
 export const NEW_PROVIDER = {
   id: "prov-new",
   name: "My Env",
   provider_key: "watsonx-orchestrate",
-  provider_url: "https://example.com",
+  url: "https://example.com",
   created_at: "2026-04-06T00:00:00Z",
 };
 

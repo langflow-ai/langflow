@@ -13,7 +13,8 @@ async function setupBaseRoutes(page: Page) {
   // Register broad catch-all FIRST so specific routes (registered after) take priority via LIFO
   await page.route("**/api/v1/deployments*", (route) => {
     const url = route.request().url();
-    if (url.includes("/executions")) {
+    // Execution routes are handled per-test; fall through for those
+    if (url.includes("/dep-1/executions") || url.includes("/executions")) {
       route.fallback();
       return;
     }
@@ -72,33 +73,42 @@ test(
 
     await setupBaseRoutes(page);
 
-    await page.route("**/api/v1/deployments/executions/exec-1*", (route) => {
-      executionCallCount++;
-      const isCompleted = executionCallCount > 1;
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(
-          isCompleted
-            ? COMPLETED_EXECUTION_RESPONSE
-            : RUNNING_EXECUTION_RESPONSE,
-        ),
-      });
-    });
-
-    await page.route("**/api/v1/deployments/executions", async (route) => {
-      if (route.request().method() === "POST") {
-        const body = route.request().postDataJSON() as Record<string, unknown>;
-        capturedRequestBody = body;
+    await page.route(
+      "**/api/v1/deployments/dep-1/executions/exec-1",
+      (route) => {
+        executionCallCount++;
+        const isCompleted = executionCallCount > 1;
         route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify(POST_EXECUTION_RESPONSE),
+          body: JSON.stringify(
+            isCompleted
+              ? COMPLETED_EXECUTION_RESPONSE
+              : RUNNING_EXECUTION_RESPONSE,
+          ),
         });
-      } else {
-        route.fallback();
-      }
-    });
+      },
+    );
+
+    await page.route(
+      "**/api/v1/deployments/dep-1/executions",
+      async (route) => {
+        if (route.request().method() === "POST") {
+          const body = route.request().postDataJSON() as Record<
+            string,
+            unknown
+          >;
+          capturedRequestBody = body;
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(POST_EXECUTION_RESPONSE),
+          });
+        } else {
+          route.fallback();
+        }
+      },
+    );
 
     await navigateToDeploymentsPage(page);
 
@@ -111,7 +121,6 @@ test(
     await expect
       .poll(() => capturedRequestBody, { timeout: 10_000 })
       .toMatchObject({
-        deployment_id: "dep-1",
         provider_data: { input: "Hello AI" },
       });
   },
@@ -130,31 +139,37 @@ test(
 
     await setupBaseRoutes(page);
 
-    await page.route("**/api/v1/deployments/executions/exec-1*", (route) => {
-      executionCallCount++;
-      const isCompleted = executionCallCount > 1;
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(
-          isCompleted
-            ? COMPLETED_EXECUTION_RESPONSE
-            : RUNNING_EXECUTION_RESPONSE,
-        ),
-      });
-    });
-
-    await page.route("**/api/v1/deployments/executions", async (route) => {
-      if (route.request().method() === "POST") {
+    await page.route(
+      "**/api/v1/deployments/dep-1/executions/exec-1",
+      (route) => {
+        executionCallCount++;
+        const isCompleted = executionCallCount > 1;
         route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify(POST_EXECUTION_RESPONSE),
+          body: JSON.stringify(
+            isCompleted
+              ? COMPLETED_EXECUTION_RESPONSE
+              : RUNNING_EXECUTION_RESPONSE,
+          ),
         });
-      } else {
-        route.fallback();
-      }
-    });
+      },
+    );
+
+    await page.route(
+      "**/api/v1/deployments/dep-1/executions",
+      async (route) => {
+        if (route.request().method() === "POST") {
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(POST_EXECUTION_RESPONSE),
+          });
+        } else {
+          route.fallback();
+        }
+      },
+    );
 
     await navigateToDeploymentsPage(page);
 
@@ -184,31 +199,37 @@ test(
 
     await setupBaseRoutes(page);
 
-    await page.route("**/api/v1/deployments/executions/exec-1*", (route) => {
-      executionCallCount++;
-      const isCompleted = executionCallCount > 1;
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(
-          isCompleted
-            ? COMPLETED_EXECUTION_RESPONSE
-            : RUNNING_EXECUTION_RESPONSE,
-        ),
-      });
-    });
-
-    await page.route("**/api/v1/deployments/executions", async (route) => {
-      if (route.request().method() === "POST") {
+    await page.route(
+      "**/api/v1/deployments/dep-1/executions/exec-1",
+      (route) => {
+        executionCallCount++;
+        const isCompleted = executionCallCount > 1;
         route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify(POST_EXECUTION_RESPONSE),
+          body: JSON.stringify(
+            isCompleted
+              ? COMPLETED_EXECUTION_RESPONSE
+              : RUNNING_EXECUTION_RESPONSE,
+          ),
         });
-      } else {
-        route.fallback();
-      }
-    });
+      },
+    );
+
+    await page.route(
+      "**/api/v1/deployments/dep-1/executions",
+      async (route) => {
+        if (route.request().method() === "POST") {
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(POST_EXECUTION_RESPONSE),
+          });
+        } else {
+          route.fallback();
+        }
+      },
+    );
 
     await navigateToDeploymentsPage(page);
 
@@ -243,35 +264,44 @@ test(
 
     await setupBaseRoutes(page);
 
-    await page.route("**/api/v1/deployments/executions/exec-1*", (route) => {
-      executionCallCount++;
-      const isCompleted = executionCallCount % 2 === 0;
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(
-          isCompleted
-            ? COMPLETED_EXECUTION_RESPONSE
-            : RUNNING_EXECUTION_RESPONSE,
-        ),
-      });
-    });
-
-    await page.route("**/api/v1/deployments/executions", async (route) => {
-      if (route.request().method() === "POST") {
-        const body = route.request().postDataJSON() as Record<string, unknown>;
-        capturedBodies.push(body);
-        // Reset poll counter for each new execution so each returns running then completed
-        executionCallCount = 0;
+    await page.route(
+      "**/api/v1/deployments/dep-1/executions/exec-1",
+      (route) => {
+        executionCallCount++;
+        const isCompleted = executionCallCount % 2 === 0;
         route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify(POST_EXECUTION_RESPONSE),
+          body: JSON.stringify(
+            isCompleted
+              ? COMPLETED_EXECUTION_RESPONSE
+              : RUNNING_EXECUTION_RESPONSE,
+          ),
         });
-      } else {
-        route.fallback();
-      }
-    });
+      },
+    );
+
+    await page.route(
+      "**/api/v1/deployments/dep-1/executions",
+      async (route) => {
+        if (route.request().method() === "POST") {
+          const body = route.request().postDataJSON() as Record<
+            string,
+            unknown
+          >;
+          capturedBodies.push(body);
+          // Reset poll counter for each new execution so each returns running then completed
+          executionCallCount = 0;
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(POST_EXECUTION_RESPONSE),
+          });
+        } else {
+          route.fallback();
+        }
+      },
+    );
 
     await navigateToDeploymentsPage(page);
 
@@ -299,7 +329,6 @@ test(
     // Second POST should include thread_id from first response
     expect(capturedBodies).toHaveLength(2);
     expect(capturedBodies[1]).toMatchObject({
-      deployment_id: "dep-1",
       provider_data: {
         input: "Second message",
         thread_id: "thread-1",
@@ -321,31 +350,37 @@ test(
 
     await setupBaseRoutes(page);
 
-    await page.route("**/api/v1/deployments/executions/exec-1*", (route) => {
-      executionCallCount++;
-      const isCompleted = executionCallCount > 1;
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(
-          isCompleted
-            ? COMPLETED_EXECUTION_RESPONSE
-            : RUNNING_EXECUTION_RESPONSE,
-        ),
-      });
-    });
-
-    await page.route("**/api/v1/deployments/executions", async (route) => {
-      if (route.request().method() === "POST") {
+    await page.route(
+      "**/api/v1/deployments/dep-1/executions/exec-1",
+      (route) => {
+        executionCallCount++;
+        const isCompleted = executionCallCount > 1;
         route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify(POST_EXECUTION_RESPONSE),
+          body: JSON.stringify(
+            isCompleted
+              ? COMPLETED_EXECUTION_RESPONSE
+              : RUNNING_EXECUTION_RESPONSE,
+          ),
         });
-      } else {
-        route.fallback();
-      }
-    });
+      },
+    );
+
+    await page.route(
+      "**/api/v1/deployments/dep-1/executions",
+      async (route) => {
+        if (route.request().method() === "POST") {
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(POST_EXECUTION_RESPONSE),
+          });
+        } else {
+          route.fallback();
+        }
+      },
+    );
 
     await navigateToDeploymentsPage(page);
 
