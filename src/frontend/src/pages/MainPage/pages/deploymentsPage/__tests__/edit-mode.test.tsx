@@ -271,6 +271,118 @@ describe("Edit mode — throws outside edit mode", () => {
   });
 });
 
+describe("Edit mode — no-op and partial update payloads", () => {
+  it("sends fallback spec when nothing changed at all", () => {
+    const { result } = renderEditHook();
+    const payload = result.current.buildDeploymentUpdatePayload();
+    // LLM is pre-filled so provider_data always has llm
+    expect(payload.deployment_id).toBe("deploy-1");
+    expect(payload.provider_data?.llm).toBe("test-model");
+    // No spec change → no spec field (or fallback if no provider_data either)
+  });
+
+  it("sends only description in spec when only description changed", () => {
+    const { result } = renderEditHook();
+
+    act(() => result.current.setDeploymentDescription("New description only"));
+
+    const payload = result.current.buildDeploymentUpdatePayload();
+    expect(payload.spec).toEqual({ description: "New description only" });
+    // No operations since no flows changed
+    const ops =
+      (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
+    expect(ops).toHaveLength(0);
+  });
+
+  it("sends only LLM change without spec when description unchanged", () => {
+    const { result } = renderEditHook();
+
+    act(() => result.current.setSelectedLlm("new-model"));
+
+    const payload = result.current.buildDeploymentUpdatePayload();
+    expect(payload.provider_data?.llm).toBe("new-model");
+    expect(payload.spec).toBeUndefined();
+  });
+
+  it("sends only flow operations when only flows changed", () => {
+    const { result } = renderEditHook();
+
+    act(() => {
+      result.current.handleSelectVersion("flow-new", "ver-new", "v1");
+    });
+
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const ops =
+      (payload.provider_data?.operations as Array<{
+        op: string;
+        flow_version_id?: string;
+      }>) ?? [];
+    const bindOps = ops.filter((o) => o.op === "bind");
+    expect(bindOps).toHaveLength(1);
+    expect(bindOps[0].flow_version_id).toBe("ver-new");
+    // Description didn't change → no spec
+    expect(payload.spec).toBeUndefined();
+  });
+});
+
+describe("Edit mode — detach then re-attach same flow", () => {
+  it("re-attaching a detached flow restores it to selectedVersionByFlow", () => {
+    const { result } = renderEditHook();
+
+    // Detach flow-1
+    act(() => result.current.handleRemoveAttachedFlow("flow-1"));
+    expect(result.current.removedFlowIds.has("flow-1")).toBe(true);
+    expect(result.current.selectedVersionByFlow.has("flow-1")).toBe(false);
+
+    // Re-attach via undo
+    act(() => result.current.handleUndoRemoveFlow("flow-1"));
+    expect(result.current.removedFlowIds.has("flow-1")).toBe(false);
+    expect(result.current.selectedVersionByFlow.get("flow-1")).toEqual({
+      versionId: "ver-1",
+      versionTag: "v1",
+    });
+
+    // Payload should have no remove_tool or bind for flow-1 (it's back to original)
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const ops =
+      (payload.provider_data?.operations as Array<{
+        op: string;
+        flow_version_id?: string;
+      }>) ?? [];
+    expect(ops.filter((o) => o.flow_version_id === "ver-1")).toHaveLength(0);
+  });
+
+  it("detaching all flows then re-attaching one produces correct ops", () => {
+    const { result } = renderEditHook();
+
+    // Detach both
+    act(() => {
+      result.current.handleRemoveAttachedFlow("flow-1");
+      result.current.handleRemoveAttachedFlow("flow-2");
+    });
+    expect(result.current.removedFlowIds.size).toBe(2);
+
+    // Re-attach only flow-2
+    act(() => result.current.handleUndoRemoveFlow("flow-2"));
+
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const ops =
+      (payload.provider_data?.operations as Array<{
+        op: string;
+        flow_version_id?: string;
+      }>) ?? [];
+
+    // flow-1 should have remove_tool
+    expect(ops.filter((o) => o.op === "remove_tool")).toHaveLength(1);
+    expect(ops.find((o) => o.op === "remove_tool")?.flow_version_id).toBe(
+      "ver-1",
+    );
+
+    // flow-2 was undone, so no remove_tool and no bind (it's pre-existing)
+    expect(ops.filter((o) => o.flow_version_id === "ver-2")).toHaveLength(0);
+  });
+});
+
 describe("Edit mode — pre-populated provider data", () => {
   it("pre-fills toolNameByFlow from initialToolNameByFlow", () => {
     const { result } = renderEditHook();
