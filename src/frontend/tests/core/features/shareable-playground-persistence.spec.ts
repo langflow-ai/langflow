@@ -234,9 +234,7 @@ test(
     await page.waitForTimeout(1000);
     await sendMessageAndWait(page, "delete this");
 
-    const sessionsBefore = await page
-      .getByTestId("session-selector")
-      .count();
+    const sessionsBefore = await page.getByTestId("session-selector").count();
 
     // Delete last session
     await page

@@ -10,8 +10,20 @@
 const FLOW_ID = "virtual-flow-id-123";
 const SOURCE_FLOW_ID = "real-flow-id-456";
 const MOCK_MESSAGES = [
-  { id: "msg-1", flow_id: FLOW_ID, session_id: "s1", text: "hello", sender: "User" },
-  { id: "msg-2", flow_id: FLOW_ID, session_id: "s1", text: "hi", sender: "Machine" },
+  {
+    id: "msg-1",
+    flow_id: FLOW_ID,
+    session_id: "s1",
+    text: "hello",
+    sender: "User",
+  },
+  {
+    id: "msg-2",
+    flow_id: FLOW_ID,
+    session_id: "s1",
+    text: "hi",
+    sender: "Machine",
+  },
 ];
 
 // Mock all external dependencies
@@ -67,7 +79,9 @@ import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-a
 import { useGetMessagesQuery } from "../use-get-messages";
 
 const mockFlowStore = useFlowStore as unknown as { getState: jest.Mock };
-const mockIsAuth = isAuthenticatedPlayground as jest.MockedFunction<typeof isAuthenticatedPlayground>;
+const mockIsAuth = isAuthenticatedPlayground as jest.MockedFunction<
+  typeof isAuthenticatedPlayground
+>;
 
 describe("useGetMessagesQuery - Routing Logic", () => {
   beforeEach(() => {
@@ -88,7 +102,9 @@ describe("useGetMessagesQuery - Routing Logic", () => {
 
     expect(mockApiGet).toHaveBeenCalledWith(
       "api/v1/messages",
-      expect.objectContaining({ params: expect.objectContaining({ flow_id: FLOW_ID }) }),
+      expect.objectContaining({
+        params: expect.objectContaining({ flow_id: FLOW_ID }),
+      }),
     );
   });
 

@@ -90,9 +90,7 @@ test(
     await page.waitForSelector("text=built successfully", { timeout: 120000 });
 
     // Open regular playground
-    await page
-      .getByRole("button", { name: "Playground", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 10000,
     });
