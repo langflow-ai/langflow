@@ -146,14 +146,37 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         connection_id: str,
         app_id: str,
         config_type: str | None = None,
+        environment: str | None = None,
     ) -> ConfigListItem:
         """Build a normalized config list item from resolved identifiers."""
-        provider_data = {"type": config_type} if config_type else None
+        provider_data: dict[str, str] = {}
+        if config_type:
+            provider_data["type"] = config_type
+        if environment:
+            provider_data["environment"] = environment
         return ConfigListItem(
             id=connection_id,
             name=app_id,
-            provider_data=provider_data,
+            provider_data=provider_data or None,
         )
+
+    @staticmethod
+    def _warn_if_expected_ids_missing(
+        *,
+        deployment_id: str,
+        resource_name: str,
+        expected_ids: list[object],
+        resolved_ids: set[object],
+    ) -> None:
+        missing_ids = [resource_id for resource_id in expected_ids if resource_id not in resolved_ids]
+        if missing_ids:
+            logger.warning(
+                "list_configs: deployment '%s' references %s IDs not returned by provider "
+                "(possibly stale/deleted between reads): %s",
+                deployment_id,
+                resource_name,
+                missing_ids,
+            )
 
     @staticmethod
     def _normalize_optional_text(value: object | None) -> str | None:
@@ -747,11 +770,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 config_id = connection.connection_id
                 config_name = connection.app_id
                 config_type = self._normalize_optional_text(connection.security_scheme)
+                if config_type != "key_value_creds":
+                    continue
+                environment = self._normalize_optional_text(getattr(connection, "environment", None))
                 configs.append(
                     self._build_config_list_item(
                         connection_id=config_id,
                         app_id=config_name,
                         config_type=config_type,
+                        environment=environment,
                     )
                 )
             return ConfigListResult(
@@ -772,9 +799,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if not agent:
             msg = f"Deployment '{agent_id}' not found."
             raise DeploymentNotFoundError(msg)
+        if not isinstance(agent, dict):
+            msg = f"wxO returned an unexpected deployment payload type for '{agent_id}': {type(agent).__name__}."
+            raise InvalidContentError(message=msg)
 
-        tool_ids = agent.get("tools", []) if isinstance(agent, dict) else []
-        tool_ids = dedupe_list(tool_ids)
+        raw_tool_ids = agent.get("tools", [])
+        if raw_tool_ids is None:
+            raw_tool_ids = []
+        tool_ids = raw_tool_ids
 
         if not tool_ids:
             return ConfigListResult(
@@ -796,37 +828,53 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             )
 
         app_to_connection_id: dict[str, str] = {}
-        for tool in tools or []:
-            if not isinstance(tool, dict):
-                continue
+        resolved_tool_ids: set[object] = set()
+        for tool in tools:
+            tool_id = tool.get("id")
+            resolved_tool_ids.add(tool_id)
             connections = extract_langflow_connections_binding(tool)
             if not connections:
                 continue
-            for app_id, connection_id in connections.items():
-                app_to_connection_id.setdefault(app_id, connection_id)
+            app_to_connection_id.update(connections)
 
-        connection_type_by_id: dict[str, str] = {}
-        connection_ids = dedupe_list(
-            [connection_id for connection_id in app_to_connection_id.values() if connection_id]
+        self._warn_if_expected_ids_missing(
+            deployment_id=agent_id,
+            resource_name="tool",
+            expected_ids=tool_ids,
+            resolved_ids=resolved_tool_ids,
         )
+
+        key_value_connection_ids: set[str] = set()
+        key_value_connection_environment_by_id: dict[str, str | None] = {}
+        # duplication might occur given the list connections api returns
+        # two entries per app id, one for draft and one for live
+        connection_ids = list(dict.fromkeys(app_to_connection_id.values()))
         if connection_ids:
             try:
                 detailed_connections = await asyncio.to_thread(clients.connections.get_drafts_by_ids, connection_ids)
             except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "list_configs: failed to enrich deployment configs with connection types",
-                    exc_info=exc,
+                raise_as_deployment_error(
+                    exc,
+                    error_prefix=ErrorPrefix.LIST_CONFIGS,
+                    log_msg="Unexpected error while enriching wxO deployment configs with connection types",
                 )
             else:
-                for connection in detailed_connections or []:
-                    if not isinstance(connection, ListConfigsResponse):
-                        continue
+                resolved_connection_ids: set[object] = set()
+                for connection in detailed_connections:
                     connection_id = connection.connection_id
-                    if not connection_id:
-                        continue
+                    resolved_connection_ids.add(connection_id)
                     config_type = self._normalize_optional_text(connection.security_scheme)
-                    if config_type:
-                        connection_type_by_id[connection_id] = config_type
+                    if config_type == "key_value_creds":
+                        key_value_connection_ids.add(connection_id)
+                        key_value_connection_environment_by_id[connection_id] = self._normalize_optional_text(
+                            getattr(connection, "environment", None)
+                        )
+                self._warn_if_expected_ids_missing(
+                    deployment_id=agent_id,
+                    resource_name="connection",
+                    expected_ids=connection_ids,
+                    resolved_ids=resolved_connection_ids,
+                )
 
         # Preserve first-seen binding order (tool order + per-tool connection order)
         # instead of re-sorting app_ids alphabetically.
@@ -834,9 +882,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             self._build_config_list_item(
                 connection_id=connection_id,
                 app_id=app_id,
-                config_type=connection_type_by_id.get(connection_id),
+                config_type="key_value_creds",
+                environment=key_value_connection_environment_by_id.get(connection_id),
             )
             for app_id, connection_id in app_to_connection_id.items()
+            if connection_id in key_value_connection_ids
         ]
 
         return ConfigListResult(

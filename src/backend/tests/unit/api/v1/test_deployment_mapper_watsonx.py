@@ -387,7 +387,7 @@ def test_watsonx_mapper_shapes_config_list_result_with_full_slot_validation() ->
                 updated_at=now,
                 provider_data={"type": "key_value_creds"},
             ),
-            ConfigListItem(id="conn-2", name="cfg-2"),
+            ConfigListItem(id="conn-2", name="cfg-2", provider_data={"type": "key_value_creds"}),
         ],
         provider_result={"deployment_id": " dep-1 ", "tool_ids": ["tool-1", "  "]},
     )
@@ -414,7 +414,27 @@ def test_watsonx_mapper_shapes_config_list_result_with_full_slot_validation() ->
     }
 
 
-def test_watsonx_mapper_config_list_accepts_items_without_type() -> None:
+def test_watsonx_mapper_shapes_config_list_result_with_environment_metadata() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    result = ConfigListResult(
+        configs=[
+            ConfigListItem(
+                id="conn-1",
+                name="cfg-1",
+                provider_data={"type": "key_value_creds", "environment": "live"},
+            ),
+        ],
+        provider_result={},
+    )
+
+    shaped = mapper.shape_config_list_result(result, page=1, size=10)
+    assert shaped.provider_data is not None
+    assert shaped.provider_data["connections"] == [
+        {"connection_id": "conn-1", "app_id": "cfg-1", "type": "key_value_creds", "environment": "live"}
+    ]
+
+
+def test_watsonx_mapper_config_list_fails_fast_when_type_missing() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     result = ConfigListResult(
         configs=[
@@ -427,16 +447,17 @@ def test_watsonx_mapper_config_list_accepts_items_without_type() -> None:
         provider_result={},
     )
 
-    shaped = mapper.shape_config_list_result(result, page=1, size=10)
-    assert shaped.provider_data is not None
-    assert shaped.provider_data["connections"] == [{"connection_id": "conn-bad", "app_id": "cfg-bad"}]
+    with pytest.raises(HTTPException) as exc_info:
+        mapper.shape_config_list_result(result, page=1, size=10)
+    assert exc_info.value.status_code == 500
+    assert "expected non-empty 'type'" in str(exc_info.value.detail)
 
 
-def test_watsonx_mapper_config_list_exposes_connection_id_and_app_id() -> None:
+def test_watsonx_mapper_config_list_exposes_connection_id_app_id_and_type() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     result = ConfigListResult(
         configs=[
-            ConfigListItem(id="conn-dep", name="cfg-dep"),
+            ConfigListItem(id="conn-dep", name="cfg-dep", provider_data={"type": "key_value_creds"}),
         ],
         provider_result={},
     )
@@ -449,10 +470,11 @@ def test_watsonx_mapper_config_list_exposes_connection_id_and_app_id() -> None:
     assert shaped.provider_data["connections"][0] == {
         "connection_id": "conn-dep",
         "app_id": "cfg-dep",
+        "type": "key_value_creds",
     }
 
 
-def test_watsonx_mapper_config_list_ignores_unexpected_provider_data_keys() -> None:
+def test_watsonx_mapper_config_list_rejects_missing_type_even_with_other_provider_data() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     result = ConfigListResult(
         configs=[
@@ -465,9 +487,10 @@ def test_watsonx_mapper_config_list_ignores_unexpected_provider_data_keys() -> N
         provider_result={},
     )
 
-    shaped = mapper.shape_config_list_result(result, page=1, size=10)
-    assert shaped.provider_data is not None
-    assert shaped.provider_data["connections"] == [{"connection_id": "conn-1", "app_id": "cfg-1"}]
+    with pytest.raises(HTTPException) as exc_info:
+        mapper.shape_config_list_result(result, page=1, size=10)
+    assert exc_info.value.status_code == 500
+    assert "expected non-empty 'type'" in str(exc_info.value.detail)
 
 
 def test_watsonx_mapper_shapes_snapshot_list_result_without_nested_provider_data() -> None:

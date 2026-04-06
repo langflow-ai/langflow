@@ -1232,8 +1232,13 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         }
         item_provider_data = item.provider_data if isinstance(item.provider_data, dict) else {}
         config_type = str(item_provider_data.get("type") or "").strip()
-        if config_type:
-            payload["type"] = config_type
+        if not config_type:
+            msg = "Invalid config list item provider_data payload: expected non-empty 'type'."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        payload["type"] = config_type
+        environment = str(item_provider_data.get("environment") or "").strip()
+        if environment:
+            payload["environment"] = environment
         return payload
 
     def _parse_required_payload_slot(

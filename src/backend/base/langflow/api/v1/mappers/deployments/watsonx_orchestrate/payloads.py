@@ -455,6 +455,7 @@ class WatsonxApiConfigListItem(BaseModel):
     connection_id: str = Field(min_length=1)
     app_id: str = Field(min_length=1)
     type: str | None = None
+    environment: str | None = None
 
     @field_validator("connection_id", "app_id", mode="before")
     @classmethod
@@ -469,6 +470,12 @@ class WatsonxApiConfigListItem(BaseModel):
     @field_validator("type", mode="before")
     @classmethod
     def normalize_optional_type(cls, value: Any) -> str | None:
+        normalized = str(value or "").strip()
+        return normalized or None
+
+    @field_validator("environment", mode="before")
+    @classmethod
+    def normalize_optional_environment(cls, value: Any) -> str | None:
         normalized = str(value or "").strip()
         return normalized or None
 
