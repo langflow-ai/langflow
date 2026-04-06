@@ -536,7 +536,7 @@ async def get_workflow_status(
 
     job_service = get_job_service()
     try:
-        job = await job_service.get_job_by_job_id(job_id=job_id)
+        job = await job_service.get_job_by_job_id(job_id=job_id, user_id=api_key_user.id)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -569,9 +569,6 @@ async def get_workflow_status(
                 "job_id": str(job_id),
             },
         )
-
-    # Ownership check — raises 403 if the requesting user does not own the job
-    job_service.assert_job_owner(job, api_key_user.id, job_id)
 
     # Store context for exception handling scope
     flow_id_str = str(job.flow_id)
@@ -677,7 +674,7 @@ async def stop_workflow(
 
     try:
         # 1. Fetch Job
-        job = await job_service.get_job_by_job_id(job_id)
+        job = await job_service.get_job_by_job_id(job_id, user_id=api_key_user.id)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -698,9 +695,6 @@ async def stop_workflow(
                 "job_id": str(job_id),
             },
         )
-
-    # Ownership check — must run before type check to avoid leaking job.type to non-owners
-    job_service.assert_job_owner(job, api_key_user.id, job_id)
 
     # Verify this is a workflow job
     if job.type != JobType.WORKFLOW:

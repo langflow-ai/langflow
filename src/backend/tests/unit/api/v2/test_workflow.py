@@ -1345,7 +1345,6 @@ class TestWorkflowStatus:
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
             mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
-            mock_service.assert_job_owner = MagicMock()
             mock_get_job_service.return_value = mock_service
 
             headers = {"x-api-key": created_api_key.api_key}
@@ -1396,7 +1395,6 @@ class TestWorkflowStatus:
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
             mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
-            mock_service.assert_job_owner = MagicMock()
             mock_get_job_service.return_value = mock_service
 
             headers = {"x-api-key": created_api_key.api_key}
@@ -1431,7 +1429,6 @@ class TestWorkflowStatus:
         ):
             mock_service = MagicMock()
             mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
-            mock_service.assert_job_owner = MagicMock()
             mock_get_job_service.return_value = mock_service
 
             mock_flow = MagicMock()
@@ -1468,7 +1465,6 @@ class TestWorkflowStatus:
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
             mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
-            mock_service.assert_job_owner = MagicMock()
             mock_get_job_service.return_value = mock_service
 
             headers = {"x-api-key": created_api_key.api_key}
@@ -1518,7 +1514,6 @@ class TestWorkflowStop:
             mock_job_service = MagicMock()
             mock_job_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
             mock_job_service.update_job_status = AsyncMock()
-            mock_job_service.assert_job_owner = MagicMock()
             mock_get_job_service.return_value = mock_job_service
 
             mock_task_service = MagicMock()
@@ -1574,7 +1569,6 @@ class TestWorkflowStop:
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
             mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
-            mock_service.assert_job_owner = MagicMock()
             mock_get_job_service.return_value = mock_service
 
             headers = {"x-api-key": created_api_key.api_key}
@@ -1612,9 +1606,10 @@ class TestWorkflowIDORProtection:
         created_user_two_api_key,
         mock_settings_dev_api_enabled,  # noqa: ARG002
     ):
-        """GET /api/v2/workflows returns 403 when the job belongs to a different user.
+        """GET /api/v2/workflows returns 404 when the job belongs to a different user.
 
         GHSA-qfw4-cjhf-3g3q: job status must not be visible cross-user.
+        Ownership is enforced at the SQL level — unauthorized access returns 404.
         """
         job_id = uuid4()
         other_user_id = created_user_two_api_key.user_id
@@ -1634,9 +1629,9 @@ class TestWorkflowIDORProtection:
             headers = {"x-api-key": created_api_key.api_key}
             response = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
 
-            assert response.status_code == 403
+            assert response.status_code == 404
             result = response.json()
-            assert result["detail"]["code"] == "FORBIDDEN"
+            assert result["detail"]["code"] == "JOB_NOT_FOUND"
             assert str(job_id) in result["detail"]["job_id"]
         finally:
             async with session_scope() as session:
@@ -1687,9 +1682,10 @@ class TestWorkflowIDORProtection:
         created_user_two_api_key,
         mock_settings_dev_api_enabled,  # noqa: ARG002
     ):
-        """POST /api/v2/workflows/stop returns 403 when the job belongs to a different user.
+        """POST /api/v2/workflows/stop returns 404 when the job belongs to a different user.
 
         GHSA-qfw4-cjhf-3g3q: job cancellation must not be allowed cross-user.
+        Ownership is enforced at the SQL level — unauthorized access returns 404.
         """
         job_id = uuid4()
         other_user_id = created_user_two_api_key.user_id
@@ -1713,9 +1709,9 @@ class TestWorkflowIDORProtection:
                 headers=headers,
             )
 
-            assert response.status_code == 403
+            assert response.status_code == 404
             result = response.json()
-            assert result["detail"]["code"] == "FORBIDDEN"
+            assert result["detail"]["code"] == "JOB_NOT_FOUND"
             assert str(job_id) in result["detail"]["job_id"]
         finally:
             async with session_scope() as session:
@@ -1788,7 +1784,9 @@ class TestWorkflowIDORProtection:
             headers = {"x-api-key": created_api_key.api_key}
             response = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
 
-            assert response.status_code != 403
+            assert response.status_code == 200
+            result = response.json()
+            assert result["job_id"] == str(job_id)
         finally:
             async with session_scope() as session:
                 db_job = await session.get(Job, job_id)
@@ -1828,7 +1826,7 @@ class TestWorkflowIDORProtection:
                 headers=headers,
             )
 
-            assert response.status_code != 403, (
+            assert response.status_code == 200, (
                 "Legacy jobs with user_id=None must not be blocked by the ownership check"
             )
         finally:
@@ -1879,6 +1877,43 @@ class TestWorkflowIDORProtection:
                     await session.delete(db_job)
 
     @pytest.mark.security
+    async def test_get_workflow_status_returns_404_for_non_workflow_job_type(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """GET /api/v2/workflows returns 404 for non-WORKFLOW job types.
+
+        Prevents status endpoint from exposing ingestion or evaluation jobs.
+        """
+        job_id = uuid4()
+
+        async with session_scope() as session:
+            job = Job(
+                job_id=job_id,
+                flow_id=uuid4(),
+                status=JobStatus.IN_PROGRESS,
+                type=JobType.INGESTION,
+                user_id=None,
+            )
+            session.add(job)
+            await session.flush()
+
+        try:
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
+
+            assert response.status_code == 404
+            result = response.json()
+            assert result["detail"]["code"] == "JOB_NOT_FOUND"
+        finally:
+            async with session_scope() as session:
+                db_job = await session.get(Job, job_id)
+                if db_job:
+                    await session.delete(db_job)
+
+    @pytest.mark.security
     async def test_background_job_stores_user_id_and_blocks_cross_user_access(
         self,
         client: AsyncClient,
@@ -1894,7 +1929,7 @@ class TestWorkflowIDORProtection:
 
         Steps:
           1. Alice creates a background job via the real endpoint (no mock on create_job)
-          2. Bob queries the job_id returned — must get 403
+          2. Bob queries the job_id returned — must get 404 (ownership enforced at SQL level)
         """
         flow_id = uuid4()
         job_id_str = None
@@ -1933,18 +1968,18 @@ class TestWorkflowIDORProtection:
             )
             job_id_str = response.json()["job_id"]
 
-            # Bob queries Alice's job — must be 403
+            # Bob queries Alice's job — must be 404 (ownership enforced at SQL level)
             bob_headers = {"x-api-key": created_user_two_api_key.api_key}
             response = await client.get(
                 f"api/v2/workflows?job_id={job_id_str}",
                 headers=bob_headers,
             )
 
-            assert response.status_code == 403, (
-                f"Expected 403 Forbidden but got {response.status_code}. "
+            assert response.status_code == 404, (
+                f"Expected 404 Not Found but got {response.status_code}. "
                 "user_id is not being persisted in create_job — Bob can access Alice's job."
             )
-            assert response.json()["detail"]["code"] == "FORBIDDEN"
+            assert response.json()["detail"]["code"] == "JOB_NOT_FOUND"
 
         finally:
             async with session_scope() as session:

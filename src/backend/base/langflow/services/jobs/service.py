@@ -10,8 +10,6 @@ if TYPE_CHECKING:
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import HTTPException, status
-
 from langflow.services.base import Service
 from langflow.services.database.models.jobs.crud import (
     get_job_by_job_id,
@@ -49,36 +47,22 @@ class JobService(Service):
         async with session_scope() as session:
             return await get_jobs_by_flow_id(session, flow_id, page=page, size=page_size)
 
-    async def get_job_by_job_id(self, job_id: UUID | str) -> Job | None:
+    async def get_job_by_job_id(self, job_id: UUID | str, user_id: UUID | None = None) -> Job | None:
         """Get job for a specific job ID.
 
         Args:
             job_id: The job ID to filter jobs by
+            user_id: When provided, restricts the result to jobs owned by this user
+                or legacy jobs with no owner (user_id IS NULL).
 
         Returns:
-            Job object for the specified job ID
+            Job object for the specified job ID, or None if not found or not accessible
         """
         if isinstance(job_id, str):
             job_id = UUID(job_id)
 
         async with session_scope() as session:
-            return await get_job_by_job_id(session, job_id)
-
-    def assert_job_owner(self, job: Job, user_id: UUID | None, job_id: UUID) -> None:
-        """Raise 403 if the authenticated user does not own the job.
-
-        Legacy rows with user_id=None are allowed through to preserve backwards compatibility.
-        """
-        if job.user_id is not None and job.user_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
-                    "error": "Forbidden",
-                    "code": "FORBIDDEN",
-                    "message": "You do not have permission to access this job.",
-                    "job_id": str(job_id),
-                },
-            )
+            return await get_job_by_job_id(session, job_id, user_id=user_id)
 
     async def create_job(
         self,
