@@ -10,11 +10,9 @@ import uuid
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-from lfx.services.deps import session_scope
-
 from langflow.api.utils.flow_utils import compute_virtual_flow_id
 from langflow.services.database.models.message.model import MessageTable
-
+from lfx.services.deps import session_scope
 
 # --- Unit tests for compute_virtual_flow_id ---
 
@@ -77,23 +75,17 @@ FAKE_FLOW_ID = "00000000-0000-0000-0000-000000000001"
 
 
 async def test_get_shared_sessions_requires_auth(client: AsyncClient):
-    response = await client.get(
-        f"api/v1/monitor/messages/shared/sessions?source_flow_id={FAKE_FLOW_ID}"
-    )
+    response = await client.get(f"api/v1/monitor/messages/shared/sessions?source_flow_id={FAKE_FLOW_ID}")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 async def test_get_shared_messages_requires_auth(client: AsyncClient):
-    response = await client.get(
-        f"api/v1/monitor/messages/shared?source_flow_id={FAKE_FLOW_ID}"
-    )
+    response = await client.get(f"api/v1/monitor/messages/shared?source_flow_id={FAKE_FLOW_ID}")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 async def test_delete_shared_session_requires_auth(client: AsyncClient):
-    response = await client.delete(
-        f"api/v1/monitor/messages/shared/session/test-session?source_flow_id={FAKE_FLOW_ID}"
-    )
+    response = await client.delete(f"api/v1/monitor/messages/shared/session/test-session?source_flow_id={FAKE_FLOW_ID}")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -155,9 +147,7 @@ async def shared_messages_setup(active_user):
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_get_shared_sessions_returns_user_sessions(
-    client: AsyncClient, logged_in_headers, shared_messages_setup
-):
+async def test_get_shared_sessions_returns_user_sessions(client: AsyncClient, logged_in_headers, shared_messages_setup):
     source_flow_id = shared_messages_setup["source_flow_id"]
     response = await client.get(
         f"api/v1/monitor/messages/shared/sessions?source_flow_id={source_flow_id}",
@@ -171,9 +161,7 @@ async def test_get_shared_sessions_returns_user_sessions(
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_get_shared_messages_returns_messages(
-    client: AsyncClient, logged_in_headers, shared_messages_setup
-):
+async def test_get_shared_messages_returns_messages(client: AsyncClient, logged_in_headers, shared_messages_setup):
     source_flow_id = shared_messages_setup["source_flow_id"]
     response = await client.get(
         f"api/v1/monitor/messages/shared?source_flow_id={source_flow_id}&session_id=test-session-1",
@@ -186,9 +174,7 @@ async def test_get_shared_messages_returns_messages(
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_get_shared_messages_empty_for_wrong_flow(
-    client: AsyncClient, logged_in_headers, shared_messages_setup
-):
+async def test_get_shared_messages_empty_for_wrong_flow(client: AsyncClient, logged_in_headers, shared_messages_setup):
     """Requesting messages for a flow the user hasn't interacted with returns empty."""
     random_flow_id = uuid.uuid4()
     response = await client.get(
@@ -200,9 +186,7 @@ async def test_get_shared_messages_empty_for_wrong_flow(
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_delete_shared_session_removes_messages(
-    client: AsyncClient, logged_in_headers, shared_messages_setup
-):
+async def test_delete_shared_session_removes_messages(client: AsyncClient, logged_in_headers, shared_messages_setup):
     source_flow_id = shared_messages_setup["source_flow_id"]
 
     # Delete session-1
@@ -228,9 +212,7 @@ async def test_delete_shared_session_removes_messages(
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_rename_shared_session(
-    client: AsyncClient, logged_in_headers, shared_messages_setup
-):
+async def test_rename_shared_session(client: AsyncClient, logged_in_headers, shared_messages_setup):
     source_flow_id = shared_messages_setup["source_flow_id"]
 
     response = await client.patch(
