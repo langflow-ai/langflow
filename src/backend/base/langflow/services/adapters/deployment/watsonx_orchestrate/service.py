@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 from fastapi import HTTPException, status
 from ibm_cloud_sdk_core import ApiException
@@ -114,6 +115,14 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
+
+
+def _safe_url_parts(url: str) -> tuple[str, str]:
+    """Return log-safe hostname/path details for provider URL diagnostics."""
+    parsed = urlparse(url or "")
+    host = (parsed.hostname or "").strip() or "<missing-host>"
+    path = (parsed.path or "").strip() or "/"
+    return host, path
 
 
 class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
@@ -867,7 +876,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     async def verify_credentials(
         self,
         *,
-        user_id: IdLike,  # noqa: ARG002
+        user_id: IdLike,
         payload: VerifyCredentials,
     ) -> VerifyCredentialsResult:
         """Verify WXO credentials by obtaining a token from the provider."""
@@ -881,10 +890,26 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         malformed_credentials_msg = (
             "Provider credentials are malformed. Please ensure the URL and API key are correctly formatted."
         )
+        normalized_base_url = (payload.base_url or "").strip().rstrip("/")
+        base_host, base_path = _safe_url_parts(normalized_base_url)
+        auth_scheme = (
+            "iam"
+            if ".cloud.ibm.com" in normalized_base_url
+            else "mcsp"
+            if ".ibm.com" in normalized_base_url
+            else "unknown"
+        )
+        logger.info(
+            "WXO credential verification started (user_id=%s, base_url_host=%s, base_url_path=%s, auth_scheme=%s)",
+            user_id,
+            base_host,
+            base_path,
+            auth_scheme,
+        )
 
         try:
             authenticator = get_authenticator(
-                instance_url=payload.base_url,
+                instance_url=normalized_base_url,
                 api_key=provider_creds.api_key,
             )
         except ValueError as exc:
@@ -907,8 +932,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             # Log only the status code for diagnostics and avoid exposing
             # provider response details that could include sensitive values.
             logger.error(  # noqa: TRY400
-                "Credential verification failed (status=%s)",
+                "Credential verification failed (status=%s, base_url_host=%s, base_url_path=%s, auth_scheme=%s)",
                 exc.status_code,
+                base_host,
+                base_path,
+                auth_scheme,
             )
             raise_for_status_and_detail(
                 status_code=exc.status_code,
@@ -917,12 +945,25 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 cause=None,
             )
         except Exception as exc:
+            logger.exception(
+                "Credential verification failed unexpectedly (base_url_host=%s, base_url_path=%s, auth_scheme=%s)",
+                base_host,
+                base_path,
+                auth_scheme,
+            )
             raise DeploymentError(
                 message="Credential verification failed unexpectedly.",
                 error_code="deployment_error",
                 cause=exc,
             ) from exc
 
+        logger.info(
+            "WXO credential verification succeeded (user_id=%s, base_url_host=%s, base_url_path=%s, auth_scheme=%s)",
+            user_id,
+            base_host,
+            base_path,
+            auth_scheme,
+        )
         return VerifyCredentialsResult()
 
     async def teardown(self) -> None:

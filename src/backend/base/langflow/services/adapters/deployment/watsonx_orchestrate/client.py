@@ -16,6 +16,7 @@ Important behavior notes:
 
 from __future__ import annotations
 
+import os
 from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
@@ -67,6 +68,16 @@ class WxOProviderClientsRequestContext:
     @classmethod
     def clear_current(cls) -> None:
         cls._current.set(None)
+
+
+def _ibm_iam_base() -> str:
+    raw = (os.getenv("WXO_IBM_IAM_TOKEN_BASE_URL") or os.getenv("LANGFLOW_WXO_IBM_IAM_TOKEN_BASE_URL") or "").strip()
+    return raw.rstrip("/") if raw else WxOAuthURL.IBM_IAM.value
+
+
+def _mcsp_base() -> str:
+    raw = (os.getenv("WXO_MCSP_TOKEN_BASE_URL") or os.getenv("LANGFLOW_WXO_MCSP_TOKEN_BASE_URL") or "").strip()
+    return raw.rstrip("/") if raw else WxOAuthURL.MCSP.value
 
 
 def _provider_client_context_key(*, provider_id: UUID, user_id: UUID | str) -> tuple[str, str]:
@@ -128,9 +139,9 @@ def set_request_context_provider_clients(*, provider_id: UUID, user_id: UUID | s
 def get_authenticator(instance_url: str, api_key: str) -> IAMAuthenticator | MCSPAuthenticator:
     """Return the appropriate authenticator for the Watsonx Orchestrate API."""
     if ".cloud.ibm.com" in instance_url:
-        return IAMAuthenticator(apikey=api_key, url=WxOAuthURL.IBM_IAM.value)
+        return IAMAuthenticator(apikey=api_key, url=_ibm_iam_base())
     elif ".ibm.com" in instance_url:  # noqa: RET505 - explicitness
-        return MCSPAuthenticator(apikey=api_key, url=WxOAuthURL.MCSP.value)
+        return MCSPAuthenticator(apikey=api_key, url=_mcsp_base())
 
     msg = f"Could not determine authentication scheme for instance URL: {instance_url}"
     raise AuthSchemeError(message=msg)
