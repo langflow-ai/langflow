@@ -268,9 +268,7 @@ async def test_shared_messages_isolated_between_users(
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_update_shared_message_updates_properties(
-    client: AsyncClient, logged_in_headers, shared_messages_setup
-):
+async def test_update_shared_message_updates_properties(client: AsyncClient, logged_in_headers, shared_messages_setup):
     """PUT /messages/shared/{id} should update message properties."""
     source_flow_id = shared_messages_setup["source_flow_id"]
 

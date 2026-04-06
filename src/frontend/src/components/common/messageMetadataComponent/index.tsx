@@ -76,9 +76,7 @@ export default function MessageMetadata({
               className="h-3 w-3 text-muted-foreground"
             />
             <span>{formatTokenCount(totalTokens)}</span>
-            {hasDuration && (
-              <span className="text-muted-foreground">|</span>
-            )}
+            {hasDuration && <span className="text-muted-foreground">|</span>}
           </span>
         )}
         {hasDuration && <span>{formatSeconds(duration)}</span>}

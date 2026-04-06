@@ -522,7 +522,10 @@ export function processEndVertexEvent(
       if (storeMsg) {
         useMessagesStore.getState().updateMessage({
           ...storeMsg,
-          properties: { ...storeMsg.properties, build_duration: segmentDurationMs },
+          properties: {
+            ...storeMsg.properties,
+            build_duration: segmentDurationMs,
+          },
         });
       }
 
