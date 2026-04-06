@@ -268,7 +268,7 @@ async def create_provider_account(
         resolved_provider_tenant_id = resolve_provider_tenant_id(
             deployment_mapper=deployment_mapper,
             provider_url=payload.url,
-            tenant_id=payload.tenant_id,
+            provider_data=payload.provider_data,
         )
         credential_kwargs = deployment_mapper.resolve_credential_fields(provider_data=payload.provider_data)
         provider_account = await create_provider_account_row(

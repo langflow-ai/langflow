@@ -1503,14 +1503,14 @@ def test_watsonx_mapper_resolve_provider_tenant_id_from_url() -> None:
     assert (
         mapper.resolve_provider_tenant_id(
             provider_url="https://api.example.com/orchestrate/instances/account-123/agents",
-            tenant_id=None,
+            provider_data={},
         )
         == "account-123"
     )
     assert (
         mapper.resolve_provider_tenant_id(
             provider_url="https://api.example.com/orchestrate/instances/account-123/agents",
-            tenant_id="tenant-explicit",
+            provider_data={"tenant_id": "tenant-explicit"},
         )
         == "tenant-explicit"
     )
@@ -1534,8 +1534,8 @@ def test_watsonx_mapper_trusts_top_level_deployment_id() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_wxo_mapper_resolve_verify_credentials_forwards_provider_data() -> None:
-    """WXO mapper forwards provider_data through the adapter slot."""
+def test_wxo_mapper_resolve_verify_credentials_filters_non_credential_fields() -> None:
+    """WXO mapper forwards only credential fields to adapter verification."""
     from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
     from lfx.services.adapters.deployment.schema import VerifyCredentials
 
@@ -1544,13 +1544,17 @@ def test_wxo_mapper_resolve_verify_credentials_forwards_provider_data() -> None:
         name="test-account",
         provider_key="watsonx-orchestrate",
         url="https://api.us-south.wxo.cloud.ibm.com",
-        provider_data={"api_key": "my-secret-key"},  # pragma: allowlist secret
+        provider_data={
+            "tenant_id": "tenant-123",
+            "api_key": "my-secret-key",  # pragma: allowlist secret
+        },
     )
     result = mapper.resolve_verify_credentials(payload=payload)
     assert isinstance(result, VerifyCredentials)
     assert "cloud.ibm.com" in result.base_url
     assert result.provider_data is not None
     assert result.provider_data["api_key"] == "my-secret-key"  # pragma: allowlist secret
+    assert "tenant_id" not in result.provider_data
 
 
 def test_wxo_mapper_resolve_credential_fields_returns_api_key() -> None:
@@ -1558,6 +1562,38 @@ def test_wxo_mapper_resolve_credential_fields_returns_api_key() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     result = mapper.resolve_credential_fields(provider_data={"api_key": "my-key"})  # pragma: allowlist secret
     assert result == {"api_key": "my-key"}  # pragma: allowlist secret
+
+
+def test_wxo_mapper_resolve_credential_fields_ignores_tenant_metadata() -> None:
+    """Tenant metadata in provider_data should not break credential extraction."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    result = mapper.resolve_credential_fields(
+        provider_data={
+            "tenant_id": "tenant-123",
+            "api_key": "my-key",  # pragma: allowlist secret
+        }
+    )
+    assert result == {"api_key": "my-key"}  # pragma: allowlist secret
+
+
+def test_wxo_mapper_resolve_verify_credentials_rejects_unknown_non_metadata_fields() -> None:
+    """Mapper strips tenant metadata but still rejects unexpected credential keys."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
+    from lfx.services.adapters.payload import AdapterPayloadValidationError
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentProviderAccountCreateRequest(
+        name="test-account",
+        provider_key="watsonx-orchestrate",
+        url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data={
+            "tenant_id": "tenant-123",
+            "api_key": "my-secret-key",  # pragma: allowlist secret
+            "unexpected": "field",
+        },
+    )
+    with pytest.raises(AdapterPayloadValidationError):
+        mapper.resolve_verify_credentials(payload=payload)
 
 
 def test_wxo_mapper_resolve_credential_fields_strips_whitespace() -> None:

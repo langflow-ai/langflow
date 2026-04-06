@@ -395,10 +395,26 @@ class BaseDeploymentMapper:
             provider_data=provider_data,
         )
 
-    def resolve_provider_tenant_id(self, *, provider_url: str, tenant_id: str | None) -> str | None:
+    def resolve_provider_tenant_id(
+        self,
+        *,
+        provider_url: str,
+        provider_data: dict[str, Any],
+    ) -> str | None:
         """Resolve provider tenant id for provider-account create/update."""
         _ = provider_url
-        return tenant_id
+        return self.resolve_provider_tenant_id_from_data(provider_data=provider_data)
+
+    def resolve_provider_tenant_id_from_data(self, *, provider_data: dict[str, Any]) -> str | None:
+        """Extract optional tenant/account identifier from provider_data."""
+        raw_tenant_id = provider_data.get("tenant_id")
+        if raw_tenant_id is None:
+            return None
+        if not isinstance(raw_tenant_id, str):
+            msg = "provider_data.tenant_id must be a string when provided."
+            raise ValueError(msg)  # noqa: TRY004 - route layer maps ValueError to HTTP 4xx
+        tenant_id = raw_tenant_id.strip()
+        return tenant_id or None
 
     def format_conflict_detail(self, raw_message: str) -> str:
         """Format provider conflict errors for API responses.
@@ -486,12 +502,25 @@ class BaseDeploymentMapper:
         return DeploymentProviderAccountGetResponse(
             id=provider_account.id,
             name=provider_account.name,
-            tenant_id=provider_account.provider_tenant_id,
             provider_key=provider_account.provider_key,
             url=provider_account.provider_url,
+            provider_data=self.shape_provider_account_provider_data(provider_account),
             created_at=provider_account.created_at,
             updated_at=provider_account.updated_at,
         )
+
+    def shape_provider_account_provider_data(
+        self,
+        provider_account: DeploymentProviderAccount,
+    ) -> dict[str, Any] | None:
+        """Return non-sensitive provider metadata for provider-account responses."""
+        raw_tenant_id = provider_account.provider_tenant_id
+        if raw_tenant_id is None:
+            return None
+        tenant_id = str(raw_tenant_id).strip()
+        if not tenant_id:
+            return None
+        return {"tenant_id": tenant_id}
 
     def util_create_flow_artifact_provider_data(
         self,

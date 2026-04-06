@@ -355,11 +355,11 @@ def resolve_provider_tenant_id(
     *,
     deployment_mapper: BaseDeploymentMapper,
     provider_url: str,
-    tenant_id: str | None,
+    provider_data: dict[str, Any],
 ) -> str | None:
     return deployment_mapper.resolve_provider_tenant_id(
         provider_url=provider_url,
-        tenant_id=tenant_id,
+        provider_data=provider_data,
     )
 
 

@@ -26,9 +26,9 @@ export interface DeploymentProvider {
 export interface ProviderAccount {
   id: string;
   name: string;
-  tenant_id: string | null;
   provider_key: string;
   url: string;
+  provider_data?: Record<string, unknown>;
   created_at: string | null;
   updated_at: string | null;
 }

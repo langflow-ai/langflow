@@ -35,9 +35,9 @@ class TestCredentialSecurity:
         """DeploymentProviderAccountGetResponse.model_fields must not contain api_key."""
         assert "api_key" not in DeploymentProviderAccountGetResponse.model_fields
 
-    def test_provider_account_response_excludes_provider_data(self):
-        """DeploymentProviderAccountGetResponse.model_fields must not contain provider_data."""
-        assert "provider_data" not in DeploymentProviderAccountGetResponse.model_fields
+    def test_provider_account_response_includes_provider_data(self):
+        """DeploymentProviderAccountGetResponse includes non-sensitive provider metadata."""
+        assert "provider_data" in DeploymentProviderAccountGetResponse.model_fields
 
     def test_provider_account_response_dump_excludes_credentials(self):
         """model_dump() on a response instance must never contain credential fields."""
@@ -46,10 +46,12 @@ class TestCredentialSecurity:
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             url="https://api.us-south.wxo.cloud.ibm.com",
+            provider_data={"tenant_id": "tenant-1"},
         )
         dumped = response.model_dump()
         assert "api_key" not in dumped
-        assert "provider_data" not in dumped
+        assert dumped["provider_data"] == {"tenant_id": "tenant-1"}
+        assert "api_key" not in (dumped["provider_data"] or {})
 
 
 # ---------------------------------------------------------------------------
@@ -165,6 +167,16 @@ class TestProviderUrlSchemaValidation:
     def test_update_rejects_tenant_id_field(self):
         with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
             DeploymentProviderAccountUpdateRequest(tenant_id="tenant-1")
+
+    def test_create_rejects_top_level_tenant_id_field(self):
+        with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+            DeploymentProviderAccountCreateRequest(
+                name="staging",
+                tenant_id="tenant-1",
+                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+                url="https://api.us-south.wxo.cloud.ibm.com/v1",
+                provider_data={"api_key": "key"},
+            )
 
 
 class TestProviderKeyEnum:

@@ -195,7 +195,13 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         ),
     )
 
-    def resolve_provider_tenant_id(self, *, provider_url: str, tenant_id: str | None) -> str | None:
+    def resolve_provider_tenant_id(
+        self,
+        *,
+        provider_url: str,
+        provider_data: dict[str, Any],
+    ) -> str | None:
+        tenant_id = self.resolve_provider_tenant_id_from_data(provider_data=provider_data)
         if tenant_id:
             return tenant_id
         return extract_tenant_from_url(provider_url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
@@ -218,10 +224,17 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
 
     def _validate_provider_data(self, provider_data: dict[str, Any]) -> dict[str, Any]:
         verify_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.verify_credentials
+        credential_payload = self._credential_provider_data(provider_data)
         if verify_slot:
-            validated = verify_slot.apply(provider_data)
+            validated = verify_slot.apply(credential_payload)
             return validated if isinstance(validated, dict) else dict(validated)
-        return provider_data
+        return credential_payload
+
+    def _credential_provider_data(self, provider_data: dict[str, Any]) -> dict[str, Any]:
+        """Return provider_data minus mapper-owned metadata keys."""
+        credential_payload: dict[str, Any] = dict(provider_data)
+        credential_payload.pop("tenant_id", None)
+        return credential_payload
 
     def resolve_credential_fields(
         self,

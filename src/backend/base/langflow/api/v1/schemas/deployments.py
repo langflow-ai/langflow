@@ -9,9 +9,10 @@ Two identifier domains coexist in these schemas:
   ``provider_id`` maps to ``deployment_provider_account.id``.
 
 * **Provider-owned (str)** -- ``reference_id``, ``config_id``,
-  ``execution_id``, and provider-account fields ``tenant_id``, ``provider_key``,
-  and ``url``. Opaque values assigned or consumed by the external deployment
-  provider.
+  ``execution_id``, and provider-account fields ``provider_key`` and ``url``.
+  Opaque values assigned or consumed by the external deployment provider.
+  Provider-specific metadata (for example tenant/account identifiers) belongs
+  inside ``provider_data``.
 
 * **Provider-originated but Langflow-owned once persisted** -- ``resource_key``.
   Langflow stores and indexes this as part of its own deployment record.
@@ -142,10 +143,6 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
             "User-chosen display name for this provider account. Must be unique per user within a provider_key."
         ),
     )
-    tenant_id: NonEmptyStr | None = Field(
-        default=None,
-        description="Provider-owned tenant/organization id. Langflow persists this opaque value.",
-    )
     provider_key: DeploymentProviderKey = Field(description="Deployment provider key.")
     url: ValidatedUrl = Field(
         description="Provider service URL persisted in Langflow DB for provider-account resolution.",
@@ -153,9 +150,10 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
     provider_data: dict[str, Any] = Field(
         min_length=1,
         description=(
-            "Provider-specific credential payload. "
+            "Provider-specific credential/metadata payload. "
             "Contents are opaque to the API schema; the deployment mapper "
-            "for the target provider_key validates and extracts credentials."
+            "for the target provider_key validates and extracts credentials "
+            "and provider metadata (for example tenant/account identifiers)."
         ),
     )
 
@@ -196,12 +194,15 @@ class DeploymentProviderAccountUpdateRequest(BaseModel):
 class DeploymentProviderAccountGetResponse(BaseModel):
     id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
     name: str = Field(description="User-chosen display name for this provider account.")
-    tenant_id: str | None = Field(
-        default=None,
-        description="Provider-owned tenant/organization identifier persisted as opaque text.",
-    )
     provider_key: DeploymentProviderKey = Field(description="Official provider name used by Langflow.")
     url: str = Field(description="Provider service URL persisted in Langflow DB.")
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Provider-owned non-sensitive metadata for this provider account "
+            "(for example tenant/account identifiers). Credentials are excluded."
+        ),
+    )
     created_at: datetime | None = Field(default=None, description="Langflow DB row creation timestamp.")
     updated_at: datetime | None = Field(default=None, description="Langflow DB row update timestamp.")
 

@@ -371,6 +371,7 @@ def test_base_mapper_shapes_deployment_create_result() -> None:
         name="Deployment 1",
         description="desc",
         deployment_type=DeploymentType.AGENT,
+        resource_key="provider-id",
         created_at=timestamp,
         updated_at=timestamp,
         deployment_provider_account_id=provider_account_id,
@@ -592,6 +593,7 @@ def test_base_mapper_shapes_deployment_update_result() -> None:
         name="Deployment Name",
         description="desc",
         deployment_type=DeploymentType.AGENT,
+        resource_key="provider-id",
         created_at=timestamp,
         updated_at=timestamp,
         deployment_provider_account_id=provider_account_id,
@@ -694,14 +696,14 @@ def test_base_mapper_resolve_provider_tenant_id_passthrough() -> None:
     assert (
         mapper.resolve_provider_tenant_id(
             provider_url="https://example.com/instances/abc",
-            tenant_id="tenant-1",
+            provider_data={"tenant_id": "tenant-1"},
         )
         == "tenant-1"
     )
     assert (
         mapper.resolve_provider_tenant_id(
             provider_url="https://example.com/instances/abc",
-            tenant_id=None,
+            provider_data={},
         )
         is None
     )
@@ -723,7 +725,7 @@ def test_base_mapper_shapes_provider_account_response() -> None:
     shaped = mapper.shape_provider_account_response(account)
     assert shaped.id == account.id
     assert shaped.name == "staging"
-    assert shaped.tenant_id == "tenant-1"
+    assert shaped.provider_data == {"tenant_id": "tenant-1"}
     assert shaped.provider_key == "watsonx-orchestrate"
     assert shaped.url == "https://provider.example"
 
