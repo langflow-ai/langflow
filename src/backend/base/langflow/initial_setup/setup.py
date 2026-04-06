@@ -28,6 +28,7 @@ from lfx.base.constants import (
 )
 from lfx.log.logger import logger
 from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
+from lfx.utils.component_aliases import flatten_components_with_aliases
 from lfx.utils.util import escape_json_dump
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
@@ -61,10 +62,7 @@ from langflow.services.deps import (
 
 
 def update_projects_components_with_latest_component_versions(project_data, all_types_dict):
-    # Flatten the all_types_dict for easy access
-    all_types_dict_flat = {
-        key: component for category in all_types_dict.values() for key, component in category.items()
-    }
+    all_types_dict_flat = flatten_components_with_aliases(all_types_dict)
 
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
@@ -77,6 +75,12 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = deepcopy(latest_template["code"])
+
+            # Sync field_order so the UI renders fields in the correct order
+            latest_field_order = latest_node.get("field_order")
+            if latest_field_order is not None:
+                node_data["field_order"] = latest_field_order
+
             # skip components that are having dynamic values that need to be persisted for templates
 
             if node_type in SKIPPED_COMPONENTS:
@@ -146,19 +150,22 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 )
             else:
                 for attr in NODE_FORMAT_ATTRIBUTES:
+                    latest_attr_value = latest_node.get(attr)
+                    current_attr_value = node_data.get(attr)
+
                     if (
                         attr in latest_node
                         # Check if it needs to be updated
-                        and latest_node[attr] != node_data.get(attr)
+                        and latest_attr_value != current_attr_value
                     ):
                         node_changes_log[node_type].append(
                             {
                                 "attr": attr,
-                                "old_value": node_data.get(attr),
-                                "new_value": latest_node[attr],
+                                "old_value": current_attr_value,
+                                "new_value": latest_attr_value,
                             }
                         )
-                        node_data[attr] = deepcopy(latest_node[attr])
+                        node_data[attr] = deepcopy(latest_attr_value)
 
                 for field_name, field_dict in latest_template.items():
                     if field_name not in node_data["template"]:
