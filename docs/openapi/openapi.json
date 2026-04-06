@@ -2,99 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Langflow",
-    "version": "1.8.0"
-  },
-  "$defs": {
-    "ComponentOutput": {
-      "description": "Component output schema.",
-      "properties": {
-        "type": {
-          "description": "Type of the component output (e.g., 'message', 'data', 'tool', 'text')",
-          "title": "Type",
-          "type": "string"
-        },
-        "status": {
-          "$ref": "#/$defs/JobStatus"
-        },
-        "content": {
-          "anyOf": [
-            {},
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Content"
-        },
-        "metadata": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Metadata"
-        }
-      },
-      "required": [
-        "type",
-        "status"
-      ],
-      "title": "ComponentOutput",
-      "type": "object"
-    },
-    "ErrorDetail": {
-      "description": "Error detail schema.",
-      "properties": {
-        "error": {
-          "title": "Error",
-          "type": "string"
-        },
-        "code": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Code"
-        },
-        "details": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Details"
-        }
-      },
-      "required": [
-        "error"
-      ],
-      "title": "ErrorDetail",
-      "type": "object"
-    },
-    "JobStatus": {
-      "description": "Job execution status.",
-      "enum": [
-        "queued",
-        "in_progress",
-        "completed",
-        "failed",
-        "cancelled",
-        "timed_out"
-      ],
-      "title": "JobStatus",
-      "type": "string"
-    }
+    "version": "1.8.4"
   },
   "paths": {
     "/api/v1/build/{flow_id}/flow": {
@@ -450,6 +358,99 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/build_public_tmp/{job_id}/events": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Get Build Events Public",
+        "description": "Get events for a public flow build job.<br><br>This endpoint does not require authentication, matching the public build endpoint.<br>It is used by the shareable playground to consume build events.",
+        "operationId": "get_build_events_public_api_v1_build_public_tmp__job_id__events_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "event_delivery",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/EventDeliveryType",
+              "default": "streaming"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/build_public_tmp/{job_id}/cancel": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Cancel Build Public",
+        "description": "Cancel a public flow build job.<br><br>This endpoint does not require authentication, matching the public build endpoint.<br>It is used by the shareable playground to cancel builds.",
+        "operationId": "cancel_build_public_api_v1_build_public_tmp__job_id__cancel_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelFlowResponse"
+                }
               }
             }
           },
@@ -3679,6 +3680,80 @@
         }
       }
     },
+    "/api/v1/mcp/streamable/": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable__delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable__delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable__delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
     "/api/v1/mcp/project/{project_id}": {
       "get": {
         "tags": [
@@ -4086,6 +4161,113 @@
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
         "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/streamable/": {
+      "delete": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Streamable Http",
+        "description": "Handle Streamable HTTP connections for a specific project.",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Streamable Http",
+        "description": "Handle Streamable HTTP connections for a specific project.",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Streamable Http",
+        "description": "Handle Streamable HTTP connections for a specific project.",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__delete",
         "parameters": [
           {
             "name": "project_id",
@@ -4570,6 +4752,16 @@
               "default": false,
               "title": "Append"
             }
+          },
+          {
+            "name": "ephemeral",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Ephemeral"
+            }
           }
         ],
         "requestBody": {
@@ -4698,6 +4890,16 @@
               "type": "boolean",
               "default": false,
               "title": "Append"
+            }
+          },
+          {
+            "name": "ephemeral",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Ephemeral"
             }
           }
         ],
@@ -6009,6 +6211,234 @@
           }
         },
         "security": [
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
+    "/api/mcp/sse": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Sse",
+        "operationId": "handle_sse_api_mcp_sse_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "head": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Im Alive",
+        "operationId": "im_alive_api_mcp_sse_head",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/": {
+      "post": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Messages",
+        "operationId": "handle_messages_api_mcp__post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/streamable": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_mcp_streamable_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_mcp_streamable_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_mcp_streamable_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "head": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Streamable Health",
+        "operationId": "streamable_health_api_mcp_streamable_head",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/streamable/": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_mcp_streamable__delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_mcp_streamable__delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_mcp_streamable__delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
           {
             "API key query": []
           },
