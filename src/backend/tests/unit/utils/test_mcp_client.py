@@ -266,7 +266,7 @@ class TestClientHeaders:
     def test_api_key_only(self):
         client = LangflowClient(server_url="http://test:7860", api_key="sk-test-key")
         headers = client._headers()
-        assert headers["Authorization"] == "Bearer sk-test-key"
+        assert "Authorization" not in headers
         assert headers["x-api-key"] == "sk-test-key"
 
     def test_access_token_only(self):

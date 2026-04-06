@@ -24,24 +24,14 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest-instafail>=0.5.0",
-    "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
-    "mypy>=1.11.0",
     "ruff~=0.13.1",
     "httpx>=0.28.1",
     "pytest>=8.2.0",
-    "types-requests>=2.33.0",
     "requests>=2.33.0",
     "pytest-cov>=5.0.0",
-    "pandas-stubs>=2.1.4.231227",
-    "types-pillow>=10.2.0.20240213",
-    "types-pyyaml>=6.0.12.8",
-    "types-python-jose>=3.3.4.8",
-    "types-passlib>=1.7.7.13",
     "pytest-mock>=3.14.0",
     "pytest-xdist>=3.6.0",
-    "types-pywin32>=306.0.0.4",
-    "types-google-cloud-ndb>=2.2.0.0",
     "pytest-sugar>=1.0.0",
     "respx>=0.21.1",
     "pytest-asyncio>=0.23.0",
@@ -51,22 +41,18 @@ dev = [
     "dictdiffer>=0.9.0",
     "pytest-split>=0.9.0",
     "pytest-flakefinder>=1.1.0",
-    "types-markdown>=3.7.0.20240822",
     "packaging>=24.1,<25.0",
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
     "blockbuster>=1.5.20,<1.6",
-    "types-aiofiles>=24.1.0.20240626",
     "hypothesis>=6.123.17",
     "locust~=2.40.5",
     "pytest-rerunfailures>=15.0",
     "scrapegraph-py>=1.10.2",
-    "pydantic-ai>=0.0.19",
     'elevenlabs==1.58.1; python_version == "3.12"',
     'elevenlabs>=1.52.0; python_version != "3.12"',
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
-    "types-cachetools>=5.5.0.20240820",
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
     "mcp-server-fetch>=2025.1.17",
@@ -82,6 +68,7 @@ explicit = true
 langflow-base = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
+langflow-sdk = { workspace = true }
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
 
@@ -90,6 +77,7 @@ members = [
     "src/backend/base",
     ".",
     "src/lfx",
+    "src/sdk",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -206,7 +194,12 @@ directory = "coverage"
 
 [tool.ruff]
 target-version = "py310"
-exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*", "src/lfx/src/lfx/_assets/component_index.json"]
+exclude = [
+    "src/backend/base/langflow/alembic/*",
+    "src/frontend/tests/assets/*",
+    "src/lfx/src/lfx/_assets/component_index.json",
+    "docs/docs/API-Reference/python-examples/**",
+]
 line-length = 120
 
 [tool.ruff.lint]
@@ -326,6 +319,46 @@ external = ["RUF027"]
 "src/lfx/src/lfx/inputs/input_mixin.py" = [
     "S105",  # False positive: PASSWORD is a type constant
 ]
+"src/lfx/src/lfx/__main__.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_setup_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_authoring_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_running_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_remote_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/backend/base/langflow/api/utils/*" = [
+    "TCH",  # Imports are used at runtime (FastAPI deps, SQLAlchemy queries, model constructors)
+]
+"src/sdk/src/langflow_sdk/_http.py" = [
+    "TCH",  # httpx is used at runtime (response object methods)
+]
+"src/sdk/src/langflow_sdk/environments.py" = [
+    "TRY003", # Contextual error messages are necessary here
+    "EM102",  # f-string messages assigned before raise where possible
+]
+"src/sdk/tests/*" = [
+    "S101",   # assert is the standard pytest assertion style
+    "INP001", # Not a package namespace issue in tests
+    "TC003",  # pytest fixture type hints are evaluated at runtime
+]
 "src/lfx/src/lfx/schema/table.py" = [
     "S105",  # False positive: PASSWORD is a formatter type
 ]
@@ -387,14 +420,6 @@ external = ["RUF027"]
 
 [tool.ruff.lint.flake8-builtins]
 builtins-allowed-modules = [ "io", "logging", "socket"]
-
-[tool.mypy]
-plugins = ["pydantic.mypy"]
-follow_imports = "skip"
-disable_error_code = ["type-var"]
-namespace_packages = true
-mypy_path = "langflow"
-ignore_missing_imports = true
 
 [build-system]
 requires = ["hatchling"]

@@ -271,6 +271,14 @@ class ResultDataResponse(BaseModel):
     timedelta: float | None = None
     duration: str | None = None
     used_frozen_result: bool | None = False
+    token_usage: dict | None = None
+
+    @field_validator("token_usage", mode="before")
+    @classmethod
+    def validate_token_usage(cls, v):
+        if v is not None and not isinstance(v, dict) and hasattr(v, "model_dump"):
+            return v.model_dump()
+        return v
 
     @field_serializer("results")
     @classmethod
@@ -300,6 +308,7 @@ class ResultDataResponse(BaseModel):
             "timedelta": self.timedelta,
             "duration": self.duration,
             "used_frozen_result": self.used_frozen_result,
+            "token_usage": self.token_usage,
         }
 
 
@@ -380,6 +389,7 @@ class PublicConfigResponse(BaseConfigResponse):
     """
 
     type: Literal["public"] = "public"
+    allow_custom_components: bool
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "PublicConfigResponse":
@@ -397,6 +407,7 @@ class PublicConfigResponse(BaseConfigResponse):
             event_delivery=settings.event_delivery,
             voice_mode_available=settings.voice_mode_available,
             frontend_timeout=settings.frontend_timeout,
+            allow_custom_components=settings.allow_custom_components,
         )
 
 
@@ -418,6 +429,7 @@ class ConfigResponse(BaseConfigResponse):
     webhook_auth_enable: bool
     default_folder_name: str
     hide_getting_started_progress: bool
+    allow_custom_components: bool
 
     @classmethod
     def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
@@ -451,6 +463,7 @@ class ConfigResponse(BaseConfigResponse):
             webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
             default_folder_name=DEFAULT_FOLDER_NAME,
             hide_getting_started_progress=os.getenv("HIDE_GETTING_STARTED_PROGRESS", "").lower() == "true",
+            allow_custom_components=settings.allow_custom_components,
         )
 
 

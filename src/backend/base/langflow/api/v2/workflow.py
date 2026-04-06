@@ -486,6 +486,8 @@ async def execute_workflow_background(
     except (WorkflowResourceError, WorkflowServiceUnavailableError, WorkflowQueueFullError):
         # Re-raise infrastructure/resource errors to be handled by the endpoint
         raise
+    except ValueError as exc:
+        raise WorkflowValidationError(str(exc)) from exc
     except MemoryError as exc:
         raise WorkflowResourceError from exc
 

@@ -4,6 +4,7 @@ import {
   DEFAULT_TIMEOUT,
 } from "@/constants/constants";
 import { EventDeliveryType } from "@/constants/enums";
+import { recomputeComponentsToUpdateIfNeeded } from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { useQueryFunctionType } from "../../../../types/api";
@@ -18,6 +19,7 @@ interface BaseConfig {
   max_file_size_upload: number;
   event_delivery: EventDeliveryType;
   voice_mode_available: boolean;
+  allow_custom_components: boolean;
 }
 
 // Public config = base config (unauthenticated users get only base fields)
@@ -28,7 +30,7 @@ export interface ConfigResponse extends BaseConfig {
   auto_saving: boolean;
   auto_saving_interval: number;
   health_check_max_retries: number;
-  feature_flags: Record<string, any>;
+  feature_flags: Record<string, unknown>;
   webhook_polling_interval: number;
   serialization_max_items_length: number;
   webhook_auth_enable: boolean;
@@ -77,6 +79,9 @@ export const useGetConfig: useQueryFunctionType<
   const setHideGettingStartedProgress = useUtilityStore(
     (state) => state.setHideGettingStartedProgress,
   );
+  const setAllowCustomComponents = useUtilityStore(
+    (state) => state.setAllowCustomComponents,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -97,6 +102,9 @@ export const useGetConfig: useQueryFunctionType<
       // Set fields present in both public and full config
       setMaxFileSizeUpload(data.max_file_size_upload);
       setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
+      const allowCustomComponents = data.allow_custom_components ?? true;
+      setAllowCustomComponents(allowCustomComponents);
+      recomputeComponentsToUpdateIfNeeded();
 
       // Set authenticated-only fields if present (full config)
       if (isFullConfig(data)) {
