@@ -4,7 +4,6 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface DeploymentExecutionRequest {
-  provider_id: string;
   deployment_id: string;
   provider_data: {
     input: string;
@@ -40,9 +39,10 @@ export const usePostDeploymentExecution: useMutationFunctionType<
   const fn = async (
     payload: DeploymentExecutionRequest,
   ): Promise<DeploymentExecutionResponse> => {
+    const { deployment_id, ...body } = payload;
     const res = await api.post<DeploymentExecutionResponse>(
-      `${getURL("DEPLOYMENTS")}/executions`,
-      payload,
+      `${getURL("DEPLOYMENTS")}/${encodeURIComponent(deployment_id)}/executions`,
+      body,
     );
     return res.data;
   };

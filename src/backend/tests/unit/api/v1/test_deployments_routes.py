@@ -31,6 +31,16 @@ def _resolve_endpoint_name(routes: list[APIRoute], *, path: str, method: str = "
     raise AssertionError(msg)
 
 
+def _resolve_route(routes: list[APIRoute], *, path: str, method: str = "GET") -> APIRoute:
+    scope = {"type": "http", "path": path, "method": method}
+    for route in routes:
+        match, _ = route.matches(scope)
+        if match == Match.FULL:
+            return route
+    msg = f"No matching route for {method} {path}"
+    raise AssertionError(msg)
+
+
 def test_configs_path_matches_configs_endpoint(deployment_routes: list[APIRoute]) -> None:
     assert _resolve_endpoint_name(deployment_routes, path="/deployments/configs") == "list_deployment_configs"
 
@@ -45,6 +55,16 @@ def test_llms_path_matches_llms_endpoint(deployment_routes: list[APIRoute]) -> N
 
 def test_snapshots_path_matches_snapshots_endpoint(deployment_routes: list[APIRoute]) -> None:
     assert _resolve_endpoint_name(deployment_routes, path="/deployments/snapshots") == "list_deployment_snapshots"
+
+
+def test_configs_route_excludes_none_fields_in_response_model(deployment_routes: list[APIRoute]) -> None:
+    route = _resolve_route(deployment_routes, path="/deployments/configs")
+    assert route.response_model_exclude_none is True
+
+
+def test_snapshots_route_excludes_none_fields_in_response_model(deployment_routes: list[APIRoute]) -> None:
+    route = _resolve_route(deployment_routes, path="/deployments/snapshots")
+    assert route.response_model_exclude_none is True
 
 
 def test_snapshot_patch_path_matches_update_endpoint(deployment_routes: list[APIRoute]) -> None:

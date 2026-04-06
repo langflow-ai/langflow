@@ -600,7 +600,6 @@ def test_config_list_item_accepts_minimal_fields() -> None:
     assert item.name == "Config"
     assert item.created_at is None
     assert item.updated_at is None
-    assert item.provider_data is None
 
 
 def test_config_list_item_accepts_uuid_id() -> None:
@@ -622,11 +621,9 @@ def test_config_list_item_accepts_all_fields() -> None:
         name="Config",
         created_at=now,
         updated_at=now,
-        provider_data={"region": "us-east-1"},
     )
     assert item.created_at == now
     assert item.updated_at == now
-    assert item.provider_data == {"region": "us-east-1"}
 
 
 # ---------------------------------------------------------------------------

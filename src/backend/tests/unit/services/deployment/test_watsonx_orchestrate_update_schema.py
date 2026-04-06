@@ -369,13 +369,13 @@ def test_update_schema_rejects_unbind_raw_app_ids() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_update_schema_rejects_empty_payload_without_llm() -> None:
-    """Empty payload (no llm, no operations, no put_tools) → must reject."""
-    with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
-            {}
-        )
-    assert "llm is required for deployment update operations" in str(exc.value.error)
+def test_update_schema_accepts_empty_payload_without_llm() -> None:
+    """Empty update payload is allowed; service layer decides if the request has actionable work."""
+    applied = WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+        {}
+    )
+    assert applied["llm"] is None
+    assert applied["operations"] == []
 
 
 def test_update_schema_accepts_put_tools_alone() -> None:

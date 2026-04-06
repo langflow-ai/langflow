@@ -369,7 +369,9 @@ async def _apply_tool_renames(
         if tool_id not in original_tools:
             original_tools[tool_id] = to_writable_tool_payload(tool)
 
-        writable = copy.deepcopy(original_tools[tool_id])
+        # Use the current provider payload as rename base so we preserve
+        # connection changes applied earlier in this update transaction.
+        writable = to_writable_tool_payload(tool)
         writable["name"] = new_name
         writable["display_name"] = new_name
         tool_updates.append((tool_id, writable))

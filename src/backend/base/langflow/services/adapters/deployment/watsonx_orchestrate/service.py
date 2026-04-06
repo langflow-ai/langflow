@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
 from ibm_cloud_sdk_core import ApiException
+from ibm_watsonx_orchestrate_clients.connections.connections_client import ListConfigsResponse
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.services.adapters.deployment.base import BaseDeploymentService
 from lfx.services.adapters.deployment.exceptions import (
@@ -138,6 +139,49 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             raise RuntimeError(msg)
         self.settings_service = settings_service
         self.set_ready()
+
+    @staticmethod
+    def _build_config_list_item(
+        *,
+        connection_id: str,
+        app_id: str,
+        config_type: str | None = None,
+    ) -> ConfigListItem:
+        """Build a normalized config list item from resolved identifiers."""
+        provider_data = {"type": config_type} if config_type else None
+        return ConfigListItem(
+            id=connection_id,
+            name=app_id,
+            provider_data=provider_data,
+        )
+
+    @staticmethod
+    def _normalize_optional_text(value: object | None) -> str | None:
+        """Normalize SDK scalar/enum/tuple values to optional text.
+
+        Guards against two quirks in the upstream SDK model definitions:
+
+        * **Tuple defaults** - Several ``ListConfigsResponse`` fields are
+          declared with trailing commas (e.g. ``security_scheme: ... = None,``)
+          which makes the Python default ``(None,)`` instead of ``None``.
+          Pydantic coerces this away when the field *is* supplied, but we
+          unwrap single-element tuples defensively in case a future SDK
+          version or edge case surfaces the raw default.
+        * **str-Enum coercion** - ``ConnectionSecurityScheme(str, Enum)``
+          inherits from ``str``, yet ``str()`` returns the class-qualified
+          name (``"ConnectionSecurityScheme.KEY_VALUE"``) in Python 3.11+.
+          Extracting ``.value`` yields the raw string we need.
+        """
+        if isinstance(value, tuple):
+            if len(value) == 1:
+                value = value[0]
+            else:
+                logger.debug("_normalize_optional_text: ignoring multi-element tuple: %s", value)
+                return None
+        if hasattr(value, "value"):
+            value = value.value
+        normalized = str(value or "").strip()
+        return normalized or None
 
     async def _get_provider_clients(self, *, user_id: IdLike, db: AsyncSession) -> WxOClient:
         """Resolve provider clients through a service-level seam.
@@ -358,7 +402,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     data=agent,
                     deployment_type=DeploymentType.AGENT,
                     provider_data={
-                        "snapshot_ids": extract_agent_tool_ids(agent),
+                        "tool_ids": extract_agent_tool_ids(agent),
                         "environment": derive_agent_environment(agent),
                     },
                 )
@@ -696,33 +740,23 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
 
             configs: list[ConfigListItem] = []
-            seen_ids: set[str] = set()
             for connection in raw_connections or []:
-                if isinstance(connection, dict):
-                    conn_dict = connection
-                elif hasattr(connection, "model_dump"):
-                    conn_dict = connection.model_dump()
-                else:
-                    continue
-                config_id = str(conn_dict.get("app_id") or conn_dict.get("id") or "").strip()
-                if not config_id or config_id in seen_ids:
-                    continue
-                seen_ids.add(config_id)
-                config_name = (
-                    str(conn_dict.get("name") or conn_dict.get("display_name") or config_id).strip() or config_id
-                )
+                if not isinstance(connection, ListConfigsResponse):
+                    msg = f"wxO list_configs returned an unexpected connection entry type: {type(connection).__name__}."
+                    raise InvalidContentError(message=msg)
+                config_id = connection.connection_id
+                config_name = connection.app_id
+                config_type = self._normalize_optional_text(connection.security_scheme)
                 configs.append(
-                    ConfigListItem(
-                        id=config_id,
-                        name=config_name,
-                        created_at=conn_dict.get("created_at"),
-                        updated_at=conn_dict.get("updated_at"),
-                        provider_data=conn_dict,
+                    self._build_config_list_item(
+                        connection_id=config_id,
+                        app_id=config_name,
+                        config_type=config_type,
                     )
                 )
             return ConfigListResult(
                 configs=configs,
-                provider_result={"scope": "tenant"},
+                provider_result=self.payload_schemas.config_list_result.parse({}).model_dump(exclude_none=True),
             )
 
         agent_id = _require_single_deployment_id(params, resource_label="config")
@@ -745,7 +779,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if not tool_ids:
             return ConfigListResult(
                 configs=[],
-                provider_result={"deployment_id": agent_id, "tool_ids": []},
+                provider_result=self.payload_schemas.config_list_result.parse(
+                    {"deployment_id": agent_id, "tool_ids": []}
+                ).model_dump(exclude_none=True),
             )
 
         tools: list[dict]
@@ -759,18 +795,55 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 log_msg="Unexpected error while listing wxO tools for config extraction",
             )
 
-        app_ids: set[str] = set()
+        app_to_connection_id: dict[str, str] = {}
         for tool in tools or []:
             if not isinstance(tool, dict):
                 continue
             connections = extract_langflow_connections_binding(tool)
             if not connections:
                 continue
-            app_ids.update(connections.keys())
+            for app_id, connection_id in connections.items():
+                app_to_connection_id.setdefault(app_id, connection_id)
+
+        connection_type_by_id: dict[str, str] = {}
+        connection_ids = dedupe_list(
+            [connection_id for connection_id in app_to_connection_id.values() if connection_id]
+        )
+        if connection_ids:
+            try:
+                detailed_connections = await asyncio.to_thread(clients.connections.get_drafts_by_ids, connection_ids)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "list_configs: failed to enrich deployment configs with connection types",
+                    exc_info=exc,
+                )
+            else:
+                for connection in detailed_connections or []:
+                    if not isinstance(connection, ListConfigsResponse):
+                        continue
+                    connection_id = connection.connection_id
+                    if not connection_id:
+                        continue
+                    config_type = self._normalize_optional_text(connection.security_scheme)
+                    if config_type:
+                        connection_type_by_id[connection_id] = config_type
+
+        # Preserve first-seen binding order (tool order + per-tool connection order)
+        # instead of re-sorting app_ids alphabetically.
+        configs = [
+            self._build_config_list_item(
+                connection_id=connection_id,
+                app_id=app_id,
+                config_type=connection_type_by_id.get(connection_id),
+            )
+            for app_id, connection_id in app_to_connection_id.items()
+        ]
 
         return ConfigListResult(
-            configs=[ConfigListItem(id=app_id, name=app_id) for app_id in app_ids],
-            provider_result={"deployment_id": agent_id},
+            configs=configs,
+            provider_result=self.payload_schemas.config_list_result.parse({"deployment_id": agent_id}).model_dump(
+                exclude_none=True
+            ),
         )
 
     async def list_snapshots(
@@ -826,7 +899,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             ]
             return SnapshotListResult(
                 snapshots=snapshots,
-                provider_result={"scope": "tenant"},
+                provider_result=self.payload_schemas.snapshot_list_result.parse({}).model_dump(exclude_none=True),
             )
 
         agent_id = _require_single_deployment_id(params, resource_label="snapshot")
@@ -867,19 +940,20 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             for tool in (tools or [])
             if isinstance(tool, dict) and tool.get("id")
         ]
-        if not snapshots and requested_tool_ids:
-            snapshots = [
-                SnapshotItem(
-                    id=tool_id,
-                    name=tool_id,
-                    provider_data=self._validate_snapshot_item_provider_data({"connections": {}}),
-                )
-                for tool_id in requested_tool_ids
-            ]
+        resolved_ids = {s.id for s in snapshots}
+        stale_ids = [tid for tid in requested_tool_ids if tid not in resolved_ids]
+        if stale_ids:
+            logger.warning(
+                "list_snapshots: agent '%s' references tool IDs that no longer exist on the provider: %s",
+                agent_id,
+                stale_ids,
+            )
 
         return SnapshotListResult(
             snapshots=snapshots,
-            provider_result={"deployment_id": agent_id},
+            provider_result=self.payload_schemas.snapshot_list_result.parse({"deployment_id": agent_id}).model_dump(
+                exclude_none=True
+            ),
         )
 
     async def _list_snapshots_by_ids(

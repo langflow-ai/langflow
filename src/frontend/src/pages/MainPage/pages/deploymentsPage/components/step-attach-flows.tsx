@@ -80,8 +80,8 @@ export default function StepAttachFlows() {
 
     const existingConnections: ConnectionItem[] = configsData.configs.map(
       (cfg) => ({
-        id: cfg.id,
-        name: cfg.name,
+        id: cfg.app_id,
+        name: cfg.app_id,
         variableCount: 0,
         isNew: false,
         environmentVariables: {},
@@ -401,7 +401,7 @@ export default function StepAttachFlows() {
         />
 
         {/* Right panel */}
-        <div className="flex flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           {rightPanel === "versions" ? (
             <VersionPanel
               selectedFlow={selectedFlow}

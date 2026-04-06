@@ -344,9 +344,6 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
                 msg = "put_tools is a standalone full replacement and cannot be combined with other fields."
                 raise ValueError(msg)
             return self
-        if self.llm is None:
-            msg = "llm is required for deployment update operations."
-            raise ValueError(msg)
         if not self.operations:
             has_connections = self.connections.raw_payloads
             if has_connections:
@@ -359,6 +356,8 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
             #   (connectionless-tool flow). The plan builder auto-creates
             #   entries for all declared raw_payloads even without explicit
             #   bind/attach_tool operations referencing them.
+            # - empty/no-op provider_data can pass schema validation; the
+            #   service layer rejects it when there are no spec updates.
             return self
         return self
 
@@ -585,6 +584,31 @@ class WatsonxSnapshotConnectionsProviderData(BaseModel):
     connections: dict[NormalizedId, NormalizedId] = Field(default_factory=dict)
 
 
+class WatsonxConfigListResultData(BaseModel):
+    """Provider-result metadata contract for config listing.
+
+    ``deployment_id`` is present for deployment-scoped listings and absent for
+    tenant-scoped listings.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    deployment_id: NormalizedId | None = None
+    tool_ids: list[NormalizedId] | None = None
+
+
+class WatsonxSnapshotListResultData(BaseModel):
+    """Provider-result metadata contract for snapshot listing.
+
+    ``deployment_id`` is present for deployment-scoped listings and absent for
+    tenant-scoped listings.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    deployment_id: NormalizedId | None = None
+
+
 class WatsonxProviderUpdateApplyResult(BaseModel):
     """Public adapter contract for update helper apply results.
 
@@ -638,5 +662,7 @@ PAYLOAD_SCHEMAS = DeploymentPayloadSchemas(
     execution_create_result=PayloadSlot(WatsonxAgentExecutionResultData),
     execution_status_result=PayloadSlot(WatsonxAgentExecutionResultData),
     deployment_llm_list_result=PayloadSlot(WatsonxDeploymentLlmListResultData),
+    config_list_result=PayloadSlot(WatsonxConfigListResultData),
+    snapshot_list_result=PayloadSlot(WatsonxSnapshotListResultData),
     verify_credentials=PayloadSlot(WatsonxVerifyCredentialsPayload),
 )

@@ -9,38 +9,21 @@ Two identifier domains coexist in these schemas:
   ``provider_id`` maps to ``deployment_provider_account.id``.
 
 * **Provider-owned (str)** -- ``reference_id``, ``config_id``,
-  ``resource_key``, ``execution_id``, ``provider_tenant_id``,
-  ``provider_key``, and ``provider_url``. Opaque values assigned or
-  consumed by the external deployment provider.
+  ``execution_id``, and provider-account fields ``provider_key`` and ``url``.
+  Opaque values assigned or consumed by the external deployment provider.
+  Provider-specific metadata (for example tenant/account identifiers) belongs
+  inside ``provider_data``.
+
+* **Provider-originated but Langflow-owned once persisted** -- ``resource_key``.
+  Langflow stores and indexes this as part of its own deployment record.
 
 ``provider_data`` dicts are opaque pass-through containers whose contents
 are defined by the provider adapter. Langflow forwards them without
 interpreting their schema.
 
-Service-layer schema reuse (shared-kernel pattern)
----------------------------------------------------
-Three service-layer data schemas are imported and subclassed (via
-``_Strict*`` wrappers) rather than redefined in this module.  They act as
-a **shared kernel**: field definitions owned by the service layer that the
-API layer extends with stricter validation (``extra = "forbid"``).
-
-* ``BaseDeploymentData`` -- deployment metadata for creation
-* ``BaseDeploymentDataUpdate`` -- deployment metadata for partial updates
-* ``DeploymentConfig`` -- deployment configuration payload
-
-Additionally, ``DeploymentType`` is imported as a shared vocabulary enum.
-
-This coupling is intentional -- these schemas carry no Langflow-managed
-identifiers and describe provider-facing data whose shape the API should
-track automatically.  If the service layer later introduces fields that
-must *not* be API-visible, replace the ``_Strict*`` subclass with an
-API-owned model and a mapping function.
-
-``BaseDeploymentData`` also carries an optional ``provider_spec`` dict
-(inherited from ``ProviderSpecModel``), an opaque provider-owned input
-payload similar to ``provider_data``.  ``DeploymentConfig`` carries an
-analogous ``provider_config`` dict.  ``BaseDeploymentDataUpdate`` has no
-opaque provider fields.
+DeploymentType is imported from the adapter service layer as shared
+vocabulary. Request/response models in this module are API-owned to keep
+the client-facing schema minimal and avoid exposing service-only fields.
 """
 
 from __future__ import annotations
@@ -49,13 +32,8 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from lfx.services.adapters.deployment.schema import (
-    BaseDeploymentData,
-    BaseDeploymentDataUpdate,
-    DeploymentConfig,
-    DeploymentType,
-)
-from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_validator, model_validator
+from lfx.services.adapters.deployment.schema import DEPLOYMENT_DESCRIPTION_MAX_LENGTH, DeploymentType
+from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, model_validator
 
 from langflow.services.database.models.deployment_provider_account.schemas import (
     DeploymentProviderKey,
@@ -63,7 +41,6 @@ from langflow.services.database.models.deployment_provider_account.schemas impor
 from langflow.services.database.models.deployment_provider_account.utils import (
     check_provider_url_allowed,
     validate_provider_url,
-    validate_provider_url_optional,
 )
 
 # ---------------------------------------------------------------------------
@@ -123,9 +100,6 @@ NonEmptyStr = Annotated[str, AfterValidator(_strip_nonempty)]
 ValidatedUrl = Annotated[str, AfterValidator(validate_provider_url)]
 """URL type that enforces HTTPS and normalizes."""
 
-ValidatedUrlOptional = Annotated[str | None, AfterValidator(validate_provider_url_optional)]
-"""Optional URL type that enforces HTTPS and normalizes (None passes through)."""
-
 
 def _validate_flow_version_ids(values: list[str] | None) -> list[str] | None:
     """AfterValidator for optional flow_version_ids query parameter."""
@@ -156,7 +130,6 @@ def _validate_flow_ids(values: list[UUID] | None) -> list[UUID] | None:
 FlowIdsQuery = Annotated[list[UUID] | None, AfterValidator(_validate_flow_ids)]
 """Query parameter type that validates and cleans an optional list of flow id UUIDs (max 1 today)."""
 
-
 # ---------------------------------------------------------------------------
 # Provider sub-resource schemas
 # ---------------------------------------------------------------------------
@@ -170,26 +143,23 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
             "User-chosen display name for this provider account. Must be unique per user within a provider_key."
         ),
     )
-    provider_tenant_id: NonEmptyStr | None = Field(
-        default=None,
-        description="Provider-owned tenant/organization id. Langflow persists this opaque value.",
-    )
     provider_key: DeploymentProviderKey = Field(description="Deployment provider key.")
-    provider_url: ValidatedUrl = Field(
+    url: ValidatedUrl = Field(
         description="Provider service URL persisted in Langflow DB for provider-account resolution.",
     )
     provider_data: dict[str, Any] = Field(
         min_length=1,
         description=(
-            "Provider-specific credential payload. "
+            "Provider-specific credential/metadata payload. "
             "Contents are opaque to the API schema; the deployment mapper "
-            "for the target provider_key validates and extracts credentials."
+            "for the target provider_key validates and extracts credentials "
+            "and provider metadata (for example tenant/account identifiers)."
         ),
     )
 
     @model_validator(mode="after")
     def validate_provider_url_allowed(self) -> DeploymentProviderAccountCreateRequest:
-        check_provider_url_allowed(self.provider_url, self.provider_key)
+        check_provider_url_allowed(self.url, self.provider_key)
         return self
 
 
@@ -199,14 +169,6 @@ class DeploymentProviderAccountUpdateRequest(BaseModel):
     name: NonEmptyStr | None = Field(
         default=None,
         description="User-chosen display name. Omit to keep existing value; cannot be set to null.",
-    )
-    provider_tenant_id: NonEmptyStr | None = Field(
-        default=None,
-        description="Provider-owned tenant/organization id. Omit to keep existing value, null to clear.",
-    )
-    provider_url: ValidatedUrlOptional = Field(
-        default=None,
-        description="Provider service URL. Omit to keep existing value; cannot be set to null.",
     )
     provider_data: dict[str, Any] | None = Field(
         default=None,
@@ -222,30 +184,25 @@ class DeploymentProviderAccountUpdateRequest(BaseModel):
         if not self.model_fields_set:
             msg = "At least one field must be provided for update."
             raise ValueError(msg)
-        for field_name in ("name", "provider_url", "provider_data"):
+        for field_name in ("name", "provider_data"):
             if field_name in self.model_fields_set and getattr(self, field_name) is None:
                 msg = f"'{field_name}' cannot be set to null."
                 raise ValueError(msg)
-        return self
-
-    def validate_provider_url_allowed(
-        self,
-        provider_key: DeploymentProviderKey,
-    ) -> DeploymentProviderAccountUpdateRequest:
-        if "provider_url" in self.model_fields_set and self.provider_url is not None:
-            check_provider_url_allowed(self.provider_url, provider_key)
         return self
 
 
 class DeploymentProviderAccountGetResponse(BaseModel):
     id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
     name: str = Field(description="User-chosen display name for this provider account.")
-    provider_tenant_id: str | None = Field(
-        default=None,
-        description="Provider-owned tenant/organization identifier persisted as opaque text.",
-    )
     provider_key: DeploymentProviderKey = Field(description="Official provider name used by Langflow.")
-    provider_url: str = Field(description="Provider service URL persisted in Langflow DB.")
+    url: str = Field(description="Provider service URL persisted in Langflow DB.")
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Provider-owned non-sensitive metadata for this provider account "
+            "(for example tenant/account identifiers). Credentials are excluded."
+        ),
+    )
     created_at: datetime | None = Field(default=None, description="Langflow DB row creation timestamp.")
     updated_at: datetime | None = Field(default=None, description="Langflow DB row update timestamp.")
 
@@ -270,22 +227,29 @@ class DeploymentLlmListResponse(BaseModel):
     )
 
 
-class _DeploymentResponseBase(BaseModel):
-    """Shared fields for deployment response schemas."""
+class _DeploymentResponseCommon(BaseModel):
+    """Shared non-provider-data fields for deployment response schemas."""
 
     id: UUID = Field(description="Langflow DB deployment UUID.")
+    provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
+    provider_key: str = Field(description="Provider identifier (e.g. 'watsonx-orchestrate').")
     name: str
     description: str | None = None
     type: DeploymentType
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+class _DeploymentResponseWithProviderData(_DeploymentResponseCommon):
+    """Shared fields for responses that include provider_data."""
+
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description="Provider-owned opaque payload returned by the deployment provider.",
     )
 
 
-class DeploymentGetResponse(_DeploymentResponseBase):
+class DeploymentGetResponse(_DeploymentResponseWithProviderData):
     """Full deployment detail.
 
     Intentionally separate from ``DeploymentListItem`` even though both
@@ -294,36 +258,23 @@ class DeploymentGetResponse(_DeploymentResponseBase):
     list item stays lean.
     """
 
-    resource_key: str = Field(description="Provider-owned stable resource identifier.")
+    resource_key: str = Field(description="Langflow-persisted stable provider resource identifier.")
     attached_count: int = Field(default=0, ge=0, description="Number of flow versions attached to this deployment.")
 
 
-class DeploymentListItemAttachment(BaseModel):
-    """A matched flow-version attachment on a deployment list item.
-
-    Populated only when a ``flow_ids`` or ``flow_version_ids`` filter is
-    active, giving the caller the attachment-level detail it needs
-    (e.g. the ``provider_snapshot_id`` required by the snapshot-update
-    endpoint) without a second round-trip.
-    """
-
-    flow_version_id: UUID
-    provider_snapshot_id: str | None = None
-
-
-class DeploymentListItem(_DeploymentResponseBase):
+class DeploymentListItem(_DeploymentResponseCommon):
     """Deployment representation used in list responses.
 
     See ``DeploymentGetResponse`` docstring for rationale on the separate class.
     """
 
-    resource_key: str = Field(description="Provider-owned stable resource identifier.")
+    resource_key: str = Field(description="Langflow-persisted stable provider resource identifier.")
     attached_count: int = Field(default=0, ge=0, description="Number of flow versions attached to this deployment.")
-    matched_attachments: list[DeploymentListItemAttachment] | None = Field(
+    flow_version_ids: list[UUID] | None = Field(
         default=None,
         description=(
-            "Flow-version attachments that matched the active flow_ids or "
-            "flow_version_ids filter.  None when no such filter is active."
+            "Flow-version ids that matched the active flow_ids or "
+            "flow_version_ids filter. Omitted when no such filter is active."
         ),
     )
 
@@ -331,14 +282,13 @@ class DeploymentListItem(_DeploymentResponseBase):
 class _PaginatedResponse(BaseModel):
     """Shared pagination fields for list responses."""
 
-    page: int = Field(default=1, ge=1)
-    size: int = Field(default=20, ge=1)
-    total: int = Field(default=0, ge=0)
+    page: int | None = Field(default=None, ge=1)
+    size: int | None = Field(default=None, ge=1)
+    total: int | None = Field(default=None, ge=0)
 
 
 class DeploymentListResponse(_PaginatedResponse):
-    deployments: list[DeploymentListItem]
-    deployment_type: DeploymentType | None = None
+    deployments: list[DeploymentListItem] | None = None
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description="Provider-owned opaque payload for list-specific provider metadata.",
@@ -346,41 +296,31 @@ class DeploymentListResponse(_PaginatedResponse):
 
 
 class DeploymentProviderAccountListResponse(_PaginatedResponse):
-    providers: list[DeploymentProviderAccountGetResponse]
-
-
-class DeploymentConfigListItem(BaseModel):
-    """Lean config representation used in list responses."""
-
-    id: str = Field(description="Provider-owned config identifier.")
-    name: str
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    provider_data: dict[str, Any] | None = Field(
-        default=None,
-        description="Provider-owned opaque payload returned by the deployment provider.",
-    )
+    provider_accounts: list[DeploymentProviderAccountGetResponse]
 
 
 class DeploymentConfigListResponse(_PaginatedResponse):
-    configs: list[DeploymentConfigListItem]
+    """Paginated config list with all provider-owned data in a single opaque blob."""
 
-
-class DeploymentSnapshotListItem(BaseModel):
-    """Lean snapshot/tool representation used in list responses."""
-
-    id: str = Field(description="Provider-owned snapshot/tool identifier.")
-    name: str
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
     provider_data: dict[str, Any] | None = Field(
         default=None,
-        description="Provider-owned opaque payload returned by the deployment provider.",
+        description=(
+            "Provider-owned opaque payload containing the list of connections "
+            "and any response-level metadata supplied by the provider."
+        ),
     )
 
 
 class DeploymentSnapshotListResponse(_PaginatedResponse):
-    snapshots: list[DeploymentSnapshotListItem]
+    """Paginated snapshot list with all provider-owned data in a single opaque blob."""
+
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Provider-owned opaque payload containing the list of snapshots "
+            "and any response-level metadata supplied by the provider."
+        ),
+    )
 
 
 class DeploymentFlowVersionListItem(BaseModel):
@@ -437,179 +377,20 @@ class DeploymentFlowVersionListResponse(_PaginatedResponse):
     flow_versions: list[DeploymentFlowVersionListItem]
 
 
-class DeploymentCreateResponse(_DeploymentResponseBase):
+class DeploymentCreateResponse(_DeploymentResponseWithProviderData):
     """API response for deployment creation."""
 
+    resource_key: str = Field(description="Langflow-persisted stable provider resource identifier.")
 
-class DeploymentUpdateResponse(_DeploymentResponseBase):
+
+class DeploymentUpdateResponse(_DeploymentResponseWithProviderData):
     """API response for deployment update."""
 
+    resource_key: str = Field(description="Langflow-persisted stable provider resource identifier.")
 
-class DeploymentStatusResponse(_DeploymentResponseBase):
+
+class DeploymentStatusResponse(_DeploymentResponseWithProviderData):
     """API response for deployment status/health."""
-
-
-class DeploymentRedeployResponse(_DeploymentResponseBase):
-    """API response for redeployment."""
-
-
-class DeploymentDuplicateResponse(_DeploymentResponseBase):
-    """API response for deployment duplication."""
-
-
-# ---------------------------------------------------------------------------
-# Flow versions sub-resource schemas
-# ---------------------------------------------------------------------------
-
-
-class FlowVersionsAttach(BaseModel):
-    """Flow version ids to attach to a deployment."""
-
-    model_config = {"extra": "forbid"}
-
-    ids: list[UUID] = Field(
-        min_length=1,
-        description="Langflow flow version ids to attach to the deployment.",
-    )
-
-    @field_validator("ids")
-    @classmethod
-    def validate_ids(cls, values: list[UUID]) -> list[UUID]:
-        return _validate_uuid_list(values, field_name="ids")
-
-
-class FlowVersionsPatch(BaseModel):
-    """Add or remove flow version bindings on an existing deployment."""
-
-    model_config = {"extra": "forbid"}
-
-    add: list[UUID] | None = Field(
-        None,
-        description="Langflow flow version ids to attach to the deployment. Omit to leave unchanged.",
-    )
-    remove: list[UUID] | None = Field(
-        None,
-        description="Langflow flow version ids to detach from the deployment. Omit to leave unchanged.",
-    )
-
-    @field_validator("add", "remove")
-    @classmethod
-    def validate_id_lists(cls, values: list[UUID] | None, info: ValidationInfo) -> list[UUID] | None:
-        if values is None:
-            return None
-        return _validate_uuid_list(values, field_name=info.field_name)
-
-    @model_validator(mode="after")
-    def validate_operations(self):
-        add_values = self.add or []
-        remove_values = self.remove or []
-
-        if not add_values and not remove_values:
-            msg = "At least one of 'add' or 'remove' must be provided."
-            raise ValueError(msg)
-
-        overlap = set(add_values).intersection(remove_values)
-        if overlap:
-            ids = ", ".join(sorted(str(v) for v in overlap))
-            msg = f"Flow version ids cannot be present in both 'add' and 'remove': {ids}."
-            raise ValueError(msg)
-        return self
-
-
-# ---------------------------------------------------------------------------
-# Strict API-layer wrappers (shared-kernel boundary)
-# ---------------------------------------------------------------------------
-# These thin subclasses inherit field definitions from the service layer and
-# add ``extra = "forbid"`` so API callers receive a 422 for unexpected fields
-# instead of having data silently dropped.  Subclassing (rather than
-# redefining fields) keeps the API in lock-step with the service contract.
-# If a service-layer field should NOT be API-visible, replace the relevant
-# subclass with an API-owned model and a mapping function.
-
-
-class _StrictBaseDeploymentData(BaseDeploymentData):
-    model_config = {"extra": "forbid"}
-
-
-class _StrictBaseDeploymentDataUpdate(BaseDeploymentDataUpdate):
-    model_config = {"extra": "forbid"}
-
-
-class _StrictDeploymentConfig(DeploymentConfig):
-    model_config = {"extra": "forbid"}
-
-
-# ---------------------------------------------------------------------------
-# Deployment config sub-resource schemas (API-owned)
-# ---------------------------------------------------------------------------
-
-
-class DeploymentConfigCreate(BaseModel):
-    """Config input for deployment creation.
-
-    Exactly one of ``reference_id`` or ``raw_payload`` must be provided.
-    """
-
-    model_config = {"extra": "forbid"}
-
-    reference_id: NonEmptyStr | None = Field(
-        default=None,
-        description="Provider-owned config reference id to bind to the deployment.",
-    )
-    raw_payload: _StrictDeploymentConfig | None = Field(
-        default=None,
-        description="Config payload to create and bind to the deployment.",
-    )
-
-    @model_validator(mode="after")
-    def validate_exactly_one(self) -> DeploymentConfigCreate:
-        if (self.reference_id is None) == (self.raw_payload is None):
-            msg = "Exactly one of 'reference_id' or 'raw_payload' must be provided."
-            raise ValueError(msg)
-        return self
-
-
-class DeploymentConfigBindingUpdate(BaseModel):
-    """Config binding patch for an existing deployment.
-
-    Exactly one of ``config_id``, ``raw_payload``, or ``unbind`` must be
-    provided:
-
-    * ``config_id`` — bind an existing config by reference.
-    * ``raw_payload`` — create a new config and bind it.
-    * ``unbind = true`` — detach the current config.
-    """
-
-    model_config = {"extra": "forbid"}
-
-    config_id: NonEmptyStr | None = Field(
-        default=None,
-        description="Provider-owned config id to bind to the deployment.",
-    )
-
-    raw_payload: _StrictDeploymentConfig | None = Field(
-        default=None,
-        description="Config payload to create and bind to the deployment.",
-    )
-
-    unbind: bool = Field(
-        default=False,
-        description="Set to true to detach the current config from the deployment.",
-    )
-
-    @model_validator(mode="after")
-    def validate_config_update(self) -> DeploymentConfigBindingUpdate:
-        provided = sum(
-            [
-                self.config_id is not None,
-                self.raw_payload is not None,
-                self.unbind,
-            ]
-        )
-        if provided != 1:
-            msg = "Exactly one of 'config_id', 'raw_payload', or 'unbind=true' must be provided."
-            raise ValueError(msg)
-        return self
 
 
 # ---------------------------------------------------------------------------
@@ -621,44 +402,32 @@ class DeploymentCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
-    spec: _StrictBaseDeploymentData = Field(description="Deployment metadata (service-layer schema, no ID fields).")
+    name: NonEmptyStr = Field(description="Deployment display name.")
+    description: str = Field(
+        default="",
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        description="Deployment description.",
+    )
+    type: DeploymentType = Field(description="Deployment type.")
     project_id: UUID | None = Field(
         default=None,
         description="Langflow DB project id to persist the deployment under. Defaults to user's Starter Project.",
     )
-    flow_version_ids: list[UUID] | None = Field(
-        default=None,
-        description="Flow version ids to attach to the deployment.",
-    )
-    config: DeploymentConfigCreate | None = Field(default=None, description="Deployment configuration.")
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description="Provider-owned opaque create payload.",
     )
 
-    @field_validator("flow_version_ids")
-    @classmethod
-    def validate_create_flow_version_ids(cls, values: list[UUID] | None) -> list[UUID] | None:
-        if values is None:
-            return None
-        return _validate_uuid_list(values, field_name="flow_version_ids")
-
 
 class DeploymentUpdateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    spec: _StrictBaseDeploymentDataUpdate | None = Field(
-        default=None, description="Deployment metadata updates (service-layer schema, no ID fields)."
-    )
-    add_flow_version_ids: list[UUID] | None = Field(
+    name: NonEmptyStr | None = Field(default=None, description="Updated deployment display name.")
+    description: str | None = Field(
         default=None,
-        description="Flow version ids to attach to the deployment.",
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        description="Updated deployment description.",
     )
-    remove_flow_version_ids: list[UUID] | None = Field(
-        default=None,
-        description="Flow version ids to detach from the deployment.",
-    )
-    config: DeploymentConfigBindingUpdate | None = Field(default=None, description="Deployment configuration update.")
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description="Provider-owned opaque update payload.",
@@ -667,40 +436,10 @@ class DeploymentUpdateRequest(BaseModel):
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentUpdateRequest:
         if not self.model_fields_set:
-            msg = (
-                "At least one of 'spec', 'add_flow_version_ids', "
-                "'remove_flow_version_ids', 'config', or 'provider_data' must be provided."
-            )
+            msg = "At least one of 'name', 'description', or 'provider_data' must be provided."
             raise ValueError(msg)
-        if (
-            self.spec is None
-            and self.add_flow_version_ids is None
-            and self.remove_flow_version_ids is None
-            and self.config is None
-            and self.provider_data is None
-        ):
-            msg = (
-                "At least one of 'spec', 'add_flow_version_ids', "
-                "'remove_flow_version_ids', 'config', or 'provider_data' must be provided."
-            )
-            raise ValueError(msg)
-        return self
-
-    @field_validator("add_flow_version_ids", "remove_flow_version_ids")
-    @classmethod
-    def validate_update_flow_version_ids(cls, values: list[UUID] | None, info: ValidationInfo) -> list[UUID] | None:
-        if values is None:
-            return None
-        return _validate_uuid_list(values, field_name=info.field_name)
-
-    @model_validator(mode="after")
-    def validate_update_flow_version_operations(self) -> DeploymentUpdateRequest:
-        add_values = self.add_flow_version_ids or []
-        remove_values = self.remove_flow_version_ids or []
-        overlap = set(add_values).intersection(remove_values)
-        if overlap:
-            ids = ", ".join(sorted(str(v) for v in overlap))
-            msg = f"Flow version ids cannot be present in both add/remove operations: {ids}."
+        if self.name is None and self.description is None and self.provider_data is None:
+            msg = "At least one of 'name', 'description', or 'provider_data' must be provided."
             raise ValueError(msg)
         return self
 
@@ -713,13 +452,6 @@ class DeploymentUpdateRequest(BaseModel):
 class ExecutionCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    provider_id: UUID = Field(
-        description=(
-            "Langflow DB provider-account UUID (`deployment_provider_account.id`). "
-            "Included alongside deployment_id to allow provider routing without an extra DB lookup."
-        ),
-    )
-    deployment_id: UUID = Field(description="Langflow DB deployment UUID.")
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description="Provider-owned opaque execution input payload.",

@@ -9,8 +9,15 @@ import {
   useState,
 } from "react";
 import type { ProviderAccountCreateRequest } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
-import type { DeploymentCreateRequest } from "@/controllers/API/queries/deployments/use-post-deployment";
-import type { DeploymentUpdateRequest } from "@/controllers/API/queries/deployments/use-patch-deployment";
+import type {
+  DeploymentUpdateFlowItem,
+  DeploymentUpdateProviderData,
+  DeploymentUpdateRequest,
+} from "@/controllers/API/queries/deployments/use-patch-deployment";
+import type {
+  DeploymentConnectionPayload,
+  DeploymentCreateRequest,
+} from "@/controllers/API/queries/deployments/use-post-deployment";
 import type {
   ConnectionItem,
   Deployment,
@@ -124,7 +131,7 @@ export function DeploymentStepperProvider({
   const [credentials, setCredentials] = useState<ProviderCredentials>({
     name: "",
     provider_key: "",
-    provider_url: "",
+    url: "",
     api_key: "",
   });
 
@@ -207,7 +214,7 @@ export function DeploymentStepperProvider({
   const hasValidCredentials =
     credentials.name.trim() !== "" &&
     credentials.api_key.trim() !== "" &&
-    credentials.provider_url.trim() !== "";
+    credentials.url.trim() !== "";
 
   // In edit mode, steps are shifted: 1=Type, 2=Attach, 3=Review.
   const getLogicalStep = useCallback(
@@ -257,7 +264,7 @@ export function DeploymentStepperProvider({
     setCredentials({
       name: "",
       provider_key: "",
-      provider_url: "",
+      url: "",
       api_key: "",
     });
   }, []);
@@ -282,10 +289,43 @@ export function DeploymentStepperProvider({
       return {
         name: credentials.name.trim(),
         provider_key: "watsonx-orchestrate",
-        provider_url: credentials.provider_url.trim(),
+        url: credentials.url.trim(),
         provider_data: { api_key: credentials.api_key.trim() },
       };
     }, [credentials, hasValidCredentials]);
+
+  const buildConnectionPayloads = useCallback(
+    (
+      connectionIds: Iterable<string>,
+    ): DeploymentCreateRequest["provider_data"]["connections"] => {
+      const payloads: DeploymentCreateRequest["provider_data"]["connections"] =
+        [];
+      const uniqueIds = Array.from(new Set(connectionIds));
+
+      for (const id of uniqueIds) {
+        const conn = connections.find((item) => item.id === id);
+        if (!conn?.isNew) continue;
+
+        const credentials: DeploymentConnectionPayload["credentials"] =
+          Object.entries(conn.environmentVariables).map(([key, value]) => {
+            const isGlobalVar = conn.globalVarKeys?.has(key) ?? false;
+            return {
+              key,
+              value,
+              source: isGlobalVar ? "variable" : "raw",
+            };
+          });
+
+        payloads.push({
+          app_id: id,
+          credentials,
+        });
+      }
+
+      return payloads;
+    },
+    [connections],
+  );
 
   const buildDeploymentPayload = useCallback(
     (providerId: string): DeploymentCreateRequest => {
@@ -294,67 +334,35 @@ export function DeploymentStepperProvider({
         ids.forEach((id) => allConnectionIds.add(id));
       });
 
-      const rawPayloads: Array<{
-        app_id: string;
-        environment_variables: Record<
-          string,
-          { value: string; source: "raw" | "variable" }
-        >;
-      }> = [];
-
-      Array.from(allConnectionIds).forEach((id) => {
-        const conn = connections.find((c) => c.id === id);
-        if (conn?.isNew) {
-          const envVarsWrapped: Record<
-            string,
-            { value: string; source: "raw" | "variable" }
-          > = {};
-          Object.entries(conn.environmentVariables).forEach(([k, v]) => {
-            const isGlobalVar = conn.globalVarKeys?.has(k) ?? false;
-            envVarsWrapped[k] = {
-              value: v,
-              source: isGlobalVar ? "variable" : "raw",
-            };
-          });
-          rawPayloads.push({
-            app_id: id,
-            environment_variables: envVarsWrapped,
-          });
-        }
-      });
-
-      const operations: DeploymentCreateRequest["provider_data"]["operations"] =
+      const addFlows: DeploymentCreateRequest["provider_data"]["add_flows"] =
         [];
       for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
         const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
         const customToolName = toolNameByFlow.get(flowId)?.trim();
-        operations.push({
-          op: "bind",
+        addFlows.push({
           flow_version_id: versionEntry.versionId,
           app_ids: connectionIds,
           ...(customToolName && { tool_name: customToolName }),
         });
       }
 
+      const connectionPayloads = buildConnectionPayloads(allConnectionIds);
+
       return {
         provider_id: providerId,
-        spec: {
-          name: deploymentName,
-          description: deploymentDescription,
-          type: deploymentType,
-        },
+        name: deploymentName,
+        description: deploymentDescription,
+        type: deploymentType,
         provider_data: {
           llm: selectedLlm,
-          operations,
-          connections: {
-            raw_payloads: rawPayloads,
-          },
+          add_flows: addFlows,
+          connections: connectionPayloads,
         },
       };
     },
     [
       attachedConnectionByFlow,
-      connections,
+      buildConnectionPayloads,
       deploymentDescription,
       deploymentName,
       deploymentType,
@@ -376,117 +384,79 @@ export function DeploymentStepperProvider({
         deployment_id: editingDeployment.id,
       };
 
-      // Spec changes (description only — name is not editable after creation).
+      // Metadata changes (description only — name is not editable after creation).
       const descriptionChanged =
         deploymentDescription !== (editingDeployment.description ?? "");
       if (descriptionChanged) {
-        result.spec = { description: deploymentDescription };
+        result.description = deploymentDescription;
       }
 
-      // Build provider_data with operations for attach/detach + LLM.
-      const operations: Array<Record<string, unknown>> = [];
+      const upsertFlows: DeploymentUpdateFlowItem[] = [];
 
       // New flows attached during this edit session.
       for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
-        if (initialVersionByFlow.has(flowId)) continue; // pre-existing, skip
+        if (initialVersionByFlow.has(flowId)) continue;
         const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
         const customToolName = toolNameByFlow.get(flowId)?.trim();
-        operations.push({
-          op: "bind",
+        upsertFlows.push({
           flow_version_id: versionEntry.versionId,
-          app_ids: connectionIds,
+          add_app_ids: connectionIds,
+          remove_app_ids: [],
           ...(customToolName && { tool_name: customToolName }),
         });
       }
 
       // Renamed tools on pre-existing flows.
       for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
-        if (!initialVersionByFlow.has(flowId)) continue; // new flow, handled above
+        if (!initialVersionByFlow.has(flowId)) continue;
         const currentName = toolNameByFlow.get(flowId)?.trim() ?? "";
         const originalName = initialToolNameByFlow.get(flowId)?.trim() ?? "";
         if (currentName && currentName !== originalName) {
-          operations.push({
-            op: "rename_tool",
+          upsertFlows.push({
             flow_version_id: versionEntry.versionId,
+            add_app_ids: [],
+            remove_app_ids: [],
             tool_name: currentName,
           });
         }
       }
 
-      // Detached flows.
+      const removeFlows: string[] = [];
       for (const flowId of Array.from(removedFlowIds)) {
         const originalVersion = initialVersionByFlow.get(flowId);
         if (originalVersion) {
-          operations.push({
-            op: "remove_tool",
-            flow_version_id: originalVersion.versionId,
-          });
+          removeFlows.push(originalVersion.versionId);
         }
       }
 
-      // Collect connection details for new binds.
+      // Collect connection details for newly added binds only.
       const newConnectionIds = new Set<string>();
-      const bindFlowVersionIds = new Set(
-        operations
-          .filter((o) => o.op === "bind")
-          .map((o) => o.flow_version_id as string),
-      );
-      for (const [flowId, connectionIds] of Array.from(
-        attachedConnectionByFlow,
-      )) {
-        const versionEntry = selectedVersionByFlow.get(flowId);
-        if (!versionEntry || !bindFlowVersionIds.has(versionEntry.versionId))
-          continue;
-        connectionIds.forEach((id) => newConnectionIds.add(id));
-      }
-
-      const rawPayloads: Array<{
-        app_id: string;
-        environment_variables: Record<
-          string,
-          { value: string; source: "raw" | "variable" }
-        >;
-      }> = [];
-
-      Array.from(newConnectionIds).forEach((id) => {
-        const conn = connections.find((c) => c.id === id);
-        if (!conn?.isNew) return; // existing connections are referenced via bind op app_ids
-        const envVarsWrapped: Record<
-          string,
-          { value: string; source: "raw" | "variable" }
-        > = {};
-        Object.entries(conn.environmentVariables).forEach(([k, v]) => {
-          const isGlobalVar = conn.globalVarKeys?.has(k) ?? false;
-          envVarsWrapped[k] = {
-            value: v,
-            source: isGlobalVar ? "variable" : "raw",
-          };
-        });
-        rawPayloads.push({
-          app_id: id,
-          environment_variables: envVarsWrapped,
-        });
+      upsertFlows.forEach((flowItem) => {
+        flowItem.add_app_ids.forEach((id) => newConnectionIds.add(id));
       });
+      const connectionPayloads = buildConnectionPayloads(newConnectionIds);
 
-      const hasOperations = operations.length > 0;
-      const hasNewConnections = rawPayloads.length > 0;
       const llmToSend = selectedLlm;
-
-      if (llmToSend || hasOperations || hasNewConnections) {
-        result.provider_data = {
+      if (
+        llmToSend ||
+        upsertFlows.length > 0 ||
+        removeFlows.length > 0 ||
+        connectionPayloads.length > 0
+      ) {
+        const providerData: DeploymentUpdateProviderData = {
           ...(llmToSend && { llm: llmToSend }),
-          ...(hasOperations && { operations }),
-          ...(hasNewConnections && {
-            connections: {
-              raw_payloads: rawPayloads,
-            },
+          ...(upsertFlows.length > 0 && { upsert_flows: upsertFlows }),
+          ...(removeFlows.length > 0 && { remove_flows: removeFlows }),
+          ...(connectionPayloads.length > 0 && {
+            connections: connectionPayloads,
           }),
         };
+        result.provider_data = providerData;
       }
 
       // Backend requires at least one field.
-      if (!result.spec && !result.provider_data) {
-        result.spec = { description: deploymentDescription };
+      if (result.description === undefined && !result.provider_data) {
+        result.description = deploymentDescription;
       }
 
       return result;
@@ -500,7 +470,7 @@ export function DeploymentStepperProvider({
       selectedVersionByFlow,
       toolNameByFlow,
       attachedConnectionByFlow,
-      connections,
+      buildConnectionPayloads,
     ]);
 
   const value = useMemo<DeploymentStepperContextType>(

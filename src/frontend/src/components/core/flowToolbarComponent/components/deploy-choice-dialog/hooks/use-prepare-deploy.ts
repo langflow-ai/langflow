@@ -54,7 +54,7 @@ export function usePrepareDeploy() {
       setPendingSnapshotVersionId(snapshot.id);
 
       const { data } = await fetchProviderAccounts();
-      const providerList = data?.providers ?? [];
+      const providerList = data?.provider_accounts ?? [];
 
       if (providerList.length === 0) {
         setStepperInitialProvider(undefined);

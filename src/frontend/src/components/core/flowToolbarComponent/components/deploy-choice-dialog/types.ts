@@ -1,3 +1,4 @@
+import type { DeploymentFlowVersionItem } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 import type {
   Deployment,
   DeploymentType,
@@ -11,22 +12,22 @@ export interface FlowAttachment {
   provider_snapshot_id: string;
 }
 
-export function flattenToAttachments(
-  deployments: Deployment[],
-): FlowAttachment[] {
-  const result: FlowAttachment[] = [];
-  for (const dep of deployments) {
-    if (!dep.matched_attachments) continue;
-    for (const att of dep.matched_attachments) {
-      if (!att.provider_snapshot_id) continue;
-      result.push({
-        deployment_id: dep.id,
-        deployment_name: dep.name,
-        deployment_type: dep.type,
-        flow_version_id: att.flow_version_id,
-        provider_snapshot_id: att.provider_snapshot_id,
-      });
-    }
+export function toReviewAttachment(
+  deployment: Deployment,
+  flowVersions: DeploymentFlowVersionItem[],
+): FlowAttachment | null {
+  const selectedFlowVersion = flowVersions.find(
+    (item) => !!item.provider_snapshot_id,
+  );
+  if (!selectedFlowVersion?.provider_snapshot_id) {
+    return null;
   }
-  return result;
+
+  return {
+    deployment_id: deployment.id,
+    deployment_name: deployment.name,
+    deployment_type: deployment.type,
+    flow_version_id: selectedFlowVersion.id,
+    provider_snapshot_id: selectedFlowVersion.provider_snapshot_id,
+  };
 }

@@ -4,12 +4,12 @@ Covers the integration behaviour of the FastAPI route handlers:
 - Rollback on commit failure (create / update)
 - GET single-deployment synchronization (deployment-level and snapshot-level)
 - Project-scoped flow-version validation (create / update)
-- Stubbed 501 routes (redeploy / duplicate)
 - resolve_deployment_adapter edge cases
 """
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -25,6 +25,7 @@ from langflow.api.v1.schemas.deployments import (
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
+    DeploymentConflictError,
     DeploymentNotFoundError,
     ServiceUnavailableError,
 )
@@ -143,9 +144,9 @@ class TestCreateDeploymentRollback:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "test"
-        payload.spec.type = "agent"
-        payload.spec.description = None
+        payload.name = "test"
+        payload.type = "agent"
+        payload.description = None
 
         with pytest.raises(RuntimeError, match="DB commit failed"):
             await create_deployment(session=session, payload=payload, current_user=_fake_user())
@@ -201,9 +202,9 @@ class TestCreateDeploymentRollback:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "test"
-        payload.spec.type = "agent"
-        payload.spec.description = None
+        payload.name = "test"
+        payload.type = "agent"
+        payload.description = None
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
         await create_deployment(session=session, payload=payload, current_user=_fake_user())
@@ -262,9 +263,9 @@ class TestCreateDeploymentRollback:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "existing"
-        payload.spec.type = "agent"
-        payload.spec.description = "desc"
+        payload.name = "existing"
+        payload.type = "agent"
+        payload.description = "desc"
 
         with pytest.raises(RuntimeError, match="DB commit failed"):
             await create_deployment(session=session, payload=payload, current_user=_fake_user())
@@ -323,9 +324,9 @@ class TestCreateDeploymentExistingAgent:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "existing"
-        payload.spec.type = "agent"
-        payload.spec.description = None
+        payload.name = "existing"
+        payload.type = "agent"
+        payload.description = None
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
         await create_deployment(session=session, payload=payload, current_user=_fake_user())
@@ -372,7 +373,7 @@ class TestCreateDeploymentExistingAgent:
         mapper.util_should_mutate_provider_for_existing_deployment_create.return_value = True
         mapper.util_create_flow_version_ids.return_value = []
         mapper.resolve_deployment_update_for_existing_create = AsyncMock(
-            return_value=MagicMock(provider_data={"operations": [{}]})
+            return_value=MagicMock(provider_data={"upsert_flows": []})
         )
         mock_get_mapper.return_value = mapper
         mock_resolve_project.return_value = uuid4()
@@ -384,9 +385,9 @@ class TestCreateDeploymentExistingAgent:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "existing"
-        payload.spec.type = "agent"
-        payload.spec.description = "desc"
+        payload.name = "existing"
+        payload.type = "agent"
+        payload.description = "desc"
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
         await create_deployment(session=session, payload=payload, current_user=_fake_user())
@@ -434,7 +435,7 @@ class TestCreateDeploymentExistingAgent:
         mapper.util_should_mutate_provider_for_existing_deployment_create.return_value = True
         mapper.util_create_flow_version_ids.return_value = []
         mapper.resolve_deployment_update_for_existing_create = AsyncMock(
-            return_value=MagicMock(provider_data={"operations": [{}]})
+            return_value=MagicMock(provider_data={"upsert_flows": []})
         )
         mapped_create_result = DeploymentCreateResult(id="existing-agent-1", provider_result={"ok": True})
         mapper.util_create_result_from_existing_update.return_value = mapped_create_result
@@ -448,9 +449,9 @@ class TestCreateDeploymentExistingAgent:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "existing"
-        payload.spec.type = "agent"
-        payload.spec.description = "desc"
+        payload.name = "existing"
+        payload.type = "agent"
+        payload.description = "desc"
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
         await create_deployment(session=session, payload=payload, current_user=_fake_user())
@@ -464,7 +465,11 @@ class TestCreateDeploymentExistingAgent:
             existing_resource_key="existing-agent-1",
             result=adapter.update.return_value,
         )
-        mapper.shape_deployment_create_result.assert_called_once_with(mapped_create_result, dep_row)
+        mapper.shape_deployment_create_result.assert_called_once_with(
+            mapped_create_result,
+            dep_row,
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+        )
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
@@ -495,9 +500,9 @@ class TestCreateDeploymentExistingAgent:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "existing"
-        payload.spec.type = "agent"
-        payload.spec.description = None
+        payload.name = "existing"
+        payload.type = "agent"
+        payload.description = None
 
         with pytest.raises(HTTPException) as exc_info:
             await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
@@ -702,7 +707,7 @@ class TestConfigAndSnapshotListRoutes:
                 ConfigListItem(id="cfg-1", name="Config 1"),
                 ConfigListItem(id="cfg-2", name="Config 2"),
             ],
-            provider_result={"scope": "tenant"},
+            provider_result={},
         )
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
@@ -760,7 +765,7 @@ class TestConfigAndSnapshotListRoutes:
                 SnapshotItem(id="tool-1", name="Tool 1"),
                 SnapshotItem(id="tool-2", name="Tool 2"),
             ],
-            provider_result={"scope": "deployment"},
+            provider_result={"deployment_id": "dep-1"},
         )
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
@@ -823,7 +828,7 @@ class TestListDeploymentFlowVersionsRoute:
                 )
             ]
         )
-        mock_resolve.return_value = (deployment_row, adapter, mapper)
+        mock_resolve.return_value = (deployment_row, adapter, mapper, "watsonx-orchestrate")
         mock_list_flow_versions_synced.return_value = (rows, 7, snapshot_result)
         mapper.shape_flow_version_list_result.return_value = SimpleNamespace(
             page=2,
@@ -837,12 +842,14 @@ class TestListDeploymentFlowVersionsRoute:
             ],
         )
 
+        flow_id = uuid4()
         response = await list_deployment_flow_versions(
             deployment_id=deployment_row.id,
             session=AsyncMock(),
             current_user=_fake_user(),
             page=2,
             size=5,
+            flow_ids=[flow_id],
         )
 
         assert response.page == 2
@@ -858,6 +865,7 @@ class TestListDeploymentFlowVersionsRoute:
         assert helper_kwargs["deployment_id"] == deployment_row.id
         assert helper_kwargs["page"] == 2
         assert helper_kwargs["size"] == 5
+        assert helper_kwargs["flow_ids"] == [flow_id]
         mapper.shape_flow_version_list_result.assert_called_once_with(
             rows=rows,
             snapshot_result=snapshot_result,
@@ -874,31 +882,40 @@ class TestListDeploymentFlowVersionsRoute:
 
 class TestProviderAccountRoutes:
     @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.to_provider_account_response", return_value={"ok": True})
+    @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    async def test_update_provider_account_rejects_disallowed_url(
+    async def test_update_provider_account_name_only_skips_credential_verification(
         self,
         mock_get_provider_account,
         mock_get_mapper,
         mock_resolve_adapter,
+        mock_update_provider_account,
+        mock_to_provider_response,  # noqa: ARG002
     ):
-        """PATCH rejects provider URLs that do not match the provider allowlist."""
+        """PATCH skips credential verification when only name changes."""
         from langflow.api.v1.deployments import update_provider_account
 
-        mock_get_provider_account.return_value = _fake_provider_account()
+        existing_account = _fake_provider_account()
+        mock_get_provider_account.return_value = existing_account
+        mapper = MagicMock()
+        mapper.resolve_provider_account_update.return_value = {"name": "renamed"}
+        mock_get_mapper.return_value = mapper
+        mock_update_provider_account.return_value = existing_account
 
-        with pytest.raises(HTTPException) as exc_info:
-            await update_provider_account(
-                provider_id=uuid4(),
-                session=AsyncMock(),
-                payload=DeploymentProviderAccountUpdateRequest(provider_url="https://new.example.com/api"),
-                current_user=_fake_user(),
-            )
+        session = AsyncMock()
+        await update_provider_account(
+            provider_id=existing_account.id,
+            session=session,
+            payload=DeploymentProviderAccountUpdateRequest(name="renamed"),
+            current_user=_fake_user(),
+        )
 
-        assert exc_info.value.status_code == 400
-        mock_get_mapper.assert_not_called()
+        mapper.resolve_verify_credentials_for_update.assert_not_called()
         mock_resolve_adapter.assert_not_called()
+        mock_update_provider_account.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
@@ -966,7 +983,7 @@ class TestProviderAccountRoutes:
         payload = DeploymentProviderAccountCreateRequest(
             name="prod",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+            url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
             provider_data={"api_key": "api-key"},  # pragma: allowlist secret
         )
 
@@ -978,6 +995,7 @@ class TestProviderAccountRoutes:
             )
 
         assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == "Provider account is already tracked by user."
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
@@ -1015,6 +1033,7 @@ class TestProviderAccountRoutes:
             )
 
         assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == "Provider account is already tracked by user."
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
@@ -1126,13 +1145,14 @@ class TestUpdateDeploymentRollback:
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper)
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
 
         session = AsyncMock()
         session.commit.side_effect = RuntimeError("DB commit failed")
 
         payload = MagicMock()
-        payload.spec = None
+        payload.name = None
+        payload.description = None
 
         with pytest.raises(RuntimeError, match="DB commit failed"):
             await update_deployment(
@@ -1177,13 +1197,14 @@ class TestUpdateDeploymentRollback:
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper)
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
 
         session = AsyncMock()
         session.commit.return_value = None
 
         payload = MagicMock()
-        payload.spec = None
+        payload.name = None
+        payload.description = None
 
         await update_deployment(
             deployment_id=dep_row.id,
@@ -1232,7 +1253,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper)
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
 
         reused_fv_id = uuid4()
         new_fv_id = uuid4()
@@ -1246,7 +1267,8 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         session.commit.return_value = None
 
         payload = MagicMock()
-        payload.spec = None
+        payload.name = None
+        payload.description = None
 
         await update_deployment(
             deployment_id=dep_row.id,
@@ -1289,7 +1311,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper)
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
 
         fv_id_1 = uuid4()
         fv_id_2 = uuid4()
@@ -1304,7 +1326,8 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         session.commit.return_value = None
 
         payload = MagicMock()
-        payload.spec = None
+        payload.name = None
+        payload.description = None
 
         await update_deployment(
             deployment_id=dep_row.id,
@@ -1342,7 +1365,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper)
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
 
         fv_id_1 = uuid4()
         fv_id_2 = uuid4()
@@ -1354,7 +1377,8 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         session.commit.return_value = None
 
         payload = MagicMock()
-        payload.spec = None
+        payload.name = None
+        payload.description = None
 
         await update_deployment(
             deployment_id=dep_row.id,
@@ -1402,7 +1426,7 @@ class TestUpdateDeploymentMetadataPersistence:
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper)
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
         mock_update_db.return_value = updated_row
 
         session = AsyncMock()
@@ -1410,10 +1434,8 @@ class TestUpdateDeploymentMetadataPersistence:
 
         payload = DeploymentUpdateRequest.model_validate(
             {
-                "spec": {
-                    "name": "renamed",
-                    "description": None,
-                }
+                "name": "renamed",
+                "description": None,
             }
         )
 
@@ -1454,7 +1476,7 @@ class TestGetDeploymentSync:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         adapter.get.side_effect = DeploymentNotFoundError(message="gone")
-        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper())
+        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper(), "watsonx-orchestrate")
 
         user = _fake_user()
         session = AsyncMock()
@@ -1481,7 +1503,7 @@ class TestGetDeploymentSync:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         adapter.get.side_effect = AuthenticationError(message="bad creds", error_code="authentication_error")
-        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper())
+        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper(), "watsonx-orchestrate")
 
         session = AsyncMock()
 
@@ -1506,7 +1528,7 @@ class TestGetDeploymentSync:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         adapter.get.side_effect = ServiceUnavailableError(message="provider down")
-        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper())
+        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper(), "watsonx-orchestrate")
 
         session = AsyncMock()
 
@@ -1515,6 +1537,53 @@ class TestGetDeploymentSync:
 
         assert exc_info.value.status_code == 503
         mock_delete_row.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.list_deployment_attachments", new_callable=AsyncMock, return_value=[])
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
+    async def test_get_deployment_does_not_inject_resource_key_into_provider_data(
+        self,
+        mock_resolve,
+        mock_list_att,  # noqa: ARG002
+    ):
+        from langflow.api.v1.deployments import get_deployment
+        from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
+
+        created_at = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+        updated_at = datetime(2026, 1, 3, 4, 5, 6, tzinfo=timezone.utc)
+        dep_row = _fake_deployment_row(
+            resource_key="provider-rk-1",
+            name="db-owned-name",
+            description="db-owned-description",
+            deployment_type="agent",
+            created_at=created_at,
+            updated_at=updated_at,
+        )
+        adapter = AsyncMock()
+        provider_deployment = MagicMock()
+        provider_deployment.name = "provider-owned-name"
+        provider_deployment.description = "provider-owned-description"
+        provider_deployment.type = "worker"
+        provider_deployment.created_at = None
+        provider_deployment.updated_at = None
+        provider_deployment.model_dump.return_value = {
+            "provider_data": {
+                "llm": "virtual-model/bedrock/openai.gpt-oss-120b-1:0",
+            }
+        }
+        adapter.get.return_value = provider_deployment
+        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper(), "watsonx-orchestrate")
+
+        session = AsyncMock()
+        result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
+
+        assert result.resource_key == "provider-rk-1"
+        assert result.name == "db-owned-name"
+        assert result.description == "db-owned-description"
+        assert result.type == "agent"
+        assert result.created_at == created_at
+        assert result.updated_at == updated_at
+        assert result.provider_data == {"llm": "virtual-model/bedrock/openai.gpt-oss-120b-1:0"}
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
@@ -1548,7 +1617,7 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper())
+        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper(), "watsonx-orchestrate")
 
         att_good = _fake_attachment(provider_snapshot_id="snap-1")
         att_stale = _fake_attachment(provider_snapshot_id="snap-stale")
@@ -1595,7 +1664,7 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper())
+        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper(), "watsonx-orchestrate")
         mock_list_att.return_value = [_fake_attachment(provider_snapshot_id=None)]
 
         session = AsyncMock()
@@ -1637,7 +1706,7 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper())
+        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper(), "watsonx-orchestrate")
 
         att1 = _fake_attachment(provider_snapshot_id="snap-1")
         att2 = _fake_attachment(provider_snapshot_id="snap-2")
@@ -1671,7 +1740,7 @@ class TestDeleteDeployment:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         adapter.delete.side_effect = DeploymentNotFoundError(message="gone")
-        mock_resolve.return_value = (dep_row, adapter)
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate")
 
         user = _fake_user()
         session = AsyncMock()
@@ -1697,7 +1766,7 @@ class TestDeleteDeployment:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         adapter.delete.side_effect = AuthenticationError(message="bad creds", error_code="authentication_error")
-        mock_resolve.return_value = (dep_row, adapter)
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate")
 
         session = AsyncMock()
 
@@ -1721,7 +1790,7 @@ class TestDeleteDeployment:
 
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
-        mock_resolve.return_value = (dep_row, adapter)
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate")
 
         user = _fake_user()
         session = AsyncMock()
@@ -1747,7 +1816,7 @@ class TestDeleteDeployment:
 
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
-        mock_resolve.return_value = (dep_row, adapter)
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate")
 
         session = AsyncMock()
         session.commit.side_effect = [RuntimeError("commit failed"), RuntimeError("still failing")]
@@ -1773,7 +1842,7 @@ class TestDeleteDeployment:
 
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
-        mock_resolve.return_value = (dep_row, adapter)
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate")
 
         user = _fake_user()
         session = AsyncMock()
@@ -1799,7 +1868,7 @@ class TestDeleteDeployment:
 
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
-        mock_resolve.return_value = (dep_row, adapter)
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate")
 
         user = _fake_user()
         session = AsyncMock()
@@ -1835,7 +1904,7 @@ class TestCreateDeploymentDuplicateName:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "duplicate-name"
+        payload.name = "duplicate-name"
 
         with pytest.raises(HTTPException) as exc_info:
             await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
@@ -1861,7 +1930,7 @@ class TestCreateDeploymentDuplicateName:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "taken"
+        payload.name = "taken"
 
         with pytest.raises(HTTPException):
             await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
@@ -1955,9 +2024,9 @@ class TestCreateDeploymentProjectValidation:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.spec.name = "test"
-        payload.spec.type = "agent"
-        payload.spec.description = None
+        payload.name = "test"
+        payload.type = "agent"
+        payload.description = None
 
         session = AsyncMock()
         session.commit.return_value = None
@@ -2043,7 +2112,7 @@ class TestUpdateDeploymentProjectValidation:
         adapter = AsyncMock()
         mapper = MagicMock()
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper)
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
 
         add_ids = [uuid4()]
         remove_ids = [uuid4()]
@@ -2147,39 +2216,6 @@ class TestListDeploymentLlms:
 
 
 # ---------------------------------------------------------------------------
-# Stubbed 501 routes
-# ---------------------------------------------------------------------------
-
-
-class TestStubbedRoutes:
-    @pytest.mark.asyncio
-    async def test_redeploy_returns_501(self):
-        from langflow.api.v1.deployments import redeploy_deployment
-
-        with pytest.raises(HTTPException) as exc_info:
-            await redeploy_deployment(
-                deployment_id=uuid4(),
-                session=AsyncMock(),
-                current_user=_fake_user(),
-            )
-
-        assert exc_info.value.status_code == 501
-
-    @pytest.mark.asyncio
-    async def test_duplicate_returns_501(self):
-        from langflow.api.v1.deployments import duplicate_deployment
-
-        with pytest.raises(HTTPException) as exc_info:
-            await duplicate_deployment(
-                deployment_id=uuid4(),
-                session=AsyncMock(),
-                current_user=_fake_user(),
-            )
-
-        assert exc_info.value.status_code == 501
-
-
-# ---------------------------------------------------------------------------
 # resolve_deployment_adapter
 # ---------------------------------------------------------------------------
 
@@ -2264,6 +2300,28 @@ class TestHandleAdapterErrors:
             raise DeploymentNotFoundError(message="gone")
 
         assert exc_info.value.status_code == 404
+
+    def test_maps_conflict_with_mapper_formatter(self):
+        from langflow.api.v1.mappers.deployments.helpers import handle_adapter_errors
+
+        deployment_mapper = MagicMock()
+        deployment_mapper.format_conflict_detail.return_value = "friendly detail"
+
+        with pytest.raises(HTTPException) as exc_info, handle_adapter_errors(mapper=deployment_mapper):
+            raise DeploymentConflictError(message="raw provider conflict")
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == "friendly detail"
+        deployment_mapper.format_conflict_detail.assert_called_once_with("raw provider conflict")
+
+    def test_maps_conflict_without_mapper_passthrough(self):
+        from langflow.api.v1.mappers.deployments.helpers import handle_adapter_errors
+
+        with pytest.raises(HTTPException) as exc_info, handle_adapter_errors():
+            raise DeploymentConflictError(message="raw provider conflict")
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == "raw provider conflict"
 
     def test_passes_through_http_exception(self):
         from langflow.api.v1.mappers.deployments.helpers import handle_adapter_errors
