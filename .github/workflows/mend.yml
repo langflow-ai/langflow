@@ -1,0 +1,56 @@
+name: "Mend"
+
+on:
+  push:
+    branches: ["release-1.9.0", "main"]
+  pull_request:
+    branches: ["release-1.9.0", "main"]
+
+env:
+  NODE_VERSION: "24"
+
+jobs:
+  run-jar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./src/frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: ./src/frontend
+        run: npm ci
+
+      - name: Set up Java (Semeru)
+        uses: actions/setup-java@v5
+        with:
+          distribution: "semeru"
+          java-version: "21"
+
+      - name: Cache Mend Agent
+        id: cache-mend
+        uses: actions/cache@v4
+        with:
+          path: wss-unified-agent.jar
+          key: mend-agent-latest
+
+      - name: Download Mend Unified Agent if missing or outdated
+        run: |
+          curl -L -z wss-unified-agent.jar -o wss-unified-agent.jar https://unified-agent.s3.amazonaws.com/wss-unified-agent.jar
+
+      - name: Run Mend Scan
+        env:
+          WS_APIKEY: ${{ secrets.WS_APIKEY }}
+          WS_WSS_URL: ${{ secrets.WS_WSS_URL }}
+          WS_USERKEY: ${{ secrets.WS_USERKEY }}
+          WS_PRODUCTNAME: ${{ secrets.WS_PRODUCTNAME }}
+          WS_PROJECTNAME: ${{ secrets.WS_PROJECTNAME }}
+        run: |
+          java -jar wss-unified-agent.jar -d src/frontend -logLevel debug
