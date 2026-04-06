@@ -2,7 +2,6 @@
 
 import pandas as pd
 import pytest
-
 from lfx.custom.custom_component.component import Component
 from lfx.schema.message import Message
 
@@ -88,7 +87,7 @@ class TestExtractData:
 
     def test_extract_data_dataframe_not_processed_by_hasattr(self, component):
         """Test that DataFrame bypasses hasattr checks.
-        
+
         This is a regression test to ensure DataFrames are not incorrectly
         processed by downstream hasattr checks for .data or .model_dump attributes.
         """
@@ -108,7 +107,7 @@ class TestExtractData:
 
     def test_extract_data_series_not_processed_by_hasattr(self, component):
         """Test that Series bypasses hasattr checks.
-        
+
         This is a regression test to ensure Series are not incorrectly
         processed by downstream hasattr checks for .data or .model_dump attributes.
         """
@@ -125,5 +124,6 @@ class TestExtractData:
         # Verify it wasn't converted to dict or other format
         assert not isinstance(result, dict)
         assert not isinstance(result, str)
+
 
 # Made with Bob
