@@ -56,11 +56,11 @@ export default function ProviderCredentialsForm({
           type="url"
           placeholder="https://api.example.com"
           className="bg-muted"
-          value={credentials.provider_url}
+          value={credentials.url}
           onChange={(e) =>
             onCredentialsChange({
               ...credentials,
-              provider_url: e.target.value,
+              url: e.target.value,
             })
           }
         />

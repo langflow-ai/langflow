@@ -46,6 +46,7 @@ function EditableToolName({
           value={draft}
           placeholder={placeholder}
           onChange={(e) => setDraft(e.target.value)}
+          onBlur={confirm}
           onKeyDown={(e) => {
             if (e.key === "Enter") confirm();
             if (e.key === "Escape") cancel();

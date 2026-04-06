@@ -72,9 +72,9 @@ export const ConnectionPanel = memo(function ConnectionPanel({
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
         Select or Create New Connection
       </div>
-      <div className="flex flex-1 flex-col overflow-hidden px-4 py-4">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden px-4 py-4">
         {/* Tab toggle */}
-        <div className="rounded-xl border border-border bg-muted p-1">
+        <div className="shrink-0 rounded-xl border border-border bg-muted p-1">
           <div className="grid grid-cols-2">
             {(["available", "create"] as const).map((tab) => (
               <button
@@ -82,7 +82,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                 type="button"
                 onClick={() => onTabChange(tab)}
                 className={cn(
-                  "rounded-lg py-2 text-sm transition-colors",
+                  "min-w-0 rounded-lg px-3 py-2 text-sm transition-colors",
                   connectionTab === tab
                     ? "bg-background"
                     : "text-muted-foreground hover:text-foreground",
@@ -97,9 +97,9 @@ export const ConnectionPanel = memo(function ConnectionPanel({
         </div>
 
         {/* Tab content */}
-        <div className="mt-4 flex-1 overflow-y-auto">
+        <div className="mt-4 flex-1 overflow-x-hidden overflow-y-auto">
           {connectionTab === "available" ? (
-            <div className="space-y-3">
+            <div className="min-w-0 space-y-3">
               {connections.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
                   <ForwardedIconComponent
@@ -124,7 +124,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                 </div>
               ) : (
                 <>
-                  <div className="relative">
+                  <div className="relative min-w-0">
                     <ForwardedIconComponent
                       name="Search"
                       className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
@@ -149,9 +149,11 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                         onChange={() => onToggleConnection(conn.id)}
                         data-testid={`connection-item-${conn.id}`}
                       >
-                        <span className="text-sm font-medium leading-tight">
-                          {conn.name}
-                        </span>
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium leading-tight">
+                            {conn.name}
+                          </span>
+                        </div>
                       </CheckboxSelectItem>
                     ))
                   )}
@@ -243,7 +245,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
         </div>
 
         {/* Footer buttons */}
-        <div className="flex items-center gap-3 pt-4">
+        <div className="flex min-w-0 flex-wrap items-center gap-3 pt-4">
           <Button
             variant="outline"
             onClick={onChangeFlow}
@@ -260,7 +262,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
           </Button>
           {connectionTab === "available" ? (
             <Button
-              className="flex-1"
+              className="ml-auto w-full text-center whitespace-normal sm:w-auto sm:min-w-[220px] sm:whitespace-nowrap"
               disabled={selectedConnections.size === 0}
               onClick={onAttachConnection}
               data-testid="connection-attach"
@@ -269,7 +271,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
             </Button>
           ) : (
             <Button
-              className="flex-1"
+              className="ml-auto w-full text-center whitespace-normal sm:w-auto sm:min-w-[220px] sm:whitespace-nowrap"
               disabled={newConnectionName.trim() === "" || isDuplicateName}
               onClick={onCreateConnection}
               data-testid="connection-create"

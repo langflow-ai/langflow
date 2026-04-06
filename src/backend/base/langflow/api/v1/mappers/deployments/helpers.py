@@ -310,27 +310,8 @@ def raise_http_for_value_error(exc: ValueError) -> None:
     raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
-def _friendly_conflict_message(raw_message: str) -> str:
-    """Rewrite provider conflict errors into user-friendly messages."""
-    lower = raw_message.lower()
-    if "agent" in lower and ("already exists" in lower or "conflict" in lower):
-        return (
-            "An agent with this name already exists in the provider. "
-            "Please choose a different name or delete the existing agent first."
-        )
-    if "connection" in lower or "app_id" in lower:
-        return (
-            "A connection referenced in this request already exists in the provider. "
-            "Reference it as an existing connection instead of creating a new one."
-        )
-    if "tool" in lower and ("already exists" in lower or "conflict" in lower):
-        return "A tool with this name already exists in the provider. Please choose a different name."
-    # Fall back to a cleaned-up version of the raw message.
-    return f"A resource with this name already exists in the provider. {raw_message}"
-
-
 @contextmanager
-def handle_adapter_errors():
+def handle_adapter_errors(*, mapper: BaseDeploymentMapper | None = None):
     """Map deployment adapter exceptions to appropriate HTTP responses.
 
     Domain exceptions (subclasses of :class:`DeploymentServiceError`) are
@@ -344,8 +325,8 @@ def handle_adapter_errors():
     except DeploymentServiceError as exc:
         http_status = http_status_for_deployment_error(exc)
         detail = exc.message
-        if isinstance(exc, DeploymentConflictError):
-            detail = _friendly_conflict_message(exc.message)
+        if isinstance(exc, DeploymentConflictError) and mapper is not None:
+            detail = mapper.format_conflict_detail(exc.message)
         logger.exception("Adapter error (status=%s): %s", http_status, detail)
         raise HTTPException(
             status_code=http_status,
@@ -374,11 +355,11 @@ def resolve_provider_tenant_id(
     *,
     deployment_mapper: BaseDeploymentMapper,
     provider_url: str,
-    provider_tenant_id: str | None,
+    provider_data: dict[str, Any],
 ) -> str | None:
     return deployment_mapper.resolve_provider_tenant_id(
         provider_url=provider_url,
-        provider_tenant_id=provider_tenant_id,
+        provider_data=provider_data,
     )
 
 
@@ -493,7 +474,8 @@ async def resolve_adapter_from_deployment(
     deployment_id: UUID,
     user_id: UUID,
     db: DbSession,
-) -> tuple[Deployment, DeploymentServiceProtocol]:
+) -> tuple[Deployment, DeploymentServiceProtocol, str]:
+    """Returns ``(deployment_row, adapter, provider_key)``."""
     deployment_row = await get_deployment_row_or_404(deployment_id=deployment_id, user_id=user_id, db=db)
     provider_account = await get_owned_provider_account_or_404(
         provider_id=deployment_row.deployment_provider_account_id,
@@ -501,7 +483,7 @@ async def resolve_adapter_from_deployment(
         db=db,
     )
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
-    return deployment_row, deployment_adapter
+    return deployment_row, deployment_adapter, provider_account.provider_key
 
 
 async def resolve_adapter_mapper_from_deployment(
@@ -509,7 +491,8 @@ async def resolve_adapter_mapper_from_deployment(
     deployment_id: UUID,
     user_id: UUID,
     db: DbSession,
-) -> tuple[Deployment, DeploymentServiceProtocol, BaseDeploymentMapper]:
+) -> tuple[Deployment, DeploymentServiceProtocol, BaseDeploymentMapper, str]:
+    """Returns ``(deployment_row, adapter, mapper, provider_key)``."""
     from langflow.api.v1.mappers.deployments.registry import get_deployment_mapper
 
     deployment_row = await get_deployment_row_or_404(deployment_id=deployment_id, user_id=user_id, db=db)
@@ -520,7 +503,7 @@ async def resolve_adapter_mapper_from_deployment(
     )
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
-    return deployment_row, deployment_adapter, deployment_mapper
+    return deployment_row, deployment_adapter, deployment_mapper, provider_account.provider_key
 
 
 async def resolve_project_id_for_deployment_create(
@@ -1054,6 +1037,7 @@ async def list_deployment_flow_versions_synced(
     db: DbSession,
     page: int,
     size: int,
+    flow_ids: list[UUID] | None = None,
 ) -> tuple[list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]], int, SnapshotListResult | None]:
     """Return a paginated deployment attachment view synced against provider snapshots.
 
@@ -1065,6 +1049,7 @@ async def list_deployment_flow_versions_synced(
         db,
         user_id=user_id,
         deployment_id=deployment_id,
+        flow_ids=flow_ids,
     )
     snapshot_result: SnapshotListResult | None = None
     snapshot_ids = list(dict.fromkeys(deployment_mapper.util_snapshot_ids_to_verify(attachments)))
@@ -1102,11 +1087,13 @@ async def list_deployment_flow_versions_synced(
         deployment_id=deployment_id,
         offset=page_offset(page, size),
         limit=size,
+        flow_ids=flow_ids,
     )
     total = await count_deployment_attachments(
         db,
         user_id=user_id,
         deployment_id=deployment_id,
+        flow_ids=flow_ids,
     )
     return rows, total, snapshot_result
 

@@ -2,7 +2,7 @@ import datetime
 import json
 from enum import Enum
 from functools import lru_cache
-from typing import Annotated, Generic
+from typing import Annotated, Any, Generic
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
@@ -18,7 +18,6 @@ from lfx.services.adapters.deployment.payloads import (
     T_DeploymentListResult,
     T_DeploymentLlmListResult,
     T_DeploymentOperationResult,
-    T_DeploymentSpec,
     T_DeploymentStatusData,
     T_DeploymentUpdate,
     T_DeploymentUpdateResult,
@@ -46,6 +45,7 @@ DeploymentProviderName = Annotated[
 
 NormalizedId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 IdLike = UUID | NormalizedId
+DEPLOYMENT_DESCRIPTION_MAX_LENGTH = 500
 
 
 class DeploymentType(str, Enum):
@@ -321,7 +321,7 @@ class ConfigListItem(BaseModel):
     name: str = Field(description="The name of the config item")
     created_at: datetime.datetime | None = Field(None, description="The created timestamp of the config item")
     updated_at: datetime.datetime | None = Field(None, description="The last updated timestamp of the config item")
-    provider_data: dict | None = Field(None, description="The data of the config item from the provider")
+    provider_data: dict[str, Any] | None = Field(None, description="Provider-specific data for the config item")
 
 
 class ProviderDataModel(BaseModel, Generic[T_ProviderData]):
@@ -336,17 +336,15 @@ class ProviderResultModel(BaseModel, Generic[T_ProviderResult]):
     provider_result: T_ProviderResult | None = Field(None, description="The result from the provider")
 
 
-class ProviderSpecModel(BaseModel, Generic[T_DeploymentSpec]):
-    """Base model for provider-specific input payloads."""
-
-    provider_spec: T_DeploymentSpec | None = Field(None, description="The data of the deployment from the provider")
-
-
-class BaseDeploymentData(ProviderSpecModel[T_DeploymentSpec]):
+class BaseDeploymentData(BaseModel):
     """Model representing a data for a deployment."""
 
     name: str = Field(description="The name of the deployment")
-    description: str = Field(default="", description="The description of the deployment")
+    description: str = Field(
+        default="",
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        description="The description of the deployment",
+    )
     type: DeploymentType = Field(description="The type of the deployment")
 
 
@@ -534,7 +532,11 @@ class BaseDeploymentDataUpdate(BaseModel):
     """Deployment base update payload."""
 
     name: str | None = Field(None, description="The name of the deployment")
-    description: str | None = Field(None, description="The description of the deployment")
+    description: str | None = Field(
+        None,
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        description="The description of the deployment",
+    )
 
     @model_validator(mode="after")
     def validate_has_changes(self) -> "BaseDeploymentDataUpdate":

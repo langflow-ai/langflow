@@ -46,8 +46,8 @@ describe("Custom tool naming", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
-    const bindOp = payload.provider_data.operations[0];
-    expect(bindOp.tool_name).toBe("My Custom Tool");
+    const addFlowItem = payload.provider_data.add_flows[0];
+    expect(addFlowItem.tool_name).toBe("My Custom Tool");
   });
 
   it("buildDeploymentPayload omits tool_name when empty", () => {
@@ -60,8 +60,8 @@ describe("Custom tool naming", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
-    const bindOp = payload.provider_data.operations[0];
-    expect(bindOp.tool_name).toBeUndefined();
+    const addFlowItem = payload.provider_data.add_flows[0];
+    expect(addFlowItem.tool_name).toBeUndefined();
   });
 
   it("buildDeploymentPayload omits tool_name when whitespace-only", () => {
@@ -75,8 +75,8 @@ describe("Custom tool naming", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
-    const bindOp = payload.provider_data.operations[0];
-    expect(bindOp.tool_name).toBeUndefined();
+    const addFlowItem = payload.provider_data.add_flows[0];
+    expect(addFlowItem.tool_name).toBeUndefined();
   });
 
   it("tool name with special characters is preserved in payload", () => {
@@ -171,12 +171,12 @@ describe("Custom tool naming", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
-    const ops = payload.provider_data.operations;
-    expect(ops).toHaveLength(2);
-    expect(ops.find((o) => o.flow_version_id === "ver-1")?.tool_name).toBe(
+    const addFlows = payload.provider_data.add_flows;
+    expect(addFlows).toHaveLength(2);
+    expect(addFlows.find((o) => o.flow_version_id === "ver-1")?.tool_name).toBe(
       "Tool Alpha",
     );
-    expect(ops.find((o) => o.flow_version_id === "ver-2")?.tool_name).toBe(
+    expect(addFlows.find((o) => o.flow_version_id === "ver-2")?.tool_name).toBe(
       "Tool Beta",
     );
   });

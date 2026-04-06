@@ -31,10 +31,8 @@ const mockDeployment: Deployment = {
   type: "agent",
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-02T00:00:00Z",
-  provider_data: null,
   resource_key: "my-agent-key",
   attached_count: 2,
-  matched_attachments: null,
 };
 
 const initialVersions = new Map([
@@ -142,18 +140,18 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     expect(payload.deployment_id).toBe("deploy-1");
   });
 
-  it("sends description change in spec", () => {
+  it("sends description change at top level", () => {
     const { result } = renderEditHook();
     act(() => result.current.setDeploymentDescription("Updated description"));
     const payload = result.current.buildDeploymentUpdatePayload();
-    expect(payload.spec).toEqual({ description: "Updated description" });
+    expect(payload.description).toBe("Updated description");
   });
 
-  it("does NOT include name in spec", () => {
+  it("does NOT include name on update payload", () => {
     const { result } = renderEditHook();
     act(() => result.current.setDeploymentDescription("Updated"));
     const payload = result.current.buildDeploymentUpdatePayload();
-    expect(payload.spec?.name).toBeUndefined();
+    expect(payload.name).toBeUndefined();
   });
 
   it("sends LLM in provider_data", () => {
@@ -162,16 +160,16 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     expect(payload.provider_data?.llm).toBe("test-model");
   });
 
-  it("does NOT send bind for pre-existing flows", () => {
+  it("does NOT send upsert_flows for unchanged pre-existing flows", () => {
     const { result } = renderEditHook();
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops =
-      (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
-    const bindOps = ops.filter((o) => o.op === "bind");
-    expect(bindOps).toHaveLength(0);
+    const upsertFlows =
+      (payload.provider_data as { upsert_flows?: Array<unknown> } | undefined)
+        ?.upsert_flows ?? [];
+    expect(upsertFlows).toHaveLength(0);
   });
 
-  it("sends bind for newly attached flows", () => {
+  it("sends upsert_flows for newly attached flows", () => {
     const { result } = renderEditHook();
 
     act(() => {
@@ -179,48 +177,53 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     });
 
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops =
-      (payload.provider_data?.operations as Array<{
-        op: string;
-        flow_version_id?: string;
-      }>) ?? [];
-    const bindOps = ops.filter((o) => o.op === "bind");
-    expect(bindOps).toHaveLength(1);
-    expect(bindOps[0].flow_version_id).toBe("ver-new");
+    const upsertFlows =
+      (
+        payload.provider_data as
+          | {
+              upsert_flows?: Array<{
+                flow_version_id?: string;
+                add_app_ids?: string[];
+                remove_app_ids?: string[];
+              }>;
+            }
+          | undefined
+      )?.upsert_flows ?? [];
+    expect(upsertFlows).toHaveLength(1);
+    expect(upsertFlows[0].flow_version_id).toBe("ver-new");
+    expect(upsertFlows[0].add_app_ids).toEqual([]);
+    expect(upsertFlows[0].remove_app_ids).toEqual([]);
   });
 
-  it("sends remove_tool for detached flows", () => {
+  it("sends remove_flows for detached flows", () => {
     const { result } = renderEditHook();
 
     act(() => result.current.handleRemoveAttachedFlow("flow-1"));
 
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops =
-      (payload.provider_data?.operations as Array<{
-        op: string;
-        flow_version_id?: string;
-      }>) ?? [];
-    const removeOps = ops.filter((o) => o.op === "remove_tool");
-    expect(removeOps).toHaveLength(1);
-    expect(removeOps[0].flow_version_id).toBe("ver-1");
+    const removeFlows =
+      (payload.provider_data as { remove_flows?: string[] } | undefined)
+        ?.remove_flows ?? [];
+    expect(removeFlows).toEqual(["ver-1"]);
   });
 
-  it("does NOT send remove_tool for flows that were not removed", () => {
+  it("does NOT send remove_flows for flows that were not removed", () => {
     const { result } = renderEditHook();
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops =
-      (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
-    expect(ops.filter((o) => o.op === "remove_tool")).toHaveLength(0);
+    const removeFlows =
+      (payload.provider_data as { remove_flows?: string[] } | undefined)
+        ?.remove_flows ?? [];
+    expect(removeFlows).toHaveLength(0);
   });
 
-  it("sends fallback spec when nothing changed", () => {
+  it("sends fallback description when nothing changed", () => {
     const { result } = renderEditHook();
     const payload = result.current.buildDeploymentUpdatePayload();
     // LLM is set so provider_data exists, but also check spec fallback logic
     expect(payload.provider_data).toBeDefined();
   });
 
-  it("includes tool_name on new bind operations", () => {
+  it("includes tool_name on newly attached flow upsert", () => {
     const { result } = renderEditHook();
 
     act(() => {
@@ -231,13 +234,19 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     });
 
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops =
-      (payload.provider_data?.operations as Array<{
-        op: string;
-        tool_name?: string;
-      }>) ?? [];
-    const bindOps = ops.filter((o) => o.op === "bind");
-    expect(bindOps[0].tool_name).toBe("Custom Tool Name");
+    const upsertFlows =
+      (
+        payload.provider_data as
+          | {
+              upsert_flows?: Array<{
+                flow_version_id?: string;
+                tool_name?: string;
+              }>;
+            }
+          | undefined
+      )?.upsert_flows ?? [];
+    expect(upsertFlows[0].flow_version_id).toBe("ver-new");
+    expect(upsertFlows[0].tool_name).toBe("Custom Tool Name");
   });
 
   it("handles attach + detach in same update", () => {
@@ -249,13 +258,14 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     });
 
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops =
-      (payload.provider_data?.operations as Array<{
-        op: string;
-        flow_version_id?: string;
-      }>) ?? [];
-    expect(ops.filter((o) => o.op === "remove_tool")).toHaveLength(1);
-    expect(ops.filter((o) => o.op === "bind")).toHaveLength(1);
+    const upsertFlows =
+      (payload.provider_data as { upsert_flows?: Array<unknown> } | undefined)
+        ?.upsert_flows ?? [];
+    const removeFlows =
+      (payload.provider_data as { remove_flows?: string[] } | undefined)
+        ?.remove_flows ?? [];
+    expect(upsertFlows).toHaveLength(1);
+    expect(removeFlows).toEqual(["ver-1"]);
   });
 });
 
@@ -405,8 +415,8 @@ describe("Edit mode — pre-populated provider data", () => {
   });
 });
 
-describe("Edit mode — rename_tool operations", () => {
-  it("sends rename_tool when pre-existing flow tool name changes", () => {
+describe("Edit mode — tool_name updates", () => {
+  it("sends upsert_flows tool_name for renamed pre-existing flow", () => {
     const { result } = renderEditHook();
 
     act(() => {
@@ -419,28 +429,37 @@ describe("Edit mode — rename_tool operations", () => {
     });
 
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops =
-      (payload.provider_data?.operations as Array<{
-        op: string;
-        flow_version_id?: string;
-        tool_name?: string;
-      }>) ?? [];
-    const renameOps = ops.filter((o) => o.op === "rename_tool");
-    expect(renameOps).toHaveLength(1);
-    expect(renameOps[0].flow_version_id).toBe("ver-1");
-    expect(renameOps[0].tool_name).toBe("renamed_tool");
+    const upsertFlows =
+      (
+        payload.provider_data as
+          | {
+              upsert_flows?: Array<{
+                flow_version_id?: string;
+                tool_name?: string;
+                add_app_ids?: string[];
+                remove_app_ids?: string[];
+              }>;
+            }
+          | undefined
+      )?.upsert_flows ?? [];
+    expect(upsertFlows).toHaveLength(1);
+    expect(upsertFlows[0].flow_version_id).toBe("ver-1");
+    expect(upsertFlows[0].tool_name).toBe("renamed_tool");
+    expect(upsertFlows[0].add_app_ids).toEqual([]);
+    expect(upsertFlows[0].remove_app_ids).toEqual([]);
   });
 
-  it("does NOT send rename_tool when name is unchanged", () => {
+  it("does NOT send tool_name upsert when name is unchanged", () => {
     const { result } = renderEditHook();
     // toolNameByFlow is pre-filled with initialToolNames, no changes
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops =
-      (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
-    expect(ops.filter((o) => o.op === "rename_tool")).toHaveLength(0);
+    const upsertFlows =
+      (payload.provider_data as { upsert_flows?: Array<unknown> } | undefined)
+        ?.upsert_flows ?? [];
+    expect(upsertFlows).toHaveLength(0);
   });
 
-  it("does NOT send rename_tool when name is cleared (falls back to flow name)", () => {
+  it("does NOT send tool_name upsert when name is cleared", () => {
     const { result } = renderEditHook();
 
     act(() => {
@@ -450,9 +469,9 @@ describe("Edit mode — rename_tool operations", () => {
     });
 
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops =
-      (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
-    // Empty string !== original, but we only send rename when currentName is truthy
-    expect(ops.filter((o) => o.op === "rename_tool")).toHaveLength(0);
+    const upsertFlows =
+      (payload.provider_data as { upsert_flows?: Array<unknown> } | undefined)
+        ?.upsert_flows ?? [];
+    expect(upsertFlows).toHaveLength(0);
   });
 });

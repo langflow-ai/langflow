@@ -85,7 +85,7 @@ function EnvironmentList({
                   {environment.name}
                 </span>
                 <span className="text-sm leading-tight text-muted-foreground">
-                  {environment.provider_url}
+                  {environment.url}
                 </span>
               </span>
             </RadioSelectItem>
@@ -105,7 +105,7 @@ export default function StepProvider() {
     setCredentials,
   } = useDeploymentStepper();
   const { data: providerAccountsData } = useGetProviderAccounts({});
-  const environments = providerAccountsData?.providers ?? [];
+  const environments = providerAccountsData?.provider_accounts ?? [];
 
   useEffect(() => {
     setSelectedProvider(PROVIDERS[0]);

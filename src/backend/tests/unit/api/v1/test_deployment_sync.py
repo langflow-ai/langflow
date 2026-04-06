@@ -684,12 +684,27 @@ def test_resolve_flow_version_patch_for_update_watsonx_operations():
     from langflow.api.v1.mappers.deployments.helpers import resolve_flow_version_patch_for_update
 
     add_id = uuid4()
+    unbind_only_id = uuid4()
     remove_id = uuid4()
     add_ids, remove_ids = resolve_flow_version_patch_for_update(
-        deployment_mapper=_FakeMapper(),
+        deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
         payload=DeploymentUpdateRequest(
-            add_flow_version_ids=[add_id],
-            remove_flow_version_ids=[remove_id],
+            provider_data={
+                "llm": "test-llm",
+                "upsert_flows": [
+                    {
+                        "flow_version_id": str(add_id),
+                        "add_app_ids": ["app-one"],
+                        "remove_app_ids": [],
+                    },
+                    {
+                        "flow_version_id": str(unbind_only_id),
+                        "add_app_ids": [],
+                        "remove_app_ids": ["app-one"],
+                    },
+                ],
+                "remove_flows": [str(remove_id)],
+            }
         ),
     )
 
@@ -1209,6 +1224,7 @@ class TestWxoResolveRollbackUpdate:
         )
 
         assert result is not None
+        assert result.spec is not None
         assert result.spec.name == "test-dep"
         assert result.spec.description == "desc"
         provider_data = result.provider_data
@@ -1236,6 +1252,7 @@ class TestWxoResolveRollbackUpdate:
 
         assert result is not None
         assert result.provider_data["put_tools"] == []
+        assert result.spec is not None
         assert result.spec.description == ""
 
 
@@ -1623,6 +1640,39 @@ class TestListDeploymentFlowVersionsSynced:
         assert snapshot_result is None
         mock_sync_snapshot_ids.assert_not_awaited()
         mock_count_attachments.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployment_attachments", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.list_deployment_attachments_with_versions", new_callable=AsyncMock, return_value=[])
+    @patch(f"{MODULE}.list_deployment_attachments", new_callable=AsyncMock, return_value=[])
+    async def test_forwards_flow_ids_filter_to_attachment_queries(
+        self,
+        mock_list_attachments,
+        mock_list_with_versions,
+        mock_count_attachments,
+    ):
+        deployment_id = uuid4()
+        flow_id = uuid4()
+        adapter = AsyncMock()
+        mapper = WatsonxOrchestrateDeploymentMapper()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployment_flow_versions_synced
+
+        await list_deployment_flow_versions_synced(
+            deployment_adapter=adapter,
+            deployment_mapper=mapper,
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            deployment_id=deployment_id,
+            db=AsyncMock(),
+            page=1,
+            size=10,
+            flow_ids=[flow_id],
+        )
+
+        assert mock_list_attachments.call_args.kwargs["flow_ids"] == [flow_id]
+        assert mock_list_with_versions.call_args.kwargs["flow_ids"] == [flow_id]
+        assert mock_count_attachments.call_args.kwargs["flow_ids"] == [flow_id]
 
 
 # ---------------------------------------------------------------------------

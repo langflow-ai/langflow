@@ -59,17 +59,14 @@ export default function DeploymentDetailsModal({
       ? deploymentData.provider_data.llm
       : "";
 
-  const configMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const cfg of configsData?.configs ?? []) {
-      map.set(cfg.id, cfg.name);
-    }
-    return map;
-  }, [configsData]);
+  const configAppIds = useMemo(
+    () => new Set((configsData?.configs ?? []).map((cfg) => cfg.app_id)),
+    [configsData],
+  );
 
   const getConnectionNames = (fv: DeploymentFlowVersionItem): string[] => {
     const appIds = fv.provider_data?.app_ids ?? [];
-    return appIds.map((id) => configMap.get(id) ?? id).filter(Boolean);
+    return appIds.filter((id) => id && configAppIds.has(id));
   };
 
   return (

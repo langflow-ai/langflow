@@ -10,7 +10,6 @@ from uuid import UUID
 import pytest
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import (
-    BaseDeploymentData,
     ConfigListParams,
     ConfigListResult,
     DeploymentCreateResult,
@@ -226,19 +225,12 @@ def test_deployment_payload_schemas_defaults_to_no_active_slots() -> None:
 
 
 def test_generic_parametrization_applies_to_provider_fields() -> None:
-    typed_spec = BaseDeploymentData[_SpecModel](
-        name="dep",
-        description="",
-        type=DeploymentType.AGENT,
-        provider_spec={"region": "us-east-1"},
-    )
     typed_status = DeploymentStatusResult[_StatusModel](
         id="dep_1",
         provider_data={"healthy": True},
     )
     typed_params = DeploymentListParams[_FilterModel](provider_params={"env": "prod"})
 
-    assert isinstance(typed_spec.provider_spec, _SpecModel)
     assert isinstance(typed_status.provider_data, _StatusModel)
     assert isinstance(typed_params.provider_params, _FilterModel)
 
@@ -306,16 +298,7 @@ def test_generic_parametrization_applies_to_result_and_list_models() -> None:
     assert isinstance(typed_snapshot_params.provider_params, _SnapshotFilterModel)
 
 
-def test_unparametrized_models_keep_dict_passthrough_behavior() -> None:
-    payload = {"region": "us-east-1"}
-    data = BaseDeploymentData(
-        name="dep",
-        description="",
-        type=DeploymentType.AGENT,
-        provider_spec=payload,
-    )
-    assert data.provider_spec == payload
-
+def test_payload_slot_dump_json_serializes_rich_payload() -> None:
     now = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
     rich_slot = PayloadSlot(_RichPayload)
     dumped = rich_slot.dump(

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { usePatchSnapshot } from "@/controllers/API/queries/deployments";
+import { useGetDeploymentAttachments } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 import { useGetDeployments } from "@/controllers/API/queries/deployments/use-get-deployments";
 import { useErrorAlert } from "@/pages/MainPage/pages/deploymentsPage/hooks/use-error-alert";
 import type {
@@ -12,7 +13,7 @@ import DeploymentPhaseContent, {
 } from "./deployment-phase";
 import ProviderPhaseContent from "./provider-phase";
 import ReviewPhaseContent from "./review-phase";
-import { type FlowAttachment, flattenToAttachments } from "./types";
+import { type FlowAttachment, toReviewAttachment } from "./types";
 import UpdatePhaseContent from "./update-phase";
 
 const PROVIDER_KEY_MAP: Record<string, DeploymentProvider> = {
@@ -88,18 +89,82 @@ export default function DeployChoiceDialog({
       { enabled: shouldFetchDeployments },
     );
 
-  const attachments = useMemo(
-    () => flattenToAttachments(deploymentsData?.deployments ?? []),
+  const deployments = useMemo(
+    () => deploymentsData?.deployments ?? [],
     [deploymentsData],
   );
 
+  const selectedDeploymentEntry = useMemo(
+    () =>
+      deployments.find((deployment) => deployment.id === selectedDeployment),
+    [deployments, selectedDeployment],
+  );
+
+  const shouldFetchSelectedDeploymentAttachments =
+    open &&
+    phase === "review" &&
+    !!selectedProvider &&
+    selectedDeployment !== NEW_DEPLOYMENT_VALUE &&
+    !!selectedDeploymentEntry;
+
+  const {
+    data: selectedDeploymentAttachmentsData,
+    isLoading: isLoadingSelectedDeploymentAttachments,
+    isFetching: isFetchingSelectedDeploymentAttachments,
+  } = useGetDeploymentAttachments(
+    {
+      deploymentId: selectedDeploymentEntry?.id ?? "",
+      flow_ids: flowId,
+    },
+    { enabled: shouldFetchSelectedDeploymentAttachments },
+  );
+
   useEffect(() => {
-    if (attachments.length === 1) {
-      setSelectedDeployment(attachments[0].provider_snapshot_id);
+    if (deployments.length === 1) {
+      setSelectedDeployment(deployments[0].id);
     } else {
       setSelectedDeployment(NEW_DEPLOYMENT_VALUE);
     }
-  }, [attachments]);
+  }, [deployments]);
+
+  useEffect(() => {
+    if (
+      phase !== "review" ||
+      selectedDeployment === NEW_DEPLOYMENT_VALUE ||
+      !selectedDeploymentEntry
+    ) {
+      return;
+    }
+    if (
+      isLoadingSelectedDeploymentAttachments ||
+      isFetchingSelectedDeploymentAttachments
+    ) {
+      return;
+    }
+
+    const nextReviewAttachment = toReviewAttachment(
+      selectedDeploymentEntry,
+      selectedDeploymentAttachmentsData?.flow_versions ?? [],
+    );
+    if (!nextReviewAttachment) {
+      showError(
+        "Failed to load deployment details",
+        "No provider snapshot was found for this flow on the selected deployment.",
+      );
+      setPhase("deployments");
+      setReviewAttachment(null);
+      return;
+    }
+    setReviewAttachment(nextReviewAttachment);
+  }, [
+    phase,
+    selectedDeployment,
+    selectedDeploymentEntry,
+    selectedDeploymentAttachmentsData,
+    isLoadingSelectedDeploymentAttachments,
+    isFetchingSelectedDeploymentAttachments,
+    showError,
+  ]);
 
   useEffect(() => {
     if (!open) return;
@@ -137,13 +202,8 @@ export default function DeployChoiceDialog({
       onChooseNew(buildProviderPreselection());
       return;
     }
-
-    const attachment = attachments.find(
-      (a) => a.provider_snapshot_id === selectedDeployment,
-    );
-    if (!attachment) return;
-
-    setReviewAttachment(attachment);
+    if (!selectedDeploymentEntry) return;
+    setReviewAttachment(null);
     setPhase("review");
   };
 
@@ -178,7 +238,12 @@ export default function DeployChoiceDialog({
   const isUpdating = updatePhase === "updating";
   const isUpdated = updatePhase === "updated";
   const isInUpdatePhase = isUpdating || isUpdated;
-  const isBusy = isUpdating || isLoadingDeployments;
+  const isLoadingReviewAttachment =
+    phase === "review" &&
+    (isLoadingSelectedDeploymentAttachments ||
+      isFetchingSelectedDeploymentAttachments);
+  const isBusy =
+    isUpdating || isLoadingDeployments || isLoadingReviewAttachment;
 
   return (
     <Dialog
@@ -227,10 +292,16 @@ export default function DeployChoiceDialog({
             onConfirm={handleReviewConfirm}
             onCancel={() => setOpen(false)}
           />
+        ) : phase === "review" && isLoadingReviewAttachment ? (
+          <div className="flex min-h-52 items-center justify-center">
+            <div className="text-sm text-muted-foreground">
+              Loading deployment attachment details...
+            </div>
+          </div>
         ) : (
           <DeploymentPhaseContent
             selectedProvider={selectedProvider}
-            attachments={attachments}
+            deployments={deployments}
             selectedDeployment={selectedDeployment}
             onSelectDeployment={setSelectedDeployment}
             isLoading={isLoadingDeployments}

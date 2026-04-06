@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from lfx.services.adapters.deployment.schema import (
-        BaseDeploymentData,
         ConfigListParams,
         SnapshotListParams,
     )
@@ -158,25 +157,6 @@ def raise_as_deployment_error(
     logger.exception(log_msg)
     msg = f"{error_prefix.value} Please check server logs for details."
     raise DeploymentError(message=msg, error_code="deployment_error") from exc
-
-
-def build_agent_payload(
-    *,
-    data: BaseDeploymentData,
-    tool_ids: Sequence[str],
-    llm: str,
-) -> dict[str, Any]:
-    if data.provider_spec is None:
-        msg = "Deployment data must include provider_spec with a non-empty name and display_name."
-        raise InvalidContentError(message=msg)
-    return build_agent_payload_from_values(
-        agent_name=str(data.provider_spec["name"]),
-        agent_display_name=str(data.provider_spec["display_name"]),
-        deployment_name=str(data.name),
-        description=str(data.description or ""),
-        tool_ids=tool_ids,
-        llm=llm,
-    )
 
 
 def build_agent_payload_from_values(

@@ -20,7 +20,7 @@ interface AddProviderModalProps {
 const EMPTY_CREDENTIALS: ProviderCredentials = {
   name: "",
   provider_key: "watsonx-orchestrate",
-  provider_url: "",
+  url: "",
   api_key: "",
 };
 
@@ -38,7 +38,7 @@ export default function AddProviderModal({
   const canSave =
     credentials.name.trim() !== "" &&
     credentials.api_key.trim() !== "" &&
-    credentials.provider_url.trim() !== "";
+    credentials.url.trim() !== "";
 
   function handleClose() {
     if (isSaving) return;
@@ -53,7 +53,7 @@ export default function AddProviderModal({
       await createProviderAccount({
         name: credentials.name.trim(),
         provider_key: credentials.provider_key,
-        provider_url: credentials.provider_url.trim(),
+        url: credentials.url.trim(),
         provider_data: { api_key: credentials.api_key.trim() },
       });
       setCredentials(EMPTY_CREDENTIALS);

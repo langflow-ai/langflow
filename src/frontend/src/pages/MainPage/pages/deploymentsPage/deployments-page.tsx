@@ -16,7 +16,7 @@ export default function DeploymentsPage() {
 
   const { data: providersData, isLoading: isLoadingProviders } =
     useGetProviderAccounts({});
-  const providers = providersData?.providers ?? [];
+  const providers = providersData?.provider_accounts ?? [];
 
   return (
     <div className="flex flex-col gap-4 pt-4">
