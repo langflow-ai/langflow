@@ -89,13 +89,25 @@ export function useCreateMemoryModal({
       onSuccess?.(data.id);
     },
     onError: (error: any) => {
+      const detail = error?.response?.data?.detail;
+      const list = Array.isArray(detail)
+        ? detail
+            .map((entry) => {
+              if (typeof entry === "string") return entry;
+              if (entry && typeof entry === "object") {
+                const msg = (entry as any)?.msg;
+                return typeof msg === "string" ? msg : JSON.stringify(entry);
+              }
+              return String(entry);
+            })
+            .filter(Boolean)
+        : typeof detail === "string"
+          ? [detail]
+          : [error?.message || "An unknown error occurred"];
+
       setErrorData({
         title: "Failed to create memory",
-        list: [
-          error?.response?.data?.detail ||
-            error?.message ||
-            "An unknown error occurred",
-        ],
+        list,
       });
     },
   });

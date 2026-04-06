@@ -7,35 +7,44 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 }));
 
 describe("MemoriesSidebar", () => {
-  const baseProps = {
-    memories: [
-      { id: "m1", name: "Memory One", status: "idle", is_active: true },
-    ],
-    filteredMemories: [
-      { id: "m1", name: "Memory One", status: "idle", is_active: true },
-    ],
-    memoriesSearch: "",
-    setMemoriesSearch: jest.fn(),
-    selectedMemoryId: "m1",
-    currentFlowId: "flow-1",
-    onSelectMemory: jest.fn(),
-    onCreateMemory: jest.fn(),
-  } as any;
+  const makeProps = (overrides: Partial<any> = {}) =>
+    ({
+      memories: [
+        { id: "m1", name: "Memory One", status: "idle", is_active: true },
+      ],
+      filteredMemories: [
+        { id: "m1", name: "Memory One", status: "idle", is_active: true },
+      ],
+      memoriesSearch: "",
+      setMemoriesSearch: jest.fn(),
+      selectedMemoryId: "m1",
+      currentFlowId: "flow-1",
+      onSelectMemory: jest.fn(),
+      onCreateMemory: jest.fn(),
+      ...overrides,
+    }) as any;
 
-  it("renders memory and status", () => {
-    render(<MemoriesSidebar {...baseProps} />);
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("renders memory item", () => {
+    const props = makeProps();
+    render(<MemoriesSidebar {...props} />);
     expect(screen.getByText("Memory One")).toBeInTheDocument();
   });
 
   it("calls onSelectMemory when memory item is clicked", () => {
-    render(<MemoriesSidebar {...baseProps} />);
+    const props = makeProps();
+    render(<MemoriesSidebar {...props} />);
     fireEvent.click(screen.getByText("Memory One"));
-    expect(baseProps.onSelectMemory).toHaveBeenCalledWith("m1");
+    expect(props.onSelectMemory).toHaveBeenCalledWith("m1");
   });
 
   it("opens create action", () => {
-    render(<MemoriesSidebar {...baseProps} />);
+    const props = makeProps();
+    render(<MemoriesSidebar {...props} />);
     fireEvent.click(screen.getByText("Create"));
-    expect(baseProps.onCreateMemory).toHaveBeenCalled();
+    expect(props.onCreateMemory).toHaveBeenCalled();
   });
 });

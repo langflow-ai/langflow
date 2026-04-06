@@ -99,7 +99,6 @@ export const useUpdateMemory: useMutationFunctionType<
     mutationFn: updateMemoryFn,
     ...restOptions,
     onSettled: (data, error, variables, onMutateResult, context) => {
-      queryClient.invalidateQueries({ queryKey: ["useUpdateMemory"] });
       userOnSettled?.(data, error, variables, onMutateResult, context);
     },
     retry: restOptions.retry ?? 3,

@@ -1,8 +1,6 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
-import { cn } from "@/utils/utils";
-import { statusBgColors, statusColors } from "../helpers";
 import type { MemoryDetailsHeaderProps } from "../types";
 
 export function MemoryDetailsHeader({
@@ -54,7 +52,7 @@ export function MemoryDetailsHeader({
         </Button>
 
         <DeleteConfirmationModal
-          description={`memory \"${memory.name}\"`}
+          description={`memory "${memory.name}"`}
           onConfirm={(e) => {
             e.stopPropagation();
             deleteMutation.mutate({ memoryId: memory.id });

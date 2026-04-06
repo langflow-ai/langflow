@@ -120,7 +120,14 @@ export function useMemoriesData({
   };
 
   const effectiveSessionId = useMemo(() => {
-    return selectedSession ?? resolveDefaultSessionId(memorySessions);
+    const candidate = selectedSession?.trim();
+    if (candidate) {
+      const exists = memorySessions.some((s) => s.session_id === candidate);
+      if (exists) return candidate;
+    }
+
+    const fallback = resolveDefaultSessionId(memorySessions);
+    return fallback && fallback.trim() ? fallback : null;
   }, [selectedSession, memorySessions]);
 
   const {
@@ -198,7 +205,7 @@ export function useMemoriesData({
         const sessionId = String(m?.session_id ?? "");
         const messageId =
           ingestionJobId || timestamp || sender
-            ? [ingestionJobId, timestamp, sender].filter(Boolean).join(":" )
+            ? [ingestionJobId, timestamp, sender].filter(Boolean).join(":")
             : "";
 
         return {
