@@ -33,7 +33,6 @@ from sqlmodel import col, func, select
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
-    DeploymentProviderAccountGetResponse,
     DeploymentUpdateRequest,
 )
 from langflow.initial_setup.setup import get_or_create_default_folder
@@ -349,25 +348,6 @@ def handle_adapter_errors(*, mapper: BaseDeploymentMapper | None = None):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while communicating with the deployment provider.",
         ) from exc
-
-
-def resolve_provider_tenant_id(
-    *,
-    deployment_mapper: BaseDeploymentMapper,
-    provider_url: str,
-    provider_data: dict[str, Any],
-) -> str | None:
-    return deployment_mapper.resolve_provider_tenant_id(
-        provider_url=provider_url,
-        provider_data=provider_data,
-    )
-
-
-def to_provider_account_response(provider_account: DeploymentProviderAccount) -> DeploymentProviderAccountGetResponse:
-    from langflow.api.v1.mappers.deployments.registry import get_deployment_mapper
-
-    deployment_mapper = get_deployment_mapper(provider_account.provider_key or "")
-    return deployment_mapper.shape_provider_account_response(provider_account)
 
 
 def normalize_flow_version_query_ids(flow_version_ids: list[str] | None) -> list[UUID]:

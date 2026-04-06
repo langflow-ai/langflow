@@ -3,7 +3,11 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
-import type { DeploymentProvider, ProviderAccount } from "../types";
+import {
+  type DeploymentProvider,
+  getProviderAccountUrl,
+  type ProviderAccount,
+} from "../types";
 import ProviderCredentialsForm from "./provider-credentials-form";
 import { RadioSelectItem } from "./radio-select-item";
 
@@ -84,7 +88,7 @@ function EnvironmentList({
                   {environment.name}
                 </span>
                 <span className="text-sm leading-tight text-muted-foreground">
-                  {environment.url}
+                  {getProviderAccountUrl(environment)}
                 </span>
               </span>
             </RadioSelectItem>

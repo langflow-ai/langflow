@@ -17,7 +17,12 @@ from langflow.api.v1.mappers.deployments.contracts import (
     UpdateSnapshotBindings,
 )
 from langflow.api.v1.mappers.deployments.registry import DeploymentMapperRegistry
-from langflow.api.v1.schemas.deployments import DeploymentCreateRequest, DeploymentUpdateRequest, ExecutionCreateRequest
+from langflow.api.v1.schemas.deployments import (
+    DeploymentCreateRequest,
+    DeploymentProviderAccountCreateRequest,
+    DeploymentUpdateRequest,
+    ExecutionCreateRequest,
+)
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
@@ -118,9 +123,9 @@ OUTBOUND_SLOT_NAMES = [
 
 
 def test_api_payload_field_names_match_adapter_registry() -> None:
-    api_fields = [field.name for field in fields(DeploymentApiPayloads)]
-    adapter_fields = [field.name for field in fields(DeploymentPayloadSchemas)]
-    assert api_fields == adapter_fields
+    api_fields = {field.name for field in fields(DeploymentApiPayloads)}
+    adapter_fields = {field.name for field in fields(DeploymentPayloadSchemas)}
+    assert adapter_fields.issubset(api_fields), f"Adapter fields not in API payloads: {adapter_fields - api_fields}"
 
 
 @pytest.mark.asyncio
@@ -722,12 +727,14 @@ def test_base_mapper_shapes_provider_account_response() -> None:
         updated_at=timestamp,
     )
 
-    shaped = mapper.shape_provider_account_response(account)
+    shaped = mapper.resolve_provider_account_response(account)
     assert shaped.id == account.id
     assert shaped.name == "staging"
-    assert shaped.provider_data == {"tenant_id": "tenant-1"}
+    assert shaped.provider_data == {
+        "url": "https://provider.example",
+        "tenant_id": "tenant-1",
+    }
     assert shaped.provider_key == "watsonx-orchestrate"
-    assert shaped.url == "https://provider.example"
 
 
 def test_mapper_registry_returns_default_when_unregistered() -> None:
@@ -785,8 +792,10 @@ def test_base_mapper_resolve_verify_credentials_extracts_url() -> None:
     payload = DeploymentProviderAccountCreateRequest(
         name="test-account",
         provider_key="watsonx-orchestrate",
-        url="https://api.us-south.wxo.cloud.ibm.com",
-        provider_data={"api_key": "secret-key"},  # pragma: allowlist secret
+        provider_data={
+            "url": "https://api.us-south.wxo.cloud.ibm.com",
+            "api_key": "secret-key",  # pragma: allowlist secret
+        },
     )
     result = mapper.resolve_verify_credentials(payload=payload)
     assert isinstance(result, VerifyCredentials)
@@ -794,11 +803,26 @@ def test_base_mapper_resolve_verify_credentials_extracts_url() -> None:
     assert result.provider_data is None
 
 
-def test_base_mapper_resolve_credential_fields_raises_not_implemented() -> None:
-    """Base mapper does not implement resolve_credential_fields."""
+def test_base_mapper_resolve_credentials_raises_not_implemented() -> None:
+    """Base mapper does not implement resolve_credentials."""
     mapper = BaseDeploymentMapper()
     with pytest.raises(NotImplementedError):
-        mapper.resolve_credential_fields(provider_data={"api_key": "key"})  # pragma: allowlist secret
+        mapper.resolve_credentials(provider_data={"api_key": "key"})  # pragma: allowlist secret
+
+
+def test_base_mapper_resolve_provider_account_create_raises_not_implemented() -> None:
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentProviderAccountCreateRequest(
+        name="provider-account",
+        provider_key="watsonx-orchestrate",
+        provider_data={
+            "url": "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+            "tenant_id": "tenant-1",
+            "api_key": "secret-key",  # pragma: allowlist secret
+        },
+    )
+    with pytest.raises(NotImplementedError):
+        mapper.resolve_provider_account_create(payload=payload, user_id=uuid4())
 
 
 # ---------------------------------------------------------------------------

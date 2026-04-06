@@ -737,6 +737,54 @@ def test_watsonx_mapper_resolve_verify_credentials_for_update_prefers_new_provid
     assert verify_input.provider_data == {"api_key": "new-api-key"}  # pragma: allowlist secret
 
 
+def test_watsonx_mapper_resolve_verify_credentials_for_update_rejects_url_update() -> None:
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    existing_account = DeploymentProviderAccount(
+        id=uuid4(),
+        user_id=uuid4(),
+        name="prod",
+        provider_tenant_id="tenant-1",
+        provider_key="watsonx-orchestrate",
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+        api_key="encrypted-api-key",  # pragma: allowlist secret
+    )
+    payload = DeploymentProviderAccountUpdateRequest(
+        provider_data={
+            "url": "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-2",
+            "api_key": "new-api-key",  # pragma: allowlist secret
+        }
+    )
+
+    with pytest.raises(ValueError, match=r"provider_data\.url cannot be updated\."):
+        mapper.resolve_verify_credentials_for_update(payload=payload, existing_account=existing_account)
+
+
+def test_watsonx_mapper_resolve_verify_credentials_for_update_rejects_tenant_id_update() -> None:
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    existing_account = DeploymentProviderAccount(
+        id=uuid4(),
+        user_id=uuid4(),
+        name="prod",
+        provider_tenant_id="tenant-1",
+        provider_key="watsonx-orchestrate",
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+        api_key="encrypted-api-key",  # pragma: allowlist secret
+    )
+    payload = DeploymentProviderAccountUpdateRequest(
+        provider_data={
+            "tenant_id": "tenant-2",
+            "api_key": "new-api-key",  # pragma: allowlist secret
+        }
+    )
+
+    with pytest.raises(ValueError, match=r"provider_data\.tenant_id cannot be updated\."):
+        mapper.resolve_verify_credentials_for_update(payload=payload, existing_account=existing_account)
+
+
 @pytest.mark.asyncio
 async def test_watsonx_mapper_resolve_update_passthrough_without_provider_data() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
@@ -1543,8 +1591,8 @@ def test_wxo_mapper_resolve_verify_credentials_filters_non_credential_fields() -
     payload = DeploymentProviderAccountCreateRequest(
         name="test-account",
         provider_key="watsonx-orchestrate",
-        url="https://api.us-south.wxo.cloud.ibm.com",
         provider_data={
+            "url": "https://api.us-south.wxo.cloud.ibm.com",
             "tenant_id": "tenant-123",
             "api_key": "my-secret-key",  # pragma: allowlist secret
         },
@@ -1557,65 +1605,92 @@ def test_wxo_mapper_resolve_verify_credentials_filters_non_credential_fields() -
     assert "tenant_id" not in result.provider_data
 
 
-def test_wxo_mapper_resolve_credential_fields_returns_api_key() -> None:
+def test_wxo_mapper_resolve_credentials_returns_api_key() -> None:
     """WXO mapper extracts api_key from provider_data for DB storage."""
     mapper = WatsonxOrchestrateDeploymentMapper()
-    result = mapper.resolve_credential_fields(provider_data={"api_key": "my-key"})  # pragma: allowlist secret
+    result = mapper.resolve_credentials(provider_data={"api_key": "my-key"})  # pragma: allowlist secret
     assert result == {"api_key": "my-key"}  # pragma: allowlist secret
 
 
-def test_wxo_mapper_resolve_credential_fields_ignores_tenant_metadata() -> None:
-    """Tenant metadata in provider_data should not break credential extraction."""
+def test_wxo_mapper_resolve_credentials_rejects_tenant_metadata() -> None:
+    """Update-path credential extraction rejects non-credential fields."""
     mapper = WatsonxOrchestrateDeploymentMapper()
-    result = mapper.resolve_credential_fields(
-        provider_data={
-            "tenant_id": "tenant-123",
-            "api_key": "my-key",  # pragma: allowlist secret
-        }
-    )
-    assert result == {"api_key": "my-key"}  # pragma: allowlist secret
+    with pytest.raises(HTTPException) as exc_info:
+        mapper.resolve_credentials(
+            provider_data={
+                "tenant_id": "tenant-123",
+                "api_key": "my-key",  # pragma: allowlist secret
+            }
+        )
+    assert exc_info.value.status_code == 422
+    assert "tenant_id" in exc_info.value.detail
 
 
 def test_wxo_mapper_resolve_verify_credentials_rejects_unknown_non_metadata_fields() -> None:
-    """Mapper strips tenant metadata but still rejects unexpected credential keys."""
+    """Mapper rejects unexpected provider_data keys."""
     from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
-    from lfx.services.adapters.payload import AdapterPayloadValidationError
 
     mapper = WatsonxOrchestrateDeploymentMapper()
     payload = DeploymentProviderAccountCreateRequest(
         name="test-account",
         provider_key="watsonx-orchestrate",
-        url="https://api.us-south.wxo.cloud.ibm.com",
         provider_data={
+            "url": "https://api.us-south.wxo.cloud.ibm.com",
             "tenant_id": "tenant-123",
             "api_key": "my-secret-key",  # pragma: allowlist secret
             "unexpected": "field",
         },
     )
-    with pytest.raises(AdapterPayloadValidationError):
+    with pytest.raises(HTTPException) as exc_info:
         mapper.resolve_verify_credentials(payload=payload)
+    assert exc_info.value.status_code == 422
+    assert "Invalid field 'unexpected'" in exc_info.value.detail
 
 
-def test_wxo_mapper_resolve_credential_fields_strips_whitespace() -> None:
+def test_wxo_mapper_resolve_credentials_strips_whitespace() -> None:
     """WXO mapper strips whitespace from api_key."""
     mapper = WatsonxOrchestrateDeploymentMapper()
-    result = mapper.resolve_credential_fields(provider_data={"api_key": "  my-key  "})  # pragma: allowlist secret
+    result = mapper.resolve_credentials(provider_data={"api_key": "  my-key  "})  # pragma: allowlist secret
     assert result == {"api_key": "my-key"}  # pragma: allowlist secret
 
 
-def test_wxo_mapper_resolve_credential_fields_rejects_empty() -> None:
+def test_wxo_mapper_resolve_credentials_rejects_empty() -> None:
     """WXO mapper rejects empty api_key in provider_data."""
-    from lfx.services.adapters.payload import AdapterPayloadValidationError
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    with pytest.raises(HTTPException) as exc_info:
+        mapper.resolve_credentials(provider_data={"api_key": ""})
+    assert exc_info.value.status_code == 422
+    assert "api_key" in exc_info.value.detail
+
+    with pytest.raises(HTTPException) as exc_info:
+        mapper.resolve_credentials(provider_data={"api_key": "   "})
+    assert exc_info.value.status_code == 422
+    assert "api_key" in exc_info.value.detail
+
+    with pytest.raises(HTTPException) as exc_info:
+        mapper.resolve_credentials(provider_data={})
+    assert exc_info.value.status_code == 422
+    assert "api_key" in exc_info.value.detail
+
+
+def test_wxo_mapper_resolve_provider_account_create_assembles_model() -> None:
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
 
     mapper = WatsonxOrchestrateDeploymentMapper()
-    with pytest.raises(ValueError, match="non-empty"):
-        mapper.resolve_credential_fields(provider_data={"api_key": ""})
-
-    with pytest.raises(ValueError, match="non-empty"):
-        mapper.resolve_credential_fields(provider_data={"api_key": "   "})
-
-    with pytest.raises(AdapterPayloadValidationError):
-        mapper.resolve_credential_fields(provider_data={})
+    payload = DeploymentProviderAccountCreateRequest(
+        name="test-account",
+        provider_key="watsonx-orchestrate",
+        provider_data={
+            "url": "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-123",
+            "tenant_id": "tenant-123",
+            "api_key": "my-secret-key",  # pragma: allowlist secret
+        },
+    )
+    result = mapper.resolve_provider_account_create(payload=payload, user_id=uuid4())
+    assert result.name == "test-account"
+    assert result.provider_url == "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-123"
+    assert result.provider_tenant_id == "tenant-123"
+    assert result.api_key == "my-secret-key"  # pragma: allowlist secret
 
 
 # ---------------------------------------------------------------------------

@@ -41,12 +41,10 @@ from langflow.api.v1.mappers.deployments.helpers import (
     resolve_deployment_adapter,
     resolve_flow_version_patch_for_update,
     resolve_project_id_for_deployment_create,
-    resolve_provider_tenant_id,
     resolve_snapshot_map_for_create,
     rollback_provider_create,
     rollback_provider_update,
     sync_attachment_snapshot_ids,
-    to_provider_account_response,
     validate_project_scoped_flow_version_ids,
 )
 from langflow.api.v1.schemas.deployments import (
@@ -91,7 +89,7 @@ from langflow.services.database.models.deployment_provider_account.crud import (
     count_provider_accounts as count_provider_account_rows,
 )
 from langflow.services.database.models.deployment_provider_account.crud import (
-    create_provider_account as create_provider_account_row,
+    create_provider_account_from_model as create_provider_account_row,
 )
 from langflow.services.database.models.deployment_provider_account.crud import (
     delete_provider_account as delete_provider_account_row,
@@ -265,24 +263,17 @@ async def create_provider_account(
         )
 
     try:
-        resolved_provider_tenant_id = resolve_provider_tenant_id(
-            deployment_mapper=deployment_mapper,
-            provider_url=payload.url,
-            provider_data=payload.provider_data,
+        provider_account_to_create = deployment_mapper.resolve_provider_account_create(
+            payload=payload,
+            user_id=current_user.id,
         )
-        credential_kwargs = deployment_mapper.resolve_credential_fields(provider_data=payload.provider_data)
         provider_account = await create_provider_account_row(
             session,
-            user_id=current_user.id,
-            name=payload.name,
-            provider_tenant_id=resolved_provider_tenant_id,
-            provider_key=payload.provider_key,
-            provider_url=payload.url,
-            **credential_kwargs,
+            provider_account=provider_account_to_create,
         )
     except ValueError as exc:
         _raise_http_for_provider_account_value_error(exc)
-    return to_provider_account_response(provider_account)
+    return deployment_mapper.resolve_provider_account_response(provider_account)
 
 
 @router.get("/providers", response_model=DeploymentProviderAccountListResponse, tags=["Deployment Providers"])
@@ -296,7 +287,10 @@ async def list_provider_accounts(
     provider_accounts = await list_provider_account_rows(session, user_id=current_user.id, offset=offset, limit=size)
     total = await count_provider_account_rows(session, user_id=current_user.id)
     return DeploymentProviderAccountListResponse(
-        provider_accounts=[to_provider_account_response(item) for item in provider_accounts],
+        provider_accounts=[
+            get_deployment_mapper(item.provider_key).resolve_provider_account_response(item)
+            for item in provider_accounts
+        ],
         page=page,
         size=size,
         total=total,
@@ -316,7 +310,7 @@ async def get_provider_account(
     provider_account = await get_provider_account_row_by_id(session, provider_id=provider_id, user_id=current_user.id)
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
-    return to_provider_account_response(provider_account)
+    return get_deployment_mapper(provider_account.provider_key).resolve_provider_account_response(provider_account)
 
 
 @router.delete(
@@ -403,7 +397,7 @@ async def update_provider_account(
         )
     except ValueError as exc:
         _raise_http_for_provider_account_value_error(exc)
-    return to_provider_account_response(updated)
+    return deployment_mapper.resolve_provider_account_response(updated)
 
 
 @router.post("", response_model=DeploymentCreateResponse, status_code=status.HTTP_201_CREATED)

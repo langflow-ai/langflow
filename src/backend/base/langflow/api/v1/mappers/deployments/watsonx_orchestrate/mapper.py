@@ -71,6 +71,8 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiDeploymentUpdatePayload,
     WatsonxApiDeploymentUpdateResultData,
     WatsonxApiFlowArtifactProviderData,
+    WatsonxApiProviderAccountCreate,
+    WatsonxApiProviderAccountUpdate,
     WatsonxApiProviderDeploymentListItem,
     WatsonxApiSnapshotListProviderData,
     WatsonxApiUpsertFlowItem,
@@ -99,7 +101,11 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS as WXO_ADAPTER_PAYLOAD_SCHEMAS,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import normalize_wxo_name
-from langflow.services.database.models.deployment_provider_account.utils import extract_tenant_from_url
+from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+from langflow.services.database.models.deployment_provider_account.utils import (
+    check_provider_url_allowed,
+    extract_tenant_from_url,
+)
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     list_deployment_attachments_for_flow_version_ids,
 )
@@ -108,7 +114,6 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from langflow.services.database.models.deployment.model import Deployment
-    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.flow_version.model import FlowVersion
     from langflow.services.database.models.flow_version_deployment_attachment.model import (
         FlowVersionDeploymentAttachment,
@@ -193,6 +198,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             adapter_model=WatsonxApiDeploymentLlmListResultData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
+        provider_account_create=PayloadSlot(adapter_model=WatsonxApiProviderAccountCreate),
+        provider_account_update=PayloadSlot(adapter_model=WatsonxApiProviderAccountUpdate),
     )
 
     def resolve_provider_tenant_id(
@@ -205,6 +212,13 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         if tenant_id:
             return tenant_id
         return extract_tenant_from_url(provider_url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
+
+    def validate_provider_url(
+        self,
+        *,
+        provider_data: dict[str, Any],
+    ) -> str:
+        return self._parse_create_provider_data(provider_data).url
 
     def format_conflict_detail(self, raw_message: str) -> str:
         lower = raw_message.lower()
@@ -222,40 +236,75 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             return "A tool with this name already exists in the provider. Please choose a different name."
         return super().format_conflict_detail(raw_message)
 
-    def _validate_provider_data(self, provider_data: dict[str, Any]) -> dict[str, Any]:
+    def _parse_create_provider_data(
+        self,
+        provider_data: dict[str, Any],
+    ) -> WatsonxApiProviderAccountCreate:
+        """Parse and validate provider_data for the create path.
+
+        Validates schema, then checks the URL against the hostname allowlist.
+        """
+        parsed: WatsonxApiProviderAccountCreate = self._parse_api_payload_slot(
+            slot=self.api_payloads.provider_account_create,
+            slot_name="provider_account_create",
+            raw=provider_data,
+        )
+        check_provider_url_allowed(parsed.url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
+        return parsed
+
+    def _validate_verify_credentials_provider_data(
+        self,
+        *,
+        api_key: str,
+    ) -> dict[str, Any]:
         verify_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.verify_credentials
-        credential_payload = self._credential_provider_data(provider_data)
+        credential_payload = {"api_key": api_key}
         if verify_slot:
             validated = verify_slot.apply(credential_payload)
             return validated if isinstance(validated, dict) else dict(validated)
         return credential_payload
 
-    def _credential_provider_data(self, provider_data: dict[str, Any]) -> dict[str, Any]:
-        """Return provider_data minus mapper-owned metadata keys."""
-        credential_payload: dict[str, Any] = dict(provider_data)
-        credential_payload.pop("tenant_id", None)
-        return credential_payload
-
-    def resolve_credential_fields(
+    def resolve_credentials(
         self,
         *,
         provider_data: dict[str, Any],
     ) -> dict[str, Any]:
-        validated = self._validate_provider_data(provider_data)
-        api_key = validated.get("api_key")
-        if not api_key or not isinstance(api_key, str) or not api_key.strip():
-            msg = "provider_data must contain a non-empty 'api_key' string"
-            raise ValueError(msg)
-        return {"api_key": api_key.strip()}
+        parsed: WatsonxApiProviderAccountUpdate = self._parse_api_payload_slot(
+            slot=self.api_payloads.provider_account_update,
+            slot_name="provider_account_update",
+            raw=provider_data,
+        )
+        validated = self._validate_verify_credentials_provider_data(api_key=parsed.api_key)
+        return {"api_key": str(validated["api_key"]).strip()}
+
+    def resolve_provider_account_create(
+        self,
+        *,
+        payload: DeploymentProviderAccountCreateRequest,
+        user_id: UUID | str,
+    ) -> DeploymentProviderAccount:
+        parsed = self._parse_create_provider_data(payload.provider_data)
+        return DeploymentProviderAccount(
+            user_id=user_id,
+            name=payload.name,
+            provider_tenant_id=self.resolve_provider_tenant_id(
+                provider_url=parsed.url,
+                provider_data=payload.provider_data,
+            ),
+            provider_key=payload.provider_key,
+            provider_url=parsed.url,
+            api_key=parsed.api_key,
+        )
 
     def resolve_verify_credentials(
         self,
         *,
         payload: DeploymentProviderAccountCreateRequest,
     ) -> VerifyCredentials:
-        validated = self._validate_provider_data(payload.provider_data)
+        parsed = self._parse_create_provider_data(payload.provider_data)
+        validated = self._validate_verify_credentials_provider_data(api_key=parsed.api_key)
         return VerifyCredentials(
-            base_url=payload.url,
+            base_url=parsed.url,
             provider_data=validated,
         )
 
@@ -265,14 +314,16 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         payload: DeploymentProviderAccountUpdateRequest,
         existing_account: DeploymentProviderAccount,
     ) -> VerifyCredentials | None:
-        provider_data_changed = "provider_data" in payload.model_fields_set
-        if not provider_data_changed:
+        if "provider_data" not in payload.model_fields_set:
             return None
 
-        if payload.provider_data is None:
-            msg = "'provider_data' cannot be null when provided."
-            raise ValueError(msg)
-        provider_data = self.resolve_credential_fields(provider_data=payload.provider_data)
+        self._guard_provider_data_for_update(payload.provider_data)
+        parsed: WatsonxApiProviderAccountUpdate = self._parse_api_payload_slot(
+            slot=self.api_payloads.provider_account_update,
+            slot_name="provider_account_update",
+            raw=payload.provider_data,
+        )
+        provider_data = self._validate_verify_credentials_provider_data(api_key=parsed.api_key)
 
         return VerifyCredentials(
             base_url=existing_account.provider_url,

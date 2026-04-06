@@ -31,20 +31,26 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
-from langflow.services.database.utils import validate_non_empty_string
 
 _ALLOWED_URL_SCHEMES = frozenset({"https"})
 _MAX_URL_LENGTH = 2048
 
 
-def validate_provider_url(v: str, info: object) -> str:
+def validate_provider_url(v: str, info: object | None = None, *, field_name: str | None = None) -> str:
     """Validate and normalize a provider URL.
 
     Enforces HTTPS-only, rejects embedded credentials, validates the URL
     structure, and normalises scheme + host to lowercase.
+
+    *info* is the Pydantic ``ValidationInfo`` passed by field validators.
+    When calling outside a Pydantic context, pass *field_name* directly
+    instead.
     """
-    stripped = validate_non_empty_string(v, info)
-    field = getattr(info, "field_name", "Field")
+    field = field_name or getattr(info, "field_name", None) or "Field"
+    stripped = v.strip()
+    if not stripped:
+        msg = f"{field} must not be empty"
+        raise ValueError(msg)
 
     if len(stripped) > _MAX_URL_LENGTH:
         msg = f"{field} exceeds maximum length of {_MAX_URL_LENGTH}"

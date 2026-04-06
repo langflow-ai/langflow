@@ -10,10 +10,10 @@ Provider credentials arrive in the API request as an opaque
   ``provider_data`` into the adapter-layer ``VerifyCredentials`` model so the
   deployment adapter can validate the credentials against the provider.
 
-* **API -> DB** (``resolve_credential_fields``): extracts credentials from
-  ``provider_data`` and returns a ``dict[str, Any]`` of DB column-value
-  pairs (e.g. ``{"api_key": "..."}``).  The route spreads these into the
-  CRUD layer's keyword arguments.
+* **API -> DB** (``resolve_credentials``): extracts credentials from
+  ``provider_data`` and returns DB column-value pairs
+  (e.g. ``{"api_key": "..."}``) used by mapper-owned create/update
+  assembly methods.
 
 The mapper is the **single** component that understands a provider's
 credential shape.  The API schema treats ``provider_data`` as opaque and
@@ -75,6 +75,9 @@ from langflow.api.v1.schemas.deployments import (
     ExecutionCreateResponse,
     ExecutionStatusResponse,
 )
+from langflow.services.database.models.deployment_provider_account.utils import (
+    validate_provider_url,
+)
 
 from .contracts import (
     CreatedSnapshotIds,
@@ -106,6 +109,9 @@ class DeploymentApiPayloads(DeploymentPayloadFields):
     Langflow-specific references and reshaping requirements. Adapter-side
     slot population is defined separately via ``DeploymentPayloadSchemas``.
     """
+
+    provider_account_create: PayloadSlot | None = None
+    provider_account_update: PayloadSlot | None = None
 
 
 class BaseDeploymentMapper:
@@ -405,6 +411,18 @@ class BaseDeploymentMapper:
         _ = provider_url
         return self.resolve_provider_tenant_id_from_data(provider_data=provider_data)
 
+    def validate_provider_url(
+        self,
+        *,
+        provider_data: dict[str, Any],
+    ) -> str:
+        """Resolve and validate provider URL from provider_data."""
+        raw_url = provider_data.get("url")
+        if not isinstance(raw_url, str):
+            msg = "provider_data.url must be a string."
+            raise ValueError(msg)  # noqa: TRY004 - route layer maps ValueError to HTTP 4xx
+        return validate_provider_url(raw_url, field_name="provider_data.url")
+
     def resolve_provider_tenant_id_from_data(self, *, provider_data: dict[str, Any]) -> str | None:
         """Extract optional tenant/account identifier from provider_data."""
         raw_tenant_id = provider_data.get("tenant_id")
@@ -424,7 +442,7 @@ class BaseDeploymentMapper:
         """
         return f"A resource with this name already exists in the provider. {raw_message}"
 
-    def resolve_credential_fields(
+    def resolve_credentials(
         self,
         *,
         provider_data: dict[str, Any],
@@ -437,6 +455,41 @@ class BaseDeploymentMapper:
         blob).
         """
         raise NotImplementedError
+
+    def resolve_provider_account_create(
+        self,
+        *,
+        payload: DeploymentProviderAccountCreateRequest,
+        user_id: UUID | str,
+    ) -> DeploymentProviderAccount:
+        """Assemble provider-account DB model for create.
+
+        Provider mappers must override this so provider-specific create
+        semantics stay out of the base mapper.
+        """
+        _ = (payload, user_id)
+        raise NotImplementedError
+
+    def _guard_provider_data_for_update(
+        self,
+        provider_data: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        """Validate provider_data for update: null guard + immutability checks.
+
+        Raises ``ValueError`` if *provider_data* is ``None`` or contains
+        immutable keys (``url``, ``tenant_id``).  Returns the validated dict
+        for chaining convenience.
+        """
+        if provider_data is None:
+            msg = "'provider_data' cannot be null when provided."
+            raise ValueError(msg)
+        if "url" in provider_data:
+            msg = "provider_data.url cannot be updated."
+            raise ValueError(msg)
+        if "tenant_id" in provider_data:
+            msg = "provider_data.tenant_id cannot be updated."
+            raise ValueError(msg)
+        return provider_data
 
     def resolve_provider_account_update(
         self,
@@ -456,10 +509,8 @@ class BaseDeploymentMapper:
         if "name" in payload.model_fields_set:
             update_kwargs["name"] = payload.name
         if "provider_data" in payload.model_fields_set:
-            if payload.provider_data is None:
-                msg = "'provider_data' cannot be null when provided."
-                raise ValueError(msg)
-            update_kwargs.update(self.resolve_credential_fields(provider_data=payload.provider_data))
+            self._guard_provider_data_for_update(payload.provider_data)
+            update_kwargs.update(self.resolve_credentials(provider_data=payload.provider_data))
         return update_kwargs
 
     def resolve_verify_credentials(
@@ -467,14 +518,17 @@ class BaseDeploymentMapper:
         *,
         payload: DeploymentProviderAccountCreateRequest,
     ) -> VerifyCredentials:
-        """Build adapter verify-credentials input from the API create request.
+        """Build adapter verify-credentials input from create payload.
 
-        The base implementation extracts only ``base_url``.  Credentials
-        are provider-specific and must be packed into ``provider_data`` by
-        provider mapper overrides.
+        The base implementation extracts ``base_url`` from
+        ``provider_data.url``. Credentials are provider-specific and must be
+        packed into ``provider_data`` by provider mapper overrides.
         """
+        provider_url = self.validate_provider_url(
+            provider_data=payload.provider_data,
+        )
         return VerifyCredentials(
-            base_url=payload.url,
+            base_url=provider_url,
         )
 
     def resolve_verify_credentials_for_update(
@@ -495,7 +549,7 @@ class BaseDeploymentMapper:
         msg = "Credential verification for provider account updates is not implemented for this provider."
         raise NotImplementedError(msg)
 
-    def shape_provider_account_response(
+    def resolve_provider_account_response(
         self,
         provider_account: DeploymentProviderAccount,
     ) -> DeploymentProviderAccountGetResponse:
@@ -503,24 +557,23 @@ class BaseDeploymentMapper:
             id=provider_account.id,
             name=provider_account.name,
             provider_key=provider_account.provider_key,
-            url=provider_account.provider_url,
-            provider_data=self.shape_provider_account_provider_data(provider_account),
+            provider_data=self.resolve_provider_account_provider_data(provider_account),
             created_at=provider_account.created_at,
             updated_at=provider_account.updated_at,
         )
 
-    def shape_provider_account_provider_data(
+    def resolve_provider_account_provider_data(
         self,
         provider_account: DeploymentProviderAccount,
     ) -> dict[str, Any] | None:
         """Return non-sensitive provider metadata for provider-account responses."""
+        provider_data: dict[str, Any] = {"url": provider_account.provider_url}
         raw_tenant_id = provider_account.provider_tenant_id
-        if raw_tenant_id is None:
-            return None
-        tenant_id = str(raw_tenant_id).strip()
-        if not tenant_id:
-            return None
-        return {"tenant_id": tenant_id}
+        if raw_tenant_id is not None:
+            tenant_id = str(raw_tenant_id).strip()
+            if tenant_id:
+                provider_data["tenant_id"] = tenant_id
+        return provider_data
 
     def util_create_flow_artifact_provider_data(
         self,

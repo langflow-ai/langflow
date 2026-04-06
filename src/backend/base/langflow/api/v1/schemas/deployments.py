@@ -9,10 +9,10 @@ Two identifier domains coexist in these schemas:
   ``provider_id`` maps to ``deployment_provider_account.id``.
 
 * **Provider-owned (str)** -- ``reference_id``, ``config_id``,
-  ``execution_id``, and provider-account fields ``provider_key`` and ``url``.
+  ``execution_id``, and provider-account field ``provider_key``.
   Opaque values assigned or consumed by the external deployment provider.
-  Provider-specific metadata (for example tenant/account identifiers) belongs
-  inside ``provider_data``.
+  Provider-specific metadata (for example URL and tenant/account identifiers)
+  belongs inside ``provider_data``.
 
 * **Provider-originated but Langflow-owned once persisted** -- ``resource_key``.
   Langflow stores and indexes this as part of its own deployment record.
@@ -38,10 +38,7 @@ from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, model_val
 from langflow.services.database.models.deployment_provider_account.schemas import (
     DeploymentProviderKey,
 )
-from langflow.services.database.models.deployment_provider_account.utils import (
-    check_provider_url_allowed,
-    validate_provider_url,
-)
+from langflow.services.database.models.deployment_provider_account.utils import validate_provider_url
 
 # ---------------------------------------------------------------------------
 # Shared validation helpers
@@ -144,23 +141,15 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
         ),
     )
     provider_key: DeploymentProviderKey = Field(description="Deployment provider key.")
-    url: ValidatedUrl = Field(
-        description="Provider service URL persisted in Langflow DB for provider-account resolution.",
-    )
     provider_data: dict[str, Any] = Field(
         min_length=1,
         description=(
             "Provider-specific credential/metadata payload. "
             "Contents are opaque to the API schema; the deployment mapper "
             "for the target provider_key validates and extracts credentials "
-            "and provider metadata (for example tenant/account identifiers)."
+            "and provider metadata (for example URL/region and tenant/account identifiers)."
         ),
     )
-
-    @model_validator(mode="after")
-    def validate_provider_url_allowed(self) -> DeploymentProviderAccountCreateRequest:
-        check_provider_url_allowed(self.url, self.provider_key)
-        return self
 
 
 class DeploymentProviderAccountUpdateRequest(BaseModel):
@@ -195,12 +184,11 @@ class DeploymentProviderAccountGetResponse(BaseModel):
     id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
     name: str = Field(description="User-chosen display name for this provider account.")
     provider_key: DeploymentProviderKey = Field(description="Official provider name used by Langflow.")
-    url: str = Field(description="Provider service URL persisted in Langflow DB.")
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description=(
             "Provider-owned non-sensitive metadata for this provider account "
-            "(for example tenant/account identifiers). Credentials are excluded."
+            "(for example URL, tenant/account identifiers). Credentials are excluded."
         ),
     )
     created_at: datetime | None = Field(default=None, description="Langflow DB row creation timestamp.")

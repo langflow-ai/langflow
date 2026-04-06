@@ -289,8 +289,10 @@ export function DeploymentStepperProvider({
       return {
         name: credentials.name.trim(),
         provider_key: "watsonx-orchestrate",
-        url: credentials.url.trim(),
-        provider_data: { api_key: credentials.api_key.trim() },
+        provider_data: {
+          url: credentials.url.trim(),
+          api_key: credentials.api_key.trim(),
+        },
       };
     }, [credentials, hasValidCredentials]);
 

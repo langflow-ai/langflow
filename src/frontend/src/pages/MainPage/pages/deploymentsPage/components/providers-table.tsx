@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/utils/utils";
-import type { ProviderAccount } from "../types";
+import { getProviderAccountUrl, type ProviderAccount } from "../types";
 
 interface ProvidersTableProps {
   providers: ProviderAccount[];
@@ -63,7 +63,7 @@ export default function ProvidersTable({
               </TableCell>
               <TableCell>
                 <span className="max-w-[300px] truncate text-sm text-muted-foreground">
-                  {provider.url}
+                  {getProviderAccountUrl(provider)}
                 </span>
               </TableCell>
               <TableCell>

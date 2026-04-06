@@ -18,6 +18,7 @@ from pydantic import (
 )
 
 from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
+from langflow.api.v1.schemas.deployments import ValidatedUrl
 
 WatsonxApiLlmName = Annotated[
     str,
@@ -26,6 +27,33 @@ WatsonxApiLlmName = Annotated[
         min_length=1,
     ),
 ]
+
+
+class WatsonxApiProviderAccountCreate(BaseModel):
+    """WXO provider-account provider_data contract at API boundary.
+
+    This schema is owned by the WXO mapper and parsed once to validate the
+    provider-account provider_data payload before URL policy checks, credential
+    verification payload shaping, and DB field extraction.
+    """
+
+    model_config = {"extra": "forbid"}
+
+    url: ValidatedUrl
+    tenant_id: Annotated[str | None, StringConstraints(strip_whitespace=True, min_length=1)] = None
+    api_key: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class WatsonxApiProviderAccountUpdate(BaseModel):
+    """WXO mutable provider-account fields for update requests.
+
+    Only credential rotation is supported after create. URL and tenant are
+    immutable and therefore intentionally absent from this schema.
+    """
+
+    model_config = {"extra": "forbid"}
+
+    api_key: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class WatsonxApiFlowArtifactProviderData(CreateFlowArtifactProviderData):
