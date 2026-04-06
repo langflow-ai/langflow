@@ -47,15 +47,14 @@ class TestMCPComponentOutputProcessing:
         assert result["type"] == "text"
 
     def test_process_output_item_with_array_json(self, component):
-        """Test that process_output_item wraps array JSON values in dict."""
+        """Test that process_output_item returns a list of dicts for array JSON."""
         item_dict = {"type": "text", "text": '["item1", "item2", "item3"]'}
 
         result = component.process_output_item(item_dict)
 
-        assert isinstance(result, dict)
-        assert result["text"] == '["item1", "item2", "item3"]'
-        assert result["parsed_value"] == ["item1", "item2", "item3"]
-        assert result["type"] == "text"
+        assert isinstance(result, list)
+        assert len(result) == 3
+        assert result == [{"value": "item1"}, {"value": "item2"}, {"value": "item3"}]
 
     def test_process_output_item_with_invalid_json(self, component):
         """Test that process_output_item handles invalid JSON gracefully."""

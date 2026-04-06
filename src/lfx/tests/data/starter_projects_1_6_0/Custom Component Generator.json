@@ -1844,7 +1844,7 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": [
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/custom_component/custom_component.py"
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/lfx/src/lfx/custom/custom_component/custom_component.py"
                 ]
               },
               "use_async": {
