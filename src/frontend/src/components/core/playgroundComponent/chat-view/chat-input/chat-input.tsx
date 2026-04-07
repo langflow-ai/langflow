@@ -40,6 +40,7 @@ export default function ChatInput({
   const { handleFileChange } = useChatFileUpload({
     currentFlowId,
     setFiles,
+    playgroundPage: true,
   });
 
   // Audio transcription handler - appends transcribed text to the chat input

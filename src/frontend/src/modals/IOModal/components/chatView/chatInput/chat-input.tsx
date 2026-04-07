@@ -1,7 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
-import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import { useChatFileUpload } from "@/shared/hooks/use-chat-file-upload";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -56,27 +55,15 @@ export default function ChatInput({
   const { handleFileChange: handleFileUploadChange } = useChatFileUpload({
     currentFlowId,
     setFiles,
+    playgroundPage: !!playgroundPage,
   });
 
-  const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
-  ) => {
-    if (playgroundPage && !ENABLE_IMAGE_ON_PLAYGROUND) {
-      if ("target" in event && event.target instanceof HTMLInputElement) {
-        event.target.value = "";
-      }
-      return;
-    }
-
-    handleFileUploadChange(event);
-  };
-
   useEffect(() => {
-    document.addEventListener("paste", handleFileChange);
+    document.addEventListener("paste", handleFileUploadChange);
     return () => {
-      document.removeEventListener("paste", handleFileChange);
+      document.removeEventListener("paste", handleFileUploadChange);
     };
-  }, [handleFileChange, currentFlowId, isBuilding]);
+  }, [handleFileUploadChange, currentFlowId, isBuilding]);
 
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
 
@@ -164,7 +151,7 @@ export default function ChatInput({
             isDragging={isDragging}
             handleDeleteFile={handleDeleteFile}
             fileInputRef={fileInputRef}
-            handleFileChange={handleFileChange}
+            handleFileChange={handleFileUploadChange}
             handleButtonClick={handleButtonClick}
             setShowAudioInput={setShowAudioInput}
             currentFlowId={currentFlowId}

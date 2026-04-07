@@ -7,6 +7,7 @@ import {
 import type { AxiosError } from "axios";
 import ShortUniqueId from "short-unique-id";
 import { FS_ERROR_TEXT, SN_ERROR_TEXT } from "@/constants/constants";
+import { ENABLE_FILES_ON_PLAYGROUND } from "@/customization/feature-flags";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { isAllowedChatAttachmentFile } from "@/utils/fileUtils";
@@ -16,18 +17,26 @@ import type { FilePreviewType } from "@/types/components";
 interface UseChatFileUploadParams {
   currentFlowId: string;
   setFiles: Dispatch<SetStateAction<FilePreviewType[]>>;
+  playgroundPage?: boolean;
 }
 
 export const useChatFileUpload = ({
   currentFlowId,
   setFiles,
+  playgroundPage = false,
 }: UseChatFileUploadParams) => {
   const { mutate } = usePostUploadFile();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { validateFileSize } = useFileSizeValidator();
 
+  const isUploadEnabled = !playgroundPage || ENABLE_FILES_ON_PLAYGROUND;
+
   const uploadFile = useCallback(
     (file: File) => {
+      if (!isUploadEnabled) {
+        return;
+      }
+
       if (!isAllowedChatAttachmentFile(file)) {
         setErrorData({
           title: "Error uploading file",
@@ -93,11 +102,15 @@ export const useChatFileUpload = ({
         },
       );
     },
-    [currentFlowId, mutate, setErrorData, setFiles],
+    [currentFlowId, isUploadEnabled, mutate, setErrorData, setFiles],
   );
 
   const handleFiles = useCallback(
     (uploadedFiles: FileList | null) => {
+      if (!isUploadEnabled) {
+        return;
+      }
+
       if (!uploadedFiles || uploadedFiles.length === 0) {
         return;
       }
@@ -115,11 +128,18 @@ export const useChatFileUpload = ({
 
       uploadFile(file);
     },
-    [setErrorData, uploadFile, validateFileSize],
+    [isUploadEnabled, setErrorData, uploadFile, validateFileSize],
   );
 
   const handleFileChange = useCallback(
     (event: ChangeEvent<HTMLInputElement> | ClipboardEvent) => {
+      if (!isUploadEnabled) {
+        if ("target" in event && event.target instanceof HTMLInputElement) {
+          event.target.value = "";
+        }
+        return;
+      }
+
       if ("clipboardData" in event) {
         const items = event.clipboardData?.items;
         if (!items) {
@@ -149,7 +169,7 @@ export const useChatFileUpload = ({
       handleFiles(fileInput.files);
       fileInput.value = "";
     },
-    [handleFiles, setErrorData, uploadFile, validateFileSize],
+    [handleFiles, isUploadEnabled, setErrorData, uploadFile, validateFileSize],
   );
 
   return { handleFiles, handleFileChange };
