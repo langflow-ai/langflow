@@ -77,7 +77,7 @@ test(
     await page.getByTestId("deployments-btn").click();
     await page.waitForSelector('[data-testid="new-deployment-btn"]');
 
-    await expect(page.getByTestId("create-deployment-empty-btn")).toBeVisible();
+    await expect(page.getByTestId("add-environment-empty-btn")).toBeVisible();
     await expect(page.getByTestId("new-deployment-btn")).toBeVisible();
   },
 );

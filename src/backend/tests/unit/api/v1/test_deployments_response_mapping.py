@@ -16,6 +16,7 @@ def test_shape_deployment_create_result_maps_db_identity_and_provider_result() -
         name="db-deployment-name",
         description="db-description",
         deployment_type=DeploymentType.AGENT,
+        resource_key="provider-deployment-id",
         created_at=now,
         updated_at=now,
     )
