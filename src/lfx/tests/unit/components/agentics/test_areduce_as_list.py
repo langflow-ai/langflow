@@ -11,9 +11,8 @@ except ImportError:
 
 from agentics import AG
 from agentics.core.atype import create_pydantic_model
-from pydantic import create_model
-
 from lfx.components.agentics.helpers.schema_builder import build_schema_fields
+from pydantic import create_model
 
 
 def _extract_list_items(output: AG, atype: type) -> AG:
@@ -36,7 +35,9 @@ class TestAreduceAsList:
     """Tests for the aReduce 'As List' post-processing logic."""
 
     def test_should_collect_items_from_all_output_states_not_just_first(self):
-        """When aReduce processes data in multiple batches (areduce_batch_size), each batch
+        """Verify aReduce collects items from ALL output states, not just the first.
+
+        When aReduce processes data in multiple batches (areduce_batch_size), each batch
         produces a separate output state with a ListOfTarget wrapper. The post-processing
         must collect items from ALL states, not just the first one.
 

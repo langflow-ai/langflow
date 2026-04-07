@@ -11,7 +11,6 @@ except ImportError:
 
 from agentics import AG
 from agentics.core.atype import create_pydantic_model
-
 from lfx.components.agentics.helpers.schema_builder import build_schema_fields
 
 
@@ -20,10 +19,10 @@ class TestAMapDuplicateColumns:
     """Tests for the duplicate column bug when source already contains output schema columns."""
 
     def test_should_merge_without_error_when_source_has_overlapping_columns(self):
-        """Reproduces the exact bug: merge_states fails with 'got multiple values for keyword argument'
-        when the source DataFrame already contains columns matching the output schema.
+        """Reproduces the exact bug: merge_states fails with 'got multiple values for keyword argument'.
 
-        The fix deduplicates the source by removing overlapping columns before merging.
+        When the source DataFrame already contains columns matching the output schema,
+        the fix deduplicates the source by removing overlapping columns before merging.
         """
         # Arrange — simulate a table that was already processed by aMap
         # (source already contains 'full_name' and 'age_group' from a previous run)
