@@ -36,8 +36,9 @@ def search_registry(
     registry: dict[str, dict],
     query: str | None = None,
     category: str | None = None,
+    output_type: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Search the registry by name/category. Pure function."""
+    """Search the registry by name/category/output_type. Pure function."""
     results = []
     for name, tmpl in sorted(registry.items()):
         cat = tmpl.get("category", "")
@@ -45,6 +46,10 @@ def search_registry(
             continue
         if query and query.lower() not in name.lower() and query.lower() not in cat.lower():
             continue
+        if output_type:
+            all_types = [t for o in tmpl.get("outputs", []) for t in o.get("types", [])]
+            if output_type not in all_types:
+                continue
         results.append(
             {
                 "type": name,
@@ -77,18 +82,38 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
                 "description": f"Wraps this component as a Tool (uses: {uses}). Connect to an Agent's 'tools' input.",
             }
         )
+    fields = []
+    advanced_fields: list[str] = []
     inputs = []
     for fname, fdata in tmpl.get("template", {}).items():
-        if isinstance(fdata, dict) and fdata.get("input_types"):
-            inputs.append(
-                {
+        if not isinstance(fdata, dict):
+            continue
+        is_advanced = fdata.get("advanced", False)
+        if fdata.get("input_types"):
+            if is_advanced:
+                advanced_fields.append(fname)
+            else:
+                inputs.append(
+                    {
+                        "name": fname,
+                        "input_types": fdata["input_types"],
+                        "type": fdata.get("type", ""),
+                        "required": fdata.get("required", False),
+                    }
+                )
+        elif fdata.get("show", True) and fdata.get("type") and fname != "code":
+            if is_advanced:
+                advanced_fields.append(fname)
+            else:
+                field_info: dict[str, Any] = {
                     "name": fname,
-                    "input_types": fdata["input_types"],
                     "type": fdata.get("type", ""),
-                    "required": fdata.get("required", False),
                 }
-            )
-    return {
+                if fdata.get("required"):
+                    field_info["required"] = True
+                fields.append(field_info)
+
+    result: dict[str, Any] = {
         "type": component_type,
         "category": tmpl.get("category", ""),
         "display_name": tmpl.get("display_name", component_type),
@@ -96,3 +121,8 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
         "outputs": outputs,
         "inputs": inputs,
     }
+    if fields:
+        result["fields"] = fields
+    if advanced_fields:
+        result["advanced_fields"] = sorted(advanced_fields)
+    return result

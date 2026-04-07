@@ -14,6 +14,8 @@ import secrets
 import string
 from typing import Any
 
+from lfx.graph.flow_builder._utils import node_id as _node_id
+
 
 def _generate_id(component_type: str) -> str:
     """Generate a component ID like 'ChatInput-a1B2c'."""
@@ -160,11 +162,6 @@ def needs_server_update(template: dict, field: str) -> bool:
     if not isinstance(field_def, dict):
         return False
     return bool(field_def.get("real_time_refresh"))
-
-
-def _node_id(node: dict) -> str:
-    """Extract the node ID from a node dict."""
-    return node.get("data", {}).get("id", node.get("id", ""))
 
 
 def _find_node(flow: dict, component_id: str) -> dict | None:

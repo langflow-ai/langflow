@@ -2,6 +2,66 @@
 title: Files endpoints
 slug: /api-files
 ---
+import CodeSnippet from '@site/src/components/CodeSnippet';
+import exampleApiFilesUploadFileV1 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/upload-file-v1.sh';
+import resultApiFilesResultUploadFileV1 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/result-upload-file-v1.json';
+import exampleApiFilesUploadImageFilesV1 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/upload-image-files-v1.sh';
+import exampleApiFilesUploadImageFilesV12 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/upload-image-files-v1-2.sh';
+import exampleApiFilesListFilesV1 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/list-files-v1.sh';
+import resultApiFilesResultListFilesV1 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/result-list-files-v1.json';
+import exampleApiFilesDownloadFileV1 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/download-file-v1.sh';
+import resultApiFilesResultDownloadFileV1 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/result-download-file-v1.txt';
+import exampleApiFilesDeleteFileV1 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/delete-file-v1.sh';
+import resultApiFilesResultDeleteFileV1 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/result-delete-file-v1.json';
+import exampleApiFilesUploadFileV2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/upload-file-v2.sh';
+import resultApiFilesResultUploadFileV2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/result-upload-file-v2.txt';
+import exampleApiFilesUploadFileV22 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/upload-file-v2-2.sh';
+import exampleApiFilesSendFilesToYourFlowsV2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/send-files-to-your-flows-v2.sh';
+import exampleApiFilesSendFilesToYourFlowsV22 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/send-files-to-your-flows-v2-2.sh';
+import exampleApiFilesListFilesV2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/list-files-v2.sh';
+import resultApiFilesResultListFilesV2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/result-list-files-v2.json';
+import exampleApiFilesDownloadFileV2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/download-file-v2.sh';
+import resultApiFilesResultDownloadFileV2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/result-download-file-v2.txt';
+import exampleApiFilesEditFileNameV2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/edit-file-name-v2.sh';
+import resultApiFilesResultEditFileNameV2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/result-edit-file-name-v2.json';
+import exampleApiFilesDeleteFileV2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/delete-file-v2.sh';
+import resultApiFilesResultDeleteFileV2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/result-delete-file-v2.json';
+import exampleApiFilesDeleteAllFilesV2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/delete-all-files-v2.sh';
+import resultApiFilesResultDeleteAllFilesV2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/result-delete-all-files-v2.json';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import examplePythonApiFilesUploadFileV1 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/upload-file-v1.py';
+import exampleJavascriptApiFilesUploadFileV1 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/upload-file-v1.js';
+import examplePythonApiFilesUploadImageFilesV1 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/upload-image-files-v1.py';
+import exampleJavascriptApiFilesUploadImageFilesV1 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/upload-image-files-v1.js';
+import examplePythonApiFilesUploadImageFilesV12 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/upload-image-files-v1-2.py';
+import exampleJavascriptApiFilesUploadImageFilesV12 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/upload-image-files-v1-2.js';
+import examplePythonApiFilesListFilesV1 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/list-files-v1.py';
+import exampleJavascriptApiFilesListFilesV1 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/list-files-v1.js';
+import examplePythonApiFilesDownloadFileV1 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/download-file-v1.py';
+import exampleJavascriptApiFilesDownloadFileV1 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/download-file-v1.js';
+import examplePythonApiFilesDeleteFileV1 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/delete-file-v1.py';
+import exampleJavascriptApiFilesDeleteFileV1 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/delete-file-v1.js';
+import examplePythonApiFilesUploadFileV2 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/upload-file-v2.py';
+import exampleJavascriptApiFilesUploadFileV2 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/upload-file-v2.js';
+import examplePythonApiFilesUploadFileV22 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/upload-file-v2-2.py';
+import exampleJavascriptApiFilesUploadFileV22 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/upload-file-v2-2.js';
+import examplePythonApiFilesSendFilesToYourFlowsV2 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/send-files-to-your-flows-v2.py';
+import exampleJavascriptApiFilesSendFilesToYourFlowsV2 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/send-files-to-your-flows-v2.js';
+import examplePythonApiFilesSendFilesToYourFlowsV22 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/send-files-to-your-flows-v2-2.py';
+import exampleJavascriptApiFilesSendFilesToYourFlowsV22 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/send-files-to-your-flows-v2-2.js';
+import examplePythonApiFilesListFilesV2 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/list-files-v2.py';
+import exampleJavascriptApiFilesListFilesV2 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/list-files-v2.js';
+import examplePythonApiFilesDownloadFileV2 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/download-file-v2.py';
+import exampleJavascriptApiFilesDownloadFileV2 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/download-file-v2.js';
+import examplePythonApiFilesEditFileNameV2 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/edit-file-name-v2.py';
+import exampleJavascriptApiFilesEditFileNameV2 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/edit-file-name-v2.js';
+import examplePythonApiFilesDeleteFileV2 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/delete-file-v2.py';
+import exampleJavascriptApiFilesDeleteFileV2 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/delete-file-v2.js';
+import examplePythonApiFilesDeleteAllFilesV2 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-files/delete-all-files-v2.py';
+import exampleJavascriptApiFilesDeleteAllFilesV2 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-files/delete-all-files-v2.js';
+
+
 
 Use the `/files` endpoints to move files between your local machine and Langflow.
 
@@ -33,14 +93,23 @@ Use the `/files` endpoints to move files between your local machine and Langflow
 Upload a file to the `v1/files/upload/$FLOW_ID` endpoint:
 Replace **FILE_NAME** with the uploaded file name.
 
-```bash
-curl -X POST \
-  "$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID" \
-  -H "accept: application/json" \
-  -H "Content-Type: multipart/form-data" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -F "file=@FILE_NAME.txt"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFilesUploadFileV1} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFilesUploadFileV1} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFilesUploadFileV1} language="bash" />
+
+</TabItem>
+</Tabs>
 
 Replace `FILE_NAME.txt` with the name and extension of the file you want to upload.
 Not all file types are supported.
@@ -48,12 +117,7 @@ Not all file types are supported.
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "flowId": "92f9a4c5-cfc8-4656-ae63-1f0881163c28",
-  "file_path": "92f9a4c5-cfc8-4656-ae63-1f0881163c28/2024-12-30_15-19-43_your_file.txt"
-}
-```
+<CodeSnippet source={resultApiFilesResultUploadFileV1} language="json" />
 
 </details>
 
@@ -66,12 +130,23 @@ To change this limit, set the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment varia
 
 1. Attach the image to a `POST /v1/files/upload/$FLOW_ID` request with `--form` (`-F`) and the file path:
 
-    ```bash
-    curl -X POST "$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID" \
-      -H "Content-Type: multipart/form-data" \
-      -H "x-api-key: $LANGFLOW_API_KEY" \
-      -F "file=@PATH/TO/FILE.png"
-    ```
+    <Tabs>
+    <TabItem value="Python" label="Python" default>
+
+    <CodeSnippet source={examplePythonApiFilesUploadImageFilesV1} language="python" />
+
+    </TabItem>
+    <TabItem value="JavaScript" label="JavaScript">
+
+    <CodeSnippet source={exampleJavascriptApiFilesUploadImageFilesV1} language="javascript" />
+
+    </TabItem>
+    <TabItem value="curl" label="curl">
+
+    <CodeSnippet source={exampleApiFilesUploadImageFilesV1} language="bash" />
+
+    </TabItem>
+    </Tabs>
 
     A successful request returns the `file_path` for the image in the Langflow file management system in the format `FLOW_ID/TIMESTAMP_FILENAME.TYPE`.
     For example:
@@ -88,22 +163,23 @@ To change this limit, set the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment varia
     The following example runs the **Basic Prompting** template flow, passing the image file and the query `describe this image` as input for the **Chat Input** component.
     In this case, the file path is specified in `tweaks`.
 
-    ```bash
-    curl -X POST \
-        "$LANGFLOW_URL/api/v1/run/a430cc57-06bb-4c11-be39-d3d4de68d2c4?stream=false" \
-        -H "Content-Type: application/json" \
-        -H "x-api-key: $LANGFLOW_API_KEY" \
-        -d '{
-        "output_type": "chat",
-        "input_type": "chat",
-        "tweaks": {
-          "ChatInput-b67sL": {
-            "files": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png",
-            "input_value": "describe this image"
-          }
-        }
-      }'
-    ```
+    <Tabs>
+    <TabItem value="Python" label="Python" default>
+
+    <CodeSnippet source={examplePythonApiFilesUploadImageFilesV12} language="python" />
+
+    </TabItem>
+    <TabItem value="JavaScript" label="JavaScript">
+
+    <CodeSnippet source={exampleJavascriptApiFilesUploadImageFilesV12} language="javascript" />
+
+    </TabItem>
+    <TabItem value="curl" label="curl">
+
+    <CodeSnippet source={exampleApiFilesUploadImageFilesV12} language="bash" />
+
+    </TabItem>
+    </Tabs>
 
     :::tip
     For help with tweaks, use the **Input Schema** in a flow's [**API access** pane](/concepts-publish#api-access).
@@ -114,21 +190,28 @@ To change this limit, set the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment varia
 
 List all files associated with a specific flow.
 
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/files/list/$FLOW_ID" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFilesListFilesV1} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFilesListFilesV1} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFilesListFilesV1} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "files": ["2024-12-30_15-19-43_your_file.txt"]
-}
-```
+<CodeSnippet source={resultApiFilesResultListFilesV1} language="json" />
 
 </details>
 
@@ -136,20 +219,28 @@ curl -X GET \
 
 Download a specific file from a flow.
 
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/files/download/$FLOW_ID/2024-12-30_15-19-43_your_file.txt" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  --output downloaded_file.txt
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFilesDownloadFileV1} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFilesDownloadFileV1} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFilesDownloadFileV1} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```text
-File contents downloaded to downloaded_file.txt
-```
+<CodeSnippet source={resultApiFilesResultDownloadFileV1} language="text" />
 
 </details>
 
@@ -157,21 +248,28 @@ File contents downloaded to downloaded_file.txt
 
 Delete a specific file from a flow.
 
-```bash
-curl -X DELETE \
-  "$LANGFLOW_URL/api/v1/files/delete/$FLOW_ID/2024-12-30_15-19-43_your_file.txt" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFilesDeleteFileV1} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFilesDeleteFileV1} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFilesDeleteFileV1} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "message": "File 2024-12-30_15-19-43_your_file.txt deleted successfully"
-}
-```
+<CodeSnippet source={resultApiFilesResultDeleteFileV1} language="json" />
 
 </details>
 
@@ -190,33 +288,51 @@ The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, such as `07
 
 1. To retrieve your current `user_id`, call the `/whoami` endpoint:
 
-    ```bash
-    curl -X GET \
-      "$LANGFLOW_URL/api/v1/users/whoami" \
-      -H "accept: application/json" \
-      -H "x-api-key: $LANGFLOW_API_KEY"
-    ```
+    <Tabs>
+    <TabItem value="Python" label="Python" default>
+
+    <CodeSnippet source={examplePythonApiFilesUploadFileV2} language="python" />
+
+    </TabItem>
+    <TabItem value="JavaScript" label="JavaScript">
+
+    <CodeSnippet source={exampleJavascriptApiFilesUploadFileV2} language="javascript" />
+
+    </TabItem>
+    <TabItem value="curl" label="curl">
+
+    <CodeSnippet source={exampleApiFilesUploadFileV2} language="bash" />
+
+    </TabItem>
+    </Tabs>
 
     <details>
     <summary>Result</summary>
 
-    ```
-    {"id":"07e5b864-e367-4f52-b647-a48035ae7e5e","username":"langflow","profile_image":null,"store_api_key":null,"is_active":true,"is_superuser":true,"create_at":"2025-05-08T17:59:07.855965","updated_at":"2025-05-28T19:00:42.556460","last_login_at":"2025-05-28T19:00:42.554338","optins":{"github_starred":false,"dialog_dismissed":true,"discord_clicked":false,"mcp_dialog_dismissed":true}}
-    ```
+    <CodeSnippet source={resultApiFilesResultUploadFileV2} language="text" />
 
     </details>
 
 2. In the POST request to `v2/files`, replace **@FILE_NAME.EXTENSION** with the uploaded file name and its extension.
 You must include the ampersand (`@`) in the request to instruct curl to upload the contents of the file, not the string `FILE_NAME.EXTENSION`.
 
-    ```bash
-    curl -X POST \
-      "$LANGFLOW_URL/api/v2/files" \
-      -H "accept: application/json" \
-      -H "Content-Type: multipart/form-data" \
-      -H "x-api-key: $LANGFLOW_API_KEY" \
-      -F "file=@FILE_NAME.EXTENSION"
-    ```
+    <Tabs>
+    <TabItem value="Python" label="Python" default>
+
+    <CodeSnippet source={examplePythonApiFilesUploadFileV22} language="python" />
+
+    </TabItem>
+    <TabItem value="JavaScript" label="JavaScript">
+
+    <CodeSnippet source={exampleJavascriptApiFilesUploadFileV22} language="javascript" />
+
+    </TabItem>
+    <TabItem value="curl" label="curl">
+
+    <CodeSnippet source={exampleApiFilesUploadFileV22} language="bash" />
+
+    </TabItem>
+    </Tabs>
 
     The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API returns metadata about the uploaded file:
 
@@ -247,14 +363,23 @@ The default file limit is 1024 MB. To configure this value, change the `LANGFLOW
     Replace **FILE_NAME.EXTENSION** with the name and extension of the file you want to upload.
     This is the same step described in [Upload file (v2)](#upload-file-v2), but since you need the filename to upload to your flow, it is included here.
 
-    ```bash
-    curl -X POST \
-      "$LANGFLOW_URL/api/v2/files" \
-      -H "accept: application/json" \
-      -H "Content-Type: multipart/form-data" \
-      -H "x-api-key: $LANGFLOW_API_KEY" \
-      -F "file=@FILE_NAME.EXTENSION"
-    ```
+    <Tabs>
+    <TabItem value="Python" label="Python" default>
+
+    <CodeSnippet source={examplePythonApiFilesSendFilesToYourFlowsV2} language="python" />
+
+    </TabItem>
+    <TabItem value="JavaScript" label="JavaScript">
+
+    <CodeSnippet source={exampleJavascriptApiFilesSendFilesToYourFlowsV2} language="javascript" />
+
+    </TabItem>
+    <TabItem value="curl" label="curl">
+
+    <CodeSnippet source={exampleApiFilesSendFilesToYourFlowsV2} language="bash" />
+
+    </TabItem>
+    </Tabs>
 
     The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API returns metadata about the uploaded file:
 
@@ -273,24 +398,23 @@ This component loads files into flows from your local machine or Langflow file m
 
 3. Run the flow, passing the `path` to the `Read-File` component in the `tweaks` object:
 
-    ```text
-    curl --request POST \
-      --url "$LANGFLOW_URL/api/v1/run/$FLOW_ID" \
-      --header "Content-Type: application/json" \
-      --header "x-api-key: $LANGFLOW_API_KEY" \
-      --data '{
-      "input_value": "what do you see?",
-      "output_type": "chat",
-      "input_type": "text",
-      "tweaks": {
-        "Read-File-1olS3": {
-          "path": [
-            "07e5b864-e367-4f52-b647-a48035ae7e5e/3a290013-fe1e-4d3d-a454-cacae81288f3.pdf"
-          ]
-        }
-      }
-    }'
-    ```
+    <Tabs>
+    <TabItem value="Python" label="Python" default>
+
+    <CodeSnippet source={examplePythonApiFilesSendFilesToYourFlowsV22} language="python" />
+
+    </TabItem>
+    <TabItem value="JavaScript" label="JavaScript">
+
+    <CodeSnippet source={exampleJavascriptApiFilesSendFilesToYourFlowsV22} language="javascript" />
+
+    </TabItem>
+    <TabItem value="curl" label="curl">
+
+    <CodeSnippet source={exampleApiFilesSendFilesToYourFlowsV22} language="bash" />
+
+    </TabItem>
+    </Tabs>
 
     To get the `Read-File` component's ID, call the [Read flow](/api-flows#read-flow) endpoint or inspect the component in the visual editor.
 
@@ -300,27 +424,28 @@ This component loads files into flows from your local machine or Langflow file m
 
 List all files associated with your user account.
 
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v2/files" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFilesListFilesV2} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFilesListFilesV2} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFilesListFilesV2} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-[
-  {
-    "id": "c7b22c4c-d5e0-4ec9-af97-5d85b7657a34",
-    "name": "your_file",
-    "path": "6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.txt",
-    "size": 1234,
-    "provider": null
-  }
-]
-```
+<CodeSnippet source={resultApiFilesResultListFilesV2} language="json" />
 
 </details>
 
@@ -330,20 +455,28 @@ Download a specific file by its ID and file extension.
 
 You must specify the file type you expect in the `--output` value.
 
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v2/files/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  --output downloaded_file.txt
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFilesDownloadFileV2} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFilesDownloadFileV2} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFilesDownloadFileV2} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```text
-File contents downloaded to downloaded_file.txt
-```
+<CodeSnippet source={resultApiFilesResultDownloadFileV2} language="text" />
 
 </details>
 
@@ -351,25 +484,28 @@ File contents downloaded to downloaded_file.txt
 
 Change a file name.
 
-```bash
-curl -X PUT \
-  "$LANGFLOW_URL/api/v2/files/$FILE_ID?name=new_file_name" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFilesEditFileNameV2} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFilesEditFileNameV2} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFilesEditFileNameV2} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "id": "76543e40-f388-4cb3-b0ee-a1e870aca3d3",
-  "name": "new_file_name",
-  "path": "6f17a73e-97d7-4519-a8d9-8e4c0be411bb/76543e40-f388-4cb3-b0ee-a1e870aca3d3.png",
-  "size": 2728251,
-  "provider": null
-}
-```
+<CodeSnippet source={resultApiFilesResultEditFileNameV2} language="json" />
 
 </details>
 
@@ -377,21 +513,28 @@ curl -X PUT \
 
 Delete a specific file by its ID.
 
-```bash
-curl -X DELETE \
-  "$LANGFLOW_URL/api/v2/files/$FILE_ID" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFilesDeleteFileV2} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFilesDeleteFileV2} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFilesDeleteFileV2} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "message": "File deleted successfully"
-}
-```
+<CodeSnippet source={resultApiFilesResultDeleteFileV2} language="json" />
 
 </details>
 
@@ -399,21 +542,28 @@ curl -X DELETE \
 
 Delete all files associated with your user account.
 
-```bash
-curl -X DELETE \
-  "$LANGFLOW_URL/api/v2/files" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFilesDeleteAllFilesV2} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFilesDeleteAllFilesV2} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFilesDeleteAllFilesV2} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "message": "All files deleted successfully"
-}
-```
+<CodeSnippet source={resultApiFilesResultDeleteAllFilesV2} language="json" />
 
 </details>
 

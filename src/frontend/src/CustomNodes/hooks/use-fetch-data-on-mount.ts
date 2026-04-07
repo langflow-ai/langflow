@@ -28,6 +28,11 @@ const useFetchDataOnMount = (
         (node.tool_mode && name === "tools_metadata");
 
       const hasOptions = (template.options?.length ?? 0) > 0;
+      // Only consider empty options as a trigger if the field actually supports
+      // options (e.g., dropdowns). Fields like McpInput have no options property
+      // and should not trigger a fetch on mount — their real_time_refresh is
+      // meant for user-initiated value changes, not initial load.
+      const fieldSupportsOptions = template.options !== undefined;
 
       const needApiKeyPrefill =
         name === "model" &&
@@ -36,7 +41,7 @@ const useFetchDataOnMount = (
 
       const shouldFetchOnMount =
         isRealtimeOrRefresh &&
-        (!hasOptions ||
+        ((!hasOptions && fieldSupportsOptions) ||
           (name === "api_key" && !template.value) ||
           needApiKeyPrefill);
 
