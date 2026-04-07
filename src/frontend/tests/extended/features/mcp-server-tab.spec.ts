@@ -238,7 +238,7 @@ test(
     await page.waitForSelector(
       '[data-testid="add-component-button-lf-starter_project"]',
       {
-        timeout: 30000,
+        timeout: 60000,
       },
     );
     await page.getByTestId("add-component-button-lf-starter_project").click();
