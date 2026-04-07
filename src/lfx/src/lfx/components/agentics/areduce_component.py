@@ -29,7 +29,7 @@ from lfx.io import (
 from lfx.schema.dataframe import DataFrame
 
 
-class SemanticAggregator(BaseAgenticComponent):
+class AreduceComponent(BaseAgenticComponent):
     """Aggregate or summarize entire input data using natural language instructions and a defined output schema.
 
     This component processes all rows of input data collectively to produce aggregated results,
@@ -101,7 +101,7 @@ class SemanticAggregator(BaseAgenticComponent):
             schema_fields = build_schema_fields(self.schema)
             atype = create_pydantic_model(schema_fields, name="Target")
             if self.return_multiple_instances:
-                final_atype = create_model("ListOfTarget", items=(list[atype], ...))
+                final_atype = create_model("ListOfTarget", items=(list[atype], ...))  # type: ignore[valid-type]
             else:
                 final_atype = atype
 
@@ -113,11 +113,13 @@ class SemanticAggregator(BaseAgenticComponent):
                 else "\nGenerate a list of instances of the target type following those instructions : ."
                 + self.instructions,
                 llm=llm,
+                areduce_batch_size=100,
             )
 
             output = await (target << source)
             if self.return_multiple_instances:
-                output = AG(atype=atype, states=output[0].items)
+                appended_states = [item_state for state in output for item_state in state.items]
+                output = AG(atype=atype, states=appended_states)
 
             return DataFrame(output.to_dataframe().to_dict(orient="records"))
         raise ValueError(ERROR_INPUT_SCHEMA_REQUIRED)

@@ -7,8 +7,7 @@ import {
 } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import { POLLING_MESSAGES } from "@/constants/constants";
-import { api, performStreamingRequest } from "@/controllers/API/api";
-import { getURL } from "@/controllers/API/helpers/constants";
+import { performStreamingRequest } from "@/controllers/API/api";
 import {
   customBuildUrl,
   customCancelBuildUrl,
@@ -20,7 +19,9 @@ import { transformBuildErrorMessages } from "@/customization/utils/custom-build-
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
+import { persistMessageProperties } from "@/controllers/API/helpers/persist-message-properties";
 import useFlowStore from "../stores/flowStore";
+import { useMessagesStore } from "../stores/messagesStore";
 import type { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import type { VertexLayerElementType } from "../types/zustand/flow";
@@ -504,23 +505,55 @@ export function processEndVertexEvent(
 
     const found = findLastBotMessage();
     if (found && !found.message.properties?.build_duration) {
+      const updatedProperties = {
+        ...found.message.properties,
+        build_duration: segmentDurationMs,
+      };
+
+      // Update React Query cache
       updateMessageProperties(found.message.id!, found.queryKey, {
         build_duration: segmentDurationMs,
       });
-      api
-        .put(`${getURL("MESSAGES")}/${found.message.id}`, {
-          ...found.message,
+
+      // Update Zustand store (for shareable playground ChatMessage)
+      const storeMsg = useMessagesStore
+        .getState()
+        .messages.find((m) => m.id === found.message.id);
+      if (storeMsg) {
+        useMessagesStore.getState().updateMessage({
+          ...storeMsg,
           properties: {
-            ...found.message.properties,
+            ...storeMsg.properties,
             build_duration: segmentDurationMs,
           },
-        })
-        .catch((err: unknown) => {
-          console.warn("Failed to persist build_duration", {
-            messageId: found.message.id,
-            error: err instanceof Error ? err.message : String(err),
-          });
         });
+      }
+
+      // Persist to DB (routes to correct endpoint automatically)
+      persistMessageProperties(found.message.id!, {
+        ...found.message,
+        properties: updatedProperties,
+      });
+    } else if (!found) {
+      // Fallback: find last bot message in Zustand store (shareable playground)
+      const storeMessages = useMessagesStore.getState().messages;
+      for (let i = storeMessages.length - 1; i >= 0; i--) {
+        const msg = storeMessages[i];
+        if (msg.sender === "Machine" && !msg.properties?.build_duration) {
+          const updatedProperties = {
+            ...msg.properties,
+            build_duration: segmentDurationMs,
+          };
+          useMessagesStore.getState().updateMessage({
+            ...msg,
+            properties: updatedProperties,
+          });
+          if (msg.id) {
+            persistMessageProperties(msg.id, { properties: updatedProperties });
+          }
+          break;
+        }
+      }
     }
 
     flowState.setBuildStartTime(Date.now());
@@ -753,20 +786,13 @@ async function onEvent(
           updateMessageProperties(found.message.id!, found.queryKey, {
             build_duration: durationMs,
           });
-          api
-            .put(`${getURL("MESSAGES")}/${found.message.id}`, {
-              ...found.message,
-              properties: {
-                ...found.message.properties,
-                build_duration: durationMs,
-              },
-            })
-            .catch((err: unknown) => {
-              console.warn("Failed to persist build_duration", {
-                messageId: found.message.id,
-                error: err instanceof Error ? err.message : String(err),
-              });
-            });
+          persistMessageProperties(found.message.id!, {
+            ...found.message,
+            properties: {
+              ...found.message.properties,
+              build_duration: durationMs,
+            },
+          });
         }
       }
       onBuildComplete && onBuildComplete(allNodesValid);

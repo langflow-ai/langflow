@@ -104,33 +104,52 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         raise RuntimeError(msg, e) from e
 
 
-async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | None) -> tuple[User, uuid.UUID]:
+def compute_virtual_flow_id(identifier: str | uuid.UUID, flow_id: uuid.UUID) -> uuid.UUID:
+    """Compute a deterministic virtual flow ID for session/message isolation.
+
+    Args:
+        identifier: A unique identifier (user_id for authenticated users, client_id for anonymous).
+        flow_id: The original flow ID.
+
+    Returns:
+        A deterministic UUID v5 derived from the identifier and flow_id.
+    """
+    return uuid.uuid5(uuid.NAMESPACE_DNS, f"{identifier}_{flow_id}")
+
+
+async def verify_public_flow_and_get_user(
+    flow_id: uuid.UUID,
+    client_id: str | None,
+    authenticated_user_id: uuid.UUID | None = None,
+) -> tuple[User, uuid.UUID]:
     """Verify a public flow request and generate a deterministic flow ID.
 
     This utility function:
-    1. Checks that a client_id cookie is provided
+    1. Checks that a client_id cookie or authenticated_user_id is provided
     2. Verifies the flow exists and is marked as PUBLIC
-    3. Creates a deterministic UUID based on client_id and original flow_id
+    3. Creates a deterministic UUID based on the identifier and original flow_id
     4. Retrieves the flow owner user for permission purposes
 
-    This function is used to support public flow endpoints that don't require
-    authentication but still need to operate within the permission model.
+    When an authenticated_user_id is provided, it takes precedence over client_id
+    for UUID v5 generation. This enables DB-persisted sessions for logged-in users
+    on the shareable playground.
 
     Args:
         flow_id: The original flow ID to verify
         client_id: The client ID from the request cookie
+        authenticated_user_id: The authenticated user's ID (takes precedence over client_id)
 
     Returns:
         tuple: (flow owner user, deterministic flow ID for tracking)
 
     Raises:
         HTTPException:
-            - 400 if no client_id is provided
+            - 400 if neither client_id nor authenticated_user_id is provided
             - 403 if flow doesn't exist or isn't public
             - 403 if unable to retrieve the flow owner user
             - 403 if user is not found for public flow
     """
-    if not client_id:
+    if not client_id and not authenticated_user_id:
         raise HTTPException(status_code=400, detail="No client_id cookie found")
 
     # Check if the flow is public
@@ -143,9 +162,9 @@ async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | N
         if not flow or flow.access_type is not AccessTypeEnum.PUBLIC:
             raise HTTPException(status_code=403, detail="Flow is not public")
 
-    # Create a new flow ID using the client_id and flow_id
-    new_id = f"{client_id}_{flow_id}"
-    new_flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, new_id)
+    # Use authenticated user_id for deterministic UUID when available, otherwise client_id
+    identifier = str(authenticated_user_id) if authenticated_user_id else client_id
+    new_flow_id = compute_virtual_flow_id(identifier, flow_id)
 
     # Get the user associated with the flow
     try:
