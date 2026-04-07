@@ -94,7 +94,7 @@ describe("SourceChunksPage", () => {
       expect(screen.getByText("Failed to load chunks")).toBeInTheDocument();
     });
 
-    it("redirects to knowledge bases page on 4xx errors", async () => {
+    it("shows error message on 4xx errors", () => {
       mockGetChunks.mockReturnValue({
         isLoading: false,
         isError: true,
