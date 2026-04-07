@@ -40,6 +40,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     to_writable_tool_payload,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxAttachToolOperation,
     WatsonxBindOperation,
     WatsonxDeploymentCreatePayload,
     WatsonxFlowArtifactProviderData,
@@ -73,6 +74,7 @@ logger = logging.getLogger(__name__)
 class ProviderCreatePlan:
     resource_prefix: str
     prefixed_deployment_name: str
+    llm: str
     existing_tool_ids: list[str]
     existing_tool_bindings: dict[str, list[str]]
     existing_app_ids: list[str]
@@ -115,16 +117,22 @@ def build_provider_create_plan(
 
     # raw_tool_app_ids: per raw tool name, collects operation app_ids to bind
     #   when the raw tool is created.
-    raw_tool_app_ids: dict[str, OrderedUniqueStrs] = {}
+    raw_tool_app_ids = {
+        raw_payload.name: OrderedUniqueStrs() for raw_payload in (provider_create.tools.raw_payloads or [])
+    }
     for operation in provider_create.operations:
+        if isinstance(operation, WatsonxAttachToolOperation):
+            existing_tool_ids.add(operation.tool.tool_id)
+            continue
         if not isinstance(operation, WatsonxBindOperation):
             continue
         selected_operation_app_ids.extend(operation.app_ids)
         if operation.tool.tool_id_with_ref is not None:
             tool_id = operation.tool.tool_id_with_ref.tool_id
             existing_tool_ids.add(tool_id)
-            existing_bindings = existing_tool_bindings.setdefault(tool_id, OrderedUniqueStrs())
-            existing_bindings.extend(operation.app_ids)
+            if operation.app_ids:
+                existing_bindings = existing_tool_bindings.setdefault(tool_id, OrderedUniqueStrs())
+                existing_bindings.extend(operation.app_ids)
             continue
         raw_name = str(operation.tool.name_of_raw)
         raw_apps = raw_tool_app_ids.setdefault(raw_name, OrderedUniqueStrs())
@@ -147,6 +155,7 @@ def build_provider_create_plan(
     return ProviderCreatePlan(
         resource_prefix=resource_prefix,
         prefixed_deployment_name=prefixed_deployment_name,
+        llm=provider_create.llm,
         existing_tool_ids=existing_tool_ids.to_list(),
         existing_tool_bindings={tool_id: app_ids.to_list() for tool_id, app_ids in existing_tool_bindings.items()},
         existing_app_ids=existing_app_ids.to_list(),
@@ -256,6 +265,7 @@ async def apply_provider_create_plan_with_rollback(
             deployment_name=deployment_spec.name,
             description=deployment_spec.description,
             tool_ids=final_tool_ids,
+            llm=plan.llm,
         )
     except Exception:
         # undo tool<->connection bindings of existing tools
@@ -390,6 +400,7 @@ async def create_agent_deployment(
     agent_display_name: str,
     deployment_name: str,
     description: str,
+    llm: str,
 ):
     """Create a provider agent deployment from explicit payload fields."""
     payload = build_agent_payload_from_values(
@@ -398,6 +409,7 @@ async def create_agent_deployment(
         deployment_name=deployment_name,
         description=description,
         tool_ids=tool_ids,
+        llm=llm,
     )
     return await asyncio.to_thread(clients.agent.create, payload)
 
