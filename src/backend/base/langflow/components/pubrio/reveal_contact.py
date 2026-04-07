@@ -56,7 +56,7 @@ class PubrioRevealContactComponent(Component):
                 value = params.get("value", "")
                 if params.get("people_contact_types"):
                     contact_types = split_csv(params["people_contact_types"]) or contact_types
-            except (json.JSONDecodeError, TypeError):
+            except (json.JSONDecodeError, TypeError, ValueError):
                 value = self.query
 
         result = pubrio_post(

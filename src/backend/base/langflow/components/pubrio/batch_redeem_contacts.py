@@ -45,7 +45,7 @@ class PubrioBatchRedeemContactsComponent(Component):
                 peoples = split_csv(params.get("peoples", "")) or []
                 if params.get("people_contact_types"):
                     contact_types = split_csv(params["people_contact_types"]) or contact_types
-            except (json.JSONDecodeError, TypeError):
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
         result = pubrio_post(

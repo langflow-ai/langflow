@@ -47,7 +47,7 @@ class PubrioLookupCompanyComponent(Component):
                     raise TypeError
                 lookup_type = params.get("lookup_type", lookup_type)
                 value = params.get("value", "")
-            except (json.JSONDecodeError, TypeError):
+            except (json.JSONDecodeError, TypeError, ValueError):
                 value = self.query
 
         result = pubrio_post(self.api_key, "/companies/lookup", {lookup_type: value})
