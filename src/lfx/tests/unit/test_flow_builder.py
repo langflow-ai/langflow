@@ -16,6 +16,7 @@ from lfx.graph.flow_builder import (
     list_components,
     list_connections,
     needs_server_update,
+    parse_flow_spec,
     remove_component,
     remove_connection,
 )
@@ -802,3 +803,408 @@ class TestCustomStringifyExtended:
         # Should contain the field names with oe
         assert "dataType" in result.replace("\u0153", '"')
         assert "output_types" in result.replace("\u0153", '"')
+
+
+# ---------------------------------------------------------------------------
+# parse_flow_spec — text parser tests
+# ---------------------------------------------------------------------------
+
+
+class TestParseFlowSpec:
+    def test_basic_spec(self):
+        spec = """\
+name: Test Flow
+description: A test
+
+nodes:
+  A: ChatInput
+  B: ChatOutput
+
+edges:
+  A.message -> B.input_value
+"""
+        result = parse_flow_spec(spec)
+        assert result["name"] == "Test Flow"
+        assert result["description"] == "A test"
+        assert len(result["nodes"]) == 2
+        assert result["nodes"][0] == {"id": "A", "type": "ChatInput"}
+        assert result["nodes"][1] == {"id": "B", "type": "ChatOutput"}
+        assert len(result["edges"]) == 1
+        assert result["edges"][0] == {
+            "source_id": "A",
+            "source_output": "message",
+            "target_id": "B",
+            "target_input": "input_value",
+        }
+
+    def test_no_description(self):
+        spec = """\
+name: Minimal
+
+nodes:
+  A: ChatInput
+"""
+        result = parse_flow_spec(spec)
+        assert result["name"] == "Minimal"
+        assert result["description"] == ""
+
+    def test_no_edges(self):
+        spec = """\
+name: No Edges
+
+nodes:
+  A: ChatInput
+  B: ChatOutput
+"""
+        result = parse_flow_spec(spec)
+        assert len(result["nodes"]) == 2
+        assert len(result["edges"]) == 0
+
+    def test_config_simple_values(self):
+        spec = """\
+name: Config Test
+
+nodes:
+  A: ChatInput
+
+config:
+  A.input_value: Hello world
+  A.sender_name: Bot
+"""
+        result = parse_flow_spec(spec)
+        assert result["config"] == {"A": {"input_value": "Hello world", "sender_name": "Bot"}}
+
+    def test_config_multiline(self):
+        spec = """\
+name: Multiline
+
+nodes:
+  A: ChatInput
+
+config:
+  A.system_prompt: |
+    You are a helpful assistant.
+    Be concise.
+"""
+        result = parse_flow_spec(spec)
+        assert "You are a helpful assistant." in result["config"]["A"]["system_prompt"]
+        assert "Be concise." in result["config"]["A"]["system_prompt"]
+
+    def test_config_multiple_nodes(self):
+        spec = """\
+name: Multi Config
+
+nodes:
+  A: ChatInput
+  B: OpenAIModel
+
+config:
+  A.input_value: test
+  B.model_name: gpt-4o
+  B.temperature: 0.5
+"""
+        result = parse_flow_spec(spec)
+        assert result["config"]["A"] == {"input_value": "test"}
+        assert result["config"]["B"] == {"model_name": "gpt-4o", "temperature": 0.5}
+
+    def test_multiple_edges(self):
+        spec = """\
+name: Chain
+
+nodes:
+  A: ChatInput
+  B: OpenAIModel
+  C: ChatOutput
+
+edges:
+  A.message -> B.input_value
+  B.text_output -> C.input_value
+"""
+        result = parse_flow_spec(spec)
+        assert len(result["edges"]) == 2
+        assert result["edges"][0]["source_id"] == "A"
+        assert result["edges"][0]["target_id"] == "B"
+        assert result["edges"][1]["source_id"] == "B"
+        assert result["edges"][1]["target_id"] == "C"
+
+    def test_tool_mode_edge(self):
+        spec = """\
+name: Agent
+
+nodes:
+  A: URLComponent
+  B: Agent
+
+edges:
+  A.component_as_tool -> B.tools
+"""
+        result = parse_flow_spec(spec)
+        assert result["edges"][0]["source_output"] == "component_as_tool"
+        assert result["edges"][0]["target_input"] == "tools"
+
+    def test_empty_nodes_raises(self):
+        spec = """\
+name: Empty
+"""
+        with pytest.raises(ValueError, match="No nodes found"):
+            parse_flow_spec(spec)
+
+    def test_blank_lines_between_sections(self):
+        spec = """\
+name: Spaced
+
+
+
+nodes:
+
+  A: ChatInput
+
+  B: ChatOutput
+
+
+edges:
+
+  A.message -> B.input_value
+
+"""
+        result = parse_flow_spec(spec)
+        assert len(result["nodes"]) == 2
+        assert len(result["edges"]) == 1
+
+    def test_leading_trailing_whitespace(self):
+        spec = """
+    name: Indented
+
+    nodes:
+      A: ChatInput
+
+    edges:
+      A.message -> A.input_value
+"""
+        result = parse_flow_spec(spec)
+        assert result["name"] == "Indented"
+
+    def test_many_nodes(self):
+        lines = ["name: Big", "", "nodes:"]
+        lines.extend(f"  N{i}: ChatInput" for i in range(10))
+        spec = "\n".join(lines)
+        result = parse_flow_spec(spec)
+        assert len(result["nodes"]) == 10
+
+    def test_config_preserves_multiline_indentation(self):
+        spec = """\
+name: Indent Test
+
+nodes:
+  A: ChatInput
+
+config:
+  A.template: |
+    Line 1
+      Indented line 2
+    Line 3
+"""
+        result = parse_flow_spec(spec)
+        tmpl = result["config"]["A"]["template"]
+        assert "  Indented line 2" in tmpl
+
+    def test_edge_with_underscores_in_names(self):
+        spec = """\
+name: Underscores
+
+nodes:
+  A: OpenAIModel
+  B: Agent
+
+edges:
+  A.model_output -> B.model
+"""
+        result = parse_flow_spec(spec)
+        assert result["edges"][0]["source_output"] == "model_output"
+
+    def test_roundtrip_node_ids_preserved(self):
+        spec = """\
+name: IDs
+
+nodes:
+  X: ChatInput
+  Y: ChatOutput
+  Z: OpenAIModel
+"""
+        result = parse_flow_spec(spec)
+        ids = [n["id"] for n in result["nodes"]]
+        assert ids == ["X", "Y", "Z"]
+
+    def test_config_multiline_with_dot_and_colon(self):
+        """Continuation lines with dots and colons must not be mistaken for keys."""
+        spec = """\
+name: DotColon Test
+
+nodes:
+  A: ChatInput
+
+config:
+  A.system_prompt: |
+    You are an assistant. Follow these rules: be polite.
+    Also see http://example.com: it has info.
+"""
+        result = parse_flow_spec(spec)
+        prompt = result["config"]["A"]["system_prompt"]
+        assert "You are an assistant" in prompt
+        assert "Also see http://example.com" in prompt
+
+    def test_config_coerces_int(self):
+        spec = """\
+name: Coerce
+
+nodes:
+  A: ChatInput
+
+config:
+  A.max_tokens: 100
+"""
+        result = parse_flow_spec(spec)
+        assert result["config"]["A"]["max_tokens"] == 100
+        assert isinstance(result["config"]["A"]["max_tokens"], int)
+
+    def test_config_coerces_float(self):
+        spec = """\
+name: Coerce
+
+nodes:
+  A: ChatInput
+
+config:
+  A.temperature: 0.7
+"""
+        result = parse_flow_spec(spec)
+        assert result["config"]["A"]["temperature"] == 0.7
+        assert isinstance(result["config"]["A"]["temperature"], float)
+
+    def test_config_coerces_bool(self):
+        spec = """\
+name: Coerce
+
+nodes:
+  A: ChatInput
+
+config:
+  A.stream: true
+  A.verbose: False
+"""
+        result = parse_flow_spec(spec)
+        assert result["config"]["A"]["stream"] is True
+        assert result["config"]["A"]["verbose"] is False
+
+    def test_config_multiline_stays_string(self):
+        """Multi-line values (with |) should not be coerced."""
+        spec = """\
+name: NoCoerce
+
+nodes:
+  A: ChatInput
+
+config:
+  A.template: |
+    42
+"""
+        result = parse_flow_spec(spec)
+        assert result["config"]["A"]["template"] == "42"
+        assert isinstance(result["config"]["A"]["template"], str)
+
+    def test_config_coerces_null(self):
+        spec = """\
+name: Null
+
+nodes:
+  A: ChatInput
+
+config:
+  A.value: null
+"""
+        result = parse_flow_spec(spec)
+        assert result["config"]["A"]["value"] is None
+
+    def test_edge_unknown_source_in_spec(self):
+        """Parser doesn't validate refs, but the structure should be correct."""
+        spec = """\
+name: Bad Edge
+
+nodes:
+  A: ChatInput
+
+edges:
+  Z.message -> A.input_value
+"""
+        result = parse_flow_spec(spec)
+        assert result["edges"][0]["source_id"] == "Z"
+
+    def test_config_key_with_long_field_name(self):
+        spec = """\
+name: Long
+
+nodes:
+  A: ChatInput
+
+config:
+  A.very_long_field_name_with_underscores: hello
+"""
+        result = parse_flow_spec(spec)
+        assert result["config"]["A"]["very_long_field_name_with_underscores"] == "hello"
+
+    def test_multiline_then_single_line(self):
+        """A multi-line value followed by a single-line value."""
+        spec = """\
+name: Mixed
+
+nodes:
+  A: ChatInput
+
+config:
+  A.template: |
+    Line 1
+    Line 2
+  A.name: simple
+"""
+        result = parse_flow_spec(spec)
+        assert "Line 1" in result["config"]["A"]["template"]
+        assert "Line 2" in result["config"]["A"]["template"]
+        assert result["config"]["A"]["name"] == "simple"
+
+    def test_config_multiline_with_key_like_pattern(self):
+        """Continuation line that looks like a config key (word.word: value)."""
+        spec = """\
+name: KeyLike
+
+nodes:
+  A: ChatInput
+
+config:
+  A.prompt: |
+    hello.world: this should stay in the prompt
+    config.timeout: 30 seconds
+"""
+        result = parse_flow_spec(spec)
+        prompt = result["config"]["A"]["prompt"]
+        assert "hello.world: this should stay" in prompt
+        assert "config.timeout: 30" in prompt
+        assert len(result["config"]) == 1  # only A, no hello or config node
+
+    def test_sections_in_any_order(self):
+        """Config before edges should work."""
+        spec = """\
+name: Reordered
+
+nodes:
+  A: ChatInput
+  B: ChatOutput
+
+config:
+  A.input_value: test
+
+edges:
+  A.message -> B.input_value
+"""
+        result = parse_flow_spec(spec)
+        assert result["config"]["A"]["input_value"] == "test"
+        assert len(result["edges"]) == 1

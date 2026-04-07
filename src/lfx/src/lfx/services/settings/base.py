@@ -92,6 +92,11 @@ class Settings(BaseSettings):
     If not provided, a hash of the database URL will be used. Useful when multiple Langflow
     instances share the same database and need coordinated migration locking."""
 
+    mcp_base_url: str = ""
+    """External base URL used to build MCP server URLs in the UI configuration JSON
+    (e.g. 'https://langflow.example.com'). When empty, the frontend falls back to
+    the browser's window.location.origin."""
+
     mcp_server_timeout: int = 20
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
@@ -162,6 +167,11 @@ class Settings(BaseSettings):
     disable_track_apikey_usage: bool = False
     remove_api_keys: bool = False
     components_path: list[str] = []
+    """List of paths to custom components.
+
+    Security: This setting defines an allow-list of custom components
+    permitted to execute, even when LANGFLOW_ALLOW_CUSTOM_COMPONENTS is False.
+    """
     components_index_path: str | None = None
     """Path or URL to a prebuilt component index JSON file.
 
@@ -343,6 +353,21 @@ class Settings(BaseSettings):
     this is intended to be used to skip all startup project logic."""
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
+
+    # Custom Component Security
+    allow_custom_components: bool = True
+    """If set to False, blocks execution of components whose code does not match a known
+    server template.
+
+    The server validates node code against its component template cache;
+    when the cache is not yet loaded (e.g., during startup), all flow execution is blocked
+    as a safety measure.
+
+    Note: LANGFLOW_COMPONENTS_PATH can be used to define an allow-list of custom components
+    that will be allowed to execute, even when allow_custom_components is False.
+
+    Note: this is a beta feature. For security in a multi-tenant environment,
+    use hardware-level isolation to restrict access."""
 
     # SSRF Protection
     ssrf_protection_enabled: bool = False
