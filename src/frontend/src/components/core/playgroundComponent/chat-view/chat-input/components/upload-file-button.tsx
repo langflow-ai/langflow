@@ -1,9 +1,9 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import {
-  CHAT_ATTACHMENT_UPLOAD_ACCEPT,
-  CHAT_ATTACHMENT_UPLOAD_TOOLTIP,
-} from "@/constants/constants";
+  CHAT_UPLOAD_ATTACHMENT_ACCEPT,
+  CHAT_UPLOAD_ATTACHMENT_TOOLTIP,
+} from "@/constants/file-upload-constants";
 import { Button } from "@/components/ui/button";
 
 interface UploadFileButtonProps {
@@ -28,7 +28,7 @@ const UploadFileButton = ({
     <ShadTooltip
       styleClasses="z-50"
       side="right"
-      content={CHAT_ATTACHMENT_UPLOAD_TOOLTIP}
+      content={CHAT_UPLOAD_ATTACHMENT_TOOLTIP}
     >
       <div>
         <input
@@ -37,7 +37,7 @@ const UploadFileButton = ({
           ref={fileInputRef}
           style={{ display: "none" }}
           onChange={handleFileChange}
-          accept={CHAT_ATTACHMENT_UPLOAD_ACCEPT}
+          accept={CHAT_UPLOAD_ATTACHMENT_ACCEPT}
         />
         <Button
           disabled={isBuilding}

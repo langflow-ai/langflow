@@ -6,11 +6,11 @@ import {
 } from "react";
 import type { AxiosError } from "axios";
 import ShortUniqueId from "short-unique-id";
-import { FS_ERROR_TEXT, SN_ERROR_TEXT } from "@/constants/constants";
+import { FS_ERROR_TEXT, SN_ERROR_TEXT } from "@/constants/file-upload-constants";
 import { ENABLE_FILES_ON_PLAYGROUND } from "@/customization/feature-flags";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
-import { isAllowedChatAttachmentFile } from "@/utils/fileUtils";
+import { isAllowedChatAttachmentFile } from "@/utils/file-validation";
 import useAlertStore from "@/stores/alertStore";
 import type { FilePreviewType } from "@/types/components";
 

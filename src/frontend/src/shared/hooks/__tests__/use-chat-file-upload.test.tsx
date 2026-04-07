@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { AxiosError } from "axios";
-import { FS_ERROR_TEXT, SN_ERROR_TEXT } from "@/constants/constants";
+import { FS_ERROR_TEXT, SN_ERROR_TEXT } from "@/constants/file-upload-constants";
 import { useChatFileUpload } from "@/shared/hooks/use-chat-file-upload";
 import { useState } from "react";
 import type { ChangeEvent } from "react";
@@ -31,7 +31,7 @@ jest.mock("@/shared/hooks/use-file-size-validator", () => ({
   }),
 }));
 
-jest.mock("@/utils/fileUtils", () => ({
+jest.mock("@/utils/file-validation", () => ({
   isAllowedChatAttachmentFile: (file: File) =>
     isAllowedChatAttachmentFileMock(file),
 }));

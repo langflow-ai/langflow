@@ -1,9 +1,9 @@
 import {
-  ALLOWED_CHAT_ATTACHMENT_INPUT_EXTENSIONS,
-  ALLOWED_CHAT_ATTACHMENT_INPUT_MIME_TYPES,
-  ALLOWED_IMAGE_INPUT_EXTENSIONS,
-  ALLOWED_IMAGE_INPUT_MIME_TYPES,
-} from "@/constants/constants";
+  CHAT_UPLOAD_ATTACHMENT_EXTENSIONS,
+  CHAT_UPLOAD_ATTACHMENT_MIME_TYPES,
+  CHAT_UPLOAD_IMAGE_EXTENSIONS,
+  CHAT_UPLOAD_IMAGE_MIME_TYPES,
+} from "@/constants/file-upload-constants";
 
 export const getFileExtension = (fileName: string): string => {
   const fileParts = fileName.split(".");
@@ -25,12 +25,12 @@ export const isAllowedChatAttachmentFile = (file: File): boolean => {
   const fileExtension = getFileExtension(file.name);
   const hasNamedExtension = hasFileExtension(file.name);
   const hasAllowedExtension =
-    ALLOWED_CHAT_ATTACHMENT_INPUT_EXTENSIONS.includes(fileExtension);
+    CHAT_UPLOAD_ATTACHMENT_EXTENSIONS.includes(fileExtension);
   const hasAllowedMime =
-    ALLOWED_CHAT_ATTACHMENT_INPUT_MIME_TYPES.includes(fileType);
+    CHAT_UPLOAD_ATTACHMENT_MIME_TYPES.includes(fileType);
   const extensionIsImage =
-    ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension);
-  const mimeIsImage = ALLOWED_IMAGE_INPUT_MIME_TYPES.includes(fileType);
+    CHAT_UPLOAD_IMAGE_EXTENSIONS.includes(fileExtension);
+  const mimeIsImage = CHAT_UPLOAD_IMAGE_MIME_TYPES.includes(fileType);
 
   if (hasNamedExtension && !hasAllowedExtension) {
     return false;

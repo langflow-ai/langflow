@@ -2,9 +2,9 @@ import {
   getFileExtension,
   hasFileExtension,
   isAllowedChatAttachmentFile,
-} from "@/utils/fileUtils";
+} from "@/utils/file-validation";
 
-describe("fileUtils", () => {
+describe("file-validation", () => {
   describe("getFileExtension", () => {
     it("returns lowercase extension", () => {
       expect(getFileExtension("Report.PDF")).toBe("pdf");
