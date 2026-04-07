@@ -1,6 +1,6 @@
 import base64
-from types import SimpleNamespace
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
@@ -176,7 +176,7 @@ def test_convert_to_langchain(method_name):
 def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
     warnings: list[str] = []
 
-    def warning(event: str, **_kwargs):  # noqa: ANN001
+    def warning(event: str, **_kwargs):
         warnings.append(event)
 
     monkeypatch.setattr(
