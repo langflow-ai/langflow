@@ -1,7 +1,6 @@
 import json
 from json import JSONDecodeError
 
-import jq
 from json_repair import repair_json
 
 from lfx.custom.custom_component.component import Component
@@ -85,6 +84,12 @@ class ParseJSONDataComponent(Component):
         full_filter_str = json.dumps(to_filter_as_dict)
 
         logger.info("to_filter: %s", to_filter)
+
+        try:
+            import jq
+        except ImportError:
+            msg = "jq is required for Parse JSON. Install with: pip install jq"
+            raise ImportError(msg) from None
 
         results = jq.compile(self.query).input_text(full_filter_str).all()
         logger.info("results: %s", results)

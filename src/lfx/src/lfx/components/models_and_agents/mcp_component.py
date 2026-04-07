@@ -419,7 +419,10 @@ class MCPToolsComponent(ComponentWithCache):
 
                 current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
                 _last_selected_server = safe_cache_get(self._shared_component_cache, "last_selected_server", "")
-                server_changed = current_server_name != _last_selected_server
+                # Only treat as a server change if there was a previous server selection.
+                # Cold cache (_last_selected_server="") on initial flow load is NOT a server change —
+                # the user didn't switch anything, the backend just hasn't seen this component yet.
+                server_changed = bool(_last_selected_server and current_server_name != _last_selected_server)
 
                 # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
                 is_in_tool_mode = build_config["tools_metadata"]["show"]
@@ -428,15 +431,17 @@ class MCPToolsComponent(ComponentWithCache):
                 use_cache = getattr(self, "use_cache", False)
 
                 # Fast path: if server didn't change and we already have options, keep them as-is
-                # BUT only if caching is enabled or we're in tool mode
+                # BUT only if caching is enabled, we're in tool mode, or it's the initial load
                 existing_options = build_config.get("tool", {}).get("options") or []
                 if not server_changed and existing_options:
                     # In non-tool mode with cache disabled, skip the fast path to force refresh
-                    if not is_in_tool_mode and not use_cache:
-                        pass  # Continue to refresh logic below
+                    # BUT on initial load (cold cache), always preserve saved options from the flow
+                    if not is_in_tool_mode and not use_cache and _last_selected_server:
+                        pass  # Continue to refresh logic below (user-initiated with cache disabled)
                     else:
                         if not is_in_tool_mode:
                             build_config["tool"]["show"] = True
+                        safe_cache_set(self._shared_component_cache, "last_selected_server", current_server_name)
                         return build_config
 
                 # To avoid unnecessary updates, only proceed if the server has actually changed
@@ -503,11 +508,9 @@ class MCPToolsComponent(ComponentWithCache):
                         # Show loading state only when we need to fetch tools
                         build_config["tool"]["placeholder"] = "Loading tools..."
                         build_config["tool"]["options"] = []
-                    # Force a value refresh when:
-                    # 1. Server changed
-                    # 2. We don't have cached tools
-                    # 3. Cache is disabled (to force refresh on config changes)
-                    if server_changed or not cached_tools or not use_cache:
+                    # Force a value refresh only when the user genuinely switched servers.
+                    # server_changed is only True for real user-initiated changes (not initial load).
+                    if server_changed:
                         build_config["tool"]["value"] = uuid.uuid4()
                 else:
                     # Keep the tool dropdown hidden if in tool_mode
