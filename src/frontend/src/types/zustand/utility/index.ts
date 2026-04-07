@@ -38,4 +38,6 @@ export type UtilityStoreType = {
   setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) => void;
   allowCustomComponents: boolean;
   setAllowCustomComponents: (allowCustomComponents: boolean) => void;
+  mcpBaseUrl: string;
+  setMcpBaseUrl: (mcpBaseUrl: string) => void;
 };

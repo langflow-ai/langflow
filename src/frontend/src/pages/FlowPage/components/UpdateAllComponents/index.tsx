@@ -278,7 +278,7 @@ export default function UpdateAllComponents() {
   return (
     <AnimatePresence mode="wait">
       {!shouldHide && (
-        <div className="absolute bottom-2 left-1/2 z-50 w-[530px] -translate-x-1/2">
+        <div className="absolute bottom-16 left-1/2 z-50 w-[530px] -translate-x-1/2">
           <motion.div
             initial="hidden"
             animate="visible"

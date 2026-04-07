@@ -1,6 +1,7 @@
 import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
+import MessageMetadata from "@/components/common/messageMetadataComponent";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
@@ -267,7 +268,7 @@ export default function ChatMessage({
             <div>
               <div
                 className={cn(
-                  "flex max-w-full items-baseline gap-3 truncate pb-2 text-sm font-semibold",
+                  "flex w-full items-baseline gap-3 pb-2 text-sm font-semibold",
                 )}
                 style={
                   chat.properties?.text_color
@@ -293,6 +294,13 @@ export default function ChatMessage({
                   <div className="text-mmd font-normal text-muted-foreground">
                     {chat.properties?.source.source}
                   </div>
+                )}
+                {!chat.isSend && (
+                  <MessageMetadata
+                    duration={chat.properties?.build_duration}
+                    usage={chat.properties?.usage}
+                    timestamp={chat.timestamp}
+                  />
                 )}
               </div>
             </div>
