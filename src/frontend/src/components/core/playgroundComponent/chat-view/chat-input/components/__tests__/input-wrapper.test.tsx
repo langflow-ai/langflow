@@ -2,7 +2,6 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import InputWrapper from "../input-wrapper";
 
-
 jest.mock("@/customization/feature-flags", () => ({
   ENABLE_FILES_ON_PLAYGROUND: false,
 }));
@@ -26,7 +25,6 @@ jest.mock("../text-area-wrapper", () => ({
   __esModule: true,
   default: () => <textarea data-testid="text-area" />,
 }));
-
 
 describe("Playground chat input wrapper", () => {
   it("hides the upload icon when the flag is false", () => {

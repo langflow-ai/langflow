@@ -93,8 +93,9 @@ export default function ChatView({
             files = [];
           }
         }
-        const rawProperties =
-          isPlainObject(message.properties) ? message.properties : {};
+        const rawProperties = isPlainObject(message.properties)
+          ? message.properties
+          : {};
 
         const rawSourceValue = rawProperties["source"];
         const rawSource = isPlainObject(rawSourceValue) ? rawSourceValue : {};

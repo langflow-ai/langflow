@@ -19,8 +19,9 @@ jest.mock("@/controllers/API/queries/files/use-post-upload-file", () => ({
 
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
-  default: (selector: (state: { setErrorData: typeof setErrorDataMock }) => unknown) =>
-    selector({ setErrorData: setErrorDataMock }),
+  default: (
+    selector: (state: { setErrorData: typeof setErrorDataMock }) => unknown,
+  ) => selector({ setErrorData: setErrorDataMock }),
 }));
 
 jest.mock("@/shared/hooks/use-file-size-validator", () => ({
@@ -141,7 +142,10 @@ describe("useChatFileUpload", () => {
 
     await waitFor(() => {
       expect(result.current.files).toHaveLength(1);
-      const entry = result.current.files[0] as { loading: boolean; error: boolean };
+      const entry = result.current.files[0] as {
+        loading: boolean;
+        error: boolean;
+      };
       expect(entry.loading).toBe(false);
       expect(entry.error).toBe(true);
       expect(setErrorDataMock).toHaveBeenCalledWith({
@@ -318,7 +322,9 @@ describe("useChatFileUpload", () => {
     const input = document.createElement("input");
     input.value = "should-clear";
 
-    const changeEvent = { target: input } as unknown as ChangeEvent<HTMLInputElement>;
+    const changeEvent = {
+      target: input,
+    } as unknown as ChangeEvent<HTMLInputElement>;
 
     act(() => {
       result.current.handleFileChange(changeEvent);
