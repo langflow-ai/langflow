@@ -85,4 +85,20 @@ describe("MemoryDetailsHeader", () => {
     );
     expect(props.handleToggleActive).toHaveBeenCalledWith(false);
   });
+
+  it("renders the session selector when sessions exist", () => {
+    const props = makeProps({ sessions: ["session-1", "session-2"] });
+    render(<MemoryDetailsHeader {...props} />);
+
+    expect(screen.getByLabelText("Session filter")).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "session-1" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "session-2" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Session filter")).not.toBeDisabled();
+  });
+
+  it("disables the session selector when only one session exists", () => {
+    const props = makeProps({ sessions: ["session-1"] });
+    render(<MemoryDetailsHeader {...props} />);
+    expect(screen.getByLabelText("Session filter")).toBeDisabled();
+  });
 });

@@ -26,10 +26,11 @@ export function MemoryDetailsHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        {sessions && sessions.length > 1 && (
+        {sessions && sessions.length > 0 && (
           <select
             aria-label="Session filter"
             className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+            disabled={sessions.length <= 1}
             value={selectedSession ?? sessions[0] ?? ""}
             onChange={(e) => setSelectedSession(e.target.value)}
           >

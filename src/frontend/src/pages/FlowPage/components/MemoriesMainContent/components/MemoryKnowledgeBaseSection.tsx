@@ -62,8 +62,11 @@ export function MemoryKnowledgeBaseSection({
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-32 text-xs">Session</TableHead>
                 <TableHead className="w-24 text-xs">Sender</TableHead>
+                <TableHead className="w-40 text-xs">Ingestion Job</TableHead>
                 <TableHead className="text-xs">Content</TableHead>
-                <TableHead className="w-36 text-xs">Timestamp</TableHead>
+                <TableHead className="w-44 text-xs">
+                  Ingestion Timestamp
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -103,13 +106,16 @@ export function MemoryKnowledgeBaseSection({
                     <TableCell className="text-xs text-muted-foreground">
                       {doc.sender || "-"}
                     </TableCell>
+                    <TableCell className="max-w-40 truncate text-xs text-muted-foreground">
+                      {doc.ingestion_job_id || "-"}
+                    </TableCell>
                     <TableCell className="max-w-md text-xs">
                       <div className="line-clamp-2" title={doc.content}>
                         {doc.content}
                       </div>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {formatTimestamp(doc.timestamp)}
+                      {formatTimestamp(doc.ingestion_timestamp || doc.timestamp)}
                     </TableCell>
                   </TableRow>
                 )),
@@ -117,7 +123,7 @@ export function MemoryKnowledgeBaseSection({
 
               {isFetchingNextMessagesPage && (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={4} className="py-4">
+                  <TableCell colSpan={5} className="py-4">
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                       <Loading size={16} className="text-muted-foreground" />
                       Loading more...

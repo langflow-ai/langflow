@@ -47,6 +47,8 @@ export interface MemoryDocumentItem {
   sender: string;
   session_id: string;
   timestamp: string;
+  ingestion_job_id?: string;
+  ingestion_timestamp?: string;
   message_id: string;
 }
 
