@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
 from ibm_cloud_sdk_core import ApiException
-from ibm_watsonx_orchestrate_clients.connections.connections_client import ListConfigsResponse
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.services.adapters.deployment.base import BaseDeploymentService
 from lfx.services.adapters.deployment.exceptions import (
@@ -29,7 +28,6 @@ from lfx.services.adapters.deployment.exceptions import (
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseFlowArtifact,
-    ConfigListItem,
     ConfigListParams,
     ConfigListResult,
     DeploymentCreate,
@@ -64,6 +62,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.client import get
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     SUPPORTED_ADAPTER_DEPLOYMENT_TYPES,
     ErrorPrefix,
+)
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import (
+    list_configs as list_adapter_configs,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.create import (
     apply_provider_create_plan_with_rollback,
@@ -104,11 +105,11 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentUpdateResultData,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
-    _require_single_deployment_id,
     dedupe_list,
     extract_agent_tool_ids,
     extract_error_detail,
     raise_as_deployment_error,
+    require_single_deployment_id,
 )
 from langflow.services.deps import get_settings_service
 
@@ -139,49 +140,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             raise RuntimeError(msg)
         self.settings_service = settings_service
         self.set_ready()
-
-    @staticmethod
-    def _build_config_list_item(
-        *,
-        connection_id: str,
-        app_id: str,
-        config_type: str | None = None,
-    ) -> ConfigListItem:
-        """Build a normalized config list item from resolved identifiers."""
-        provider_data = {"type": config_type} if config_type else None
-        return ConfigListItem(
-            id=connection_id,
-            name=app_id,
-            provider_data=provider_data,
-        )
-
-    @staticmethod
-    def _normalize_optional_text(value: object | None) -> str | None:
-        """Normalize SDK scalar/enum/tuple values to optional text.
-
-        Guards against two quirks in the upstream SDK model definitions:
-
-        * **Tuple defaults** - Several ``ListConfigsResponse`` fields are
-          declared with trailing commas (e.g. ``security_scheme: ... = None,``)
-          which makes the Python default ``(None,)`` instead of ``None``.
-          Pydantic coerces this away when the field *is* supplied, but we
-          unwrap single-element tuples defensively in case a future SDK
-          version or edge case surfaces the raw default.
-        * **str-Enum coercion** - ``ConnectionSecurityScheme(str, Enum)``
-          inherits from ``str``, yet ``str()`` returns the class-qualified
-          name (``"ConnectionSecurityScheme.KEY_VALUE"``) in Python 3.11+.
-          Extracting ``.value`` yields the raw string we need.
-        """
-        if isinstance(value, tuple):
-            if len(value) == 1:
-                value = value[0]
-            else:
-                logger.debug("_normalize_optional_text: ignoring multi-element tuple: %s", value)
-                return None
-        if hasattr(value, "value"):
-            value = value.value
-        normalized = str(value or "").strip()
-        return normalized or None
 
     async def _get_provider_clients(self, *, user_id: IdLike, db: AsyncSession) -> WxOClient:
         """Resolve provider clients through a service-level seam.
@@ -729,121 +687,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> ConfigListResult:
         """List configs visible to this adapter."""
         clients = await self._get_provider_clients(user_id=user_id, db=db)
-        if not params or not params.deployment_ids:
-            try:
-                raw_connections = await asyncio.to_thread(clients.connections.list)
-            except Exception as exc:  # noqa: BLE001
-                raise_as_deployment_error(
-                    exc,
-                    error_prefix=ErrorPrefix.LIST_CONFIGS,
-                    log_msg="Unexpected error while listing wxO tenant configs",
-                )
-
-            configs: list[ConfigListItem] = []
-            for connection in raw_connections or []:
-                if not isinstance(connection, ListConfigsResponse):
-                    msg = f"wxO list_configs returned an unexpected connection entry type: {type(connection).__name__}."
-                    raise InvalidContentError(message=msg)
-                config_id = connection.connection_id
-                config_name = connection.app_id
-                config_type = self._normalize_optional_text(connection.security_scheme)
-                configs.append(
-                    self._build_config_list_item(
-                        connection_id=config_id,
-                        app_id=config_name,
-                        config_type=config_type,
-                    )
-                )
-            return ConfigListResult(
-                configs=configs,
-                provider_result=self.payload_schemas.config_list_result.parse({}).model_dump(exclude_none=True),
-            )
-
-        agent_id = _require_single_deployment_id(params, resource_label="config")
-        try:
-            agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
-        except Exception as exc:  # noqa: BLE001
-            raise_as_deployment_error(
-                exc,
-                error_prefix=ErrorPrefix.LIST_CONFIGS,
-                log_msg="Unexpected error while listing wxO deployment configs",
-            )
-
-        if not agent:
-            msg = f"Deployment '{agent_id}' not found."
-            raise DeploymentNotFoundError(msg)
-
-        tool_ids = agent.get("tools", []) if isinstance(agent, dict) else []
-        tool_ids = dedupe_list(tool_ids)
-
-        if not tool_ids:
-            return ConfigListResult(
-                configs=[],
-                provider_result=self.payload_schemas.config_list_result.parse(
-                    {"deployment_id": agent_id, "tool_ids": []}
-                ).model_dump(exclude_none=True),
-            )
-
-        tools: list[dict]
-
-        try:
-            tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, tool_ids)
-        except Exception as exc:  # noqa: BLE001
-            raise_as_deployment_error(
-                exc,
-                error_prefix=ErrorPrefix.LIST_CONFIGS,
-                log_msg="Unexpected error while listing wxO tools for config extraction",
-            )
-
-        app_to_connection_id: dict[str, str] = {}
-        for tool in tools or []:
-            if not isinstance(tool, dict):
-                continue
-            connections = extract_langflow_connections_binding(tool)
-            if not connections:
-                continue
-            for app_id, connection_id in connections.items():
-                app_to_connection_id.setdefault(app_id, connection_id)
-
-        connection_type_by_id: dict[str, str] = {}
-        connection_ids = dedupe_list(
-            [connection_id for connection_id in app_to_connection_id.values() if connection_id]
-        )
-        if connection_ids:
-            try:
-                detailed_connections = await asyncio.to_thread(clients.connections.get_drafts_by_ids, connection_ids)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "list_configs: failed to enrich deployment configs with connection types",
-                    exc_info=exc,
-                )
-            else:
-                for connection in detailed_connections or []:
-                    if not isinstance(connection, ListConfigsResponse):
-                        continue
-                    connection_id = connection.connection_id
-                    if not connection_id:
-                        continue
-                    config_type = self._normalize_optional_text(connection.security_scheme)
-                    if config_type:
-                        connection_type_by_id[connection_id] = config_type
-
-        # Preserve first-seen binding order (tool order + per-tool connection order)
-        # instead of re-sorting app_ids alphabetically.
-        configs = [
-            self._build_config_list_item(
-                connection_id=connection_id,
-                app_id=app_id,
-                config_type=connection_type_by_id.get(connection_id),
-            )
-            for app_id, connection_id in app_to_connection_id.items()
-        ]
-
-        return ConfigListResult(
-            configs=configs,
-            provider_result=self.payload_schemas.config_list_result.parse({"deployment_id": agent_id}).model_dump(
-                exclude_none=True
-            ),
+        return await list_adapter_configs(
+            clients=clients,
+            params=params,
+            config_item_data_slot=self.payload_schemas.config_item_data,
+            config_list_result_slot=self.payload_schemas.config_list_result,
         )
 
     async def list_snapshots(
@@ -902,7 +750,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 provider_result=self.payload_schemas.snapshot_list_result.parse({}).model_dump(exclude_none=True),
             )
 
-        agent_id = _require_single_deployment_id(params, resource_label="snapshot")
+        agent_id = require_single_deployment_id(params, resource_label="snapshot")
 
         try:
             agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
