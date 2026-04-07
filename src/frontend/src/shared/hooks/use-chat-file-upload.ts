@@ -4,6 +4,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import type { AxiosError } from "axios";
 import ShortUniqueId from "short-unique-id";
 import { FS_ERROR_TEXT, SN_ERROR_TEXT } from "@/constants/constants";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
@@ -64,7 +65,7 @@ export const useChatFileUpload = ({
               return newFiles;
             });
           },
-          onError: (error) => {
+          onError: (error: AxiosError<{ detail?: string }>) => {
             setFiles((prev) => {
               const newFiles = [...prev];
               const updatedIndex = newFiles.findIndex((f) => f.id === id);

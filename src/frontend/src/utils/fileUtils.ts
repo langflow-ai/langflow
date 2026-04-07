@@ -5,7 +5,7 @@ import {
   ALLOWED_IMAGE_INPUT_MIME_TYPES,
 } from "@/constants/constants";
 
-export const getFileExtension = (fileName: string) => {
+export const getFileExtension = (fileName: string): string => {
   const fileParts = fileName.split(".");
   if (fileParts.length <= 1) {
     return "";
@@ -15,7 +15,7 @@ export const getFileExtension = (fileName: string) => {
   return lastPart.length > 0 ? lastPart : "";
 };
 
-export const hasFileExtension = (fileName: string) => {
+export const hasFileExtension = (fileName: string): boolean => {
   const fileParts = fileName.split(".");
   return fileParts.length > 1 && fileParts[fileParts.length - 1].length > 0;
 };
