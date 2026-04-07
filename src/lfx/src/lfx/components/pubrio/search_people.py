@@ -17,15 +17,39 @@ class PubrioSearchPeopleComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(name="query", display_name="Search Query", info="JSON search parameters or free-text search.", tool_mode=True),
+        MessageTextInput(
+            name="query",
+            display_name="Search Query",
+            info="JSON search parameters or free-text search.",
+            tool_mode=True,
+        ),
         MessageTextInput(name="people_name", display_name="Person Name", advanced=True),
-        MessageTextInput(name="people_titles", display_name="Job Titles", info="Comma-separated titles (fuzzy match).", advanced=True),
-        MessageTextInput(name="management_levels", display_name="Management Levels", info="c_level, director, entry, head, manager, senior, vp", advanced=True),
-        MessageTextInput(name="departments", display_name="Departments", info="master_engineering, master_finance, master_sales, etc.", advanced=True),
+        MessageTextInput(
+            name="people_titles", display_name="Job Titles", info="Comma-separated titles (fuzzy match).", advanced=True
+        ),
+        MessageTextInput(
+            name="management_levels",
+            display_name="Management Levels",
+            info="c_level, director, entry, head, manager, senior, vp",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="departments",
+            display_name="Departments",
+            info="master_engineering, master_finance, master_sales, etc.",
+            advanced=True,
+        ),
         MessageTextInput(name="department_functions", display_name="Department Functions", advanced=True),
-        MessageTextInput(name="people_locations", display_name="Person Locations", info="Comma-separated ISO country codes.", advanced=True),
+        MessageTextInput(
+            name="people_locations",
+            display_name="Person Locations",
+            info="Comma-separated ISO country codes.",
+            advanced=True,
+        ),
         MessageTextInput(name="company_locations", display_name="Company Locations", advanced=True),
-        MessageTextInput(name="domains", display_name="Company Domains", info="Comma-separated domains.", advanced=True),
+        MessageTextInput(
+            name="domains", display_name="Company Domains", info="Comma-separated domains.", advanced=True
+        ),
         MessageTextInput(name="linkedin_urls", display_name="LinkedIn URLs", advanced=True),
         MessageTextInput(name="company_linkedin_urls", display_name="Company LinkedIn URLs", advanced=True),
         MessageTextInput(name="companies", display_name="Company UUIDs", advanced=True),
@@ -54,9 +78,19 @@ class PubrioSearchPeopleComponent(Component):
             if val:
                 body[key] = val
 
-        for key in ("people_titles", "management_levels", "departments", "department_functions",
-                     "people_locations", "company_locations", "domains", "linkedin_urls",
-                     "company_linkedin_urls", "companies", "peoples"):
+        for key in (
+            "people_titles",
+            "management_levels",
+            "departments",
+            "department_functions",
+            "people_locations",
+            "company_locations",
+            "domains",
+            "linkedin_urls",
+            "company_linkedin_urls",
+            "companies",
+            "peoples",
+        ):
             val = getattr(self, key, None)
             if val:
                 body[key] = split_csv(val)

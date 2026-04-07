@@ -18,7 +18,12 @@ class PubrioTechnologyLookupComponent(Component):
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
         MessageTextInput(name="query", display_name="Query", info="JSON with lookup_type and value.", tool_mode=True),
-        DropdownInput(name="lookup_type", display_name="Lookup Type", options=["domain", "linkedin_url", "domain_search_id", "domain_id"], value="domain"),
+        DropdownInput(
+            name="lookup_type",
+            display_name="Lookup Type",
+            options=["domain", "linkedin_url", "domain_search_id", "domain_id"],
+            value="domain",
+        ),
         MessageTextInput(name="value", display_name="Value", info="The domain, LinkedIn URL, or ID to look up."),
     ]
 

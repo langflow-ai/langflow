@@ -27,11 +27,15 @@ class PubrioGetMonitorLogsComponent(Component):
     ]
 
     def get_logs(self) -> DataFrame:
-        result = pubrio_post(self.api_key, "/monitors/statistics/logs", {
-            "monitor_id": self.monitor_id,
-            "page": self.page or 1,
-            "per_page": self.per_page or 25,
-        })
+        result = pubrio_post(
+            self.api_key,
+            "/monitors/statistics/logs",
+            {
+                "monitor_id": self.monitor_id,
+                "page": self.page or 1,
+                "per_page": self.per_page or 25,
+            },
+        )
         records = result.get("data", result) if isinstance(result, dict) else result
         if isinstance(records, list):
             data = [Data(text=json.dumps(r), data=r) for r in records]

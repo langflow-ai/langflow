@@ -105,7 +105,7 @@ __all__ = [
     "PubrioTechnologyLookupComponent",
     "PubrioTestRunMonitorComponent",
     "PubrioUpdateMonitorComponent",
-    "PubrioValidateWebhookComponent"
+    "PubrioValidateWebhookComponent",
 ]
 
 

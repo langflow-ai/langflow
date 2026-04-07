@@ -17,7 +17,12 @@ class PubrioQueryBatchRedeemComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(name="redeem_query_id", display_name="Redeem Query ID", info="The redeem_query_id from a batch redeem operation.", tool_mode=True),
+        MessageTextInput(
+            name="redeem_query_id",
+            display_name="Redeem Query ID",
+            info="The redeem_query_id from a batch redeem operation.",
+            tool_mode=True,
+        ),
     ]
 
     outputs = [

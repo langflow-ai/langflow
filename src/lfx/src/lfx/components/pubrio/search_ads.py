@@ -17,7 +17,9 @@ class PubrioSearchAdsComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(name="query", display_name="Search Query", info="JSON search parameters or keyword.", tool_mode=True),
+        MessageTextInput(
+            name="query", display_name="Search Query", info="JSON search parameters or keyword.", tool_mode=True
+        ),
         MessageTextInput(name="search_terms", display_name="Search Terms", advanced=True),
         MessageTextInput(name="headlines", display_name="Headlines", advanced=True),
         MessageTextInput(name="target_locations", display_name="Target Locations", advanced=True),
