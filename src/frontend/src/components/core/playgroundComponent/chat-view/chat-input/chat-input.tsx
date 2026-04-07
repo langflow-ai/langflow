@@ -102,6 +102,7 @@ export default function ChatInput({
     } catch (_error) {
       setChatValueStore(storedChatValue);
       setFiles(storedFiles);
+      setAwaitingBotResponse?.(false);
     }
   };
 

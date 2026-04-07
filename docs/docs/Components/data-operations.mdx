@@ -1,5 +1,5 @@
 ---
-title: Data Operations
+title: JSON Operations
 slug: /data-operations
 ---
 
@@ -9,26 +9,30 @@ import TabItem from '@theme/TabItem';
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 import PartialCurlyBraces from '@site/docs/_partial-escape-curly-braces.mdx';
 
-The **Data Operations** component performs operations on [`Data`](/data-types#data) objects, including extracting, filtering, and editing keys and values in the `Data`.
+:::tip
+Prior to Langflow 1.9.0, this component was named **Data Operations**.
+:::
+
+The **JSON Operations** component performs operations on [`JSON`](/data-types#json) objects, including extracting, filtering, and editing keys and values in the `JSON`.
 For all options, see [Available data operations](#available-data-operations).
-The output is a new `Data` object containing the modified data after running the selected operation.
+The output is a new `JSON` object containing the modified data after running the selected operation.
 
-## Use the Data Operations component in a flow
+## Use the JSON Operations component in a flow
 
-The following example demonstrates how to use a **Data Operations** component in a flow using data from a webhook payload:
+The following example demonstrates how to use a **JSON Operations** component in a flow using data from a webhook payload:
 
-1. Create a flow with a **Webhook** component and a **Data Operations** component, and then connect the **Webhook** component's output to the **Data Operations** component's **Data** input.
+1. Create a flow with a **Webhook** component and a **JSON Operations** component, and then connect the **Webhook** component's output to the **JSON Operations** component's **JSON** input.
 
-    All operations in the **Data Operations** component require at least one `Data` input from another component.
-    If the preceding component doesn't produce `Data` output, you can use another component, such as the [**Type Convert** component](/type-convert), to reformat the data before passing it to the **Data Operations** component.
-    Alternatively, you could consider using a component that is designed to process the original data type, such as the [**Parser** component](/parser) or [**DataFrame Operations** component](/dataframe-operations).
+    All operations in the **JSON Operations** component require at least one `JSON` input from another component.
+    If the preceding component doesn't produce `JSON` output, you can use another component, such as the [**Type Convert** component](/type-convert), to reformat the data before passing it to the **JSON Operations** component.
+    Alternatively, you could consider using a component that is designed to process the original data type, such as the [**Parser** component](/parser) or [**Table Operations** component](/dataframe-operations).
 
-2. In the **Operations** field, select the operation you want to perform on the incoming `Data`.
+2. In the **Operations** field, select the operation you want to perform on the incoming `JSON`.
 For this example, select the **Select Keys** operation.
 
     :::tip
     You can select only one operation.
-    If you need to perform multiple operations on the data, you can chain multiple **Data Operations** components together to execute each operation in sequence.
+    If you need to perform multiple operations on the data, you can chain multiple **JSON Operations** components together to execute each operation in sequence.
     For more complex multi-step operations, consider using a component like the [**Smart Transform** component](/smart-transform).
     :::
 
@@ -38,9 +42,9 @@ Click <Icon name="Plus" aria-hidden="true" /> **Add more** to add a field for ea
     For this example, assume that the webhook will receive consistent payloads that always contain `name`, `username`, and `email` keys.
     The **Select Keys** operation extracts the value of these keys from each incoming payload.
 
-4. Optional: If you want to view the output in the **Playground**, connect the **Data Operations** component's output to a **Chat Output** component.
+4. Optional: If you want to view the output in the **Playground**, connect the **JSON Operations** component's output to a **Chat Output** component.
 
-    ![A flow with Webhook, Data Operations, and Chat Output components](/img/component-data-operations-select-key.png)
+    ![A flow with Webhook, JSON Operations, and Chat Output components](/img/component-data-operations-select-key.png)
 
 5. To test the flow, send the following request to your flow's webhook endpoint.
 For more information about the webhook endpoint, see [Trigger flows with webhooks](/webhook).
@@ -74,18 +78,18 @@ For more information about the webhook endpoint, see [Trigger flows with webhook
     }'
     ```
 
-6. To view the `Data` resulting from the **Select Keys** operation, do one of the following:
+6. To view the `JSON` resulting from the **Select Keys** operation, do one of the following:
 
    * If you attached a **Chat Output** component, open the **Playground** to see the result as a chat message.
-   * Click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** on the **Data Operations** component.
+   * Click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** on the **JSON Operations** component.
 
-## Data Operations parameters
+## JSON Operations parameters
 
 Many parameters are conditional based on the selected **Operation** (`operation`).
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | Input parameter. The `Data` object to operate on. |
+| data | JSON | Input parameter. The `JSON` object to operate on. Must be provided as `JSON` data type input generated by another component. If the preceding component doesn't produce `JSON` output, use the [**Type Convert** component](/type-convert) to reformat the data before passing it to the **JSON Operations** component. |
 | operation | Operation | Input parameter. The operation to perform on the data. See [Available data operations](#available-data-operations) |
 | select_keys_input | Select Keys | Input parameter. A list of keys to select from the data. |
 | filter_key | Filter Key | Input parameter. The key to filter by. |
@@ -101,7 +105,7 @@ Many parameters are conditional based on the selected **Operation** (`operation`
 #### Available data operations
 
 Options for the `operations` input parameter are as follows.
-All operations act on an incoming `Data` object.
+All operations act on an incoming `JSON` object.
 
 | Name | Required Inputs | Process |
 |-----------|----------------|-------------|
@@ -144,7 +148,7 @@ Use the Path Selection operation to extract values from nested JSON structures w
 
 Use the **JQ Expressions** operation to use the [jq](https://jqlang.org/) query language to perform more advanced JSON filtering.
 1. In the **Operations** dropdown, select **JQ Expression**.
-2. In the **JQ Expression** field, enter a `jq` filter to query against the **Data Operations** component's Data input.
+2. In the **JQ Expression** field, enter a `jq` filter to query against the **JSON Operations** component's **JSON** input.
 
     For this example JSON structure, enter expressions like `.user.profile.name` to extract "John Doe", `.user.profile | {name, email}` to project fields to a new object, or `.user.profile | tostring` to convert the field to a string.
     ```json

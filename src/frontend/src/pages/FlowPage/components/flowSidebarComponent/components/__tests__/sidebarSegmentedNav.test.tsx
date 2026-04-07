@@ -115,21 +115,12 @@ jest.mock("@/utils/utils", () => ({
     args.filter(Boolean).join(" "),
 }));
 
-jest.mock("@/components/ui/separator", () => ({
-  Separator: ({ className }: { className?: string }) => (
-    <div data-testid="separator" className={className} />
-  ),
-}));
-
 jest.mock("@/stores/playgroundStore", () => ({
   usePlaygroundStore: (selector: (state: typeof mockPlaygroundStore) => any) =>
     selector(mockPlaygroundStore),
 }));
 
 describe("SidebarSegmentedNav", () => {
-  const mockDispatchEvent = jest.fn();
-  const originalDispatchEvent = window.dispatchEvent;
-
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset to default values
@@ -138,15 +129,10 @@ describe("SidebarSegmentedNav", () => {
     mockUseSearchContext.isSearchFocused = false;
     jest.useFakeTimers();
     jest.clearAllTimers();
-
-    // Mock window.dispatchEvent
-    window.dispatchEvent = mockDispatchEvent;
   });
 
   afterEach(() => {
     jest.useRealTimers();
-    // Restore original dispatchEvent
-    window.dispatchEvent = originalDispatchEvent;
   });
 
   it("renders all navigation items", () => {
@@ -393,7 +379,7 @@ describe("SidebarSegmentedNav", () => {
   });
 
   it("exports NAV_ITEMS correctly", () => {
-    expect(NAV_ITEMS).toHaveLength(7);
+    expect(NAV_ITEMS).toHaveLength(6);
     expect(NAV_ITEMS[0]).toEqual({
       id: "search",
       icon: "search",
@@ -407,18 +393,12 @@ describe("SidebarSegmentedNav", () => {
       tooltip: "Bundles",
     });
     expect(NAV_ITEMS[4]).toEqual({
-      id: "add_note",
-      icon: "sticky-note",
-      label: "Sticky Notes",
-      tooltip: "Add Sticky Notes",
-    });
-    expect(NAV_ITEMS[5]).toEqual({
       id: "versions",
       icon: "History",
       label: "Versions",
       tooltip: "Version History",
     });
-    expect(NAV_ITEMS[6]).toEqual({
+    expect(NAV_ITEMS[5]).toEqual({
       id: "traces",
       icon: "Activity",
       label: "Traces",
@@ -450,136 +430,5 @@ describe("SidebarSegmentedNav", () => {
     expect(mockPlaygroundStore.setIsFullscreen).toHaveBeenCalledWith(false);
     expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("components");
     expect(mockUseSidebar.toggleSidebar).not.toHaveBeenCalled();
-  });
-
-  describe("Add Note Functionality", () => {
-    it("renders separator before add_note item", () => {
-      render(<SidebarSegmentedNav />);
-
-      expect(screen.getByTestId("separator")).toBeInTheDocument();
-      expect(screen.getByTestId("separator")).toHaveClass("w-full");
-    });
-
-    it("dispatches lf:start-add-note event when add_note is clicked", () => {
-      render(<SidebarSegmentedNav />);
-
-      const addNoteButton = screen.getByTestId("sidebar-nav-add_note");
-      fireEvent.click(addNoteButton);
-
-      expect(mockDispatchEvent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: "lf:start-add-note",
-        }),
-      );
-      expect(mockDispatchEvent).toHaveBeenCalledTimes(1);
-
-      // By default, we should not change sections (already on canvas)
-      expect(mockUseSidebar.setActiveSection).not.toHaveBeenCalled();
-    });
-
-    it("unhighlights add_note when another nav item is clicked", async () => {
-      render(<SidebarSegmentedNav />);
-
-      const addNoteButton = screen.getByTestId("sidebar-nav-add_note");
-      fireEvent.click(addNoteButton);
-      expect(addNoteButton).toHaveAttribute("data-active", "true");
-
-      const mcpButton = screen.getByTestId("sidebar-nav-mcp");
-      fireEvent.click(mcpButton);
-
-      await waitFor(() => {
-        expect(addNoteButton).toHaveAttribute("data-active", "false");
-      });
-      expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("mcp");
-    });
-
-    it("exits traces and returns to canvas when add_note is clicked in traces", () => {
-      mockUseSidebar.activeSection = "traces";
-      render(<SidebarSegmentedNav />);
-
-      const addNoteButton = screen.getByTestId("sidebar-nav-add_note");
-      fireEvent.click(addNoteButton);
-
-      expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith(
-        "components",
-      );
-      expect(mockDispatchEvent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: "lf:start-add-note",
-        }),
-      );
-    });
-
-    it("sets add_note as active when clicked", () => {
-      render(<SidebarSegmentedNav />);
-
-      const addNoteButton = screen.getByTestId("sidebar-nav-add_note");
-      fireEvent.click(addNoteButton);
-
-      expect(addNoteButton).toHaveAttribute("data-active", "true");
-    });
-
-    it("stops propagation when add_note is clicked", () => {
-      render(<SidebarSegmentedNav />);
-
-      const addNoteButton = screen.getByTestId("sidebar-nav-add_note");
-      const mockStopPropagation = jest.fn();
-
-      const event = new MouseEvent("click", { bubbles: true });
-      event.stopPropagation = mockStopPropagation;
-
-      fireEvent.click(addNoteButton);
-
-      // The component should call stopPropagation
-      expect(mockUseSidebar.setActiveSection).not.toHaveBeenCalled();
-      expect(mockUseSidebar.toggleSidebar).not.toHaveBeenCalled();
-    });
-
-    it("does not reset search when add_note is clicked", () => {
-      render(<SidebarSegmentedNav />);
-
-      const addNoteButton = screen.getByTestId("sidebar-nav-add_note");
-      fireEvent.click(addNoteButton);
-
-      expect(mockUseSearchContext.setSearch).not.toHaveBeenCalled();
-    });
-
-    it("resets add_note active state when lf:end-add-note event is dispatched", () => {
-      const mockAddEventListener = jest.spyOn(window, "addEventListener");
-
-      render(<SidebarSegmentedNav />);
-
-      // Verify that the event listener was added
-      expect(mockAddEventListener).toHaveBeenCalledWith(
-        "lf:end-add-note",
-        expect.any(Function),
-      );
-
-      // Get the event listener function that was registered
-      const eventListenerCall = mockAddEventListener.mock.calls.find(
-        ([eventType]) => eventType === "lf:end-add-note",
-      );
-      expect(eventListenerCall).toBeDefined();
-
-      // Test that the event listener function works (it should reset state)
-      const eventListener = eventListenerCall![1] as () => void;
-      expect(typeof eventListener).toBe("function");
-
-      mockAddEventListener.mockRestore();
-    });
-
-    it("cleans up event listener on unmount", () => {
-      const mockRemoveEventListener = jest.spyOn(window, "removeEventListener");
-
-      const { unmount } = render(<SidebarSegmentedNav />);
-      unmount();
-
-      expect(mockRemoveEventListener).toHaveBeenCalledWith(
-        "lf:end-add-note",
-        expect.any(Function),
-      );
-
-      mockRemoveEventListener.mockRestore();
-    });
   });
 });

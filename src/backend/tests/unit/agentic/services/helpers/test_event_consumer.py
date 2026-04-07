@@ -1,6 +1,7 @@
-"""Tests for event consumer utilities.
+"""Tests for event consumer module.
 
-Tests the streaming event consumption and parsing functionality.
+Tests parse_event_data for various event types and edge cases,
+and consume_streaming_events for token/end/cancel/disconnection handling.
 """
 
 import asyncio
@@ -84,10 +85,9 @@ class TestConsumeStreamingEvents:
         """Should yield token events from queue."""
         queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue()
 
-        # Add token events to queue
         await queue.put(("id1", b'{"event": "token", "data": {"chunk": "Hello"}}', 1.0))
         await queue.put(("id2", b'{"event": "token", "data": {"chunk": " World"}}', 2.0))
-        await queue.put(None)  # Signal end
+        await queue.put(None)
 
         events = []
         async for event_type, data in consume_streaming_events(queue):
@@ -135,7 +135,6 @@ class TestConsumeStreamingEvents:
         queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue()
         cancel_event = asyncio.Event()
 
-        # Set cancel event before consuming
         cancel_event.set()
 
         events = []
@@ -161,7 +160,7 @@ class TestConsumeStreamingEvents:
         async for event_type, data in consume_streaming_events(queue, cancel_event=cancel_event):
             events.append((event_type, data))
 
-        await task  # Ensure task completes
+        await task
 
         assert len(events) == 1
         assert events[0] == ("cancelled", "")
@@ -176,7 +175,7 @@ class TestConsumeStreamingEvents:
         async def is_disconnected():
             nonlocal call_count
             call_count += 1
-            return call_count >= 2  # Disconnect on second check
+            return call_count >= 2
 
         events = []
         async for event_type, data in consume_streaming_events(queue, is_disconnected=is_disconnected):
@@ -198,13 +197,12 @@ class TestConsumeStreamingEvents:
             if check_count == 1:
                 msg = "Connection check failed"
                 raise RuntimeError(msg)
-            return True  # Disconnect on second check
+            return True
 
         events = []
         async for event_type, data in consume_streaming_events(queue, is_disconnected=flaky_is_disconnected):
             events.append((event_type, data))
 
-        # Should have recovered from first error and caught second check
         assert events[-1] == ("cancelled", "")
 
     @pytest.mark.asyncio
@@ -247,7 +245,7 @@ class TestConsumeStreamingEvents:
         queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue()
 
         await queue.put(("id1", b'{"event": "token", "data": {"chunk": "good"}}', 1.0))
-        await queue.put(("id2", b"\xff\xfe", 2.0))  # Invalid UTF-8
+        await queue.put(("id2", b"\xff\xfe", 2.0))
         await queue.put(("id3", b'{"event": "token", "data": {"chunk": "fine"}}', 3.0))
         await queue.put(None)
 
@@ -258,3 +256,79 @@ class TestConsumeStreamingEvents:
         assert len(events) == 2
         assert events[0] == ("token", "good")
         assert events[1] == ("token", "fine")
+
+
+class TestBugsAndEdgeCases:
+    """Tests that challenge the code — exposing real bugs and untested edge cases."""
+
+    def test_parse_event_data_non_dict_data_field(self):
+        """L18: when 'data' field is a string instead of dict, it returns the string.
+
+        This causes L71 data.get('chunk') to crash with AttributeError.
+        """
+        data = b'{"event": "token", "data": "not a dict"}'
+        event_type, event_data = parse_event_data(data)
+        assert event_type == "token"
+        # Documents: returns the string as-is, no type validation
+        assert event_data == "not a dict"
+
+    def test_parse_event_data_missing_event_key(self):
+        """Missing 'event' key returns None — consumer silently ignores."""
+        data = b'{"data": {"chunk": "hello"}}'
+        event_type, event_data = parse_event_data(data)
+        assert event_type is None
+        assert event_data == {"chunk": "hello"}
+
+    @pytest.mark.asyncio
+    @pytest.mark.xfail(
+        reason="BUG: L71 data.get('chunk') crashes with AttributeError when data is string, not caught by L77",
+        strict=True,
+    )
+    async def test_consume_non_dict_data_should_not_crash(self):
+        """Consumer should handle events where 'data' is not a dict.
+
+        parse_event_data returns string → data.get('chunk') → AttributeError
+        which is NOT caught by except (JSONDecodeError, UnicodeDecodeError).
+        """
+        queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue()
+
+        await queue.put(("id1", b'{"event": "token", "data": "not a dict"}', 1.0))
+        await queue.put(("id2", b'{"event": "token", "data": {"chunk": "good"}}', 2.0))
+        await queue.put(None)
+
+        events = []
+        async for event_type, data in consume_streaming_events(queue):
+            events.append((event_type, data))
+
+        # Should skip the malformed event and yield the good one
+        assert len(events) == 1
+        assert events[0] == ("token", "good")
+
+    def test_parse_event_data_invalid_json_raises(self):
+        """parse_event_data does NOT catch JSONDecodeError — caller must handle."""
+        from json import JSONDecodeError
+
+        with pytest.raises(JSONDecodeError):
+            parse_event_data(b"not valid json")
+
+    @pytest.mark.asyncio
+    async def test_consume_timeout_without_cancel_continues_loop(self):
+        """Queue timeout without cancel/disconnect just continues the loop."""
+        queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue()
+
+        # Put item after a short delay
+        async def put_after_delay():
+            await asyncio.sleep(0.6)  # Longer than check_interval (0.5s)
+            await queue.put(("id1", b'{"event": "token", "data": {"chunk": "delayed"}}', 1.0))
+            await queue.put(None)
+
+        task = asyncio.create_task(put_after_delay())
+
+        events = []
+        async for event_type, data in consume_streaming_events(queue):
+            events.append((event_type, data))
+
+        await task
+
+        assert len(events) == 1
+        assert events[0] == ("token", "delayed")

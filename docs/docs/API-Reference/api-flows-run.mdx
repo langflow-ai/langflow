@@ -2,6 +2,26 @@
 title: Flow trigger endpoints
 slug: /api-flows-run
 ---
+import CodeSnippet from '@site/src/components/CodeSnippet';
+import exampleApiFlowsRunRunFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows-run/run-flow.sh';
+import exampleApiFlowsRunStreamLlmTokenResponses from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows-run/stream-llm-token-responses.sh';
+import exampleApiFlowsRunRequestExampleWithAllHeadersAndParameters from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows-run/request-example-with-all-headers-and-parameters.sh';
+import exampleApiFlowsRunPassGlobalVariablesInRequestHeaders from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows-run/pass-global-variables-in-request-headers.sh';
+import exampleApiFlowsRunWebhookRunFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows-run/webhook-run-flow.sh';
+import resultApiFlowsRunResultWebhookRunFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows-run/result-webhook-run-flow.json';
+import examplePythonApiFlowsRunRunFlow from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows-run/run-flow.py';
+import exampleJavascriptApiFlowsRunRunFlow from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows-run/run-flow.js';
+import examplePythonApiFlowsRunStreamLlmTokenResponses from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows-run/stream-llm-token-responses.py';
+import exampleJavascriptApiFlowsRunStreamLlmTokenResponses from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows-run/stream-llm-token-responses.js';
+import examplePythonApiFlowsRunRequestExampleWithAllHeadersAndParameters from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows-run/request-example-with-all-headers-and-parameters.py';
+import exampleJavascriptApiFlowsRunRequestExampleWithAllHeadersAndParameters from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows-run/request-example-with-all-headers-and-parameters.js';
+import examplePythonApiFlowsRunPassGlobalVariablesInRequestHeaders from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows-run/pass-global-variables-in-request-headers.py';
+import exampleJavascriptApiFlowsRunPassGlobalVariablesInRequestHeaders from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows-run/pass-global-variables-in-request-headers.js';
+import examplePythonApiFlowsRunWebhookRunFlow from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows-run/webhook-run-flow.py';
+import exampleJavascriptApiFlowsRunWebhookRunFlow from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows-run/webhook-run-flow.js';
+
+
+
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -26,77 +46,17 @@ This flow requires a chat input string (`input_value`), and uses default values 
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-```python
-import requests
-
-url = "http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID"
-
-# Request payload
-payload = {
-    "input_value": "Tell me about something interesting!",
-    "session_id": "chat-123",
-    "input_type": "chat",
-    "output_type": "chat",
-    "output_component": ""
-}
-
-# Request headers
-headers = {
-    "Content-Type": "application/json",
-    "x-api-key": "LANGFLOW_API_KEY"
-}
-
-try:
-    response = requests.post(url, json=payload, headers=headers)
-    response.raise_for_status()
-    print(response.json())
-except requests.exceptions.RequestException as e:
-    print(f"Error making API request: {e}")
-```
+<CodeSnippet source={examplePythonApiFlowsRunRunFlow} language="python" />
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-```js
-const payload = {
-  input_value: "Tell me about something interesting!",
-  session_id: "chat-123",
-  input_type: "chat",
-  output_type: "chat",
-  output_component: ""
-};
-
-const options = {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'x-api-key': 'LANGFLOW_API_KEY'
-  },
-  body: JSON.stringify(payload)
-};
-
-fetch('http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID', options)
-  .then(response => response.json())
-  .then(data => console.log(data))
-  .catch(err => console.error(err));
-```
+<CodeSnippet source={exampleJavascriptApiFlowsRunRunFlow} language="javascript" />
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-```bash
-curl -X POST \
-  "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{
-    "input_value": "Tell me about something interesting!",
-    "session_id": "chat-123",
-    "input_type": "chat",
-    "output_type": "chat",
-    "output_component": ""
-  }'
-```
+<CodeSnippet source={exampleApiFlowsRunRunFlow} language="bash" />
 
 </TabItem>
 </Tabs>
@@ -153,85 +113,17 @@ To stream LLM token responses, append the `?stream=true` query parameter to the 
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-```python
-import requests
-
-url = "http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID?stream=true"
-
-# Request payload
-payload = {
-    "message": "Tell me something interesting!",
-    "session_id": "chat-123"
-}
-
-# Request headers
-headers = {
-    "accept": "application/json",
-    "Content-Type": "application/json",
-    "x-api-key": "LANGFLOW_API_KEY"
-}
-
-try:
-    response = requests.post(url, json=payload, headers=headers, stream=True)
-    response.raise_for_status()
-
-    # Process streaming response
-    for line in response.iter_lines():
-        if line:
-            print(line.decode('utf-8'))
-except requests.exceptions.RequestException as e:
-    print(f"Error making API request: {e}")
-```
+<CodeSnippet source={examplePythonApiFlowsRunStreamLlmTokenResponses} language="python" />
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-```js
-const payload = {
-  message: "Tell me something interesting!",
-  session_id: "chat-123"
-};
-
-const options = {
-  method: 'POST',
-  headers: {
-    'accept': 'application/json',
-    'Content-Type': 'application/json',
-    'x-api-key': 'LANGFLOW_API_KEY'
-  },
-  body: JSON.stringify(payload)
-};
-
-fetch('http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID?stream=true', options)
-  .then(async response => {
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
-
-    if (reader) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        console.log(decoder.decode(value));
-      }
-    }
-  })
-  .catch(err => console.error(err));
-```
+<CodeSnippet source={exampleJavascriptApiFlowsRunStreamLlmTokenResponses} language="javascript" />
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-```bash
-curl -X POST \
-  "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID?stream=true" \
-  -H "accept: application/json" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{
-    "message": "Tell me something interesting!",
-    "session_id": "chat-123"
-  }'
-```
+<CodeSnippet source={exampleApiFlowsRunStreamLlmTokenResponses} language="bash" />
 
 </TabItem>
 </Tabs>
@@ -294,109 +186,17 @@ The following example is truncated to illustrate a series of `token` events as w
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-```python
-import requests
-
-url = "http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID?stream=true"
-
-# Request payload with tweaks
-payload = {
-    "input_value": "Tell me a story",
-    "input_type": "chat",
-    "output_type": "chat",
-    "output_component": "chat_output",
-    "session_id": "chat-123",
-    "tweaks": {
-        "component_id": {
-            "parameter_name": "value"
-        }
-    }
-}
-
-# Request headers
-headers = {
-    "Content-Type": "application/json",
-    "accept": "application/json",
-    "x-api-key": "LANGFLOW_API_KEY"
-}
-
-try:
-    response = requests.post(url, json=payload, headers=headers, stream=True)
-    response.raise_for_status()
-
-    # Process streaming response
-    for line in response.iter_lines():
-        if line:
-            print(line.decode('utf-8'))
-except requests.exceptions.RequestException as e:
-    print(f"Error making API request: {e}")
-```
+<CodeSnippet source={examplePythonApiFlowsRunRequestExampleWithAllHeadersAndParameters} language="python" />
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-```js
-const payload = {
-  input_value: "Tell me a story",
-  input_type: "chat",
-  output_type: "chat",
-  output_component: "chat_output",
-  session_id: "chat-123",
-  tweaks: {
-    component_id: {
-      parameter_name: "value"
-    }
-  }
-};
-
-const options = {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'accept': 'application/json',
-    'x-api-key': 'LANGFLOW_API_KEY'
-  },
-  body: JSON.stringify(payload)
-};
-
-fetch('http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID?stream=true', options)
-  .then(async response => {
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
-
-    if (reader) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        console.log(decoder.decode(value));
-      }
-    }
-  })
-  .catch(err => console.error(err));
-```
+<CodeSnippet source={exampleJavascriptApiFlowsRunRequestExampleWithAllHeadersAndParameters} language="javascript" />
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-```bash
-curl -X POST \
-  "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID?stream=true" \
-  -H "Content-Type: application/json" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{
-    "input_value": "Tell me a story",
-    "input_type": "chat",
-    "output_type": "chat",
-    "output_component": "chat_output",
-    "session_id": "chat-123",
-    "tweaks": {
-      "component_id": {
-        "parameter_name": "value"
-      }
-    }
-  }'
-```
+<CodeSnippet source={exampleApiFlowsRunRequestExampleWithAllHeadersAndParameters} language="bash" />
 
 </TabItem>
 </Tabs>
@@ -414,80 +214,17 @@ You don't need to create these variables in Langflow's Global Variables section 
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-```python
-import requests
-
-url = "http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID"
-
-# Request payload
-payload = {
-    "input_value": "Tell me about something interesting!",
-    "input_type": "chat",
-    "output_type": "chat"
-}
-
-# Request headers with global variables
-headers = {
-    "Content-Type": "application/json",
-    "x-api-key": "LANGFLOW_API_KEY",
-    "X-LANGFLOW-GLOBAL-VAR-OPENAI_API_KEY": "sk-...",
-    "X-LANGFLOW-GLOBAL-VAR-USER_ID": "user123",
-    "X-LANGFLOW-GLOBAL-VAR-ENVIRONMENT": "production"
-}
-
-try:
-    response = requests.post(url, json=payload, headers=headers)
-    response.raise_for_status()
-    print(response.json())
-except requests.exceptions.RequestException as e:
-    print(f"Error making API request: {e}")
-```
+<CodeSnippet source={examplePythonApiFlowsRunPassGlobalVariablesInRequestHeaders} language="python" />
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-```js
-const payload = {
-  input_value: "Tell me about something interesting!",
-  input_type: "chat",
-  output_type: "chat"
-};
-
-const options = {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'x-api-key': 'LANGFLOW_API_KEY',
-    'X-LANGFLOW-GLOBAL-VAR-OPENAI_API_KEY': 'sk-...',
-    'X-LANGFLOW-GLOBAL-VAR-USER_ID': 'user123',
-    'X-LANGFLOW-GLOBAL-VAR-ENVIRONMENT': 'production'
-  },
-  body: JSON.stringify(payload)
-};
-
-fetch('http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID', options)
-  .then(response => response.json())
-  .then(data => console.log(data))
-  .catch(err => console.error(err));
-```
+<CodeSnippet source={exampleJavascriptApiFlowsRunPassGlobalVariablesInRequestHeaders} language="javascript" />
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-```bash
-curl -X POST \
-  "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -H "X-LANGFLOW-GLOBAL-VAR-OPENAI_API_KEY: sk-..." \
-  -H "X-LANGFLOW-GLOBAL-VAR-USER_ID: user123" \
-  -H "X-LANGFLOW-GLOBAL-VAR-ENVIRONMENT: production" \
-  -d '{
-    "input_value": "Tell me about something interesting!",
-    "input_type": "chat",
-    "output_type": "chat"
-  }'
-```
+<CodeSnippet source={exampleApiFlowsRunPassGlobalVariablesInRequestHeaders} language="bash" />
 
 </TabItem>
 </Tabs>
@@ -504,23 +241,28 @@ After you add a [**Webhook** component](/webhook) to a flow, open the [**API acc
 For more information, see [Trigger flows with webhooks](/webhook).
 :::
 
-```bash
-curl -X POST \
-  "$LANGFLOW_SERVER_URL/api/v1/webhook/$FLOW_ID" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{"data": "example-data"}'
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFlowsRunWebhookRunFlow} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFlowsRunWebhookRunFlow} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFlowsRunWebhookRunFlow} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "message": "Task started in the background",
-  "status": "in progress"
-}
-```
+<CodeSnippet source={resultApiFlowsRunResultWebhookRunFlow} language="json" />
 
 </details>
 

@@ -3,6 +3,14 @@
  * Copied from @docusaurus/theme-classic with minimal adjustments.
  */
 
+.docMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0 1.25rem 0;
+}
+
 .docItemContainer header + *,
 .docItemContainer article > *:first-child {
   margin-top: 0;

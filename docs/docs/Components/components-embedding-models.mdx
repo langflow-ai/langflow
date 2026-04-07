@@ -40,7 +40,7 @@ This component stores the generated embeddings so they can be used for similarit
 
 6. Connect the components:
 
-    * Connect the **Read File** component's **Loaded Files** output to the **Split Text** component's **Data or DataFrame** input.
+    * Connect the **Read File** component's **Loaded Files** output to the **Split Text** component's **JSON or Table** input.
     * Connect the **Split Text** component's **Chunks** output to the vector store component's **Ingest Data** input.
     * Connect the **Embedding Model** component's **Embeddings** output to the vector store component's **Embedding** input.
 
