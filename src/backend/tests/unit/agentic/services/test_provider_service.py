@@ -225,7 +225,10 @@ class TestGetEnabledProvidersForUser:
                 "langflow.agentic.services.provider_service.get_model_provider_variable_mapping",
                 return_value={"Anthropic": "ANTHROPIC_API_KEY", "OpenAI": "OPENAI_API_KEY"},
             ),
+            patch.dict(os.environ, {}, clear=False),
         ):
+            # Remove OPENAI_API_KEY from env to ensure only DB credentials matter
+            os.environ.pop("OPENAI_API_KEY", None)
             enabled, status = await get_enabled_providers_for_user("user-1", mock_session)
 
         assert "Anthropic" in enabled
