@@ -1,9 +1,13 @@
+"""MrScraper component: list and filter scraping results with pagination."""
+
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, IntInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
 
 
 class MrscraperGetResults(Component):
+    """Langflow component wrapping MrScraper `get_all_results` with sort and filters."""
+
     display_name: str = "MrScraper Get Results"
     description: str = "Retrieve a paginated, sortable, and filterable list of all MrScraper scraping results."
     name = "MrscraperGetResults"
@@ -88,6 +92,7 @@ class MrscraperGetResults(Component):
     ]
 
     async def fetch_all_results(self) -> Data:
+        """Return a paginated list of results as `Data`."""
         try:
             from mrscraper import MrScraper
         except ImportError as e:

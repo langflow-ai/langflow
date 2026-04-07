@@ -1,9 +1,13 @@
+"""MrScraper component: rerun a manual (selector-based) scraper on a new URL."""
+
 from lfx.custom.custom_component.component import Component
 from lfx.io import MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
 
 
 class MrscraperRunManualScraper(Component):
+    """Langflow component wrapping MrScraper `rerun_manual_scraper`."""
+
     display_name: str = "MrScraper Run Manual Scraper"
     description: str = (
         "Rerun a manually configured MrScraper scraper on a new URL. "
@@ -42,6 +46,7 @@ class MrscraperRunManualScraper(Component):
     ]
 
     async def rerun_manual(self) -> Data:
+        """Rerun a manual scraper configuration and return `Data`."""
         try:
             from mrscraper import MrScraper
         except ImportError as e:

@@ -1,9 +1,13 @@
+"""MrScraper component: batch rerun AI or manual scrapers on multiple URLs."""
+
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
 
 
 class MrscraperBatchScrape(Component):
+    """Langflow component for MrScraper bulk AI or manual scraper reruns."""
+
     display_name: str = "MrScraper Batch Scrape URLs"
     description: str = (
         "Rerun an existing MrScraper scraper on multiple URLs in a single batch. "
@@ -49,6 +53,7 @@ class MrscraperBatchScrape(Component):
     ]
 
     async def batch_scrape(self) -> Data:
+        """Validate URLs, dispatch bulk rerun by mode, and return `Data`."""
         try:
             from mrscraper import MrScraper
         except ImportError as e:

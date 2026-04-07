@@ -1,9 +1,13 @@
+"""MrScraper component: load a single scraping result by ID."""
+
 from lfx.custom.custom_component.component import Component
 from lfx.io import Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
 
 
 class MrscraperGetResult(Component):
+    """Langflow component wrapping MrScraper `get_result_by_id`."""
+
     display_name: str = "MrScraper Get Result Detail"
     description: str = "Retrieve the full details of a specific MrScraper scraping result by its ID."
     name = "MrscraperGetResult"
@@ -32,6 +36,7 @@ class MrscraperGetResult(Component):
     ]
 
     async def get_result(self) -> Data:
+        """Return full detail for one result ID as `Data`."""
         try:
             from mrscraper import MrScraper
         except ImportError as e:

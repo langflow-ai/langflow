@@ -1,9 +1,13 @@
+"""MrScraper component: create and run an AI-powered scraper via the official SDK."""
+
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
 
 
 class MrscraperAiScraper(Component):
+    """Langflow component wrapping MrScraper `create_scraper` for natural-language extraction."""
+
     display_name: str = "MrScraper AI Agent Scraper"
     description: str = (
         "Create and run an AI-powered scraper using MrScraper. "
@@ -44,7 +48,8 @@ class MrscraperAiScraper(Component):
             options=["general", "listing", "map"],
             value="general",
             info=(
-                '"general" works on almost any page. "listing" is optimised for listing/grid pages. "map agent" is optimised for map pages.'
+                '"general" works on almost any page. "listing" is optimised for listing/grid pages. '
+                '"map agent" is optimised for map pages.'
             ),
         ),
         StrInput(
@@ -59,6 +64,7 @@ class MrscraperAiScraper(Component):
     ]
 
     async def run_scraper(self) -> Data:
+        """Call the MrScraper API to create a scraper run and return structured `Data`."""
         try:
             from mrscraper import MrScraper
         except ImportError as e:

@@ -1,9 +1,13 @@
+"""MrScraper component: fetch rendered HTML via the stealth browser."""
+
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, IntInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
 
 
 class MrscraperFetchHtml(Component):
+    """Langflow component wrapping MrScraper `fetch_html` for JS-rendered pages."""
+
     display_name: str = "MrScraper Fetch Rendered HTML"
     description: str = (
         "Fetch the fully rendered HTML of a page via the MrScraper stealth browser. "
@@ -56,6 +60,7 @@ class MrscraperFetchHtml(Component):
     ]
 
     async def fetch(self) -> Data:
+        """Fetch rendered HTML for the target URL and return `Data`."""
         try:
             from mrscraper import MrScraper
         except ImportError as e:
