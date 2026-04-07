@@ -17,7 +17,7 @@ from langflow.memory import (
 )
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
-from langflow.schema.message import Message
+from langflow.schema.message import MAX_ATTACHMENT_SIZE_BYTES, Message
 from langflow.schema.properties import Properties, Source
 
 # Assuming you have these imports available
@@ -246,8 +246,11 @@ def test_to_lc_message_keeps_supported_image_attachments(tmp_path):
 
 def test_to_lc_message_skips_oversized_file_attachments(tmp_path):
     big_path = tmp_path / "big.txt"
+
+    big_size = MAX_ATTACHMENT_SIZE_BYTES + 1
     with open(big_path, "wb") as handle:
-        handle.truncate(1024 * 1024 * 1024 + 1)
+        handle.seek(big_size - 1)
+        handle.write(b"\0")
 
     message = Message(
         text="Hello",

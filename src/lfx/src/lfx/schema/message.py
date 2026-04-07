@@ -33,6 +33,7 @@ from lfx.utils.mustache_security import safe_mustache_render
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
 
+MAX_ATTACHMENT_SIZE_BYTES: int = 50 * 1024 * 1024
 
 class Message(Data):
     """Message schema for Langflow.
@@ -75,8 +76,6 @@ class Message(Data):
     category: Literal["message", "error", "warning", "info"] | None = "message"
     content_blocks: list[ContentBlock] = Field(default_factory=list)
     duration: int | None = None
-
-    _MAX_ATTACHMENT_SIZE_BYTES = 1024 * 1024 * 1024
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -288,7 +287,7 @@ class Message(Data):
                     )
                     continue
 
-                if file_size_bytes > self._MAX_ATTACHMENT_SIZE_BYTES:
+                if file_size_bytes > MAX_ATTACHMENT_SIZE_BYTES:
                     continue
 
                 from lfx.base.data.utils import parse_text_file_to_data
@@ -651,4 +650,11 @@ class ErrorMessage(Message):
         )
 
 
-__all__ = ["ContentBlock", "DefaultModel", "ErrorMessage", "Message", "MessageResponse"]
+__all__ = [
+    "ContentBlock",
+    "DefaultModel",
+    "ErrorMessage",
+    "MAX_ATTACHMENT_SIZE_BYTES",
+    "Message",
+    "MessageResponse",
+]
