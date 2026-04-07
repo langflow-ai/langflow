@@ -17,10 +17,25 @@ class PubrioRevealContactComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(name="query", display_name="Query", info="JSON with lookup_type, value, and people_contact_types.", tool_mode=True),
-        DropdownInput(name="lookup_type", display_name="Lookup Type", options=["linkedin_url", "people_search_id"], value="people_search_id"),
+        MessageTextInput(
+            name="query",
+            display_name="Query",
+            info="JSON with lookup_type, value, and people_contact_types.",
+            tool_mode=True,
+        ),
+        DropdownInput(
+            name="lookup_type",
+            display_name="Lookup Type",
+            options=["linkedin_url", "people_search_id"],
+            value="people_search_id",
+        ),
         MessageTextInput(name="value", display_name="Value", info="LinkedIn URL or people_search_id."),
-        MessageTextInput(name="people_contact_types", display_name="Contact Types", info="Comma-separated: email-work, email-personal, phone", value="email-work"),
+        MessageTextInput(
+            name="people_contact_types",
+            display_name="Contact Types",
+            info="Comma-separated: email-work, email-personal, phone",
+            value="email-work",
+        ),
     ]
 
     outputs = [
@@ -44,10 +59,14 @@ class PubrioRevealContactComponent(Component):
             except (json.JSONDecodeError, TypeError):
                 value = self.query
 
-        result = pubrio_post(self.api_key, "/redeem/people", {
-            lookup_type: value,
-            "people_contact_types": contact_types,
-        })
+        result = pubrio_post(
+            self.api_key,
+            "/redeem/people",
+            {
+                lookup_type: value,
+                "people_contact_types": contact_types,
+            },
+        )
         data = [Data(text=json.dumps(result), data=result if isinstance(result, dict) else {"result": result})]
         self.status = data
         return DataFrame(data)

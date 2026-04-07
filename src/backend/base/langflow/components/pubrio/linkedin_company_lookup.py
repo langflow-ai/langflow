@@ -17,7 +17,13 @@ class PubrioLinkedInCompanyLookupComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(name="linkedin_url", display_name="LinkedIn URL", info="LinkedIn company page URL.", required=True, tool_mode=True),
+        MessageTextInput(
+            name="linkedin_url",
+            display_name="LinkedIn URL",
+            info="LinkedIn company page URL.",
+            required=True,
+            tool_mode=True,
+        ),
     ]
 
     outputs = [

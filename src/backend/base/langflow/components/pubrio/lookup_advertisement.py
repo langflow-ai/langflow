@@ -17,7 +17,13 @@ class PubrioLookupAdvertisementComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(name="id", display_name="Advertisement Search ID", info="The advertisement_search_id.", required=True, tool_mode=True),
+        MessageTextInput(
+            name="id",
+            display_name="Advertisement Search ID",
+            info="The advertisement_search_id.",
+            required=True,
+            tool_mode=True,
+        ),
     ]
 
     outputs = [

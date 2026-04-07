@@ -17,7 +17,9 @@ class PubrioGetMonitorChartComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(name="monitor_id", required=True, display_name="Monitor ID", info="Monitor UUID.", tool_mode=True),
+        MessageTextInput(
+            name="monitor_id", required=True, display_name="Monitor ID", info="Monitor UUID.", tool_mode=True
+        ),
         MessageTextInput(name="start_date", display_name="Start Date", info="YYYY-MM-DD", advanced=True),
         MessageTextInput(name="end_date", display_name="End Date", info="YYYY-MM-DD", advanced=True),
     ]

@@ -18,7 +18,12 @@ class PubrioEnrichPersonComponent(Component):
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
         MessageTextInput(name="query", display_name="Query", info="JSON with lookup_type and value.", tool_mode=True),
-        DropdownInput(name="lookup_type", display_name="Lookup Type", options=["linkedin_url", "people_search_id"], value="linkedin_url"),
+        DropdownInput(
+            name="lookup_type",
+            display_name="Lookup Type",
+            options=["linkedin_url", "people_search_id"],
+            value="linkedin_url",
+        ),
         MessageTextInput(name="value", display_name="Value", info="The domain, LinkedIn URL, or ID to look up."),
     ]
 

@@ -17,9 +17,16 @@ class PubrioBatchRedeemContactsComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(name="query", display_name="Query", info="JSON with peoples and people_contact_types.", tool_mode=True),
+        MessageTextInput(
+            name="query", display_name="Query", info="JSON with peoples and people_contact_types.", tool_mode=True
+        ),
         MessageTextInput(name="peoples", display_name="People UUIDs", info="Comma-separated people_search_id UUIDs."),
-        MessageTextInput(name="people_contact_types", display_name="Contact Types", info="Comma-separated: email-work, email-personal, phone", value="email-work"),
+        MessageTextInput(
+            name="people_contact_types",
+            display_name="Contact Types",
+            info="Comma-separated: email-work, email-personal, phone",
+            value="email-work",
+        ),
     ]
 
     outputs = [
@@ -41,10 +48,14 @@ class PubrioBatchRedeemContactsComponent(Component):
             except (json.JSONDecodeError, TypeError):
                 pass
 
-        result = pubrio_post(self.api_key, "/redeem/people/batch", {
-            "peoples": peoples,
-            "people_contact_types": contact_types,
-        })
+        result = pubrio_post(
+            self.api_key,
+            "/redeem/people/batch",
+            {
+                "peoples": peoples,
+                "people_contact_types": contact_types,
+            },
+        )
         data = [Data(text=json.dumps(result), data=result if isinstance(result, dict) else {"result": result})]
         self.status = data
         return DataFrame(data)
