@@ -12,7 +12,6 @@ from pydantic import (
     BaseModel,
     Field,
     StringConstraints,
-    ValidationInfo,
     field_validator,
     model_validator,
 )
@@ -20,6 +19,16 @@ from pydantic import (
 from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
 
 WatsonxApiLlmName = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+    ),
+]
+
+# Keep API-boundary scalar normalization local to this module instead of
+# importing adapter-layer aliases, so mapper contracts can evolve independently.
+NormalizedStr = Annotated[
     str,
     StringConstraints(
         strip_whitespace=True,
@@ -452,32 +461,10 @@ class WatsonxApiConfigListItem(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    connection_id: str = Field(min_length=1)
-    app_id: str = Field(min_length=1)
-    type: str | None = None
-    environment: str | None = None
-
-    @field_validator("connection_id", "app_id", mode="before")
-    @classmethod
-    def normalize_required_strings(cls, value: Any, info: ValidationInfo) -> str:
-        normalized = str(value or "").strip()
-        if not normalized:
-            field_name = str(info.field_name)
-            msg = f"Config list item field '{field_name}' must be a non-empty string."
-            raise ValueError(msg)
-        return normalized
-
-    @field_validator("type", mode="before")
-    @classmethod
-    def normalize_optional_type(cls, value: Any) -> str | None:
-        normalized = str(value or "").strip()
-        return normalized or None
-
-    @field_validator("environment", mode="before")
-    @classmethod
-    def normalize_optional_environment(cls, value: Any) -> str | None:
-        normalized = str(value or "").strip()
-        return normalized or None
+    connection_id: NormalizedStr
+    app_id: NormalizedStr
+    type: NormalizedStr
+    environment: NormalizedStr
 
 
 class WatsonxApiConfigListProviderData(BaseModel):
@@ -541,6 +528,16 @@ class WatsonxApiDeploymentFlowVersionItemData(BaseModel):
     def normalize_optional_tool_name(cls, value: Any) -> str | None:
         normalized = str(value or "").strip()
         return normalized or None
+
+
+class WatsonxApiRenameToolOperation(BaseModel):
+    """API-facing rename-tool operation payload."""
+
+    model_config = {"extra": "forbid"}
+
+    op: Literal["rename_tool"]
+    flow_version_id: str = Field(min_length=1)
+    tool_name: NormalizedStr = Field(min_length=1)
 
 
 class _WatsonxApiAgentExecutionResultBase(BaseModel):

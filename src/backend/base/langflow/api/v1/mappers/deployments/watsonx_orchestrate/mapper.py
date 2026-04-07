@@ -10,7 +10,6 @@ from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
-    ConfigListItem,
     ConfigListResult,
     DeploymentCreateResult,
     DeploymentListLlmsResult,
@@ -60,6 +59,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiAddFlowItem,
     WatsonxApiAgentExecutionCreateResultData,
     WatsonxApiAgentExecutionStatusResultData,
+    WatsonxApiConfigListItem,
     WatsonxApiConfigListProviderData,
     WatsonxApiCreatedTool,
     WatsonxApiCreateUpsertToolItem,
@@ -171,6 +171,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         ),
         config_list_result=PayloadSlot(
             adapter_model=WatsonxApiConfigListProviderData,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
+        config_item_data=PayloadSlot(
+            adapter_model=WatsonxApiConfigListItem,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
         snapshot_list_result=PayloadSlot(
@@ -1007,11 +1011,26 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             msg = "Watsonx config_list_result payload slot is not configured."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
 
-        items_all = [self._shape_config_list_item(item) for item in result.configs]
+        items_all: list[WatsonxApiConfigListItem] = []
+        for item in result.configs:
+            if not isinstance(item.provider_data, dict):
+                msg = "Invalid config item provider_data payload: expected non-null object."
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+            items_all.append(
+                self.shape_config_item_data(
+                    {
+                        **item.provider_data,
+                        "connection_id": item.id,
+                        "app_id": item.name,
+                    }
+                )
+            )
         total = len(items_all)
         offset = page_offset(page, size)
         provider_payload = {
-            "connections": items_all[offset : offset + size],
+            "connections": [
+                item.model_dump(mode="json", exclude_none=True) for item in items_all[offset : offset + size]
+            ],
             "page": page,
             "size": size,
             "total": total,
@@ -1232,23 +1251,14 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 detail=f"Invalid deployment list item provider_data payload: {detail}",
             ) from exc
 
-    def _shape_config_list_item(self, item: ConfigListItem) -> dict[str, Any]:
-        payload: dict[str, Any] = {
-            "connection_id": str(item.id).strip(),
-            "app_id": str(item.name).strip(),
-        }
-        item_provider_data = item.provider_data if isinstance(item.provider_data, dict) else {}
-        config_type = str(item_provider_data.get("type") or "").strip()
-        if not config_type:
-            msg = "Invalid config list item provider_data payload: expected non-empty 'type'."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        payload["type"] = config_type
-        environment = str(item_provider_data.get("environment") or "").strip()
-        if not environment:
-            msg = "Invalid config list item provider_data payload: expected non-null and non-empty 'environment'."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        payload["environment"] = environment
-        return payload
+    def shape_config_item_data(self, provider_data: dict[str, Any]) -> WatsonxApiConfigListItem:
+        return self._parse_required_payload_slot(
+            slot=self.api_payloads.config_item_data,
+            slot_name="config_item_data",
+            raw=provider_data,
+            missing_payload_detail="Config item provider_data payload is missing.",
+            malformed_payload_detail="Invalid config item provider_data payload:",
+        )
 
     def _parse_required_payload_slot(
         self,

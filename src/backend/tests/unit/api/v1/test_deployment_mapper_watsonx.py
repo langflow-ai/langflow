@@ -82,6 +82,7 @@ def test_watsonx_mapper_is_registered() -> None:
     assert mapper.api_payloads.deployment_update is not None
     assert mapper.api_payloads.deployment_update_result is not None
     assert mapper.api_payloads.config_list_result is not None
+    assert mapper.api_payloads.config_item_data is not None
     assert mapper.api_payloads.snapshot_list_result is not None
 
 
@@ -459,7 +460,9 @@ def test_watsonx_mapper_config_list_fails_fast_when_type_missing() -> None:
     with pytest.raises(HTTPException) as exc_info:
         mapper.shape_config_list_result(result, page=1, size=10)
     assert exc_info.value.status_code == 500
-    assert "expected non-empty 'type'" in str(exc_info.value.detail)
+    detail = str(exc_info.value.detail)
+    assert "Invalid config item provider_data payload:" in detail
+    assert "'type'" in detail
 
 
 def test_watsonx_mapper_config_list_exposes_connection_id_app_id_and_type() -> None:
@@ -504,7 +507,9 @@ def test_watsonx_mapper_config_list_fails_fast_when_environment_missing() -> Non
     with pytest.raises(HTTPException) as exc_info:
         mapper.shape_config_list_result(result, page=1, size=10)
     assert exc_info.value.status_code == 500
-    assert "expected non-null and non-empty 'environment'" in str(exc_info.value.detail)
+    detail = str(exc_info.value.detail)
+    assert "Invalid config item provider_data payload:" in detail
+    assert "'environment'" in detail
 
 
 def test_watsonx_mapper_config_list_rejects_missing_type_even_with_other_provider_data() -> None:
@@ -523,7 +528,9 @@ def test_watsonx_mapper_config_list_rejects_missing_type_even_with_other_provide
     with pytest.raises(HTTPException) as exc_info:
         mapper.shape_config_list_result(result, page=1, size=10)
     assert exc_info.value.status_code == 500
-    assert "expected non-empty 'type'" in str(exc_info.value.detail)
+    detail = str(exc_info.value.detail)
+    assert "Invalid config item provider_data payload:" in detail
+    assert "'type'" in detail
 
 
 def test_watsonx_mapper_shapes_snapshot_list_result_without_nested_provider_data() -> None:

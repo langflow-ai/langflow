@@ -2904,7 +2904,7 @@ async def test_create_execution_posts_runs_payload(monkeypatch):
 
     assert result.deployment_id == "dep-1"
     assert result.execution_id == "run-1"
-    assert result.provider_result == {"status": "accepted", "execution_id": "run-1"}
+    assert result.provider_result == {"status": "accepted", "execution_id": "run-1", "thread_id": "thread-1"}
     assert fake_base.post_calls
     path, payload = fake_base.post_calls[0]
     assert path == "/runs"
@@ -5443,6 +5443,124 @@ def test_extract_agent_tool_ids():
 
 
 # ---------------------------------------------------------------------------
+# Config helper unit tests (core/config.py standalone functions)
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_optional_text_strips_and_returns_none_for_empty():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import normalize_optional_text
+
+    assert normalize_optional_text(None) is None
+    assert normalize_optional_text("") is None
+    assert normalize_optional_text("  ") is None
+    assert normalize_optional_text("hello") == "hello"
+    assert normalize_optional_text("  spaced  ") == "spaced"
+
+
+def test_normalize_optional_text_rejects_non_str():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import normalize_optional_text
+
+    with pytest.raises(TypeError, match=r"expected str \| None"):
+        normalize_optional_text(("value",))
+    with pytest.raises(TypeError, match=r"expected str \| None"):
+        normalize_optional_text(42)
+
+
+def test_normalize_optional_text_handles_str_enum():
+    from enum import Enum
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import normalize_optional_text
+
+    class FakeEnum(str, Enum):
+        KEY_VALUE = "key_value_creds"
+
+    assert normalize_optional_text(FakeEnum.KEY_VALUE) == "key_value_creds"
+
+
+def test_build_config_list_item_valid():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import build_config_list_item
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxConfigItemProviderData
+    from lfx.services.adapters.payload import PayloadSlot
+
+    slot = PayloadSlot(WatsonxConfigItemProviderData)
+    item = build_config_list_item(
+        config_item_data_slot=slot,
+        connection_id="conn-1",
+        app_id="app-1",
+        config_type="key_value_creds",
+        environment="draft",
+    )
+    assert item.id == "conn-1"
+    assert item.name == "app-1"
+    assert isinstance(item.provider_data, dict)
+    assert item.provider_data["type"] == "key_value_creds"
+    assert item.provider_data["environment"] == "draft"
+
+
+def test_build_config_list_item_missing_environment_for_key_value_creds():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import build_config_list_item
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxConfigItemProviderData
+    from lfx.services.adapters.payload import PayloadSlot
+
+    slot = PayloadSlot(WatsonxConfigItemProviderData)
+    with pytest.raises(InvalidContentError, match="key_value_creds connection without a required environment"):
+        build_config_list_item(
+            config_item_data_slot=slot,
+            connection_id="conn-1",
+            app_id="app-1",
+            config_type="key_value_creds",
+            environment=None,
+        )
+
+
+def test_build_config_list_item_invalid_payload():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import build_config_list_item
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxConfigItemProviderData
+    from lfx.services.adapters.payload import PayloadSlot
+
+    slot = PayloadSlot(WatsonxConfigItemProviderData)
+    with pytest.raises(InvalidContentError, match="invalid config item provider_data payload"):
+        build_config_list_item(
+            config_item_data_slot=slot,
+            connection_id="conn-1",
+            app_id="app-1",
+            config_type="unknown_type",
+            environment=None,
+        )
+
+
+def test_warn_if_expected_ids_missing_logs_warning(caplog):
+    import logging
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import warn_if_expected_ids_missing
+
+    with caplog.at_level(logging.WARNING):
+        warn_if_expected_ids_missing(
+            deployment_id="dep-1",
+            resource_name="tool",
+            expected_ids=["t1", "t2", "t3"],
+            resolved_ids={"t1"},
+        )
+    assert "t2" in caplog.text
+    assert "t3" in caplog.text
+
+
+def test_warn_if_expected_ids_missing_no_warning_when_all_resolved(caplog):
+    import logging
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import warn_if_expected_ids_missing
+
+    with caplog.at_level(logging.WARNING):
+        warn_if_expected_ids_missing(
+            deployment_id="dep-1",
+            resource_name="tool",
+            expected_ids=["t1", "t2"],
+            resolved_ids={"t1", "t2"},
+        )
+    assert "list_configs" not in caplog.text
+
+
+# ---------------------------------------------------------------------------
 # Execution helper tests
 # ---------------------------------------------------------------------------
 
@@ -5795,7 +5913,7 @@ async def test_create_maps_409_conflict_to_deployment_conflict_error():
                 response=SimpleNamespace(status_code=409, text='{"detail":"already exists"}')
             ),
         ),
-        tool=FakeToolClient([{"id": "tool-existing-1"}]),
+        tool=FakeToolClient([{"id": "tool-existing-1", "binding": {"langflow": {}}}]),
         connections=FakeConnectionsClient(existing_app_id="app-existing-1"),
     )
     _attach_provider_clients(service, clients)
@@ -5828,7 +5946,7 @@ async def test_create_maps_422_to_invalid_content_error():
                 response=SimpleNamespace(status_code=422, text='{"detail":"validation error"}')
             ),
         ),
-        tool=FakeToolClient([{"id": "tool-existing-1"}]),
+        tool=FakeToolClient([{"id": "tool-existing-1", "binding": {"langflow": {}}}]),
         connections=FakeConnectionsClient(existing_app_id="app-existing-1"),
     )
     _attach_provider_clients(service, clients)
@@ -6083,17 +6201,17 @@ def test_create_agent_run_result_falls_back_to_id_field():
 
 
 # ---------------------------------------------------------------------------
-# Additional coverage: _require_single_deployment_id — multiple IDs
+# Additional coverage: require_single_deployment_id — multiple IDs
 # ---------------------------------------------------------------------------
 
 
 def test_require_single_deployment_id_rejects_multiple_ids():
-    """_require_single_deployment_id raises InvalidContentError for multiple IDs."""
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import _require_single_deployment_id
+    """require_single_deployment_id raises InvalidContentError for multiple IDs."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import require_single_deployment_id
 
     params = ConfigListParams(deployment_ids=["id-1", "id-2"])
     with pytest.raises(InvalidContentError, match="exactly one deployment_id"):
-        _require_single_deployment_id(params, resource_label="config")
+        require_single_deployment_id(params, resource_label="config")
 
 
 # ---------------------------------------------------------------------------
@@ -6109,7 +6227,7 @@ async def test_create_preserves_exception_chain_on_unexpected_error():
     original_error = RuntimeError("unexpected db error")
     clients = FakeWXOClients(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}, create_exception=original_error),
-        tool=FakeToolClient([{"id": "tool-existing-1"}]),
+        tool=FakeToolClient([{"id": "tool-existing-1", "binding": {"langflow": {}}}]),
         connections=FakeConnectionsClient(existing_app_id="app-existing-1"),
     )
     _attach_provider_clients(service, clients)
