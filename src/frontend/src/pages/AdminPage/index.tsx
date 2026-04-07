@@ -1,5 +1,5 @@
-import { cloneDeep } from "lodash";
-import { useContext, useEffect, useRef, useState } from "react";
+import { cloneDeep, debounce } from "lodash";
+import { useCallback, useContext, useEffect, useState } from "react";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import {
   useAddUser,
@@ -59,71 +59,62 @@ export default function AdminPage() {
   const { mutate: mutateUpdateUser } = useUpdateUser();
   const { mutate: mutateAddUser } = useAddUser();
 
-  const userList = useRef([]);
-
-  useEffect(() => {
-    setTimeout(() => {
-      getUsers();
-    }, 500);
-  }, []);
-
-  const [filterUserList, setFilterUserList] = useState(userList.current);
+  const [userList, setUserList] = useState<Users[]>([]);
 
   const { mutate: mutateGetUsers, isPending, isIdle } = useGetUsers({});
 
-  function getUsers() {
-    mutateGetUsers(
-      {
-        skip: size * (index - 1),
-        limit: size,
-      },
-      {
-        onSuccess: (users) => {
-          setTotalRowsCount(users["total_count"]);
-          userList.current = users["users"];
-          setFilterUserList(users["users"]);
+  const fetchUsers = useCallback(
+    (skip: number, limit: number, search?: string) => {
+      mutateGetUsers(
+        { skip, limit, search: search || undefined },
+        {
+          onSuccess: (users) => {
+            setTotalRowsCount(users["total_count"]);
+            setUserList(users["users"]);
+          },
+          onError: () => {},
         },
-        onError: () => {},
-      },
-    );
-  }
+      );
+    },
+    [mutateGetUsers],
+  );
+
+  useEffect(() => {
+    setTimeout(() => {
+      fetchUsers(size * (index - 1), size);
+    }, 500);
+  }, []);
 
   function handleChangePagination(pageIndex: number, pageSize: number) {
     setPageSize(pageSize);
     setPageIndex(pageIndex);
-
-    mutateGetUsers(
-      {
-        skip: pageSize * (pageIndex - 1),
-        limit: pageSize,
-      },
-      {
-        onSuccess: (users) => {
-          setTotalRowsCount(users["total_count"]);
-          userList.current = users["users"];
-          setFilterUserList(users["users"]);
-        },
-      },
-    );
+    fetchUsers(pageSize * (pageIndex - 1), pageSize, inputValue);
   }
 
   function resetFilter() {
+    setInputValue("");
     setPageIndex(PAGINATION_PAGE);
     setPageSize(PAGINATION_SIZE);
-    getUsers();
+    fetchUsers(0, PAGINATION_SIZE);
   }
+
+  const debouncedSearch = useCallback(
+    debounce((search: string) => {
+      setPageIndex(PAGINATION_PAGE);
+      fetchUsers(0, size, search);
+    }, 300),
+    [size, fetchUsers],
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [debouncedSearch]);
 
   function handleFilterUsers(input: string) {
     setInputValue(input);
-
-    if (input === "") {
-      setFilterUserList(userList.current);
-    } else {
-      const filteredList = userList.current.filter((user: Users) =>
-        user.username.toLowerCase().includes(input.toLowerCase()),
-      );
-      setFilterUserList(filteredList);
-    }
+    debouncedSearch(input);
   }
 
   function handleDeleteUser(user) {
@@ -276,7 +267,8 @@ export default function AdminPage() {
                   className="cursor-pointer"
                   onClick={() => {
                     setInputValue("");
-                    setFilterUserList(userList.current);
+                    setPageIndex(PAGINATION_PAGE);
+                    fetchUsers(0, size);
                   }}
                 >
                   <IconComponent name="X" className="w-6 text-foreground" />
@@ -306,11 +298,11 @@ export default function AdminPage() {
               </UserManagementModal>
             </div>
           </div>
-          {isPending || isIdle ? (
+          {(isPending || isIdle) && userList.length === 0 ? (
             <div className="flex h-full w-full items-center justify-center">
               <CustomLoader remSize={12} />
             </div>
-          ) : userList.current.length === 0 && !isIdle ? (
+          ) : userList.length === 0 && !isPending && !isIdle ? (
             <>
               <div className="m-4 flex items-center justify-between text-sm">
                 No users registered.
@@ -340,10 +332,10 @@ export default function AdminPage() {
                       <TableHead className="h-10 w-[100px] text-right"></TableHead>
                     </TableRow>
                   </TableHeader>
-                  {!isPending && (
+                  {
                     <TableBody className="border-b">
-                      {filterUserList.map((user: UserInputType, index) => (
-                        <TableRow key={index}>
+                      {userList.map((user: UserInputType, index) => (
+                        <TableRow key={user.id}>
                           <TableCell className="truncate py-2 font-medium">
                             <ShadTooltip content={user.id}>
                               <span className="cursor-default">{user.id}</span>
@@ -496,7 +488,7 @@ export default function AdminPage() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  )}
+                  }
                 </Table>
               </div>
 
