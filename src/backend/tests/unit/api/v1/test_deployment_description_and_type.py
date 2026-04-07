@@ -126,6 +126,7 @@ class TestCreateResponse:
         provider_account_id = uuid4()
         row = SimpleNamespace(
             id=uuid4(),
+            resource_key="rk-1",
             deployment_provider_account_id=provider_account_id,
             name="deploy",
             description="my description",
@@ -145,6 +146,7 @@ class TestCreateResponse:
         provider_account_id = uuid4()
         row = SimpleNamespace(
             id=uuid4(),
+            resource_key="rk-1",
             deployment_provider_account_id=provider_account_id,
             name="deploy",
             description=None,
@@ -164,6 +166,7 @@ class TestCreateResponse:
         provider_account_id = uuid4()
         row = SimpleNamespace(
             id=uuid4(),
+            resource_key="rk-1",
             deployment_provider_account_id=provider_account_id,
             name="deploy",
             description=None,
@@ -190,6 +193,7 @@ class TestMapperUpdateResult:
         provider_account_id = uuid4()
         row = SimpleNamespace(
             id=uuid4(),
+            resource_key="rk-1",
             deployment_provider_account_id=provider_account_id,
             name="deploy",
             description="persisted desc",
@@ -210,6 +214,7 @@ class TestMapperUpdateResult:
         provider_account_id = uuid4()
         row = SimpleNamespace(
             id=uuid4(),
+            resource_key="rk-1",
             deployment_provider_account_id=provider_account_id,
             name="deploy",
             description=None,
