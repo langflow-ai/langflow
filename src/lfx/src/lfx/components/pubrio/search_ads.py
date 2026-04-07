@@ -17,9 +17,7 @@ class PubrioSearchAdsComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(
-            name="query", display_name="Search Query", info="JSON search parameters or keyword.", tool_mode=True
-        ),
+        MessageTextInput(name="query", display_name="Search Query", info="JSON search parameters or keyword.", tool_mode=True),
         MessageTextInput(name="search_terms", display_name="Search Terms", advanced=True),
         MessageTextInput(name="headlines", display_name="Headlines", advanced=True),
         MessageTextInput(name="target_locations", display_name="Target Locations", advanced=True),
@@ -43,8 +41,12 @@ class PubrioSearchAdsComponent(Component):
 
         if self.query:
             try:
-                body.update(json.loads(self.query))
-            except (json.JSONDecodeError, TypeError):
+                parsed = json.loads(self.query)
+                if isinstance(parsed, dict):
+                    body.update(parsed)
+                else:
+                    body["search_term"] = self.query
+            except (json.JSONDecodeError, TypeError, ValueError):
                 body["search_term"] = self.query
 
         if self.search_terms:
