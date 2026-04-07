@@ -82,14 +82,14 @@ class GuardedTool(Tool):
 
     async def arun(self, tool_input: str | dict | ToolCall, config=None, **kwargs):
         args = self.parse_input(tool_input)
-        logger.info(f"running toolguard for {self.name}")
+        logger.debug(f"running toolguard for {self.name}")
 
         with self._toolguard:
             try:
                 await self._toolguard.guard_toolcall(self.name, args=args, delegate=self._tool_invoker)
                 return await self._orig_tool.arun(tool_input=args, config=config, **kwargs)
             except PolicyViolationException as ex:
-                print(f'exception: {ex.message}')
+                logger.debug(f"exception: {ex.message}")
                 return {
                     "ok": False,
                     "error": {
