@@ -9,7 +9,7 @@
             "id": "KnowledgeBase-kgwih",
             "name": "retrieve_data",
             "output_types": [
-              "Table"
+              "DataFrame"
             ]
           },
           "targetHandle": {
@@ -17,19 +17,17 @@
             "id": "ChatOutput-OG4M9",
             "inputTypes": [
               "Data",
-              "JSON",
               "DataFrame",
-              "Table",
               "Message"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__KnowledgeBase-kgwih{œdataTypeœ:œKnowledgeBaseœ,œidœ:œKnowledgeBase-kgwihœ,œnameœ:œretrieve_dataœ,œoutput_typesœ:[œTableœ]}-ChatOutput-OG4M9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-OG4M9œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__KnowledgeBase-kgwih{œdataTypeœ:œKnowledgeBaseœ,œidœ:œKnowledgeBase-kgwihœ,œnameœ:œretrieve_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-OG4M9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-OG4M9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "source": "KnowledgeBase-kgwih",
-        "sourceHandle": "{œdataTypeœ: œKnowledgeBaseœ, œidœ: œKnowledgeBase-kgwihœ, œnameœ: œretrieve_dataœ, œoutput_typesœ: [œTableœ]}",
+        "sourceHandle": "{œdataTypeœ: œKnowledgeBaseœ, œidœ: œKnowledgeBase-kgwihœ, œnameœ: œretrieve_dataœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ChatOutput-OG4M9",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-OG4M9œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-OG4M9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
@@ -385,9 +383,7 @@
                 "info": "Message to be passed as output.",
                 "input_types": [
                   "Data",
-                  "JSON",
                   "DataFrame",
-                  "Table",
                   "Message"
                 ],
                 "list": false,
@@ -513,8 +509,7 @@
           "id": "KnowledgeBase-kgwih",
           "node": {
             "base_classes": [
-              "DataFrame",
-              "Table"
+              "DataFrame"
             ],
             "beta": false,
             "conditional_paths": [],
@@ -557,7 +552,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.11.10"
                   },
                   {
                     "name": "lfx",
@@ -602,10 +597,10 @@
                 "group_outputs": false,
                 "method": "retrieve_data",
                 "name": "retrieve_data",
-                "selected": "Table",
+                "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
-                  "Table"
+                  "DataFrame"
                 ],
                 "value": "__UNDEFINED__"
               }
