@@ -263,6 +263,14 @@ describe("file-utils", () => {
         expect(getFilePreviewUrl(windowsPath)).toBe(expected);
       });
 
+      it("should_not_treat_langflow_substrings_as_special_path_segments", () => {
+        const windowsPath = "C:\\temp\\langflow-report\\flow123\\image.png";
+        const expected =
+          "http://localhost:3000/api/v1/files/images/C%3A/temp/langflow-report/flow123/image.png";
+
+        expect(getFilePreviewUrl(windowsPath)).toBe(expected);
+      });
+
       it("should_encode_special_characters_in_path_segments", () => {
         const pathWithSpaces = "flow 123\\folder name\\image file.jpg";
         const expected =

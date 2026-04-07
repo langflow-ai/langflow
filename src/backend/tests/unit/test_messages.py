@@ -1,5 +1,5 @@
 import base64
-import logging
+from types import SimpleNamespace
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
@@ -173,7 +173,17 @@ def test_convert_to_langchain(method_name):
     assert len(list(iterator)) == expected_len
 
 
-def test_to_lc_message_skips_unsupported_file_attachments(caplog):
+def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
+    warnings: list[str] = []
+
+    def warning(event: str, **_kwargs):  # noqa: ANN001
+        warnings.append(event)
+
+    monkeypatch.setattr(
+        "lfx.schema.message.logger",
+        SimpleNamespace(warning=warning, error=lambda *_args, **_kwargs: None),
+    )
+
     message = Message(
         text="Hello",
         sender="User",
@@ -182,12 +192,11 @@ def test_to_lc_message_skips_unsupported_file_attachments(caplog):
         files=["nonexistent.unsupported"],
     )
 
-    with caplog.at_level(logging.WARNING):
-        lc_message = message.to_lc_message()
+    lc_message = message.to_lc_message()
 
     assert lc_message.type == "human"
     assert lc_message.content == [{"type": "text", "text": "Hello"}]
-    assert "Skipping unsupported attachment" in caplog.text
+    assert any("Skipping attachment during message conversion" in event for event in warnings)
 
 
 def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
