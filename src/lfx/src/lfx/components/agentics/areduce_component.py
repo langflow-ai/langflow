@@ -118,7 +118,8 @@ class AreduceComponent(BaseAgenticComponent):
 
             output = await (target << source)
             if self.return_multiple_instances:
-                output = AG(atype=atype, states=output[0].items)
+                appended_states = [item_state for state in output for item_state in state.items]
+                output = AG(atype=atype, states=appended_states)
 
             return DataFrame(output.to_dataframe().to_dict(orient="records"))
         raise ValueError(ERROR_INPUT_SCHEMA_REQUIRED)
