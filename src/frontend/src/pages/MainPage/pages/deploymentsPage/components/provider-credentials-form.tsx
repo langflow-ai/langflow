@@ -16,8 +16,25 @@ export default function ProviderCredentialsForm({
 }: ProviderCredentialsFormProps) {
   const [showApiKey, setShowApiKey] = useState(false);
 
-  const apiKeyAndUrlFields = (
+  const urlAndApiKeyFields = (
     <>
+      <div className="flex flex-col">
+        <span className="pb-2 text-sm font-medium">
+          Service Environment URL <span className="text-destructive">*</span>
+        </span>
+        <Input
+          type="url"
+          placeholder="https://api.example.com"
+          className="bg-muted"
+          value={credentials.url}
+          onChange={(e) =>
+            onCredentialsChange({
+              ...credentials,
+              url: e.target.value,
+            })
+          }
+        />
+      </div>
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
           API Key <span className="text-destructive">*</span>
@@ -48,23 +65,6 @@ export default function ProviderCredentialsForm({
           </button>
         </div>
       </div>
-      <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">
-          Service Environment URL <span className="text-destructive">*</span>
-        </span>
-        <Input
-          type="url"
-          placeholder="https://api.example.com"
-          className="bg-muted"
-          value={credentials.url}
-          onChange={(e) =>
-            onCredentialsChange({
-              ...credentials,
-              url: e.target.value,
-            })
-          }
-        />
-      </div>
     </>
   );
 
@@ -88,9 +88,9 @@ export default function ProviderCredentialsForm({
         />
       </div>
       {layout === "two-column" ? (
-        <div className="grid grid-cols-2 gap-4">{apiKeyAndUrlFields}</div>
+        <div className="grid grid-cols-2 gap-4">{urlAndApiKeyFields}</div>
       ) : (
-        apiKeyAndUrlFields
+        urlAndApiKeyFields
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import type { ProviderAccount } from "../../types";
-import { ALL_PROVIDERS, useProviderFilter } from "../use-provider-filter";
+import { useProviderFilter } from "../use-provider-filter";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -25,18 +25,27 @@ const makeProvider = (
 
 describe("useProviderFilter", () => {
   describe("initial state", () => {
-    it("initializes with ALL_PROVIDERS selected", () => {
-      const { result } = renderHook(() => useProviderFilter([]));
-      expect(result.current.selectedProviderId).toBe(ALL_PROVIDERS);
-    });
-
-    it("returns all provider IDs in providerIdsToQuery when all selected", () => {
+    it("initializes with first provider selected", () => {
       const providers = [
         makeProvider({ id: "p1" }),
         makeProvider({ id: "p2" }),
       ];
       const { result } = renderHook(() => useProviderFilter(providers));
-      expect(result.current.providerIdsToQuery).toEqual(["p1", "p2"]);
+      expect(result.current.selectedProviderId).toBe("p1");
+    });
+
+    it("initializes with empty string when no providers given", () => {
+      const { result } = renderHook(() => useProviderFilter([]));
+      expect(result.current.selectedProviderId).toBe("");
+    });
+
+    it("returns only the first provider ID in providerIdsToQuery", () => {
+      const providers = [
+        makeProvider({ id: "p1" }),
+        makeProvider({ id: "p2" }),
+      ];
+      const { result } = renderHook(() => useProviderFilter(providers));
+      expect(result.current.providerIdsToQuery).toEqual(["p1"]);
     });
 
     it("returns empty providerIdsToQuery for empty provider list", () => {
@@ -68,33 +77,52 @@ describe("useProviderFilter", () => {
       const { result } = renderHook(() => useProviderFilter(providers));
 
       act(() => {
-        result.current.setSelectedProviderId("p1");
+        result.current.setSelectedProviderId("p2");
       });
 
-      expect(result.current.providerIdsToQuery).toEqual(["p1"]);
-      expect(result.current.selectedProviderId).toBe("p1");
+      expect(result.current.providerIdsToQuery).toEqual(["p2"]);
+      expect(result.current.selectedProviderId).toBe("p2");
     });
 
-    it("returns all IDs after resetting back to ALL_PROVIDERS", () => {
+    it("providerIdsToQuery is always a single-element array", () => {
       const providers = [
         makeProvider({ id: "p1" }),
         makeProvider({ id: "p2" }),
+        makeProvider({ id: "p3" }),
       ];
       const { result } = renderHook(() => useProviderFilter(providers));
 
+      // Initially selects first provider — single element
+      expect(result.current.providerIdsToQuery).toHaveLength(1);
+
       act(() => {
-        result.current.setSelectedProviderId("p1");
-      });
-      act(() => {
-        result.current.setSelectedProviderId(ALL_PROVIDERS);
+        result.current.setSelectedProviderId("p3");
       });
 
-      expect(result.current.providerIdsToQuery).toEqual(["p1", "p2"]);
+      expect(result.current.providerIdsToQuery).toHaveLength(1);
+      expect(result.current.providerIdsToQuery).toEqual(["p3"]);
+    });
+  });
+
+  describe("selects first provider once providers load", () => {
+    it("updates selection when providers arrive after mount", () => {
+      const { result, rerender } = renderHook(
+        ({ list }: { list: ProviderAccount[] }) => useProviderFilter(list),
+        { initialProps: { list: [] } },
+      );
+
+      expect(result.current.selectedProviderId).toBe("");
+
+      rerender({
+        list: [makeProvider({ id: "p1" }), makeProvider({ id: "p2" })],
+      });
+
+      expect(result.current.selectedProviderId).toBe("p1");
     });
   });
 
   describe("reset on provider deletion", () => {
-    it("resets to ALL_PROVIDERS when the selected provider is removed from the list", () => {
+    it("selects next available provider when selected provider is removed", () => {
       const providers = [
         makeProvider({ id: "p1" }),
         makeProvider({ id: "p2" }),
@@ -111,7 +139,7 @@ describe("useProviderFilter", () => {
 
       rerender({ list: [makeProvider({ id: "p1" })] });
 
-      expect(result.current.selectedProviderId).toBe(ALL_PROVIDERS);
+      expect(result.current.selectedProviderId).toBe("p1");
     });
 
     it("does not reset when the selected provider still exists", () => {
@@ -132,35 +160,6 @@ describe("useProviderFilter", () => {
       rerender({ list: [makeProvider({ id: "p1" })] });
 
       expect(result.current.selectedProviderId).toBe("p1");
-    });
-
-    it("does not reset when ALL_PROVIDERS is selected and a provider is removed", () => {
-      const providers = [
-        makeProvider({ id: "p1" }),
-        makeProvider({ id: "p2" }),
-      ];
-      const { result, rerender } = renderHook(
-        ({ list }: { list: ProviderAccount[] }) => useProviderFilter(list),
-        { initialProps: { list: providers } },
-      );
-
-      expect(result.current.selectedProviderId).toBe(ALL_PROVIDERS);
-
-      rerender({ list: [makeProvider({ id: "p1" })] });
-
-      expect(result.current.selectedProviderId).toBe(ALL_PROVIDERS);
-    });
-
-    it("does not reset when the provider list is empty and ALL_PROVIDERS is selected", () => {
-      const { result, rerender } = renderHook(
-        ({ list }: { list: ProviderAccount[] }) => useProviderFilter(list),
-        { initialProps: { list: [makeProvider({ id: "p1" })] } },
-      );
-
-      // Don't select a specific provider — stay at ALL_PROVIDERS
-      rerender({ list: [] });
-
-      expect(result.current.selectedProviderId).toBe(ALL_PROVIDERS);
     });
   });
 

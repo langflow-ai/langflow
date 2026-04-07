@@ -9,7 +9,7 @@ import {
 import { useDeleteDeployment } from "@/controllers/API/queries/deployments/use-delete-deployment";
 import { useGetDeploymentsByProviders } from "@/controllers/API/queries/deployments/use-get-deployments-by-providers";
 import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation";
-import { ALL_PROVIDERS, useProviderFilter } from "../hooks/use-provider-filter";
+import { useProviderFilter } from "../hooks/use-provider-filter";
 import { useTestDeploymentModal } from "../hooks/use-test-deployment-modal";
 import type { Deployment, ProviderAccount } from "../types";
 import DeploymentDetailsModal from "./deployment-details-modal/deployment-details-modal";
@@ -27,6 +27,7 @@ interface DeploymentsContentProps {
   providers: ProviderAccount[];
   stepperOpen: boolean;
   setStepperOpen: (open: boolean) => void;
+  onGoToProviders: () => void;
 }
 
 export default function DeploymentsContent({
@@ -34,6 +35,7 @@ export default function DeploymentsContent({
   providers,
   stepperOpen,
   setStepperOpen,
+  onGoToProviders,
 }: DeploymentsContentProps) {
   const {
     selectedProviderId,
@@ -64,14 +66,21 @@ export default function DeploymentsContent({
 
   const isLoading = isLoadingProviders || isLoadingDeployments;
   const hasProviders = providers.length > 0;
-  const isEmpty = !hasProviders || deployments.length === 0;
 
   const content = (() => {
     if (isLoading) return <DeploymentsLoadingSkeleton />;
-    if (isEmpty)
+    if (!hasProviders)
       return (
         <DeploymentsEmptyState
-          onCreateDeployment={() => setStepperOpen(true)}
+          variant="no-providers"
+          onAction={onGoToProviders}
+        />
+      );
+    if (deployments.length === 0)
+      return (
+        <DeploymentsEmptyState
+          variant="no-deployments"
+          onAction={() => setStepperOpen(true)}
         />
       );
     return (
@@ -92,7 +101,7 @@ export default function DeploymentsContent({
 
   return (
     <>
-      {providers.length > 1 && (
+      {providers.length >= 1 && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Environment:</span>
           <Select
@@ -103,7 +112,6 @@ export default function DeploymentsContent({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_PROVIDERS}>All environments</SelectItem>
               {providers.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.name}
