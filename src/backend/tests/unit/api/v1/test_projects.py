@@ -1815,7 +1815,9 @@ async def _create_other_user(client: AsyncClient) -> tuple[str, dict]:
         await session.refresh(user)
         created_id = str(user.id)
 
-    response = await client.post("api/v1/login", data={"username": username, "password": "testpassword"})  # pragma: allowlist secret
+    response = await client.post(
+        "api/v1/login", data={"username": username, "password": "testpassword"}
+    )  # pragma: allowlist secret
     assert response.status_code == 200
     token = response.json()["access_token"]
     return created_id, {"Authorization": f"Bearer {token}"}
