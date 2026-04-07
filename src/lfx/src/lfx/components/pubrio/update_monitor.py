@@ -17,26 +17,12 @@ class PubrioUpdateMonitorComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(
-            name="query", display_name="Query", info="JSON with monitor_id and fields to update.", tool_mode=True
-        ),
+        MessageTextInput(name="query", display_name="Query", info="JSON with monitor_id and fields to update.", tool_mode=True),
         MessageTextInput(name="monitor_id", display_name="Monitor ID", info="Monitor UUID to update."),
         MessageTextInput(name="name", display_name="Name", advanced=True),
-        DropdownInput(
-            name="detection_mode",
-            display_name="Detection Mode",
-            options=["company_first", "signal_first"],
-            value="company_first",
-            advanced=True,
-        ),
+        DropdownInput(name="detection_mode", display_name="Detection Mode", options=["company_first", "signal_first"], value="company_first", advanced=True),
         MessageTextInput(name="signal_types", display_name="Signal Types", advanced=True),
-        DropdownInput(
-            name="destination_type",
-            display_name="Destination Type",
-            options=["webhook", "email", "sequences"],
-            value="webhook",
-            advanced=True,
-        ),
+        DropdownInput(name="destination_type", display_name="Destination Type", options=["webhook", "email", "sequences"], value="webhook", advanced=True),
         MessageTextInput(name="webhook_url", display_name="Webhook URL", advanced=True),
         MessageTextInput(name="companies", display_name="Companies", advanced=True),
         MessageTextInput(name="domains", display_name="Domains", advanced=True),
@@ -56,8 +42,10 @@ class PubrioUpdateMonitorComponent(Component):
 
         if self.query:
             try:
-                body.update(json.loads(self.query))
-            except (json.JSONDecodeError, TypeError):
+                parsed = json.loads(self.query)
+                if isinstance(parsed, dict):
+                    body.update(parsed)
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
         if self.monitor_id:
