@@ -11,6 +11,7 @@ from lfx.services.adapters.payload import AdapterPayload, PayloadSlot
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 RawToolName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+NormalizedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class WatsonxFlowArtifactProviderData(BaseModel):
@@ -551,6 +552,7 @@ class WatsonxAgentExecutionResultData(BaseModel):
         default=None,
         description="WXO agent identifier (resource_key in Langflow DB).",
     )
+    thread_id: NormalizedId | None = None
     status: str | None = None
     result: Any | None = None
     started_at: str | None = None
@@ -582,6 +584,15 @@ class WatsonxSnapshotConnectionsProviderData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     connections: dict[NormalizedId, NormalizedId] = Field(default_factory=dict)
+
+
+class WatsonxConfigItemProviderData(BaseModel):
+    """Provider data contract for config list items."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: NormalizedStr
+    environment: NormalizedStr
 
 
 class WatsonxConfigListResultData(BaseModel):
@@ -656,6 +667,7 @@ PAYLOAD_SCHEMAS = DeploymentPayloadSchemas(
     deployment_create=PayloadSlot(WatsonxDeploymentCreatePayload),
     flow_artifact=PayloadSlot(WatsonxFlowArtifactProviderData),
     snapshot_item_data=PayloadSlot(WatsonxSnapshotConnectionsProviderData),
+    config_item_data=PayloadSlot(WatsonxConfigItemProviderData),
     deployment_create_result=PayloadSlot(WatsonxDeploymentCreateResultData),
     deployment_update=PayloadSlot(WatsonxDeploymentUpdatePayload),
     deployment_update_result=PayloadSlot(WatsonxDeploymentUpdateResultData),

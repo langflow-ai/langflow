@@ -8,8 +8,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { usePostProviderAccount } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
-import { useGetDeploymentAttachments } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 import { useGetDeployment } from "@/controllers/API/queries/deployments/use-get-deployment";
+import { useGetDeploymentAttachments } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 import { usePatchDeployment } from "@/controllers/API/queries/deployments/use-patch-deployment";
 import { usePostDeployment } from "@/controllers/API/queries/deployments/use-post-deployment";
 import {
@@ -71,7 +71,7 @@ export default function DeploymentStepperModal({
   //
   // - If a user renames a tool in the wxO console, the new name appears
   //   here on the next edit. Langflow doesn't cache tool names locally.
-  // - If a tool is deleted in wxO, its tool_name will be null and the
+  // - If a tool is deleted in wxO, provider_data.tool_name will be null and the
   //   review page falls back to the Langflow flow name.
   // - If a connection is deleted in wxO but the tool still references it,
   //   the app_id will appear in connectionsByFlow. The backend will fail
@@ -93,8 +93,9 @@ export default function DeploymentStepperModal({
         versionTag: `v${fv.version_number}`,
       });
       // Pre-populate tool names from the provider (may differ from flow name).
-      if (fv.tool_name) {
-        toolNames.set(fv.flow_id, fv.tool_name);
+      const providerToolName = fv.provider_data?.tool_name;
+      if (providerToolName) {
+        toolNames.set(fv.flow_id, providerToolName);
       }
       // Pre-populate attached connections from existing tool bindings.
       const appIds = fv.provider_data?.app_ids;

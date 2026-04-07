@@ -2904,7 +2904,7 @@ async def test_create_execution_posts_runs_payload(monkeypatch):
 
     assert result.deployment_id == "dep-1"
     assert result.execution_id == "run-1"
-    assert result.provider_result == {"status": "accepted", "execution_id": "run-1"}
+    assert result.provider_result == {"status": "accepted", "execution_id": "run-1", "thread_id": "thread-1"}
     assert fake_base.post_calls
     path, payload = fake_base.post_calls[0]
     assert path == "/runs"
@@ -3081,6 +3081,7 @@ async def test_list_configs_single_deployment_scope(monkeypatch):
                 "connection_id": "conn-1",
                 "app_id": "cfg-1",
                 "security_scheme": "key_value_creds",
+                "environment": "live",
             }
         )
     ]
@@ -3104,22 +3105,616 @@ async def test_list_configs_single_deployment_scope(monkeypatch):
     assert len(result.configs) == 1
     assert result.configs[0].id == "conn-1"
     assert result.configs[0].name == "cfg-1"
-    assert result.configs[0].provider_data == {"type": "key_value_creds"}
+    assert result.configs[0].provider_data == {"type": "key_value_creds", "environment": "live"}
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_filters_to_key_value_creds(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1", "tool-2"]})
+    fake_tool = FakeToolClient(
+        [
+            {"id": "tool-1", "name": "tool-one", "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}}},
+            {"id": "tool-2", "name": "tool-two", "binding": {"langflow": {"connections": {"cfg-2": "conn-2"}}}},
+        ]
+    )
+    connections_client = FakeConnectionsClient()
+    connections_client._draft_entries_by_id = [
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-1",
+                "app_id": "cfg-1",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
+        ),
+        ListConfigsResponse.model_validate({"connection_id": "conn-2", "app_id": "cfg-2", "security_scheme": "oauth2"}),
+    ]
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=fake_tool,
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(
+        user_id="user-1",
+        db=object(),
+        params=ConfigListParams(deployment_ids=["dep-1"]),
+    )
+
+    assert [config.id for config in result.configs] == ["conn-1"]
+    assert [config.name for config in result.configs] == ["cfg-1"]
+    assert [config.provider_data for config in result.configs] == [{"type": "key_value_creds", "environment": "draft"}]
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_warns_on_stale_tool_ids(monkeypatch, caplog):
+    """Stale tool IDs can be deleted between reads; keep resolved configs and warn."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1", "deleted-tool"]})
+    fake_tool = FakeToolClient(
+        [
+            {
+                "id": "tool-1",
+                "name": "tool-one",
+                "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+            }
+        ]
+    )
+    connections_client = FakeConnectionsClient()
+    connections_client._draft_entries_by_id = [
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-1",
+                "app_id": "cfg-1",
+                "security_scheme": "key_value_creds",
+                "environment": "live",
+            }
+        )
+    ]
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=fake_tool,
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        result = await service.list_configs(
+            user_id="user-1",
+            db=object(),
+            params=ConfigListParams(deployment_ids=["dep-1"]),
+        )
+
+    assert [config.id for config in result.configs] == ["conn-1"]
+    assert "tool IDs not returned by provider" in caplog.text
+    assert "deleted-tool" in caplog.text
+    assert "dep-1" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_fails_fast_when_type_enrichment_fails(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_tool = FakeToolClient(
+        [
+            {
+                "id": "tool-1",
+                "name": "tool-one",
+                "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+            }
+        ]
+    )
+    connections_client = FakeConnectionsClient()
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=fake_tool,
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    def get_drafts_by_ids_raises(conn_ids):  # noqa: ARG001
+        msg = "provider timeout"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(connections_client, "get_drafts_by_ids", get_drafts_by_ids_raises)
+
+    with pytest.raises(DeploymentError, match="listing deployment configs"):
+        await service.list_configs(
+            user_id="user-1",
+            db=object(),
+            params=ConfigListParams(deployment_ids=["dep-1"]),
+        )
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_accepts_schema_compatible_detailed_connection(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_tool = FakeToolClient(
+        [
+            {
+                "id": "tool-1",
+                "name": "tool-one",
+                "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+            }
+        ]
+    )
+    connections_client = FakeConnectionsClient()
+    connections_client._draft_entries_by_id = [
+        SimpleNamespace(connection_id="conn-1", app_id="cfg-1", security_scheme="key_value_creds", environment="draft")
+    ]
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=fake_tool,
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(
+        user_id="user-1",
+        db=object(),
+        params=ConfigListParams(deployment_ids=["dep-1"]),
+    )
+    assert len(result.configs) == 1
+    assert result.configs[0].id == "conn-1"
+    assert result.configs[0].name == "cfg-1"
+    assert result.configs[0].provider_data == {"type": "key_value_creds", "environment": "draft"}
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_fails_fast_when_environment_missing(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_tool = FakeToolClient(
+        [
+            {
+                "id": "tool-1",
+                "name": "tool-one",
+                "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+            }
+        ]
+    )
+    connections_client = FakeConnectionsClient()
+    connections_client._draft_entries_by_id = [
+        ListConfigsResponse.model_validate(
+            {"connection_id": "conn-1", "app_id": "cfg-1", "security_scheme": "key_value_creds"}
+        )
+    ]
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=fake_tool,
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(InvalidContentError, match="required environment"):
+        await service.list_configs(
+            user_id="user-1",
+            db=object(),
+            params=ConfigListParams(deployment_ids=["dep-1"]),
+        )
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_warns_when_referenced_connection_missing(monkeypatch, caplog):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_tool = FakeToolClient(
+        [
+            {
+                "id": "tool-1",
+                "name": "tool-one",
+                "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+            }
+        ]
+    )
+    connections_client = FakeConnectionsClient()
+    connections_client._draft_entries_by_id = []
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=fake_tool,
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        result = await service.list_configs(
+            user_id="user-1",
+            db=object(),
+            params=ConfigListParams(deployment_ids=["dep-1"]),
+        )
+    assert result.configs == []
+    assert "connection IDs not returned by provider" in caplog.text
+    assert "conn-1" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_list_configs_tenant_scope_raises_on_provider_list_failure(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    connections_client = FakeConnectionsClient()
+
+    def list_raises():
+        msg = "provider list failed"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(connections_client, "list", list_raises)
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(DeploymentError, match="listing deployment configs"):
+        await service.list_configs(user_id="user-1", db=object(), params=None)
+
+
+@pytest.mark.anyio
+async def test_list_configs_tenant_scope_handles_none_response(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    connections_client = FakeConnectionsClient()
+    connections_client._list_entries = None
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(user_id="user-1", db=object(), params=None)
+    assert result.configs == []
+    assert result.provider_result == {}
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_raises_on_agent_fetch_failure(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    def get_draft_by_id_raises(deployment_id):  # noqa: ARG001
+        msg = "provider agent fetch failed"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(fake_agent, "get_draft_by_id", get_draft_by_id_raises)
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(DeploymentError, match="listing deployment configs"):
+        await service.list_configs(
+            user_id="user-1",
+            db=object(),
+            params=ConfigListParams(deployment_ids=["dep-1"]),
+        )
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_raises_when_agent_not_found(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient(None),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(DeploymentNotFoundError, match="Deployment 'dep-1' not found"):
+        await service.list_configs(
+            user_id="user-1",
+            db=object(),
+            params=ConfigListParams(deployment_ids=["dep-1"]),
+        )
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_raises_on_non_dict_agent_payload(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient(["dep-1"]),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(InvalidContentError, match="unexpected deployment payload type"):
+        await service.list_configs(
+            user_id="user-1",
+            db=object(),
+            params=ConfigListParams(deployment_ids=["dep-1"]),
+        )
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_trusts_non_list_tools_payload(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    connections_client = FakeConnectionsClient()
+    connections_client._draft_entries_by_id = [
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-1",
+                "app_id": "cfg-1",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
+        )
+    ]
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ("tool-1",)}),
+        tool=FakeToolClient(
+            [
+                {
+                    "id": "tool-1",
+                    "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+                }
+            ]
+        ),
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(
+        user_id="user-1",
+        db=object(),
+        params=ConfigListParams(deployment_ids=["dep-1"]),
+    )
+    assert [config.id for config in result.configs] == ["conn-1"]
+    assert [config.name for config in result.configs] == ["cfg-1"]
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_returns_early_when_no_tools(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(
+        user_id="user-1",
+        db=object(),
+        params=ConfigListParams(deployment_ids=["dep-1"]),
+    )
+    assert result.configs == []
+    assert result.provider_result == {"deployment_id": "dep-1", "tool_ids": []}
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_handles_none_tools_payload(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": None}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(
+        user_id="user-1",
+        db=object(),
+        params=ConfigListParams(deployment_ids=["dep-1"]),
+    )
+    assert result.configs == []
+    assert result.provider_result == {"deployment_id": "dep-1", "tool_ids": []}
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_raises_on_tool_fetch_failure(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_tool = FakeToolClient([])
+
+    def get_drafts_by_ids_raises(tool_ids):  # noqa: ARG001
+        msg = "provider tool fetch failed"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(fake_tool, "get_drafts_by_ids", get_drafts_by_ids_raises)
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=fake_tool,
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(DeploymentError, match="listing deployment configs"):
+        await service.list_configs(
+            user_id="user-1",
+            db=object(),
+            params=ConfigListParams(deployment_ids=["dep-1"]),
+        )
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_uses_latest_binding_for_same_app(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    connections_client = FakeConnectionsClient()
+    connections_client._draft_entries_by_id = [
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-2",
+                "app_id": "cfg-1",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
+        )
+    ]
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1", "tool-2"]}),
+        tool=FakeToolClient(
+            [
+                {"id": "tool-1", "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}}},
+                {"id": "tool-2", "binding": {"langflow": {"connections": {"cfg-1": "conn-2"}}}},
+            ]
+        ),
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(
+        user_id="user-1",
+        db=object(),
+        params=ConfigListParams(deployment_ids=["dep-1"]),
+    )
+    assert len(result.configs) == 1
+    assert result.configs[0].id == "conn-2"
+    assert result.configs[0].name == "cfg-1"
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_skips_enrichment_when_no_connections(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_tool = FakeToolClient([{"id": "tool-1", "name": "tool-without-connections"}])
+    connections_client = FakeConnectionsClient()
+
+    def fail_if_called(conn_ids):  # noqa: ARG001
+        msg = "connection enrichment should not be called"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(connections_client, "get_drafts_by_ids", fail_if_called)
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=fake_tool,
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(
+        user_id="user-1",
+        db=object(),
+        params=ConfigListParams(deployment_ids=["dep-1"]),
+    )
+    assert result.configs == []
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_raises_on_malformed_detailed_connection(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_tool = FakeToolClient([{"id": "tool-1", "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}}}])
+    connections_client = FakeConnectionsClient()
+    monkeypatch.setattr(
+        connections_client,
+        "get_drafts_by_ids",
+        lambda conn_ids: [SimpleNamespace(security_scheme="key_value_creds")],  # noqa: ARG005
+    )
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=fake_tool,
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(AttributeError):
+        await service.list_configs(
+            user_id="user-1",
+            db=object(),
+            params=ConfigListParams(deployment_ids=["dep-1"]),
+        )
 
 
 @pytest.mark.anyio
 async def test_list_configs_scopes_return_same_normalized_item_shape(monkeypatch):
-    """Tenant-scope and deployment-scope must return the same ConfigListItem shape, including type metadata."""
+    """Tenant-scope and deployment-scope must return the same ConfigListItem shape."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
         ListConfigsResponse.model_validate(
-            {"connection_id": "conn-1", "app_id": "cfg-1", "name": "Config One", "security_scheme": "key_value_creds"}
+            {
+                "connection_id": "conn-1",
+                "app_id": "cfg-1",
+                "name": "Config One",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
         )
     ]
     connections_client._draft_entries_by_id = [
         ListConfigsResponse.model_validate(
-            {"connection_id": "conn-1", "app_id": "cfg-1", "security_scheme": "key_value_creds"}
+            {
+                "connection_id": "conn-1",
+                "app_id": "cfg-1",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
         )
     ]
     fake_clients = SimpleNamespace(
@@ -3148,7 +3743,7 @@ async def test_list_configs_scopes_return_same_normalized_item_shape(monkeypatch
         params=ConfigListParams(deployment_ids=["dep-1"]),
     )
 
-    expected = {"id": "conn-1", "name": "cfg-1", "provider_data": {"type": "key_value_creds"}}
+    expected = {"id": "conn-1", "name": "cfg-1", "provider_data": {"type": "key_value_creds", "environment": "draft"}}
     assert len(tenant_result.configs) == 1
     assert len(deployment_result.configs) == 1
     assert tenant_result.configs[0].model_dump(exclude_none=True) == expected
@@ -3274,8 +3869,24 @@ async def test_list_configs_without_deployment_id_lists_tenant_scope(monkeypatch
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
-        ListConfigsResponse.model_validate({"connection_id": "conn-1", "app_id": "cfg-1", "name": "Config One"}),
-        ListConfigsResponse.model_validate({"connection_id": "conn-2", "app_id": "cfg-2", "name": "Config Two"}),
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-1",
+                "app_id": "cfg-1",
+                "name": "Config One",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
+        ),
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-2",
+                "app_id": "cfg-2",
+                "name": "Config Two",
+                "security_scheme": "key_value_creds",
+                "environment": "live",
+            }
+        ),
     ]
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}),
@@ -3301,10 +3912,22 @@ async def test_list_configs_tenant_scope_handles_sdk_models(monkeypatch):
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
         ListConfigsResponse.model_validate(
-            {"connection_id": "conn-pydantic-1", "app_id": "cfg-pydantic-1", "name": "Pydantic One"}
+            {
+                "connection_id": "conn-pydantic-1",
+                "app_id": "cfg-pydantic-1",
+                "name": "Pydantic One",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
         ),
         ListConfigsResponse.model_validate(
-            {"connection_id": "conn-pydantic-2", "app_id": "cfg-pydantic-2", "name": "Pydantic Two"}
+            {
+                "connection_id": "conn-pydantic-2",
+                "app_id": "cfg-pydantic-2",
+                "name": "Pydantic Two",
+                "security_scheme": "key_value_creds",
+                "environment": "live",
+            }
         ),
     ]
     fake_clients = SimpleNamespace(
@@ -3325,7 +3948,48 @@ async def test_list_configs_tenant_scope_handles_sdk_models(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_list_configs_tenant_scope_preserves_type_metadata(monkeypatch):
+async def test_list_configs_tenant_scope_filters_to_key_value_creds(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    connections_client = FakeConnectionsClient()
+    connections_client._list_entries = [
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-oauth",
+                "app_id": "cfg-oauth",
+                "name": "Oauth Config",
+                "security_scheme": "oauth2",
+            }
+        ),
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-auth",
+                "app_id": "cfg-auth",
+                "name": "Auth Config",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
+        ),
+    ]
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(user_id="user-1", db=object(), params=None)
+    assert len(result.configs) == 1
+    assert result.configs[0].id == "conn-auth"
+    assert result.configs[0].name == "cfg-auth"
+    assert result.configs[0].provider_data == {"type": "key_value_creds", "environment": "draft"}
+
+
+@pytest.mark.anyio
+async def test_list_configs_tenant_scope_fails_fast_when_environment_missing(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
@@ -3349,11 +4013,8 @@ async def test_list_configs_tenant_scope_preserves_type_metadata(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert len(result.configs) == 1
-    assert result.configs[0].id == "conn-auth"
-    assert result.configs[0].name == "cfg-auth"
-    assert result.configs[0].provider_data == {"type": "key_value_creds"}
+    with pytest.raises(InvalidContentError, match="required environment"):
+        await service.list_configs(user_id="user-1", db=object(), params=None)
 
 
 @pytest.mark.anyio
@@ -3386,9 +4047,33 @@ async def test_list_configs_tenant_scope_preserves_duplicates(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
-        ListConfigsResponse.model_validate({"connection_id": "conn-dup", "app_id": "cfg-dup", "name": "First"}),
-        ListConfigsResponse.model_validate({"connection_id": "conn-dup", "app_id": "cfg-dup", "name": "Second"}),
-        ListConfigsResponse.model_validate({"connection_id": "conn-unique", "app_id": "cfg-unique", "name": "Unique"}),
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-dup",
+                "app_id": "cfg-dup",
+                "name": "First",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
+        ),
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-dup",
+                "app_id": "cfg-dup",
+                "name": "Second",
+                "security_scheme": "key_value_creds",
+                "environment": "live",
+            }
+        ),
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-unique",
+                "app_id": "cfg-unique",
+                "name": "Unique",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
+        ),
     ]
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}),
@@ -4758,6 +5443,124 @@ def test_extract_agent_tool_ids():
 
 
 # ---------------------------------------------------------------------------
+# Config helper unit tests (core/config.py standalone functions)
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_optional_text_strips_and_returns_none_for_empty():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import normalize_optional_text
+
+    assert normalize_optional_text(None) is None
+    assert normalize_optional_text("") is None
+    assert normalize_optional_text("  ") is None
+    assert normalize_optional_text("hello") == "hello"
+    assert normalize_optional_text("  spaced  ") == "spaced"
+
+
+def test_normalize_optional_text_rejects_non_str():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import normalize_optional_text
+
+    with pytest.raises(TypeError, match=r"expected str \| None"):
+        normalize_optional_text(("value",))
+    with pytest.raises(TypeError, match=r"expected str \| None"):
+        normalize_optional_text(42)
+
+
+def test_normalize_optional_text_handles_str_enum():
+    from enum import Enum
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import normalize_optional_text
+
+    class FakeEnum(str, Enum):
+        KEY_VALUE = "key_value_creds"
+
+    assert normalize_optional_text(FakeEnum.KEY_VALUE) == "key_value_creds"
+
+
+def test_build_config_list_item_valid():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import build_config_list_item
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxConfigItemProviderData
+    from lfx.services.adapters.payload import PayloadSlot
+
+    slot = PayloadSlot(WatsonxConfigItemProviderData)
+    item = build_config_list_item(
+        config_item_data_slot=slot,
+        connection_id="conn-1",
+        app_id="app-1",
+        config_type="key_value_creds",
+        environment="draft",
+    )
+    assert item.id == "conn-1"
+    assert item.name == "app-1"
+    assert isinstance(item.provider_data, dict)
+    assert item.provider_data["type"] == "key_value_creds"
+    assert item.provider_data["environment"] == "draft"
+
+
+def test_build_config_list_item_missing_environment_for_key_value_creds():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import build_config_list_item
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxConfigItemProviderData
+    from lfx.services.adapters.payload import PayloadSlot
+
+    slot = PayloadSlot(WatsonxConfigItemProviderData)
+    with pytest.raises(InvalidContentError, match="key_value_creds connection without a required environment"):
+        build_config_list_item(
+            config_item_data_slot=slot,
+            connection_id="conn-1",
+            app_id="app-1",
+            config_type="key_value_creds",
+            environment=None,
+        )
+
+
+def test_build_config_list_item_invalid_payload():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import build_config_list_item
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxConfigItemProviderData
+    from lfx.services.adapters.payload import PayloadSlot
+
+    slot = PayloadSlot(WatsonxConfigItemProviderData)
+    with pytest.raises(InvalidContentError, match="invalid config item provider_data payload"):
+        build_config_list_item(
+            config_item_data_slot=slot,
+            connection_id="conn-1",
+            app_id="app-1",
+            config_type="unknown_type",
+            environment=None,
+        )
+
+
+def test_warn_if_expected_ids_missing_logs_warning(caplog):
+    import logging
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import warn_if_expected_ids_missing
+
+    with caplog.at_level(logging.WARNING):
+        warn_if_expected_ids_missing(
+            deployment_id="dep-1",
+            resource_name="tool",
+            expected_ids=["t1", "t2", "t3"],
+            resolved_ids={"t1"},
+        )
+    assert "t2" in caplog.text
+    assert "t3" in caplog.text
+
+
+def test_warn_if_expected_ids_missing_no_warning_when_all_resolved(caplog):
+    import logging
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import warn_if_expected_ids_missing
+
+    with caplog.at_level(logging.WARNING):
+        warn_if_expected_ids_missing(
+            deployment_id="dep-1",
+            resource_name="tool",
+            expected_ids=["t1", "t2"],
+            resolved_ids={"t1", "t2"},
+        )
+    assert "list_configs" not in caplog.text
+
+
+# ---------------------------------------------------------------------------
 # Execution helper tests
 # ---------------------------------------------------------------------------
 
@@ -5110,7 +5913,7 @@ async def test_create_maps_409_conflict_to_deployment_conflict_error():
                 response=SimpleNamespace(status_code=409, text='{"detail":"already exists"}')
             ),
         ),
-        tool=FakeToolClient([{"id": "tool-existing-1"}]),
+        tool=FakeToolClient([{"id": "tool-existing-1", "binding": {"langflow": {}}}]),
         connections=FakeConnectionsClient(existing_app_id="app-existing-1"),
     )
     _attach_provider_clients(service, clients)
@@ -5143,7 +5946,7 @@ async def test_create_maps_422_to_invalid_content_error():
                 response=SimpleNamespace(status_code=422, text='{"detail":"validation error"}')
             ),
         ),
-        tool=FakeToolClient([{"id": "tool-existing-1"}]),
+        tool=FakeToolClient([{"id": "tool-existing-1", "binding": {"langflow": {}}}]),
         connections=FakeConnectionsClient(existing_app_id="app-existing-1"),
     )
     _attach_provider_clients(service, clients)
@@ -5398,17 +6201,17 @@ def test_create_agent_run_result_falls_back_to_id_field():
 
 
 # ---------------------------------------------------------------------------
-# Additional coverage: _require_single_deployment_id — multiple IDs
+# Additional coverage: require_single_deployment_id — multiple IDs
 # ---------------------------------------------------------------------------
 
 
 def test_require_single_deployment_id_rejects_multiple_ids():
-    """_require_single_deployment_id raises InvalidContentError for multiple IDs."""
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import _require_single_deployment_id
+    """require_single_deployment_id raises InvalidContentError for multiple IDs."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import require_single_deployment_id
 
     params = ConfigListParams(deployment_ids=["id-1", "id-2"])
     with pytest.raises(InvalidContentError, match="exactly one deployment_id"):
-        _require_single_deployment_id(params, resource_label="config")
+        require_single_deployment_id(params, resource_label="config")
 
 
 # ---------------------------------------------------------------------------
@@ -5424,7 +6227,7 @@ async def test_create_preserves_exception_chain_on_unexpected_error():
     original_error = RuntimeError("unexpected db error")
     clients = FakeWXOClients(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}, create_exception=original_error),
-        tool=FakeToolClient([{"id": "tool-existing-1"}]),
+        tool=FakeToolClient([{"id": "tool-existing-1", "binding": {"langflow": {}}}]),
         connections=FakeConnectionsClient(existing_app_id="app-existing-1"),
     )
     _attach_provider_clients(service, clients)
@@ -6540,12 +7343,12 @@ def test_rename_tool_provider_payload_parses():
 
 
 # ---------------------------------------------------------------------------
-# DeploymentFlowVersionListItem includes tool_name
+# DeploymentFlowVersionListItem carries provider tool_name under provider_data
 # ---------------------------------------------------------------------------
 
 
-def test_flow_version_list_item_includes_tool_name():
-    """DeploymentFlowVersionListItem accepts and serializes tool_name."""
+def test_flow_version_list_item_includes_tool_name_in_provider_data():
+    """DeploymentFlowVersionListItem serializes provider tool_name under provider_data."""
     from langflow.api.v1.schemas.deployments import DeploymentFlowVersionListItem
 
     item = DeploymentFlowVersionListItem(
@@ -6553,15 +7356,14 @@ def test_flow_version_list_item_includes_tool_name():
         flow_id="00000000-0000-0000-0000-000000000002",
         flow_name="My Flow",
         version_number=1,
-        tool_name="my_custom_tool",
+        provider_data={"tool_name": "my_custom_tool"},
     )
-    assert item.tool_name == "my_custom_tool"
     data = item.model_dump()
-    assert data["tool_name"] == "my_custom_tool"
+    assert data["provider_data"]["tool_name"] == "my_custom_tool"
 
 
-def test_flow_version_list_item_tool_name_defaults_to_none():
-    """DeploymentFlowVersionListItem defaults tool_name to None."""
+def test_flow_version_list_item_provider_data_defaults_to_none():
+    """DeploymentFlowVersionListItem defaults provider_data to None."""
     from langflow.api.v1.schemas.deployments import DeploymentFlowVersionListItem
 
     item = DeploymentFlowVersionListItem(
@@ -6569,4 +7371,4 @@ def test_flow_version_list_item_tool_name_defaults_to_none():
         flow_id="00000000-0000-0000-0000-000000000002",
         version_number=1,
     )
-    assert item.tool_name is None
+    assert item.provider_data is None
