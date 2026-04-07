@@ -68,7 +68,10 @@ export default function MessageMetadata({
       styleClasses="border rounded-xl p-2 bg-background"
       side="bottom"
     >
-      <span className="ml-auto flex cursor-help items-center gap-1 font-mono text-xs font-normal text-accent-emerald-foreground">
+      <span
+        data-testid="chat-message-token-usage"
+        className="ml-auto flex cursor-help items-center gap-1 font-mono text-xs font-normal text-accent-emerald-foreground"
+      >
         {hasTokens && (
           <span className="flex items-center gap-1">
             <ForwardedIconComponent
