@@ -42,6 +42,7 @@ const useFetchDataOnMount = (
       const shouldFetchOnMount =
         isRealtimeOrRefresh &&
         ((!hasOptions && fieldSupportsOptions) ||
+          (!fieldSupportsOptions && !!template.value) ||
           (name === "api_key" && !template.value) ||
           needApiKeyPrefill);
 

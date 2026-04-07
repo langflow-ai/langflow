@@ -53,7 +53,7 @@ export const ThemeButtons = () => {
         unstyled
         className={`relative z-10 inline-flex items-center rounded-full px-1 ${
           selectedTheme === "light"
-            ? "text-foreground"
+            ? "text-background"
             : "text-foreground hover:bg-accent-amber-foreground hover:text-background"
         }`}
         onClick={() => handleThemeChange("light")}
