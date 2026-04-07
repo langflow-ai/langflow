@@ -1721,16 +1721,12 @@ async def test_download_file_starter_project(client: AsyncClient, logged_in_head
     assert delete_response.status_code == status.HTTP_204_NO_CONTENT
 
 
-# ── Security tests for GHSA-rpf3-3973-4gjr ───────────────────────────────────
-
-
-async def _create_second_user(client: AsyncClient) -> tuple[str, dict]:
-    """Create a second user and return (user_id, auth_headers)."""
+async def _create_other_user(client: AsyncClient) -> tuple[str, dict]:
     from langflow.services.auth.utils import get_password_hash
     from langflow.services.database.models.user.model import User
 
     user_id = str(uuid4())
-    username = f"attacker_{user_id[:8]}"
+    username = f"other_user_{user_id[:8]}"
     async with session_scope() as session:
         user = User(
             username=username,
@@ -1749,85 +1745,73 @@ async def _create_second_user(client: AsyncClient) -> tuple[str, dict]:
     return created_id, {"Authorization": f"Bearer {token}"}
 
 
-async def test_create_project_cannot_steal_other_users_flow(
+async def test_create_project_does_not_reassign_other_users_flows(
     client: AsyncClient,
     logged_in_headers: dict,
     active_user,
 ):
-    """GHSA-rpf3-3973-4gjr — attacker cannot move victim's flow via flows_list on create_project."""
-    _, attacker_headers = await _create_second_user(client)
+    """Test that flows_list in create_project only moves flows owned by the requesting user."""
+    _, other_user_headers = await _create_other_user(client)
 
-    # Victim creates a flow
     flow_resp = await client.post(
         "api/v1/flows/",
-        json={"name": "victim-secret-flow", "data": {}},
+        json={"name": "user-flow", "data": {}},
         headers=logged_in_headers,
     )
     assert flow_resp.status_code == status.HTTP_201_CREATED
-    victim_flow_id = flow_resp.json()["id"]
+    flow_id = flow_resp.json()["id"]
     original_folder_id = flow_resp.json()["folder_id"]
 
-    # Attacker creates a project injecting the victim's flow UUID
     proj_resp = await client.post(
         "api/v1/projects/",
-        json={"name": "pwn", "flows_list": [victim_flow_id]},
-        headers=attacker_headers,
+        json={"name": "other-project", "flows_list": [flow_id]},
+        headers=other_user_headers,
     )
     assert proj_resp.status_code == status.HTTP_201_CREATED
-    attacker_project_id = proj_resp.json()["id"]
+    other_project_id = proj_resp.json()["id"]
 
-    # Victim's flow folder_id must be unchanged
-    flow_after = await client.get(f"api/v1/flows/{victim_flow_id}", headers=logged_in_headers)
+    flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
     assert flow_after.status_code == status.HTTP_200_OK
-    assert flow_after.json()["folder_id"] == original_folder_id, (
-        "Victim's flow was stolen: folder_id changed to attacker's project"
-    )
+    assert flow_after.json()["folder_id"] == original_folder_id
 
-    # Attacker's project must be empty
-    proj_detail = await client.get(f"api/v1/projects/{attacker_project_id}", headers=attacker_headers)
+    proj_detail = await client.get(f"api/v1/projects/{other_project_id}", headers=other_user_headers)
     assert proj_detail.status_code == status.HTTP_200_OK
-    flows = proj_detail.json().get("flows", [])
-    assert len(flows) == 0, "Attacker's project must not contain the victim's flow"
+    assert len(proj_detail.json().get("flows", [])) == 0
 
 
-async def test_read_project_paginated_does_not_leak_other_users_flows(
+async def test_read_project_paginated_only_returns_current_users_flows(
     client: AsyncClient,
     logged_in_headers: dict,
     active_user,
 ):
-    """GHSA-rpf3-3973-4gjr — paginated GET /projects/{id} must not return flows owned by other users."""
-    _, attacker_headers = await _create_second_user(client)
+    """Test that paginated GET /projects/{id} does not return flows owned by other users."""
+    _, other_user_headers = await _create_other_user(client)
 
-    # Victim creates a flow
     flow_resp = await client.post(
         "api/v1/flows/",
-        json={"name": "victim-paginated-flow", "data": {}},
+        json={"name": "user-flow-paginated", "data": {}},
         headers=logged_in_headers,
     )
     assert flow_resp.status_code == status.HTTP_201_CREATED
-    victim_flow_id = flow_resp.json()["id"]
-    victim_folder_id = flow_resp.json()["folder_id"]
+    flow_id = flow_resp.json()["id"]
+    original_folder_id = flow_resp.json()["folder_id"]
 
-    # Attacker creates a project and tries to pull in victim's flow
     proj_resp = await client.post(
         "api/v1/projects/",
-        json={"name": "pwn-paginated", "flows_list": [victim_flow_id]},
-        headers=attacker_headers,
+        json={"name": "other-project-paginated", "flows_list": [flow_id]},
+        headers=other_user_headers,
     )
     assert proj_resp.status_code == status.HTTP_201_CREATED
-    attacker_project_id = proj_resp.json()["id"]
+    other_project_id = proj_resp.json()["id"]
 
-    # Paginated read must return 0 flows for the attacker
     paginated = await client.get(
-        f"api/v1/projects/{attacker_project_id}",
+        f"api/v1/projects/{other_project_id}",
         params={"page": 1, "size": 50},
-        headers=attacker_headers,
+        headers=other_user_headers,
     )
     assert paginated.status_code == status.HTTP_200_OK
     items = paginated.json().get("flows", {}).get("items", [])
-    leaked = [f for f in items if f["id"] == victim_flow_id]
-    assert len(leaked) == 0, "Paginated response leaked victim's flow to attacker"
+    assert all(item["id"] != flow_id for item in items)
 
-    # Sanity: victim's flow must still be in the original folder
-    flow_after = await client.get(f"api/v1/flows/{victim_flow_id}", headers=logged_in_headers)
-    assert flow_after.json()["folder_id"] == victim_folder_id
+    flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert flow_after.json()["folder_id"] == original_folder_id
