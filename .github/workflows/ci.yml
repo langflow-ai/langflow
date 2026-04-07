@@ -426,7 +426,7 @@ jobs:
       DOCS_ONLY: ${{ needs.path-filter.outputs.docs-only }}
       EXIT_CODE: ${{ (contains(needs.*.result, 'failure') ||
         contains(needs.*.result, 'cancelled') ||
-        (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && needs.path-filter.outputs.docs-only != 'true'))
+        (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && github.event_name != 'merge_group' && needs.path-filter.outputs.docs-only != 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-nightly-check')))
         && '1' || '0' }}
     steps:
       - name: "CI Success"

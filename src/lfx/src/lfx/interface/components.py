@@ -14,6 +14,7 @@ import orjson
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.utils import abuild_custom_components, create_component_template
 from lfx.log.logger import logger
+from lfx.utils.flow_validation import collect_component_hash_lookups
 from lfx.utils.validate_cloud import (
     filter_disabled_components_from_dict,
     is_component_disabled_in_astra_cloud,
@@ -36,6 +37,11 @@ class ComponentCache:
         """
         self.all_types_dict: dict[str, Any] | None = None
         self.fully_loaded_components: dict[str, bool] = {}
+        # Precomputed code hashes for fast flow validation.
+        # Populated by get_and_cache_all_types_dict() via _build_code_hash_lookups().
+        # None means "not yet loaded" (fail-closed); {} means "loaded, no components found".
+        self.type_to_current_hash: dict[str, set[str]] | None = None
+        self.all_known_hashes: set[str] | None = None
 
 
 # Singleton instance
@@ -597,6 +603,23 @@ async def _determine_loading_strategy(settings_service: "SettingsService") -> di
     return component_cache.all_types_dict or {}
 
 
+def _build_code_hash_lookups(cache: ComponentCache) -> None:
+    """Populate type_to_current_hash and all_known_hashes from all_types_dict.
+
+    Called once after all_types_dict is fully populated. Builds:
+    - type_to_current_hash: {component_type: 12-char SHA256 prefix}
+    - all_known_hashes: set of all known code hashes
+    """
+    if not cache.all_types_dict:
+        return
+
+    type_to_hash, all_hashes = collect_component_hash_lookups(cache.all_types_dict)
+
+    cache.type_to_current_hash = type_to_hash
+    cache.all_known_hashes = all_hashes
+    logger.debug(f"Built code hash lookups: {len(type_to_hash)} types, {len(all_hashes)} unique hashes")
+
+
 async def get_and_cache_all_types_dict(
     settings_service: "SettingsService",
     telemetry_service: Any | None = None,
@@ -628,6 +651,10 @@ async def get_and_cache_all_types_dict(
         }
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
         await logger.adebug(f"Loaded {component_count} components")
+
+        # Precompute code hash lookups for fast flow validation
+        _build_code_hash_lookups(component_cache)
+
     return component_cache.all_types_dict
 
 

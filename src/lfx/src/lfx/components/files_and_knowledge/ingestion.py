@@ -208,6 +208,23 @@ class KnowledgeIngestionComponent(Component):
         """Return the root directory for knowledge bases."""
         return _get_knowledge_bases_root_path()
 
+    @staticmethod
+    def _scalar_notna(value) -> bool:
+        """Check if a value is not NA, safely handling arrays and sequences.
+
+        ``pd.notna`` returns an array when given an array-like input, which
+        cannot be used directly in a boolean context.  This helper collapses the
+        result to a single scalar ``bool``.
+        """
+        result = pd.notna(value)
+        # If result is array-like (numpy array, list, etc.), treat non-empty arrays as "present"
+        if hasattr(result, "__iter__") and not isinstance(result, str):
+            import numpy as np
+
+            arr = np.asarray(result)
+            return arr.size > 0 and arr.all()
+        return bool(result)
+
     def _validate_column_config(self, df_source: pd.DataFrame) -> list[dict[str, Any]]:
         """Validate column configuration using Structured Output patterns."""
         if not self.column_config:
@@ -278,6 +295,29 @@ class KnowledgeIngestionComponent(Component):
         metadata_path = kb_path / "embedding_metadata.json"
         metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
 
+    def _update_metadata_metrics(self, kb_path: Path, chroma: Chroma) -> None:
+        """Update embedding_metadata.json with accurate chunk/word/character counts.
+
+        This ensures the Knowledge Base modal displays correct stats after
+        component-based ingestion, matching the behavior of API-based ingestion.
+        Delegates to KBAnalysisHelper.update_text_metrics to avoid duplicating
+        the batched metrics counting logic.
+        """
+        import chromadb.errors
+        from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBStorageHelper
+
+        metadata_path = kb_path / "embedding_metadata.json"
+        if not metadata_path.exists():
+            return
+
+        try:
+            metadata = json.loads(metadata_path.read_text())
+            KBAnalysisHelper.update_text_metrics(kb_path, metadata, chroma)
+            metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
+            metadata_path.write_text(json.dumps(metadata, indent=2))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
+            self.log(f"Warning: Could not update metadata metrics: {e}")
+
     def _save_kb_files(
         self,
         kb_path: Path,
@@ -334,39 +374,40 @@ class KnowledgeIngestionComponent(Component):
         df_source: pd.DataFrame,
         config_list: list[dict[str, Any]],
         embedding_function,
-    ) -> None:
-        """Create vector store following Local DB component pattern."""
-        try:
-            # Set up vector store directory
-            vector_store_dir = await self._kb_path()
-            if not vector_store_dir:
-                msg = "Knowledge base path is not set. Please create a new knowledge base first."
-                raise ValueError(msg)
-            vector_store_dir.mkdir(parents=True, exist_ok=True)
+    ) -> Chroma:
+        """Create vector store following Local DB component pattern.
 
-            # Convert DataFrame to Data objects (following Local DB pattern)
-            data_objects = await self._convert_df_to_data_objects(df_source, config_list)
+        Returns the Chroma instance so callers can use it for metrics updates.
+        """
+        # Set up vector store directory
+        vector_store_dir = await self._kb_path()
+        if not vector_store_dir:
+            msg = "Knowledge base path is not set. Please create a new knowledge base first."
+            raise ValueError(msg)
+        vector_store_dir.mkdir(parents=True, exist_ok=True)
 
-            # Create vector store
-            chroma = Chroma(
-                persist_directory=str(vector_store_dir),
-                embedding_function=embedding_function,
-                collection_name=self.knowledge_base,
-            )
+        # Convert DataFrame to Data objects (following Local DB pattern)
+        data_objects = await self._convert_df_to_data_objects(df_source, config_list)
 
-            # Convert Data objects to LangChain Documents
-            documents = []
-            for data_obj in data_objects:
-                doc = data_obj.to_lc_document()
-                documents.append(doc)
+        # Create vector store
+        chroma = Chroma(
+            persist_directory=str(vector_store_dir),
+            embedding_function=embedding_function,
+            collection_name=self.knowledge_base,
+        )
 
-            # Add documents to vector store
-            if documents:
-                chroma.add_documents(documents)
-                self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
+        # Convert Data objects to LangChain Documents
+        documents = []
+        for data_obj in data_objects:
+            doc = data_obj.to_lc_document()
+            documents.append(doc)
 
-        except (OSError, ValueError, RuntimeError) as e:
-            self.log(f"Error creating vector store: {e}")
+        # Add documents to vector store
+        if documents:
+            chroma.add_documents(documents)
+            self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
+
+        return chroma
 
     async def _convert_df_to_data_objects(
         self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]
@@ -406,7 +447,7 @@ class KnowledgeIngestionComponent(Component):
         # Convert each row to a Data object
         for _, row in df_source.iterrows():
             # Build content text from identifier columns using list comprehension
-            identifier_parts = [str(row[col]) for col in content_cols if col in row and pd.notna(row[col])]
+            identifier_parts = [str(row[col]) for col in content_cols if col in row and self._scalar_notna(row[col])]
 
             # Join all parts into a single string
             page_content = " ".join(identifier_parts)
@@ -418,12 +459,14 @@ class KnowledgeIngestionComponent(Component):
 
             # Add identifier columns if they exist
             if identifier_cols:
-                identifier_parts = [str(row[col]) for col in identifier_cols if col in row and pd.notna(row[col])]
+                identifier_parts = [
+                    str(row[col]) for col in identifier_cols if col in row and self._scalar_notna(row[col])
+                ]
                 page_content = " ".join(identifier_parts)
 
             # Add metadata columns as simple key-value pairs
             for col in df_source.columns:
-                if col not in content_cols and col in row and pd.notna(row[col]):
+                if col not in content_cols and col in row and self._scalar_notna(row[col]):
                     # Convert to simple types for Chroma metadata
                     value = row[col]
                     data_dict[col] = str(value)  # Convert complex types to string
@@ -598,10 +641,14 @@ class KnowledgeIngestionComponent(Component):
             )
 
             # Create vector store following Local DB component pattern
-            await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
+            chroma = await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
 
             # Save KB files (using File Component storage patterns)
             self._save_kb_files(kb_path, config_list)
+
+            # Update embedding_metadata.json with accurate text metrics
+            # so the KB modal and API show correct chunks/words/characters
+            self._update_metadata_metrics(kb_path, chroma)
 
             # Build metadata response
             meta: dict[str, Any] = {
