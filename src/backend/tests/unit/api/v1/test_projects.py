@@ -1891,3 +1891,38 @@ async def test_read_project_paginated_only_returns_current_users_flows(
 
     flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
     assert flow_after.json()["folder_id"] == original_folder_id
+
+
+async def test_create_project_with_own_flows_assigns_them_correctly(
+    client: AsyncClient,
+    logged_in_headers: dict,
+):
+    """Test that flows_list in create_project correctly assigns flows owned by the requesting user."""
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "my-flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = flow_resp.json()["id"]
+
+    proj_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "my-project", "flows_list": [flow_id]},
+        headers=logged_in_headers,
+    )
+    assert proj_resp.status_code == status.HTTP_201_CREATED
+    project_id = proj_resp.json()["id"]
+
+    flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert flow_after.status_code == status.HTTP_200_OK
+    assert flow_after.json()["folder_id"] == project_id
+
+    paginated = await client.get(
+        f"api/v1/projects/{project_id}",
+        params={"page": 1, "size": 50},
+        headers=logged_in_headers,
+    )
+    assert paginated.status_code == status.HTTP_200_OK
+    items = paginated.json().get("flows", {}).get("items", [])
+    assert any(item["id"] == flow_id for item in items)
