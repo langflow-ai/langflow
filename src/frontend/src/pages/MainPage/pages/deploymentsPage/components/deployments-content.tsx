@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/select";
 import { useDeleteDeployment } from "@/controllers/API/queries/deployments/use-delete-deployment";
 import { useGetDeploymentsByProviders } from "@/controllers/API/queries/deployments/use-get-deployments-by-providers";
-import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation";
 import { ALL_PROVIDERS, useProviderFilter } from "../hooks/use-provider-filter";
 import { useTestDeploymentModal } from "../hooks/use-test-deployment-modal";
@@ -19,6 +18,7 @@ import DeploymentsEmptyState from "./deployments-empty-state";
 import DeploymentsLoadingSkeleton from "./deployments-loading-skeleton";
 import DeploymentsTable from "./deployments-table";
 import TestDeploymentModal from "./test-deployment-modal/test-deployment-modal";
+import TypeToConfirmDeleteDialog from "./type-to-confirm-delete-dialog";
 
 const buildDeploymentDeleteParams = (id: string) => ({ deployment_id: id });
 
@@ -49,11 +49,10 @@ export default function DeploymentsContent({
 
   const { mutate: deleteDeployment } = useDeleteDeployment();
 
-  const deploymentDelete = useDeleteWithConfirmation(
-    deleteDeployment,
-    buildDeploymentDeleteParams,
-    "Error deleting deployment",
-  );
+  const deploymentDelete = useDeleteWithConfirmation<
+    Deployment,
+    { deployment_id: string }
+  >(deleteDeployment, buildDeploymentDeleteParams, "Error deleting deployment");
 
   const [editingDeployment, setEditingDeployment] = useState<Deployment | null>(
     null,
@@ -154,10 +153,10 @@ export default function DeploymentsContent({
         }
       />
 
-      <DeleteConfirmationModal
+      <TypeToConfirmDeleteDialog
         open={!!deploymentDelete.target}
-        setOpen={deploymentDelete.setModalOpen}
-        description={`deployment "${deploymentDelete.target?.name}"`}
+        onOpenChange={deploymentDelete.setModalOpen}
+        deploymentName={deploymentDelete.target?.name ?? ""}
         onConfirm={deploymentDelete.confirmDelete}
       />
     </>
