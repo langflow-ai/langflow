@@ -27,8 +27,12 @@ class PubrioSearchJobsComponent(Component):
         MessageTextInput(name="companies", display_name="Companies", advanced=True),
         MessageTextInput(name="domains", display_name="Company Domains", advanced=True),
         MessageTextInput(name="linkedin_urls", display_name="LinkedIn URLs", advanced=True),
-        MessageTextInput(name="posted_date_from", display_name="Posted Date From", info="Start date (YYYY-MM-DD).", advanced=True),
-        MessageTextInput(name="posted_date_to", display_name="Posted Date To", info="End date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(
+            name="posted_date_from", display_name="Posted Date From", info="Start date (YYYY-MM-DD).", advanced=True
+        ),
+        MessageTextInput(
+            name="posted_date_to", display_name="Posted Date To", info="End date (YYYY-MM-DD).", advanced=True
+        ),
         MessageTextInput(name="search_terms", display_name="Search Terms", advanced=True),
         IntInput(name="page", display_name="Page", value=1, advanced=True),
         IntInput(name="per_page", display_name="Per Page", value=25, advanced=True),

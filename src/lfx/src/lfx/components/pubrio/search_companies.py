@@ -1,6 +1,5 @@
 import json
 
-
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.schema.data import Data
@@ -78,16 +77,53 @@ class PubrioSearchCompaniesComponent(Component):
         MessageTextInput(name="job_titles", display_name="Job Titles Filter", advanced=True),
         MessageTextInput(name="job_locations", display_name="Job Locations Filter", advanced=True),
         MessageTextInput(name="news_categories", display_name="News Categories Filter", advanced=True),
-        MessageTextInput(name="news_published_date_from", display_name="News Published Date From", info="Start date (YYYY-MM-DD).", advanced=True),
-        MessageTextInput(name="news_published_date_to", display_name="News Published Date To", info="End date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(
+            name="news_published_date_from",
+            display_name="News Published Date From",
+            info="Start date (YYYY-MM-DD).",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="news_published_date_to",
+            display_name="News Published Date To",
+            info="End date (YYYY-MM-DD).",
+            advanced=True,
+        ),
         MessageTextInput(name="advertisement_search_terms", display_name="Ad Search Terms", advanced=True),
         MessageTextInput(name="advertisement_target_locations", display_name="Ad Target Locations", advanced=True),
-        MessageTextInput(name="job_posted_date_from", display_name="Job Posted Date From", info="Start date (YYYY-MM-DD).", advanced=True),
-        MessageTextInput(name="job_posted_date_to", display_name="Job Posted Date To", info="End date (YYYY-MM-DD).", advanced=True),
-        MessageTextInput(name="advertisement_start_date_from", display_name="Ad Start Date From", info="Start date (YYYY-MM-DD).", advanced=True),
-        MessageTextInput(name="advertisement_start_date_to", display_name="Ad Start Date To", info="End date (YYYY-MM-DD).", advanced=True),
-        MessageTextInput(name="advertisement_end_date_from", display_name="Ad End Date From", info="Start date (YYYY-MM-DD).", advanced=True),
-        MessageTextInput(name="advertisement_end_date_to", display_name="Ad End Date To", info="End date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(
+            name="job_posted_date_from",
+            display_name="Job Posted Date From",
+            info="Start date (YYYY-MM-DD).",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="job_posted_date_to", display_name="Job Posted Date To", info="End date (YYYY-MM-DD).", advanced=True
+        ),
+        MessageTextInput(
+            name="advertisement_start_date_from",
+            display_name="Ad Start Date From",
+            info="Start date (YYYY-MM-DD).",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="advertisement_start_date_to",
+            display_name="Ad Start Date To",
+            info="End date (YYYY-MM-DD).",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="advertisement_end_date_from",
+            display_name="Ad End Date From",
+            info="Start date (YYYY-MM-DD).",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="advertisement_end_date_to",
+            display_name="Ad End Date To",
+            info="End date (YYYY-MM-DD).",
+            advanced=True,
+        ),
         IntInput(name="page", display_name="Page", value=1, advanced=True),
         IntInput(name="per_page", display_name="Per Page", value=25, advanced=True),
     ]

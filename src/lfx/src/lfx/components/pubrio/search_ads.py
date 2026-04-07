@@ -28,9 +28,15 @@ class PubrioSearchAdsComponent(Component):
         MessageTextInput(name="companies", display_name="Companies", advanced=True),
         MessageTextInput(name="domains", display_name="Domains", advanced=True),
         MessageTextInput(name="linkedin_urls", display_name="LinkedIn URLs", advanced=True),
-        MessageTextInput(name="start_date_from", display_name="Start Date From", info="Start date (YYYY-MM-DD).", advanced=True),
-        MessageTextInput(name="start_date_to", display_name="Start Date To", info="End date (YYYY-MM-DD).", advanced=True),
-        MessageTextInput(name="end_date_from", display_name="End Date From", info="Start date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(
+            name="start_date_from", display_name="Start Date From", info="Start date (YYYY-MM-DD).", advanced=True
+        ),
+        MessageTextInput(
+            name="start_date_to", display_name="Start Date To", info="End date (YYYY-MM-DD).", advanced=True
+        ),
+        MessageTextInput(
+            name="end_date_from", display_name="End Date From", info="Start date (YYYY-MM-DD).", advanced=True
+        ),
         MessageTextInput(name="end_date_to", display_name="End Date To", info="End date (YYYY-MM-DD).", advanced=True),
         IntInput(name="page", display_name="Page", value=1, advanced=True),
         IntInput(name="per_page", display_name="Per Page", value=25, advanced=True),

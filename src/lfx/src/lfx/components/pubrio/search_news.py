@@ -26,8 +26,15 @@ class PubrioSearchNewsComponent(Component):
         MessageTextInput(name="companies", display_name="Companies", advanced=True),
         MessageTextInput(name="domains", display_name="Domains", advanced=True),
         MessageTextInput(name="linkedin_urls", display_name="LinkedIn URLs", advanced=True),
-        MessageTextInput(name="published_date_from", display_name="Published Date From", info="Start date (YYYY-MM-DD).", advanced=True),
-        MessageTextInput(name="published_date_to", display_name="Published Date To", info="End date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(
+            name="published_date_from",
+            display_name="Published Date From",
+            info="Start date (YYYY-MM-DD).",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="published_date_to", display_name="Published Date To", info="End date (YYYY-MM-DD).", advanced=True
+        ),
         MessageTextInput(name="search_terms", display_name="Search Terms", advanced=True),
         MessageTextInput(name="news_galleries", display_name="News Galleries", advanced=True),
         MessageTextInput(name="news_gallery_ids", display_name="News Gallery IDs", advanced=True),

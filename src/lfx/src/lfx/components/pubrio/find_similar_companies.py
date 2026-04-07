@@ -50,7 +50,10 @@ class PubrioFindSimilarCompaniesComponent(Component):
         MessageTextInput(name="job_titles", display_name="Job Titles Filter", advanced=True),
         MessageTextInput(name="job_locations", display_name="Job Locations Filter", advanced=True),
         MessageTextInput(
-            name="job_posted_date_from", display_name="Job Posted Date From", info="Start date (YYYY-MM-DD).", advanced=True
+            name="job_posted_date_from",
+            display_name="Job Posted Date From",
+            info="Start date (YYYY-MM-DD).",
+            advanced=True,
         ),
         MessageTextInput(
             name="job_posted_date_to", display_name="Job Posted Date To", info="End date (YYYY-MM-DD).", advanced=True
