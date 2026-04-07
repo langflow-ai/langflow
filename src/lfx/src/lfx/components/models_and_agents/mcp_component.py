@@ -520,7 +520,7 @@ class MCPToolsComponent(ComponentWithCache):
                             await logger.awarning(msg)
                             build_config["tool"]["options"] = []
                             build_config["tool"]["placeholder"] = "Timeout on MCP server"
-                        except (ValueError, Exception) as e:
+                        except (ValueError, ImportError, ConnectionError, OSError, RuntimeError) as e:
                             msg = f"Error loading tools for MCP server: {e!s}"
                             await logger.awarning(msg)
                             build_config["tool"]["options"] = []
@@ -554,7 +554,7 @@ class MCPToolsComponent(ComponentWithCache):
                         await logger.awarning(msg)
                         build_config["tool"]["options"] = []
                         build_config["tool"]["placeholder"] = "Timeout on MCP server"
-                    except (ValueError, Exception) as e:
+                    except (ValueError, ImportError, ConnectionError, OSError, RuntimeError) as e:
                         msg = f"Error loading tools when toggling tool mode: {e!s}"
                         await logger.awarning(msg)
                         build_config["tool"]["options"] = []
