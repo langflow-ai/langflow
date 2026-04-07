@@ -7,8 +7,14 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 from langflow.services.database.models.flow.model import FlowCreate
+from langflow.services.deps import get_settings_service
 from lfx.custom.directory_reader.directory_reader import DirectoryReader
 from lfx.services.settings.base import BASE_COMPONENTS_PATH
+
+
+@pytest.fixture(autouse=True)
+def allow_custom_components_by_default(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "true")
 
 
 async def run_post(client, flow_id, headers, post_data):
@@ -282,6 +288,18 @@ async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
     ids = [_id.split("-")[0] for _id in response.json()["ids"]]
 
     assert set(ids) == {"ChatInput"}
+
+
+async def test_get_vertices_blocks_custom_components_when_disabled(
+    client, added_flow_webhook_test, logged_in_headers, monkeypatch
+):
+    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", False)
+
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+
+    assert response.status_code == 400
+    assert "outdated components must be updated before running" in response.json()["detail"]
 
 
 async def test_build_vertex_invalid_flow_id(client, logged_in_headers):

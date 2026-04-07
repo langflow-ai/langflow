@@ -13,6 +13,10 @@ from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest, OutputValue
 from lfx.services.cache.utils import CacheMiss
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    validate_flow_for_current_settings,
+)
 from sqlmodel import select
 
 from langflow.api.build import cancel_flow_build, get_flow_events_response, start_flow_build
@@ -109,7 +113,6 @@ async def retrieve_vertices_order(
     components_count = None
     run_id = str(uuid.uuid4())
     try:
-        # First, we need to check if the flow_id is in the cache
         if not data:
             graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
         else:
@@ -147,6 +150,8 @@ async def retrieve_vertices_order(
             ),
         )
         if "stream or streaming set to True" in str(exc):
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if isinstance(exc, CustomComponentValidationError):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         await logger.aexception("Error checking build status")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -208,6 +213,16 @@ async def build_flow(
                 flow_id,
             )
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+
+    try:
+        if data:
+            validate_flow_for_current_settings(data.model_dump())
+        elif flow and flow.data:
+            validate_flow_for_current_settings(flow.data)
+    except CustomComponentValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     job_id = await start_flow_build(
         flow_id=flow_id,
@@ -346,7 +361,6 @@ async def build_vertex(
         if isinstance(cache, CacheMiss):
             # If there's no cache
             await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-
             async with session_scope() as session:
                 graph = await build_graph_from_db(
                     flow_id=flow_id,
@@ -466,6 +480,8 @@ async def build_vertex(
                 component_run_id=run_id if "run_id" in locals() else None,
             ),
         )
+        if isinstance(exc, CustomComponentValidationError):
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         await logger.aexception("Error building Component")
         message = parse_exception(exc)
         raise HTTPException(status_code=500, detail=message) from exc
@@ -674,6 +690,13 @@ async def build_public_tmp(
         client_id = request.cookies.get("client_id")
         owner_user, new_flow_id = await verify_public_flow_and_get_user(flow_id=flow_id, client_id=client_id)
 
+        # Validate the stored flow data after the public-access boundary.
+        # Public flows never accept client-supplied data.
+        async with session_scope() as session:
+            flow = await session.get(Flow, flow_id)
+            if flow and flow.data:
+                validate_flow_for_current_settings(flow.data)
+
         # flow_id=new_flow_id for tracking/sessions/messages (virtual, per-user isolation).
         # source_flow_id=flow_id to load the actual flow data from the database.
         job_id = await start_flow_build(
@@ -690,6 +713,11 @@ async def build_public_tmp(
             queue_service=queue_service,
             flow_name=flow_name or f"{client_id}_{flow_id}",
         )
+    except CustomComponentValidationError as exc:
+        await logger.awarning(f"Public flow validation failed: {exc}")
+        raise HTTPException(status_code=400, detail="This flow cannot be executed.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         await logger.aexception("Error building public flow")
         if isinstance(exc, HTTPException):
