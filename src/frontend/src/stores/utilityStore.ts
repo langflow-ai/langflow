@@ -64,4 +64,6 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   allowCustomComponents: true,
   setAllowCustomComponents: (allowCustomComponents: boolean) =>
     set({ allowCustomComponents }),
+  mcpBaseUrl: "",
+  setMcpBaseUrl: (mcpBaseUrl: string) => set({ mcpBaseUrl }),
 }));

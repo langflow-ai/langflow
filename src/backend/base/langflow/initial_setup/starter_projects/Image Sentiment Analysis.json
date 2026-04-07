@@ -456,7 +456,7 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.7"
+                    "version": "3.11.8"
                   },
                   {
                     "name": "fastapi",
