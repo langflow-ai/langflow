@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
 
-The **Structured Output** component uses an LLM to transform any input into structured data (`Data` or `DataFrame`) using natural language formatting instructions and an output schema definition.
+The **Structured Output** component uses an LLM to transform any input into structured data (`JSON` or `Table`) using natural language formatting instructions and an output schema definition.
 For example, you can extract specific details from documents, like email messages or scientific papers.
 
 ## Use the Structured Output component in a flow
@@ -26,19 +26,19 @@ This can come from practically any component, but it is typically a **Chat Input
     Any irrelevant source material isn't included in the structured output.
     :::
 
-2. Define **Format Instructions** and an **Output Schema** to specify the data to extract from the source material and how to structure it in the final `Data` or `DataFrame` output.
+2. Define **Format Instructions** and an **Output Schema** to specify the data to extract from the source material and how to structure it in the final `JSON` or `Table` output.
 
     The instructions are a prompt that tell the LLM what data to extract, how to format it, how to handle exceptions, and any other instructions relevant to preparing the structured data.
 
-    The schema is a table that defines the fields (keys) and data types to organize the data extracted by the LLM into a structured `Data` or `DataFrame` object.
+    The schema is a table that defines the fields (keys) and data types to organize the data extracted by the LLM into a structured `JSON` or `Table` object.
     For more information, see [Output Schema options](#output-schema-options)
 
 3. Attach a [language model component](/components-models) that is set to emit [`LanguageModel`](/data-types#languagemodel) output.
 
     The LLM uses the **Input Message** and **Format Instructions** from the **Structured Output** component to extract specific pieces of data from the input text.
-    The output schema is applied to the model's response to produce the final `Data` or `DataFrame` structured object.
+    The output schema is applied to the model's response to produce the final `JSON` or `Table` structured object.
 
-4. Optional: Typically, the structured output is passed to downstream components that use the extracted data for other processes, such as the **Parser** or **Data Operations** components.
+4. Optional: Typically, the structured output is passed to downstream components that use the extracted data for other processes, such as the **Parser** or **JSON Operations** components.
 
 ![A basic flow with Structured Output, Language Model, Type Convert, and Chat Input and Output components.](/img/component-structured-output.png)
 
@@ -65,7 +65,7 @@ The template's **Structured Output** component has the following configuration:
 
 * The **Output Schema** includes keys for `EBITDA`, `NET_INCOME`, and `GROSS_PROFIT`.
 
-The structured `Data` object is passed to a **Parser** component that produces a text string by mapping the schema keys to variables in the parsing template:
+The structured `JSON` object is passed to a **Parser** component that produces a text string by mapping the schema keys to variables in the parsing template:
 
 ```text
 EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}
@@ -89,14 +89,14 @@ EBITDA: 900 million , Net Income: 500 million , GROSS_PROFIT: 1.2 billion
 | Input Message (`input_value`) | String | Input parameter. The input message containing source material for extraction. |
 | Format Instructions (`system_prompt`) | String | Input parameter. The instructions to the language model for extracting and formatting the output. |
 | Schema Name (`schema_name`) | String | Input parameter. An optional title for the **Output Schema**. |
-| Output Schema (`output_schema`)| Table | Input parameter. A table describing the schema of the desired structured output, ultimately determining the content of the `Data` or `DataFrame` output. See [Output Schema options](#output-schema-options). |
-| Structured Output (`structured_output`) | `Data` or `DataFrame` | Output parameter. The final structured output produced by the component. Near the component's output port, you can select the output data type as either **Structured Output Data** or **Structured Output DataFrame**. The specific content and structure of the output depends on the input parameters. |
+| Output Schema (`output_schema`)| Table | Input parameter. A table describing the schema of the desired structured output, ultimately determining the content of the `JSON` or `Table` output. See [Output Schema options](#output-schema-options). |
+| Structured Output (`structured_output`) | `JSON` or `Table` | Output parameter. The final structured output produced by the component. Near the component's output port, you can select the output data type as either **Structured Output Data** or **Structured Output DataFrame**. The specific content and structure of the output depends on the input parameters. |
 
 #### Output Schema options {#output-schema-options}
 
 After the LLM extracts the relevant data from the **Input Message** and **Format Instructions**, the data is organized according to the **Output Schema**.
 
-The schema is a table that defines the fields (keys) and data types for the final `Data` or `DataFrame` output from the **Structured Output** component.
+The schema is a table that defines the fields (keys) and data types for the final `JSON` or `Table` output from the **Structured Output** component.
 
 The default schema is a single `field` string.
 
@@ -115,6 +115,6 @@ Supported types are `str` (default), `int`, `float`, `bool`, and `dict`.
 * **As List**: Enable this setting if you want the field to contain a list of values rather than a single value.
 
 For simple schemas, you might only extract a few `string` or `int` fields.
-For more complex schemas with lists and dictionaries, it might help to refer to the `Data` and `DataFrame` structures and attributes, as described in [Langflow data types](/data-types).
-You can also emit a rough `Data` or `DataFrame`, and then use downstream components for further refinement, such as a **Data Operations** component.
+For more complex schemas with lists and dictionaries, it might help to refer to the `JSON` and `Table` structures and attributes, as described in [Langflow data types](/data-types).
+You can also emit a rough `JSON` or `Table`, and then use downstream components for further refinement, such as a **JSON Operations** component.
 

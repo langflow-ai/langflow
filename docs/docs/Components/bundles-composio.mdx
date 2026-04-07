@@ -230,7 +230,7 @@ For example, if you are using the Composio **Gmail** component, your Composio AP
 When used as tools for an agent, Composio components output [`Tools`](/data-types#tool), which is a list of tools for use by an agent.
 When called by the agent, the response from the Composio service is ingested by the agent, not passed directly as output to the user or application.
 
-In non-agentic use cases, the output is a [`DataFrame`](/data-types#dataframe) containing the response from the specified Composio service, depending on the component and action used in the flow.
+In non-agentic use cases, the output is a [`Table`](/data-types#table) containing the response from the specified Composio service, depending on the component and action used in the flow.
 
-Because the **Composio Tools** component supports _only_ agentic use, it cannot output `DataFrame`.
-All single-service Composio components can output either `DataFrame` or `Tools`.
+Because the **Composio Tools** component supports _only_ agentic use, it cannot output `Table`.
+All single-service Composio components can output either `Table` or `Tools`.

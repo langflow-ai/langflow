@@ -13,10 +13,14 @@ if TYPE_CHECKING:
 
 from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionConflictError,
+    FlowVersionDeployedError,
     FlowVersionNotFoundError,
 )
 from langflow.services.database.models.flow_version.model import (
     FlowVersion,
+)
+from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    FlowVersionDeploymentAttachment,
 )
 from langflow.services.deps import get_settings_service
 
@@ -82,19 +86,35 @@ async def create_flow_version_entry(
         )
         raise FlowVersionConflictError(msg)
 
-    # Prune oldest entries beyond the configured limit.
+    # Prune oldest non-deployed entries beyond the configured limit.
+    # Versions attached to deployments are excluded from pruning to avoid
+    # orphaning provider-side snapshots. This means the actual count can
+    # exceed max_entries when many versions are deployed — acceptable
+    # because deployed versions are actively in use.
     # NOTE: Concurrent snapshot requests for the same flow could both insert
     # before either prunes, temporarily exceeding the limit by one or more
     # entries. This is acceptable — the excess self-corrects on the next
-    # snapshot, and serializing with SELECT FOR UPDATE would add contention
-    # for a non-critical constraint.
+    # snapshot.
     try:
         max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
+        deployed_version_ids = (
+            select(FlowVersionDeploymentAttachment.flow_version_id)
+            .where(
+                col(FlowVersionDeploymentAttachment.flow_version_id).in_(
+                    select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
+                )
+            )
+            .distinct()
+        )
         delete_older = delete(FlowVersion).where(
             FlowVersion.flow_id == flow_id,
+            col(FlowVersion.id).not_in(deployed_version_ids),
             col(FlowVersion.id).in_(
                 select(FlowVersion.id)
-                .where(FlowVersion.flow_id == flow_id)
+                .where(
+                    FlowVersion.flow_id == flow_id,
+                    col(FlowVersion.id).not_in(deployed_version_ids),
+                )
                 .order_by(col(FlowVersion.version_number).desc())
                 .offset(max_entries)
             ),
@@ -115,21 +135,76 @@ async def create_flow_version_entry(
     return entry
 
 
-async def get_flow_version_list(
+async def get_flow_version_list_simple(
     session: AsyncSession,
     flow_id: UUID,
     user_id: UUID,
     limit: int = 50,
     offset: int = 0,
-) -> list[FlowVersion]:
-    result = await session.exec(
+) -> list[tuple[FlowVersion, bool]]:
+    """Return flow versions without deployment awareness.
+
+    Used when no deployment provider is configured, avoiding unnecessary
+    joins against the (empty) attachment table.  The boolean second
+    element is always ``False``.
+    """
+    stmt = (
         select(FlowVersion)
         .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
         .order_by(col(FlowVersion.version_number).desc())
         .offset(offset)
         .limit(limit)
     )
-    return list(result.all())
+    rows = (await session.exec(stmt)).all()
+    return [(version, False) for version in rows]
+
+
+async def get_flow_version_list(
+    session: AsyncSession,
+    flow_id: UUID,
+    user_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
+    deployment_ids: list[UUID] | None = None,
+) -> list[tuple[FlowVersion, bool]]:
+    """Return flow versions with a deployed indicator.
+
+    When *deployment_ids* is provided, only versions attached to at least one
+    of those deployments are returned.  The boolean second element is True when
+    the version is attached to *any* deployment (regardless of the filter).
+    """
+    deployed_subquery = (
+        select(FlowVersionDeploymentAttachment.flow_version_id)
+        .where(
+            col(FlowVersionDeploymentAttachment.flow_version_id).in_(
+                select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
+            )
+        )
+        .distinct()
+        .subquery()
+    )
+    stmt = (
+        select(
+            FlowVersion,
+            deployed_subquery.c.flow_version_id.isnot(None).label("is_deployed"),
+        )
+        .outerjoin(deployed_subquery, deployed_subquery.c.flow_version_id == FlowVersion.id)
+        .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
+    )
+    if deployment_ids:
+        filter_subquery = (
+            select(FlowVersionDeploymentAttachment.flow_version_id)
+            .where(
+                col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+                FlowVersionDeploymentAttachment.user_id == user_id,
+            )
+            .distinct()
+            .subquery()
+        )
+        stmt = stmt.join(filter_subquery, filter_subquery.c.flow_version_id == FlowVersion.id)
+    stmt = stmt.order_by(col(FlowVersion.version_number).desc()).offset(offset).limit(limit)
+    rows = (await session.exec(stmt)).all()
+    return [(version, bool(is_deployed)) for version, is_deployed in rows]
 
 
 async def get_flow_version_entry(
@@ -158,6 +233,29 @@ async def get_flow_version_entry_or_raise(
     return entry
 
 
+async def is_flow_version_deployed(
+    session: AsyncSession,
+    flow_version_id: UUID,
+    user_id: UUID | None = None,
+) -> bool:
+    """Return True if the flow version is attached to at least one deployment."""
+    return await has_deployment_attachments(session, flow_version_id, user_id=user_id)
+
+
+async def has_deployment_attachments(
+    session: AsyncSession,
+    flow_version_id: UUID,
+    user_id: UUID | None = None,
+) -> bool:
+    stmt = select(func.count(FlowVersionDeploymentAttachment.id)).where(
+        FlowVersionDeploymentAttachment.flow_version_id == flow_version_id,
+    )
+    if user_id is not None:
+        stmt = stmt.where(FlowVersionDeploymentAttachment.user_id == user_id)
+    count = (await session.exec(stmt)).one()
+    return int(count or 0) > 0
+
+
 async def delete_flow_version_entry(
     session: AsyncSession,
     version_id: UUID,
@@ -167,6 +265,13 @@ async def delete_flow_version_entry(
     if not entry:
         msg = f"Version entry {version_id} not found"
         raise FlowVersionNotFoundError(msg)
+
+    if await has_deployment_attachments(session, version_id, user_id=user_id):
+        msg = (
+            f"Version entry {version_id} is attached to one or more deployments "
+            f"and cannot be deleted. Detach it from all deployments first."
+        )
+        raise FlowVersionDeployedError(msg)
 
     await session.delete(entry)
     await session.flush()

@@ -16,6 +16,7 @@ import {
 } from "@/customization/utils/custom-buildUtils";
 import { customPollBuildEvents } from "@/customization/utils/custom-poll-build-events";
 import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
+import { transformBuildErrorMessages } from "@/customization/utils/custom-build-error-transform";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
@@ -339,12 +340,21 @@ export async function buildFlowVertices({
       if (buildResponse.status === 404) {
         throw new Error("Flow not found");
       }
-      throw new Error("Error starting build process");
+      let errorDetail = "Error starting build process";
+      try {
+        const errorData = await buildResponse.json();
+        if (errorData.detail) {
+          errorDetail = errorData.detail;
+        }
+      } catch (parseError) {
+        console.debug("Could not parse error response body:", parseError);
+      }
+      throw new Error(errorDetail);
     }
 
     const { job_id } = await buildResponse.json();
 
-    const cancelBuildUrl = customCancelBuildUrl(job_id);
+    const cancelBuildUrl = customCancelBuildUrl(job_id, playgroundPage);
 
     // Get the buildController from flowStore
     const buildController = new AbortController();
@@ -363,7 +373,7 @@ export async function buildFlowVertices({
     });
     useFlowStore.getState().setBuildController(buildController);
     // Then stream the events
-    const eventsUrl = customEventsUrl(job_id);
+    const eventsUrl = customEventsUrl(job_id, playgroundPage);
     const buildResults: Array<boolean> = [];
 
     if (eventDelivery === EventDeliveryType.STREAMING) {
@@ -470,9 +480,11 @@ export function processEndVertexEvent(
         },
       );
       onBuildError &&
-        onBuildError("Error Building Component", errorMessages, [
-          { id: buildData.id },
-        ]);
+        onBuildError(
+          "Error Building Component",
+          transformBuildErrorMessages(errorMessages),
+          [{ id: buildData.id }],
+        );
       onBuildUpdate(buildData, BuildStatus.ERROR, "");
       buildResults.push(false);
       return false;
@@ -958,7 +970,7 @@ async function buildVertex({
         });
         onBuildError!(
           "Error Building Component",
-          errorMessages,
+          transformBuildErrorMessages(errorMessages.flat()),
           verticesIds.map((id) => ({ id })),
         );
         stopBuild();
@@ -980,7 +992,7 @@ async function buildVertex({
     }
     onBuildError!(
       "Error Building Component",
-      errorMessage,
+      transformBuildErrorMessages(errorMessage),
       verticesIds.map((id) => ({ id })),
     );
     buildResults.push(false);
