@@ -17,8 +17,6 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   onToggleConnection,
   newConnectionName,
   onNameChange,
-  newConnectionDescription,
-  onDescriptionChange,
   envVars,
   detectedVarCount,
   globalVariableOptions,
@@ -38,8 +36,6 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   onToggleConnection: (id: string) => void;
   newConnectionName: string;
   onNameChange: (v: string) => void;
-  newConnectionDescription: string;
-  onDescriptionChange: (v: string) => void;
   envVars: EnvVarEntry[];
   detectedVarCount: number;
   globalVariableOptions: string[];
@@ -179,15 +175,6 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                     A connection with this name already exists.
                   </span>
                 )}
-              </div>
-              <div className="flex flex-col">
-                <span className="pb-2 text-sm font-medium">Description</span>
-                <Input
-                  placeholder="e.g., Production sales bot connection"
-                  className="bg-muted"
-                  value={newConnectionDescription}
-                  onChange={(e) => onDescriptionChange(e.target.value)}
-                />
               </div>
               <div className="flex flex-col">
                 <span className="pb-2 text-sm font-medium">
