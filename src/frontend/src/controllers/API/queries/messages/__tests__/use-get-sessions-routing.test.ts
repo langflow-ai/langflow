@@ -45,7 +45,9 @@ import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-a
 import { useGetSessionsFromFlowQuery } from "../use-get-sessions-from-flow";
 
 const mockFlowStore = useFlowStore as unknown as { getState: jest.Mock };
-const mockIsAuth = isAuthenticatedPlayground as jest.MockedFunction<typeof isAuthenticatedPlayground>;
+const mockIsAuth = isAuthenticatedPlayground as jest.MockedFunction<
+  typeof isAuthenticatedPlayground
+>;
 
 describe("useGetSessionsFromFlowQuery - Routing Logic", () => {
   beforeEach(() => {
@@ -74,10 +76,7 @@ describe("useGetSessionsFromFlowQuery - Routing Logic", () => {
     mockFlowStore.getState.mockReturnValue({ playgroundPage: true });
     mockIsAuth.mockReturnValue(false);
 
-    const messages = [
-      { session_id: "session-a" },
-      { session_id: "session-b" },
-    ];
+    const messages = [{ session_id: "session-a" }, { session_id: "session-b" }];
     window.sessionStorage.setItem(FLOW_ID, JSON.stringify(messages));
 
     useGetSessionsFromFlowQuery({ id: FLOW_ID }, {});

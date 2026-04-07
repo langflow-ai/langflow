@@ -9,10 +9,7 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
  * Helper: create Basic Prompting flow, configure GPT, publish,
  * and open the shareable playground in a new tab.
  */
-async function setupShareablePlayground(
-  page: any,
-  context: any,
-): Promise<any> {
+async function setupShareablePlayground(page: any, context: any): Promise<any> {
   await awaitBootstrapTest(page);
 
   await page.getByTestId("side_nav_options_all-templates").click();
