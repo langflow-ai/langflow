@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 
+from lfx.graph.flow_builder._utils import node_id as _node_id
+
 LAYER_SPACING_X = 600
 NODE_SPACING_Y = 350
 
@@ -86,7 +88,3 @@ def _assign_layers(
             next_layer += 1
 
     return layers
-
-
-def _node_id(node: dict) -> str:
-    return node.get("data", {}).get("id", node.get("id", ""))
