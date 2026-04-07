@@ -26,10 +26,8 @@ export const isAllowedChatAttachmentFile = (file: File): boolean => {
   const hasNamedExtension = hasFileExtension(file.name);
   const hasAllowedExtension =
     CHAT_UPLOAD_ATTACHMENT_EXTENSIONS.includes(fileExtension);
-  const hasAllowedMime =
-    CHAT_UPLOAD_ATTACHMENT_MIME_TYPES.includes(fileType);
-  const extensionIsImage =
-    CHAT_UPLOAD_IMAGE_EXTENSIONS.includes(fileExtension);
+  const hasAllowedMime = CHAT_UPLOAD_ATTACHMENT_MIME_TYPES.includes(fileType);
+  const extensionIsImage = CHAT_UPLOAD_IMAGE_EXTENSIONS.includes(fileExtension);
   const mimeIsImage = CHAT_UPLOAD_IMAGE_MIME_TYPES.includes(fileType);
 
   if (hasNamedExtension && !hasAllowedExtension) {
