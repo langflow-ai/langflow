@@ -41,7 +41,7 @@ export default function TypeToConfirmDeleteDialog({
           <DialogTitle>
             <div className="flex items-center">
               <AlertTriangle
-                className="h-6 w-6 pr-1 text-destructive"
+                className="mr-2 h-6 w-6 text-destructive"
                 strokeWidth={1.5}
               />
               <span className="pl-2">Delete</span>
@@ -54,7 +54,7 @@ export default function TypeToConfirmDeleteDialog({
             in Langflow and Watsonx Orchestrate.
           </p>
           <label htmlFor="confirm-delete-input" className="text-sm">
-            Type the agent name to confirm:{" "}
+            Type the deployment name to confirm:{" "}
             <code className="font-mono bg-muted px-1 rounded text-sm">
               {deploymentName}
             </code>

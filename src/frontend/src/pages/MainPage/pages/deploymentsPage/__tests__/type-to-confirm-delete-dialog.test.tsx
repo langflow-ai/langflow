@@ -84,6 +84,16 @@ describe("TypeToConfirmDeleteDialog", () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
+  it("Delete button is disabled when input matches deployment name with different casing", () => {
+    renderDialog(defaultProps);
+
+    const input = screen.getByTestId("input-type-to-confirm-delete");
+    fireEvent.change(input, { target: { value: "my agent" } });
+
+    const deleteBtn = screen.getByTestId("btn-delete-type-to-confirm-delete");
+    expect(deleteBtn).toBeDisabled();
+  });
+
   it("input resets to empty when dialog is closed (open becomes false)", () => {
     const { rerender } = renderDialog({ ...defaultProps, open: true });
 
