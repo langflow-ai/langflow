@@ -1,7 +1,5 @@
 import json
 
-import httpx
-
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.schema.data import Data
@@ -19,27 +17,62 @@ class PubrioSearchCompaniesComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(name="query", display_name="Search Query", info="JSON search parameters or company name to search.", tool_mode=True),
+        MessageTextInput(
+            name="query",
+            display_name="Search Query",
+            info="JSON search parameters or company name to search.",
+            tool_mode=True,
+        ),
         MessageTextInput(name="company_name", display_name="Company Name", advanced=True),
-        MessageTextInput(name="domains", display_name="Domains", info="Comma-separated company domains.", advanced=True),
-        MessageTextInput(name="linkedin_urls", display_name="LinkedIn URLs", info="Comma-separated LinkedIn company URLs.", advanced=True),
-        MessageTextInput(name="locations", display_name="Locations", info="Comma-separated ISO country codes (e.g. US, GB).", advanced=True),
+        MessageTextInput(
+            name="domains", display_name="Domains", info="Comma-separated company domains.", advanced=True
+        ),
+        MessageTextInput(
+            name="linkedin_urls",
+            display_name="LinkedIn URLs",
+            info="Comma-separated LinkedIn company URLs.",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="locations",
+            display_name="Locations",
+            info="Comma-separated ISO country codes (e.g. US, GB).",
+            advanced=True,
+        ),
         MessageTextInput(name="exclude_locations", display_name="Exclude Locations", advanced=True),
-        MessageTextInput(name="places", display_name="Places", info="Comma-separated place names (city, region).", advanced=True),
-        MessageTextInput(name="keywords", display_name="Keywords", info="Comma-separated keywords for free-text search.", advanced=True),
-        MessageTextInput(name="verticals", display_name="Industry Verticals", info="Comma-separated vertical IDs.", advanced=True),
+        MessageTextInput(
+            name="places", display_name="Places", info="Comma-separated place names (city, region).", advanced=True
+        ),
+        MessageTextInput(
+            name="keywords",
+            display_name="Keywords",
+            info="Comma-separated keywords for free-text search.",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="verticals", display_name="Industry Verticals", info="Comma-separated vertical IDs.", advanced=True
+        ),
         MessageTextInput(name="vertical_categories", display_name="Vertical Categories", advanced=True),
         MessageTextInput(name="vertical_sub_categories", display_name="Vertical Sub-Categories", advanced=True),
-        MessageTextInput(name="technologies", display_name="Technologies", info="Comma-separated technology tag IDs.", advanced=True),
+        MessageTextInput(
+            name="technologies", display_name="Technologies", info="Comma-separated technology tag IDs.", advanced=True
+        ),
         MessageTextInput(name="categories", display_name="Technology Categories", advanced=True),
-        MessageTextInput(name="companies", display_name="Company UUIDs", info="Comma-separated domain_search_id UUIDs.", advanced=True),
+        MessageTextInput(
+            name="companies",
+            display_name="Company UUIDs",
+            info="Comma-separated domain_search_id UUIDs.",
+            advanced=True,
+        ),
         IntInput(name="employees_min", display_name="Min Employees", advanced=True),
         IntInput(name="employees_max", display_name="Max Employees", advanced=True),
         IntInput(name="revenue_min", display_name="Min Revenue", advanced=True),
         IntInput(name="revenue_max", display_name="Max Revenue", advanced=True),
         IntInput(name="founded_year_start", display_name="Founded Year Start", advanced=True),
         IntInput(name="founded_year_end", display_name="Founded Year End", advanced=True),
-        BoolInput(name="is_enable_similarity_search", display_name="Enable Similarity Search", value=False, advanced=True),
+        BoolInput(
+            name="is_enable_similarity_search", display_name="Enable Similarity Search", value=False, advanced=True
+        ),
         MessageTextInput(name="exclude_fields", display_name="Exclude Fields", advanced=True),
         MessageTextInput(name="job_titles", display_name="Job Titles Filter", advanced=True),
         MessageTextInput(name="job_locations", display_name="Job Locations Filter", advanced=True),
@@ -72,11 +105,27 @@ class PubrioSearchCompaniesComponent(Component):
         if self.company_name:
             body["company_name"] = self.company_name
 
-        for key in ("domains", "linkedin_urls", "locations", "exclude_locations", "places",
-                     "verticals", "vertical_categories", "vertical_sub_categories",
-                     "technologies", "categories", "companies", "exclude_fields", "keywords",
-                     "job_titles", "job_locations", "news_categories", "news_published_dates",
-                     "advertisement_search_terms", "advertisement_target_locations"):
+        for key in (
+            "domains",
+            "linkedin_urls",
+            "locations",
+            "exclude_locations",
+            "places",
+            "verticals",
+            "vertical_categories",
+            "vertical_sub_categories",
+            "technologies",
+            "categories",
+            "companies",
+            "exclude_fields",
+            "keywords",
+            "job_titles",
+            "job_locations",
+            "news_categories",
+            "news_published_dates",
+            "advertisement_search_terms",
+            "advertisement_target_locations",
+        ):
             val = getattr(self, key, None)
             if val:
                 body[key] = split_csv(val)

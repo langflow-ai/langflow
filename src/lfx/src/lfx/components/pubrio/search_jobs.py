@@ -17,7 +17,9 @@ class PubrioSearchJobsComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(name="query", display_name="Search Query", info="JSON search parameters or keyword.", tool_mode=True),
+        MessageTextInput(
+            name="query", display_name="Search Query", info="JSON search parameters or keyword.", tool_mode=True
+        ),
         MessageTextInput(name="titles", display_name="Job Titles", advanced=True),
         MessageTextInput(name="locations", display_name="Job Locations", advanced=True),
         MessageTextInput(name="exclude_locations", display_name="Exclude Locations", advanced=True),

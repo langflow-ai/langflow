@@ -17,15 +17,31 @@ class PubrioCreateMonitorComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(name="query", display_name="Query", info="JSON with full monitor configuration.", tool_mode=True),
+        MessageTextInput(
+            name="query", display_name="Query", info="JSON with full monitor configuration.", tool_mode=True
+        ),
         MessageTextInput(name="name", display_name="Monitor Name"),
-        DropdownInput(name="detection_mode", display_name="Detection Mode", options=["company_first", "signal_first"], value="company_first"),
-        MessageTextInput(name="signal_types", display_name="Signal Types", info="Comma-separated: jobs, news, advertisements"),
-        DropdownInput(name="destination_type", display_name="Destination Type", options=["webhook", "email", "sequences"], value="webhook"),
+        DropdownInput(
+            name="detection_mode",
+            display_name="Detection Mode",
+            options=["company_first", "signal_first"],
+            value="company_first",
+        ),
+        MessageTextInput(
+            name="signal_types", display_name="Signal Types", info="Comma-separated: jobs, news, advertisements"
+        ),
+        DropdownInput(
+            name="destination_type",
+            display_name="Destination Type",
+            options=["webhook", "email", "sequences"],
+            value="webhook",
+        ),
         MessageTextInput(name="webhook_url", display_name="Webhook URL", advanced=True),
         MessageTextInput(name="destination_email", display_name="Destination Email", advanced=True),
         MessageTextInput(name="description", display_name="Description", advanced=True),
-        MessageTextInput(name="companies", display_name="Companies", info="Comma-separated domain_search_id UUIDs.", advanced=True),
+        MessageTextInput(
+            name="companies", display_name="Companies", info="Comma-separated domain_search_id UUIDs.", advanced=True
+        ),
         MessageTextInput(name="domains", display_name="Domains", advanced=True),
         MessageTextInput(name="linkedin_urls", display_name="LinkedIn URLs", advanced=True),
         MessageTextInput(name="company_filters", display_name="Company Filters (JSON)", advanced=True),
