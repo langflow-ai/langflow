@@ -13,9 +13,6 @@ const IMAGE_TYPES = new Set([
   "image",
 ]);
 
-const UUID_SEGMENT_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export function isAbsoluteUrl(value: string): boolean {
   return (
     value.startsWith("http://") ||
@@ -23,31 +20,6 @@ export function isAbsoluteUrl(value: string): boolean {
     value.startsWith("data:") ||
     value.startsWith("blob:")
   );
-}
-
-export function normalizeServerImagePath(rawPath: string): string | null {
-  const normalized = rawPath.trim().replace(/\\/g, "/");
-  if (!normalized) return null;
-
-  if (isAbsoluteUrl(normalized)) {
-    return normalized;
-  }
-
-  const withoutLeadingSlashes = normalized.replace(/^\/+/, "");
-
-  const parts = normalized.split("/").filter(Boolean);
-  const lowerParts = parts.map((p) => p.toLowerCase());
-  const langflowIdx = lowerParts.lastIndexOf("langflow");
-  if (langflowIdx !== -1 && langflowIdx + 1 < parts.length) {
-    return parts.slice(langflowIdx + 1).join("/");
-  }
-
-  const uuidIdx = parts.findIndex((p) => UUID_SEGMENT_REGEX.test(p));
-  if (uuidIdx !== -1) {
-    return parts.slice(uuidIdx).join("/");
-  }
-
-  return withoutLeadingSlashes;
 }
 
 /**
@@ -150,11 +122,16 @@ export function getFilePreviewUrl(
     return null;
   }
 
+  const normalizePath = (value: string): string | null => {
+    const normalized = value.trim().replace(/\\/g, "/");
+    return normalized.length > 0 ? normalized : null;
+  };
+
   if (file instanceof File) {
     // Browser File object - create object URL
     return URL.createObjectURL(file);
   } else if (typeof file === "string") {
-    const normalizedPath = normalizeServerImagePath(file);
+    const normalizedPath = normalizePath(file);
     if (!normalizedPath) return null;
 
     if (isAbsoluteUrl(normalizedPath)) {
@@ -170,7 +147,7 @@ export function getFilePreviewUrl(
     const baseUrlWithSlash = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
     return `${baseUrlWithSlash}files/images/${encodedPath}`;
   } else if ("path" in file) {
-    const normalizedPath = normalizeServerImagePath(file.path);
+    const normalizedPath = normalizePath(file.path);
     if (!normalizedPath) return null;
 
     if (isAbsoluteUrl(normalizedPath)) {

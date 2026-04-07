@@ -6,7 +6,6 @@ import {
   getFilePreviewUrl,
   isAbsoluteUrl,
   isImageFile,
-  normalizeServerImagePath,
 } from "../file-utils";
 
 // Mock the getBaseUrl function
@@ -34,49 +33,6 @@ describe("file-utils", () => {
       expect(isAbsoluteUrl("flow123/a.png")).toBe(false);
       expect(isAbsoluteUrl("C:/temp/a.png")).toBe(false);
       expect(isAbsoluteUrl(" ")).toBe(false);
-    });
-  });
-
-  describe("normalizeServerImagePath", () => {
-    it("should_return_null_for_empty_or_whitespace", () => {
-      expect(normalizeServerImagePath("")).toBeNull();
-      expect(normalizeServerImagePath("   ")).toBeNull();
-    });
-
-    it("should_return_absolute_urls_unchanged", () => {
-      expect(normalizeServerImagePath("https://cdn.example.com/a.png")).toBe(
-        "https://cdn.example.com/a.png",
-      );
-      expect(normalizeServerImagePath(" data:image/png;base64,AAAA ")).toBe(
-        "data:image/png;base64,AAAA",
-      );
-    });
-
-    it("should_normalize_windows_separators_and_strip_leading_slashes", () => {
-      expect(normalizeServerImagePath("\\flow123\\image.jpg")).toBe(
-        "flow123/image.jpg",
-      );
-      expect(normalizeServerImagePath("///flow123//image.jpg")).toBe(
-        "flow123//image.jpg",
-      );
-      expect(normalizeServerImagePath("/flow123/sub/image.jpg")).toBe(
-        "flow123/sub/image.jpg",
-      );
-    });
-
-    it("should_extract_path_after_langflow_segment_when_present", () => {
-      expect(
-        normalizeServerImagePath(
-          "/Users/me/Library/Caches/langflow/flow123/sub/image.jpg",
-        ),
-      ).toBe("flow123/sub/image.jpg");
-    });
-
-    it("should_extract_path_from_uuid_segment_when_present", () => {
-      const uuid = "c8852b3e-d0c9-42b5-a557-4540272f28f5";
-      expect(normalizeServerImagePath(`/var/tmp/${uuid}/nested/file.png`)).toBe(
-        `${uuid}/nested/file.png`,
-      );
     });
   });
 
@@ -305,15 +261,6 @@ describe("file-utils", () => {
           "http://localhost:3000/api/v1/files/images/C%3A/temp/flow123/image.png";
 
         expect(getFilePreviewUrl(windowsPath)).toBe(expected);
-      });
-
-      it("should_normalize_macos_cache_absolute_path_to_flow_relative_path", () => {
-        const macosPath =
-          "/Users/langy/Library/Caches/langflow/c8852b3e-d0c9-42b5-a557-4540272f28f5/2026-04-01_18-43-42_image (3).png";
-        const expected =
-          "http://localhost:3000/api/v1/files/images/c8852b3e-d0c9-42b5-a557-4540272f28f5/2026-04-01_18-43-42_image%20(3).png";
-
-        expect(getFilePreviewUrl(macosPath)).toBe(expected);
       });
 
       it("should_encode_special_characters_in_path_segments", () => {

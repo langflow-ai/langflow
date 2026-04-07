@@ -1,4 +1,5 @@
 import base64
+import logging
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
@@ -172,7 +173,7 @@ def test_convert_to_langchain(method_name):
     assert len(list(iterator)) == expected_len
 
 
-def test_to_lc_message_skips_unsupported_file_attachments():
+def test_to_lc_message_skips_unsupported_file_attachments(caplog):
     message = Message(
         text="Hello",
         sender="User",
@@ -181,10 +182,12 @@ def test_to_lc_message_skips_unsupported_file_attachments():
         files=["nonexistent.unsupported"],
     )
 
-    lc_message = message.to_lc_message()
+    with caplog.at_level(logging.WARNING):
+        lc_message = message.to_lc_message()
 
     assert lc_message.type == "human"
     assert lc_message.content == [{"type": "text", "text": "Hello"}]
+    assert "Skipping unsupported attachment" in caplog.text
 
 
 def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
