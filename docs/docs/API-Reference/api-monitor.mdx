@@ -2,6 +2,47 @@
 title: Monitor endpoints
 slug: /api-monitor
 ---
+import CodeSnippet from '@site/src/components/CodeSnippet';
+import exampleApiMonitorGetVertexBuilds from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/get-vertex-builds.sh';
+import resultApiMonitorResultGetVertexBuilds from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-get-vertex-builds.json';
+import exampleApiMonitorDeleteVertexBuilds from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/delete-vertex-builds.sh';
+import resultApiMonitorResultDeleteVertexBuilds from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-delete-vertex-builds.txt';
+import exampleApiMonitorGetMessages from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/get-messages.sh';
+import exampleApiMonitorGetMessages2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/get-messages-2.sh';
+import resultApiMonitorResultGetMessages2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-get-messages-2.json';
+import exampleApiMonitorDeleteMessages from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/delete-messages.sh';
+import resultApiMonitorResultDeleteMessages from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-delete-messages.txt';
+import exampleApiMonitorUpdateMessage from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/update-message.sh';
+import resultApiMonitorResultUpdateMessage from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-update-message.json';
+import exampleApiMonitorUpdateSessionId from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/update-session-id.sh';
+import resultApiMonitorResultUpdateSessionId from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-update-session-id.json';
+import exampleApiMonitorDeleteMessagesBySession from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/delete-messages-by-session.sh';
+import resultApiMonitorResultDeleteMessagesBySession from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-delete-messages-by-session.txt';
+import exampleApiMonitorExampleRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/example-request.sh';
+import exampleApiMonitorGetTransactions from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/get-transactions.sh';
+import resultApiMonitorResultGetTransactions from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-get-transactions.json';
+import examplePythonApiMonitorExampleRequest from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/example-request.py';
+import examplePythonApiMonitorGetVertexBuilds from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/get-vertex-builds.py';
+import exampleJavascriptApiMonitorGetVertexBuilds from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/get-vertex-builds.js';
+import examplePythonApiMonitorDeleteVertexBuilds from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/delete-vertex-builds.py';
+import exampleJavascriptApiMonitorDeleteVertexBuilds from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/delete-vertex-builds.js';
+import examplePythonApiMonitorGetMessages from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/get-messages.py';
+import exampleJavascriptApiMonitorGetMessages from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/get-messages.js';
+import examplePythonApiMonitorGetMessages2 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/get-messages-2.py';
+import exampleJavascriptApiMonitorGetMessages2 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/get-messages-2.js';
+import examplePythonApiMonitorDeleteMessages from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/delete-messages.py';
+import exampleJavascriptApiMonitorDeleteMessages from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/delete-messages.js';
+import examplePythonApiMonitorUpdateMessage from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/update-message.py';
+import exampleJavascriptApiMonitorUpdateMessage from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/update-message.js';
+import examplePythonApiMonitorUpdateSessionId from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/update-session-id.py';
+import exampleJavascriptApiMonitorUpdateSessionId from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/update-session-id.js';
+import examplePythonApiMonitorDeleteMessagesBySession from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/delete-messages-by-session.py';
+import exampleJavascriptApiMonitorDeleteMessagesBySession from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/delete-messages-by-session.js';
+import examplePythonApiMonitorGetTransactions from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/get-transactions.py';
+import exampleJavascriptApiMonitorGetTransactions from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/get-transactions.js';
+
+
+
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -29,375 +70,28 @@ The `build` function allows components to execute logic at runtime. For example,
 
 Retrieve Vertex builds for a specific flow.
 
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/monitor/builds?flow_id=$FLOW_ID" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorGetVertexBuilds} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorGetVertexBuilds} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorGetVertexBuilds} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "vertex_builds": {
-    "ChatInput-NCmix": [
-      {
-        "data": {
-          "results": {
-            "message": {
-              "text_key": "text",
-              "data": {
-                "timestamp": "2024-12-23 19:10:57",
-                "sender": "User",
-                "sender_name": "User",
-                "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
-                "text": "Hello",
-                "files": [],
-                "error": "False",
-                "edit": "False",
-                "properties": {
-                  "text_color": "",
-                  "background_color": "",
-                  "edited": "False",
-                  "source": {
-                    "id": "None",
-                    "display_name": "None",
-                    "source": "None"
-                  },
-                  "icon": "",
-                  "allow_markdown": "False",
-                  "positive_feedback": "None",
-                  "state": "complete",
-                  "targets": []
-                },
-                "category": "message",
-                "content_blocks": [],
-                "id": "c95bed34-f906-4aa6-84e4-68553f6db772",
-                "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
-              },
-              "default_value": "",
-              "text": "Hello",
-              "sender": "User",
-              "sender_name": "User",
-              "files": [],
-              "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
-              "timestamp": "2024-12-23 19:10:57+00:00",
-              "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
-              "error": "False",
-              "edit": "False",
-              "properties": {
-                "text_color": "",
-                "background_color": "",
-                "edited": "False",
-                "source": {
-                  "id": "None",
-                  "display_name": "None",
-                  "source": "None"
-                },
-                "icon": "",
-                "allow_markdown": "False",
-                "positive_feedback": "None",
-                "state": "complete",
-                "targets": []
-              },
-              "category": "message",
-              "content_blocks": []
-            }
-          },
-          "outputs": {
-            "message": {
-              "message": {
-                "timestamp": "2024-12-23T19:10:57",
-                "sender": "User",
-                "sender_name": "User",
-                "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
-                "text": "Hello",
-                "files": [],
-                "error": false,
-                "edit": false,
-                "properties": {
-                  "text_color": "",
-                  "background_color": "",
-                  "edited": false,
-                  "source": {
-                    "id": null,
-                    "display_name": null,
-                    "source": null
-                  },
-                  "icon": "",
-                  "allow_markdown": false,
-                  "positive_feedback": null,
-                  "state": "complete",
-                  "targets": []
-                },
-                "category": "message",
-                "content_blocks": [],
-                "id": "c95bed34-f906-4aa6-84e4-68553f6db772",
-                "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
-              },
-              "type": "object"
-            }
-          },
-          "logs": { "message": [] },
-          "message": {
-            "message": "Hello",
-            "sender": "User",
-            "sender_name": "User",
-            "files": [],
-            "type": "object"
-          },
-          "artifacts": {
-            "message": "Hello",
-            "sender": "User",
-            "sender_name": "User",
-            "files": [],
-            "type": "object"
-          },
-          "timedelta": 0.015060124918818474,
-          "duration": "15 ms",
-          "used_frozen_result": false
-        },
-        "artifacts": {
-          "message": "Hello",
-          "sender": "User",
-          "sender_name": "User",
-          "files": [],
-          "type": "object"
-        },
-        "params": "- Files: []\n  Message: Hello\n  Sender: User\n  Sender Name: User\n  Type: object\n",
-        "valid": true,
-        "build_id": "40aa200e-74db-4651-b698-f80301d2b26b",
-        "id": "ChatInput-NCmix",
-        "timestamp": "2024-12-23T19:10:58.772766Z",
-        "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
-      }
-    ],
-    "Prompt-BEn9c": [
-      {
-        "data": {
-          "results": {},
-          "outputs": {
-            "prompt": {
-              "message": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
-              "type": "text"
-            }
-          },
-          "logs": { "prompt": [] },
-          "message": {
-            "prompt": {
-              "repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
-              "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
-              "type": "text"
-            }
-          },
-          "artifacts": {
-            "prompt": {
-              "repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
-              "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
-              "type": "text"
-            }
-          },
-          "timedelta": 0.0057758750626817346,
-          "duration": "6 ms",
-          "used_frozen_result": false
-        },
-        "artifacts": {
-          "prompt": {
-            "repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
-            "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
-            "type": "text"
-          }
-        },
-        "params": "None",
-        "valid": true,
-        "build_id": "39bbbfde-97fd-42a5-a9ed-d42a5c5d532b",
-        "id": "Prompt-BEn9c",
-        "timestamp": "2024-12-23T19:10:58.781019Z",
-        "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
-      }
-    ],
-    "OpenAIModel-7AjrN": [
-      {
-        "data": {
-          "results": {},
-          "outputs": {
-            "text_output": {
-              "message": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
-              "type": "text"
-            },
-            "model_output": { "message": "", "type": "unknown" }
-          },
-          "logs": { "text_output": [] },
-          "message": {
-            "text_output": {
-              "repr": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
-              "raw": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
-              "type": "text"
-            }
-          },
-          "artifacts": {
-            "text_output": {
-              "repr": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
-              "raw": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
-              "type": "text"
-            }
-          },
-          "timedelta": 1.034765167045407,
-          "duration": "1.03 seconds",
-          "used_frozen_result": false
-        },
-        "artifacts": {
-          "text_output": {
-            "repr": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
-            "raw": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
-            "type": "text"
-          }
-        },
-        "params": "None",
-        "valid": true,
-        "build_id": "4f0ae730-a266-4d35-b89f-7b825c620a0f",
-        "id": "OpenAIModel-7AjrN",
-        "timestamp": "2024-12-23T19:10:58.790484Z",
-        "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
-      }
-    ],
-    "ChatOutput-sfUhT": [
-      {
-        "data": {
-          "results": {
-            "message": {
-              "text_key": "text",
-              "data": {
-                "timestamp": "2024-12-23 19:10:58",
-                "sender": "Machine",
-                "sender_name": "AI",
-                "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
-                "text": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
-                "files": [],
-                "error": "False",
-                "edit": "False",
-                "properties": {
-                  "text_color": "",
-                  "background_color": "",
-                  "edited": "False",
-                  "source": {
-                    "id": "OpenAIModel-7AjrN",
-                    "display_name": "OpenAI",
-                    "source": "gpt-4o-mini"
-                  },
-                  "icon": "OpenAI",
-                  "allow_markdown": "False",
-                  "positive_feedback": "None",
-                  "state": "complete",
-                  "targets": []
-                },
-                "category": "message",
-                "content_blocks": [],
-                "id": "5688356d-9f30-40ca-9907-79a7a2fc16fd",
-                "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
-              },
-              "default_value": "",
-              "text": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
-              "sender": "Machine",
-              "sender_name": "AI",
-              "files": [],
-              "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
-              "timestamp": "2024-12-23 19:10:58+00:00",
-              "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
-              "error": "False",
-              "edit": "False",
-              "properties": {
-                "text_color": "",
-                "background_color": "",
-                "edited": "False",
-                "source": {
-                  "id": "OpenAIModel-7AjrN",
-                  "display_name": "OpenAI",
-                  "source": "gpt-4o-mini"
-                },
-                "icon": "OpenAI",
-                "allow_markdown": "False",
-                "positive_feedback": "None",
-                "state": "complete",
-                "targets": []
-              },
-              "category": "message",
-              "content_blocks": []
-            }
-          },
-          "outputs": {
-            "message": {
-              "message": {
-                "timestamp": "2024-12-23T19:10:58",
-                "sender": "Machine",
-                "sender_name": "AI",
-                "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
-                "text": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
-                "files": [],
-                "error": false,
-                "edit": false,
-                "properties": {
-                  "text_color": "",
-                  "background_color": "",
-                  "edited": false,
-                  "source": {
-                    "id": "OpenAIModel-7AjrN",
-                    "display_name": "OpenAI",
-                    "source": "gpt-4o-mini"
-                  },
-                  "icon": "OpenAI",
-                  "allow_markdown": false,
-                  "positive_feedback": null,
-                  "state": "complete",
-                  "targets": []
-                },
-                "category": "message",
-                "content_blocks": [],
-                "id": "5688356d-9f30-40ca-9907-79a7a2fc16fd",
-                "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
-              },
-              "type": "object"
-            }
-          },
-          "logs": { "message": [] },
-          "message": {
-            "message": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
-            "sender": "Machine",
-            "sender_name": "AI",
-            "files": [],
-            "type": "object"
-          },
-          "artifacts": {
-            "message": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
-            "sender": "Machine",
-            "sender_name": "AI",
-            "files": [],
-            "type": "object"
-          },
-          "timedelta": 0.017838125000707805,
-          "duration": "18 ms",
-          "used_frozen_result": false
-        },
-        "artifacts": {
-          "message": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
-          "sender": "Machine",
-          "sender_name": "AI",
-          "files": [],
-          "type": "object"
-        },
-        "params": "- Files: []\n  Message: Hello! 🌟 I'm excited to help you get started on your journey to building\n    something fresh! What do you have in mind? Whether it's a project, an idea, or\n    a concept, let's dive in and make it happen!\n  Sender: Machine\n  Sender Name: AI\n  Type: object\n",
-        "valid": true,
-        "build_id": "1e8b908b-aba7-403b-9e9b-eca92bb78668",
-        "id": "ChatOutput-sfUhT",
-        "timestamp": "2024-12-23T19:10:58.813268Z",
-        "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
-      }
-    ]
-  }
-}
-```
+<CodeSnippet source={resultApiMonitorResultGetVertexBuilds} language="json" />
 
 </details>
 
@@ -405,19 +99,28 @@ curl -X GET \
 
 Delete Vertex builds for a specific flow.
 
-```bash
-curl -X DELETE \
-  "$LANGFLOW_URL/api/v1/monitor/builds?flow_id=$FLOW_ID" \
-  -H "accept: */*" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorDeleteVertexBuilds} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorDeleteVertexBuilds} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorDeleteVertexBuilds} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```text
-204 No Content
-```
+<CodeSnippet source={resultApiMonitorResultDeleteVertexBuilds} language="text" />
 
 </details>
 
@@ -430,12 +133,23 @@ Typically, these are called implicitly when running flows that produce message h
 
 Retrieve a list of all messages:
 
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/monitor/messages" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorGetMessages} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorGetMessages} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorGetMessages} language="bash" />
+
+</TabItem>
+</Tabs>
 
 To filter messages, use the `flow_id`, `session_id`, `sender`, and `sender_name` query parameters.
 
@@ -443,48 +157,28 @@ To sort the results, use the `order_by` query parameter.
 
 This example retrieves messages sent by `Machine` and `AI` in a given chat session (`session_id`) and orders the messages by timestamp.
 
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/monitor/messages?flow_id=$FLOW_ID&session_id=01ce083d-748b-4b8d-97b6-33adbb6a528a&sender=Machine&sender_name=AI&order_by=timestamp" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorGetMessages2} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorGetMessages2} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorGetMessages2} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-[
-  {
-    "id": "1c1d6134-9b8b-4079-931c-84dcaddf19ba",
-    "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
-    "timestamp": "2024-12-23 19:20:11 UTC",
-    "sender": "Machine",
-    "sender_name": "AI",
-    "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
-    "text": "Hello! It's great to see you here! What exciting project or idea are you thinking about diving into today? Whether it's something fresh and innovative or a classic concept with a twist, I'm here to help you get started! Let's brainstorm together!",
-    "files": "[]",
-    "edit": false,
-    "properties": {
-      "text_color": "",
-      "background_color": "",
-      "edited": false,
-      "source": {
-        "id": "OpenAIModel-7AjrN",
-        "display_name": "OpenAI",
-        "source": "gpt-4o-mini"
-      },
-      "icon": "OpenAI",
-      "allow_markdown": false,
-      "positive_feedback": null,
-      "state": "complete",
-      "targets": []
-    },
-    "category": "message",
-    "content_blocks": []
-  }
-]
-```
+<CodeSnippet source={resultApiMonitorResultGetMessages2} language="json" />
 
 </details>
 
@@ -494,21 +188,28 @@ Delete specific messages by their IDs.
 
 This example deletes the message retrieved in the previous `GET /messages` example.
 
-```bash
-curl -v -X DELETE \
-  "$LANGFLOW_URL/api/v1/monitor/messages" \
-  -H "accept: */*" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '["MESSAGE_ID_1", "MESSAGE_ID_2"]'
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorDeleteMessages} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorDeleteMessages} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorDeleteMessages} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```text
-204 No Content
-```
+<CodeSnippet source={resultApiMonitorResultDeleteMessages} language="text" />
 
 </details>
 
@@ -518,47 +219,28 @@ Update a specific message by its ID.
 
 This example updates the `text` value of message `3ab66cc6-c048-48f8-ab07-570f5af7b160`.
 
-```bash
-curl -X PUT \
-  "$LANGFLOW_URL/api/v1/monitor/messages/3ab66cc6-c048-48f8-ab07-570f5af7b160" \
-  -H "accept: application/json" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{
-  "text": "testing 1234"
-}'
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorUpdateMessage} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorUpdateMessage} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorUpdateMessage} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "timestamp": "2024-12-23T18:49:06",
-  "sender": "string",
-  "sender_name": "string",
-  "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
-  "text": "testing 1234",
-  "files": ["string"],
-  "error": true,
-  "edit": true,
-  "properties": {
-    "text_color": "string",
-    "background_color": "string",
-    "edited": false,
-    "source": { "id": "string", "display_name": "string", "source": "string" },
-    "icon": "string",
-    "allow_markdown": false,
-    "positive_feedback": true,
-    "state": "complete",
-    "targets": []
-  },
-  "category": "message",
-  "content_blocks": [],
-  "id": "3ab66cc6-c048-48f8-ab07-570f5af7b160",
-  "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
-}
-```
+<CodeSnippet source={resultApiMonitorResultUpdateMessage} language="json" />
 
 </details>
 
@@ -568,48 +250,28 @@ Update the session ID for messages.
 
 This example updates the `session_ID` value `01ce083d-748b-4b8d-97b6-33adbb6a528a` to `different_session_id`.
 
-```bash
-curl -X PATCH \
-  "$LANGFLOW_URL/api/v1/monitor/messages/session/01ce083d-748b-4b8d-97b6-33adbb6a528a?new_session_id=different_session_id" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorUpdateSessionId} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorUpdateSessionId} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorUpdateSessionId} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-[
-  {
-    "id": "8dd7f064-e63a-4773-b472-ca0475249dfd",
-    "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
-    "timestamp": "2024-12-23 18:49:55 UTC",
-    "sender": "User",
-    "sender_name": "User",
-    "session_id": "different_session_id",
-    "text": "message",
-    "files": "[]",
-    "edit": false,
-    "properties": {
-      "text_color": "",
-      "background_color": "",
-      "edited": false,
-      "source": {
-        "id": null,
-        "display_name": null,
-        "source": null
-      },
-      "icon": "",
-      "allow_markdown": false,
-      "positive_feedback": null,
-      "state": "complete",
-      "targets": []
-    },
-    "category": "message",
-    "content_blocks": []
-  }
-]
-```
+<CodeSnippet source={resultApiMonitorResultUpdateSessionId} language="json" />
 
 </details>
 
@@ -617,19 +279,28 @@ curl -X PATCH \
 
 Delete all messages for a specific session.
 
-```bash
-curl -X DELETE \
-  "$LANGFLOW_URL/api/v1/monitor/messages/session/different_session_id_2" \
-  -H "accept: */*" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorDeleteMessagesBySession} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorDeleteMessagesBySession} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorDeleteMessagesBySession} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```text
-HTTP/1.1 204 No Content
-```
+<CodeSnippet source={resultApiMonitorResultDeleteMessagesBySession} language="text" />
 
 </details>
 
@@ -644,25 +315,7 @@ Use `GET /monitor/traces` and filter by `flow_id`:
 <Tabs>
 <TabItem value="python" label="Python">
 
-```python
-import os
-
-import requests
-
-base_url = os.getenv("LANGFLOW_SERVER_URL", "http://localhost:7860")
-api_key = os.getenv("LANGFLOW_API_KEY")
-flow_id = "YOUR_FLOW_ID"
-
-response = requests.get(
-    f"{base_url}/api/v1/monitor/traces",
-    params={"flow_id": flow_id, "page": 1, "size": 50},
-    headers={"x-api-key": api_key, "accept": "application/json"},
-    timeout=10,
-)
-response.raise_for_status()
-traces = response.json()
-print(traces)
-```
+<CodeSnippet source={examplePythonApiMonitorExampleRequest} language="python" />
 
 </TabItem>
 <TabItem value="typescript" label="TypeScript">
@@ -699,16 +352,7 @@ listTraces().catch(console.error);
 </TabItem>
 <TabItem value="curl" label="curl">
 
-```bash
-export LANGFLOW_SERVER_URL="http://localhost:7860"
-export LANGFLOW_API_KEY="YOUR_LANGFLOW_API_KEY"
-export FLOW_ID="YOUR_FLOW_ID"
-
-curl -s "$LANGFLOW_SERVER_URL/api/v1/monitor/traces?flow_id=$FLOW_ID&page=1&size=50" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  | jq .
-```
+<CodeSnippet source={exampleApiMonitorExampleRequest} language="bash" />
 
 </TabItem>
 </Tabs>
@@ -754,37 +398,28 @@ curl -s "$LANGFLOW_SERVER_URL/api/v1/monitor/traces?flow_id=$FLOW_ID&page=1&size
 Retrieve all transactions, which are interactions between components, for a specific flow.
 This information is also available in [flow logs](/logging).
 
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/monitor/transactions?flow_id=$FLOW_ID&page=1&size=50" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorGetTransactions} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorGetTransactions} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorGetTransactions} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "items": [
-    {
-      "timestamp": "2024-12-23T20:05:01.061Z",
-      "vertex_id": "string",
-      "target_id": "string",
-      "inputs": {},
-      "outputs": {},
-      "status": "string",
-      "error": "string",
-      "flow_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-    }
-  ],
-  "total": 0,
-  "page": 1,
-  "size": 1,
-  "pages": 0
-}
-```
+<CodeSnippet source={resultApiMonitorResultGetTransactions} language="json" />
 
 </details>
 

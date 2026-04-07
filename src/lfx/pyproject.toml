@@ -33,6 +33,7 @@ dependencies = [
     "passlib>=1.7.4,<2.0.0",
     "pydantic-settings>=2.10.1,<3.0.0",
     "tomli>=2.2.1,<3.0.0",
+    "pyyaml>=6.0.0,<7.0.0",
     "orjson>=3.11.6,<4.0.0",
     "asyncer>=0.0.8,<1.0.0",
     "structlog>=25.4.0,<26.0.0",
@@ -44,6 +45,7 @@ dependencies = [
     "pypdf>=6.9.0,<7.0.0",
     "cryptography>=46.0.6",
     "ag-ui-protocol>=0.1.10",
+    "langflow-sdk>=0.1.0",
     "markitdown>=0.1.4,<2.0.0",
     "setuptools>=80.0.0,<81.0.0",
     "wheel>=0.46.2,<1.0.0",
@@ -53,6 +55,9 @@ dependencies = [
 [project.scripts]
 lfx = "lfx.__main__:main"
 lfx-mcp = "lfx.mcp.__main__:main"
+
+[project.entry-points.pytest11]
+lfx = "lfx.testing"
 
 [build-system]
 requires = ["hatchling"]
@@ -72,7 +77,9 @@ markers = [
     "unit: Unit tests",
     "integration: Integration tests",
     "slow: Slow-running tests",
-    "asyncio: Async tests"
+    "asyncio: Async tests",
+    "lfx_env_file(path): path to a .env file loaded before this test's flow execution",
+    "lfx_timeout(seconds): timeout in seconds for this test's flow execution"
 ]
 
 [dependency-groups]

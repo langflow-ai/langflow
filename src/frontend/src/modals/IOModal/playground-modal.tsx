@@ -10,6 +10,7 @@ import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
+import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
 import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
@@ -127,7 +128,7 @@ export default function IOModal({
 
     // Delete the session (which will delete all associated messages on the backend)
     deleteSessionFunction(
-      { sessionId: session_id },
+      { sessionId: session_id, flowId: currentFlowId },
       {
         onSuccess: () => {
           // Remove the session from local state
@@ -136,7 +137,8 @@ export default function IOModal({
           // Remove all messages for this session from local state
           const messageIdsToRemove = messages
             .filter((msg) => msg.session_id === session_id)
-            .map((msg) => msg.id);
+            .map((msg) => msg.id)
+            .filter((id): id is string => id != null);
 
           if (messageIdsToRemove.length > 0) {
             removeMessages(messageIdsToRemove);
@@ -228,7 +230,7 @@ export default function IOModal({
   );
 
   useEffect(() => {
-    if (playgroundPage && messages.length > 0) {
+    if (playgroundPage && !isAuthenticatedPlayground() && messages.length > 0) {
       window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
     }
     if (newChatOnPlayground && !sessionsLoading) {
