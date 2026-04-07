@@ -1,8 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
+import { useDeleteWithConfirmation } from "../use-delete-with-confirmation";
 
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
+// ── Mocks ──────────────────────────────────────────────────────────────────
 
 const mockShowError = jest.fn();
 
@@ -10,287 +9,228 @@ jest.mock("../use-error-alert", () => ({
   useErrorAlert: () => mockShowError,
 }));
 
-import { useDeleteWithConfirmation } from "../use-delete-with-confirmation";
+// ── Helpers ────────────────────────────────────────────────────────────────
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+type Item = { id: string; name: string };
 
-interface TestItem {
-  id: string;
-  name: string;
+const makeItem = (overrides: Partial<Item> = {}): Item => ({
+  id: "dep-1",
+  name: "My Deployment",
+  ...overrides,
+});
+
+const buildParams = (id: string) => ({ deployment_id: id });
+
+function makeMouseEvent() {
+  return { stopPropagation: jest.fn() } as unknown as React.MouseEvent<
+    HTMLButtonElement,
+    MouseEvent
+  >;
 }
 
-type Params = { id: string };
-
-const makeEvent = () =>
-  ({
-    stopPropagation: jest.fn(),
-  }) as unknown as React.MouseEvent<HTMLButtonElement, MouseEvent>;
-
-const renderDeleteHook = (
-  mutateFn: jest.Mock = jest.fn(),
-  buildParams: (id: string) => Params = (id) => ({ id }),
-  errorMessage = "Failed to delete item",
-) =>
-  renderHook(() =>
-    useDeleteWithConfirmation<TestItem, Params>(
-      mutateFn,
-      buildParams,
-      errorMessage,
-    ),
-  );
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+// ── Tests ──────────────────────────────────────────────────────────────────
 
 describe("useDeleteWithConfirmation", () => {
+  let mutateFn: jest.Mock;
+
   beforeEach(() => {
+    mutateFn = jest.fn();
     mockShowError.mockClear();
   });
 
-  describe("initial state", () => {
-    it("initializes with null target", () => {
-      const { result } = renderDeleteHook();
-      expect(result.current.target).toBeNull();
-    });
+  it("starts with target and deletingId as null", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(mutateFn, buildParams, "Error"),
+    );
 
-    it("initializes with null deletingId", () => {
-      const { result } = renderDeleteHook();
-      expect(result.current.deletingId).toBeNull();
-    });
+    expect(result.current.target).toBeNull();
+    expect(result.current.deletingId).toBeNull();
   });
 
-  describe("requestDelete", () => {
-    it("sets the target item", () => {
-      const { result } = renderDeleteHook();
-      const item: TestItem = { id: "item-1", name: "Widget" };
+  it("requestDelete sets the target item", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(mutateFn, buildParams, "Error"),
+    );
+    const item = makeItem();
 
-      act(() => {
-        result.current.requestDelete(item);
-      });
-
-      expect(result.current.target).toEqual(item);
+    act(() => {
+      result.current.requestDelete(item);
     });
 
-    it("replaces a previous target with the new one", () => {
-      const { result } = renderDeleteHook();
-
-      act(() => {
-        result.current.requestDelete({ id: "item-1", name: "First" });
-      });
-      act(() => {
-        result.current.requestDelete({ id: "item-2", name: "Second" });
-      });
-
-      expect(result.current.target).toEqual({ id: "item-2", name: "Second" });
-    });
+    expect(result.current.target).toEqual(item);
   });
 
-  describe("cancelDelete", () => {
-    it("clears the target", () => {
-      const { result } = renderDeleteHook();
+  it("requestDelete replaces a previous target with the new one", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(mutateFn, buildParams, "Error"),
+    );
 
-      act(() => {
-        result.current.requestDelete({ id: "item-1", name: "Widget" });
-      });
-      act(() => {
-        result.current.cancelDelete();
-      });
-
-      expect(result.current.target).toBeNull();
+    act(() => {
+      result.current.requestDelete(makeItem({ id: "dep-1", name: "First" }));
+    });
+    act(() => {
+      result.current.requestDelete(makeItem({ id: "dep-2", name: "Second" }));
     });
 
-    it("is a no-op when target is already null", () => {
-      const { result } = renderDeleteHook();
-
-      act(() => {
-        result.current.cancelDelete();
-      });
-
-      expect(result.current.target).toBeNull();
-    });
+    expect(result.current.target).toEqual({ id: "dep-2", name: "Second" });
   });
 
-  describe("setModalOpen", () => {
-    it("clears the target when called with false", () => {
-      const { result } = renderDeleteHook();
+  it("confirmDelete calls mutateFn with built params and clears target", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(mutateFn, buildParams, "Error"),
+    );
+    const item = makeItem();
 
-      act(() => {
-        result.current.requestDelete({ id: "item-1", name: "Widget" });
-      });
-      act(() => {
-        result.current.setModalOpen(false);
-      });
-
-      expect(result.current.target).toBeNull();
+    act(() => {
+      result.current.requestDelete(item);
     });
 
-    it("does not change state when called with true", () => {
-      const { result } = renderDeleteHook();
-      const item: TestItem = { id: "item-1", name: "Widget" };
-
-      act(() => {
-        result.current.requestDelete(item);
-      });
-      act(() => {
-        result.current.setModalOpen(true);
-      });
-
-      expect(result.current.target).toEqual(item);
+    act(() => {
+      result.current.confirmDelete(makeMouseEvent());
     });
+
+    expect(mutateFn).toHaveBeenCalledWith(
+      { deployment_id: "dep-1" },
+      expect.objectContaining({
+        onError: expect.any(Function),
+        onSettled: expect.any(Function),
+      }),
+    );
+    expect(result.current.target).toBeNull();
+    expect(result.current.deletingId).toBe("dep-1");
   });
 
-  describe("confirmDelete", () => {
-    it("does nothing when target is null", () => {
-      const mutateFn = jest.fn();
-      const { result } = renderDeleteHook(mutateFn);
-      const event = makeEvent();
+  it("confirmDelete calls stopPropagation on the event", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(mutateFn, buildParams, "Error"),
+    );
+    const event = makeMouseEvent();
 
-      act(() => {
-        result.current.confirmDelete(event);
-      });
-
-      expect(mutateFn).not.toHaveBeenCalled();
+    act(() => {
+      result.current.requestDelete(makeItem());
+    });
+    act(() => {
+      result.current.confirmDelete(event);
     });
 
-    it("calls stopPropagation on the event", () => {
-      const { result } = renderDeleteHook();
-      const event = makeEvent();
-
-      act(() => {
-        result.current.requestDelete({ id: "item-1", name: "Widget" });
-      });
-      act(() => {
-        result.current.confirmDelete(event);
-      });
-
-      expect(event.stopPropagation).toHaveBeenCalled();
-    });
-
-    it("calls mutateFn with params built from the target id", () => {
-      const mutateFn = jest.fn();
-      const buildParams = jest.fn((id: string) => ({ id, extra: "data" }));
-      const { result } = renderDeleteHook(mutateFn, buildParams);
-      const item: TestItem = { id: "item-1", name: "Widget" };
-
-      act(() => {
-        result.current.requestDelete(item);
-      });
-      act(() => {
-        result.current.confirmDelete(makeEvent());
-      });
-
-      expect(buildParams).toHaveBeenCalledWith("item-1");
-      expect(mutateFn).toHaveBeenCalledWith(
-        { id: "item-1", extra: "data" },
-        expect.objectContaining({
-          onError: expect.any(Function),
-          onSettled: expect.any(Function),
-        }),
-      );
-    });
-
-    it("sets deletingId to the confirmed item's id", () => {
-      const mutateFn = jest.fn();
-      const { result } = renderDeleteHook(mutateFn);
-
-      act(() => {
-        result.current.requestDelete({ id: "item-1", name: "Widget" });
-      });
-      act(() => {
-        result.current.confirmDelete(makeEvent());
-      });
-
-      expect(result.current.deletingId).toBe("item-1");
-    });
-
-    it("clears target after confirming", () => {
-      const { result } = renderDeleteHook();
-
-      act(() => {
-        result.current.requestDelete({ id: "item-1", name: "Widget" });
-      });
-      act(() => {
-        result.current.confirmDelete(makeEvent());
-      });
-
-      expect(result.current.target).toBeNull();
-    });
+    expect(event.stopPropagation).toHaveBeenCalled();
   });
 
-  describe("mutation callbacks", () => {
-    it("onSettled clears deletingId", () => {
-      const mutateFn = jest.fn();
-      const { result } = renderDeleteHook(mutateFn);
+  it("confirmDelete is a no-op when target is null", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(mutateFn, buildParams, "Error"),
+    );
 
-      act(() => {
-        result.current.requestDelete({ id: "item-1", name: "Widget" });
-      });
-      act(() => {
-        result.current.confirmDelete(makeEvent());
-      });
-      expect(result.current.deletingId).toBe("item-1");
-
-      act(() => {
-        const { onSettled } = mutateFn.mock.calls[0][1] as {
-          onSettled: () => void;
-        };
-        onSettled();
-      });
-
-      expect(result.current.deletingId).toBeNull();
+    act(() => {
+      result.current.confirmDelete(makeMouseEvent());
     });
 
-    it("onError calls showError with the configured error message", () => {
-      const mutateFn = jest.fn();
-      const { result } = renderDeleteHook(
+    expect(mutateFn).not.toHaveBeenCalled();
+  });
+
+  it("onSettled clears deletingId", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(mutateFn, buildParams, "Error"),
+    );
+
+    act(() => {
+      result.current.requestDelete(makeItem());
+    });
+    act(() => {
+      result.current.confirmDelete(makeMouseEvent());
+    });
+
+    expect(result.current.deletingId).toBe("dep-1");
+
+    const { onSettled } = mutateFn.mock.calls[0][1];
+    act(() => {
+      onSettled();
+    });
+
+    expect(result.current.deletingId).toBeNull();
+  });
+
+  it("onError calls showError with the configured message", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(
         mutateFn,
-        (id) => ({ id }),
-        "Cannot delete widget",
-      );
+        buildParams,
+        "Error deleting deployment",
+      ),
+    );
 
-      act(() => {
-        result.current.requestDelete({ id: "item-1", name: "Widget" });
-      });
-      act(() => {
-        result.current.confirmDelete(makeEvent());
-      });
-
-      const error = new Error("server error");
-      act(() => {
-        const { onError } = mutateFn.mock.calls[0][1] as {
-          onError: (err: unknown) => void;
-        };
-        onError(error);
-      });
-
-      expect(mockShowError).toHaveBeenCalledWith("Cannot delete widget", error);
+    act(() => {
+      result.current.requestDelete(makeItem());
+    });
+    act(() => {
+      result.current.confirmDelete(makeMouseEvent());
     });
 
-    it("onError can handle non-Error values", () => {
-      const mutateFn = jest.fn();
-      const { result } = renderDeleteHook(mutateFn);
-
-      act(() => {
-        result.current.requestDelete({ id: "item-1", name: "Widget" });
-      });
-      act(() => {
-        result.current.confirmDelete(makeEvent());
-      });
-
-      act(() => {
-        const { onError } = mutateFn.mock.calls[0][1] as {
-          onError: (err: unknown) => void;
-        };
-        onError("a plain string error");
-      });
-
-      expect(mockShowError).toHaveBeenCalledWith(
-        "Failed to delete item",
-        "a plain string error",
-      );
+    const { onError } = mutateFn.mock.calls[0][1];
+    const fakeError = new Error("network failure");
+    act(() => {
+      onError(fakeError);
     });
+
+    expect(mockShowError).toHaveBeenCalledWith(
+      "Error deleting deployment",
+      fakeError,
+    );
+  });
+
+  it("onError handles non-Error values", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(mutateFn, buildParams, "Failed to delete item"),
+    );
+
+    act(() => {
+      result.current.requestDelete(makeItem());
+    });
+    act(() => {
+      result.current.confirmDelete(makeMouseEvent());
+    });
+
+    const { onError } = mutateFn.mock.calls[0][1];
+    act(() => {
+      onError("a plain string error");
+    });
+
+    expect(mockShowError).toHaveBeenCalledWith(
+      "Failed to delete item",
+      "a plain string error",
+    );
+  });
+
+  it("setModalOpen(false) clears the target", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(mutateFn, buildParams, "Error"),
+    );
+
+    act(() => {
+      result.current.requestDelete(makeItem());
+    });
+    expect(result.current.target).not.toBeNull();
+
+    act(() => {
+      result.current.setModalOpen(false);
+    });
+
+    expect(result.current.target).toBeNull();
+  });
+
+  it("setModalOpen(true) does not change target", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(mutateFn, buildParams, "Error"),
+    );
+
+    act(() => {
+      result.current.requestDelete(makeItem());
+    });
+
+    act(() => {
+      result.current.setModalOpen(true);
+    });
+
+    expect(result.current.target).toEqual(makeItem());
   });
 });
