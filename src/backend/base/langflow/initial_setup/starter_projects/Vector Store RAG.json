@@ -196,8 +196,7 @@
             "id": "AstraDB-2kFlp",
             "inputTypes": [
               "Data",
-              "DataFrame",
-              "Table"
+              "DataFrame"
             ],
             "type": "other"
           }
@@ -207,7 +206,7 @@
         "source": "SplitText-dswy4",
         "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-dswy4œ, œnameœ: œdataframeœ, œoutput_typesœ: [œTableœ]}",
         "target": "AstraDB-2kFlp",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-2kFlpœ, œinputTypesœ: [œDataœ, œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-2kFlpœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -3278,8 +3277,7 @@
                 "info": "",
                 "input_types": [
                   "Data",
-                  "DataFrame",
-                  "Table"
+                  "DataFrame"
                 ],
                 "list": true,
                 "list_add_label": "Add More",
@@ -4190,8 +4188,7 @@
                 "info": "",
                 "input_types": [
                   "Data",
-                  "DataFrame",
-                  "Table"
+                  "DataFrame"
                 ],
                 "list": true,
                 "list_add_label": "Add More",

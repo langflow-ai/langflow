@@ -106,8 +106,7 @@
             "id": "FAISS-Ugchq",
             "inputTypes": [
               "Data",
-              "DataFrame",
-              "Table"
+              "DataFrame"
             ],
             "type": "other"
           }
@@ -117,7 +116,7 @@
         "source": "RemixDocumentation-aT7Gm",
         "sourceHandle": "{œdataTypeœ: œRemixDocumentationœ, œidœ: œRemixDocumentation-aT7Gmœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œTableœ]}",
         "target": "FAISS-Ugchq",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œFAISS-Ugchqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œFAISS-Ugchqœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -2104,8 +2103,7 @@
                 "info": "",
                 "input_types": [
                   "Data",
-                  "DataFrame",
-                  "Table"
+                  "DataFrame"
                 ],
                 "list": true,
                 "list_add_label": "Add More",
