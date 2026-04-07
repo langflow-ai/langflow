@@ -1244,8 +1244,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
         payload["type"] = config_type
         environment = str(item_provider_data.get("environment") or "").strip()
-        if environment:
-            payload["environment"] = environment
+        if not environment:
+            msg = "Invalid config list item provider_data payload: expected non-null and non-empty 'environment'."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        payload["environment"] = environment
         return payload
 
     def _parse_required_payload_slot(

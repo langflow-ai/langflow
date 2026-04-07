@@ -179,6 +179,16 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             )
 
     @staticmethod
+    def _require_non_empty_config_environment(*, connection_id: str, app_id: str, environment: str | None) -> str:
+        if environment:
+            return environment
+        msg = (
+            "wxO returned a key_value_creds connection without a required environment: "
+            f"connection_id='{connection_id}', app_id='{app_id}'."
+        )
+        raise InvalidContentError(message=msg)
+
+    @staticmethod
     def _normalize_optional_text(value: object | None) -> str | None:
         """Normalize SDK scalar/enum/tuple values to optional text.
 
@@ -772,7 +782,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 config_type = self._normalize_optional_text(connection.security_scheme)
                 if config_type != "key_value_creds":
                     continue
-                environment = self._normalize_optional_text(getattr(connection, "environment", None))
+                environment = self._require_non_empty_config_environment(
+                    connection_id=config_id,
+                    app_id=config_name,
+                    environment=self._normalize_optional_text(getattr(connection, "environment", None)),
+                )
                 configs.append(
                     self._build_config_list_item(
                         connection_id=config_id,
@@ -865,9 +879,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     resolved_connection_ids.add(connection_id)
                     config_type = self._normalize_optional_text(connection.security_scheme)
                     if config_type == "key_value_creds":
+                        app_id = self._normalize_optional_text(connection.app_id) or "<unknown>"
                         key_value_connection_ids.add(connection_id)
                         key_value_connection_environment_by_id[connection_id] = self._normalize_optional_text(
-                            getattr(connection, "environment", None)
+                            self._require_non_empty_config_environment(
+                                connection_id=connection_id,
+                                app_id=app_id,
+                                environment=self._normalize_optional_text(getattr(connection, "environment", None)),
+                            )
                         )
                 self._warn_if_expected_ids_missing(
                     deployment_id=agent_id,

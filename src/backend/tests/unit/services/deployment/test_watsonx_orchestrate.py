@@ -3121,7 +3121,12 @@ async def test_list_configs_deployment_scope_filters_to_key_value_creds(monkeypa
     connections_client = FakeConnectionsClient()
     connections_client._draft_entries_by_id = [
         ListConfigsResponse.model_validate(
-            {"connection_id": "conn-1", "app_id": "cfg-1", "security_scheme": "key_value_creds"}
+            {
+                "connection_id": "conn-1",
+                "app_id": "cfg-1",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
         ),
         ListConfigsResponse.model_validate({"connection_id": "conn-2", "app_id": "cfg-2", "security_scheme": "oauth2"}),
     ]
@@ -3144,7 +3149,7 @@ async def test_list_configs_deployment_scope_filters_to_key_value_creds(monkeypa
 
     assert [config.id for config in result.configs] == ["conn-1"]
     assert [config.name for config in result.configs] == ["cfg-1"]
-    assert [config.provider_data for config in result.configs] == [{"type": "key_value_creds"}]
+    assert [config.provider_data for config in result.configs] == [{"type": "key_value_creds", "environment": "draft"}]
 
 
 @pytest.mark.anyio
@@ -3168,6 +3173,7 @@ async def test_list_configs_deployment_scope_warns_on_stale_tool_ids(monkeypatch
                 "connection_id": "conn-1",
                 "app_id": "cfg-1",
                 "security_scheme": "key_value_creds",
+                "environment": "live",
             }
         )
     ]
@@ -3250,7 +3256,7 @@ async def test_list_configs_deployment_scope_accepts_schema_compatible_detailed_
     )
     connections_client = FakeConnectionsClient()
     connections_client._draft_entries_by_id = [
-        SimpleNamespace(connection_id="conn-1", app_id="cfg-1", security_scheme="key_value_creds")
+        SimpleNamespace(connection_id="conn-1", app_id="cfg-1", security_scheme="key_value_creds", environment="draft")
     ]
     fake_clients = SimpleNamespace(
         agent=fake_agent,
@@ -3271,7 +3277,45 @@ async def test_list_configs_deployment_scope_accepts_schema_compatible_detailed_
     assert len(result.configs) == 1
     assert result.configs[0].id == "conn-1"
     assert result.configs[0].name == "cfg-1"
-    assert result.configs[0].provider_data == {"type": "key_value_creds"}
+    assert result.configs[0].provider_data == {"type": "key_value_creds", "environment": "draft"}
+
+
+@pytest.mark.anyio
+async def test_list_configs_deployment_scope_fails_fast_when_environment_missing(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_tool = FakeToolClient(
+        [
+            {
+                "id": "tool-1",
+                "name": "tool-one",
+                "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+            }
+        ]
+    )
+    connections_client = FakeConnectionsClient()
+    connections_client._draft_entries_by_id = [
+        ListConfigsResponse.model_validate(
+            {"connection_id": "conn-1", "app_id": "cfg-1", "security_scheme": "key_value_creds"}
+        )
+    ]
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=fake_tool,
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(InvalidContentError, match="required environment"):
+        await service.list_configs(
+            user_id="user-1",
+            db=object(),
+            params=ConfigListParams(deployment_ids=["dep-1"]),
+        )
 
 
 @pytest.mark.anyio
@@ -3442,6 +3486,7 @@ async def test_list_configs_deployment_scope_trusts_non_list_tools_payload(monke
                 "connection_id": "conn-1",
                 "app_id": "cfg-1",
                 "security_scheme": "key_value_creds",
+                "environment": "draft",
             }
         )
     ]
@@ -3557,6 +3602,7 @@ async def test_list_configs_deployment_scope_uses_latest_binding_for_same_app(mo
                 "connection_id": "conn-2",
                 "app_id": "cfg-1",
                 "security_scheme": "key_value_creds",
+                "environment": "draft",
             }
         )
     ]
@@ -3652,12 +3698,23 @@ async def test_list_configs_scopes_return_same_normalized_item_shape(monkeypatch
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
         ListConfigsResponse.model_validate(
-            {"connection_id": "conn-1", "app_id": "cfg-1", "name": "Config One", "security_scheme": "key_value_creds"}
+            {
+                "connection_id": "conn-1",
+                "app_id": "cfg-1",
+                "name": "Config One",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
         )
     ]
     connections_client._draft_entries_by_id = [
         ListConfigsResponse.model_validate(
-            {"connection_id": "conn-1", "app_id": "cfg-1", "security_scheme": "key_value_creds"}
+            {
+                "connection_id": "conn-1",
+                "app_id": "cfg-1",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
         )
     ]
     fake_clients = SimpleNamespace(
@@ -3686,7 +3743,7 @@ async def test_list_configs_scopes_return_same_normalized_item_shape(monkeypatch
         params=ConfigListParams(deployment_ids=["dep-1"]),
     )
 
-    expected = {"id": "conn-1", "name": "cfg-1", "provider_data": {"type": "key_value_creds"}}
+    expected = {"id": "conn-1", "name": "cfg-1", "provider_data": {"type": "key_value_creds", "environment": "draft"}}
     assert len(tenant_result.configs) == 1
     assert len(deployment_result.configs) == 1
     assert tenant_result.configs[0].model_dump(exclude_none=True) == expected
@@ -3813,10 +3870,22 @@ async def test_list_configs_without_deployment_id_lists_tenant_scope(monkeypatch
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
         ListConfigsResponse.model_validate(
-            {"connection_id": "conn-1", "app_id": "cfg-1", "name": "Config One", "security_scheme": "key_value_creds"}
+            {
+                "connection_id": "conn-1",
+                "app_id": "cfg-1",
+                "name": "Config One",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
         ),
         ListConfigsResponse.model_validate(
-            {"connection_id": "conn-2", "app_id": "cfg-2", "name": "Config Two", "security_scheme": "key_value_creds"}
+            {
+                "connection_id": "conn-2",
+                "app_id": "cfg-2",
+                "name": "Config Two",
+                "security_scheme": "key_value_creds",
+                "environment": "live",
+            }
         ),
     ]
     fake_clients = SimpleNamespace(
@@ -3848,6 +3917,7 @@ async def test_list_configs_tenant_scope_handles_sdk_models(monkeypatch):
                 "app_id": "cfg-pydantic-1",
                 "name": "Pydantic One",
                 "security_scheme": "key_value_creds",
+                "environment": "draft",
             }
         ),
         ListConfigsResponse.model_validate(
@@ -3856,6 +3926,7 @@ async def test_list_configs_tenant_scope_handles_sdk_models(monkeypatch):
                 "app_id": "cfg-pydantic-2",
                 "name": "Pydantic Two",
                 "security_scheme": "key_value_creds",
+                "environment": "live",
             }
         ),
     ]
@@ -3918,6 +3989,35 @@ async def test_list_configs_tenant_scope_filters_to_key_value_creds(monkeypatch)
 
 
 @pytest.mark.anyio
+async def test_list_configs_tenant_scope_fails_fast_when_environment_missing(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    connections_client = FakeConnectionsClient()
+    connections_client._list_entries = [
+        ListConfigsResponse.model_validate(
+            {
+                "connection_id": "conn-auth",
+                "app_id": "cfg-auth",
+                "name": "Auth Config",
+                "security_scheme": "key_value_creds",
+            }
+        )
+    ]
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=connections_client,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(InvalidContentError, match="required environment"):
+        await service.list_configs(user_id="user-1", db=object(), params=None)
+
+
+@pytest.mark.anyio
 async def test_list_configs_tenant_scope_fails_fast_on_dict_entries(monkeypatch):
     """Tenant-scope list_configs raises when wxO returns unexpected entry types."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
@@ -3948,10 +4048,22 @@ async def test_list_configs_tenant_scope_preserves_duplicates(monkeypatch):
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
         ListConfigsResponse.model_validate(
-            {"connection_id": "conn-dup", "app_id": "cfg-dup", "name": "First", "security_scheme": "key_value_creds"}
+            {
+                "connection_id": "conn-dup",
+                "app_id": "cfg-dup",
+                "name": "First",
+                "security_scheme": "key_value_creds",
+                "environment": "draft",
+            }
         ),
         ListConfigsResponse.model_validate(
-            {"connection_id": "conn-dup", "app_id": "cfg-dup", "name": "Second", "security_scheme": "key_value_creds"}
+            {
+                "connection_id": "conn-dup",
+                "app_id": "cfg-dup",
+                "name": "Second",
+                "security_scheme": "key_value_creds",
+                "environment": "live",
+            }
         ),
         ListConfigsResponse.model_validate(
             {
@@ -3959,6 +4071,7 @@ async def test_list_configs_tenant_scope_preserves_duplicates(monkeypatch):
                 "app_id": "cfg-unique",
                 "name": "Unique",
                 "security_scheme": "key_value_creds",
+                "environment": "draft",
             }
         ),
     ]

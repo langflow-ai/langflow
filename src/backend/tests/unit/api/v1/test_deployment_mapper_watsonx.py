@@ -392,9 +392,9 @@ def test_watsonx_mapper_shapes_config_list_result_with_full_slot_validation() ->
                 name="cfg-1",
                 created_at=now,
                 updated_at=now,
-                provider_data={"type": "key_value_creds"},
+                provider_data={"type": "key_value_creds", "environment": "draft"},
             ),
-            ConfigListItem(id="conn-2", name="cfg-2", provider_data={"type": "key_value_creds"}),
+            ConfigListItem(id="conn-2", name="cfg-2", provider_data={"type": "key_value_creds", "environment": "live"}),
         ],
         provider_result={"deployment_id": " dep-1 ", "tool_ids": ["tool-1", "  "]},
     )
@@ -414,10 +414,12 @@ def test_watsonx_mapper_shapes_config_list_result_with_full_slot_validation() ->
     assert shaped.provider_data["connections"][0]["app_id"] == "cfg-1"
     assert shaped.provider_data["connections"][0]["connection_id"] == "conn-1"
     assert shaped.provider_data["connections"][0]["type"] == "key_value_creds"
+    assert shaped.provider_data["connections"][0]["environment"] == "draft"
     assert set(shaped.provider_data["connections"][0].keys()) == {
         "app_id",
         "connection_id",
         "type",
+        "environment",
     }
 
 
@@ -464,7 +466,11 @@ def test_watsonx_mapper_config_list_exposes_connection_id_app_id_and_type() -> N
     mapper = WatsonxOrchestrateDeploymentMapper()
     result = ConfigListResult(
         configs=[
-            ConfigListItem(id="conn-dep", name="cfg-dep", provider_data={"type": "key_value_creds"}),
+            ConfigListItem(
+                id="conn-dep",
+                name="cfg-dep",
+                provider_data={"type": "key_value_creds", "environment": "draft"},
+            ),
         ],
         provider_result={},
     )
@@ -478,7 +484,27 @@ def test_watsonx_mapper_config_list_exposes_connection_id_app_id_and_type() -> N
         "connection_id": "conn-dep",
         "app_id": "cfg-dep",
         "type": "key_value_creds",
+        "environment": "draft",
     }
+
+
+def test_watsonx_mapper_config_list_fails_fast_when_environment_missing() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    result = ConfigListResult(
+        configs=[
+            ConfigListItem(
+                id="conn-no-env",
+                name="cfg-no-env",
+                provider_data={"type": "key_value_creds"},
+            ),
+        ],
+        provider_result={},
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        mapper.shape_config_list_result(result, page=1, size=10)
+    assert exc_info.value.status_code == 500
+    assert "expected non-null and non-empty 'environment'" in str(exc_info.value.detail)
 
 
 def test_watsonx_mapper_config_list_rejects_missing_type_even_with_other_provider_data() -> None:
