@@ -143,6 +143,7 @@ class MCPToolsComponent(ComponentWithCache):
             show=False,
             required=True,
             real_time_refresh=True,
+            refresh_button=True,
         ),
         MessageTextInput(
             name="tool_placeholder",

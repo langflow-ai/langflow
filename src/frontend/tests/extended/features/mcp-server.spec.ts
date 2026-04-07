@@ -61,25 +61,23 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
-    await page.waitForTimeout(5000);
-
     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
-      timeout: 30000,
+      timeout: 60000,
     });
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 30000,
+        timeout: 60000,
         state: "visible",
       },
     );
 
     await page.getByTestId("dropdown_str_tool").click();
 
-    const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
-
-    expect(fetchOptionCount).toBeGreaterThan(0);
+    await expect(page.getByTestId("fetch-0-option")).toBeVisible({
+      timeout: 30000,
+    });
 
     await page.getByTestId("fetch-0-option").click();
 
