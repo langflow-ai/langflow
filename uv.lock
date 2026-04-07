@@ -22,10 +22,10 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "langflow",
-    "langflow-base",
-    "langflow-sdk",
-    "lfx",
+    "langflow-base-nightly",
+    "langflow-nightly",
+    "langflow-sdk-nightly",
+    "lfx-nightly",
 ]
 overrides = [
     { name = "dynaconf", specifier = ">=3.2.13" },
@@ -119,33 +119,33 @@ name = "agent-lifecycle-toolkit"
 version = "0.10.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "aiofiles" },
-    { name = "black" },
-    { name = "docstring-parser" },
-    { name = "genson" },
-    { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "ibm-watsonx-ai", version = "1.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "jinja2" },
-    { name = "jsonschema" },
-    { name = "langchain-chroma" },
-    { name = "langchain-community" },
-    { name = "langchain-core" },
-    { name = "langchain-huggingface" },
-    { name = "langchain-text-splitters" },
-    { name = "litellm", version = "1.75.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13' or sys_platform != 'win32'" },
+    { name = "aiofiles", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "black", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "docstring-parser", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "genson", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "ibm-watsonx-ai", version = "1.5.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "jinja2", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "jsonschema", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "langchain-chroma", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "langchain-community", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "langchain-core", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "langchain-text-splitters", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "litellm", version = "1.75.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.13' and sys_platform == 'win32') or (platform_machine != 'x86_64' and sys_platform == 'darwin') or (sys_platform != 'darwin' and sys_platform != 'win32')" },
     { name = "litellm", version = "1.80.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13' and sys_platform == 'win32'" },
-    { name = "llm-sandbox", extra = ["docker", "podman"] },
-    { name = "nltk" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "openai" },
-    { name = "pydantic" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "smolagents" },
-    { name = "tomli" },
-    { name = "typing-extensions" },
+    { name = "llm-sandbox", extra = ["docker", "podman"], marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "nltk", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "openai", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "pydantic", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "smolagents", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "tomli", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "typing-extensions", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/70/34/46b02b1d4942279a19437632a65d0b964715cbb60b443d43012671d691e6/agent_lifecycle_toolkit-0.10.1.tar.gz", hash = "sha256:940920d84b844616b33baedaf4bbed34b9e678142f4a4f8a012e588aaa8a20b4", size = 8655370, upload-time = "2026-03-16T20:58:23.576Z" }
 wheels = [
@@ -5537,9 +5537,9 @@ name = "langchain-huggingface"
 version = "1.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "huggingface-hub" },
-    { name = "langchain-core" },
-    { name = "tokenizers" },
+    { name = "huggingface-hub", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "langchain-core", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "tokenizers", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/5b/4910551367de5c6ec246616fcc0ddb0bc6f9e5d353d4a22dcb5ab1f87e60/langchain_huggingface-1.2.1.tar.gz", hash = "sha256:33d52a30a56775380c6b4321b78136a410eb079132a80fe7120ddd4b954b4efa", size = 253106, upload-time = "2026-03-02T18:44:39.163Z" }
 wheels = [
@@ -5801,152 +5801,8 @@ wheels = [
 ]
 
 [[package]]
-name = "langflow"
-version = "1.9.0"
-source = { editable = "." }
-dependencies = [
-    { name = "langflow-base", extra = ["complete"] },
-]
-
-[package.optional-dependencies]
-audio = [
-    { name = "webrtcvad" },
-]
-cassio = [
-    { name = "cassio" },
-]
-clickhouse-connect = [
-    { name = "clickhouse-connect" },
-]
-couchbase = [
-    { name = "couchbase" },
-]
-docling = [
-    { name = "langchain-docling" },
-    { name = "ocrmac", marker = "sys_platform == 'darwin'" },
-    { name = "rapidocr-onnxruntime" },
-    { name = "tesserocr" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine != 'x86_64' and sys_platform == 'darwin'" },
-    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine == 'x86_64' or sys_platform != 'darwin'" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine != 'x86_64' and sys_platform == 'darwin'" },
-    { name = "torchvision", version = "0.25.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine == 'x86_64' or sys_platform != 'darwin'" },
-]
-local = [
-    { name = "ctransformers" },
-    { name = "llama-cpp-python" },
-    { name = "sentence-transformers" },
-]
-nv-ingest = [
-    { name = "nv-ingest-api", marker = "python_full_version >= '3.12'" },
-    { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
-]
-postgresql = [
-    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "asgi-lifespan" },
-    { name = "blockbuster" },
-    { name = "dictdiffer" },
-    { name = "elevenlabs", version = "1.58.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*'" },
-    { name = "elevenlabs", version = "1.59.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version != '3.12.*'" },
-    { name = "faker" },
-    { name = "httpx" },
-    { name = "hypothesis" },
-    { name = "ipykernel" },
-    { name = "locust" },
-    { name = "mcp-server-fetch" },
-    { name = "onnxruntime", version = "1.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "packaging" },
-    { name = "pre-commit" },
-    { name = "pyleak" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "pytest-flakefinder" },
-    { name = "pytest-github-actions-annotate-failures" },
-    { name = "pytest-instafail" },
-    { name = "pytest-mock" },
-    { name = "pytest-profiling" },
-    { name = "pytest-rerunfailures" },
-    { name = "pytest-split" },
-    { name = "pytest-sugar" },
-    { name = "pytest-timeout" },
-    { name = "pytest-xdist" },
-    { name = "pyyaml" },
-    { name = "requests" },
-    { name = "respx" },
-    { name = "ruff" },
-    { name = "scrapegraph-py" },
-    { name = "vulture" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "cassio", marker = "extra == 'cassio'", specifier = ">=0.1.7" },
-    { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
-    { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
-    { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "langchain-docling", marker = "extra == 'docling'", specifier = ">=1.1.0" },
-    { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
-    { name = "llama-cpp-python", marker = "extra == 'local'", specifier = "~=0.2.0" },
-    { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
-    { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
-    { name = "ocrmac", marker = "sys_platform == 'darwin' and extra == 'docling'", specifier = ">=1.0.0" },
-    { name = "rapidocr-onnxruntime", marker = "extra == 'docling'", specifier = ">=1.4.4" },
-    { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "tesserocr", marker = "extra == 'docling'", specifier = ">=2.8.0" },
-    { name = "torch", marker = "extra == 'docling'", specifier = ">=2.6.0", index = "https://download.pytorch.org/whl/cpu" },
-    { name = "torchvision", marker = "extra == 'docling'", specifier = ">=0.21.0", index = "https://download.pytorch.org/whl/cpu" },
-    { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
-]
-provides-extras = ["docling", "audio", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "asgi-lifespan", specifier = ">=2.1.0" },
-    { name = "blockbuster", specifier = ">=1.5.20,<1.6" },
-    { name = "dictdiffer", specifier = ">=0.9.0" },
-    { name = "elevenlabs", marker = "python_full_version != '3.12.*'", specifier = ">=1.52.0" },
-    { name = "elevenlabs", marker = "python_full_version == '3.12.*'", specifier = "==1.58.1" },
-    { name = "faker", specifier = ">=37.0.0" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "hypothesis", specifier = ">=6.123.17" },
-    { name = "ipykernel", specifier = ">=6.29.0" },
-    { name = "locust", specifier = "~=2.40.5" },
-    { name = "mcp-server-fetch", specifier = ">=2025.1.17" },
-    { name = "onnxruntime", specifier = ">=1.20,<1.24" },
-    { name = "packaging", specifier = ">=24.1,<25.0" },
-    { name = "pre-commit", specifier = ">=3.7.0" },
-    { name = "pyleak", specifier = ">=0.1.14" },
-    { name = "pytest", specifier = ">=8.2.0" },
-    { name = "pytest-asyncio", specifier = ">=0.23.0" },
-    { name = "pytest-cov", specifier = ">=5.0.0" },
-    { name = "pytest-flakefinder", specifier = ">=1.1.0" },
-    { name = "pytest-github-actions-annotate-failures", specifier = ">=0.2.0" },
-    { name = "pytest-instafail", specifier = ">=0.5.0" },
-    { name = "pytest-mock", specifier = ">=3.14.0" },
-    { name = "pytest-profiling", specifier = ">=1.7.0" },
-    { name = "pytest-rerunfailures", specifier = ">=15.0" },
-    { name = "pytest-split", specifier = ">=0.9.0" },
-    { name = "pytest-sugar", specifier = ">=1.0.0" },
-    { name = "pytest-timeout", specifier = ">=2.3.1" },
-    { name = "pytest-xdist", specifier = ">=3.6.0" },
-    { name = "pyyaml", specifier = ">=6.0.2" },
-    { name = "requests", specifier = ">=2.33.0" },
-    { name = "respx", specifier = ">=0.21.1" },
-    { name = "ruff", specifier = "~=0.13.1" },
-    { name = "scrapegraph-py", specifier = ">=1.10.2" },
-    { name = "vulture", specifier = ">=2.11" },
-]
-
-[[package]]
-name = "langflow-base"
-version = "0.9.0"
+name = "langflow-base-nightly"
+version = "1.9.0.dev36"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -5991,7 +5847,7 @@ dependencies = [
     { name = "langchain-ibm" },
     { name = "langchainhub" },
     { name = "langgraph-checkpoint" },
-    { name = "lfx" },
+    { name = "lfx-nightly" },
     { name = "loguru" },
     { name = "mcp" },
     { name = "multiprocess" },
@@ -6047,7 +5903,7 @@ aioboto3 = [
 ]
 all = [
     { name = "ag2" },
-    { name = "agent-lifecycle-toolkit" },
+    { name = "agent-lifecycle-toolkit", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "aioboto3" },
     { name = "apify-client" },
     { name = "arize-phoenix-otel" },
@@ -6102,7 +5958,7 @@ all = [
     { name = "langchain-google-vertexai" },
     { name = "langchain-graph-retriever" },
     { name = "langchain-groq" },
-    { name = "langchain-huggingface" },
+    { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "langchain-mcp-adapters" },
     { name = "langchain-milvus" },
     { name = "langchain-mistralai" },
@@ -6162,7 +6018,7 @@ all = [
     { name = "zep-python" },
 ]
 altk = [
-    { name = "agent-lifecycle-toolkit" },
+    { name = "agent-lifecycle-toolkit", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 anthropic = [
     { name = "langchain-anthropic" },
@@ -6213,7 +6069,7 @@ cohere = [
 ]
 complete = [
     { name = "ag2" },
-    { name = "agent-lifecycle-toolkit" },
+    { name = "agent-lifecycle-toolkit", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "aioboto3" },
     { name = "apify-client" },
     { name = "arize-phoenix-otel" },
@@ -6268,7 +6124,7 @@ complete = [
     { name = "langchain-google-vertexai" },
     { name = "langchain-graph-retriever" },
     { name = "langchain-groq" },
-    { name = "langchain-huggingface" },
+    { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "langchain-mcp-adapters" },
     { name = "langchain-milvus" },
     { name = "langchain-mistralai" },
@@ -6421,7 +6277,7 @@ kubernetes = [
     { name = "kubernetes" },
 ]
 langchain-huggingface = [
-    { name = "langchain-huggingface" },
+    { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 langchain-mcp-adapters = [
     { name = "langchain-mcp-adapters" },
@@ -6631,7 +6487,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "ag2", marker = "extra == 'ag2'", specifier = ">=0.1.0" },
-    { name = "agent-lifecycle-toolkit", marker = "extra == 'altk'", specifier = ">=0.10.1,<1.0" },
+    { name = "agent-lifecycle-toolkit", marker = "(platform_machine != 'x86_64' and extra == 'altk') or (sys_platform != 'darwin' and extra == 'altk')", specifier = ">=0.10.1,<1.0" },
     { name = "aioboto3", marker = "extra == 'aioboto3'", specifier = ">=15.2.0,<16.0.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
@@ -6727,7 +6583,7 @@ requires-dist = [
     { name = "langchain-google-vertexai", marker = "extra == 'google'", specifier = "~=3.2.0" },
     { name = "langchain-graph-retriever", marker = "extra == 'graph-retriever'", specifier = "==0.8.0" },
     { name = "langchain-groq", marker = "extra == 'groq'", specifier = "~=1.1.1" },
-    { name = "langchain-huggingface", marker = "extra == 'langchain-huggingface'", specifier = "~=1.2.0" },
+    { name = "langchain-huggingface", marker = "(platform_machine != 'x86_64' and extra == 'langchain-huggingface') or (sys_platform != 'darwin' and extra == 'langchain-huggingface')", specifier = "~=1.2.0" },
     { name = "langchain-ibm", specifier = "~=1.0.2" },
     { name = "langchain-mcp-adapters", marker = "extra == 'langchain-mcp-adapters'", specifier = ">=0.1.14,<0.2.0" },
     { name = "langchain-milvus", marker = "extra == 'milvus'", specifier = "~=0.3.2" },
@@ -6740,111 +6596,111 @@ requires-dist = [
     { name = "langchain-sambanova", marker = "extra == 'sambanova'", specifier = "~=1.0.0" },
     { name = "langchain-unstructured", marker = "extra == 'langchain-unstructured'", specifier = "~=1.0.0" },
     { name = "langchainhub", specifier = "~=0.1.15" },
-    { name = "langflow-base", extras = ["ag2"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["aioboto3"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["altk"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["anthropic"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["apify"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["arize"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["assemblyai"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["astradb"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["astrapy"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["atlassian"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["aws"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["beautifulsoup"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["cassandra"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["chroma"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["cleanlab"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["clickhouse"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["cohere"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["complete"], marker = "extra == 'all'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["composio"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["couchbase"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["cuga"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["datasets"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["docling"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["docx"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["dspy"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["duckduckgo"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["easyocr"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["elasticsearch"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["faiss"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["fake-useragent"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["fastavro"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["fastmcp"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["fastparquet"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["gassist"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["gitpython"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["google"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["google-api"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["graph-retriever"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["groq"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["huggingface"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["ibm-watsonx-clients"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["jigsawstack"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["json-repair"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["kubernetes"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langchain-huggingface"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langchain-mcp-adapters"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langchain-unstructured"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langfuse"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langsmith"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langwatch"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["lark"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["litellm"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["markdown"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["markup"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["mcp"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["mem0"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["metal"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["metaphor"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["milvus"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["mistral"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["mlx"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["mongodb"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["mongodb-vectors"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["needle"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["nltk"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["numexpr"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["nvidia"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["ollama"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["openai"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["openinference"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["openlayer"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["opensearch"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["opik"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pgvector"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pinecone"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pyarrow"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pypdf"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pytube"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["qdrant"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["qianfan"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["ragstack"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["redis"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["sambanova"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["scrapegraph"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["serpapi"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["smolagents"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["spider"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["sseclient"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["supabase"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["traceloop"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["twelvelabs"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["upstash"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["vlmrun"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["weaviate"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["wikipedia"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["wolframalpha"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["yfinance"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["youtube"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["zep"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["ag2"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["aioboto3"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["altk"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["anthropic"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["apify"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["arize"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["assemblyai"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["astradb"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["astrapy"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["atlassian"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["aws"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["beautifulsoup"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["cassandra"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["chroma"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["cleanlab"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["clickhouse"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["cohere"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["complete"], marker = "extra == 'all'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["composio"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["couchbase"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["cuga"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["datasets"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["docling"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["docx"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["dspy"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["duckduckgo"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["easyocr"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["elasticsearch"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["faiss"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["fake-useragent"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["fastavro"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["fastmcp"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["fastparquet"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["gassist"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["gitpython"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["google"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["google-api"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["graph-retriever"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["groq"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["huggingface"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["ibm-watsonx-clients"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["jigsawstack"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["json-repair"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["kubernetes"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["langchain-huggingface"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["langchain-mcp-adapters"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["langchain-unstructured"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["langfuse"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["langsmith"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["langwatch"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["lark"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["litellm"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["markdown"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["markup"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["mcp"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["mem0"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["metal"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["metaphor"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["milvus"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["mistral"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["mlx"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["mongodb"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["mongodb-vectors"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["needle"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["nltk"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["numexpr"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["nvidia"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["ollama"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["openai"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["openinference"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["openlayer"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["opensearch"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["opik"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["pgvector"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["pinecone"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["pyarrow"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["pypdf"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["pytube"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["qdrant"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["qianfan"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["ragstack"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["redis"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["sambanova"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["scrapegraph"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["serpapi"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["smolagents"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["spider"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["sseclient"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["supabase"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["traceloop"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["twelvelabs"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["upstash"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["vlmrun"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["weaviate"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["wikipedia"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["wolframalpha"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["yfinance"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["youtube"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", extras = ["zep"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langfuse", marker = "extra == 'langfuse'", specifier = "~=3.8" },
     { name = "langgraph-checkpoint", specifier = ">4.0.0,<5.0.0" },
     { name = "langsmith", marker = "extra == 'langsmith'", specifier = ">=0.3.42,<1.0.0" },
     { name = "langwatch", marker = "extra == 'langwatch'", specifier = "~=0.10.0" },
     { name = "lark", marker = "extra == 'lark'", specifier = "==1.2.2" },
-    { name = "lfx", editable = "src/lfx" },
+    { name = "lfx-nightly", editable = "src/lfx" },
     { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.60.2,<2.0.0" },
     { name = "llama-cpp-python", marker = "extra == 'llama-cpp'", specifier = "~=0.2.0" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = ">=0.2.0" },
@@ -6964,8 +6820,152 @@ dev = [
 ]
 
 [[package]]
-name = "langflow-sdk"
-version = "0.1.0"
+name = "langflow-nightly"
+version = "1.9.0.dev36"
+source = { editable = "." }
+dependencies = [
+    { name = "langflow-base-nightly", extra = ["complete"] },
+]
+
+[package.optional-dependencies]
+audio = [
+    { name = "webrtcvad" },
+]
+cassio = [
+    { name = "cassio" },
+]
+clickhouse-connect = [
+    { name = "clickhouse-connect" },
+]
+couchbase = [
+    { name = "couchbase" },
+]
+docling = [
+    { name = "langchain-docling" },
+    { name = "ocrmac", marker = "sys_platform == 'darwin'" },
+    { name = "rapidocr-onnxruntime" },
+    { name = "tesserocr" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine != 'x86_64' and sys_platform == 'darwin'" },
+    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine == 'x86_64' or sys_platform != 'darwin'" },
+    { name = "torchvision", version = "0.25.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine != 'x86_64' and sys_platform == 'darwin'" },
+    { name = "torchvision", version = "0.25.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine == 'x86_64' or sys_platform != 'darwin'" },
+]
+local = [
+    { name = "ctransformers" },
+    { name = "llama-cpp-python" },
+    { name = "sentence-transformers" },
+]
+nv-ingest = [
+    { name = "nv-ingest-api", marker = "python_full_version >= '3.12'" },
+    { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
+]
+postgresql = [
+    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "asgi-lifespan" },
+    { name = "blockbuster" },
+    { name = "dictdiffer" },
+    { name = "elevenlabs", version = "1.58.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*'" },
+    { name = "elevenlabs", version = "1.59.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version != '3.12.*'" },
+    { name = "faker" },
+    { name = "httpx" },
+    { name = "hypothesis" },
+    { name = "ipykernel" },
+    { name = "locust" },
+    { name = "mcp-server-fetch" },
+    { name = "onnxruntime", version = "1.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "packaging" },
+    { name = "pre-commit" },
+    { name = "pyleak" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-flakefinder" },
+    { name = "pytest-github-actions-annotate-failures" },
+    { name = "pytest-instafail" },
+    { name = "pytest-mock" },
+    { name = "pytest-profiling" },
+    { name = "pytest-rerunfailures" },
+    { name = "pytest-split" },
+    { name = "pytest-sugar" },
+    { name = "pytest-timeout" },
+    { name = "pytest-xdist" },
+    { name = "pyyaml" },
+    { name = "requests" },
+    { name = "respx" },
+    { name = "ruff" },
+    { name = "scrapegraph-py" },
+    { name = "vulture" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cassio", marker = "extra == 'cassio'", specifier = ">=0.1.7" },
+    { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
+    { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
+    { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
+    { name = "langchain-docling", marker = "extra == 'docling'", specifier = ">=1.1.0" },
+    { name = "langflow-base-nightly", extras = ["complete"], editable = "src/backend/base" },
+    { name = "llama-cpp-python", marker = "extra == 'local'", specifier = "~=0.2.0" },
+    { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
+    { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
+    { name = "ocrmac", marker = "sys_platform == 'darwin' and extra == 'docling'", specifier = ">=1.0.0" },
+    { name = "rapidocr-onnxruntime", marker = "extra == 'docling'", specifier = ">=1.4.4" },
+    { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
+    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
+    { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
+    { name = "tesserocr", marker = "extra == 'docling'", specifier = ">=2.8.0" },
+    { name = "torch", marker = "extra == 'docling'", specifier = ">=2.6.0", index = "https://download.pytorch.org/whl/cpu" },
+    { name = "torchvision", marker = "extra == 'docling'", specifier = ">=0.21.0", index = "https://download.pytorch.org/whl/cpu" },
+    { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
+]
+provides-extras = ["docling", "audio", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "asgi-lifespan", specifier = ">=2.1.0" },
+    { name = "blockbuster", specifier = ">=1.5.20,<1.6" },
+    { name = "dictdiffer", specifier = ">=0.9.0" },
+    { name = "elevenlabs", marker = "python_full_version != '3.12.*'", specifier = ">=1.52.0" },
+    { name = "elevenlabs", marker = "python_full_version == '3.12.*'", specifier = "==1.58.1" },
+    { name = "faker", specifier = ">=37.0.0" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "hypothesis", specifier = ">=6.123.17" },
+    { name = "ipykernel", specifier = ">=6.29.0" },
+    { name = "locust", specifier = "~=2.40.5" },
+    { name = "mcp-server-fetch", specifier = ">=2025.1.17" },
+    { name = "onnxruntime", specifier = ">=1.20,<1.24" },
+    { name = "packaging", specifier = ">=24.1,<25.0" },
+    { name = "pre-commit", specifier = ">=3.7.0" },
+    { name = "pyleak", specifier = ">=0.1.14" },
+    { name = "pytest", specifier = ">=8.2.0" },
+    { name = "pytest-asyncio", specifier = ">=0.23.0" },
+    { name = "pytest-cov", specifier = ">=5.0.0" },
+    { name = "pytest-flakefinder", specifier = ">=1.1.0" },
+    { name = "pytest-github-actions-annotate-failures", specifier = ">=0.2.0" },
+    { name = "pytest-instafail", specifier = ">=0.5.0" },
+    { name = "pytest-mock", specifier = ">=3.14.0" },
+    { name = "pytest-profiling", specifier = ">=1.7.0" },
+    { name = "pytest-rerunfailures", specifier = ">=15.0" },
+    { name = "pytest-split", specifier = ">=0.9.0" },
+    { name = "pytest-sugar", specifier = ">=1.0.0" },
+    { name = "pytest-timeout", specifier = ">=2.3.1" },
+    { name = "pytest-xdist", specifier = ">=3.6.0" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "requests", specifier = ">=2.33.0" },
+    { name = "respx", specifier = ">=0.21.1" },
+    { name = "ruff", specifier = "~=0.13.1" },
+    { name = "scrapegraph-py", specifier = ">=1.10.2" },
+    { name = "vulture", specifier = ">=2.11" },
+]
+
+[[package]]
+name = "langflow-sdk-nightly"
+version = "0.1.0.dev8"
 source = { editable = "src/sdk" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
@@ -7170,8 +7170,8 @@ wheels = [
 ]
 
 [[package]]
-name = "lfx"
-version = "0.4.0"
+name = "lfx-nightly"
+version = "0.4.0.dev37"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "ag-ui-protocol" },
@@ -7191,7 +7191,7 @@ dependencies = [
     { name = "langchain" },
     { name = "langchain-classic" },
     { name = "langchain-core" },
-    { name = "langflow-sdk" },
+    { name = "langflow-sdk-nightly" },
     { name = "loguru" },
     { name = "markitdown" },
     { name = "mcp" },
@@ -7256,7 +7256,7 @@ requires-dist = [
     { name = "langchain", specifier = "~=1.2.0" },
     { name = "langchain-classic", specifier = "~=1.0.0" },
     { name = "langchain-core", specifier = ">=1.2.22,<2.0.0" },
-    { name = "langflow-sdk", editable = "src/sdk" },
+    { name = "langflow-sdk-nightly", editable = "src/sdk" },
     { name = "loguru", specifier = ">=0.7.3,<1.0.0" },
     { name = "markitdown", specifier = ">=0.1.4,<2.0.0" },
     { name = "mcp", specifier = ">=1.17.0,<2.0.0" },
@@ -7383,7 +7383,7 @@ name = "llm-sandbox"
 version = "0.3.37"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pydantic" },
+    { name = "pydantic", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ff/96/fa676c1551ed96a6d4814c1a5ad8561d723be7344e03bc293d9ee53b3db7/llm_sandbox-0.3.37.tar.gz", hash = "sha256:bec2d2d2b6eb5311fd70e4aa6a21e60c3c7e8dee36f89aac47a1fd072485adc6", size = 605861, upload-time = "2026-03-02T06:45:28.168Z" }
 wheels = [
@@ -7392,11 +7392,11 @@ wheels = [
 
 [package.optional-dependencies]
 docker = [
-    { name = "docker" },
+    { name = "docker", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 podman = [
-    { name = "docker" },
-    { name = "podman" },
+    { name = "docker", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "podman", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 
 [[package]]
@@ -10259,9 +10259,9 @@ name = "podman"
 version = "5.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "requests" },
-    { name = "tomli", marker = "python_full_version < '3.11'" },
-    { name = "urllib3" },
+    { name = "requests", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "tomli", marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "urllib3", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/18/f1/ea8988ff2085d1a898f7f27b7fa26a5b5e296949c6ef4df26ebc2be1aac0/podman-5.8.0.tar.gz", hash = "sha256:bc39b77f4a6a0598bbe860d199e0d54ef2ec551131ae7eab66f0557c43331fb3", size = 121596, upload-time = "2026-03-25T15:21:22.353Z" }
 wheels = [
