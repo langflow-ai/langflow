@@ -593,10 +593,9 @@ def build_custom_component_template(
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
 
-        if module_name:
-            frontend_node = build_component_metadata(
-                frontend_node, custom_component, module_name, custom_component.__class__.__name__
-            )
+        frontend_node = build_component_metadata(
+            frontend_node, custom_component, module_name, custom_component.__class__.__name__
+        )
 
         return frontend_node.to_dict(keep_name=False), custom_instance
     except Exception as exc:

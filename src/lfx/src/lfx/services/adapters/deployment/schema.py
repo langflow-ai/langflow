@@ -16,6 +16,7 @@ from lfx.services.adapters.deployment.payloads import (
     T_DeploymentItemData,
     T_DeploymentListParams,
     T_DeploymentListResult,
+    T_DeploymentLlmListResult,
     T_DeploymentOperationResult,
     T_DeploymentSpec,
     T_DeploymentStatusData,
@@ -392,6 +393,10 @@ class DeploymentListResult(ProviderResultModel[T_DeploymentListResult]):
     """Model representing a result for a deployment list operation."""
 
     deployments: list[ItemResult] = Field(description="The list of deployments")
+
+
+class DeploymentListLlmsResult(ProviderResultModel[T_DeploymentLlmListResult]):
+    """Provider payload container for listing available deployment LLM metadata."""
 
 
 class ConfigListResult(ProviderResultModel[T_ConfigListResult]):
