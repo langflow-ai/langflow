@@ -76,6 +76,6 @@ class MrscraperAiScraper(Component):
             url=self.url,
             message=self.message,
             agent=self.agent,
-            proxy_country=self.proxy_country or "None",
+            proxy_country=self.proxy_country or None,
         )
         return Data(data=result)
