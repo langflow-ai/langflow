@@ -248,7 +248,7 @@ def test_to_lc_message_skips_oversized_file_attachments(tmp_path):
     big_path = tmp_path / "big.txt"
 
     big_size = MAX_ATTACHMENT_SIZE_BYTES + 1
-    with open(big_path, "wb") as handle:
+    with big_path.open("wb") as handle:
         handle.seek(big_size - 1)
         handle.write(b"\0")
 
