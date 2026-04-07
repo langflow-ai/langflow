@@ -27,7 +27,8 @@ class PubrioSearchJobsComponent(Component):
         MessageTextInput(name="companies", display_name="Companies", advanced=True),
         MessageTextInput(name="domains", display_name="Company Domains", advanced=True),
         MessageTextInput(name="linkedin_urls", display_name="LinkedIn URLs", advanced=True),
-        MessageTextInput(name="posted_dates", display_name="Posted Dates", advanced=True),
+        MessageTextInput(name="posted_date_from", display_name="Posted Date From", info="Start date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(name="posted_date_to", display_name="Posted Date To", info="End date (YYYY-MM-DD).", advanced=True),
         MessageTextInput(name="search_terms", display_name="Search Terms", advanced=True),
         IntInput(name="page", display_name="Page", value=1, advanced=True),
         IntInput(name="per_page", display_name="Per Page", value=25, advanced=True),
@@ -64,8 +65,10 @@ class PubrioSearchJobsComponent(Component):
             body["domains"] = split_csv(self.domains)
         if self.linkedin_urls:
             body["linkedin_urls"] = split_csv(self.linkedin_urls)
-        if self.posted_dates:
-            body["posted_dates"] = split_csv(self.posted_dates)
+        if self.posted_date_from or self.posted_date_to:
+            f = self.posted_date_from or self.posted_date_to
+            t = self.posted_date_to or self.posted_date_from
+            body["posted_dates"] = [f[:10], t[:10]]
         if self.search_terms:
             body["search_terms"] = split_csv(self.search_terms)
 

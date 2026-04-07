@@ -1,5 +1,6 @@
 import json
 
+
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.schema.data import Data
@@ -50,12 +51,12 @@ class PubrioSearchCompaniesComponent(Component):
             advanced=True,
         ),
         MessageTextInput(
-            name="verticals", display_name="Industry Verticals", info="Comma-separated vertical IDs.", advanced=True
+            name="verticals", display_name="Industry Verticals", info="Comma-separated vertical names.", advanced=True
         ),
         MessageTextInput(name="vertical_categories", display_name="Vertical Categories", advanced=True),
         MessageTextInput(name="vertical_sub_categories", display_name="Vertical Sub-Categories", advanced=True),
         MessageTextInput(
-            name="technologies", display_name="Technologies", info="Comma-separated technology tag IDs.", advanced=True
+            name="technologies", display_name="Technologies", info="Comma-separated technology names.", advanced=True
         ),
         MessageTextInput(name="categories", display_name="Technology Categories", advanced=True),
         MessageTextInput(
@@ -77,9 +78,16 @@ class PubrioSearchCompaniesComponent(Component):
         MessageTextInput(name="job_titles", display_name="Job Titles Filter", advanced=True),
         MessageTextInput(name="job_locations", display_name="Job Locations Filter", advanced=True),
         MessageTextInput(name="news_categories", display_name="News Categories Filter", advanced=True),
-        MessageTextInput(name="news_published_dates", display_name="News Published Dates", advanced=True),
+        MessageTextInput(name="news_published_date_from", display_name="News Published Date From", info="Start date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(name="news_published_date_to", display_name="News Published Date To", info="End date (YYYY-MM-DD).", advanced=True),
         MessageTextInput(name="advertisement_search_terms", display_name="Ad Search Terms", advanced=True),
         MessageTextInput(name="advertisement_target_locations", display_name="Ad Target Locations", advanced=True),
+        MessageTextInput(name="job_posted_date_from", display_name="Job Posted Date From", info="Start date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(name="job_posted_date_to", display_name="Job Posted Date To", info="End date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(name="advertisement_start_date_from", display_name="Ad Start Date From", info="Start date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(name="advertisement_start_date_to", display_name="Ad Start Date To", info="End date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(name="advertisement_end_date_from", display_name="Ad End Date From", info="Start date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(name="advertisement_end_date_to", display_name="Ad End Date To", info="End date (YYYY-MM-DD).", advanced=True),
         IntInput(name="page", display_name="Page", value=1, advanced=True),
         IntInput(name="per_page", display_name="Per Page", value=25, advanced=True),
     ]
@@ -122,7 +130,6 @@ class PubrioSearchCompaniesComponent(Component):
             "job_titles",
             "job_locations",
             "news_categories",
-            "news_published_dates",
             "advertisement_search_terms",
             "advertisement_target_locations",
         ):
@@ -132,16 +139,29 @@ class PubrioSearchCompaniesComponent(Component):
 
         if self.employees_min or self.employees_max:
             body["employees"] = [self.employees_min or 1, self.employees_max or 1000000]
-        if self.revenue_min is not None:
-            body["revenue_min"] = self.revenue_min
-        if self.revenue_max is not None:
-            body["revenue_max"] = self.revenue_max
-        if self.founded_year_start is not None:
-            body["founded_year_start"] = self.founded_year_start
-        if self.founded_year_end is not None:
-            body["founded_year_end"] = self.founded_year_end
+        if self.revenue_min is not None or self.revenue_max is not None:
+            body["revenues"] = [self.revenue_min or 0, self.revenue_max or 999999999999]
+        if self.founded_year_start is not None or self.founded_year_end is not None:
+            body["founded_dates"] = [self.founded_year_start or 1900, self.founded_year_end or 2100]
         if self.is_enable_similarity_search:
             body["is_enable_similarity_search"] = True
+
+        if self.job_posted_date_from or self.job_posted_date_to:
+            f = self.job_posted_date_from or self.job_posted_date_to
+            t = self.job_posted_date_to or self.job_posted_date_from
+            body["job_posted_dates"] = [f[:10], t[:10]]
+        if self.news_published_date_from or self.news_published_date_to:
+            f = self.news_published_date_from or self.news_published_date_to
+            t = self.news_published_date_to or self.news_published_date_from
+            body["news_published_dates"] = [f[:10], t[:10]]
+        if self.advertisement_start_date_from or self.advertisement_start_date_to:
+            f = self.advertisement_start_date_from or self.advertisement_start_date_to
+            t = self.advertisement_start_date_to or self.advertisement_start_date_from
+            body["advertisement_start_dates"] = [f[:10], t[:10]]
+        if self.advertisement_end_date_from or self.advertisement_end_date_to:
+            f = self.advertisement_end_date_from or self.advertisement_end_date_to
+            t = self.advertisement_end_date_to or self.advertisement_end_date_from
+            body["advertisement_end_dates"] = [f[:10], t[:10]]
 
         result = pubrio_post(self.api_key, "/companies/search", body)
         records = result.get("data", result) if isinstance(result, dict) else result

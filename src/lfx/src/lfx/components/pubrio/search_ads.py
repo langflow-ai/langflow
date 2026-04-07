@@ -28,8 +28,10 @@ class PubrioSearchAdsComponent(Component):
         MessageTextInput(name="companies", display_name="Companies", advanced=True),
         MessageTextInput(name="domains", display_name="Domains", advanced=True),
         MessageTextInput(name="linkedin_urls", display_name="LinkedIn URLs", advanced=True),
-        MessageTextInput(name="start_dates", display_name="Start Dates", advanced=True),
-        MessageTextInput(name="end_dates", display_name="End Dates", advanced=True),
+        MessageTextInput(name="start_date_from", display_name="Start Date From", info="Start date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(name="start_date_to", display_name="Start Date To", info="End date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(name="end_date_from", display_name="End Date From", info="Start date (YYYY-MM-DD).", advanced=True),
+        MessageTextInput(name="end_date_to", display_name="End Date To", info="End date (YYYY-MM-DD).", advanced=True),
         IntInput(name="page", display_name="Page", value=1, advanced=True),
         IntInput(name="per_page", display_name="Per Page", value=25, advanced=True),
     ]
@@ -67,10 +69,14 @@ class PubrioSearchAdsComponent(Component):
             body["domains"] = split_csv(self.domains)
         if self.linkedin_urls:
             body["linkedin_urls"] = split_csv(self.linkedin_urls)
-        if self.start_dates:
-            body["start_dates"] = split_csv(self.start_dates)
-        if self.end_dates:
-            body["end_dates"] = split_csv(self.end_dates)
+        if self.start_date_from or self.start_date_to:
+            f = self.start_date_from or self.start_date_to
+            t = self.start_date_to or self.start_date_from
+            body["start_dates"] = [f[:10], t[:10]]
+        if self.end_date_from or self.end_date_to:
+            f = self.end_date_from or self.end_date_to
+            t = self.end_date_to or self.end_date_from
+            body["end_dates"] = [f[:10], t[:10]]
 
         result = pubrio_post(self.api_key, "/companies/advertisements/search", body)
         records = result.get("data", result) if isinstance(result, dict) else result
