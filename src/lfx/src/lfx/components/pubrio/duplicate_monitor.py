@@ -18,7 +18,11 @@ class PubrioDuplicateMonitorComponent(Component):
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
         MessageTextInput(
-            name="monitor_id", display_name="Monitor ID", info="Monitor UUID to duplicate.", tool_mode=True
+            name="monitor_id",
+            required=True,
+            display_name="Monitor ID",
+            info="Monitor UUID to duplicate.",
+            tool_mode=True,
         ),
     ]
 

@@ -1,5 +1,6 @@
 import json
 
+
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.schema.data import Data

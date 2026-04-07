@@ -18,7 +18,11 @@ class PubrioLookalikeLookupComponent(Component):
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
         MessageTextInput(
-            name="id", display_name="Lookalike Search ID", info="The lookalike_search_id.", tool_mode=True
+            name="id",
+            display_name="Lookalike Search ID",
+            info="The lookalike_search_id.",
+            required=True,
+            tool_mode=True,
         ),
     ]
 

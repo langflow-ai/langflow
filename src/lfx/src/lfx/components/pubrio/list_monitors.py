@@ -1,7 +1,7 @@
 import json
 
 from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import IntInput, MessageTextInput, SecretStrInput
+from lfx.inputs.inputs import IntInput, SecretStrInput, MessageTextInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
@@ -27,7 +27,15 @@ class PubrioListMonitorsComponent(Component):
     ]
 
     def list(self) -> DataFrame:
-        result = pubrio_post(self.api_key, "/monitors", {"page": self.page or 1, "per_page": self.per_page or 25})
+        body: dict = {"page": self.page or 1, "per_page": self.per_page or 25}
+        if self.query:
+            try:
+                parsed = json.loads(self.query)
+                if isinstance(parsed, dict):
+                    body.update(parsed)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                pass
+        result = pubrio_post(self.api_key, "/monitors", body)
         records = result.get("data", result) if isinstance(result, dict) else result
         if isinstance(records, list):
             data = [Data(text=json.dumps(r), data=r) for r in records]

@@ -17,7 +17,9 @@ class PubrioGetMonitorLogsComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(name="monitor_id", display_name="Monitor ID", info="Monitor UUID.", tool_mode=True),
+        MessageTextInput(
+            name="monitor_id", required=True, display_name="Monitor ID", info="Monitor UUID.", tool_mode=True
+        ),
         IntInput(name="page", display_name="Page", value=1, advanced=True),
         IntInput(name="per_page", display_name="Per Page", value=25, advanced=True),
     ]

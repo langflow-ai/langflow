@@ -17,7 +17,9 @@ class PubrioGetMonitorComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
-        MessageTextInput(name="monitor_id", display_name="Monitor ID", info="Monitor UUID.", tool_mode=True),
+        MessageTextInput(
+            name="monitor_id", required=True, display_name="Monitor ID", info="Monitor UUID.", tool_mode=True
+        ),
     ]
 
     outputs = [

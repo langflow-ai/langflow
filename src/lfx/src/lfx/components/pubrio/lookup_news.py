@@ -18,7 +18,11 @@ class PubrioLookupNewsComponent(Component):
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
         MessageTextInput(
-            name="id", display_name="News Search ID", info="The news_search_id from a news search.", tool_mode=True
+            name="id",
+            display_name="News Search ID",
+            info="The news_search_id from a news search.",
+            required=True,
+            tool_mode=True,
         ),
     ]
 

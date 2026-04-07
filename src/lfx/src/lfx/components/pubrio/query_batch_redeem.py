@@ -21,6 +21,7 @@ class PubrioQueryBatchRedeemComponent(Component):
             name="redeem_query_id",
             display_name="Redeem Query ID",
             info="The redeem_query_id from a batch redeem operation.",
+            required=True,
             tool_mode=True,
         ),
     ]

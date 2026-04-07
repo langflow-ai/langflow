@@ -18,7 +18,11 @@ class PubrioValidateWebhookComponent(Component):
     inputs = [
         SecretStrInput(name="api_key", display_name="Pubrio API Key", required=True),
         MessageTextInput(
-            name="webhook_url", display_name="Webhook URL", info="Webhook URL to validate.", tool_mode=True
+            name="webhook_url",
+            display_name="Webhook URL",
+            info="Webhook URL to validate.",
+            required=True,
+            tool_mode=True,
         ),
     ]
 

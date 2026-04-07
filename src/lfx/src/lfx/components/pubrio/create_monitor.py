@@ -1,3 +1,4 @@
+import contextlib
 import json
 
 from lfx.custom.custom_component.component import Component
@@ -91,10 +92,8 @@ class PubrioCreateMonitorComponent(Component):
         for key in ("company_filters", "signal_filters"):
             val = getattr(self, key, None)
             if val:
-                try:
+                with contextlib.suppress(json.JSONDecodeError, TypeError, ValueError):
                     body[key] = json.loads(val)
-                except (json.JSONDecodeError, TypeError):
-                    pass
 
         for key in ("is_company_enrichment", "is_people_enrichment"):
             val = getattr(self, key, None)
