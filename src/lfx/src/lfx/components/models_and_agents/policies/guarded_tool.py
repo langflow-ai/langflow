@@ -89,7 +89,7 @@ class GuardedTool(Tool):
                 await self._toolguard.guard_toolcall(self.name, args=args, delegate=self._tool_invoker)
                 return await self._orig_tool.arun(tool_input=args, config=config, **kwargs)
             except PolicyViolationException as ex:
-                print(f'exception: {ex.message}')
+                print(f"exception: {ex.message}")
                 return {
                     "ok": False,
                     "error": {
