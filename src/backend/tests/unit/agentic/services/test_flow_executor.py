@@ -24,6 +24,7 @@ from langflow.agentic.services.flow_types import (
     FlowExecutionResult,
 )
 from langflow.agentic.services.helpers.event_consumer import parse_event_data
+from lfx.utils.flow_validation import CustomComponentValidationError
 
 MODULE = "langflow.agentic.services.flow_executor"
 
@@ -304,6 +305,28 @@ class TestExecuteFlowFile:
             await execute_flow_file("test.json")
 
         assert exc_info.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_should_raise_400_for_custom_component_validation_error(self):
+        """Should return 400 when custom components are blocked during flow loading."""
+        validation_error = "Flow build blocked: custom components are not allowed: Bad (node)"
+
+        with (
+            patch(
+                "langflow.agentic.services.flow_executor.resolve_flow_path",
+                return_value=(Path("/fake/path/test.py"), "python"),
+            ),
+            patch(
+                "langflow.agentic.services.flow_executor.load_graph_for_execution",
+                new_callable=AsyncMock,
+                side_effect=CustomComponentValidationError(validation_error),
+            ),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await execute_flow_file("test.py")
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail == validation_error
 
     @pytest.mark.asyncio
     async def test_should_set_user_and_session_on_loaded_graph(self):
@@ -708,6 +731,29 @@ class TestTracingIntegration:
             await execute_flow_file("test.json", input_value="test", global_variables=None)
 
         assert mock_graph.flow_id is None
+
+    @pytest.mark.asyncio
+    async def test_should_raise_400_for_custom_component_validation_error(self):
+        """Should return 400 when custom components are blocked before streaming starts."""
+        validation_error = "Flow build blocked: custom components are not allowed: Bad (node)"
+
+        with (
+            patch(
+                "langflow.agentic.services.flow_executor.resolve_flow_path",
+                return_value=(Path("/fake/path/test.py"), "python"),
+            ),
+            patch(
+                "langflow.agentic.services.flow_executor.load_graph_for_execution",
+                new_callable=AsyncMock,
+                side_effect=CustomComponentValidationError(validation_error),
+            ),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            async for _ in execute_flow_file_streaming("test.py"):
+                pass
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail == validation_error
 
 
 class TestBugsAndEdgeCases:

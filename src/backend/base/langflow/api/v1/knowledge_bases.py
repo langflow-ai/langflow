@@ -367,7 +367,12 @@ async def ingest_files_to_knowledge_base(
 
         # Create job record in database for both async and sync paths
         await job_service.create_job(
-            job_id=job_id, flow_id=job_id, job_type=JobType.INGESTION, asset_id=asset_id, asset_type="knowledge_base"
+            job_id=job_id,
+            flow_id=job_id,
+            job_type=JobType.INGESTION,
+            asset_id=asset_id,
+            asset_type="knowledge_base",
+            user_id=current_user.id,
         )
 
         # Always use async path: fire and forget the ingestion logic wrapped in status updates
