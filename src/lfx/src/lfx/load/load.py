@@ -15,6 +15,7 @@ from lfx.load.utils import replace_tweaks_with_env
 from lfx.log.logger import configure
 from lfx.processing.process import process_tweaks, run_graph
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.flow_validation import CustomComponentValidationError, ensure_component_hash_lookups_loaded
 from lfx.utils.util import update_settings
 
 
@@ -78,6 +79,17 @@ async def aload_flow_from_json(
     graph_data = flow_graph["data"]
     if tweaks is not None:
         graph_data = process_tweaks(graph_data, tweaks)
+
+    try:
+        await ensure_component_hash_lookups_loaded()
+    except CustomComponentValidationError:
+        raise
+    except Exception as exc:
+        msg = (
+            "Failed to load component templates for validation. "
+            "Ensure the server is fully initialized before loading flows."
+        )
+        raise CustomComponentValidationError(msg) from exc
 
     from lfx.graph.graph.base import Graph
 

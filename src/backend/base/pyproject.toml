@@ -22,7 +22,7 @@ dependencies = [
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
     "uvicorn>=0.30.0,<1.0.0",
-    "gunicorn>=22.0.0,<23.0.0",
+    "gunicorn>=25.3.0,<26.0.0",
     "langchain~=1.2.0",
     "langchain-community~=0.4.1",
     "langchain-core>=1.2.22,<2.0.0",
@@ -43,7 +43,7 @@ dependencies = [
     "alembic>=1.13.0,<2.0.0",
     "passlib>=1.7.4,<2.0.0",
     "bcrypt==4.0.1",
-    "pillow>=11.1.0,<13.0.0",
+    "pillow>=12.0.0,<13.0.0",
     "docstring-parser>=0.16,<1.0.0",
     "PyJWT>=2.12.1",
     "pandas==2.2.3",
@@ -78,7 +78,7 @@ dependencies = [
     "assemblyai>=0.33.0,<1.0.0",
     "fastapi-pagination>=0.13.1,<1.0.0",
     "defusedxml>=0.7.1,<1.0.0",
-    "pypdf>=6.4.0,<7.0.0",
+    "pypdf>=6.9.0,<7.0.0",
     "validators>=0.34.0,<1.0.0",
     "networkx>=3.4.2,<4.0.0",
     "json-repair>=0.30.3,<1.0.0",
@@ -106,24 +106,14 @@ dependencies = [
 dev = [
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
-    "types-aiofiles>=24.1.0.20240626",
-    "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
-    "mypy>=1.11.0",
     "ruff>=0.12.7",
     "httpx[http2]>=0.27",
     "pytest>=8.2.0",
-    "types-requests>=2.33.0",
     "requests>=2.33.0",
     "pytest-cov>=5.0.0",
-    "pandas-stubs>=2.1.4.231227",
-    "types-pillow>=10.2.0.20240213",
-    "types-pyyaml>=6.0.12.8",
-    "types-passlib>=1.7.7.13",
     "pytest-mock>=3.14.0",
     "pytest-xdist>=3.6.0",
-    "types-pywin32>=306.0.0.4",
-    "types-google-cloud-ndb>=2.2.0.0",
     "pytest-sugar>=1.0.0",
     "respx>=0.21.1",
     "pytest-instafail>=0.5.0",
@@ -135,7 +125,6 @@ dev = [
     "pytest-split>=0.9.0",
     "devtools>=0.12.2",
     "pytest-flakefinder>=1.1.0",
-    "types-markdown>=3.7.0.20240822",
 ]
 
 
@@ -154,13 +143,6 @@ markers = ["async_test"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
-[tool.mypy]
-plugins = ["pydantic.mypy"]
-follow_imports = "skip"
-disable_error_code = ["type-var"]
-namespace_packages = true
-mypy_path = "langflow"
-ignore_missing_imports = true
 
 [build-system]
 requires = ["hatchling"]
@@ -285,7 +267,6 @@ youtube = ["youtube-transcript-api>=1.0.0,<2.0.0"]
 markdown = ["Markdown>=3.8.0"]
 kubernetes = ["kubernetes==31.0.0"]
 json-repair = ["json_repair==0.30.3"]
-astra = ["astra-assistants[tools]>=2.2.13,<3.0.0"]
 composio = [
     "composio==0.9.2",
     "composio-langchain==0.9.2"
@@ -300,17 +281,18 @@ openinference = ["openinference-instrumentation-langchain>=0.1.29"]
 mcp = ["mcp>=1.17.0,<2.0.0"]
 ag2 = ["ag2>=0.1.0"]
 scrapegraph = ["scrapegraph-py>=1.12.0"]
-pydantic-ai = ["pydantic-ai>=0.0.19"]
 apify = ["apify-client>=1.8.1"]
 spider = ["spider-client>=0.0.27,<1.0.0"]
 
 # ALTK (Agent Lifecycle Toolkit)
 # Updated to 0.10.1+ for PyTorch 2.6.0 compatibility (addresses torch.load RCE vulnerability)
 # Upper bound prevents breaking changes in future major versions
-altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0"]
+# Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2 (see LE-172)
+altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 
 # Additional LangChain integrations
-langchain-huggingface = ["langchain-huggingface~=1.2.0"]
+# Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels (see LE-172)
+langchain-huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 langchain-unstructured = ["langchain-unstructured~=1.0.0"]
 graph-retriever = ["langchain-graph-retriever==0.8.0", "graph-retriever==0.8.0"]
 langchain-mcp-adapters = ["langchain-mcp-adapters>=0.1.14,<0.2.0"]
@@ -339,14 +321,17 @@ fastparquet = ["fastparquet>=2024.11.0,<2025.0.0"]
 
 # Vision / ML
 vlmrun = ["vlmrun[all]>=0.2.0"]
-cuga = ["cuga>=0.2.10"]
+cuga = [
+    "cuga>=0.2.10; sys_platform != 'darwin'",
+    "cuga>=0.2.10; sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
 mlx = [
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
     "mlx-vlm~=0.3.9; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
 ]
 
 # MCP
-fastmcp = ["fastmcp>=2.14.0"]
+fastmcp = ["fastmcp>=3.2.0"]
 
 # AWS extras
 aioboto3 = ["aioboto3>=15.2.0,<16.0.0"]
@@ -427,7 +412,6 @@ complete = [
     "langflow-base[markdown]",
     "langflow-base[kubernetes]",
     "langflow-base[json-repair]",
-    "langflow-base[astra]",
     "langflow-base[composio]",
     "langflow-base[ragstack]",
     "langflow-base[opensearch]",
@@ -439,7 +423,6 @@ complete = [
     "langflow-base[mcp]",
     "langflow-base[ag2]",
     "langflow-base[scrapegraph]",
-    "langflow-base[pydantic-ai]",
     "langflow-base[apify]",
     "langflow-base[spider]",
     # ALTK
