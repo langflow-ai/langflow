@@ -1180,6 +1180,50 @@ class TestMCPUtilityFunctions:
         instance_none = model_class(params=None)
         assert instance_none.params is None
 
+    def test_nested_dict_preservation_issue_9881(self):
+        """Test that nested dictionaries are preserved when object has no explicit properties.
+
+        Regression test for issue #9881 where nested dictionaries in MCP tool parameters
+        were being lost during Pydantic validation.
+        """
+        # ROS2 example from the bug report
+        schema = {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "object",  # No "properties" defined - free-form object
+                    "description": "Message data with nested structure",
+                },
+                "msg_type": {"type": "string"},
+                "topic": {"type": "string"},
+            },
+            "required": ["msg", "msg_type", "topic"],
+        }
+
+        model_class = util.create_input_schema_from_json_schema(schema)
+
+        # Input with nested dictionary (like the bug report)
+        input_data = {
+            "msg": {"linear": {"x": 1}},
+            "msg_type": "geometry_msgs/msg/Twist",
+            "topic": "/turtle1/cmd_vel",
+        }
+
+        # Validate and dump (this is what happens in create_tool_coroutine)
+        validated = model_class.model_validate(input_data)
+        result = validated.model_dump()
+
+        # Nested dictionary should be preserved
+        assert result["msg"] == {"linear": {"x": 1}}
+        assert result["msg_type"] == "geometry_msgs/msg/Twist"
+        assert result["topic"] == "/turtle1/cmd_vel"
+
+        # Test with deeply nested structure
+        deep_input = {"msg": {"level1": {"level2": {"level3": "value"}}}, "msg_type": "test", "topic": "/test"}
+        deep_validated = model_class.model_validate(deep_input)
+        deep_result = deep_validated.model_dump()
+        assert deep_result["msg"] == {"level1": {"level2": {"level3": "value"}}}
+
     @pytest.mark.asyncio
     async def test_validate_connection_params(self):
         """Test connection parameter validation."""
