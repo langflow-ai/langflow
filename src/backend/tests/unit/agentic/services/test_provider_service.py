@@ -198,7 +198,10 @@ class TestGetEnabledProvidersForUser:
 
         mock_session = MagicMock()
 
-        with patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service):
+        with (
+            patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service),
+            patch("langflow.agentic.services.provider_service.os.getenv", return_value=None),
+        ):
             enabled_providers, provider_status = await get_enabled_providers_for_user("user-1", mock_session)
 
         assert enabled_providers == []
@@ -225,6 +228,7 @@ class TestGetEnabledProvidersForUser:
                 "langflow.agentic.services.provider_service.get_model_provider_variable_mapping",
                 return_value={"Anthropic": "ANTHROPIC_API_KEY", "OpenAI": "OPENAI_API_KEY"},
             ),
+            patch("langflow.agentic.services.provider_service.os.getenv", return_value=None),
         ):
             enabled, status = await get_enabled_providers_for_user("user-1", mock_session)
 
@@ -272,7 +276,10 @@ class TestGetEnabledProvidersForUser:
 
         mock_session = MagicMock()
 
-        with patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service):
+        with (
+            patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service),
+            patch("langflow.agentic.services.provider_service.os.getenv", return_value=None),
+        ):
             enabled_providers, provider_status = await get_enabled_providers_for_user("user-1", mock_session)
 
         assert enabled_providers == []
