@@ -19,10 +19,13 @@ export const useChatHistory = (visibleSession: string | null) => {
   const { data: queryData } = useGetMessagesQuery(messageQueryParams);
 
   // Session cache key - this is the single source of truth for messages
-  const sessionCacheKey = [
-    "useGetMessagesQuery",
-    { id: currentFlowId, session_id: visibleSession },
-  ];
+  const sessionCacheKey = useMemo(
+    () => [
+      "useGetMessagesQuery",
+      { id: currentFlowId, session_id: visibleSession },
+    ],
+    [currentFlowId, visibleSession],
+  );
 
   // Watch the session cache - this automatically updates when updateMessage/addUserMessage change it
   const { data: sessionMessages = [] } = useQuery<Message[]>({
@@ -91,14 +94,16 @@ export const useChatHistory = (visibleSession: string | null) => {
 
         // Convert Message.properties to ChatMessageType.properties (PropertiesType)
         // Properties are now properly typed in Message, no cast needed
-        let properties: ChatMessageType["properties"] = undefined;
-        if (message.properties?.source?.id) {
+        let properties: ChatMessageType["properties"];
+        if (message.properties) {
           properties = {
-            source: {
-              id: message.properties.source.id,
-              display_name: message.properties.source.display_name || "",
-              source: message.properties.source.source || "",
-            },
+            ...(message.properties.source?.id && {
+              source: {
+                id: message.properties.source.id,
+                display_name: message.properties.source.display_name || "",
+                source: message.properties.source.source || "",
+              },
+            }),
             state: message.properties.state,
             icon: message.properties.icon,
             background_color: message.properties.background_color,
@@ -108,6 +113,7 @@ export const useChatHistory = (visibleSession: string | null) => {
             allow_markdown: message.properties.allow_markdown,
             positive_feedback: message.properties.positive_feedback,
             build_duration: message.properties.build_duration,
+            usage: message.properties.usage,
           };
         }
 

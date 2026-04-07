@@ -290,3 +290,5 @@ data/user
 
 sso-config.yaml
 AGENTS.md
+CLAUDE.local.md
+langflow.log.*

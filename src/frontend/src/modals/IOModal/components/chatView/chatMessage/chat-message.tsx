@@ -69,7 +69,7 @@ export default function ChatMessage({
           setChatMessage((prev) => prev + parsedData.chunk);
         }
       };
-      eventSource.current.onerror = (event: any) => {
+      eventSource.current.onerror = (event: Event & { data?: string }) => {
         setIsStreaming(false);
         eventSource.current?.close();
         setStreamUrl(undefined);
@@ -413,7 +413,7 @@ export default function ChatMessage({
             )}
           </div>
           {!editMessage && (
-            <div className="invisible absolute -top-4 right-0 group-hover:visible">
+            <div className="invisible absolute bottom-full right-0 group-hover:visible">
               <div>
                 <EditMessageButton
                   onCopy={() => {
