@@ -45,6 +45,10 @@ export default function DeploymentsPage() {
           providers={providers}
           stepperOpen={stepperOpen}
           setStepperOpen={setStepperOpen}
+          onGoToProviders={() => {
+            setActiveSubTab("providers");
+            setAddProviderOpen(true);
+          }}
         />
       )}
 

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ProviderAccount } from "../types";
 
-const ALL_PROVIDERS = "all";
-
 interface ProviderFilter {
   selectedProviderId: string;
   setSelectedProviderId: (id: string) => void;
@@ -13,23 +11,26 @@ interface ProviderFilter {
 export function useProviderFilter(
   providers: ProviderAccount[],
 ): ProviderFilter {
-  const [selectedProviderId, setSelectedProviderId] = useState(ALL_PROVIDERS);
+  const [selectedProviderId, setSelectedProviderId] = useState(
+    () => providers[0]?.id ?? "",
+  );
 
-  // Reset filter when the selected provider no longer exists
+  // Select first provider once providers load, or reset when selected is removed
   useEffect(() => {
+    if (providers.length === 0) return;
+
     if (
-      selectedProviderId !== ALL_PROVIDERS &&
-      providers.length > 0 &&
+      !selectedProviderId ||
       !providers.some((p) => p.id === selectedProviderId)
     ) {
-      setSelectedProviderId(ALL_PROVIDERS);
+      setSelectedProviderId(providers[0].id);
     }
   }, [providers, selectedProviderId]);
 
   const providerIdsToQuery = useMemo(() => {
-    if (selectedProviderId !== ALL_PROVIDERS) return [selectedProviderId];
-    return providers.map((p) => p.id);
-  }, [selectedProviderId, providers]);
+    if (!selectedProviderId) return [];
+    return [selectedProviderId];
+  }, [selectedProviderId]);
 
   const providerMap = useMemo(
     () =>
@@ -47,5 +48,3 @@ export function useProviderFilter(
     providerMap,
   };
 }
-
-export { ALL_PROVIDERS };
