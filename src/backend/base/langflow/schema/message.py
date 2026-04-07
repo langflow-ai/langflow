@@ -5,19 +5,19 @@ This maintains backward compatibility while using the lfx implementation.
 
 # Import and re-export to ensure class identity is preserved
 from lfx.schema.message import (
-	MAX_ATTACHMENT_SIZE_BYTES,
-	ContentBlock,
-	DefaultModel,
-	ErrorMessage,
-	Message,
-	MessageResponse,
+    MAX_ATTACHMENT_SIZE_BYTES,
+    ContentBlock,
+    DefaultModel,
+    ErrorMessage,
+    Message,
+    MessageResponse,
 )
 
 __all__ = [
-	"ContentBlock",
-	"DefaultModel",
-	"ErrorMessage",
-	"MAX_ATTACHMENT_SIZE_BYTES",
-	"Message",
-	"MessageResponse",
+    "MAX_ATTACHMENT_SIZE_BYTES",
+    "ContentBlock",
+    "DefaultModel",
+    "ErrorMessage",
+    "Message",
+    "MessageResponse",
 ]

@@ -35,6 +35,7 @@ if TYPE_CHECKING:
 
 MAX_ATTACHMENT_SIZE_BYTES: int = 50 * 1024 * 1024
 
+
 class Message(Data):
     """Message schema for Langflow.
 
@@ -651,10 +652,10 @@ class ErrorMessage(Message):
 
 
 __all__ = [
+    "MAX_ATTACHMENT_SIZE_BYTES",
     "ContentBlock",
     "DefaultModel",
     "ErrorMessage",
-    "MAX_ATTACHMENT_SIZE_BYTES",
     "Message",
     "MessageResponse",
 ]
