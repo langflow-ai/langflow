@@ -98,12 +98,12 @@ export function useMemoriesData({
 
   const { data: memorySessions = [], refetch: refetchMemorySessions } =
     useGetMemorySessions(
-    { memoryId: selectedMemoryId ?? "" },
-    {
-      enabled: !!selectedMemoryId,
-      retry: false,
-    },
-  );
+      { memoryId: selectedMemoryId ?? "" },
+      {
+        enabled: !!selectedMemoryId,
+        retry: false,
+      },
+    );
 
   useEffect(() => {
     if (!selectedMemoryId) return;

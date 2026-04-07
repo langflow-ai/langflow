@@ -91,8 +91,12 @@ describe("MemoryDetailsHeader", () => {
     render(<MemoryDetailsHeader {...props} />);
 
     expect(screen.getByLabelText("Session filter")).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "session-1" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "session-2" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "session-1" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "session-2" }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText("Session filter")).not.toBeDisabled();
   });
 

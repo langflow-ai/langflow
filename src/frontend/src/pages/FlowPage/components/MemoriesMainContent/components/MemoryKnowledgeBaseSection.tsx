@@ -115,7 +115,9 @@ export function MemoryKnowledgeBaseSection({
                       </div>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {formatTimestamp(doc.ingestion_timestamp || doc.timestamp)}
+                      {formatTimestamp(
+                        doc.ingestion_timestamp || doc.timestamp,
+                      )}
                     </TableCell>
                   </TableRow>
                 )),
