@@ -1826,7 +1826,6 @@ async def _create_other_user(client: AsyncClient) -> tuple[str, dict]:
 async def test_create_project_does_not_reassign_other_users_flows(
     client: AsyncClient,
     logged_in_headers: dict,
-    active_user,
 ):
     """Test that flows_list in create_project only moves flows owned by the requesting user."""
     _, other_user_headers = await _create_other_user(client)
@@ -1860,7 +1859,6 @@ async def test_create_project_does_not_reassign_other_users_flows(
 async def test_read_project_paginated_only_returns_current_users_flows(
     client: AsyncClient,
     logged_in_headers: dict,
-    active_user,
 ):
     """Test that paginated GET /projects/{id} does not return flows owned by other users."""
     _, other_user_headers = await _create_other_user(client)
