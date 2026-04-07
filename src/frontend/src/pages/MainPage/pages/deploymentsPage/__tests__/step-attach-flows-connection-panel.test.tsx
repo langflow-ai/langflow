@@ -69,8 +69,6 @@ const defaultProps = {
   onToggleConnection: jest.fn(),
   newConnectionName: "",
   onNameChange: jest.fn(),
-  newConnectionDescription: "",
-  onDescriptionChange: jest.fn(),
   envVars: [{ id: "ev-1", key: "", value: "" }] as EnvVarEntry[],
   detectedVarCount: 0,
   globalVariableOptions: [] as string[],
@@ -221,13 +219,6 @@ describe("Create tab — form", () => {
     renderPanel({ connectionTab: "create" });
     expect(
       screen.getByPlaceholderText("e.g., SALES_BOT_PROD"),
-    ).toBeInTheDocument();
-  });
-
-  it("renders description input", () => {
-    renderPanel({ connectionTab: "create" });
-    expect(
-      screen.getByPlaceholderText("e.g., Production sales bot connection"),
     ).toBeInTheDocument();
   });
 
