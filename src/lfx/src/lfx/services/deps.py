@@ -61,6 +61,7 @@ def get_service(service_type: ServiceType, default=None):
     try:
         return service_manager.get(service_type, default)
     except Exception:  # noqa: BLE001
+        logger.exception("Failed to resolve service %s, returning None", service_type)
         return None
 
 
@@ -82,10 +83,15 @@ def get_db_service() -> DatabaseServiceProtocol:
 
 
 def get_storage_service() -> StorageServiceProtocol | None:
-    """Retrieves the storage service instance."""
-    from lfx.services.schema import ServiceType
+    """Retrieves the storage service instance.
 
-    return get_service(ServiceType.STORAGE_SERVICE)
+    Falls back to a local StorageServiceFactory when no storage service
+    is registered, allowing lfx to work in standalone/CLI mode.
+    """
+    from lfx.services.schema import ServiceType
+    from lfx.services.storage.factory import StorageServiceFactory
+
+    return get_service(ServiceType.STORAGE_SERVICE, default=StorageServiceFactory())
 
 
 def get_settings_service() -> SettingsServiceProtocol | None:

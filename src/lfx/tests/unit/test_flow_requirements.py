@@ -900,11 +900,31 @@ class TestErrorHandling:
             generate_requirements_from_file(bad_file)
 
     def test_generate_requirements_from_file_wrong_structure(self, tmp_path):
-        """A valid JSON file that isn't a flow should still produce a result (just lfx)."""
+        """A valid JSON file that isn't a flow should raise ValueError."""
         wrong_file = tmp_path / "wrong.json"
         wrong_file.write_text('{"not": "a flow"}', encoding="utf-8")
-        result = generate_requirements_from_file(wrong_file, pin_versions=False)
-        assert result == ["lfx"]
+        with pytest.raises(ValueError, match="does not appear to be a valid Langflow flow"):
+            generate_requirements_from_file(wrong_file, pin_versions=False)
+
+    def test_non_flow_json_raises(self):
+        """A valid JSON dict without data.nodes should raise ValueError."""
+        with pytest.raises(ValueError, match="does not appear to be a valid Langflow flow"):
+            generate_requirements_from_flow({"some": "json"}, pin_versions=False)
+
+    def test_non_dict_flow_raises(self):
+        """A JSON array or other non-dict should raise ValueError."""
+        with pytest.raises(ValueError, match="not a JSON object"):
+            generate_requirements_from_flow([1, 2, 3], pin_versions=False)
+
+    def test_flow_with_non_dict_data_raises(self):
+        """Flow where 'data' exists but is not a dict should raise ValueError."""
+        with pytest.raises(ValueError, match="does not appear to be a valid Langflow flow"):
+            generate_requirements_from_flow({"data": "not a dict"}, pin_versions=False)
+
+    def test_flow_with_data_but_no_nodes_raises(self):
+        """Flow with data dict but no 'nodes' key should raise ValueError."""
+        with pytest.raises(ValueError, match="does not appear to be a valid Langflow flow"):
+            generate_requirements_from_flow({"data": {"edges": []}}, pin_versions=False)
 
     def test_flow_with_empty_code_value(self):
         """A node with an empty code string should not crash."""
@@ -996,3 +1016,10 @@ class TestTyperRequirementsCommand:
         result = runner.invoke(app, ["requirements", str(bad)])
         assert result.exit_code == 1
         assert "Error" in result.output
+
+    def test_non_flow_json_fails(self, runner, app, tmp_path):
+        non_flow = tmp_path / "not_a_flow.json"
+        non_flow.write_text('{"not": "a flow"}', encoding="utf-8")
+        result = runner.invoke(app, ["requirements", str(non_flow), "--no-pin"])
+        assert result.exit_code == 1
+        assert "does not appear to be a valid Langflow flow" in result.output
