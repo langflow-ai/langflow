@@ -58,7 +58,9 @@ export default defineConfig(({ mode }) => {
         envLangflow.LANGFLOW_MCP_COMPOSER_ENABLED ?? "true",
       ),
       "import.meta.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS": JSON.stringify(
-        envLangflow.LANGFLOW_FEATURE_WXO_DEPLOYMENTS ?? "false",
+        envLangflow.LANGFLOW_FEATURE_WXO_DEPLOYMENTS ??
+          process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS ??
+          "false",
       ),
     },
     plugins: [

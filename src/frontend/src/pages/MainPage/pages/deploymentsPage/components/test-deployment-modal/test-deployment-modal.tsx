@@ -44,7 +44,10 @@ export default function TestDeploymentModal({
           Chat interface to test the {deployment?.name ?? "deployment"}
         </DialogDescription>
 
-        <h2 className="text-center text-2xl font-semibold py-5">
+        <h2
+          className="text-center text-2xl font-semibold py-5"
+          data-testid="test-deployment-modal-title"
+        >
           Test Deployment
         </h2>
 

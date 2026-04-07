@@ -4,6 +4,7 @@ import { useDeleteWithConfirmation } from "../use-delete-with-confirmation";
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
 const mockShowError = jest.fn();
+
 jest.mock("../use-error-alert", () => ({
   useErrorAlert: () => mockShowError,
 }));
@@ -59,6 +60,21 @@ describe("useDeleteWithConfirmation", () => {
     expect(result.current.target).toEqual(item);
   });
 
+  it("requestDelete replaces a previous target with the new one", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(mutateFn, buildParams, "Error"),
+    );
+
+    act(() => {
+      result.current.requestDelete(makeItem({ id: "dep-1", name: "First" }));
+    });
+    act(() => {
+      result.current.requestDelete(makeItem({ id: "dep-2", name: "Second" }));
+    });
+
+    expect(result.current.target).toEqual({ id: "dep-2", name: "Second" });
+  });
+
   it("confirmDelete calls mutateFn with built params and clears target", () => {
     const { result } = renderHook(() =>
       useDeleteWithConfirmation(mutateFn, buildParams, "Error"),
@@ -82,6 +98,22 @@ describe("useDeleteWithConfirmation", () => {
     );
     expect(result.current.target).toBeNull();
     expect(result.current.deletingId).toBe("dep-1");
+  });
+
+  it("confirmDelete calls stopPropagation on the event", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(mutateFn, buildParams, "Error"),
+    );
+    const event = makeMouseEvent();
+
+    act(() => {
+      result.current.requestDelete(makeItem());
+    });
+    act(() => {
+      result.current.confirmDelete(event);
+    });
+
+    expect(event.stopPropagation).toHaveBeenCalled();
   });
 
   it("confirmDelete is a no-op when target is null", () => {
@@ -110,7 +142,6 @@ describe("useDeleteWithConfirmation", () => {
 
     expect(result.current.deletingId).toBe("dep-1");
 
-    // Simulate mutateFn calling onSettled
     const { onSettled } = mutateFn.mock.calls[0][1];
     act(() => {
       onSettled();
@@ -144,6 +175,29 @@ describe("useDeleteWithConfirmation", () => {
     expect(mockShowError).toHaveBeenCalledWith(
       "Error deleting deployment",
       fakeError,
+    );
+  });
+
+  it("onError handles non-Error values", () => {
+    const { result } = renderHook(() =>
+      useDeleteWithConfirmation(mutateFn, buildParams, "Failed to delete item"),
+    );
+
+    act(() => {
+      result.current.requestDelete(makeItem());
+    });
+    act(() => {
+      result.current.confirmDelete(makeMouseEvent());
+    });
+
+    const { onError } = mutateFn.mock.calls[0][1];
+    act(() => {
+      onError("a plain string error");
+    });
+
+    expect(mockShowError).toHaveBeenCalledWith(
+      "Failed to delete item",
+      "a plain string error",
     );
   });
 

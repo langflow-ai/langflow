@@ -221,6 +221,7 @@ export default function DeploymentsTable({
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
+                          data-testid={`delete-deployment-${deployment.id}`}
                           onClick={() => onDeleteDeployment?.(deployment)}
                         >
                           <ForwardedIconComponent

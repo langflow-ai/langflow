@@ -246,10 +246,18 @@ export const ConnectionPanel = memo(function ConnectionPanel({
 
         {/* Footer buttons */}
         <div className="flex min-w-0 flex-wrap items-center gap-3 pt-4">
-          <Button variant="outline" onClick={onChangeFlow}>
+          <Button
+            variant="outline"
+            onClick={onChangeFlow}
+            data-testid="connection-change-flow"
+          >
             Change Flow
           </Button>
-          <Button variant="outline" onClick={onSkipConnection}>
+          <Button
+            variant="outline"
+            onClick={onSkipConnection}
+            data-testid="connection-skip"
+          >
             Skip
           </Button>
           {connectionTab === "available" ? (
@@ -257,6 +265,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
               className="ml-auto w-full text-center whitespace-normal sm:w-auto sm:min-w-[220px] sm:whitespace-nowrap"
               disabled={selectedConnections.size === 0}
               onClick={onAttachConnection}
+              data-testid="connection-attach"
             >
               Attach Connection to Flow
             </Button>
@@ -265,6 +274,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
               className="ml-auto w-full text-center whitespace-normal sm:w-auto sm:min-w-[220px] sm:whitespace-nowrap"
               disabled={newConnectionName.trim() === "" || isDuplicateName}
               onClick={onCreateConnection}
+              data-testid="connection-create"
             >
               Create Connection
             </Button>
