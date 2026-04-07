@@ -11,9 +11,8 @@ except ImportError:
 
 from agentics import AG
 from agentics.core.atype import create_pydantic_model
-from pydantic import create_model
-
 from lfx.components.agentics.helpers.schema_builder import build_schema_fields
+from pydantic import create_model
 
 
 def _extract_list_items(output: AG, atype: type) -> AG:
@@ -44,22 +43,28 @@ class TestAreduceAsList:
         Fix: iterate all states like aMap does.
         """
         # Arrange
-        output_fields = build_schema_fields([
-            {"name": "total_orders", "description": "Total orders", "type": "int", "multiple": False},
-            {"name": "top_product", "description": "Top product", "type": "str", "multiple": False},
-        ])
+        output_fields = build_schema_fields(
+            [
+                {"name": "total_orders", "description": "Total orders", "type": "int", "multiple": False},
+                {"name": "top_product", "description": "Top product", "type": "str", "multiple": False},
+            ]
+        )
         atype = create_pydantic_model(output_fields, name="Target")
         final_atype = create_model("ListOfTarget", items=(list[atype], ...))
 
         # Simulate multiple output states (as happens with multiple areduce batches)
-        state1 = final_atype(items=[
-            atype(total_orders=100, top_product="Widget A"),
-            atype(total_orders=50, top_product="Widget B"),
-        ])
-        state2 = final_atype(items=[
-            atype(total_orders=25, top_product="Widget C"),
-            atype(total_orders=10, top_product="Widget D"),
-        ])
+        state1 = final_atype(
+            items=[
+                atype(total_orders=100, top_product="Widget A"),
+                atype(total_orders=50, top_product="Widget B"),
+            ]
+        )
+        state2 = final_atype(
+            items=[
+                atype(total_orders=25, top_product="Widget C"),
+                atype(total_orders=10, top_product="Widget D"),
+            ]
+        )
         output = AG(atype=final_atype, states=[state1, state2])
 
         # Act
@@ -73,18 +78,22 @@ class TestAreduceAsList:
     def test_should_work_with_single_output_state(self):
         """Single output state (common case: <100 rows) should also work correctly."""
         # Arrange
-        output_fields = build_schema_fields([
-            {"name": "category", "description": "Category", "type": "str", "multiple": False},
-            {"name": "count", "description": "Count", "type": "int", "multiple": False},
-        ])
+        output_fields = build_schema_fields(
+            [
+                {"name": "category", "description": "Category", "type": "str", "multiple": False},
+                {"name": "count", "description": "Count", "type": "int", "multiple": False},
+            ]
+        )
         atype = create_pydantic_model(output_fields, name="Target")
         final_atype = create_model("ListOfTarget", items=(list[atype], ...))
 
-        state = final_atype(items=[
-            atype(category="Electronics", count=42),
-            atype(category="Books", count=15),
-            atype(category="Clothing", count=8),
-        ])
+        state = final_atype(
+            items=[
+                atype(category="Electronics", count=42),
+                atype(category="Books", count=15),
+                atype(category="Clothing", count=8),
+            ]
+        )
         output = AG(atype=final_atype, states=[state])
 
         # Act
