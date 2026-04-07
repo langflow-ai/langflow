@@ -28,7 +28,7 @@ import type { DeploymentExecutionResponse } from "../use-post-deployment-executi
 describe("useGetDeploymentExecution", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("calls GET with encoded execution_id and provider_id param", async () => {
+  it("calls GET with encoded deployment_id and execution_id", async () => {
     const response = {
       deployment_id: "dep-1",
       provider_data: { execution_id: "exec-1", status: "completed" },
@@ -37,13 +37,12 @@ describe("useGetDeploymentExecution", () => {
 
     const mutation = useGetDeploymentExecution();
     await mutation.mutate({
+      deployment_id: "dep-1",
       execution_id: "exec-1",
-      provider_id: "prov-1",
     });
 
     expect(mockApiGet).toHaveBeenCalledWith(
-      "/api/v1/deployments/executions/exec-1",
-      { params: { provider_id: "prov-1" } },
+      "/api/v1/deployments/dep-1/executions/exec-1",
     );
   });
 
@@ -54,13 +53,12 @@ describe("useGetDeploymentExecution", () => {
 
     const mutation = useGetDeploymentExecution();
     await mutation.mutate({
+      deployment_id: "dep-1",
       execution_id: "exec/with spaces",
-      provider_id: "prov-1",
     });
 
     expect(mockApiGet).toHaveBeenCalledWith(
-      "/api/v1/deployments/executions/exec%2Fwith%20spaces",
-      { params: { provider_id: "prov-1" } },
+      "/api/v1/deployments/dep-1/executions/exec%2Fwith%20spaces",
     );
   });
 
@@ -78,8 +76,8 @@ describe("useGetDeploymentExecution", () => {
 
     const mutation = useGetDeploymentExecution();
     const result = (await mutation.mutate({
+      deployment_id: "dep-1",
       execution_id: "exec-1",
-      provider_id: "prov-1",
     })) as unknown as DeploymentExecutionResponse;
 
     expect(result).toEqual(response);

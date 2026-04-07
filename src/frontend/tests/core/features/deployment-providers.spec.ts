@@ -147,7 +147,7 @@ test(
         });
       } else {
         const body = postCalled
-          ? { providers: [NEW_PROVIDER] }
+          ? { provider_accounts: [NEW_PROVIDER] }
           : EMPTY_PROVIDERS_MOCK;
         route.fulfill({
           status: 200,

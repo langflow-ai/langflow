@@ -91,7 +91,7 @@ beforeEach(() => {
   mockCurrentFlowId = "flow-1";
   mockSaveFlow.mockResolvedValue(undefined);
   mockCreateSnapshot.mockResolvedValue({ id: "snap-1", version_tag: "v1.0" });
-  mockFetchProviders.mockResolvedValue({ data: { providers: [] } });
+  mockFetchProviders.mockResolvedValue({ data: { provider_accounts: [] } });
 });
 
 // ---------------------------------------------------------------------------
@@ -247,7 +247,9 @@ describe("usePrepareDeploy — handleDeploy: no providers", () => {
 describe("usePrepareDeploy — handleDeploy: with providers", () => {
   it("opens choiceDialog and sets providers when accounts are returned", async () => {
     const providers = [makeProvider()];
-    mockFetchProviders.mockResolvedValue({ data: { providers } });
+    mockFetchProviders.mockResolvedValue({
+      data: { provider_accounts: providers },
+    });
     const { result } = renderHook(() => usePrepareDeploy());
 
     await act(async () => {
@@ -261,7 +263,7 @@ describe("usePrepareDeploy — handleDeploy: with providers", () => {
 
   it("does not open deployModal when providers are available", async () => {
     mockFetchProviders.mockResolvedValue({
-      data: { providers: [makeProvider()] },
+      data: { provider_accounts: [makeProvider()] },
     });
     const { result } = renderHook(() => usePrepareDeploy());
 
@@ -413,7 +415,7 @@ describe("usePrepareDeploy — handleUpdateComplete", () => {
 
   it("clears providers list", async () => {
     mockFetchProviders.mockResolvedValue({
-      data: { providers: [makeProvider()] },
+      data: { provider_accounts: [makeProvider()] },
     });
     const { result } = renderHook(() => usePrepareDeploy());
 
@@ -474,7 +476,7 @@ describe("usePrepareDeploy — resetChoiceState", () => {
 
   it("clears providers list", async () => {
     mockFetchProviders.mockResolvedValue({
-      data: { providers: [makeProvider()] },
+      data: { provider_accounts: [makeProvider()] },
     });
     const { result } = renderHook(() => usePrepareDeploy());
 

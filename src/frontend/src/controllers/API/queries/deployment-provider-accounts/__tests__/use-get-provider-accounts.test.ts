@@ -36,7 +36,7 @@ describe("useGetProviderAccounts", () => {
 
   it("calls API with default pagination", async () => {
     mockApiGet.mockResolvedValue({
-      data: { providers: [], page: 1, size: 20, total: 0 },
+      data: { provider_accounts: [], page: 1, size: 20, total: 0 },
     });
 
     useGetProviderAccounts({});
@@ -49,7 +49,7 @@ describe("useGetProviderAccounts", () => {
 
   it("calls API with custom pagination", async () => {
     mockApiGet.mockResolvedValue({
-      data: { providers: [], page: 2, size: 10, total: 15 },
+      data: { provider_accounts: [], page: 2, size: 10, total: 15 },
     });
 
     useGetProviderAccounts({ page: 2, size: 10 });
@@ -74,7 +74,7 @@ describe("useGetProviderAccounts", () => {
 
   it("returns provider accounts from response", async () => {
     const responseData = {
-      providers: [
+      provider_accounts: [
         {
           id: "prov-1",
           name: "My WxO",
@@ -97,7 +97,9 @@ describe("useGetProviderAccounts", () => {
     expect(result.data).toBeDefined();
     if (!result.data) return;
     expect(result.data).toEqual(responseData);
-    expect(result.data.providers).toHaveLength(1);
-    expect(result.data.providers[0].provider_key).toBe("watsonx_orchestrate");
+    expect(result.data.provider_accounts).toHaveLength(1);
+    expect(result.data.provider_accounts[0].provider_key).toBe(
+      "watsonx_orchestrate",
+    );
   });
 });

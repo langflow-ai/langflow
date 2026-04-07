@@ -15,7 +15,7 @@ test(
       route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ providers: [] }),
+        body: JSON.stringify({ provider_accounts: [] }),
       });
     });
 
@@ -49,7 +49,7 @@ test(
       route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ providers: [] }),
+        body: JSON.stringify({ provider_accounts: [] }),
       });
     });
 
@@ -83,7 +83,7 @@ test(
       route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ providers: [] }),
+        body: JSON.stringify({ provider_accounts: [] }),
       });
     });
 

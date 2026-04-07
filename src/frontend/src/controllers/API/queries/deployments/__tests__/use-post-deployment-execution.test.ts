@@ -39,7 +39,6 @@ describe("usePostDeploymentExecution", () => {
     mockApiPost.mockResolvedValue({ data: response });
 
     const payload: DeploymentExecutionRequest = {
-      provider_id: "prov-1",
       deployment_id: "dep-1",
       provider_data: { input: "Hello agent" },
     };
@@ -48,8 +47,8 @@ describe("usePostDeploymentExecution", () => {
     await mutation.mutate(payload);
 
     expect(mockApiPost).toHaveBeenCalledWith(
-      "/api/v1/deployments/executions",
-      payload,
+      "/api/v1/deployments/dep-1/executions",
+      { provider_data: { input: "Hello agent" } },
     );
   });
 
@@ -62,7 +61,6 @@ describe("usePostDeploymentExecution", () => {
     });
 
     const payload: DeploymentExecutionRequest = {
-      provider_id: "prov-1",
       deployment_id: "dep-1",
       provider_data: { input: "Follow up", thread_id: "thread-1" },
     };
@@ -94,7 +92,6 @@ describe("usePostDeploymentExecution", () => {
 
     const mutation = usePostDeploymentExecution();
     const result = await mutation.mutate({
-      provider_id: "prov-1",
       deployment_id: "dep-1",
       provider_data: { input: "Hi" },
     });

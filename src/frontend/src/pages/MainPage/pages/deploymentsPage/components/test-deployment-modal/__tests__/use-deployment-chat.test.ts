@@ -164,7 +164,6 @@ describe("useDeploymentChat", () => {
 
     expect(mockPostExecution).toHaveBeenCalledWith(
       expect.objectContaining({
-        provider_id: "my-provider",
         deployment_id: "my-dep",
         provider_data: expect.objectContaining({ input: "hello world" }),
       }),
@@ -397,8 +396,8 @@ describe("useDeploymentChat", () => {
     });
 
     expect(mockGetExecution).toHaveBeenCalledWith({
+      deployment_id: "d1",
       execution_id: "my-exec-id",
-      provider_id: "my-provider",
     });
   });
 

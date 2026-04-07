@@ -60,37 +60,28 @@ describe("useGetDeploymentConfigs", () => {
   });
 
   it("returns config list with provider_data", async () => {
-    const responseData = {
-      configs: [
-        {
-          id: "cfg-1",
-          name: "my_connection",
-          created_at: "2026-01-01T00:00:00Z",
-          updated_at: null,
-          provider_data: { scheme: "key_value" },
-        },
-        {
-          id: "cfg-2",
-          name: "other_conn",
-          created_at: "2026-01-02T00:00:00Z",
-          updated_at: "2026-01-03T00:00:00Z",
-          provider_data: null,
-        },
-      ],
-      page: 1,
-      size: 10000,
-      total: 2,
+    const apiResponse = {
+      provider_data: {
+        connections: [
+          { connection_id: "cfg-1", app_id: "app-1", type: "key_value" },
+          { connection_id: "cfg-2", app_id: "app-2" },
+        ],
+        page: 1,
+        size: 10000,
+        total: 2,
+      },
     };
-    mockApiGet.mockResolvedValue({ data: responseData });
+    mockApiGet.mockResolvedValue({ data: apiResponse });
 
     const result = useGetDeploymentConfigs({ providerId: "prov-1" });
     await flushPromises();
 
     expect(result.data).toBeDefined();
     if (!result.data) return;
-    expect(result.data).toEqual(responseData);
     expect(result.data.configs).toHaveLength(2);
-    expect(result.data.configs[0].name).toBe("my_connection");
-    expect(result.data.configs[1].provider_data).toBeNull();
+    expect(result.data.configs[0].connection_id).toBe("cfg-1");
+    expect(result.data.configs[1].connection_id).toBe("cfg-2");
+    expect(result.data.page).toBe(1);
+    expect(result.data.total).toBe(2);
   });
 });

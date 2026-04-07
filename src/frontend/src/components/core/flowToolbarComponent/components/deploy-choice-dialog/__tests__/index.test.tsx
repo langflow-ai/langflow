@@ -15,14 +15,21 @@ let mockIsLoadingDeployments = false;
 const mockPatchSnapshot = jest.fn();
 const mockShowError = jest.fn();
 
+// Simulate react-query caching: data is undefined until the first enabled
+// fetch, then persists even when the query is later disabled.
+let _deploymentsCache: typeof mockDeploymentsData = undefined;
+
 jest.mock("@/controllers/API/queries/deployments/use-get-deployments", () => ({
-  useGetDeployments: (_params: unknown, options?: { enabled?: boolean }) => ({
-    // Mirror react-query's enabled behaviour: when disabled, data is undefined
-    // so deploymentsData changes reference when the phase flips to "deployments",
-    // which triggers the attachments useMemo and the auto-select useEffect.
-    data: options?.enabled === false ? undefined : mockDeploymentsData,
-    isLoading: options?.enabled === false ? false : mockIsLoadingDeployments,
-  }),
+  useGetDeployments: (_params: unknown, options?: { enabled?: boolean }) => {
+    if (options?.enabled !== false && mockDeploymentsData !== undefined) {
+      _deploymentsCache = mockDeploymentsData;
+    }
+    return {
+      data:
+        options?.enabled === false ? _deploymentsCache : mockDeploymentsData,
+      isLoading: options?.enabled === false ? false : mockIsLoadingDeployments,
+    };
+  },
 }));
 
 jest.mock("@/controllers/API/queries/deployments", () => ({
@@ -35,6 +42,26 @@ jest.mock(
   "@/pages/MainPage/pages/deploymentsPage/hooks/use-error-alert",
   () => ({
     useErrorAlert: () => mockShowError,
+  }),
+);
+
+// biome-ignore lint/suspicious/noExplicitAny: test mock
+let mockAttachmentsData: Record<string, any> | undefined = undefined;
+let mockIsLoadingAttachments = false;
+let mockIsFetchingAttachments = false;
+
+jest.mock(
+  "@/controllers/API/queries/deployments/use-get-deployment-attachments",
+  () => ({
+    useGetDeploymentAttachments: (
+      _params: unknown,
+      options?: { enabled?: boolean },
+    ) => ({
+      data: options?.enabled === false ? undefined : mockAttachmentsData,
+      isLoading: options?.enabled === false ? false : mockIsLoadingAttachments,
+      isFetching:
+        options?.enabled === false ? false : mockIsFetchingAttachments,
+    }),
   }),
 );
 
@@ -145,6 +172,10 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockDeploymentsData = undefined;
   mockIsLoadingDeployments = false;
+  _deploymentsCache = undefined;
+  mockAttachmentsData = undefined;
+  mockIsLoadingAttachments = false;
+  mockIsFetchingAttachments = false;
   mockPatchSnapshot.mockResolvedValue({
     flow_version_id: "v-new",
     provider_snapshot_id: "snap-1",
@@ -312,13 +343,32 @@ describe("DeployChoiceDialog — deployments phase", () => {
   it("auto-selects the single existing attachment", async () => {
     const user = userEvent.setup();
     mockDeploymentsData = { deployments: [makeDeployment()] };
+    mockAttachmentsData = {
+      flow_versions: [
+        {
+          id: "v-1",
+          flow_id: "flow-1",
+          flow_name: "My Flow",
+          version_number: 1,
+          attached_at: "2025-01-01",
+          provider_snapshot_id: "snap-1",
+          tool_name: null,
+          provider_data: null,
+        },
+      ],
+      page: 1,
+      size: 50,
+      total: 1,
+    };
     renderDialog({ providers: [makeProvider()] });
 
     // Clicking Continue should go to review (not call onChooseNew) because
     // the single attachment was auto-selected instead of __new__
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(screen.getByText("Review Update")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("Review Update")).toBeInTheDocument(),
+    );
   });
 
   it("advances to review phase when existing attachment selected and continued", async () => {
@@ -326,11 +376,30 @@ describe("DeployChoiceDialog — deployments phase", () => {
     mockDeploymentsData = {
       deployments: [makeDeployment("dep-1", "My Bot", "snap-1")],
     };
+    mockAttachmentsData = {
+      flow_versions: [
+        {
+          id: "v-1",
+          flow_id: "flow-1",
+          flow_name: "My Flow",
+          version_number: 1,
+          attached_at: "2025-01-01",
+          provider_snapshot_id: "snap-1",
+          tool_name: null,
+          provider_data: null,
+        },
+      ],
+      page: 1,
+      size: 50,
+      total: 1,
+    };
     renderDialog({ providers: [makeProvider()] });
 
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(screen.getByText("Review Update")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("Review Update")).toBeInTheDocument(),
+    );
   });
 });
 
@@ -346,6 +415,23 @@ describe("DeployChoiceDialog — review phase", () => {
     mockDeploymentsData = {
       deployments: [makeDeployment("dep-1", "My Bot", "snap-1", "v-1")],
     };
+    mockAttachmentsData = {
+      flow_versions: [
+        {
+          id: "v-1",
+          flow_id: "flow-1",
+          flow_name: "My Flow",
+          version_number: 1,
+          attached_at: "2025-01-01",
+          provider_snapshot_id: "snap-1",
+          tool_name: null,
+          provider_data: null,
+        },
+      ],
+      page: 1,
+      size: 50,
+      total: 1,
+    };
     user = userEvent.setup();
     callbacks = renderDialog({
       providers: [makeProvider("p1")],
@@ -354,6 +440,9 @@ describe("DeployChoiceDialog — review phase", () => {
     });
     // Single attachment auto-selected; Continue goes straight to review
     await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() =>
+      expect(screen.getByText("Review Update")).toBeInTheDocument(),
+    );
   });
 
   it("shows Review Update title", () => {
@@ -447,11 +536,31 @@ describe("DeployChoiceDialog — update phase", () => {
     mockDeploymentsData = {
       deployments: [makeDeployment("dep-1", "My Bot", "snap-1")],
     };
+    mockAttachmentsData = {
+      flow_versions: [
+        {
+          id: "v-1",
+          flow_id: "flow-1",
+          flow_name: "My Flow",
+          version_number: 1,
+          attached_at: "2025-01-01",
+          provider_snapshot_id: "snap-1",
+          tool_name: null,
+          provider_data: null,
+        },
+      ],
+      page: 1,
+      size: 50,
+      total: 1,
+    };
     mockPatchSnapshot.mockResolvedValue({});
     user = userEvent.setup();
     callbacks = renderDialog({ providers: [makeProvider("p1")] });
 
     await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() =>
+      expect(screen.getByText("Review Update")).toBeInTheDocument(),
+    );
     await user.click(screen.getByRole("button", { name: "Update" }));
     await waitFor(() =>
       expect(screen.getByTestId("step-deploy-status")).toHaveTextContent(
