@@ -1093,8 +1093,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 version_number=row.flow_version.version_number,
                 attached_at=row.attachment.created_at,
                 provider_snapshot_id=row.snapshot_id,
-                tool_name=snapshot_name_by_id.get(row.snapshot_id),
-                provider_data=self.shape_deployment_flow_version_item_data(snapshot_data_by_id.get(row.snapshot_id)),
+                provider_data=self.shape_deployment_flow_version_item_data(
+                    snapshot_data=snapshot_data_by_id.get(row.snapshot_id),
+                    tool_name=snapshot_name_by_id.get(row.snapshot_id),
+                ),
             )
             for row in normalized_rows
         ]
@@ -1159,12 +1161,13 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
 
         Edge cases:
         - Provider unreachable / snapshot_result is None: returns ``{}``.
-          The ``tool_name`` field in the response will be ``None`` and the
-          frontend falls back to the Langflow flow name for display.
+          ``provider_data.tool_name`` will be absent/``None`` and the frontend
+          falls back to the Langflow flow name for display.
         - Tool renamed in wxO console: the new name is returned here since
           ``snapshot_result`` is fetched fresh on each request.
         - Tool deleted in wxO: missing from ``snapshot_result.snapshots``,
-          so no entry in the returned dict. ``tool_name`` will be ``None``.
+          so no entry in the returned dict. ``provider_data.tool_name`` will be
+          absent/``None``.
         """
         if not snapshot_result or not snapshot_result.snapshots:
             return {}
@@ -1178,17 +1181,21 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
 
     def shape_deployment_flow_version_item_data(
         self,
+        *,
         snapshot_data: dict[str, Any] | None,
+        tool_name: str | None = None,
     ) -> dict[str, Any] | None:
-        if not snapshot_data:
-            return None
-        raw_connections = snapshot_data.get("connections")
-        if raw_connections is None or not isinstance(raw_connections, dict):
+        raw_connections = snapshot_data.get("connections") if snapshot_data else None
+        app_ids = list(raw_connections.keys()) if isinstance(raw_connections, dict) else []
+        if not app_ids and not tool_name:
             return None
         try:
             return self._validate_slot(
                 self.api_payloads.deployment_item_data,
-                {"app_ids": list(raw_connections.keys())},
+                {
+                    "app_ids": app_ids,
+                    "tool_name": tool_name,
+                },
             )
         except AdapterPayloadValidationError as exc:
             detail = exc.format_first_error()

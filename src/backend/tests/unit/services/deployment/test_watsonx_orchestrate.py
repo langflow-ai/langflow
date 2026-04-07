@@ -7112,12 +7112,12 @@ def test_rename_tool_provider_payload_parses():
 
 
 # ---------------------------------------------------------------------------
-# DeploymentFlowVersionListItem includes tool_name
+# DeploymentFlowVersionListItem carries provider tool_name under provider_data
 # ---------------------------------------------------------------------------
 
 
-def test_flow_version_list_item_includes_tool_name():
-    """DeploymentFlowVersionListItem accepts and serializes tool_name."""
+def test_flow_version_list_item_includes_tool_name_in_provider_data():
+    """DeploymentFlowVersionListItem serializes provider tool_name under provider_data."""
     from langflow.api.v1.schemas.deployments import DeploymentFlowVersionListItem
 
     item = DeploymentFlowVersionListItem(
@@ -7125,15 +7125,14 @@ def test_flow_version_list_item_includes_tool_name():
         flow_id="00000000-0000-0000-0000-000000000002",
         flow_name="My Flow",
         version_number=1,
-        tool_name="my_custom_tool",
+        provider_data={"tool_name": "my_custom_tool"},
     )
-    assert item.tool_name == "my_custom_tool"
     data = item.model_dump()
-    assert data["tool_name"] == "my_custom_tool"
+    assert data["provider_data"]["tool_name"] == "my_custom_tool"
 
 
-def test_flow_version_list_item_tool_name_defaults_to_none():
-    """DeploymentFlowVersionListItem defaults tool_name to None."""
+def test_flow_version_list_item_provider_data_defaults_to_none():
+    """DeploymentFlowVersionListItem defaults provider_data to None."""
     from langflow.api.v1.schemas.deployments import DeploymentFlowVersionListItem
 
     item = DeploymentFlowVersionListItem(
@@ -7141,4 +7140,4 @@ def test_flow_version_list_item_tool_name_defaults_to_none():
         flow_id="00000000-0000-0000-0000-000000000002",
         version_number=1,
     )
-    assert item.tool_name is None
+    assert item.provider_data is None

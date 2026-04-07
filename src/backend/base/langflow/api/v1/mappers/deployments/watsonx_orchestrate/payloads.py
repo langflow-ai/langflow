@@ -527,6 +527,7 @@ class WatsonxApiDeploymentFlowVersionItemData(BaseModel):
     model_config = {"extra": "forbid"}
 
     app_ids: list[str] = Field(default_factory=list)
+    tool_name: str | None = None
 
     @field_validator("app_ids", mode="before")
     @classmethod
@@ -534,6 +535,12 @@ class WatsonxApiDeploymentFlowVersionItemData(BaseModel):
         if value is None:
             return []
         return [str(app_id).strip() for app_id in value if str(app_id).strip()]
+
+    @field_validator("tool_name", mode="before")
+    @classmethod
+    def normalize_optional_tool_name(cls, value: Any) -> str | None:
+        normalized = str(value or "").strip()
+        return normalized or None
 
 
 class _WatsonxApiAgentExecutionResultBase(BaseModel):
