@@ -398,13 +398,13 @@ class Component(CustomComponent):
             try:
                 # Attempt to deepcopy the entire input object
                 new_inputs[k] = deepcopy(v, memo)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 # If deepcopy fails (e.g. due to RLock), handle the value carefully
                 # Pydantic's model_copy(deep=False) creates a shallow copy
                 input_copy = v.model_copy()
                 try:
                     input_copy.value = deepcopy(v.value, memo)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     # Keep the original value (shallow copy) if it can't be deepcopied
                     input_copy.value = v.value
                 new_inputs[k] = input_copy
