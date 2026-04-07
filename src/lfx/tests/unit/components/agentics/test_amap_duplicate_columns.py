@@ -26,28 +26,38 @@ class TestAMapDuplicateColumns:
         """
         # Arrange — simulate a table that was already processed by aMap
         # (source already contains 'full_name' and 'age_group' from a previous run)
-        source_fields = build_schema_fields([
-            {"name": "customer_id", "description": "Customer ID", "type": "str", "multiple": False},
-            {"name": "email", "description": "Email address", "type": "str", "multiple": False},
-            {"name": "full_name", "description": "Full name", "type": "str", "multiple": False},
-            {"name": "age_group", "description": "Age group", "type": "str", "multiple": False},
-        ])
+        source_fields = build_schema_fields(
+            [
+                {"name": "customer_id", "description": "Customer ID", "type": "str", "multiple": False},
+                {"name": "email", "description": "Email address", "type": "str", "multiple": False},
+                {"name": "full_name", "description": "Full name", "type": "str", "multiple": False},
+                {"name": "age_group", "description": "Age group", "type": "str", "multiple": False},
+            ]
+        )
         source_atype = create_pydantic_model(source_fields, name="Source")
-        source = AG(atype=source_atype, states=[
-            source_atype(customer_id="1", email="a@test.com", full_name="Alice Smith", age_group="adult"),
-            source_atype(customer_id="2", email="b@test.com", full_name="Bob Jones", age_group="senior"),
-        ])
+        source = AG(
+            atype=source_atype,
+            states=[
+                source_atype(customer_id="1", email="a@test.com", full_name="Alice Smith", age_group="adult"),
+                source_atype(customer_id="2", email="b@test.com", full_name="Bob Jones", age_group="senior"),
+            ],
+        )
 
         # Output schema has overlapping columns (full_name, age_group)
-        output_fields = build_schema_fields([
-            {"name": "full_name", "description": "Full name", "type": "str", "multiple": False},
-            {"name": "age_group", "description": "Age group", "type": "str", "multiple": False},
-        ])
+        output_fields = build_schema_fields(
+            [
+                {"name": "full_name", "description": "Full name", "type": "str", "multiple": False},
+                {"name": "age_group", "description": "Age group", "type": "str", "multiple": False},
+            ]
+        )
         output_atype = create_pydantic_model(output_fields, name="Target")
-        output = AG(atype=output_atype, states=[
-            output_atype(full_name="Alice Updated", age_group="young_adult"),
-            output_atype(full_name="Bob Updated", age_group="elderly"),
-        ])
+        output = AG(
+            atype=output_atype,
+            states=[
+                output_atype(full_name="Alice Updated", age_group="young_adult"),
+                output_atype(full_name="Bob Updated", age_group="elderly"),
+            ],
+        )
 
         # Act — apply the same deduplication logic used in AMapComponent
         output_field_names = set(output.atype.model_fields.keys())
