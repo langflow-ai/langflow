@@ -24,7 +24,6 @@ from langflow.api.v1.mappers.deployments.helpers import (
     apply_flow_version_patch_attachments,
     attach_flow_versions,
     deployment_pagination_params,
-    fetch_provider_snapshot_keys,
     get_deployment_row_or_404,
     get_owned_provider_account_or_404,
     handle_adapter_errors,
@@ -43,11 +42,11 @@ from langflow.api.v1.mappers.deployments.helpers import (
     resolve_snapshot_map_for_create,
     rollback_provider_create,
     rollback_provider_update,
-    sync_attachment_snapshot_ids,
     to_deployment_create_response,
     to_provider_account_response,
     validate_project_scoped_flow_version_ids,
 )
+from langflow.api.v1.mappers.deployments.sync import fetch_provider_snapshot_keys, sync_attachment_snapshot_ids
 from langflow.api.v1.schemas.deployments import (
     DeploymentConfigListResponse,
     DeploymentCreateRequest,
@@ -83,10 +82,6 @@ from langflow.services.database.models.deployment.crud import (
 )
 from langflow.services.database.models.deployment.crud import (
     update_deployment as update_deployment_db,
-)
-from langflow.services.database.models.deployment.exceptions import (
-    DeploymentGuardError,
-    parse_deployment_guard_error,
 )
 from langflow.services.database.models.deployment_provider_account.crud import (
     count_provider_accounts as count_provider_account_rows,
@@ -402,15 +397,8 @@ async def update_provider_account(
             provider_account=provider_account,
             **update_kwargs,
         )
-    except DeploymentGuardError:
-        raise
     except ValueError as exc:
         _raise_http_for_provider_account_value_error(exc)
-    except Exception as exc:
-        guard_error = parse_deployment_guard_error(exc)
-        if guard_error:
-            raise guard_error from exc
-        raise
     return to_provider_account_response(updated)
 
 

@@ -18,7 +18,7 @@ from langflow.api.utils import (
     custom_params,
 )
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
-from langflow.api.v1.mappers.deployments.helpers import sync_flow_deployment_state, sync_project_deployments
+from langflow.api.v1.mappers.deployments.sync import sync_flow_deployment_state, sync_project_deployments
 from langflow.api.v1.mcp_projects import register_project_with_composer
 from langflow.api.v1.projects_files import download_project_flows, upload_project_flows
 from langflow.api.v1.projects_mcp_helpers import (

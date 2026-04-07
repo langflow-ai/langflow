@@ -12,7 +12,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.core import remove_api_keys
-from langflow.api.v1.mappers.deployments.helpers import sync_flow_version_attachments
+from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
 from langflow.services.database.models.deployment_provider_account.crud import (
     count_provider_accounts,
 )

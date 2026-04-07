@@ -32,6 +32,7 @@ except ModuleNotFoundError:
     )
 
 MODULE = "langflow.api.v1.mappers.deployments.helpers"
+SYNC_MODULE = "langflow.api.v1.mappers.deployments.sync"
 
 
 # ---------------------------------------------------------------------------
@@ -176,7 +177,7 @@ class TestFetchProviderResourceKeys:
         assert exc_info.value.status_code == 502
 
     @pytest.mark.asyncio
-    async def test_passes_resource_keys_as_ids_param(self):
+    async def test_passes_resource_keys_as_deployment_ids(self):
         adapter = AsyncMock()
         adapter.list.return_value = _mock_provider_view([])
 
@@ -193,8 +194,26 @@ class TestFetchProviderResourceKeys:
 
         call_args = adapter.list.call_args
         params = call_args.kwargs["params"]
-        assert params.provider_params == {"ids": keys}
+        assert params.deployment_ids == keys
+        assert params.provider_params is None
         assert params.deployment_types is None
+
+    @pytest.mark.asyncio
+    async def test_empty_resource_keys_returns_empty_set(self):
+        adapter = AsyncMock()
+
+        from langflow.api.v1.mappers.deployments.helpers import fetch_provider_resource_keys
+
+        result = await fetch_provider_resource_keys(
+            deployment_adapter=adapter,
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            db=AsyncMock(),
+            resource_keys=[],
+        )
+
+        assert result == set()
+        adapter.list.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_passes_deployment_type_filter(self):
@@ -754,7 +773,7 @@ class TestFetchProviderSnapshotKeys:
             [_mock_snapshot_item(item_id="snap-1"), _mock_snapshot_item(item_id="snap-2")]
         )
 
-        from langflow.api.v1.mappers.deployments.helpers import fetch_provider_snapshot_keys
+        from langflow.api.v1.mappers.deployments.sync import fetch_provider_snapshot_keys
 
         result = await fetch_provider_snapshot_keys(
             deployment_adapter=adapter,
@@ -770,7 +789,7 @@ class TestFetchProviderSnapshotKeys:
     async def test_empty_snapshot_ids_returns_empty_set(self):
         adapter = AsyncMock()
 
-        from langflow.api.v1.mappers.deployments.helpers import fetch_provider_snapshot_keys
+        from langflow.api.v1.mappers.deployments.sync import fetch_provider_snapshot_keys
 
         result = await fetch_provider_snapshot_keys(
             deployment_adapter=adapter,
@@ -788,7 +807,7 @@ class TestFetchProviderSnapshotKeys:
         adapter = AsyncMock()
         adapter.list_snapshots.side_effect = RuntimeError("provider down")
 
-        from langflow.api.v1.mappers.deployments.helpers import fetch_provider_snapshot_keys
+        from langflow.api.v1.mappers.deployments.sync import fetch_provider_snapshot_keys
 
         with pytest.raises(HTTPException) as exc_info:
             await fetch_provider_snapshot_keys(
@@ -817,7 +836,7 @@ def _mock_attachment(*, flow_version_id=None, provider_snapshot_id=None, deploym
 
 class TestSyncAttachmentSnapshotIds:
     @pytest.mark.asyncio
-    @patch(f"{MODULE}.delete_deployment_attachment", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.delete_deployment_attachment", new_callable=AsyncMock)
     async def test_deletes_stale_attachments(self, mock_delete_att):
         """Attachments with snapshot IDs not in the known set are deleted."""
         dep_id = uuid4()
@@ -829,7 +848,7 @@ class TestSyncAttachmentSnapshotIds:
             _mock_attachment(flow_version_id=fv_stale, provider_snapshot_id="snap-stale", deployment_id=dep_id),
         ]
 
-        from langflow.api.v1.mappers.deployments.helpers import sync_attachment_snapshot_ids
+        from langflow.api.v1.mappers.deployments.sync import sync_attachment_snapshot_ids
 
         counts = await sync_attachment_snapshot_ids(
             user_id=uid,
@@ -846,7 +865,7 @@ class TestSyncAttachmentSnapshotIds:
         assert call_kwargs["deployment_id"] == dep_id
 
     @pytest.mark.asyncio
-    @patch(f"{MODULE}.delete_deployment_attachment", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.delete_deployment_attachment", new_callable=AsyncMock)
     async def test_keeps_attachments_without_snapshot_id(self, mock_delete_att):
         """Attachments with no provider_snapshot_id are kept (not verified)."""
         dep_id = uuid4()
@@ -855,7 +874,7 @@ class TestSyncAttachmentSnapshotIds:
             _mock_attachment(provider_snapshot_id="", deployment_id=dep_id),
         ]
 
-        from langflow.api.v1.mappers.deployments.helpers import sync_attachment_snapshot_ids
+        from langflow.api.v1.mappers.deployments.sync import sync_attachment_snapshot_ids
 
         counts = await sync_attachment_snapshot_ids(
             user_id=uuid4(),
@@ -869,7 +888,7 @@ class TestSyncAttachmentSnapshotIds:
         mock_delete_att.assert_not_awaited()
 
     @pytest.mark.asyncio
-    @patch(f"{MODULE}.delete_deployment_attachment", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.delete_deployment_attachment", new_callable=AsyncMock)
     async def test_all_snapshots_known_nothing_deleted(self, mock_delete_att):
         dep_id = uuid4()
         attachments = [
@@ -877,7 +896,7 @@ class TestSyncAttachmentSnapshotIds:
             _mock_attachment(provider_snapshot_id="snap-2", deployment_id=dep_id),
         ]
 
-        from langflow.api.v1.mappers.deployments.helpers import sync_attachment_snapshot_ids
+        from langflow.api.v1.mappers.deployments.sync import sync_attachment_snapshot_ids
 
         counts = await sync_attachment_snapshot_ids(
             user_id=uuid4(),
@@ -898,14 +917,11 @@ class TestSyncAttachmentSnapshotIds:
 
 class TestSyncFlowVersionAttachments:
     @pytest.mark.asyncio
-    @patch(f"{MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
-    @patch(f"{MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
-    @patch(f"{MODULE}.get_deployment_adapter")
+    @patch(f"{SYNC_MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.get_deployment_adapter")
     @patch("langflow.api.v1.mappers.deployments.registry.get_deployment_mapper")
-    @patch(
-        "langflow.services.database.models.flow_version_deployment_attachment.crud.list_attachments_for_flow_with_provider_info",
-        new_callable=AsyncMock,
-    )
+    @patch(f"{SYNC_MODULE}.list_attachments_for_flow_with_provider_info", new_callable=AsyncMock)
     async def test_snapshot_cleanup_runs_inside_savepoint(
         self,
         mock_list_rows,
@@ -928,7 +944,7 @@ class TestSyncFlowVersionAttachments:
         db = MagicMock()
         db.begin_nested.return_value = _AsyncNoopSavepoint()
 
-        from langflow.api.v1.mappers.deployments.helpers import sync_flow_version_attachments
+        from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
 
         await sync_flow_version_attachments(
             db=db,
@@ -1241,8 +1257,8 @@ class TestWxoResolveRollbackUpdate:
 class TestListDeploymentsSyncedSnapshotPhase:
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
-    @patch(f"{MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_attachments_by_deployment_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
@@ -1288,7 +1304,7 @@ class TestListDeploymentsSyncedSnapshotPhase:
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_attachments_by_deployment_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
@@ -1327,7 +1343,7 @@ class TestListDeploymentsSyncedSnapshotPhase:
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_attachments_by_deployment_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
@@ -1366,8 +1382,8 @@ class TestListDeploymentsSyncedSnapshotPhase:
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
-    @patch(f"{MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_attachments_by_deployment_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)

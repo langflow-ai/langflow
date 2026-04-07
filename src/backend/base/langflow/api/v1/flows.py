@@ -34,7 +34,7 @@ from langflow.api.v1.flows_helpers import (
     _upsert_flow_list,
     _verify_fs_path,
 )
-from langflow.api.v1.mappers.deployments.helpers import sync_flow_deployment_state
+from langflow.api.v1.mappers.deployments.sync import sync_flow_deployment_state
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -86,7 +86,7 @@ router = APIRouter(prefix="/flows", tags=["Flows"])
 
 async def _try_flow_deployment_sync(
     *,
-    db,
+    db: DbSession,
     flow_ids: list[UUID],
     user_id: UUID,
     warning_message: str,

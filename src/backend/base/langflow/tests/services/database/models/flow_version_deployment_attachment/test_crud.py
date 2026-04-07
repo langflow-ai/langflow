@@ -484,6 +484,10 @@ class TestListAttachmentsForFlowWithProviderInfo:
         results = await list_attachments_for_flow_with_provider_info(db, user_id=user.id, flow_ids=[flow.id])
         assert results == []
 
+    async def test_empty_flow_ids_returns_empty(self, db: AsyncSession, user: User):
+        results = await list_attachments_for_flow_with_provider_info(db, user_id=user.id, flow_ids=[])
+        assert results == []
+
     async def test_multiple_versions_same_flow(
         self,
         db: AsyncSession,
@@ -507,6 +511,53 @@ class TestListAttachmentsForFlowWithProviderInfo:
 
         results = await list_attachments_for_flow_with_provider_info(db, user_id=user.id, flow_ids=[flow.id])
         assert len(results) == 2
+
+    async def test_multiple_flows_returns_attachments_for_each_flow(
+        self,
+        db: AsyncSession,
+        user: User,
+        flow: Flow,
+        flow_version: FlowVersion,
+        deployment: Deployment,
+    ):
+        second_flow = Flow(
+            id=uuid4(),
+            name="test-flow-2",
+            user_id=user.id,
+            folder_id=flow.folder_id,
+            data={"nodes": [], "edges": []},
+        )
+        db.add(second_flow)
+        await db.commit()
+        await db.refresh(second_flow)
+
+        second_flow_version = FlowVersion(
+            flow_id=second_flow.id,
+            user_id=user.id,
+            version_number=1,
+            data={"nodes": [], "edges": []},
+        )
+        db.add(second_flow_version)
+        await db.commit()
+        await db.refresh(second_flow_version)
+
+        await create_deployment_attachment(
+            db, user_id=user.id, flow_version_id=flow_version.id, deployment_id=deployment.id
+        )
+        await create_deployment_attachment(
+            db, user_id=user.id, flow_version_id=second_flow_version.id, deployment_id=deployment.id
+        )
+        await db.commit()
+
+        results = await list_attachments_for_flow_with_provider_info(
+            db,
+            user_id=user.id,
+            flow_ids=[flow.id, second_flow.id],
+        )
+
+        assert len(results) == 2
+        flow_version_ids = {attachment.flow_version_id for attachment, _, _ in results}
+        assert flow_version_ids == {flow_version.id, second_flow_version.id}
 
 
 @pytest.mark.asyncio
