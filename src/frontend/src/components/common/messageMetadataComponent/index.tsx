@@ -65,7 +65,7 @@ export default function MessageMetadata({
   return (
     <ShadTooltip
       content={tooltipContent}
-      styleClasses="border rounded-xl p-2 bg-zinc-700"
+      styleClasses="border rounded-xl p-2 bg-background"
       side="bottom"
     >
       <span className="ml-auto flex cursor-help items-center gap-1 font-mono text-xs font-normal text-accent-emerald-foreground">
