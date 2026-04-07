@@ -8,7 +8,7 @@ import {
 import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
 import { updateHiddenOutputs } from "./update-hidden-outputs";
 
-// Map to store debounced functions for each node ID
+// Map to store debounced functions for each node ID + parameter combination
 const debouncedFunctions = new Map<string, ReturnType<typeof debounce>>();
 
 export const mutateTemplate = async (
@@ -27,10 +27,12 @@ export const mutateTemplate = async (
   toolMode?: boolean,
   isRefresh?: boolean,
 ) => {
-  // Get or create a debounced function for this node ID
-  if (!debouncedFunctions.has(nodeId)) {
+  // Different parameters must debounce independently to avoid one field's
+  // refresh cancelling another's during concurrent mount calls.
+  const debounceKey = parameterName ? `${nodeId}-${parameterName}` : nodeId;
+  if (!debouncedFunctions.has(debounceKey)) {
     debouncedFunctions.set(
-      nodeId,
+      debounceKey,
       debounce(
         async (
           newValue,
@@ -87,8 +89,7 @@ export const mutateTemplate = async (
     );
   }
 
-  // Call the debounced function for this specific node
-  debouncedFunctions.get(nodeId)?.(
+  debouncedFunctions.get(debounceKey)?.(
     newValue,
     node,
     setNodeClass,

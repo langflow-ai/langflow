@@ -86,14 +86,17 @@ export default function Dropdown({
   const [pendingSelect, setPendingSelect] = useState<string | null>(null);
   const refButton = useRef<HTMLButtonElement>(null);
 
-  value = useMemo(() => {
-    // We should only reset the value if it's not in options and not in filteredOptions
-    // and not a recently added custom value
-    if (!options.includes(value) && !filteredOptions.includes(value)) {
+  // Reset the value when options are loaded and the current value is not among them.
+  // This is in a useEffect (not useMemo) to avoid calling setState during render.
+  // When options is empty, it means options are still loading, so we preserve the saved value.
+  useEffect(() => {
+    if (
+      options.length > 0 &&
+      !options.includes(value) &&
+      !filteredOptions.includes(value)
+    ) {
       if (value) onSelect("", undefined, true);
-      return null;
     }
-    return value;
   }, [value, options, filteredOptions]);
 
   // Initialize utilities and constants
@@ -301,7 +304,12 @@ export default function Dropdown({
         setFilteredMetadata(optionsMetaData);
       }
     }
-    if (!combobox && value && !validOptions.includes(value)) {
+    if (
+      !combobox &&
+      value &&
+      validOptions.length > 0 &&
+      !validOptions.includes(value)
+    ) {
       onSelect("", undefined, true);
     }
   }, [open, validOptions]);
