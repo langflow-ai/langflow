@@ -131,9 +131,11 @@ class ChatOutput(ChatComponent):
         message.sender = self.sender
         message.sender_name = self.sender_name
         # Preserve session_id from incoming message, or use component/graph session_id
-        message.session_id = (
-            self.session_id or existing_session_id or (self.graph.session_id if hasattr(self, "graph") else None) or ""
-        )
+        # Convert UUID to string if needed
+        graph_session_id = str(self.graph.session_id) if hasattr(self, "graph") and self.graph.session_id else None
+        # Ensure session_id is converted to string if it's a UUID
+        component_session_id = str(self.session_id) if self.session_id else None
+        message.session_id = component_session_id or existing_session_id or graph_session_id or ""
         message.context_id = self.context_id
         message.flow_id = self.graph.flow_id if hasattr(self, "graph") else None
         message.properties.source = self._build_source(source_id, display_name, source)
