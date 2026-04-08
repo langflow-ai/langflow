@@ -1,5 +1,7 @@
 """Tests for flow_builder_tools components."""
 
+import asyncio
+
 from lfx.mcp.flow_builder_tools import (
     AddComponent,
     BuildFlowFromSpec,
@@ -7,6 +9,8 @@ from lfx.mcp.flow_builder_tools import (
     DescribeComponentType,
     SearchComponentTypes,
     drain_flow_events,
+    get_working_flow,
+    init_working_flow,
     reset_working_flow,
 )
 
@@ -131,3 +135,45 @@ class TestConnectComponents:
         assert len(events) == 1
         assert events[0]["action"] == "connect"
         assert "edge" in events[0]
+
+
+class TestContextVarIsolation:
+    """Verify that concurrent async tasks get isolated working flow state."""
+
+    async def test_concurrent_tasks_have_isolated_state(self):
+        """Two tasks running in parallel should not see each other's working flow."""
+        results: dict[str, dict | None] = {}
+        barrier = asyncio.Barrier(2)
+
+        async def task_a():
+            init_working_flow({"name": "flow_a", "data": {"nodes": [], "edges": []}}, "id_a")
+            await barrier.wait()  # sync with task_b
+            # After task_b has set its own flow, task_a should still see flow_a
+            flow = get_working_flow()
+            results["a"] = flow
+            events_before = drain_flow_events()
+            results["a_events_before"] = len(events_before)
+            # Add an event in task_a's context
+            comp = AddComponent()
+            comp.set(component_type="ChatInput")
+            comp.add_component()
+            results["a_events_after"] = len(drain_flow_events())
+            reset_working_flow()
+
+        async def task_b():
+            init_working_flow({"name": "flow_b", "data": {"nodes": [], "edges": []}}, "id_b")
+            await barrier.wait()  # sync with task_a
+            flow = get_working_flow()
+            results["b"] = flow
+            results["b_events_before"] = len(drain_flow_events())
+            reset_working_flow()
+
+        await asyncio.gather(task_a(), task_b())
+
+        # Each task should have seen its own flow, not the other's
+        assert results["a"]["name"] == "flow_a"
+        assert results["b"]["name"] == "flow_b"
+        # Events should be isolated too
+        assert results["a_events_before"] == 0
+        assert results["b_events_before"] == 0
+        assert results["a_events_after"] == 1  # only task_a's AddComponent event

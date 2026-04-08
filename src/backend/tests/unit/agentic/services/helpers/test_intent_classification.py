@@ -115,6 +115,40 @@ class TestClassifyIntent:
             assert result.intent == "generate_component"
 
     @pytest.mark.asyncio
+    async def test_should_extract_build_flow_intent_from_plaintext(self):
+        """Plaintext fallback should recognize build_flow intent."""
+        mock_result = {"result": "The intent is build_flow. Translation: build a chatbot flow"}
+
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ):
+            result = await classify_intent(
+                text="construa um fluxo de chatbot",
+                global_variables={},
+            )
+
+            assert result.intent == "build_flow"
+
+    @pytest.mark.asyncio
+    async def test_should_extract_off_topic_intent_from_plaintext(self):
+        """Plaintext fallback should recognize off_topic intent."""
+        mock_result = {"result": "The intent is off_topic. Translation: how does kubernetes work"}
+
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ):
+            result = await classify_intent(
+                text="como funciona o kubernetes",
+                global_variables={},
+            )
+
+            assert result.intent == "off_topic"
+
+    @pytest.mark.asyncio
     async def test_should_extract_json_with_surrounding_text(self):
         """Models may return JSON embedded in explanatory text."""
         mock_result = {

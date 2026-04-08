@@ -91,6 +91,10 @@ async def classify_intent(
                     logger.info("Extracted generate_component intent from non-JSON response")
                     return IntentResult(translation=text, intent="generate_component")
 
+                if "build_flow" in response_text:
+                    logger.info("Extracted build_flow intent from non-JSON response")
+                    return IntentResult(translation=text, intent="build_flow")
+
                 if "off_topic" in response_text:
                     logger.info("Extracted off_topic intent from non-JSON response")
                     return IntentResult(translation=text, intent="off_topic")

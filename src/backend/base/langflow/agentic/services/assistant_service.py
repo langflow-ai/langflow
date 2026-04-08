@@ -67,12 +67,6 @@ async def _get_current_flow_summary(flow_id: str | None) -> str | None:
     return None
 
 
-if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Coroutine
-
-    from langflow.agentic.api.schemas import StepType
-
-
 async def execute_flow_with_validation(
     flow_filename: str,
     input_value: str,
@@ -385,10 +379,12 @@ async def execute_flow_with_validation_streaming(
                 reset_working_flow()
                 return
 
-            # Fallback: check for flow JSON in the response text
+            # Fallback: check for flow JSON in the response text.
+            # This only triggers if the agent produced raw JSON instead of using
+            # its tools -- likely a prompt or tool execution issue.
             flow_data = extract_flow_json(response_text)
             if flow_data and "data" in flow_data and "nodes" in flow_data.get("data", {}):
-                logger.info("Flow data found in response text, sending flow preview")
+                logger.warning("Flow data found as text instead of via tools -- agent may not be using tools correctly")
                 yield format_flow_preview_event(
                     flow_data=flow_data,
                     name=flow_data.get("name", ""),
@@ -564,3 +560,4 @@ async def execute_flow_with_validation_streaming(
         # Always set cancel event when generator exits to stop any pending flow execution
         logger.debug("Assistant generator exiting, setting cancel event")
         cancel_event.set()
+        reset_working_flow()

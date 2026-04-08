@@ -87,6 +87,64 @@ export function useAssistantChat(): UseAssistantChatReturn {
           }
           break;
         }
+        case "remove_component": {
+          const nodeId = event.component_id as string;
+          if (nodeId) {
+            const setNodes = useFlowStore.getState().setNodes;
+            const setEdges = useFlowStore.getState().setEdges;
+            setNodes((prev) =>
+              prev.filter((n) => (n as Record<string, unknown>).id !== nodeId),
+            );
+            setEdges((prev) =>
+              prev.filter((e) => {
+                const edge = e as Record<string, unknown>;
+                return edge.source !== nodeId && edge.target !== nodeId;
+              }),
+            );
+          }
+          break;
+        }
+        case "configure": {
+          const compId = event.component_id as string;
+          const params = event.params as Record<string, unknown>;
+          if (compId && params) {
+            const setNodes = useFlowStore.getState().setNodes;
+            setNodes((prev) =>
+              prev.map((n) => {
+                const node = n as Record<string, unknown>;
+                if (node.id !== compId) return n;
+                const data = node.data as Record<string, unknown>;
+                const innerNode = (data?.node ?? {}) as Record<string, unknown>;
+                const tpl = (innerNode?.template ?? {}) as Record<
+                  string,
+                  unknown
+                >;
+                return {
+                  ...node,
+                  data: {
+                    ...data,
+                    node: {
+                      ...innerNode,
+                      template: {
+                        ...tpl,
+                        ...Object.fromEntries(
+                          Object.entries(params).map(([k, v]) => [
+                            k,
+                            {
+                              ...(tpl[k] as Record<string, unknown>),
+                              value: v,
+                            },
+                          ]),
+                        ),
+                      },
+                    },
+                  },
+                } as never;
+              }),
+            );
+          }
+          break;
+        }
         default:
           break;
       }
