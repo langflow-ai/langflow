@@ -9,7 +9,9 @@
     "tar": "^7.5.7",
     "tar-fs": ">=2.1.4",
     "glob": "^11.1.0",
-    "test-exclude": "^7.0.0"
+    "test-exclude": "^7.0.0",
+    "picomatch": ">=4.0.4",
+    "playwright": "^1.59.1"
   },
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
@@ -69,7 +71,7 @@
     "openseadragon": "^4.1.1",
     "p-debounce": "^4.0.0",
     "pako": "^2.1.0",
-    "playwright": "^1.57.0",
+    "playwright": "^1.59.1",
     "pretty-ms": "^9.1.0",
     "react": "^19.2.1",
     "react-ace": "^14.0.1",

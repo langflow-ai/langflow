@@ -139,6 +139,9 @@ export const UserMessage = memo(
 
             {/* Content */}
             <div className="flex w-[94%] flex-col gap-2">
+              <span className="text-sm font-medium text-foreground">
+                {chat.sender_name ?? "User"}
+              </span>
               <div className="form-modal-chat-text-position flex-grow">
                 <div className="flex w-full flex-col">
                   {editMessage ? (
