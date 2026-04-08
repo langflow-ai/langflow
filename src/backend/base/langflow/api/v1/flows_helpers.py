@@ -102,13 +102,13 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
     else:
         # Relative path - validate that it's within the base directory
         relative_part = normalized_path.lstrip("/")
-        safe_path = base_dir / relative_part if relative_part else base_dir
         safe_path_stdlib = base_dir_stdlib / relative_part if relative_part else base_dir_stdlib
         try:
-            final_resolved_str = str(safe_path_stdlib.resolve())
+            resolved_path = safe_path_stdlib.resolve()
+            resolved_str = str(resolved_path)
 
             # Ensure resolved path stays within base (prevent symlink attacks)
-            if not final_resolved_str.startswith(base_dir_resolved):
+            if not resolved_str.startswith(base_dir_resolved):
                 raise HTTPException(
                     status_code=400,
                     detail="Invalid path: resolves outside allowed directory",
@@ -116,7 +116,8 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
         except (OSError, ValueError) as e:
             raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
 
-        return safe_path
+        # Return the resolved path to prevent TOCTOU symlink attacks
+        return Path(resolved_str)
 
 
 # Fields that may be updated via setattr on a Flow ORM instance.
