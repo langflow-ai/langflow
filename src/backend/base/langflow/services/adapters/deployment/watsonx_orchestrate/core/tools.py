@@ -562,7 +562,6 @@ async def verify_tools_by_ids(
             error_prefix=ErrorPrefix.LIST,
             log_msg="Unexpected error while verifying wxO tool snapshots by ID",
             resource="tool",
-            resource_name=unique_ids[0] if len(unique_ids) == 1 else None,
         )
 
     snapshots: list[SnapshotItem] = []
