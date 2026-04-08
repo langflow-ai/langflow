@@ -143,11 +143,13 @@ class TestContextVarIsolation:
     async def test_concurrent_tasks_have_isolated_state(self):
         """Two tasks running in parallel should not see each other's working flow."""
         results: dict[str, dict | None] = {}
-        barrier = asyncio.Barrier(2)
+        a_ready = asyncio.Event()
+        b_ready = asyncio.Event()
 
         async def task_a():
             init_working_flow({"name": "flow_a", "data": {"nodes": [], "edges": []}}, "id_a")
-            await barrier.wait()  # sync with task_b
+            a_ready.set()
+            await b_ready.wait()  # wait for task_b to init its flow
             # After task_b has set its own flow, task_a should still see flow_a
             flow = get_working_flow()
             results["a"] = flow
@@ -162,7 +164,8 @@ class TestContextVarIsolation:
 
         async def task_b():
             init_working_flow({"name": "flow_b", "data": {"nodes": [], "edges": []}}, "id_b")
-            await barrier.wait()  # sync with task_a
+            b_ready.set()
+            await a_ready.wait()  # wait for task_a to init its flow
             flow = get_working_flow()
             results["b"] = flow
             results["b_events_before"] = len(drain_flow_events())

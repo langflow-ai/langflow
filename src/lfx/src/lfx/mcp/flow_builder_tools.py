@@ -464,13 +464,18 @@ class ConfigureComponent(Component):
 
         flow = _ensure_working_flow()
 
-        raw = self.params.strip() if self.params else ""
-        try:
-            params = json.loads(raw)
-            if not isinstance(params, dict):
-                return Data(data={"error": f"params must be a JSON object, got {type(params).__name__}"})
-        except json.JSONDecodeError:
-            return Data(data={"error": f'Invalid JSON in params: {raw!r}. Use format: {{"key": "value"}}'})
+        # Accept params as dict (from tool framework) or JSON string
+        raw = self.params
+        if isinstance(raw, dict):
+            params = raw
+        else:
+            raw = (raw or "").strip()
+            try:
+                params = json.loads(raw)
+                if not isinstance(params, dict):
+                    return Data(data={"error": f"params must be a JSON object, got {type(params).__name__}"})
+            except json.JSONDecodeError:
+                return Data(data={"error": f'Invalid JSON in params: {raw!r}. Use format: {{"key": "value"}}'})
 
         try:
             fb_configure(flow, self.component_id, params)

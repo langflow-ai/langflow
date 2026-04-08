@@ -50,107 +50,99 @@ export function useAssistantChat(): UseAssistantChatReturn {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const addComponent = useAddComponent();
   const { mutateAsync: validateComponent } = usePostValidateComponentCode();
-  const paste = useFlowStore((state) => state.paste);
-
   /** Apply a flow_update event to the canvas in real time */
-  const applyFlowUpdate = useCallback(
-    (event: AgenticFlowUpdateEvent) => {
-      switch (event.action) {
-        case "set_flow": {
-          const flow = event.flow as {
-            data?: { nodes?: unknown[]; edges?: unknown[] };
-          };
-          if (flow?.data?.nodes) {
-            paste(
-              {
-                nodes: flow.data.nodes as never[],
-                edges: (flow.data.edges ?? []) as never[],
-              },
-              { x: 100, y: 100 },
-            );
-          }
-          break;
+  const applyFlowUpdate = useCallback((event: AgenticFlowUpdateEvent) => {
+    switch (event.action) {
+      case "set_flow": {
+        const flow = event.flow as {
+          data?: { nodes?: unknown[]; edges?: unknown[] };
+        };
+        if (flow?.data?.nodes) {
+          const setNodes = useFlowStore.getState().setNodes;
+          const setEdges = useFlowStore.getState().setEdges;
+          setNodes(flow.data.nodes as never[]);
+          setEdges((flow.data.edges ?? []) as never[]);
         }
-        case "add_component": {
-          const node = event.node as Record<string, unknown>;
-          if (node) {
-            const setNodes = useFlowStore.getState().setNodes;
-            setNodes((prev) => [...prev, node as never]);
-          }
-          break;
+        break;
+      }
+      case "add_component": {
+        const node = event.node as Record<string, unknown>;
+        if (node) {
+          const setNodes = useFlowStore.getState().setNodes;
+          setNodes((prev) => [...prev, node as never]);
         }
-        case "connect": {
-          const edge = event.edge as Record<string, unknown>;
-          if (edge) {
-            const setEdges = useFlowStore.getState().setEdges;
-            setEdges((prev) => [...prev, edge as never]);
-          }
-          break;
+        break;
+      }
+      case "connect": {
+        const edge = event.edge as Record<string, unknown>;
+        if (edge) {
+          const setEdges = useFlowStore.getState().setEdges;
+          setEdges((prev) => [...prev, edge as never]);
         }
-        case "remove_component": {
-          const nodeId = event.component_id as string;
-          if (nodeId) {
-            const setNodes = useFlowStore.getState().setNodes;
-            const setEdges = useFlowStore.getState().setEdges;
-            setNodes((prev) =>
-              prev.filter((n) => (n as Record<string, unknown>).id !== nodeId),
-            );
-            setEdges((prev) =>
-              prev.filter((e) => {
-                const edge = e as Record<string, unknown>;
-                return edge.source !== nodeId && edge.target !== nodeId;
-              }),
-            );
-          }
-          break;
+        break;
+      }
+      case "remove_component": {
+        const nodeId = event.component_id as string;
+        if (nodeId) {
+          const setNodes = useFlowStore.getState().setNodes;
+          const setEdges = useFlowStore.getState().setEdges;
+          setNodes((prev) =>
+            prev.filter((n) => (n as Record<string, unknown>).id !== nodeId),
+          );
+          setEdges((prev) =>
+            prev.filter((e) => {
+              const edge = e as Record<string, unknown>;
+              return edge.source !== nodeId && edge.target !== nodeId;
+            }),
+          );
         }
-        case "configure": {
-          const compId = event.component_id as string;
-          const params = event.params as Record<string, unknown>;
-          if (compId && params) {
-            const setNodes = useFlowStore.getState().setNodes;
-            setNodes((prev) =>
-              prev.map((n) => {
-                const node = n as Record<string, unknown>;
-                if (node.id !== compId) return n;
-                const data = node.data as Record<string, unknown>;
-                const innerNode = (data?.node ?? {}) as Record<string, unknown>;
-                const tpl = (innerNode?.template ?? {}) as Record<
-                  string,
-                  unknown
-                >;
-                return {
-                  ...node,
-                  data: {
-                    ...data,
-                    node: {
-                      ...innerNode,
-                      template: {
-                        ...tpl,
-                        ...Object.fromEntries(
-                          Object.entries(params).map(([k, v]) => [
-                            k,
-                            {
-                              ...(tpl[k] as Record<string, unknown>),
-                              value: v,
-                            },
-                          ]),
-                        ),
-                      },
+        break;
+      }
+      case "configure": {
+        const compId = event.component_id as string;
+        const params = event.params as Record<string, unknown>;
+        if (compId && params) {
+          const setNodes = useFlowStore.getState().setNodes;
+          setNodes((prev) =>
+            prev.map((n) => {
+              const node = n as Record<string, unknown>;
+              if (node.id !== compId) return n;
+              const data = node.data as Record<string, unknown>;
+              const innerNode = (data?.node ?? {}) as Record<string, unknown>;
+              const tpl = (innerNode?.template ?? {}) as Record<
+                string,
+                unknown
+              >;
+              return {
+                ...node,
+                data: {
+                  ...data,
+                  node: {
+                    ...innerNode,
+                    template: {
+                      ...tpl,
+                      ...Object.fromEntries(
+                        Object.entries(params).map(([k, v]) => [
+                          k,
+                          {
+                            ...(tpl[k] as Record<string, unknown>),
+                            value: v,
+                          },
+                        ]),
+                      ),
                     },
                   },
-                } as never;
-              }),
-            );
-          }
-          break;
+                },
+              } as never;
+            }),
+          );
         }
-        default:
-          break;
+        break;
       }
-    },
-    [paste],
-  );
+      default:
+        break;
+    }
+  }, []);
 
   const updateMessage = useCallback(
     (
