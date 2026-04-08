@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useGetDeploymentLlms } from "@/controllers/API/queries/deployments/use-get-deployment-llms";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
+import { useErrorAlert } from "../hooks/use-error-alert";
 
 const TYPE_OPTIONS = [
   {
@@ -38,12 +39,21 @@ export default function StepType() {
     selectedInstance,
   } = useDeploymentStepper();
 
+  const showErrorAlert = useErrorAlert();
+
   const providerId = selectedInstance?.id ?? "";
-  const { data: llmData, isLoading: llmsLoading } = useGetDeploymentLlms(
-    { providerId },
-    { enabled: !!providerId },
-  );
+  const {
+    data: llmData,
+    isLoading: llmsLoading,
+    error: llmsError,
+  } = useGetDeploymentLlms({ providerId }, { enabled: !!providerId });
   const llmModels = llmData?.provider_data?.models ?? [];
+
+  useEffect(() => {
+    if (llmsError) {
+      showErrorAlert("Failed to load models", llmsError);
+    }
+  }, [llmsError, showErrorAlert]);
 
   const [showScrollHint, setShowScrollHint] = useState(true);
   const contentRef = useCallback((node: HTMLDivElement | null) => {
@@ -136,8 +146,12 @@ export default function StepType() {
         <span className="pb-2 text-sm font-medium">
           Model <span className="text-destructive">*</span>
         </span>
-        <Select value={selectedLlm} onValueChange={setSelectedLlm}>
-          <SelectTrigger className="bg-muted">
+        <Select
+          value={selectedLlm}
+          onValueChange={setSelectedLlm}
+          onOpenChange={(open) => open && setShowScrollHint(true)}
+        >
+          <SelectTrigger className="bg-muted focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-foreground">
             <SelectValue
               placeholder={llmsLoading ? "Loading models..." : "Select a model"}
             />
@@ -146,7 +160,6 @@ export default function StepType() {
             side="bottom"
             className="relative max-h-60 overflow-y-auto"
             ref={contentRef}
-            onOpenAutoFocus={() => setShowScrollHint(true)}
           >
             {!llmsLoading && llmModels.length === 0 && (
               <SelectItem value="__empty__" disabled>
