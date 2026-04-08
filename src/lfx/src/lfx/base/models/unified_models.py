@@ -280,14 +280,26 @@ def apply_provider_variable_config_to_build_config(
         env_var_key = var_info.get("variable_key")
         if env_var_key:
             env_value = os.environ.get(env_var_key)
+            # Only set the value if the field is currently empty or not already set to load from db
+            # This prevents overwriting user-selected global variables
+            current_value = field_config.get("value")
+            current_load_from_db = field_config.get("load_from_db", False)
+
             if env_value and str(env_value).strip():
-                field_config["value"] = env_var_key
-                field_config["load_from_db"] = True
-                logger.debug(
-                    "Set field %s to env var name %s (value resolved at runtime)",
-                    field_name,
-                    env_var_key,
-                )
+                # Only auto-set if field is empty or not already loading from db
+                if not current_value or (not current_load_from_db):
+                    field_config["value"] = env_var_key
+                    field_config["load_from_db"] = True
+                    logger.debug(
+                        "Set field %s to env var name %s (value resolved at runtime)",
+                        field_name,
+                        env_var_key,
+                    )
+                else:
+                    logger.debug(
+                        "Skipping auto-set for field %s - user has already selected a value (load_from_db=True)",
+                        field_name,
+                    )
 
     return build_config
 
@@ -503,20 +515,31 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     if not variable_name:
         return None
 
-    # Try to get from global variables
+    # Try to get from global variables, fall back to environment
     async def _get_variable():
         async with session_scope() as session:
             variable_service = get_variable_service()
             if variable_service is None:
                 return None
-            return await variable_service.get_variable(
-                user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
-                name=variable_name,
-                field="",
-                session=session,
-            )
+            try:
+                return await variable_service.get_variable(
+                    user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                    name=variable_name,
+                    field="",
+                    session=session,
+                )
+            except ValueError:
+                return None
 
-    return run_until_complete(_get_variable())
+    try:
+        api_key = run_until_complete(_get_variable())
+    except (ValueError, Exception):  # noqa: BLE001
+        api_key = None
+
+    if api_key:
+        return api_key
+
+    return os.getenv(variable_name)
 
 
 def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
