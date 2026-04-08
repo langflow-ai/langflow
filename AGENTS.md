@@ -198,3 +198,147 @@ cd docs
 yarn install
 yarn start        # Dev server on port 3000 (prompts for 3001 if 3000 is in use)
 ```
+
+## Local Setup with Colima (Verified)
+
+This section documents a tested Colima-based local run for Langflow built from this repository source code (not the prebuilt `langflowai/langflow` image).
+
+### Prerequisites
+
+- Colima installed on macOS
+- Internet access to pull base images and dependencies
+- Host port `7860` available
+
+### Start Colima
+
+Use a stable resource profile and enable VM network addressing:
+
+```bash
+colima start --cpu 4 --memory 8 --disk 100 --runtime containerd --network-address
+```
+
+Verify:
+
+```bash
+colima status
+colima list
+```
+
+Expected: runtime `containerd` and an address like `192.168.64.2`.
+
+### Build Langflow image from local repository sources
+
+```bash
+colima ssh -- sudo -n nerdctl build -t local-langflow-src -f "/Users/vasidmi/Documents/Github/bitmanager/langflow/docker/build_and_push.Dockerfile" "/Users/vasidmi/Documents/Github/bitmanager/langflow"
+```
+
+### Run Langflow from the locally built image
+
+```bash
+colima ssh -- bash -lc 'sudo -n nerdctl rm -f langflow-local-src >/dev/null 2>&1 || true; sudo -n nerdctl run -d --name langflow-local-src -p 7860:7860 local-langflow-src:latest'
+```
+
+Check container:
+
+```bash
+colima ssh -- sudo -n nerdctl ps --filter name=langflow-local-src
+```
+
+### Verify Access
+
+```bash
+curl -sS -o /tmp/langflow_src_localhost.html -w "%{http_code}" http://127.0.0.1:7860/
+curl -sS -o /tmp/langflow_src_ip.html -w "%{http_code}" http://192.168.64.2:7860/
+```
+
+Expected HTTP status code: `200`.
+
+Open in browser:
+
+- `http://localhost:7860`
+- `http://192.168.64.2:7860`
+
+### Logs and Recovery
+
+```bash
+colima ssh -- sudo -n nerdctl logs --tail 120 langflow-local-src
+```
+
+If runtime becomes unstable:
+
+```bash
+colima stop
+colima start --cpu 4 --memory 8 --disk 100 --runtime containerd --network-address
+```
+
+Then rerun the build and run commands.
+
+### Stop and Cleanup
+
+```bash
+colima ssh -- sudo -n nerdctl rm -f langflow-local-src
+colima stop
+```
+
+## Local Setup with Colima (Backend-only + Local Frontend, Verified)
+
+This section documents a tested flow where backend + database run in Colima containers, while frontend runs locally on the host in dev mode.
+
+### Build backend-only image from local source
+
+```bash
+colima ssh -- sudo -n nerdctl build -t local-langflow-backend-src -f "/Users/vasidmi/Documents/Github/bitmanager/langflow/docker/build_and_push_backend.Dockerfile" "/Users/vasidmi/Documents/Github/bitmanager/langflow"
+```
+
+### Start backend database and backend-only API
+
+Create an isolated network and start PostgreSQL:
+
+```bash
+colima ssh -- bash -lc 'sudo -n nerdctl network create langflow-backend-dev >/dev/null 2>&1 || true'
+colima ssh -- bash -lc 'sudo -n nerdctl rm -f langflow-postgres-local langflow-backend-local >/dev/null 2>&1 || true'
+colima ssh -- bash -lc 'sudo -n nerdctl run -d --name langflow-postgres-local --network langflow-backend-dev -e POSTGRES_USER=langflow -e POSTGRES_PASSWORD=langflow -e POSTGRES_DB=langflow -p 5433:5432 pgvector/pgvector:pg16'
+```
+
+Start backend-only Langflow and connect it to PostgreSQL:
+
+```bash
+colima ssh -- bash -lc 'sudo -n nerdctl run -d --name langflow-backend-local --network langflow-backend-dev -p 7860:7860 -e LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@langflow-postgres-local:5432/langflow -e LANGFLOW_SUPERUSER=langflow -e LANGFLOW_SUPERUSER_PASSWORD=langflow local-langflow-backend-src:latest'
+```
+
+### Verify backend API
+
+```bash
+colima ssh -- sudo -n nerdctl ps --filter name=langflow-backend-local --filter name=langflow-postgres-local
+curl -sS -o /tmp/langflow_backend_health.json -w "%{http_code}" http://127.0.0.1:7860/health
+```
+
+Expected health status code: `200`.
+
+### Run frontend locally (host machine)
+
+From repository root:
+
+```bash
+VITE_PROXY_TARGET=http://localhost:7860 make frontend
+```
+
+This starts Vite on port `3000` and proxies API/health calls to backend on port `7860`.
+
+Alternative direct command:
+
+```bash
+VITE_PROXY_TARGET=http://localhost:7860 npm --prefix src/frontend start
+```
+
+If your frontend stack uses Bun instead of npm, run the equivalent dev command (for example `VITE_PROXY_TARGET=http://localhost:7860 bun dev`).
+
+### Backend-only logs and cleanup
+
+```bash
+colima ssh -- sudo -n nerdctl logs --tail 120 langflow-backend-local
+colima ssh -- sudo -n nerdctl rm -f langflow-backend-local langflow-postgres-local
+```
+
+
+
