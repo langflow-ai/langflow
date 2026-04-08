@@ -20,7 +20,7 @@ export default function ProviderCredentialsForm({
     <>
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          Service Environment URL <span className="text-destructive">*</span>
+          Service Instance URL <span className="text-destructive">*</span>
         </span>
         <Input
           type="url"
