@@ -152,11 +152,19 @@ export async function handleMCPOAuthFlow(
       scopes,
     });
 
-    // Open the OAuth popup
+    // Open the OAuth popup centered on the current screen
+    const popupWidth = 600;
+    const popupHeight = 700;
+    const left = Math.round(
+      window.screenX + (window.outerWidth - popupWidth) / 2,
+    );
+    const top = Math.round(
+      window.screenY + (window.outerHeight - popupHeight) / 2,
+    );
     const popup = window.open(
       auth_url,
       "mcp_oauth_popup",
-      "width=600,height=700,menubar=no,toolbar=no,location=no,status=no",
+      `width=${popupWidth},height=${popupHeight},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`,
     );
 
     if (!popup) {

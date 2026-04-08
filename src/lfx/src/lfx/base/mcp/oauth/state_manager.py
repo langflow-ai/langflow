@@ -7,6 +7,7 @@ the CacheService, enabling OAuth flows to work in multi-instance deployments.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import secrets
 from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
@@ -428,16 +429,18 @@ class OAuthStateManager:
             return True
         return False
 
+    def _is_async_cache(self) -> bool:
+        """Return True if the cache's get method is a coroutine function."""
+        return inspect.iscoroutinefunction(self._cache.get)
+
     async def _cache_get(self, key: str) -> Any:
         """Get value from cache, handling both sync and async caches."""
         from lfx.services.cache.utils import CACHE_MISS
 
         try:
-            if hasattr(self._cache, "lock"):
-                # Async cache (AsyncInMemoryCache, RedisCache)
+            if self._is_async_cache():
                 result = await self._cache.get(key)
             else:
-                # Sync cache (ThreadingInMemoryCache)
                 result = self._cache.get(key)
 
             # Handle CACHE_MISS sentinel
@@ -452,11 +455,9 @@ class OAuthStateManager:
     async def _cache_set(self, key: str, value: Any) -> None:
         """Set value in cache, handling both sync and async caches."""
         try:
-            if hasattr(self._cache, "lock"):
-                # Async cache
+            if self._is_async_cache():
                 await self._cache.set(key, value)
             else:
-                # Sync cache
                 self._cache.set(key, value)
         except Exception as e:  # noqa: BLE001
             await logger.awarning(f"Cache set error for key {key}: {e}")
@@ -464,11 +465,9 @@ class OAuthStateManager:
     async def _cache_delete(self, key: str) -> None:
         """Delete value from cache, handling both sync and async caches."""
         try:
-            if hasattr(self._cache, "lock"):
-                # Async cache
+            if self._is_async_cache():
                 await self._cache.delete(key)
             else:
-                # Sync cache
                 self._cache.delete(key)
         except Exception as e:  # noqa: BLE001
             await logger.awarning(f"Cache delete error for key {key}: {e}")
@@ -476,17 +475,35 @@ class OAuthStateManager:
 
 # Global instance, lazily initialized
 _state_manager: OAuthStateManager | None = None
+_state_manager_lock: asyncio.Lock | None = None
+
+
+def _get_state_manager_lock() -> asyncio.Lock:
+    """Return (or lazily create) the module-level initialisation lock."""
+    global _state_manager_lock  # noqa: PLW0603
+    if _state_manager_lock is None:
+        _state_manager_lock = asyncio.Lock()
+    return _state_manager_lock
 
 
 async def get_oauth_state_manager() -> OAuthStateManager:
     """Get or create the global OAuth state manager instance.
+
+    Uses a double-checked locking pattern so that concurrent coroutines
+    never create more than one OAuthStateManager.
 
     Returns:
         The OAuth state manager singleton.
     """
     global _state_manager  # noqa: PLW0603
 
-    if _state_manager is None:
+    if _state_manager is not None:
+        return _state_manager
+
+    async with _get_state_manager_lock():
+        if _state_manager is not None:
+            return _state_manager
+
         from langflow.services.deps import get_cache_service
 
         cache_service = get_cache_service()

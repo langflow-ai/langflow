@@ -63,30 +63,50 @@ class UserScopedTokenStorage:
         """
         await self._state_manager.store_tokens(self._user_id, self._server_key, tokens.model_dump())
 
+    def _client_info_key(self) -> str:
+        """Cache key for persisting client registration information."""
+        return f"client_info:{self._user_id}:{self._server_key}"
+
     async def get_client_info(self) -> OAuthClientInformationFull | None:
         """Retrieve stored client information.
 
-        Note: Client info is stored in memory only as it's typically
-        provided at initialization time for deployed environments.
+        Checks the in-memory cache first; falls back to the shared cache so
+        dynamically-registered client credentials survive across new
+        UserScopedTokenStorage instances (e.g. after server restart).
 
         Returns:
             The stored OAuthClientInformationFull if available, None otherwise.
         """
+        if self._client_info is not None:
+            return self._client_info
+
+        from mcp.shared.auth import OAuthClientInformationFull
+
+        data = await self._state_manager.get_tokens(self._user_id, self._client_info_key())
+        if data:
+            self._client_info = OAuthClientInformationFull.model_validate(data)
         return self._client_info
 
     async def set_client_info(self, client_info: OAuthClientInformationFull) -> None:
         """Store client information from dynamic registration.
 
+        Persists to the shared cache so the registration survives new
+        UserScopedTokenStorage instances created for subsequent requests.
+
         Args:
             client_info: The OAuthClientInformationFull to store.
         """
         self._client_info = client_info
+        await self._state_manager.store_tokens(
+            self._user_id, self._client_info_key(), client_info.model_dump()
+        )
 
     async def clear(self) -> None:
-        """Remove all stored tokens for this user and server.
+        """Remove all stored tokens and client info for this user and server.
 
         This is useful when the user wants to re-authenticate or when
         stored credentials are no longer valid.
         """
         await self._state_manager.delete_tokens(self._user_id, self._server_key)
+        await self._state_manager.delete_tokens(self._user_id, self._client_info_key())
         self._client_info = None

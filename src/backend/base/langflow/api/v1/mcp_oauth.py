@@ -39,6 +39,10 @@ from langflow.api.v1.schemas import (
 
 router = APIRouter(prefix="/mcp/oauth", tags=["mcp-oauth"])
 
+# Module-level set to hold references to background OAuth tasks, preventing
+# premature garbage collection before the 600-second flow timeout expires.
+_oauth_tasks: set[asyncio.Task] = set()
+
 
 # HTML templates for callback responses
 SUCCESS_HTML = """<!DOCTYPE html>
@@ -230,8 +234,11 @@ async def initiate_oauth_flow(
                     {"status": "error", "error_message": str(e)},
                 )
 
-        # Start the OAuth flow in the background
-        asyncio.create_task(run_oauth_flow())  # noqa: RUF006
+        # Start the OAuth flow in the background, storing the reference in the
+        # module-level set so the task is not garbage-collected before completion.
+        task = asyncio.create_task(run_oauth_flow())
+        _oauth_tasks.add(task)
+        task.add_done_callback(_oauth_tasks.discard)
 
         # Wait for auth_url to be available (up to 30 seconds)
         # This allows the frontend to get the auth_url directly from /initiate

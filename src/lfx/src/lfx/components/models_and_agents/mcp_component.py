@@ -662,7 +662,9 @@ class MCPToolsComponent(ComponentWithCache):
                     mcp_server = build_config.get("mcp_server", {}).get("value")
                     server_url = None
                     if isinstance(mcp_server, dict):
-                        server_url = mcp_server.get("url")
+                        server_config = mcp_server.get("config", {})
+                        if isinstance(server_config, dict):
+                            server_url = server_config.get("url")
                     elif isinstance(mcp_server, str) and mcp_server.startswith("http"):
                         server_url = mcp_server
 
