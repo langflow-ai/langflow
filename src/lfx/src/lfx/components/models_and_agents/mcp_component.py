@@ -143,6 +143,7 @@ class MCPToolsComponent(ComponentWithCache):
             show=False,
             required=True,
             real_time_refresh=True,
+            refresh_button=True,
         ),
         MessageTextInput(
             name="tool_placeholder",
@@ -505,9 +506,26 @@ class MCPToolsComponent(ComponentWithCache):
                         build_config["tool"]["options"] = [tool.name for tool in cached_tools]
                         build_config["tool"]["placeholder"] = "Select a tool"
                     else:
-                        # Show loading state only when we need to fetch tools
-                        build_config["tool"]["placeholder"] = "Loading tools..."
-                        build_config["tool"]["options"] = []
+                        # Actually fetch tools now instead of deferring to a frontend callback.
+                        # The frontend has no reliable mechanism to trigger a second
+                        # update_build_config call for the "tool" field after this response,
+                        # so we must populate the options here.
+                        try:
+                            self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list(
+                                mcp_server_value=field_value
+                            )
+                            build_config["tool"]["options"] = [tool.name for tool in self.tools]
+                            build_config["tool"]["placeholder"] = "Select a tool"
+                        except (TimeoutError, asyncio.TimeoutError) as e:
+                            msg = f"Timeout loading tools for MCP server: {e!s}"
+                            await logger.awarning(msg)
+                            build_config["tool"]["options"] = []
+                            build_config["tool"]["placeholder"] = "Timeout on MCP server"
+                        except (ValueError, ImportError, ConnectionError, OSError, RuntimeError) as e:
+                            msg = f"Error loading tools for MCP server: {e!s}"
+                            await logger.awarning(msg)
+                            build_config["tool"]["options"] = []
+                            build_config["tool"]["placeholder"] = "Error on MCP Server"
                     # Force a value refresh only when the user genuinely switched servers.
                     # server_changed is only True for real user-initiated changes (not initial load).
                     if server_changed:
@@ -526,9 +544,22 @@ class MCPToolsComponent(ComponentWithCache):
                     self._not_load_actions = True
                 else:
                     build_config["tool"]["value"] = uuid.uuid4()
-                    build_config["tool"]["options"] = []
                     build_config["tool"]["show"] = True
-                    build_config["tool"]["placeholder"] = "Loading tools..."
+                    # Fetch tools immediately instead of showing "Loading tools..."
+                    try:
+                        self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
+                        build_config["tool"]["options"] = [tool.name for tool in self.tools]
+                        build_config["tool"]["placeholder"] = "Select a tool"
+                    except (TimeoutError, asyncio.TimeoutError) as e:
+                        msg = f"Timeout loading tools when toggling tool mode: {e!s}"
+                        await logger.awarning(msg)
+                        build_config["tool"]["options"] = []
+                        build_config["tool"]["placeholder"] = "Timeout on MCP server"
+                    except (ValueError, ImportError, ConnectionError, OSError, RuntimeError) as e:
+                        msg = f"Error loading tools when toggling tool mode: {e!s}"
+                        await logger.awarning(msg)
+                        build_config["tool"]["options"] = []
+                        build_config["tool"]["placeholder"] = "Error on MCP Server"
             elif field_name == "tools_metadata":
                 self._not_load_actions = False
 

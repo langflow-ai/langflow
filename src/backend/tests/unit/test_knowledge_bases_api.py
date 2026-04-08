@@ -694,6 +694,20 @@ class TestKnowledgeBaseAPI:
         assert data["page"] == 2
         mock_collection.get.assert_called_with(include=["documents", "metadatas"], limit=10, offset=10)
 
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_get_chunks_non_existent_kb_returns_404(
+        self,
+        mock_root,
+        client: AsyncClient,
+        logged_in_headers,
+        tmp_path,
+    ):
+        mock_root.return_value = tmp_path
+
+        response = await client.get("api/v1/knowledge_bases/MissingKB/chunks", headers=logged_in_headers)
+
+        assert response.status_code == 404
+
 
 class TestPerformIngestionTask:
     """Tests for the internal KBIngestionHelper.perform_ingestion background task."""

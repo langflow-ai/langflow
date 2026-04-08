@@ -23,6 +23,7 @@ from .payloads import (
     T_ProviderResult,
     T_SnapshotListParams,
     T_SnapshotListResult,
+    T_SnapshotUpdateResult,
 )
 from .service import DeploymentService
 
@@ -52,4 +53,5 @@ __all__ = [
     "T_ProviderResult",
     "T_SnapshotListParams",
     "T_SnapshotListResult",
+    "T_SnapshotUpdateResult",
 ]
