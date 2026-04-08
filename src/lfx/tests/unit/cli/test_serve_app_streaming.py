@@ -1,14 +1,46 @@
 """Unit tests for streaming functionality in multi-serve app."""
 
 import asyncio
+import hashlib
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 from lfx.cli.serve_app import FlowMeta, StreamRequest, create_multi_serve_app
+from lfx.interface.components import component_cache
+
+
+def _make_settings_service(*, allow_custom_components: bool = False):
+    return SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=allow_custom_components,
+        )
+    )
+
+
+def _blocked_raw_graph() -> dict:
+    return {
+        "nodes": [
+            {
+                "id": "node-1",
+                "data": {
+                    "id": "node-1",
+                    "type": "TotallyCustom",
+                    "node": {
+                        "display_name": "Blocked Node",
+                        "template": {
+                            "code": {"value": "print('blocked')"},
+                        },
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
 
 
 class MockNode:
@@ -44,6 +76,7 @@ class MockGraph:
             "output_node": MockNode("output_node", "ChatOutput", "Chat Output"),
         }
         self.edges = edges or [MockEdge("input_node", "output_node")]
+        self.raw_graph_data = {"nodes": [], "edges": []}
 
 
 @pytest.fixture
@@ -78,8 +111,11 @@ def mock_metas():
 @pytest.fixture
 def multi_serve_app(mock_graphs, mock_metas, monkeypatch):
     """Create a multi-serve app for testing."""
+    from lfx.services.deps import get_settings_service
+
     # Set required environment variable
     monkeypatch.setenv("LANGFLOW_API_KEY", "test-api-key")
+    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
 
     with patch("lfx.cli.serve_app.execute_graph_with_capture") as mock_execute:
         # Mock successful execution
@@ -383,3 +419,65 @@ class TestMultiServeStreaming:
             for response in responses:
                 assert response.status_code == 200
                 assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+    @pytest.mark.asyncio
+    async def test_stream_blocks_custom_components_when_disabled(
+        self,
+        mock_graphs,
+        mock_metas,
+        monkeypatch,
+    ):
+        """Test that /stream returns an error stream when validation blocks the flow."""
+        monkeypatch.setenv("LANGFLOW_API_KEY", "test-api-key")
+        mock_graphs["flow1"].raw_graph_data = _blocked_raw_graph()
+
+        app = create_multi_serve_app(
+            root_dir=Path("/tmp"),
+            graphs=mock_graphs,
+            metas=mock_metas,
+            verbose_print=lambda _: None,
+        )
+
+        from lfx.cli.serve_app import verify_api_key
+
+        def mock_verify_api_key() -> str:
+            return "test-api-key"
+
+        app.dependency_overrides[verify_api_key] = mock_verify_api_key
+
+        async with (
+            LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+            AsyncClient(
+                transport=ASGITransport(app=manager.app),
+                base_url="http://testserver/",
+                http2=True,
+            ) as client,
+        ):
+            with (
+                patch(
+                    "lfx.services.deps.get_settings_service",
+                    return_value=_make_settings_service(allow_custom_components=False),
+                ),
+                patch(
+                    "lfx.utils.flow_validation.ensure_component_hash_lookups_loaded",
+                    new=AsyncMock(return_value={"ChatInput": {hashlib.sha256(b"known").hexdigest()[:12]}}),
+                ),
+                patch.object(
+                    component_cache,
+                    "type_to_current_hash",
+                    {"ChatInput": {hashlib.sha256(b"known").hexdigest()[:12]}},
+                ),
+                patch(
+                    "lfx.cli.serve_app.run_flow_generator_for_serve",
+                    new=AsyncMock(),
+                ) as mock_run_flow,
+            ):
+                response = await client.post(
+                    "/flows/flow1/stream",
+                    json={"input_value": "test"},
+                    headers={"x-api-key": "test-api-key"},
+                )
+
+        assert response.status_code == 200
+        assert "custom components are not allowed" in response.text
+        mock_run_flow.assert_not_called()

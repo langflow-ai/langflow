@@ -1,0 +1,34 @@
+/**
+ * Match Infima `.badge` sizing (see DocVersionBadge: badge badge--secondary)
+ * so the control aligns with the version pill in docMetaRow.
+ */
+.root {
+  display: contents;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 75%;
+  font-weight: var(--ifm-font-weight-bold);
+  line-height: 1;
+  padding: var(--ifm-badge-padding-vertical) var(--ifm-badge-padding-horizontal);
+  border-radius: var(--ifm-badge-border-radius);
+  border: var(--ifm-badge-border-width) solid var(--ifm-color-secondary-dark);
+  background-color: var(--ifm-background-surface-color);
+  color: var(--ifm-font-color-base);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.label {
+  font: inherit;
+}

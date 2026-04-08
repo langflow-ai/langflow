@@ -14,6 +14,7 @@ from lfx.cli.script_loader import extract_structured_result
 from lfx.events.event_manager import EventManager, create_default_event_manager
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
+from lfx.utils.flow_validation import CustomComponentValidationError
 
 from langflow.agentic.services.flow_types import (
     STREAMING_QUEUE_MAX_SIZE,
@@ -47,6 +48,11 @@ async def _run_graph_with_events(
             if "request_variables" not in graph.context:
                 graph.context["request_variables"] = {}
             graph.context["request_variables"].update(global_variables)
+
+        flow_id = (global_variables or {}).get("FLOW_ID")
+        if flow_id:
+            graph.flow_id = flow_id
+        graph.flow_name = graph.flow_name or "Assistant Flow"
 
         graph.prepare()
         inputs = InputValueRequest(input_value=input_value) if input_value else None
@@ -96,7 +102,14 @@ async def execute_flow_file(
     flow_path, flow_type = resolve_flow_path(flow_filename)
 
     try:
-        graph = await load_graph_for_execution(flow_path, flow_type, provider, model_name, api_key_var)
+        graph = await load_graph_for_execution(
+            flow_path,
+            flow_type,
+            provider,
+            model_name,
+            api_key_var,
+            provider_vars=global_variables,
+        )
 
         if user_id:
             graph.user_id = user_id
@@ -108,6 +121,11 @@ async def execute_flow_file(
                 graph.context["request_variables"] = {}
             graph.context["request_variables"].update(global_variables)
 
+        flow_id = (global_variables or {}).get("FLOW_ID")
+        if flow_id:
+            graph.flow_id = flow_id
+        graph.flow_name = graph.flow_name or flow_filename
+
         graph.prepare()
         inputs = InputValueRequest(input_value=input_value) if input_value else None
 
@@ -116,9 +134,14 @@ async def execute_flow_file(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except CustomComponentValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except ValueError as e:
         logger.error(f"Flow execution error: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while executing the flow.") from e
+    except Exception as e:
+        logger.error(f"Flow execution error: {e}")
+        raise HTTPException(status_code=500, detail="An internal error occurred while executing the flow.") from e
 
 
 async def execute_flow_file_streaming(
@@ -164,7 +187,17 @@ async def execute_flow_file_streaming(
     flow_path, flow_type = resolve_flow_path(flow_filename)
 
     try:
-        graph = await load_graph_for_execution(flow_path, flow_type, provider, model_name, api_key_var)
+        graph = await load_graph_for_execution(
+            flow_path,
+            flow_type,
+            provider,
+            model_name,
+            api_key_var,
+            provider_vars=global_variables,
+        )
+    except CustomComponentValidationError as e:
+        logger.error(f"Flow preparation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except (json.JSONDecodeError, OSError, ValueError) as e:
         logger.error(f"Flow preparation error: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while preparing the flow.") from e
@@ -212,8 +245,10 @@ async def execute_flow_file_streaming(
         return
 
     if execution_result.has_error:
+        logger.error(f"Flow execution error: {execution_result.error}")
         raise HTTPException(
-            status_code=500, detail="An error occurred while executing the flow."
+            status_code=500,
+            detail="An internal error occurred while executing the flow.",
         ) from execution_result.error
 
     yield ("end", execution_result.result if execution_result.has_result else {})
