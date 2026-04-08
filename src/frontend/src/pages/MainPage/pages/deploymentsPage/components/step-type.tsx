@@ -148,6 +148,11 @@ export default function StepType() {
             ref={contentRef}
             onOpenAutoFocus={() => setShowScrollHint(true)}
           >
+            {!llmsLoading && llmModels.length === 0 && (
+              <SelectItem value="__empty__" disabled>
+                No models available for selected environment
+              </SelectItem>
+            )}
             {llmModels.map((model) => (
               <SelectItem key={model.model_name} value={model.model_name}>
                 {model.model_name}

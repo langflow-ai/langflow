@@ -59,7 +59,7 @@ describe("Rendering", () => {
     expect(screen.getByText("watsonx Orchestrate")).toBeInTheDocument();
   });
 
-  it("renders form fields: Name, API Key, Service Environment URL", () => {
+  it("renders form fields: Name, API Key, Service Instance URL", () => {
     renderModal();
     expect(screen.getByPlaceholderText("e.g. Production")).toBeInTheDocument();
     expect(
