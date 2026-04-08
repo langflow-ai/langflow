@@ -27,6 +27,8 @@ from lfx.services.adapters.deployment.schema import (
     ExecutionCreateResult,
     ExecutionStatusResult,
     ItemResult,
+    SnapshotItem,
+    SnapshotListResult,
 )
 from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot, PayloadSlotPolicy
 from lfx.services.adapters.schema import AdapterType
@@ -46,7 +48,7 @@ class _ApiUpdate(BaseModel):
 
 
 class _ApiCreate(BaseModel):
-    resource_name_prefix: str
+    label: str
 
 
 class _ApiExecutionInput(BaseModel):
@@ -178,8 +180,10 @@ async def test_base_mapper_resolve_deployment_create_passthrough_without_flow_ve
     mapper = BaseDeploymentMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        spec={"name": "create-deploy", "description": "", "type": "agent"},
-        provider_data={"resource_name_prefix": "lf_test_"},
+        name="create-deploy",
+        description="",
+        type="agent",
+        provider_data={"some_key": "some_value"},
     )
 
     resolved = await mapper.resolve_deployment_create(
@@ -191,7 +195,7 @@ async def test_base_mapper_resolve_deployment_create_passthrough_without_flow_ve
 
     assert resolved.snapshot is None
     assert resolved.config is None
-    assert resolved.provider_data == {"resource_name_prefix": "lf_test_"}
+    assert resolved.provider_data == {"some_key": "some_value"}
 
 
 @pytest.mark.asyncio
@@ -199,8 +203,10 @@ async def test_base_mapper_resolve_deployment_create_validates_provider_data_whe
     mapper = _TypedMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        spec={"name": "create-deploy", "description": "", "type": "agent"},
-        provider_data={"resource_name_prefix": "lf_test_"},
+        name="create-deploy",
+        description="",
+        type="agent",
+        provider_data={"label": "some_value"},
     )
 
     resolved = await mapper.resolve_deployment_create(
@@ -210,7 +216,7 @@ async def test_base_mapper_resolve_deployment_create_validates_provider_data_whe
         payload=payload,
     )
 
-    assert resolved.provider_data == {"resource_name_prefix": "lf_test_"}
+    assert resolved.provider_data == {"label": "some_value"}
 
 
 @pytest.mark.asyncio
@@ -218,7 +224,9 @@ async def test_base_mapper_resolve_deployment_create_rejects_invalid_provider_da
     mapper = _TypedMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        spec={"name": "create-deploy", "description": "", "type": "agent"},
+        name="create-deploy",
+        description="",
+        type="agent",
         provider_data={"invalid": "value"},
     )
 
@@ -281,8 +289,6 @@ async def test_base_mapper_resolve_deployment_update_rejects_invalid_provider_da
 async def test_base_mapper_resolve_execution_create_passthrough_when_slot_not_configured() -> None:
     mapper = BaseDeploymentMapper()
     payload = ExecutionCreateRequest(
-        provider_id=uuid4(),
-        deployment_id=uuid4(),
         provider_data={"invocation_id": "inv-1"},
     )
 
@@ -300,8 +306,6 @@ async def test_base_mapper_resolve_execution_create_passthrough_when_slot_not_co
 async def test_base_mapper_resolve_execution_create_validates_provider_data_when_slot_configured() -> None:
     mapper = _TypedMapper()
     payload = ExecutionCreateRequest(
-        provider_id=uuid4(),
-        deployment_id=uuid4(),
         provider_data={"invocation_id": "inv-1"},
     )
 
@@ -319,8 +323,6 @@ async def test_base_mapper_resolve_execution_create_validates_provider_data_when
 async def test_base_mapper_resolve_execution_create_rejects_invalid_provider_data_when_slot_configured() -> None:
     mapper = _TypedMapper()
     payload = ExecutionCreateRequest(
-        provider_id=uuid4(),
-        deployment_id=uuid4(),
         provider_data={"invalid": "value"},
     )
 
@@ -345,7 +347,6 @@ def test_mapper_has_shape_method_for_all_outbound_slots() -> None:
 @pytest.mark.parametrize(
     "method_name",
     [
-        "shape_deployment_create_result",
         "shape_deployment_operation_result",
         "shape_deployment_item_data",
         "shape_deployment_status_data",
@@ -357,6 +358,33 @@ def test_base_mapper_shapers_passthrough_provider_payload(method_name: str) -> N
     shaper = getattr(mapper, method_name)
     shaped = shaper(payload)
     assert shaped is payload
+
+
+def test_base_mapper_shapes_deployment_create_result() -> None:
+    mapper = BaseDeploymentMapper()
+    timestamp = datetime.now(tz=timezone.utc)
+    deployment_id = uuid4()
+    provider_account_id = uuid4()
+    result = DeploymentCreateResult(id="provider-id", provider_result={"ok": True})
+    deployment_row = SimpleNamespace(
+        id=deployment_id,
+        name="Deployment 1",
+        description="desc",
+        deployment_type=DeploymentType.AGENT,
+        resource_key="provider-id",
+        created_at=timestamp,
+        updated_at=timestamp,
+        deployment_provider_account_id=provider_account_id,
+    )
+
+    shaped = mapper.shape_deployment_create_result(result, deployment_row=deployment_row, provider_key="test-provider")
+
+    assert shaped.id == deployment_id
+    assert shaped.provider_id == provider_account_id
+    assert shaped.provider_key == "test-provider"
+    assert shaped.name == "Deployment 1"
+    assert shaped.type == DeploymentType.AGENT
+    assert shaped.provider_data == {"ok": True}
 
 
 def test_base_mapper_shapes_deployment_list_result() -> None:
@@ -375,28 +403,167 @@ def test_base_mapper_shapes_deployment_list_result() -> None:
         ]
     )
 
-    shaped = mapper.shape_deployment_list_result(
-        result,
-        deployment_type=DeploymentType.AGENT,
-    )
+    shaped = mapper.shape_deployment_list_result(result)
 
-    assert shaped.deployment_type == DeploymentType.AGENT
     assert shaped.page == 1
     assert shaped.size == 1
     assert shaped.total == 1
     assert shaped.provider_data == {
         "entries": [
             {
-                "resource_key": "dep-1",
+                "id": "dep-1",
                 "name": "Deployment 1",
                 "type": DeploymentType.AGENT,
                 "description": None,
                 "created_at": timestamp,
                 "updated_at": timestamp,
-                "provider_data": {"ok": True},
+                "ok": True,
             }
         ]
     }
+
+
+def test_base_mapper_shapes_flow_version_list_result() -> None:
+    mapper = BaseDeploymentMapper()
+    attached_at = datetime.now(tz=timezone.utc)
+    flow_version_id = uuid4()
+    flow_id = uuid4()
+    rows = [
+        (
+            SimpleNamespace(provider_snapshot_id=" tool-1 ", created_at=attached_at),
+            SimpleNamespace(id=flow_version_id, flow_id=flow_id, version_number=4),
+            "Flow A",
+        )
+    ]
+    snapshot_result = SnapshotListResult(
+        snapshots=[
+            SnapshotItem(
+                id="tool-1",
+                name="Tool 1",
+                provider_data={"connections": {"cfg-1": "conn-1"}},
+            )
+        ]
+    )
+
+    shaped = mapper.shape_flow_version_list_result(
+        rows=rows,
+        snapshot_result=snapshot_result,
+        page=2,
+        size=5,
+        total=7,
+    )
+
+    assert shaped.page == 2
+    assert shaped.size == 5
+    assert shaped.total == 7
+    assert len(shaped.flow_versions) == 1
+    assert shaped.flow_versions[0].id == flow_version_id
+    assert shaped.flow_versions[0].flow_id == flow_id
+    assert shaped.flow_versions[0].flow_name == "Flow A"
+    assert shaped.flow_versions[0].version_number == 4
+    assert shaped.flow_versions[0].attached_at == attached_at
+    assert shaped.flow_versions[0].provider_snapshot_id == "tool-1"
+    assert shaped.flow_versions[0].provider_data is None
+
+
+def test_base_mapper_flow_version_item_data_defaults_to_none() -> None:
+    mapper = BaseDeploymentMapper()
+    rows = [
+        (
+            SimpleNamespace(provider_snapshot_id=None, created_at=None),
+            SimpleNamespace(id=uuid4(), flow_id=uuid4(), version_number=1),
+            None,
+        )
+    ]
+
+    shaped = mapper.shape_flow_version_list_result(
+        rows=rows,
+        snapshot_result=None,
+        page=1,
+        size=20,
+        total=1,
+    )
+
+    assert len(shaped.flow_versions) == 1
+    assert shaped.flow_versions[0].flow_name is None
+    assert shaped.flow_versions[0].provider_snapshot_id is None
+    assert shaped.flow_versions[0].provider_data is None
+
+
+def test_shape_deployment_list_items_without_filter() -> None:
+    """Without a flow filter, flow_version_ids is omitted."""
+    mapper = BaseDeploymentMapper()
+    provider_account_id = uuid4()
+    row = SimpleNamespace(
+        id=uuid4(),
+        resource_key="rk-1",
+        deployment_type=DeploymentType.AGENT,
+        name="Dep",
+        description=None,
+        created_at=None,
+        updated_at=None,
+        deployment_provider_account_id=provider_account_id,
+    )
+    items = mapper.shape_deployment_list_items(
+        rows_with_counts=[(row, 0, [])],
+        has_flow_filter=False,
+        provider_key="test-provider",
+    )
+    assert len(items) == 1
+    assert items[0].provider_id == provider_account_id
+    assert items[0].provider_key == "test-provider"
+    assert items[0].flow_version_ids is None
+
+
+def test_shape_deployment_list_items_with_filter() -> None:
+    """With a flow filter, flow_version_ids is populated from matched tuples."""
+    mapper = BaseDeploymentMapper()
+    fv_id = uuid4()
+    provider_account_id = uuid4()
+    row = SimpleNamespace(
+        id=uuid4(),
+        resource_key="rk-1",
+        deployment_type=DeploymentType.AGENT,
+        name="Dep",
+        description=None,
+        created_at=None,
+        updated_at=None,
+        deployment_provider_account_id=provider_account_id,
+    )
+    items = mapper.shape_deployment_list_items(
+        rows_with_counts=[(row, 1, [(fv_id, "snap-1")])],
+        has_flow_filter=True,
+        provider_key="test-provider",
+    )
+    assert len(items) == 1
+    assert items[0].provider_id == provider_account_id
+    assert items[0].provider_key == "test-provider"
+    assert items[0].flow_version_ids == [fv_id]
+
+
+def test_shape_deployment_list_items_with_filter_empty_matches() -> None:
+    """With a flow filter active but no matches, flow_version_ids is empty."""
+    mapper = BaseDeploymentMapper()
+    provider_account_id = uuid4()
+    row = SimpleNamespace(
+        id=uuid4(),
+        resource_key="rk-1",
+        deployment_type=DeploymentType.AGENT,
+        name="Dep",
+        description=None,
+        created_at=None,
+        updated_at=None,
+        deployment_provider_account_id=provider_account_id,
+    )
+    items = mapper.shape_deployment_list_items(
+        rows_with_counts=[(row, 0, [])],
+        has_flow_filter=True,
+        provider_key="test-provider",
+    )
+    assert len(items) == 1
+    assert items[0].provider_id == provider_account_id
+    assert items[0].provider_key == "test-provider"
+    assert items[0].flow_version_ids == []
 
 
 def test_base_mapper_execution_provider_data_shapers_passthrough() -> None:
@@ -407,9 +574,18 @@ def test_base_mapper_execution_provider_data_shapers_passthrough() -> None:
     assert mapper.shape_execution_status_provider_data(payload) is payload
 
 
+def test_base_mapper_formats_conflict_detail_with_generic_fallback() -> None:
+    mapper = BaseDeploymentMapper()
+
+    detail = mapper.format_conflict_detail("provider conflict detail")
+
+    assert detail == "A resource with this name already exists in the provider. provider conflict detail"
+
+
 def test_base_mapper_shapes_deployment_update_result() -> None:
     mapper = BaseDeploymentMapper()
     deployment_id = uuid4()
+    provider_account_id = uuid4()
     timestamp = datetime.now(tz=timezone.utc)
     result = DeploymentUpdateResult(id="provider-id", provider_result={"ok": True})
     deployment_row = SimpleNamespace(
@@ -417,16 +593,21 @@ def test_base_mapper_shapes_deployment_update_result() -> None:
         name="Deployment Name",
         description="desc",
         deployment_type=DeploymentType.AGENT,
+        resource_key="provider-id",
         created_at=timestamp,
         updated_at=timestamp,
+        deployment_provider_account_id=provider_account_id,
     )
 
     shaped = mapper.shape_deployment_update_result(
         result,
         deployment_row,
+        provider_key="test-provider",
     )
 
     assert shaped.id == deployment_id
+    assert shaped.provider_id == provider_account_id
+    assert shaped.provider_key == "test-provider"
     assert shaped.name == "Deployment Name"
     assert shaped.description == "desc"
     assert shaped.type == DeploymentType.AGENT
@@ -471,17 +652,14 @@ def test_base_mapper_shapes_execution_status_result_with_none_execution_id() -> 
 
 def test_base_mapper_exposes_reconciliation_resolvers() -> None:
     mapper = BaseDeploymentMapper()
-    add_id = uuid4()
-    remove_id = uuid4()
     payload = DeploymentUpdateRequest(
-        add_flow_version_ids=[add_id],
-        remove_flow_version_ids=[remove_id],
+        provider_data={"operations": []},
     )
     patch = mapper.util_flow_version_patch(payload)
     assert isinstance(patch, FlowVersionPatch)
     add_ids, remove_ids = patch.add_flow_version_ids, patch.remove_flow_version_ids
-    assert add_ids == [add_id]
-    assert remove_ids == [remove_id]
+    assert add_ids == []
+    assert remove_ids == []
 
     create_result = DeploymentCreateResult(
         id="provider-id",
@@ -518,14 +696,14 @@ def test_base_mapper_resolve_provider_tenant_id_passthrough() -> None:
     assert (
         mapper.resolve_provider_tenant_id(
             provider_url="https://example.com/instances/abc",
-            provider_tenant_id="tenant-1",
+            provider_data={"tenant_id": "tenant-1"},
         )
         == "tenant-1"
     )
     assert (
         mapper.resolve_provider_tenant_id(
             provider_url="https://example.com/instances/abc",
-            provider_tenant_id=None,
+            provider_data={},
         )
         is None
     )
@@ -547,9 +725,9 @@ def test_base_mapper_shapes_provider_account_response() -> None:
     shaped = mapper.shape_provider_account_response(account)
     assert shaped.id == account.id
     assert shaped.name == "staging"
-    assert shaped.provider_tenant_id == "tenant-1"
+    assert shaped.provider_data == {"tenant_id": "tenant-1"}
     assert shaped.provider_key == "watsonx-orchestrate"
-    assert shaped.provider_url == "https://provider.example"
+    assert shaped.url == "https://provider.example"
 
 
 def test_mapper_registry_returns_default_when_unregistered() -> None:
@@ -598,8 +776,8 @@ def test_mapper_registry_get_returns_cached_instance_for_key() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_base_mapper_resolve_verify_credentials_extracts_provider_url() -> None:
-    """Base mapper builds VerifyCredentials with provider_url only."""
+def test_base_mapper_resolve_verify_credentials_extracts_url() -> None:
+    """Base mapper builds VerifyCredentials with url only."""
     from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
     from lfx.services.adapters.deployment.schema import VerifyCredentials
 
@@ -607,7 +785,7 @@ def test_base_mapper_resolve_verify_credentials_extracts_provider_url() -> None:
     payload = DeploymentProviderAccountCreateRequest(
         name="test-account",
         provider_key="watsonx-orchestrate",
-        provider_url="https://api.us-south.wxo.cloud.ibm.com",
+        url="https://api.us-south.wxo.cloud.ibm.com",
         provider_data={"api_key": "secret-key"},  # pragma: allowlist secret
     )
     result = mapper.resolve_verify_credentials(payload=payload)
@@ -648,36 +826,6 @@ def test_base_mapper_resolve_provider_account_update_name_only() -> None:
         existing_account=_make_existing_account(),
     )
     assert result == {"name": "new-name"}
-
-
-def test_base_mapper_resolve_provider_account_update_url_only() -> None:
-    """Only provider_url is set."""
-    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountUpdateRequest
-
-    mapper = BaseDeploymentMapper()
-    payload = DeploymentProviderAccountUpdateRequest(
-        provider_url="https://api.eu-de.wxo.cloud.ibm.com/instances/new-tenant/agents",
-    )
-    result = mapper.resolve_provider_account_update(
-        payload=payload,
-        existing_account=_make_existing_account(),
-    )
-    assert "provider_url" in result
-    assert "name" not in result
-    assert "provider_tenant_id" not in result
-
-
-def test_base_mapper_resolve_provider_account_update_tenant_uses_existing_url() -> None:
-    """When only tenant is set, resolve uses existing_account.provider_url."""
-    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountUpdateRequest
-
-    mapper = BaseDeploymentMapper()
-    payload = DeploymentProviderAccountUpdateRequest(provider_tenant_id="explicit-tenant")
-    result = mapper.resolve_provider_account_update(
-        payload=payload,
-        existing_account=_make_existing_account(),
-    )
-    assert result["provider_tenant_id"] == "explicit-tenant"
 
 
 def test_base_mapper_resolve_provider_account_update_provider_data_raises() -> None:

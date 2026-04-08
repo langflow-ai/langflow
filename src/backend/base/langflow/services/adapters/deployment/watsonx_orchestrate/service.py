@@ -27,7 +27,7 @@ from lfx.services.adapters.deployment.exceptions import (
 )
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
-    ConfigListItem,
+    BaseFlowArtifact,
     ConfigListParams,
     ConfigListResult,
     DeploymentCreate,
@@ -51,6 +51,7 @@ from lfx.services.adapters.deployment.schema import (
     SnapshotItem,
     SnapshotListParams,
     SnapshotListResult,
+    SnapshotUpdateResult,
     VerifyCredentials,
     VerifyCredentialsResult,
     _normalize_and_validate_id,
@@ -61,6 +62,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.client import get
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     SUPPORTED_ADAPTER_DEPLOYMENT_TYPES,
     ErrorPrefix,
+)
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import (
+    list_configs as list_adapter_configs,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.create import (
     apply_provider_create_plan_with_rollback,
@@ -80,7 +84,12 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.status impor
     get_deployment_detail_metadata,
     get_deployment_metadata,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import verify_tools_by_ids
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+    build_langflow_artifact_bytes,
+    extract_langflow_connections_binding,
+    upload_tool_artifact_bytes,
+    verify_tools_by_ids,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.update import (
     apply_provider_update_plan_with_rollback,
     build_provider_update_plan,
@@ -96,11 +105,11 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentUpdateResultData,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
-    _require_single_deployment_id,
     dedupe_list,
     extract_agent_tool_ids,
     extract_error_detail,
     raise_as_deployment_error,
+    require_single_deployment_id,
 )
 from langflow.services.deps import get_settings_service
 
@@ -157,6 +166,19 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         except (AdapterPayloadMissingError, AdapterPayloadValidationError) as exc:
             msg = exc.format_first_error() if isinstance(exc, AdapterPayloadValidationError) else str(exc)
             raise InvalidContentError(message=msg) from None
+
+    def _validate_snapshot_item_provider_data(self, raw: dict[str, object]) -> dict[str, object]:
+        """Validate per-item snapshot provider_data via configured slot."""
+        snapshot_item_slot = self.payload_schemas.snapshot_item_data
+        if snapshot_item_slot is None:
+            msg = f"{ErrorPrefix.LIST.value} Required slot 'snapshot_item_data' is not configured."
+            raise DeploymentError(message=msg, error_code="deployment_error")
+
+        try:
+            return snapshot_item_slot.apply(raw)
+        except (AdapterPayloadMissingError, AdapterPayloadValidationError) as exc:
+            detail = exc.format_first_error() if isinstance(exc, AdapterPayloadValidationError) else str(exc)
+            raise InvalidContentError(message=detail) from None
 
     async def create(
         self,
@@ -338,7 +360,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     data=agent,
                     deployment_type=DeploymentType.AGENT,
                     provider_data={
-                        "snapshot_ids": extract_agent_tool_ids(agent),
+                        "tool_ids": extract_agent_tool_ids(agent),
                         "environment": derive_agent_environment(agent),
                     },
                 )
@@ -381,6 +403,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return get_deployment_detail_metadata(
             data=agent,
             deployment_type=DeploymentType.AGENT,
+            provider_data={
+                **({"llm": agent["llm"]} if isinstance(agent, dict) and agent.get("llm") else {}),
+            }
+            or None,
         )
 
     async def update(
@@ -661,88 +687,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> ConfigListResult:
         """List configs visible to this adapter."""
         clients = await self._get_provider_clients(user_id=user_id, db=db)
-        if not params or not params.deployment_ids:
-            try:
-                raw_connections = await asyncio.to_thread(clients.connections.list)
-            except Exception as exc:  # noqa: BLE001
-                raise_as_deployment_error(
-                    exc,
-                    error_prefix=ErrorPrefix.LIST_CONFIGS,
-                    log_msg="Unexpected error while listing wxO tenant configs",
-                )
-
-            configs: list[ConfigListItem] = []
-            seen_ids: set[str] = set()
-            for connection in raw_connections or []:
-                if not isinstance(connection, dict):
-                    continue
-                config_id = str(connection.get("app_id") or connection.get("id") or "").strip()
-                if not config_id or config_id in seen_ids:
-                    continue
-                seen_ids.add(config_id)
-                config_name = (
-                    str(connection.get("name") or connection.get("display_name") or config_id).strip() or config_id
-                )
-                configs.append(
-                    ConfigListItem(
-                        id=config_id,
-                        name=config_name,
-                        created_at=connection.get("created_at"),
-                        updated_at=connection.get("updated_at"),
-                        provider_data=connection,
-                    )
-                )
-            return ConfigListResult(
-                configs=configs,
-                provider_result={"scope": "tenant"},
-            )
-
-        agent_id = _require_single_deployment_id(params, resource_label="config")
-        try:
-            agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
-        except Exception as exc:  # noqa: BLE001
-            raise_as_deployment_error(
-                exc,
-                error_prefix=ErrorPrefix.LIST_CONFIGS,
-                log_msg="Unexpected error while listing wxO deployment configs",
-            )
-
-        if not agent:
-            msg = f"Deployment '{agent_id}' not found."
-            raise DeploymentNotFoundError(msg)
-
-        tool_ids = agent.get("tools", []) if isinstance(agent, dict) else []
-        tool_ids = dedupe_list(tool_ids)
-
-        if not tool_ids:
-            return ConfigListResult(
-                configs=[],
-                provider_result={"deployment_id": agent_id, "tool_ids": []},
-            )
-
-        tools: list[dict]
-
-        try:
-            tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, tool_ids)
-        except Exception as exc:  # noqa: BLE001
-            raise_as_deployment_error(
-                exc,
-                error_prefix=ErrorPrefix.LIST_CONFIGS,
-                log_msg="Unexpected error while listing wxO tools for config extraction",
-            )
-
-        app_ids: set[str] = set()
-        for tool in tools or []:
-            if not isinstance(tool, dict):
-                continue
-            connections: dict = tool.get("binding", {}).get("langflow", {}).get("connections", {})
-            if not connections:
-                continue
-            app_ids.update(connections.keys())
-
-        return ConfigListResult(
-            configs=[ConfigListItem(id=app_id, name=app_id) for app_id in app_ids],
-            provider_result={"deployment_id": agent_id},
+        return await list_adapter_configs(
+            clients=clients,
+            params=params,
+            config_item_data_slot=self.payload_schemas.config_item_data,
+            config_list_result_slot=self.payload_schemas.config_list_result,
         )
 
     async def list_snapshots(
@@ -789,17 +738,19 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 SnapshotItem(
                     id=tool["id"],
                     name=tool.get("name") or tool["id"],
-                    provider_data=tool,
+                    provider_data=self._validate_snapshot_item_provider_data(
+                        {"connections": extract_langflow_connections_binding(tool)}
+                    ),
                 )
                 for tool in (raw_tools or [])
                 if isinstance(tool, dict) and tool.get("id")
             ]
             return SnapshotListResult(
                 snapshots=snapshots,
-                provider_result={"scope": "tenant"},
+                provider_result=self.payload_schemas.snapshot_list_result.parse({}).model_dump(exclude_none=True),
             )
 
-        agent_id = _require_single_deployment_id(params, resource_label="snapshot")
+        agent_id = require_single_deployment_id(params, resource_label="snapshot")
 
         try:
             agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
@@ -830,16 +781,27 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             SnapshotItem(
                 id=tool["id"],
                 name=tool.get("name") or tool["id"],
+                provider_data=self._validate_snapshot_item_provider_data(
+                    {"connections": extract_langflow_connections_binding(tool)}
+                ),
             )
             for tool in (tools or [])
-            if tool.get("id")
+            if isinstance(tool, dict) and tool.get("id")
         ]
-        if not snapshots and requested_tool_ids:
-            snapshots = [SnapshotItem(id=tool_id, name=tool_id) for tool_id in requested_tool_ids]
+        resolved_ids = {s.id for s in snapshots}
+        stale_ids = [tid for tid in requested_tool_ids if tid not in resolved_ids]
+        if stale_ids:
+            logger.warning(
+                "list_snapshots: agent '%s' references tool IDs that no longer exist on the provider: %s",
+                agent_id,
+                stale_ids,
+            )
 
         return SnapshotListResult(
             snapshots=snapshots,
-            provider_result={"deployment_id": agent_id},
+            provider_result=self.payload_schemas.snapshot_list_result.parse({"deployment_id": agent_id}).model_dump(
+                exclude_none=True
+            ),
         )
 
     async def _list_snapshots_by_ids(
@@ -862,7 +824,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 error_prefix=ErrorPrefix.LIST,
                 log_msg="Unexpected error while verifying wxO tool snapshots by ID",
             )
-        return SnapshotListResult(snapshots=snapshots)
+        return snapshots
 
     async def verify_credentials(
         self,
@@ -924,6 +886,105 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             ) from exc
 
         return VerifyCredentialsResult()
+
+    async def update_snapshot(
+        self,
+        *,
+        user_id: IdLike,
+        db: AsyncSession,
+        snapshot_id: str,
+        flow_artifact: BaseFlowArtifact,
+    ) -> SnapshotUpdateResult:
+        """Replace an existing snapshot's artifact content.
+
+        This is a content-only mutation -- it re-uploads the artifact zip
+        without touching the tool's name, metadata, or connection bindings.
+
+        The tool name is fetched from wxO at call time, not derived from the
+        Langflow flow name. This is intentional: the user may have set a
+        custom tool name during initial deployment, or renamed the tool
+        directly in the wxO console. Either way, the provider is the source
+        of truth for the tool name.
+
+        **Edge cases:**
+
+        * **Tool renamed in wxO console** — The new name is picked up
+          automatically on the next update since we always fetch it fresh.
+          Langflow never stores the tool name locally.
+        * **Tool deleted in wxO** — ``get_drafts_by_ids`` returns empty
+          and we raise ``InvalidContentError`` before any mutation.
+        * **Tool exists but name is empty/null** — Defensive check raises
+          ``InvalidContentError`` rather than passing an empty name to the
+          ADK, which would produce a cryptic validation error.
+        * **Race condition (rename between fetch and upload)** — The
+          artifact zip will contain the name as of the fetch. The tool's
+          API-level name (set by wxO, not by the artifact) is unaffected
+          by the zip contents, so this is harmless.
+        * **Tool deleted + recreated with same name** — The new tool has
+          a different ``tool_id``.  Our attachment still references the
+          old (deleted) ID, so ``get_drafts_by_ids`` returns nothing and
+          we fail with ``InvalidContentError``.  The user must re-deploy
+          (or update the agent) to bind the new tool — we never silently
+          adopt an unrelated tool just because the name matches.
+
+        **Identity model:** we track tools by immutable ``tool_id``, not
+        by name.  A rename preserves identity; a delete+recreate does not.
+
+        **Blast-radius boundary:** callers must verify that ``snapshot_id``
+        is tracked by a Langflow attachment record before calling this
+        method; this prevents accidental overwrites of externally managed
+        WXO tools.
+        """
+        from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import (
+            create_langflow_tool as _create_langflow_tool,
+        )
+
+        from langflow.utils.version import get_version_info
+
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
+
+        # Fetch the existing tool to preserve its wxO name — the tool may have
+        # been deployed with a custom name that differs from the Langflow flow
+        # name, and we must not overwrite it with the flow name.
+        existing_tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, [snapshot_id])
+        if not existing_tools or not isinstance(existing_tools[0], dict):
+            msg = f"Snapshot tool '{snapshot_id}' not found in provider."
+            raise InvalidContentError(message=msg)
+        existing_tool_name = str(existing_tools[0].get("name") or "").strip()
+        if not existing_tool_name:
+            msg = f"Snapshot tool '{snapshot_id}' exists but has no name. Cannot update artifact."
+            raise InvalidContentError(message=msg)
+        logger.debug("update_snapshot: snapshot_id='%s', existing tool name='%s'", snapshot_id, existing_tool_name)
+
+        flow_definition = flow_artifact.model_dump(exclude={"provider_data"})
+        flow_id = flow_definition.get("id")
+        if flow_id is None:
+            msg = "flow_definition must have an id"
+            raise ValueError(msg)
+        flow_definition["id"] = str(flow_id)
+        flow_definition["name"] = existing_tool_name
+        if not flow_definition.get("last_tested_version"):
+            detected_version = (get_version_info() or {}).get("version")
+            if detected_version:
+                flow_definition["last_tested_version"] = detected_version
+
+        tool = _create_langflow_tool(
+            tool_definition=flow_definition,
+            connections={},
+            show_details=True,
+        )
+
+        artifact_bytes = build_langflow_artifact_bytes(
+            tool=tool,
+            flow_definition=flow_definition,
+        )
+        await asyncio.to_thread(
+            upload_tool_artifact_bytes,
+            clients,
+            tool_id=snapshot_id,
+            artifact_bytes=artifact_bytes,
+        )
+        return SnapshotUpdateResult(snapshot_id=snapshot_id)
 
     async def teardown(self) -> None:
         """Teardown provider-specific resources."""

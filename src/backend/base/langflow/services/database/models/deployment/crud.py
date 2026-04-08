@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.adapters.deployment.schema import DEPLOYMENT_DESCRIPTION_MAX_LENGTH
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select
 
@@ -29,6 +30,14 @@ def _strip_or_raise(value: str, field_name: str) -> str:
     return stripped
 
 
+def _validate_description_max_length(description: str | None) -> str | None:
+    """Reject descriptions that exceed the deployment max length."""
+    if description is not None and len(description) > DEPLOYMENT_DESCRIPTION_MAX_LENGTH:
+        msg = f"description must be at most {DEPLOYMENT_DESCRIPTION_MAX_LENGTH} characters"
+        raise ValueError(msg)
+    return description
+
+
 async def create_deployment(
     db: AsyncSession,
     *,
@@ -42,6 +51,7 @@ async def create_deployment(
 ) -> Deployment:
     resource_key_s = _strip_or_raise(resource_key, "resource_key")
     name_s = _strip_or_raise(name, "name")
+    description_s = _validate_description_max_length(description)
 
     row = Deployment(
         user_id=user_id,
@@ -50,7 +60,7 @@ async def create_deployment(
         resource_key=resource_key_s,
         name=name_s,
         deployment_type=deployment_type,
-        description=description,
+        description=description_s,
     )
     db.add(row)
     try:
@@ -127,7 +137,7 @@ async def update_deployment(
     if deployment_type is not _UNSET:
         deployment.deployment_type = deployment_type  # type: ignore[assignment]
     if description is not _UNSET:
-        deployment.description = description  # type: ignore[assignment]
+        deployment.description = _validate_description_max_length(description)  # type: ignore[assignment]
     deployment.updated_at = datetime.now(timezone.utc)
     db.add(deployment)
     try:
@@ -149,7 +159,13 @@ async def list_deployments_page(
     offset: int,
     limit: int,
     flow_version_ids: list[UUID] | None = None,
-) -> list[tuple[Deployment, int, list[str]]]:
+) -> list[tuple[Deployment, int, list[tuple[UUID, str | None]]]]:
+    """Return a page of deployments with attachment counts and matched attachments.
+
+    The third tuple element contains ``(flow_version_id, provider_snapshot_id)``
+    pairs for attachments that matched the ``flow_version_ids`` filter (empty
+    list when no filter is active).
+    """
     if offset < 0:
         msg = "offset must be greater than or equal to 0"
         raise ValueError(msg)
@@ -203,6 +219,7 @@ async def list_deployments_page(
             select(
                 FlowVersionDeploymentAttachment.deployment_id,
                 FlowVersionDeploymentAttachment.flow_version_id,
+                FlowVersionDeploymentAttachment.provider_snapshot_id,
             ).where(
                 FlowVersionDeploymentAttachment.user_id == user_id,
                 col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
@@ -210,18 +227,18 @@ async def list_deployments_page(
             )
         )
     ).all()
-    matched_flow_version_ids_by_deployment: dict[UUID, list[str]] = {}
-    for deployment_id, flow_version_id in matched_rows:
-        existing = matched_flow_version_ids_by_deployment.setdefault(deployment_id, [])
-        flow_version_id_str = str(flow_version_id)
-        if flow_version_id_str not in existing:
-            existing.append(flow_version_id_str)
+    matched_by_deployment: dict[UUID, list[tuple[UUID, str | None]]] = {}
+    for deployment_id, flow_version_id, provider_snapshot_id in matched_rows:
+        entries = matched_by_deployment.setdefault(deployment_id, [])
+        pair = (flow_version_id, provider_snapshot_id)
+        if pair not in entries:
+            entries.append(pair)
 
     return [
         (
             deployment,
             attached_count,
-            matched_flow_version_ids_by_deployment.get(deployment.id, []),
+            matched_by_deployment.get(deployment.id, []),
         )
         for deployment, attached_count in deployment_rows
     ]

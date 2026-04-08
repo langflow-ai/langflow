@@ -149,13 +149,17 @@ async def create_project(
         async def _move_flows_into_project() -> None:
             if project.components_list:
                 update_statement_components = (
-                    update(Flow).where(Flow.id.in_(project.components_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
+                    update(Flow)
+                    .where(Flow.id.in_(project.components_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
+                    .values(folder_id=new_project.id)
                 )
                 await session.exec(update_statement_components)
 
             if project.flows_list:
                 update_statement_flows = (
-                    update(Flow).where(Flow.id.in_(project.flows_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
+                    update(Flow)
+                    .where(Flow.id.in_(project.flows_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
+                    .values(folder_id=new_project.id)
                 )
                 await session.exec(update_statement_flows)
 
@@ -240,7 +244,7 @@ async def read_project(
     try:
         # Check if pagination is explicitly requested by the user (both page and size provided)
         if page is not None and size is not None:
-            stmt = select(Flow).where(Flow.folder_id == project_id)
+            stmt = select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id)
 
             if Flow.updated_at is not None:
                 stmt = stmt.order_by(Flow.updated_at.desc())  # type: ignore[attr-defined]
@@ -365,13 +369,23 @@ async def update_project(
         async def _move_flows_for_project_update() -> None:
             if my_collection_project and excluded_flows:
                 update_statement_my_collection = (
-                    update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_project.id)  # type: ignore[attr-defined]
+                    update(Flow)
+                    .where(
+                        Flow.id.in_(excluded_flows),  # type: ignore[attr-defined]
+                        Flow.user_id == current_user.id,
+                    )
+                    .values(folder_id=my_collection_project.id)
                 )
                 await session.exec(update_statement_my_collection)
 
             if concat_project_components:
                 update_statement_components = (
-                    update(Flow).where(Flow.id.in_(concat_project_components)).values(folder_id=existing_project.id)  # type: ignore[attr-defined]
+                    update(Flow)
+                    .where(
+                        Flow.id.in_(concat_project_components),  # type: ignore[attr-defined]
+                        Flow.user_id == current_user.id,
+                    )
+                    .values(folder_id=existing_project.id)
                 )
                 await session.exec(update_statement_components)
 
