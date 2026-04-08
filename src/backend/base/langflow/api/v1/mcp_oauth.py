@@ -115,7 +115,7 @@ async def _validate_server_url(url: str) -> None:
         ) from None
 
     for _family, _type, _proto, _canonname, sockaddr in resolved:
-        ip_str = sockaddr[0]
+        ip_str = str(sockaddr[0])
         if _is_address_blocked(ip_str):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=_SSRF_ERROR)
 
