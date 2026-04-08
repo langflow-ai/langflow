@@ -8,10 +8,8 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
-
-pytestmark = pytest.mark.asyncio
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -65,13 +63,14 @@ class TestInitiateOAuthFlow:
     async def test_initiate_returns_flow_id_and_auth_url(self, client, logged_in_headers, mock_state_manager) -> None:
         """A valid /initiate request returns flow_id and auth_url."""
         with (
+            patch("langflow.api.v1.mcp_oauth._validate_server_url", new=AsyncMock()),
             patch(
                 "langflow.api.v1.mcp_oauth.get_oauth_state_manager",
                 new=AsyncMock(return_value=mock_state_manager),
             ),
             patch(
                 "langflow.api.v1.mcp_oauth.create_deployed_oauth_provider",
-                new=AsyncMock(),
+                new=AsyncMock(return_value=(MagicMock(spec=httpx.Auth), "state-abc", lambda: None)),
             ),
         ):
             response = await client.post(
@@ -89,13 +88,14 @@ class TestInitiateOAuthFlow:
     async def test_initiate_creates_flow_for_server(self, client, logged_in_headers, mock_state_manager) -> None:
         """Initiating a flow creates a new OAuth flow entry in the state manager."""
         with (
+            patch("langflow.api.v1.mcp_oauth._validate_server_url", new=AsyncMock()),
             patch(
                 "langflow.api.v1.mcp_oauth.get_oauth_state_manager",
                 new=AsyncMock(return_value=mock_state_manager),
             ),
             patch(
                 "langflow.api.v1.mcp_oauth.create_deployed_oauth_provider",
-                new=AsyncMock(),
+                new=AsyncMock(return_value=(MagicMock(spec=httpx.Auth), "state-abc", lambda: None)),
             ),
         ):
             await client.post(
@@ -117,13 +117,14 @@ class TestInitiateOAuthFlow:
     async def test_initiate_with_explicit_redirect_uri(self, client, logged_in_headers, mock_state_manager) -> None:
         """An explicit redirect_uri is forwarded to the OAuth provider."""
         with (
+            patch("langflow.api.v1.mcp_oauth._validate_server_url", new=AsyncMock()),
             patch(
                 "langflow.api.v1.mcp_oauth.get_oauth_state_manager",
                 new=AsyncMock(return_value=mock_state_manager),
             ),
             patch(
                 "langflow.api.v1.mcp_oauth.create_deployed_oauth_provider",
-                new=AsyncMock(),
+                new=AsyncMock(return_value=(MagicMock(spec=httpx.Auth), "state-abc", lambda: None)),
             ) as mock_create,
         ):
             await client.post(
@@ -148,13 +149,14 @@ class TestInitiateOAuthFlow:
         )
 
         with (
+            patch("langflow.api.v1.mcp_oauth._validate_server_url", new=AsyncMock()),
             patch(
                 "langflow.api.v1.mcp_oauth.get_oauth_state_manager",
                 new=AsyncMock(return_value=error_manager),
             ),
             patch(
                 "langflow.api.v1.mcp_oauth.create_deployed_oauth_provider",
-                new=AsyncMock(),
+                new=AsyncMock(return_value=(MagicMock(spec=httpx.Auth), "state-abc", lambda: None)),
             ),
         ):
             response = await client.post(
@@ -211,13 +213,14 @@ class TestInitiateOAuthFlow:
         mock_manager = _make_state_manager()
 
         with (
+            patch("langflow.api.v1.mcp_oauth._validate_server_url", new=AsyncMock()),
             patch(
                 "langflow.api.v1.mcp_oauth.get_oauth_state_manager",
                 new=AsyncMock(return_value=mock_manager),
             ),
             patch(
                 "langflow.api.v1.mcp_oauth.create_deployed_oauth_provider",
-                new=AsyncMock(),
+                new=AsyncMock(return_value=(MagicMock(spec=httpx.Auth), "state-abc", lambda: None)),
             ),
         ):
             response = await client.post(
@@ -240,13 +243,14 @@ class TestInitiateOAuthFlow:
         )
 
         with (
+            patch("langflow.api.v1.mcp_oauth._validate_server_url", new=AsyncMock()),
             patch(
                 "langflow.api.v1.mcp_oauth.get_oauth_state_manager",
                 new=AsyncMock(return_value=error_manager),
             ),
             patch(
                 "langflow.api.v1.mcp_oauth.create_deployed_oauth_provider",
-                new=AsyncMock(),
+                new=AsyncMock(return_value=(MagicMock(spec=httpx.Auth), "state-abc", lambda: None)),
             ),
         ):
             response = await client.post(

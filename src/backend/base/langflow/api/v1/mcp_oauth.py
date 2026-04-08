@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import ipaddress
+import socket
 from typing import Annotated
 from urllib.parse import urlparse
 
@@ -46,12 +47,27 @@ router = APIRouter(prefix="/mcp/oauth", tags=["mcp-oauth"])
 _oauth_tasks: set[asyncio.Task] = set()
 
 _BLOCKED_HOSTNAMES = frozenset({"localhost", "localhost.localdomain"})
+_SSRF_ERROR = "Server URL must not point to a private or loopback address."
 
 
-def _validate_server_url(url: str) -> None:
+def _is_address_blocked(addr_str: str) -> bool:
+    """Return True if the IP address string represents a non-public address."""
+    try:
+        addr = ipaddress.ip_address(addr_str)
+    except ValueError:
+        return False
+    else:
+        return addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_unspecified
+
+
+async def _validate_server_url(url: str) -> None:
     """Reject server_url values that point to private or loopback addresses.
 
-    Prevents authenticated SSRF by blocking requests to internal infrastructure.
+    Performs two checks to guard against SSRF:
+    1. Literal IP / blocked-hostname check on the parsed hostname.
+    2. DNS resolution — every resolved address is inspected so that domain
+       names that resolve to private/loopback addresses are also blocked.
+
     Only http and https schemes are permitted.
 
     Raises:
@@ -69,20 +85,39 @@ def _validate_server_url(url: str) -> None:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid server URL: missing hostname.",
         )
+
+    # --- Check 1: literal IP / known-bad hostname ---
     if hostname.lower() in _BLOCKED_HOSTNAMES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=_SSRF_ERROR)
+    # If the hostname is already a literal IP, validate it directly and skip DNS.
+    try:
+        ipaddress.ip_address(hostname)
+    except ValueError:
+        pass  # not an IP — fall through to DNS resolution
+    else:
+        # It IS a literal IP — validate it and skip DNS.
+        if _is_address_blocked(hostname):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=_SSRF_ERROR)
+        return  # valid public IP — done
+
+    # --- Check 2: DNS resolution to catch domain-based SSRF ---
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        resolved = await asyncio.get_running_loop().run_in_executor(
+            None,
+            lambda: socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM),
+        )
+    except OSError:
+        # Cannot resolve — block conservatively rather than allowing unknown targets.
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Server URL must not point to a private or loopback address.",
-        )
-    try:
-        addr = ipaddress.ip_address(hostname)
-        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_unspecified:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Server URL must not point to a private or loopback address.",
-            )
-    except ValueError:
-        pass  # hostname is a domain name, not an IP — allow it
+            detail=f"Cannot resolve hostname '{hostname}'. Verify the server URL.",
+        ) from None
+
+    for _family, _type, _proto, _canonname, sockaddr in resolved:
+        ip_str = sockaddr[0]
+        if _is_address_blocked(ip_str):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=_SSRF_ERROR)
 
 
 # HTML templates for callback responses
@@ -195,8 +230,8 @@ async def initiate_oauth_flow(
     user_id = str(current_user.id)
     server_url = oauth_request.server_url
 
-    # Reject private/loopback addresses to prevent SSRF
-    _validate_server_url(server_url)
+    # Reject private/loopback addresses to prevent SSRF (includes DNS resolution)
+    await _validate_server_url(server_url)
 
     # Determine redirect URI for callback
     # Priority: explicit redirect_uri > callback_base_url > backend_url setting > request base URL
@@ -235,14 +270,17 @@ async def initiate_oauth_flow(
 
         # Define the background task that runs the full OAuth flow
         async def run_oauth_flow() -> None:
+            # Save any existing tokens so they can be restored if the new flow fails.
+            # This prevents /initiate from permanently breaking a working connection
+            # when the user re-authenticates but the flow is cancelled or times out.
+            previous_tokens = await state_manager.get_tokens(user_id, server_key)
             try:
-                # Invalidate existing tokens immediately before starting a new exchange.
-                # Placed here (not in the endpoint) so a cancelled/failed flow never
-                # leaves the user with no credentials — the delete only runs when the
-                # task actually starts executing.
+                # Clear existing tokens so the SDK starts a fresh OAuth exchange.
+                # (If we did NOT clear them, the SDK would silently reuse valid
+                # tokens and skip the user-facing OAuth popup entirely.)
                 await state_manager.delete_tokens(user_id, server_key)
 
-                # Create SDK-based provider with the pre-created flow_id
+                # Create SDK-based provider with the pre-created flow_id.
                 provider, _, _cleanup = await create_deployed_oauth_provider(
                     server_url=server_url,
                     user_id=user_id,
@@ -270,6 +308,9 @@ async def initiate_oauth_flow(
                     if tokens is None:
                         msg = f"OAuth exchange finished without persisted tokens (HTTP {response.status_code})"
                         raise RuntimeError(msg)
+                    # New tokens are now confirmed in the cache — previous_tokens
+                    # are no longer needed; the new ones replaced them via
+                    # store_tokens (atomic overwrite of the same cache key).
                     await logger.ainfo(f"OAuth flow {flow_id} completed successfully, status: {response.status_code}")
 
                 # Mark flow as complete only after confirming token persistence
@@ -282,6 +323,10 @@ async def initiate_oauth_flow(
                     flow_id,
                     {"status": "error", "error_message": "OAuth flow was cancelled"},
                 )
+                # Restore previous tokens so a cancelled re-auth doesn't break
+                # an otherwise working MCP connection.
+                if previous_tokens is not None:
+                    await state_manager.store_tokens(user_id, server_key, previous_tokens)
                 raise
             except TimeoutError:
                 await logger.awarning(f"OAuth flow {flow_id} timed out waiting for callback")
@@ -289,12 +334,16 @@ async def initiate_oauth_flow(
                     flow_id,
                     {"status": "error", "error_message": "OAuth flow timed out"},
                 )
+                if previous_tokens is not None:
+                    await state_manager.store_tokens(user_id, server_key, previous_tokens)
             except Exception as e:  # noqa: BLE001
                 await logger.aexception(f"OAuth flow {flow_id} failed: {e}")
                 await state_manager.update_flow(
                     flow_id,
                     {"status": "error", "error_message": str(e)},
                 )
+                if previous_tokens is not None:
+                    await state_manager.store_tokens(user_id, server_key, previous_tokens)
 
         # Start the OAuth flow in the background, storing the reference in the
         # module-level set so the task is not garbage-collected before completion.
