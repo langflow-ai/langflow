@@ -125,6 +125,10 @@ DeploymentIdPath = Annotated[
     UUID,
     Path(description="Langflow DB deployment UUID (`deployment.id`)."),
 ]
+ProjectIdQuery = Annotated[
+    UUID | None,
+    Query(description="Optional project (folder) id. Filters deployments to this project."),
+]
 DeploymentIdQuery = Annotated[
     UUID,
     Query(description="Langflow DB deployment UUID (`deployment.id`)."),
@@ -606,6 +610,7 @@ async def list_deployments(
             )
         ),
     ] = None,
+    project_id: ProjectIdQuery = None,
 ):
     normalized_flow_version_ids = normalize_flow_version_query_ids(flow_version_ids)
     normalized_flow_ids = normalize_flow_ids_query(flow_ids)
@@ -623,6 +628,11 @@ async def list_deployments(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="flow_ids filtering is not supported when load_from_provider=true.",
+        )
+    if load_from_provider and project_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="project_id filtering is not supported when load_from_provider=true.",
         )
     if normalized_flow_ids:
         resolved = await flow_version_ids_for_flows(session, flow_ids=normalized_flow_ids, user_id=current_user.id)
@@ -656,6 +666,7 @@ async def list_deployments(
             size=params.size,
             deployment_type=deployment_type,
             flow_version_ids=normalized_flow_version_ids or None,
+            project_id=project_id,
         )
     deployments = deployment_mapper.shape_deployment_list_items(
         rows_with_counts=rows_with_counts,
