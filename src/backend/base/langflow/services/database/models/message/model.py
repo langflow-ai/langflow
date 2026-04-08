@@ -146,6 +146,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
             postgresql_using="btree",
         ).ddl_if(dialect="postgresql"),
     )
+
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     flow_id: UUID | None = Field(default=None)
 
