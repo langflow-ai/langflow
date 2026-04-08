@@ -146,7 +146,11 @@ export default function StepType() {
         <span className="pb-2 text-sm font-medium">
           Model <span className="text-destructive">*</span>
         </span>
-        <Select value={selectedLlm} onValueChange={setSelectedLlm}>
+        <Select
+          value={selectedLlm}
+          onValueChange={setSelectedLlm}
+          onOpenChange={(open) => open && setShowScrollHint(true)}
+        >
           <SelectTrigger className="bg-muted focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-foreground">
             <SelectValue
               placeholder={llmsLoading ? "Loading models..." : "Select a model"}
@@ -156,11 +160,10 @@ export default function StepType() {
             side="bottom"
             className="relative max-h-60 overflow-y-auto"
             ref={contentRef}
-            onOpenAutoFocus={() => setShowScrollHint(true)}
           >
             {!llmsLoading && llmModels.length === 0 && (
               <SelectItem value="__empty__" disabled>
-                No models available for the selected provider
+                No models available for selected environment
               </SelectItem>
             )}
             {llmModels.map((model) => (
