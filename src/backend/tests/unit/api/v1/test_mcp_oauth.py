@@ -62,9 +62,7 @@ class TestInitiateOAuthFlow:
     def mock_state_manager(self) -> MagicMock:
         return _make_state_manager()
 
-    async def test_initiate_returns_flow_id_and_auth_url(
-        self, client, logged_in_headers, mock_state_manager
-    ) -> None:
+    async def test_initiate_returns_flow_id_and_auth_url(self, client, logged_in_headers, mock_state_manager) -> None:
         """A valid /initiate request returns flow_id and auth_url."""
         with (
             patch(
@@ -88,9 +86,7 @@ class TestInitiateOAuthFlow:
         assert "auth_url" in data
         assert "expires_in" in data
 
-    async def test_initiate_clears_existing_tokens(
-        self, client, logged_in_headers, mock_state_manager
-    ) -> None:
+    async def test_initiate_clears_existing_tokens(self, client, logged_in_headers, mock_state_manager) -> None:
         """Initiating a flow deletes existing tokens for the server."""
         with (
             patch(
@@ -118,9 +114,7 @@ class TestInitiateOAuthFlow:
         )
         assert response.status_code in (401, 403)
 
-    async def test_initiate_with_explicit_redirect_uri(
-        self, client, logged_in_headers, mock_state_manager
-    ) -> None:
+    async def test_initiate_with_explicit_redirect_uri(self, client, logged_in_headers, mock_state_manager) -> None:
         """An explicit redirect_uri is forwarded to the OAuth provider."""
         with (
             patch(
@@ -146,9 +140,7 @@ class TestInitiateOAuthFlow:
             _args, kwargs = mock_create.call_args
             assert kwargs.get("redirect_uri") == "https://app.example.com/cb"
 
-    async def test_initiate_error_status_propagates_as_400(
-        self, client, logged_in_headers
-    ) -> None:
+    async def test_initiate_error_status_propagates_as_400(self, client, logged_in_headers) -> None:
         """If the background flow immediately errors, /initiate returns 400."""
         error_manager = _make_state_manager()
         error_manager.get_flow_by_id = AsyncMock(
@@ -297,13 +289,9 @@ class TestOAuthCallback:
 
 
 class TestGetOAuthStatus:
-    async def test_status_pending_returns_200(
-        self, client, logged_in_headers
-    ) -> None:
+    async def test_status_pending_returns_200(self, client, logged_in_headers) -> None:
         """Polling a pending flow returns status 'pending'."""
-        mock_manager = _make_state_manager(
-            flow_status={"status": "pending", "server_url": "https://mcp.example.com"}
-        )
+        mock_manager = _make_state_manager(flow_status={"status": "pending", "server_url": "https://mcp.example.com"})
 
         with patch(
             "langflow.api.v1.mcp_oauth.get_oauth_state_manager",
@@ -318,9 +306,7 @@ class TestGetOAuthStatus:
         data = response.json()
         assert data["status"] == "pending"
 
-    async def test_status_awaiting_callback_includes_auth_url(
-        self, client, logged_in_headers
-    ) -> None:
+    async def test_status_awaiting_callback_includes_auth_url(self, client, logged_in_headers) -> None:
         """Status 'awaiting_callback' includes the auth_url field."""
         mock_manager = _make_state_manager(
             flow_status={
@@ -344,13 +330,9 @@ class TestGetOAuthStatus:
         assert data["status"] == "awaiting_callback"
         assert data["auth_url"] == "https://auth.example.com/go"
 
-    async def test_status_complete_returns_200(
-        self, client, logged_in_headers
-    ) -> None:
+    async def test_status_complete_returns_200(self, client, logged_in_headers) -> None:
         """A completed flow returns status 'complete'."""
-        mock_manager = _make_state_manager(
-            flow_status={"status": "complete", "server_url": "https://mcp.example.com"}
-        )
+        mock_manager = _make_state_manager(flow_status={"status": "complete", "server_url": "https://mcp.example.com"})
 
         with patch(
             "langflow.api.v1.mcp_oauth.get_oauth_state_manager",
@@ -364,13 +346,9 @@ class TestGetOAuthStatus:
         assert response.status_code == 200
         assert response.json()["status"] == "complete"
 
-    async def test_status_error_includes_error_message(
-        self, client, logged_in_headers
-    ) -> None:
+    async def test_status_error_includes_error_message(self, client, logged_in_headers) -> None:
         """A failed flow returns status 'error' with an error_message."""
-        mock_manager = _make_state_manager(
-            flow_status={"status": "error", "error_message": "provider rejected"}
-        )
+        mock_manager = _make_state_manager(flow_status={"status": "error", "error_message": "provider rejected"})
 
         with patch(
             "langflow.api.v1.mcp_oauth.get_oauth_state_manager",
@@ -386,9 +364,7 @@ class TestGetOAuthStatus:
         assert data["status"] == "error"
         assert data["error_message"] == "provider rejected"
 
-    async def test_status_expired_for_unknown_flow(
-        self, client, logged_in_headers
-    ) -> None:
+    async def test_status_expired_for_unknown_flow(self, client, logged_in_headers) -> None:
         """An unknown flow ID returns status 'expired'."""
         mock_manager = _make_state_manager(flow_status={"status": "expired"})
 
@@ -416,9 +392,7 @@ class TestGetOAuthStatus:
 
 
 class TestRevokeOAuthTokens:
-    async def test_revoke_existing_tokens_returns_success(
-        self, client, logged_in_headers
-    ) -> None:
+    async def test_revoke_existing_tokens_returns_success(self, client, logged_in_headers) -> None:
         """Deleting tokens that exist returns success=True."""
         mock_manager = _make_state_manager(delete_tokens_result=True)
 
@@ -436,9 +410,7 @@ class TestRevokeOAuthTokens:
         assert data["success"] is True
         assert "mcp.example.com" in data["message"]
 
-    async def test_revoke_missing_tokens_returns_success_false(
-        self, client, logged_in_headers
-    ) -> None:
+    async def test_revoke_missing_tokens_returns_success_false(self, client, logged_in_headers) -> None:
         """Deleting tokens that don't exist returns success=False."""
         mock_manager = _make_state_manager(delete_tokens_result=False)
 
@@ -466,9 +438,7 @@ class TestRevokeOAuthTokens:
 
 
 class TestCheckOAuthTokens:
-    async def test_check_tokens_present_returns_true(
-        self, client, logged_in_headers
-    ) -> None:
+    async def test_check_tokens_present_returns_true(self, client, logged_in_headers) -> None:
         """has_tokens is True when tokens exist for the server."""
         mock_manager = _make_state_manager(tokens={"access_token": "tok"})
 
@@ -484,9 +454,7 @@ class TestCheckOAuthTokens:
         assert response.status_code == 200
         assert response.json()["has_tokens"] is True
 
-    async def test_check_tokens_absent_returns_false(
-        self, client, logged_in_headers
-    ) -> None:
+    async def test_check_tokens_absent_returns_false(self, client, logged_in_headers) -> None:
         """has_tokens is False when no tokens exist for the server."""
         mock_manager = _make_state_manager(tokens=None)
 

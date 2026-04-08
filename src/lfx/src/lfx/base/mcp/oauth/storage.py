@@ -97,9 +97,7 @@ class UserScopedTokenStorage:
             client_info: The OAuthClientInformationFull to store.
         """
         self._client_info = client_info
-        await self._state_manager.store_tokens(
-            self._user_id, self._client_info_key(), client_info.model_dump()
-        )
+        await self._state_manager.store_tokens(self._user_id, self._client_info_key(), client_info.model_dump())
 
     async def clear(self) -> None:
         """Remove all stored tokens and client info for this user and server.
