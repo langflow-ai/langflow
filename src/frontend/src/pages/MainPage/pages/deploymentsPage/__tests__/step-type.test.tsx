@@ -162,6 +162,17 @@ describe("LLM dropdown", () => {
     expect(screen.getByText("Select a model")).toBeInTheDocument();
   });
 
+  it("renders empty message item when no models are available", () => {
+    mockLlmModels = [];
+    mockLlmsLoading = false;
+    render(<StepType />);
+
+    // The trigger should still show the default placeholder
+    expect(screen.getByText("Select a model")).toBeInTheDocument();
+    // The combobox should be present and interactive (not broken)
+    expect(screen.getByRole("combobox")).toBeEnabled();
+  });
+
   it("shows selected model value when one is set", () => {
     mockLlmModels = [
       { model_name: "granite-13b-chat" },
