@@ -8,6 +8,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import type { MemoryApiDTO, MemoryInfo, UpdateMemoryParams } from "./types";
 import { mapMemoryApiToMemoryInfo } from "./mappers";
+import { updateMemoryInMemoriesCache } from "./memories-cache-helpers";
 
 export const useUpdateMemory: useMutationFunctionType<
   undefined,
@@ -24,15 +25,6 @@ export const useUpdateMemory: useMutationFunctionType<
     | undefined;
   const { onSettled: userOnSettled, ...restOptions } = typedOptions ?? {};
 
-  const isRecord = (value: unknown): value is Record<string, unknown> =>
-    typeof value === "object" && value !== null;
-
-  const getStringId = (value: unknown): string | undefined => {
-    if (!isRecord(value)) return undefined;
-    const id = value.id;
-    return typeof id === "string" ? id : undefined;
-  };
-
   const updateMemoryFn = async (
     params: UpdateMemoryParams,
   ): Promise<MemoryInfo> => {
@@ -47,44 +39,7 @@ export const useUpdateMemory: useMutationFunctionType<
 
     // Keep UI snappy: update caches directly instead of invalidating/refetching.
     queryClient.setQueryData(["useGetMemory", memoryId], updated);
-    queryClient.setQueriesData(
-      { queryKey: ["useGetMemoriesInfinite"] },
-      (old: unknown) => {
-        if (!isRecord(old)) return old;
-
-        // InfiniteQuery shape: { pages: [{ items: [...] }, ...], pageParams: [...] }
-        if (Array.isArray(old.pages)) {
-          const pages = old.pages;
-          const nextPages = pages.map((page) => {
-            if (!isRecord(page)) return page;
-            const items = page.items;
-            if (!Array.isArray(items)) return page;
-
-            const nextItems = items.map((item) => {
-              if (getStringId(item) !== updated.id) return item;
-              if (!isRecord(item)) return item;
-              return { ...item, ...updated };
-            });
-
-            return { ...page, items: nextItems };
-          });
-
-          return { ...old, pages: nextPages };
-        }
-
-        // Legacy/non-infinite shape: { items: [...] }
-        if (!Array.isArray(old.items)) return old;
-        const items = old.items;
-
-        const nextItems = items.map((item) => {
-          if (getStringId(item) !== updated.id) return item;
-          if (!isRecord(item)) return item;
-          return { ...item, ...updated };
-        });
-
-        return { ...old, items: nextItems };
-      },
-    );
+    updateMemoryInMemoriesCache(queryClient, updated);
 
     return updated;
   };
