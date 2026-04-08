@@ -150,7 +150,7 @@ export default function StepType() {
           >
             {!llmsLoading && llmModels.length === 0 && (
               <SelectItem value="__empty__" disabled>
-                No models available for the selected provider
+                No models available for selected environment
               </SelectItem>
             )}
             {llmModels.map((model) => (
