@@ -152,6 +152,9 @@ export const BotMessage = memo(
               )}
 
               <div className="flex w-full flex-col min-w-0">
+                <span className="text-sm font-medium text-foreground mb-1">
+                  {chat.sender_name ?? "AI"}
+                </span>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   {!thinkingActive && displayTime > 0 && (
                     <ForwardedIconComponent

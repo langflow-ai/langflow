@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import ShortcutDisplay from "../../nodeToolbarComponent/shortcutDisplay";
@@ -18,6 +19,7 @@ export const SearchInput = memo(function SearchInput({
   handleInputBlur: (event: React.FocusEvent<HTMLInputElement>) => void;
   handleInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className={`relative w-full flex-1 ${!ENABLE_NEW_SIDEBAR && "pb-2"}`}>
       <Input
@@ -26,7 +28,7 @@ export const SearchInput = memo(function SearchInput({
         icon={"Search"}
         data-testid="sidebar-search-input"
         inputClassName="w-full rounded-lg bg-background text-sm"
-        placeholder="Search"
+        placeholder={t("sidebar.searchPlaceholder")}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
         onChange={handleInputChange}

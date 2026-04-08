@@ -2,7 +2,7 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
-import { EMPTY_OUTPUT_SEND_MESSAGE } from "@/constants/constants";
+import { useTranslation } from "react-i18next";
 import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import { preprocessChatMessage } from "@/utils/markdownUtils";
 import { cn } from "@/utils/utils";
@@ -23,6 +23,7 @@ export const MarkdownField = ({
   editedFlag,
   isAudioMessage,
 }: MarkdownFieldProps) => {
+  const { t } = useTranslation();
   // Process the chat message to handle <think> tags and clean up tables
   const processedChatMessage = preprocessChatMessage(chatMessage);
 
@@ -107,7 +108,7 @@ export const MarkdownField = ({
         }}
       >
         {isEmpty && !chat.stream_url
-          ? EMPTY_OUTPUT_SEND_MESSAGE
+          ? t("chat.emptyOutputSendMessage")
           : processedChatMessage}
       </Markdown>
       {editedFlag}
