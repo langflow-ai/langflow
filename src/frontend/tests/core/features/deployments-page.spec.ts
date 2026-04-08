@@ -11,7 +11,7 @@ async function navigateToDeploymentsTab(
 ) {
   await awaitBootstrapTest(page, { skipModal: true });
   await page.getByTestId("deployments-btn").click();
-  await page.waitForSelector('[data-testid="new-deployment-btn"]');
+  await page.waitForSelector('[data-testid="subtab-deployments"]');
 }
 
 test(
@@ -41,7 +41,7 @@ test(
 
     await awaitBootstrapTest(page, { skipModal: true });
     await page.getByTestId("deployments-btn").click();
-    await page.waitForSelector('[data-testid="new-deployment-btn"]');
+    await page.waitForSelector('[data-testid="subtab-deployments"]');
 
     await expect(page.getByTestId("subtab-deployments")).toBeVisible();
     await expect(page.getByTestId("subtab-providers")).toBeVisible();
@@ -75,10 +75,9 @@ test(
 
     await awaitBootstrapTest(page, { skipModal: true });
     await page.getByTestId("deployments-btn").click();
-    await page.waitForSelector('[data-testid="new-deployment-btn"]');
+    await page.waitForSelector('[data-testid="subtab-deployments"]');
 
-    await expect(page.getByTestId("add-environment-empty-btn")).toBeVisible();
-    await expect(page.getByTestId("new-deployment-btn")).toBeVisible();
+    await expect(page.getByTestId("create-deployment-empty-btn")).toBeVisible();
   },
 );
 
@@ -109,12 +108,11 @@ test(
 
     await awaitBootstrapTest(page, { skipModal: true });
     await page.getByTestId("deployments-btn").click();
-    await page.waitForSelector('[data-testid="new-deployment-btn"]');
+    await page.waitForSelector('[data-testid="subtab-deployments"]');
 
     await page.getByTestId("subtab-providers").click();
 
     await expect(page.getByTestId("add-provider-empty-btn")).toBeVisible();
-    await expect(page.getByTestId("new-provider-btn")).toBeVisible();
   },
 );
 
@@ -145,7 +143,7 @@ test(
 
     await awaitBootstrapTest(page, { skipModal: true });
     await page.getByTestId("deployments-btn").click();
-    await page.waitForSelector('[data-testid="new-deployment-btn"]');
+    await page.waitForSelector('[data-testid="subtab-deployments"]');
 
     await expect(page.getByTestId("deployment-row-dep-1")).toBeVisible();
   },
@@ -178,7 +176,7 @@ test(
 
     await awaitBootstrapTest(page, { skipModal: true });
     await page.getByTestId("deployments-btn").click();
-    await page.waitForSelector('[data-testid="new-deployment-btn"]');
+    await page.waitForSelector('[data-testid="subtab-deployments"]');
 
     await page.getByTestId("subtab-providers").click();
 

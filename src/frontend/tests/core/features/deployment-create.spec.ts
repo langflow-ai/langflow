@@ -113,8 +113,8 @@ async function openDeploymentStepper(page: Page) {
 
   await setupDeploymentMocks(page, myCollectionId);
   await page.getByTestId("deployments-btn").click();
-  await page.waitForSelector('[data-testid="new-deployment-btn"]');
-  await page.getByTestId("new-deployment-btn").click();
+  await page.waitForSelector('[data-testid="subtab-deployments"]');
+  await page.getByTestId("create-deployment-empty-btn").click();
   // Wait for the stepper dialog to appear
   await page.waitForSelector('[data-testid="deployment-stepper-next"]');
 }
@@ -187,10 +187,10 @@ test(
     );
 
     await awaitBootstrapTest(page, { skipModal: true });
-    await setupDeploymentMocks(page);
+    await setupDeploymentMocks(page, "");
     await page.getByTestId("deployments-btn").click();
-    await page.waitForSelector('[data-testid="new-deployment-btn"]');
-    await page.getByTestId("new-deployment-btn").click();
+    await page.waitForSelector('[data-testid="subtab-deployments"]');
+    await page.getByTestId("create-deployment-empty-btn").click();
 
     await expect(page.getByTestId("stepper-modal-title")).toBeVisible();
     await expect(page.getByTestId("deployment-stepper-next")).toBeVisible();
@@ -388,5 +388,42 @@ test(
         name: /Deploying\.\.\.|Deployment successful/i,
       }),
     ).toBeVisible({ timeout: 10000 });
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Test 7: Review step — user can change tool name
+// ---------------------------------------------------------------------------
+test(
+  "deployment-create: user can change tool name on review step",
+  { tag: ["@deployment", "@workspace"] },
+  async ({ page }) => {
+    test.skip(
+      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+    );
+
+    await openDeploymentStepper(page);
+    await goToStepReview(page);
+
+    // The edit tool name button should be visible on the review step
+    await expect(page.getByTestId("edit-tool-name")).toBeVisible();
+
+    // Click the edit (pencil) button to enter editing mode
+    await page.getByTestId("edit-tool-name").click();
+
+    // The tool name input should appear
+    const toolNameInput = page.getByTestId("tool-name-input");
+    await expect(toolNameInput).toBeVisible();
+
+    // Clear and type a new tool name
+    await toolNameInput.fill("Custom Tool Name");
+
+    // Confirm the change by pressing Enter
+    await toolNameInput.press("Enter");
+
+    // The input should disappear and the new name should be visible
+    await expect(toolNameInput).not.toBeVisible();
+    await expect(page.getByText("Custom Tool Name")).toBeVisible();
   },
 );
