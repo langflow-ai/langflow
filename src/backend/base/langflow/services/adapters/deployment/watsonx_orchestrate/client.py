@@ -129,7 +129,7 @@ def get_authenticator(instance_url: str, api_key: str) -> IAMAuthenticator | MCS
     """Return the appropriate authenticator for the Watsonx Orchestrate API."""
     if ".cloud.ibm.com" in instance_url:
         authenticator = IAMAuthenticator(apikey=api_key, url=WxOAuthURL.IBM_IAM.value)
-    elif ".ibm.com" in instance_url:  # noqa: RET505 - explicitness
+    elif ".ibm.com" in instance_url:
         authenticator = MCSPAuthenticator(apikey=api_key, url=WxOAuthURL.MCSP.value)
     else:
         msg = f"Could not determine authentication scheme for instance URL: {instance_url}"
@@ -137,7 +137,7 @@ def get_authenticator(instance_url: str, api_key: str) -> IAMAuthenticator | MCS
 
     # Use a split (connect, read) timeout so that cold-start TCP/TLS handshakes
     # fail fast instead of blocking for the SDK's default 60 s.
-    authenticator.token_manager.http_config = { "timeout": (10, 30) }
+    authenticator.token_manager.http_config = {"timeout": (10, 30)}
     return authenticator
 
 
