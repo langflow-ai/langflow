@@ -235,7 +235,8 @@ def _build_tenant_scope_config_items(
         config_type = connection.security_scheme
         if config_type != "key_value_creds":
             continue
-        environment = getattr(connection, "environment", None)
+        raw_env = getattr(connection, "environment", None)
+        environment = raw_env if isinstance(raw_env, str) else None
         configs.append(
             build_config_list_item(
                 config_item_data_slot=config_item_data_slot,
@@ -275,13 +276,15 @@ def _build_deployment_scope_config_items(
         config_type = getattr(connection, "security_scheme", None)
         if config_type != "key_value_creds":
             continue
+        raw_env = getattr(connection, "environment", None)
+        environment = raw_env if isinstance(raw_env, str) else None
         configs.append(
             build_config_list_item(
                 config_item_data_slot=config_item_data_slot,
                 connection_id=connection_id,
                 app_id=getattr(connection, "app_id", None),
                 config_type=config_type,
-                environment=getattr(connection, "environment", None),
+                environment=environment,
             )
         )
     return configs, resolved_connection_ids
