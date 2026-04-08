@@ -83,7 +83,10 @@ describe("MemoryDetailsHeader", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Toggle auto-capture" }),
     );
-    expect(props.handleToggleActive).toHaveBeenCalledWith(false);
+
+    const firstCallArg = (props.handleToggleActive as jest.Mock).mock.calls[0]?.[0];
+    expect(firstCallArg).toEqual(expect.any(Function));
+    expect(firstCallArg(true)).toBe(false);
   });
 
   it("renders the session selector when sessions exist", () => {

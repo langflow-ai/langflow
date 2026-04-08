@@ -15,6 +15,8 @@ type UseAutoCaptureDebouncedToggleArgs = {
   debounceMs?: number;
 };
 
+type NextIsActive = boolean | ((prevIsActive: boolean) => boolean);
+
 export const useAutoCaptureDebouncedToggle = ({
   memory,
   updateMemoryMutation,
@@ -24,10 +26,15 @@ export const useAutoCaptureDebouncedToggle = ({
     null,
   );
   const committedIsActiveRef = useRef<boolean | null>(null);
+  const draftIsActiveRef = useRef<boolean | null>(null);
 
   const [autoCaptureDraft, setAutoCaptureDraft] = useState<boolean | null>(
     null,
   );
+
+  useEffect(() => {
+    draftIsActiveRef.current = autoCaptureDraft;
+  }, [autoCaptureDraft]);
 
   useEffect(() => {
     committedIsActiveRef.current = memory?.is_active ?? null;
@@ -35,6 +42,7 @@ export const useAutoCaptureDebouncedToggle = ({
 
   useEffect(() => {
     setAutoCaptureDraft(null);
+    draftIsActiveRef.current = null;
     committedIsActiveRef.current = null;
 
     if (autoCaptureTimerRef.current) {
@@ -52,9 +60,16 @@ export const useAutoCaptureDebouncedToggle = ({
     };
   }, []);
 
-  const handleToggleActive = (nextIsActive: boolean) => {
+  const handleToggleActive = (nextIsActiveOrUpdater: NextIsActive) => {
     if (!memory) return;
     const committedIsActive = committedIsActiveRef.current ?? memory.is_active;
+    const currentIsActive = draftIsActiveRef.current ?? committedIsActive;
+    const nextIsActive =
+      typeof nextIsActiveOrUpdater === "function"
+        ? nextIsActiveOrUpdater(currentIsActive)
+        : nextIsActiveOrUpdater;
+
+    if (nextIsActive === currentIsActive) return;
 
     if (committedIsActive === nextIsActive) {
       if (autoCaptureTimerRef.current) {
@@ -62,9 +77,11 @@ export const useAutoCaptureDebouncedToggle = ({
         autoCaptureTimerRef.current = null;
       }
       setAutoCaptureDraft(null);
+      draftIsActiveRef.current = null;
       return;
     }
 
+    draftIsActiveRef.current = nextIsActive;
     setAutoCaptureDraft(nextIsActive);
 
     if (autoCaptureTimerRef.current) {
@@ -76,6 +93,7 @@ export const useAutoCaptureDebouncedToggle = ({
       // If the committed value already matches, skip a no-op update.
       if ((committedIsActiveRef.current ?? memory.is_active) === nextIsActive) {
         setAutoCaptureDraft(null);
+        draftIsActiveRef.current = null;
         autoCaptureTimerRef.current = null;
         return;
       }
@@ -88,6 +106,7 @@ export const useAutoCaptureDebouncedToggle = ({
         {
           onSuccess: () => {
             setAutoCaptureDraft(null);
+            draftIsActiveRef.current = null;
           },
         },
       );

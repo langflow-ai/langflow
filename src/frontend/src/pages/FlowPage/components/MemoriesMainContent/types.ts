@@ -20,6 +20,8 @@ export type MemoryActionMutation = {
   isPending: boolean;
 };
 
+export type NextIsActive = boolean | ((prevIsActive: boolean) => boolean);
+
 export type MemoryDetailsProps = {
   memory: MemoryInfo;
   docsData?: {
@@ -36,7 +38,7 @@ export type MemoryDetailsProps = {
   groupedBySession: Map<string, MemoryDocumentItem[]>;
   handleOpenDocumentPanel: (doc: MemoryDocumentItem) => void;
   deleteMutation: MemoryActionMutation;
-  handleToggleActive: (nextIsActive: boolean) => void;
+  handleToggleActive: (nextIsActive: NextIsActive) => void;
 };
 
 export type MemoriesSidebarProps = {
@@ -81,5 +83,5 @@ export type MemoryDetailsHeaderProps = {
   selectedSession: string | null;
   setSelectedSession: (value: string | null) => void;
   deleteMutation: MemoryActionMutation;
-  handleToggleActive: (nextIsActive: boolean) => void;
+  handleToggleActive: (nextIsActive: NextIsActive) => void;
 };

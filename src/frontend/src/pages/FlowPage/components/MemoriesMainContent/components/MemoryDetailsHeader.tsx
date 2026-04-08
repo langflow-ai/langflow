@@ -45,7 +45,7 @@ export function MemoryDetailsHeader({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => handleToggleActive(!memory.is_active)}
+          onClick={() => handleToggleActive((prevIsActive) => !prevIsActive)}
           aria-pressed={memory.is_active}
           aria-label="Toggle auto-capture"
         >
