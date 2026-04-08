@@ -6,10 +6,18 @@ import type { DeploymentListResponse } from "./use-get-deployments";
 
 async function fetchDeployments(
   providerId: string,
+  projectId?: string,
 ): Promise<DeploymentListResponse> {
   const { data } = await api.get<DeploymentListResponse>(
     `${getURL("DEPLOYMENTS")}`,
-    { params: { provider_id: providerId, page: 1, size: 20 } },
+    {
+      params: {
+        provider_id: providerId,
+        project_id: projectId,
+        page: 1,
+        size: 20,
+      },
+    },
   );
   return data;
 }
@@ -21,11 +29,15 @@ interface UseGetDeploymentsByProvidersResult {
 
 export function useGetDeploymentsByProviders(
   providerIds: string[],
+  projectId?: string,
 ): UseGetDeploymentsByProvidersResult {
   return useQueries({
     queries: providerIds.map((pid) => ({
-      queryKey: ["useGetDeployments", { provider_id: pid, page: 1, size: 20 }],
-      queryFn: () => fetchDeployments(pid),
+      queryKey: [
+        "useGetDeployments",
+        { provider_id: pid, project_id: projectId, page: 1, size: 20 },
+      ],
+      queryFn: () => fetchDeployments(pid, projectId),
       enabled: !!pid,
     })),
     combine: (results): UseGetDeploymentsByProvidersResult => {
