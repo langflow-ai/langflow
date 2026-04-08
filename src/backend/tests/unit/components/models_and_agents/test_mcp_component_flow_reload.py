@@ -152,5 +152,10 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         updated_config = await component.update_build_config(build_config, new_server_value, "mcp_server")
 
         # Assert — options must be cleared (new server has different tools)
+        # The backend now attempts to fetch tools immediately; since "new_server"
+        # doesn't exist in the database, it will fail with an error placeholder.
         assert updated_config["tool"]["options"] == []
-        assert updated_config["tool"]["placeholder"] == "Loading tools..."
+        assert updated_config["tool"]["placeholder"] in (
+            "Error on MCP Server",
+            "Timeout on MCP server",
+        )

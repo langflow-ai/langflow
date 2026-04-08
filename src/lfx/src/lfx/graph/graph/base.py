@@ -1457,7 +1457,7 @@ class Graph:
         else:
             # Fallback no-op cache functions for tests or when service unavailable
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
-                return None
+                return CacheMiss()
 
             async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
                 return True
@@ -1682,10 +1682,10 @@ class Graph:
         else:
             # Fallback no-op cache functions for tests or when service unavailable
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
-                return None
+                return CacheMiss()
 
-            async def set_cache_func(*args, **kwargs):
-                pass
+            async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
+                return True
 
         await self.initialize_run()
         lock = asyncio.Lock()

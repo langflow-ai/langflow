@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import random
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
     DeploymentConflictError,
     InvalidContentError,
@@ -23,8 +23,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
     ROLLBACK_MAX_RETRIES,
     UPDATE_MAX_RETRIES,
 )
-
-logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
@@ -131,18 +129,18 @@ async def rollback_created_resources(
     if agent_id:
         try:
             await retry_rollback(delete_agent_if_exists, clients, agent_id=agent_id)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Rollback failed for agent_id=%s — resource may be orphaned", agent_id)
     if tool_ids:
         for tool_id in reversed(tool_ids):
             try:
                 await retry_rollback(delete_tool_if_exists, clients, tool_id=tool_id)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception("Rollback failed for tool_id=%s — resource may be orphaned", tool_id)
     for created_app_id in reversed(app_ids_to_rollback):
         try:
             await retry_rollback(delete_config_if_exists, clients, app_id=created_app_id)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Rollback failed for app_id=%s — resource may be orphaned", created_app_id)
 
 
@@ -159,7 +157,7 @@ async def rollback_update_resources(
     newly created config. Unlike ``rollback_created_resources`` this never
     deletes the deployment/agent itself.
     """
-    logger.info(
+    logger.warning(
         "Rolling back update resources: created_tool_ids=%s, created_app_id=%s, mutated_tools=%s",
         created_tool_ids,
         created_app_id,
@@ -168,7 +166,7 @@ async def rollback_update_resources(
     for tool_id, original_tool in reversed(list(original_tools.items())):
         try:
             await retry_rollback(asyncio.to_thread, clients.tool.update, tool_id, original_tool)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception(
                 "Rollback failed: could not restore tool payload for tool_id=%s — resource may be orphaned",
                 tool_id,
@@ -177,13 +175,13 @@ async def rollback_update_resources(
     for tool_id in reversed(created_tool_ids):
         try:
             await retry_rollback(delete_tool_if_exists, clients, tool_id=tool_id)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Rollback failed for created tool_id=%s — resource may be orphaned", tool_id)
 
     if created_app_id:
         try:
             await retry_rollback(delete_config_if_exists, clients, app_id=created_app_id)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Rollback failed for created app_id=%s — resource may be orphaned", created_app_id)
 
 

@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
 
 async def create_deployment_attachment(
     db: AsyncSession,
@@ -69,14 +71,56 @@ async def list_deployment_attachments(
     *,
     user_id: UUID,
     deployment_id: UUID,
+    flow_ids: list[UUID] | None = None,
 ) -> list[FlowVersionDeploymentAttachment]:
+    stmt = select(FlowVersionDeploymentAttachment).where(
+        FlowVersionDeploymentAttachment.user_id == user_id,
+        FlowVersionDeploymentAttachment.deployment_id == deployment_id,
+    )
+    if flow_ids:
+        from langflow.services.database.models.flow_version.model import FlowVersion
+
+        stmt = stmt.join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id).where(
+            col(FlowVersion.flow_id).in_(flow_ids),
+        )
+    stmt = stmt.order_by(FlowVersionDeploymentAttachment.created_at)
+    return list((await db.exec(stmt)).all())
+
+
+async def list_deployment_attachments_with_versions(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_id: UUID,
+    offset: int,
+    limit: int,
+    flow_ids: list[UUID] | None = None,
+) -> list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]]:
+    """Return paginated attachment rows joined with version metadata and flow name."""
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
+    if limit <= 0:
+        return []
+
     stmt = (
-        select(FlowVersionDeploymentAttachment)
+        select(FlowVersionDeploymentAttachment, FlowVersion, col(Flow.name).label("flow_name"))
+        .join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id)
+        .join(Flow, Flow.id == FlowVersion.flow_id)
         .where(
             FlowVersionDeploymentAttachment.user_id == user_id,
             FlowVersionDeploymentAttachment.deployment_id == deployment_id,
         )
-        .order_by(FlowVersionDeploymentAttachment.created_at)
+    )
+    if flow_ids:
+        stmt = stmt.where(col(FlowVersion.flow_id).in_(flow_ids))
+    stmt = (
+        stmt.order_by(
+            col(FlowVersionDeploymentAttachment.created_at).desc(),
+            col(FlowVersionDeploymentAttachment.updated_at).desc(),
+        )
+        .offset(offset)
+        .limit(limit)
     )
     return list((await db.exec(stmt)).all())
 
@@ -200,6 +244,69 @@ async def list_attachments_for_flow_with_provider_info(
     return [(attachment, provider_account_id, provider_key) for attachment, provider_account_id, provider_key in rows]
 
 
+async def list_attachments_for_flow_with_deployment_info(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    flow_id: UUID,
+) -> list[tuple[FlowVersionDeploymentAttachment, str, str, str]]:
+    """Return deployed attachments for all versions of a flow, with deployment context.
+
+    Each tuple contains:
+      - the attachment row
+      - the deployment's ``name``
+      - the deployment's ``deployment_type`` value
+      - the provider account's ``provider_key``
+
+    Only attachments with a non-null ``provider_snapshot_id`` are returned
+    (i.e. those that have actually been materialized on the provider).
+    Results are ordered by ``updated_at`` descending so the most recent
+    attachment per deployment comes first.
+    """
+    from langflow.services.database.models.deployment.model import Deployment
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
+    stmt = (
+        select(
+            FlowVersionDeploymentAttachment,
+            Deployment.name,
+            Deployment.deployment_type,
+            DeploymentProviderAccount.provider_key,
+        )
+        .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
+        .join(DeploymentProviderAccount, DeploymentProviderAccount.id == Deployment.deployment_provider_account_id)
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.provider_snapshot_id.is_not(None),  # type: ignore[union-attr]
+            col(FlowVersionDeploymentAttachment.flow_version_id).in_(
+                select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
+            ),
+        )
+        .order_by(FlowVersionDeploymentAttachment.updated_at.desc())  # type: ignore[union-attr]
+    )
+    rows = (await db.exec(stmt)).all()
+    return [(att, name, dtype.value, pkey) for att, name, dtype, pkey in rows]
+
+
+async def get_attachment_by_provider_snapshot_id(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    provider_snapshot_id: str,
+) -> FlowVersionDeploymentAttachment | None:
+    """Look up an attachment by its provider_snapshot_id.
+
+    Used by the PATCH /snapshots/{provider_snapshot_id} endpoint to
+    resolve the deployment context for a provider-owned snapshot.
+    """
+    stmt = select(FlowVersionDeploymentAttachment).where(
+        FlowVersionDeploymentAttachment.user_id == user_id,
+        FlowVersionDeploymentAttachment.provider_snapshot_id == provider_snapshot_id,
+    )
+    return (await db.exec(stmt)).first()
+
+
 async def count_attachments_by_deployment_ids(
     db: AsyncSession,
     *,
@@ -222,3 +329,28 @@ async def count_attachments_by_deployment_ids(
     )
     rows = (await db.exec(stmt)).all()
     return {deployment_id: int(count) for deployment_id, count in rows}
+
+
+async def count_deployment_attachments(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_id: UUID,
+    flow_ids: list[UUID] | None = None,
+) -> int:
+    stmt = (
+        select(func.count())
+        .select_from(FlowVersionDeploymentAttachment)
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.deployment_id == deployment_id,
+        )
+    )
+    if flow_ids:
+        from langflow.services.database.models.flow_version.model import FlowVersion
+
+        stmt = stmt.join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id).where(
+            col(FlowVersion.flow_id).in_(flow_ids),
+        )
+    total = (await db.exec(stmt)).one()
+    return int(total or 0)
