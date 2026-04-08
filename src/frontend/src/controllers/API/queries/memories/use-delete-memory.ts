@@ -44,7 +44,8 @@ export const useDeleteMemory: useMutationFunctionType<
     onSettled: (data, error, variables, onMutateResult, context) => {
       userOnSettled?.(data, error, variables, onMutateResult, context);
     },
-    retry: restOptions.retry ?? 3,
+    // DELETE is not safe to retry by default (may produce confusing 404s).
+    retry: restOptions.retry ?? false,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 

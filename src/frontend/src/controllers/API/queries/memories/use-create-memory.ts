@@ -58,7 +58,8 @@ export const useCreateMemory: useMutationFunctionType<
         queryClient.invalidateQueries({ queryKey: ["useCreateMemory"] });
         userOnSettled?.(data, error, variables, onMutateResult, context);
       },
-      retry: restOptions.retry ?? 3,
+      // POST is not safe to retry by default (risk of duplicates).
+      retry: restOptions.retry ?? false,
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     });
 

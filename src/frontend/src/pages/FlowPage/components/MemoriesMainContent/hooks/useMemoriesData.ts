@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useAlertStore from "@/stores/alertStore";
 import { useGetMemories } from "@/controllers/API/queries/memories/use-get-memories";
 import { useGetMemory } from "@/controllers/API/queries/memories/use-get-memory";
-import { useGetMemorySessions } from "@/controllers/API/queries/memories/use-get-memory-sessions";
 import { useDeleteMemory } from "@/controllers/API/queries/memories/use-delete-memory";
 import { useUpdateMemory } from "@/controllers/API/queries/memories/use-update-memory";
-import { useGetMemorySessionMessages } from "@/controllers/API/queries/memories/use-get-memory-session-messages";
 import { UseMemoriesDataProps } from "../types";
 import type {
   MemoryDocumentItem,
   MemoryInfo,
-  MemorySessionInfo,
 } from "@/controllers/API/queries/memories/types";
+import { useMemorySessionResolver } from "./useMemorySessionResolver";
+import { useAutoCaptureDebouncedToggle } from "./useAutoCaptureDebouncedToggle";
+import { useMemoryDocuments } from "./useMemoryDocuments";
 
 const EMPTY_MEMORIES: MemoryInfo[] = [];
 
@@ -22,21 +22,26 @@ export function useMemoriesData({
 }: UseMemoriesDataProps) {
   const { setErrorData, setSuccessData } = useAlertStore();
 
-  const AUTO_CAPTURE_DEBOUNCE_MS = 300;
-  const autoCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-  const committedIsActiveRef = useRef<boolean | null>(null);
+  const getErrorMessage = (error: unknown) => {
+    if (error && typeof error === "object") {
+      const maybeAny = error as {
+        message?: unknown;
+        response?: { data?: { detail?: unknown } };
+      };
+      const detail = maybeAny.response?.data?.detail;
+      if (typeof detail === "string" && detail) return detail;
+      if (typeof maybeAny.message === "string" && maybeAny.message) {
+        return maybeAny.message;
+      }
+    }
+    return "Unknown error";
+  };
 
   const [memoriesSearch, setMemoriesSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [documentPanelOpen, setDocumentPanelOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] =
     useState<MemoryDocumentItem | null>(null);
-  const [autoCaptureDraft, setAutoCaptureDraft] = useState<boolean | null>(
-    null,
-  );
 
   const {
     data: memoriesInfinite,
@@ -70,7 +75,6 @@ export function useMemoriesData({
   }, [memories, selectedMemoryId, onSelectMemory]);
 
   useEffect(() => {
-    setSelectedSession(null);
     setSelectedDocument(null);
     setDocumentPanelOpen(false);
   }, [selectedMemoryId]);
@@ -96,78 +100,52 @@ export function useMemoriesData({
     },
   );
 
-  const { data: memorySessions = [], refetch: refetchMemorySessions } =
-    useGetMemorySessions(
-      { memoryId: selectedMemoryId ?? "" },
-      {
-        enabled: !!selectedMemoryId,
-        retry: false,
-      },
-    );
-
-  useEffect(() => {
-    if (!selectedMemoryId) return;
-    if (!selectedSession) return;
-    refetchMemorySessions();
-  }, [selectedMemoryId, selectedSession, refetchMemorySessions]);
-
-  const resolveDefaultSessionId = (sessions: MemorySessionInfo[]) => {
-    if (!sessions.length) return null;
-    const toTime = (value: string | null | undefined) =>
-      value ? new Date(value).getTime() : 0;
-
-    const sorted = [...sessions].sort((a, b) => {
-      const timeDiff = toTime(b.last_sync_at) - toTime(a.last_sync_at);
-      if (timeDiff !== 0) return timeDiff;
-      const pendingDiff = (b.pending_count ?? 0) - (a.pending_count ?? 0);
-      if (pendingDiff !== 0) return pendingDiff;
-      return (a.session_id ?? "").localeCompare(b.session_id ?? "");
-    });
-    return sorted[0]?.session_id ?? null;
-  };
-
-  const effectiveSessionId = useMemo(() => {
-    const candidate = selectedSession?.trim();
-    if (candidate) {
-      const exists = memorySessions.some((s) => s.session_id === candidate);
-      if (exists) return candidate;
-    }
-
-    const fallback = resolveDefaultSessionId(memorySessions);
-    return fallback && fallback.trim() ? fallback : null;
-  }, [selectedSession, memorySessions]);
-
   const {
-    data: memoryMessagesInfinite,
-    isLoading: memoryMessagesLoading,
-    fetchNextPage: fetchNextMessagesPage,
-    hasNextPage: hasNextMessagesPage,
-    isFetchingNextPage: isFetchingNextMessagesPage,
-  } = useGetMemorySessionMessages(
-    {
-      memoryId: selectedMemoryId ?? "",
-      sessionId: effectiveSessionId ?? "",
-      size: 50,
+    memorySessions,
+    selectedSession,
+    setSelectedSession,
+    effectiveSessionId,
+  } = useMemorySessionResolver({ memoryId: selectedMemoryId });
+
+  const deleteMutation = useDeleteMemory({
+    onSuccess: () => {
+      setSuccessData({ title: "Memory deleted" });
+      onSelectMemory?.(null);
     },
+    onError: (error: unknown) =>
+      setErrorData({
+        title: "Failed to delete memory",
+        list: [getErrorMessage(error)],
+      }),
+  });
+
+  const updateMemoryMutation = useUpdateMemory({
+    onError: (error: unknown) =>
+      setErrorData({
+        title: "Failed to update memory",
+        list: [getErrorMessage(error)],
+      }),
+  });
+
+  const { autoCaptureDraft, handleToggleActive } = useAutoCaptureDebouncedToggle(
     {
-      enabled: !!selectedMemoryId && !!effectiveSessionId,
+      memory,
+      updateMemoryMutation,
+      debounceMs: 300,
     },
   );
 
-  useEffect(() => {
-    if (!selectedMemoryId) return;
-    if (!memorySessions.length) return;
-
-    const sessionIds = memorySessions
-      .map((s) => s.session_id)
-      .filter((sid): sid is string => !!sid);
-    if (!sessionIds.length) return;
-
-    setSelectedSession((prev) => {
-      if (prev && sessionIds.includes(prev)) return prev;
-      return resolveDefaultSessionId(memorySessions);
-    });
-  }, [selectedMemoryId, memorySessions]);
+  const {
+    docsData,
+    memoryMessagesLoading,
+    fetchNextMessagesPage,
+    hasNextMessagesPage,
+    isFetchingNextMessagesPage,
+  } = useMemoryDocuments({
+    memoryId: selectedMemoryId,
+    sessionId: effectiveSessionId,
+    memorySessions,
+  });
 
   useEffect(() => {
     if (isError && selectedMemoryId) {
@@ -175,110 +153,7 @@ export function useMemoriesData({
     }
   }, [isError, selectedMemoryId, onSelectMemory]);
 
-  useEffect(() => {
-    committedIsActiveRef.current = memory?.is_active ?? null;
-  }, [memory?.is_active]);
-
-  useEffect(() => {
-    setSelectedSession(null);
-    setSelectedDocument(null);
-    setDocumentPanelOpen(false);
-
-    setAutoCaptureDraft(null);
-    committedIsActiveRef.current = null;
-    if (autoCaptureTimerRef.current) {
-      clearTimeout(autoCaptureTimerRef.current);
-      autoCaptureTimerRef.current = null;
-    }
-  }, [selectedMemoryId]);
-
-  useEffect(() => {
-    return () => {
-      if (autoCaptureTimerRef.current) {
-        clearTimeout(autoCaptureTimerRef.current);
-        autoCaptureTimerRef.current = null;
-      }
-    };
-  }, []);
-
-  const docsData = useMemo(() => {
-    const pages = memoryMessagesInfinite?.pages ?? [];
-    const rawDocuments: MemoryDocumentItem[] = pages
-      .flatMap((p) => p?.items ?? [])
-      .map((m) => {
-        const ingestionJobId = String(m?.ingestion_job_id ?? "");
-        const ingestionTimestamp = String(m?.ingestion_timestamp ?? "");
-        const timestamp = String(m?.timestamp ?? "");
-        const sender = String(m?.sender ?? "");
-        const sessionId = String(m?.session_id ?? "");
-        const messageId =
-          ingestionJobId || timestamp || sender
-            ? [ingestionJobId, timestamp, sender].filter(Boolean).join(":")
-            : "";
-
-        return {
-          message_id: messageId,
-          session_id: sessionId,
-          sender,
-          content: String(m?.text ?? ""),
-          timestamp,
-          ...(ingestionJobId ? { ingestion_job_id: ingestionJobId } : {}),
-          ...(ingestionTimestamp
-            ? { ingestion_timestamp: ingestionTimestamp }
-            : {}),
-        };
-      })
-      .filter((d) => d.content);
-
-    const sessionScopedDocuments = effectiveSessionId
-      ? rawDocuments.filter((doc) => doc.session_id === effectiveSessionId)
-      : rawDocuments;
-
-    const sessionsFromApi = Array.from(
-      new Set(
-        (memorySessions ?? [])
-          .map((s) => s.session_id)
-          .filter((sid): sid is string => !!sid),
-      ),
-    );
-
-    const sessions = sessionsFromApi;
-
-    const totalFromApi =
-      memoryMessagesInfinite?.pages?.[0]?.total ??
-      sessionScopedDocuments.length;
-
-    return {
-      documents: sessionScopedDocuments,
-      total: totalFromApi,
-      sessions,
-    };
-  }, [memoryMessagesInfinite, memorySessions, effectiveSessionId]);
-
   const docsLoading = isLoading || memoryMessagesLoading;
-
-  const deleteMutation = useDeleteMemory({
-    onSuccess: () => {
-      setSuccessData({ title: "Memory deleted" });
-      onSelectMemory?.(null);
-    },
-    onError: (error: any) =>
-      setErrorData({
-        title: "Failed to delete memory",
-        list: [error?.response?.data?.detail || error?.message],
-      }),
-  });
-
-  const updateMemoryMutation = useUpdateMemory({
-    onSuccess: () => {
-      setAutoCaptureDraft(null);
-    },
-    onError: (error: any) =>
-      setErrorData({
-        title: "Failed to update memory",
-        list: [error?.response?.data?.detail || error?.message],
-      }),
-  });
 
   const resolvedMemory = useMemo(() => {
     if (!memory) return memory;
@@ -301,41 +176,6 @@ export function useMemoriesData({
 
     return nextMemory;
   }, [memory, autoCaptureDraft, effectiveSessionId, memorySessions]);
-
-  const handleToggleActive = (nextIsActive: boolean) => {
-    if (!memory) return;
-    const committedIsActive = committedIsActiveRef.current ?? memory.is_active;
-    if (committedIsActive === nextIsActive) {
-      if (autoCaptureTimerRef.current) {
-        clearTimeout(autoCaptureTimerRef.current);
-        autoCaptureTimerRef.current = null;
-      }
-      setAutoCaptureDraft(null);
-      return;
-    }
-
-    setAutoCaptureDraft(nextIsActive);
-
-    if (autoCaptureTimerRef.current) {
-      clearTimeout(autoCaptureTimerRef.current);
-      autoCaptureTimerRef.current = null;
-    }
-
-    autoCaptureTimerRef.current = setTimeout(() => {
-      // If the committed value already matches, skip a no-op update.
-      if ((committedIsActiveRef.current ?? memory.is_active) === nextIsActive) {
-        setAutoCaptureDraft(null);
-        autoCaptureTimerRef.current = null;
-        return;
-      }
-
-      updateMemoryMutation.mutate({
-        memoryId: memory.id,
-        auto_capture: nextIsActive,
-      });
-      autoCaptureTimerRef.current = null;
-    }, AUTO_CAPTURE_DEBOUNCE_MS);
-  };
 
   const handleOpenDocumentPanel = (doc: MemoryDocumentItem) => {
     setSelectedDocument(doc);

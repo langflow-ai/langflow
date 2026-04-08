@@ -150,7 +150,6 @@ jest.mock(
   }),
 );
 
-const manualUpdateMutation = { mutate: jest.fn(), isPending: false };
 const deleteMutation = { mutate: jest.fn(), isPending: false };
 const updateMemoryMutation = { mutate: jest.fn(), isPending: false };
 jest.mock("@/controllers/API/queries/memories/use-delete-memory", () => ({
@@ -304,10 +303,13 @@ describe("useMemoriesData", () => {
       jest.advanceTimersByTime(300);
     });
 
-    expect(updateMemoryMutation.mutate).toHaveBeenCalledWith({
-      memoryId: "m1",
-      auto_capture: false,
-    });
+    expect(updateMemoryMutation.mutate).toHaveBeenCalledWith(
+      {
+        memoryId: "m1",
+        auto_capture: false,
+      },
+      expect.any(Object),
+    );
 
     jest.useRealTimers();
   });

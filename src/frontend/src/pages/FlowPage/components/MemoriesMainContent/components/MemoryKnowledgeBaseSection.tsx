@@ -41,7 +41,6 @@ export function MemoryKnowledgeBaseSection({
             {docsData?.total ?? 0} chunks
           </span>
         </div>
-        <div className="flex items-center gap-2" />
       </div>
 
       <div className="flex-1 overflow-auto" onScroll={handleScroll}>
