@@ -6,9 +6,9 @@ from pathlib import Path
 from shutil import copy2
 from typing import Any, Literal
 
+import aiofiles
 import orjson
 import yaml
-from aiofile import async_open
 from pydantic import Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
@@ -705,7 +705,7 @@ async def load_settings_from_yaml(file_path: str) -> Settings:
     else:
         file_path_ = Path(file_path)
 
-    async with async_open(file_path_.name, encoding="utf-8") as f:
+    async with aiofiles.open(file_path_.name, encoding="utf-8") as f:
         content = await f.read()
         settings_dict = yaml.safe_load(content)
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}

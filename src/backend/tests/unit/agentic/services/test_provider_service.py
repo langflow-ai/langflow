@@ -200,7 +200,7 @@ class TestGetEnabledProvidersForUser:
 
         with (
             patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service),
-            patch("langflow.agentic.services.provider_service.os.getenv", return_value=None),
+            patch.dict(os.environ, {}, clear=True),
         ):
             enabled_providers, provider_status = await get_enabled_providers_for_user("user-1", mock_session)
 

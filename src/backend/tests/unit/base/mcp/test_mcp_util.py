@@ -2557,3 +2557,128 @@ class TestSnakeToCamelConversion:
         # Metadata fields
         assert _snake_to_camel("_meta_data") == "_metaData"
         assert _snake_to_camel("_created_at") == "_createdAt"
+
+
+class TestStripNoneRecursive:
+    """Tests for _strip_none_recursive.
+
+    Ensures null values are removed from nested dicts and arrays before
+    sending arguments to MCP servers.
+
+    Bug: antvis/mcp-server-chart returns "Expected string, received null"
+    because LLMs send explicit null for optional fields inside arrays of objects.
+    """
+
+    def test_should_remove_none_from_flat_dict(self):
+        """Top-level None values must be stripped."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange
+        data = {"name": "chart", "style": None, "title": "My Chart"}
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert
+        assert result == {"name": "chart", "title": "My Chart"}
+        assert "style" not in result
+
+    def test_should_remove_none_from_nested_objects_in_arrays(self):
+        """The exact bug scenario: data[N].group = null inside an array."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange — reproduces the exact payload from the bug report
+        data = {
+            "data": [
+                {"name": "Revenue", "value": 100, "group": None},
+                {"name": "Costs", "value": 50, "group": None},
+                {"name": "Profit", "value": 50, "group": None},
+            ],
+            "style": None,
+        }
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert — group and style must be absent
+        assert result == {
+            "data": [
+                {"name": "Revenue", "value": 100},
+                {"name": "Costs", "value": 50},
+                {"name": "Profit", "value": 50},
+            ],
+        }
+        assert "style" not in result
+        for item in result["data"]:
+            assert "group" not in item
+
+    def test_should_handle_deeply_nested_none(self):
+        """None values several levels deep must also be stripped."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange
+        data = {
+            "config": {
+                "axis": {"label": None, "color": "red"},
+                "legend": None,
+            }
+        }
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert
+        assert result == {"config": {"axis": {"color": "red"}}}
+
+    def test_should_preserve_falsy_non_none_values(self):
+        """Zero, empty string, False, empty list, empty dict must NOT be stripped."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange
+        data = {
+            "count": 0,
+            "label": "",
+            "enabled": False,
+            "items": [],
+            "meta": {},
+        }
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert — all falsy-but-not-None values preserved
+        assert result == {
+            "count": 0,
+            "label": "",
+            "enabled": False,
+            "items": [],
+            "meta": {},
+        }
+
+    def test_should_return_primitives_unchanged(self):
+        """Non-dict, non-list values pass through unchanged."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        assert _strip_none_recursive("hello") == "hello"
+        assert _strip_none_recursive(42) == 42
+        assert _strip_none_recursive(True) is True  # noqa: FBT003
+
+    def test_should_handle_empty_structures(self):
+        """Empty dict and empty list return empty."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        assert _strip_none_recursive({}) == {}
+        assert _strip_none_recursive([]) == []
+
+    def test_should_handle_list_of_primitives_with_none(self):
+        """None items inside a plain list are NOT removed (only dict keys)."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange — list items that are None stay (we only strip dict keys)
+        data = [1, None, "hello", None]
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert — None items in list preserved (stripping applies to dict keys only)
+        assert result == [1, None, "hello", None]

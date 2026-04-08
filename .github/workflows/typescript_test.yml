@@ -71,6 +71,7 @@ env:
   # This path is used for caching across workflows
   PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
   PLAYWRIGHT_VERSION: "1.57.0"
+  LANGFLOW_FEATURE_WXO_DEPLOYMENTS: "true"
 
 jobs:
   determine-test-suite:

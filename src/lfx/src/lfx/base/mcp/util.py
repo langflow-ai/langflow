@@ -471,6 +471,21 @@ def _handle_tool_validation_error(
     raise ValueError(msg) from e
 
 
+def _strip_none_recursive(obj: Any) -> Any:
+    """Recursively remove None values from dicts (including inside lists).
+
+    ``model_dump(exclude_none=True)`` handles top-level and nested-model
+    None fields, but when LLMs explicitly send ``null`` for fields inside
+    arrays of objects the serialised dict may still contain ``None``.
+    This helper guarantees a clean payload before it reaches the MCP server.
+    """
+    if isinstance(obj, dict):
+        return {k: _strip_none_recursive(v) for k, v in obj.items() if v is not None}
+    if isinstance(obj, list):
+        return [_strip_none_recursive(item) for item in obj]
+    return obj
+
+
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
@@ -494,7 +509,8 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
             _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
-            return await client.run_tool(tool_name, arguments=validated.model_dump(exclude_none=True))
+            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
+            return await client.run_tool(tool_name, arguments=arguments)
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -523,7 +539,8 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
             _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
-            return run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump(exclude_none=True)))
+            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
+            return run_until_complete(client.run_tool(tool_name, arguments=arguments))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context

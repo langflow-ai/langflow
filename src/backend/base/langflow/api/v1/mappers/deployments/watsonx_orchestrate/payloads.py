@@ -2,26 +2,33 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from lfx.services.adapters.deployment.schema import DeploymentType
-from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
-
-from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
-from langflow.services.adapters.deployment.watsonx_orchestrate.resource_name_prefix import (
-    validate_resource_name_prefix_for_provider,
+from pydantic import (
+    BaseModel,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
 )
 
-WatsonxApiResourceNamePrefix = Annotated[
+from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
+
+WatsonxApiLlmName = Annotated[
     str,
     StringConstraints(
         strip_whitespace=True,
         min_length=1,
     ),
 ]
-WatsonxApiLlmName = Annotated[
+
+# Keep API-boundary scalar normalization local to this module instead of
+# importing adapter-layer aliases, so mapper contracts can evolve independently.
+NormalizedStr = Annotated[
     str,
     StringConstraints(
         strip_whitespace=True,
@@ -36,184 +43,257 @@ class WatsonxApiFlowArtifactProviderData(CreateFlowArtifactProviderData):
     project_id: str = Field(min_length=1)
 
 
-class WatsonxApiBindOperation(BaseModel):
-    """Bind operation using a flow-version reference."""
+class WatsonxApiAddFlowItem(BaseModel):
+    """Create-time flow item (tool is created/attached if absent)."""
 
     model_config = {"extra": "forbid"}
 
-    op: Literal["bind"]
     flow_version_id: UUID
     app_ids: list[str] = Field(
+        default_factory=list,
         description=(
             "Connection app ids to bind. Use an empty list to create/attach "
             "the flow version as a tool with no connection bindings."
         ),
     )
+    tool_name: str | None = Field(
+        default=None,
+        description=("Optional user-provided tool name. When omitted, the tool name is derived from the flow name."),
+    )
 
 
-class WatsonxApiUnbindOperation(BaseModel):
-    """Unbind operation for an attached flow-version tool."""
-
-    model_config = {"extra": "forbid"}
-
-    op: Literal["unbind"]
-    flow_version_id: UUID
-    app_ids: list[str] = Field(min_length=1)
-
-
-class WatsonxApiRemoveToolOperation(BaseModel):
-    """Remove-tool operation for an attached flow-version tool."""
+class WatsonxApiUpsertFlowItem(BaseModel):
+    """Update-time flow item with per-item add/remove app-id deltas."""
 
     model_config = {"extra": "forbid"}
 
-    op: Literal["remove_tool"]
     flow_version_id: UUID
+    add_app_ids: list[str] = Field(
+        default_factory=list,
+        description=("Connection app ids to bind. Use an empty list to avoid adding new bindings."),
+    )
+    remove_app_ids: list[str] = Field(
+        default_factory=list,
+        description=("Connection app ids to unbind. Use an empty list to avoid removing bindings."),
+    )
+    tool_name: str | None = Field(
+        default=None,
+        description=("Optional user-provided tool name. When omitted, the tool name is derived from the flow name."),
+    )
 
 
-# TODO(wxo-followup): Optionally expose adapter-level `attach_tool` semantics at
-# the API layer if/when we need existing-tool attach-by-id outside flow-version refs.
-# Current API behavior is intentional and sufficient for today.
-WatsonxApiUpdateOperation = Annotated[
-    WatsonxApiBindOperation | WatsonxApiUnbindOperation | WatsonxApiRemoveToolOperation,
-    Field(discriminator="op"),
-]
+class WatsonxApiCreateUpsertToolItem(BaseModel):
+    """Create-time existing provider tool item (add connections only)."""
+
+    model_config = {"extra": "forbid"}
+
+    tool_id: str = Field(min_length=1, description="Provider-owned tool identifier.")
+    add_app_ids: list[str] = Field(
+        default_factory=list,
+        description=("Connection app ids to bind. Use an empty list to attach the tool without connection bindings."),
+    )
 
 
-class WatsonxApiUpdateConnectionRawPayload(BaseModel):
-    """Raw connection payload for app id."""
+class WatsonxApiUpsertToolItem(BaseModel):
+    """Update-time existing provider tool item with per-item add/remove app-id deltas."""
+
+    model_config = {"extra": "forbid"}
+
+    tool_id: str = Field(min_length=1, description="Provider-owned tool identifier.")
+    add_app_ids: list[str] = Field(
+        default_factory=list,
+        description=("Connection app ids to bind. Use an empty list to avoid adding new bindings."),
+    )
+    remove_app_ids: list[str] = Field(
+        default_factory=list,
+        description=("Connection app ids to unbind. Use an empty list to avoid removing bindings."),
+    )
+
+
+class WatsonxApiConnectionCredentialItem(BaseModel):
+    """API-facing connection credential declaration."""
+
+    model_config = {"extra": "forbid"}
+
+    key: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    value: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    source: Literal["raw", "variable"] = "variable"
+
+
+class WatsonxApiKeyValueConnectionPayload(BaseModel):
+    """API-facing key-value connection payload for app id.
+
+    Today this API only accepts key-value connections, so ``connections`` is a
+    flat list of this payload shape with no explicit ``type`` discriminator.
+    When additional connection types are introduced, a ``type`` field can be
+    added with a default of ``"key_value"`` for backward compatibility.
+    """
 
     model_config = {"extra": "forbid"}
 
     app_id: str = Field(min_length=1)
-    environment_variables: dict[str, Any] | None = None
-    provider_config: dict[str, Any] | None = None
+    credentials: list[WatsonxApiConnectionCredentialItem] | None = None
 
-
-class WatsonxApiUpdateConnections(BaseModel):
-    """Connection declarations used by update operations."""
-
-    model_config = {"extra": "forbid"}
-
-    existing_app_ids: list[str] | None = None
-    raw_payloads: list[WatsonxApiUpdateConnectionRawPayload] | None = None
-
-
-class WatsonxApiDeploymentPayloadBase(BaseModel):
-    """Shared API payload fields/validation for Watsonx create and update operations."""
-
-    model_config = {"extra": "forbid"}
-
-    connections: WatsonxApiUpdateConnections = Field(default_factory=WatsonxApiUpdateConnections)
-
-    @model_validator(mode="after")
-    def validate_operation_references(self) -> WatsonxApiDeploymentPayloadBase:
-        existing_app_ids = set(self.connections.existing_app_ids or [])
-        raw_app_ids = {raw.app_id for raw in (self.connections.raw_payloads or [])}
-        collisions = existing_app_ids.intersection(raw_app_ids)
-        if collisions:
-            msg = (
-                "connections.existing_app_ids collides with raw app ids from connections.raw_payloads: "
-                f"{list(collisions)}"
-            )
-            raise ValueError(msg)
-
-        valid_app_ids = existing_app_ids.union(raw_app_ids)
-        referenced_app_ids: set[str] = set()
-
-        for operation in getattr(self, "operations", []):
-            if isinstance(operation, (WatsonxApiBindOperation, WatsonxApiUnbindOperation)):
-                for app_id in operation.app_ids:
-                    referenced_app_ids.add(app_id)
-                    if app_id not in valid_app_ids:
-                        msg = (
-                            "operation app_ids must be declared in "
-                            "connections.existing_app_ids or connections.raw_payloads[*].app_id: "
-                            f"[{app_id!r}]"
-                        )
-                        raise ValueError(msg)
-            if isinstance(operation, WatsonxApiUnbindOperation):
-                for app_id in operation.app_ids:
-                    if app_id in raw_app_ids:
-                        msg = f"unbind.operation app_ids must reference connections.existing_app_ids only: [{app_id!r}]"
-                        raise ValueError(msg)
-
-        unused_existing_app_ids = existing_app_ids.difference(referenced_app_ids)
-        if unused_existing_app_ids:
-            msg = (
-                "connections.existing_app_ids contains ids not referenced by operations: "
-                f"{list(unused_existing_app_ids)}"
-            )
-            raise ValueError(msg)
-        unused_raw_app_ids = raw_app_ids.difference(referenced_app_ids)
-        if unused_raw_app_ids:
-            msg = (
-                "connections.raw_payloads contains app_id values not referenced by operations: "
-                f"{list(unused_raw_app_ids)}"
-            )
-            raise ValueError(msg)
-        return self
-
-
-class WatsonxApiDeploymentUpdatePayload(WatsonxApiDeploymentPayloadBase):
-    """Watsonx provider_data API contract for deployment update operations.
-
-    ``operations`` defaults to an empty list so that LLM-only updates
-    (changing the model without any tool/connection changes) can be
-    expressed without providing operations.
-    """
-
-    llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
-    resource_name_prefix: WatsonxApiResourceNamePrefix | None = Field(
-        default=None,
-        description=("Provider-specific naming/deconfliction hint applied only when creating resources."),
-    )
-    operations: list[WatsonxApiUpdateOperation] = Field(default_factory=list)
-
-    @field_validator("resource_name_prefix")
+    @field_validator("credentials")
     @classmethod
-    def validate_resource_name_prefix(cls, value: str | None) -> str | None:
+    def validate_unique_credential_keys(
+        cls,
+        value: list[WatsonxApiConnectionCredentialItem] | None,
+    ) -> list[WatsonxApiConnectionCredentialItem] | None:
         if value is None:
             return None
-        validate_resource_name_prefix_for_provider(value)
+        seen: set[str] = set()
+        duplicates: set[str] = set()
+        for item in value:
+            if item.key in seen:
+                duplicates.add(item.key)
+            seen.add(item.key)
+        if duplicates:
+            msg = f"credentials contains duplicate key values: {sorted(duplicates)}"
+            raise ValueError(msg)
         return value
 
-    @model_validator(mode="after")
-    def validate_prefix_required_for_bind_operations(self) -> WatsonxApiDeploymentUpdatePayload:
-        if any(isinstance(operation, WatsonxApiBindOperation) for operation in self.operations) and (
-            self.resource_name_prefix is None
-        ):
-            msg = "resource_name_prefix is required when update operations include bind."
+
+def _collect_api_referenced_app_ids(operations: list[Any], *, attr_name: str = "app_ids") -> set[str]:
+    referenced_app_ids: set[str] = set()
+    for operation in operations:
+        operation_app_ids = getattr(operation, attr_name, None)
+        if not operation_app_ids:
+            continue
+        referenced_app_ids.update(operation_app_ids)
+    return referenced_app_ids
+
+
+def _validate_api_remove_not_raw(*, operations: list[Any], raw_app_ids: set[str], attr_name: str, label: str) -> None:
+    for operation in operations:
+        remove_app_ids = getattr(operation, attr_name, None)
+        if not remove_app_ids:
+            continue
+        invalid_raw = sorted(raw_app_ids.intersection(set(remove_app_ids)))
+        if invalid_raw:
+            msg = f"{label} must not reference connections app_ids: {invalid_raw}"
             raise ValueError(msg)
+
+
+def _validate_api_add_remove_overlap(*, operations: list[Any], label: str) -> None:
+    for operation in operations:
+        add_app_ids = set(getattr(operation, "add_app_ids", []) or [])
+        remove_app_ids = set(getattr(operation, "remove_app_ids", []) or [])
+        overlap = sorted(add_app_ids.intersection(remove_app_ids))
+        if overlap:
+            msg = f"{label} add_app_ids and remove_app_ids must not overlap: {overlap}"
+            raise ValueError(msg)
+
+
+def _validate_api_remove_conflicts(
+    *,
+    remove_ids: list[Any],
+    upsert_operations: list[Any],
+    remove_label: str,
+    upsert_attr_name: str,
+) -> None:
+    normalized_remove_ids = {str(remove_id).strip() for remove_id in remove_ids if str(remove_id).strip()}
+    normalized_upsert_ids = {
+        str(getattr(operation, upsert_attr_name, "")).strip()
+        for operation in upsert_operations
+        if str(getattr(operation, upsert_attr_name, "")).strip()
+    }
+    conflicts = sorted(normalized_remove_ids.intersection(normalized_upsert_ids))
+    if conflicts:
+        msg = f"{remove_label} cannot be combined with upsert for the same id: {conflicts}"
+        raise ValueError(msg)
+
+
+def _validate_api_unused_raw_app_ids(*, raw_app_ids: set[str], referenced_app_ids: set[str]) -> None:
+    unused_raw_app_ids = sorted(raw_app_ids.difference(referenced_app_ids))
+    if unused_raw_app_ids:
+        msg = f"connections contains app_id values not referenced by operations: {unused_raw_app_ids}"
+        raise ValueError(msg)
+
+
+def _validate_api_unique_connection_app_ids(*, connections: list[WatsonxApiKeyValueConnectionPayload]) -> None:
+    app_id_counts = Counter(connection.app_id for connection in connections)
+    duplicates = sorted(app_id for app_id, count in app_id_counts.items() if count > 1)
+    if duplicates:
+        msg = f"connections contains duplicate app_id values: {duplicates}"
+        raise ValueError(msg)
+
+
+class WatsonxApiDeploymentUpdatePayload(BaseModel):
+    """Watsonx provider_data API contract for deployment update operations.
+
+    All operation fields default to empty lists so LLM-only updates
+    (changing the model without any tool/connection changes) can be
+    expressed without providing operation entries.
+    """
+
+    model_config = {"extra": "forbid"}
+
+    llm: WatsonxApiLlmName | None = Field(
+        default=None,
+        description=(
+            "Optional provider model identifier to use for the deployment agent. "
+            "When omitted, the current model is preserved."
+        ),
+    )
+    connections: list[WatsonxApiKeyValueConnectionPayload] = Field(default_factory=list)
+    upsert_flows: list[WatsonxApiUpsertFlowItem] = Field(default_factory=list)
+    upsert_tools: list[WatsonxApiUpsertToolItem] = Field(default_factory=list)
+    remove_flows: list[UUID] = Field(default_factory=list)
+    remove_tools: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_operation_references(self) -> WatsonxApiDeploymentUpdatePayload:
+        _validate_api_unique_connection_app_ids(connections=self.connections)
+        raw_app_ids = {raw.app_id for raw in self.connections}
+        referenced_app_ids = _collect_api_referenced_app_ids(self.upsert_flows, attr_name="add_app_ids")
+        referenced_app_ids.update(_collect_api_referenced_app_ids(self.upsert_tools, attr_name="add_app_ids"))
+        _validate_api_remove_not_raw(
+            operations=self.upsert_flows,
+            raw_app_ids=raw_app_ids,
+            attr_name="remove_app_ids",
+            label="upsert_flows.remove_app_ids",
+        )
+        _validate_api_remove_not_raw(
+            operations=self.upsert_tools,
+            raw_app_ids=raw_app_ids,
+            attr_name="remove_app_ids",
+            label="upsert_tools.remove_app_ids",
+        )
+        _validate_api_add_remove_overlap(operations=self.upsert_flows, label="upsert_flows")
+        _validate_api_add_remove_overlap(operations=self.upsert_tools, label="upsert_tools")
+        _validate_api_remove_conflicts(
+            remove_ids=self.remove_flows,
+            upsert_operations=self.upsert_flows,
+            remove_label="remove_flows",
+            upsert_attr_name="flow_version_id",
+        )
+        _validate_api_remove_conflicts(
+            remove_ids=self.remove_tools,
+            upsert_operations=self.upsert_tools,
+            remove_label="remove_tools",
+            upsert_attr_name="tool_id",
+        )
+        _validate_api_unused_raw_app_ids(raw_app_ids=raw_app_ids, referenced_app_ids=referenced_app_ids)
         return self
 
 
-class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
+class WatsonxApiDeploymentCreatePayload(BaseModel):
     """Watsonx provider_data API contract for deployment create operations."""
 
+    model_config = {"extra": "forbid"}
+
     llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
-    resource_name_prefix: WatsonxApiResourceNamePrefix | None = Field(
-        default=None,
-        description=(
-            "Provider-specific naming/deconfliction hint applied only when creating resources: "
-            "applied to names of created tools and deployments."
-        ),
-    )
-    operations: list[WatsonxApiBindOperation] = Field(default_factory=list)
+    connections: list[WatsonxApiKeyValueConnectionPayload] = Field(default_factory=list)
+    add_flows: list[WatsonxApiAddFlowItem] = Field(default_factory=list)
+    upsert_tools: list[WatsonxApiCreateUpsertToolItem] = Field(default_factory=list)
     existing_agent_id: str | None = Field(
         default=None,
         description=(
             "Provider-owned agent id to update/reuse instead of creating a new agent. "
-            "When provided, operations are optional and may be empty for DB-only onboarding."
+            "When provided, add_flows/upsert_tools are optional and may be empty for DB-only onboarding."
         ),
     )
-
-    @field_validator("resource_name_prefix")
-    @classmethod
-    def validate_resource_name_prefix(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        validate_resource_name_prefix_for_provider(value)
-        return value
 
     @field_validator("existing_agent_id")
     @classmethod
@@ -228,31 +308,66 @@ class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
 
     @model_validator(mode="after")
     def validate_create_operation_requirements(self) -> WatsonxApiDeploymentCreatePayload:
-        has_operations = bool(self.operations)
-        has_raw_connections = bool(self.connections.raw_payloads)
-        if (has_operations or has_raw_connections) and self.resource_name_prefix is None:
-            msg = "resource_name_prefix is required when operations or connections.raw_payloads are provided."
-            raise ValueError(msg)
+        has_operations = bool(self.add_flows or self.upsert_tools)
         if self.existing_agent_id is None and not has_operations:
-            msg = "operations must include at least one bind operation for new agent creation."
+            msg = "provider_data must include at least one add_flows or upsert_tools item for new agent creation."
             raise ValueError(msg)
+        _validate_api_unique_connection_app_ids(connections=self.connections)
+        raw_app_ids = {raw.app_id for raw in self.connections}
+        referenced_app_ids = _collect_api_referenced_app_ids(self.add_flows, attr_name="app_ids")
+        referenced_app_ids.update(_collect_api_referenced_app_ids(self.upsert_tools, attr_name="add_app_ids"))
+        _validate_api_unused_raw_app_ids(raw_app_ids=raw_app_ids, referenced_app_ids=referenced_app_ids)
         return self
 
 
-class WatsonxApiToolAppBinding(BaseModel):
-    """API response shape for a Watsonx tool binding."""
+class WatsonxApiCreatedTool(BaseModel):
+    """API response shape for a tool created from a Langflow flow version."""
 
     model_config = {"extra": "forbid"}
 
     flow_version_id: UUID
-    app_ids: list[str] = Field(default_factory=list)
+    tool_id: str = Field(min_length=1, description="Provider-owned tool identifier.")
 
-    @field_validator("app_ids", mode="before")
+    @field_validator("flow_version_id", mode="before")
     @classmethod
-    def normalize_app_ids(cls, value: Any) -> list[str]:
+    def normalize_flow_version_id(cls, value: Any) -> UUID:
+        if isinstance(value, UUID):
+            return value
+        if not isinstance(value, str):
+            msg = "flow_version_id must be provided as a UUID string or UUID object."
+            raise ValueError(msg)  # noqa: TRY004
+        try:
+            return UUID(value)
+        except ValueError as exc:
+            msg = "flow_version_id must be a valid UUID."
+            raise ValueError(msg) from exc
+
+
+class WatsonxApiDeploymentCreateResultData(BaseModel):
+    """Normalized provider-result payload used by Watsonx mapper create shapers."""
+
+    model_config = {"extra": "ignore"}
+
+    created_app_ids: list[str] = Field(default_factory=list)
+    created_tools: list[WatsonxApiCreatedTool] = Field(default_factory=list)
+
+    @field_validator("created_app_ids", mode="before")
+    @classmethod
+    def normalize_created_app_ids(cls, value: Any) -> list[str]:
         if value is None:
             return []
-        return [str(app_id).strip() for app_id in value if str(app_id).strip()]
+        return [normalized for app_id in value if (normalized := str(app_id).strip())]
+
+    @classmethod
+    def from_provider_result(cls, provider_result: Any) -> WatsonxApiDeploymentCreateResultData:
+        if not isinstance(provider_result, dict):
+            return cls()
+        return cls.model_validate(provider_result)
+
+    def to_api_provider_data(self) -> dict[str, Any] | None:
+        """Return API-safe provider_data subset for deployment create responses."""
+        payload = self.model_dump(mode="json", include={"created_app_ids", "created_tools"}, exclude_none=True)
+        return payload or None
 
 
 class WatsonxApiDeploymentUpdateResultData(BaseModel):
@@ -261,7 +376,7 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
     model_config = {"extra": "ignore"}
 
     created_app_ids: list[str] = Field(default_factory=list)
-    tool_app_bindings: list[WatsonxApiToolAppBinding] | None = None
+    created_tools: list[WatsonxApiCreatedTool] = Field(default_factory=list)
 
     @field_validator("created_app_ids", mode="before")
     @classmethod
@@ -278,7 +393,7 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
 
     def to_api_provider_data(self) -> dict[str, Any] | None:
         """Return API-safe provider_data subset for deployment update responses."""
-        payload = self.model_dump(mode="json", include={"created_app_ids", "tool_app_bindings"}, exclude_none=True)
+        payload = self.model_dump(mode="json", include={"created_app_ids", "created_tools"}, exclude_none=True)
         return payload or None
 
 
@@ -310,19 +425,119 @@ class WatsonxApiDeploymentLlmListResultData(BaseModel):
 class WatsonxApiProviderDeploymentListItem(BaseModel):
     """Provider-only deployment item returned in list provider_data."""
 
-    resource_key: str = Field(min_length=1, description="Provider-owned deployment identifier.")
+    model_config = {"extra": "forbid"}
+
+    id: str = Field(min_length=1, description="Provider-owned deployment identifier.")
     name: str
     type: DeploymentType
     description: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
-    provider_data: dict[str, Any] | None = None
+    tool_ids: list[str] = Field(default_factory=list)
+    environment: str | None = None
+
+    @field_validator("tool_ids", mode="before")
+    @classmethod
+    def normalize_tool_ids(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        return [normalized for tool_id in value if (normalized := str(tool_id).strip())]
+
+    @field_validator("environment", mode="before")
+    @classmethod
+    def normalize_environment(cls, value: Any) -> str | None:
+        normalized = str(value or "").strip()
+        return normalized or None
 
 
 class WatsonxApiDeploymentListProviderData(BaseModel):
     """Provider-level metadata attached to DeploymentListResponse.provider_data."""
 
-    entries: list[WatsonxApiProviderDeploymentListItem] = Field(default_factory=list)
+    deployments: list[WatsonxApiProviderDeploymentListItem] = Field(default_factory=list)
+
+
+class WatsonxApiConfigListItem(BaseModel):
+    """API-facing config list item payload under config-list provider_data."""
+
+    model_config = {"extra": "forbid"}
+
+    connection_id: NormalizedStr
+    app_id: NormalizedStr
+    type: NormalizedStr
+    environment: NormalizedStr
+
+
+class WatsonxApiConfigListProviderData(BaseModel):
+    """Provider-level metadata attached to DeploymentConfigListResponse."""
+
+    model_config = {"extra": "forbid"}
+
+    connections: list[WatsonxApiConfigListItem] = Field(default_factory=list)
+    page: int | None = Field(default=None, ge=1)
+    size: int | None = Field(default=None, ge=1)
+    total: int | None = Field(default=None, ge=0)
+
+
+class WatsonxApiSnapshotListItem(BaseModel):
+    """API-facing snapshot list item payload under snapshot-list provider_data."""
+
+    model_config = {"extra": "forbid"}
+
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    connections: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("id", "name", mode="before")
+    @classmethod
+    def normalize_required_strings(cls, value: Any) -> str:
+        normalized = str(value or "").strip()
+        if not normalized:
+            msg = "Snapshot list item fields 'id' and 'name' must be non-empty strings."
+            raise ValueError(msg)
+        return normalized
+
+
+class WatsonxApiSnapshotListProviderData(BaseModel):
+    """Provider-level metadata attached to DeploymentSnapshotListResponse."""
+
+    model_config = {"extra": "forbid"}
+
+    tools: list[WatsonxApiSnapshotListItem] = Field(default_factory=list)
+    page: int | None = Field(default=None, ge=1)
+    size: int | None = Field(default=None, ge=1)
+    total: int | None = Field(default=None, ge=0)
+
+
+class WatsonxApiDeploymentFlowVersionItemData(BaseModel):
+    """API-facing provider_data contract for deployment flow-version list items."""
+
+    model_config = {"extra": "forbid"}
+
+    app_ids: list[str] = Field(default_factory=list)
+    tool_name: str | None = None
+
+    @field_validator("app_ids", mode="before")
+    @classmethod
+    def normalize_app_ids(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        return [str(app_id).strip() for app_id in value if str(app_id).strip()]
+
+    @field_validator("tool_name", mode="before")
+    @classmethod
+    def normalize_optional_tool_name(cls, value: Any) -> str | None:
+        normalized = str(value or "").strip()
+        return normalized or None
+
+
+class WatsonxApiRenameToolOperation(BaseModel):
+    """API-facing rename-tool operation payload."""
+
+    model_config = {"extra": "forbid"}
+
+    op: Literal["rename_tool"]
+    flow_version_id: str = Field(min_length=1)
+    tool_name: NormalizedStr = Field(min_length=1)
 
 
 class _WatsonxApiAgentExecutionResultBase(BaseModel):
@@ -338,6 +553,7 @@ class _WatsonxApiAgentExecutionResultBase(BaseModel):
 
     execution_id: str | None = None
     agent_id: str | None = None
+    thread_id: str | None = None
     status: str | None = None
     result: Any | None = None
     started_at: str | None = None
