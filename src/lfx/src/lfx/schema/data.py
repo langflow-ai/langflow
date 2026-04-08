@@ -235,6 +235,16 @@ class JSON(CrossModuleModel):
         Allows attribute-like setting of values in the data dictionary.
         while still allowing direct assignment to class attributes.
         """
+        # Respect property descriptors defined on subclasses (e.g., Message.text)
+        if key not in {"data", "text_key"} and not key.startswith("_"):
+            for klass in type(self).__mro__:
+                attr = klass.__dict__.get(key)
+                if isinstance(attr, property) and attr.fset is not None:
+                    attr.fset(self, value)
+                    return
+                if attr is not None:
+                    break  # Found a non-property attribute, stop looking
+
         if key in {"data", "text_key"} or key.startswith("_"):
             super().__setattr__(key, value)
         elif key in type(self).model_fields:

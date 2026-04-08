@@ -451,14 +451,13 @@ class SaveToFileComponent(Component):
     async def _save_message(self, message: Message, path: Path, fmt: str) -> str:
         """Save a Message to the specified file format, handling async iterators."""
         content = ""
-        if message.text is None:
-            content = ""
-        elif isinstance(message.text, AsyncIterator):
-            async for item in message.text:
+        stream = message.text_stream if hasattr(message, "text_stream") else None
+        if stream is not None and isinstance(stream, AsyncIterator):
+            async for item in stream:
                 content += str(item) + " "
             content = content.strip()
-        elif isinstance(message.text, Iterator):
-            content = " ".join(str(item) for item in message.text)
+        elif stream is not None and isinstance(stream, Iterator):
+            content = " ".join(str(item) for item in stream)
         else:
             content = str(message.text)
 

@@ -3,7 +3,21 @@ from typing import Annotated
 from pydantic import BaseModel, Discriminator, Field, Tag, field_serializer, field_validator
 from typing_extensions import TypedDict
 
-from .content_types import CodeContent, ErrorContent, JSONContent, MediaContent, TextContent, ToolContent
+from .content_types import (
+    AudioContent,
+    CitationContent,
+    CodeContent,
+    ErrorContent,
+    FileContent,
+    ImageContent,
+    JSONContent,
+    MediaContent,
+    ReasoningContent,
+    TextContent,
+    ToolContent,
+    UsageContent,
+    VideoContent,
+)
 
 
 def _get_type(d: dict | BaseModel) -> str | None:
@@ -19,7 +33,14 @@ ContentType = Annotated[
     | Annotated[TextContent, Tag("text")]
     | Annotated[MediaContent, Tag("media")]
     | Annotated[CodeContent, Tag("code")]
-    | Annotated[JSONContent, Tag("json")],
+    | Annotated[JSONContent, Tag("json")]
+    | Annotated[ImageContent, Tag("image")]
+    | Annotated[AudioContent, Tag("audio")]
+    | Annotated[VideoContent, Tag("video")]
+    | Annotated[FileContent, Tag("file")]
+    | Annotated[ReasoningContent, Tag("reasoning")]
+    | Annotated[UsageContent, Tag("usage")]
+    | Annotated[CitationContent, Tag("citation")],
     Discriminator(_get_type),
 ]
 

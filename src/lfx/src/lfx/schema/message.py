@@ -12,15 +12,27 @@ from uuid import UUID
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    computed_field,
+    field_serializer,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 if TYPE_CHECKING:
     from langchain_core.prompts.chat import BaseChatPromptTemplate
 
+from pydantic import TypeAdapter
+
 from lfx.base.prompts.utils import dict_values_to_string
 from lfx.log.logger import logger
-from lfx.schema.content_block import ContentBlock
-from lfx.schema.content_types import ErrorContent
+from lfx.schema.content_block import ContentBlock, ContentType
+from lfx.schema.content_types import ErrorContent, TextContent
 from lfx.schema.data import Data
 from lfx.schema.image import Image, get_file_paths, is_image_file
 from lfx.schema.properties import Properties, Source
@@ -31,6 +43,8 @@ from lfx.utils.mustache_security import safe_mustache_render
 
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
+
+_CONTENT_TYPE_ADAPTER = TypeAdapter(ContentType)
 
 
 class Message(Data):
@@ -57,7 +71,6 @@ class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
     text_key: str = "text"
-    text: str | AsyncIterator | Iterator | None = Field(default="")
     sender: str | None = None
     sender_name: str | None = None
     files: list[str | Image] | None = Field(default=[])
@@ -72,9 +85,78 @@ class Message(Data):
 
     properties: Properties = Field(default_factory=Properties)
     category: Literal["message", "error", "warning", "info"] | None = "message"
-    content_blocks: list[ContentBlock] = Field(default_factory=list)
+    content_blocks: list[ContentType | ContentBlock] = Field(default_factory=list)
     duration: int | None = None
     session_metadata: dict | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _fold_text_into_content_blocks(cls, data):
+        if not isinstance(data, dict):
+            return data
+        text = data.get("text")
+        if text and not isinstance(text, str):
+            # AsyncIterator/Iterator for streaming -- leave in data for model_post_init
+            return data
+        # Don't auto-wrap text into content_blocks. Text-only messages keep
+        # content_blocks empty for backwards compatibility with the frontend.
+        # content_blocks is populated explicitly by components that produce
+        # rich content (agents, multimodal, etc.).
+        return data
+
+    @computed_field
+    @property
+    def text(self) -> str:
+        """Extract text from content_blocks, or fall back to data dict.
+
+        Always returns a string. For streaming access, use `text_stream` property.
+        """
+        # If content_blocks has TextContent, derive from there
+        text_from_blocks = "".join(b.text for b in self.content_blocks if isinstance(b, TextContent))
+        if text_from_blocks:
+            return text_from_blocks
+        # Fall back to data dict (text-only messages, backwards compat)
+        return self.data.get(self.text_key, "") or ""
+
+    @text.setter
+    def text(self, value: str | AsyncIterator | Iterator | None) -> None:
+        """Replace text content or set a stream for later consumption."""
+        if isinstance(value, AsyncIterator | Iterator):
+            object.__setattr__(self, "_text_stream", value)
+            return
+        # Clear any pending/exhausted stream
+        self.__dict__.pop("_text_stream", None)
+        # If content_blocks has non-text items, update TextContent in content_blocks
+        non_text = [b for b in self.content_blocks if not isinstance(b, TextContent)]
+        if non_text:
+            # Rich message -- update content_blocks
+            if value:
+                object.__setattr__(self, "content_blocks", [TextContent(text=str(value)), *non_text])
+            else:
+                object.__setattr__(self, "content_blocks", non_text)
+        else:
+            # Text-only message -- clear content_blocks, store in data dict
+            object.__setattr__(self, "content_blocks", [])
+        # Keep self.data["text"] in sync for backwards compatibility
+        self.data[self.text_key] = value or ""
+
+    @property
+    def text_stream(self) -> AsyncIterator | Iterator | None:
+        """Access the pending text stream, if any. Used by streaming infrastructure."""
+        return self.__dict__.get("_text_stream")
+
+    def get_text(self):
+        """Return text derived from content_blocks (overrides Data.get_text)."""
+        return self.text
+
+    @model_serializer(mode="plain", when_used="json")
+    def serialize_model(self):
+        """Override Data.serialize_model to filter out non-serializable stream objects."""
+        return {
+            k: v.to_json() if hasattr(v, "to_json") else v
+            for k, v in self.data.items()
+            if not isinstance(v, AsyncIterator | Iterator)
+        }
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -86,14 +168,30 @@ class Message(Data):
     @field_validator("content_blocks", mode="before")
     @classmethod
     def validate_content_blocks(cls, value):
-        # value may start with [ or not
-        if isinstance(value, list):
-            return [
-                ContentBlock.model_validate_json(v) if isinstance(v, str) else ContentBlock.model_validate(v)
-                for v in value
-            ]
+        def _parse_item(item):
+            # Already a Pydantic model instance -- keep as-is
+            if isinstance(item, BaseModel):
+                return item
+            # JSON string -- parse it
+            if isinstance(item, str):
+                parsed = json.loads(item)
+                return _parse_item(parsed)
+            # Dict -- determine if it's a flat ContentType or grouped ContentBlock
+            if isinstance(item, dict):
+                # If it has "title" and "contents", it's a ContentBlock (grouped)
+                if "title" in item and "contents" in item:
+                    return ContentBlock.model_validate(item)
+                # Otherwise it's a flat ContentType (TextContent, ToolContent, etc.)
+                if "type" in item:
+                    return _CONTENT_TYPE_ADAPTER.validate_python(item)
+                # Fallback to ContentBlock
+                return ContentBlock.model_validate(item)
+            return item
+
         if isinstance(value, str):
-            value = json.loads(value) if value.startswith("[") else [ContentBlock.model_validate_json(value)]
+            value = json.loads(value) if value.startswith("[") else [value]
+        if isinstance(value, list):
+            return [_parse_item(v) for v in value]
         return value
 
     @field_validator("properties", mode="before")
@@ -130,6 +228,11 @@ class Message(Data):
         return value
 
     def model_post_init(self, /, _context: Any) -> None:
+        # If text in data dict is an iterator/stream, move it to __dict__ for direct access
+        text_val = self.data.get("text")
+        if text_val is not None and not isinstance(text_val, str):
+            self.data.pop("text", None)
+            self.__dict__["_text_stream"] = text_val
         new_files: list[Any] = []
         for file in self.files or []:
             # Skip if already an Image instance
@@ -154,6 +257,9 @@ class Message(Data):
         self.files = new_files
         if "timestamp" not in self.data:
             self.data["timestamp"] = self.timestamp
+        # Sync self.data["text"] from content_blocks for backwards compatibility
+        text_val = self.text
+        self.data[self.text_key] = text_val if isinstance(text_val, str) else ""
 
     def set_flow_id(self, flow_id: str) -> None:
         self.flow_id = flow_id
@@ -162,7 +268,7 @@ class Message(Data):
         self,
         model_name: str | None = None,
     ) -> BaseMessage:
-        """Converts the Data to a BaseMessage.
+        """Converts the Message to a BaseMessage.
 
         Args:
             model_name: The model name to use for conversion. Optional.
@@ -170,24 +276,19 @@ class Message(Data):
         Returns:
             BaseMessage: The converted BaseMessage.
         """
-        # The idea of this function is to be a helper to convert a Data to a BaseMessage
-        # It will use the "sender" key to determine if the message is Human or AI
-        # If the key is not present, it will default to AI
-        # But first we check if all required keys are present in the data dictionary
-        # they are: "text", "sender"
-        if self.text is None or not self.sender:
+        text = self.text  # reads from content_blocks via computed property
+        if not isinstance(text, str):
+            text = ""
+        if not text or not self.sender:
             logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
-        text = "" if not isinstance(self.text, str) else self.text
 
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
                 contents = [{"type": "text", "text": text}]
                 file_contents = self.get_file_content_dicts(model_name)
                 contents.extend(file_contents)
-                human_message = HumanMessage(content=contents)
-            else:
-                human_message = HumanMessage(content=text)
-            return human_message
+                return HumanMessage(content=contents)
+            return HumanMessage(content=text)
 
         return AIMessage(content=text)
 
@@ -209,7 +310,58 @@ class Message(Data):
             sender = lc_message.type
             sender_name = lc_message.type
 
-        return cls(text=lc_message.content, sender=sender, sender_name=sender_name)
+        content = lc_message.content
+        if isinstance(content, str):
+            # Simple text -- use text= parameter, not content_blocks
+            return cls(text=content, sender=sender, sender_name=sender_name)
+        from lfx.schema.content_types import ImageContent
+
+        blocks = []
+        for item in content:
+            if isinstance(item, str):
+                blocks.append(TextContent(text=item))
+            elif isinstance(item, dict):
+                item_type = item.get("type", "")
+                if item_type == "text":
+                    blocks.append(TextContent(text=item.get("text", "")))
+                elif item_type == "image_url":
+                    url = item.get("image_url", {}).get("url", "")
+                    blocks.append(ImageContent(urls=[url]))
+                elif item_type == "image":
+                    url = item.get("url") or item.get("source", {}).get("url", "")
+                    b64 = item.get("source", {}).get("data") or item.get("base64")
+                    mime = item.get("source", {}).get("media_type") or item.get("mime_type")
+                    if b64 and mime:
+                        blocks.append(ImageContent(base64=b64, mime_type=mime))
+                    elif url:
+                        blocks.append(ImageContent(urls=[url]))
+                else:
+                    logger.debug(f"from_lc_message: skipping unsupported content type '{item_type}'")
+
+        # Capture tool calls from AIMessage
+        if hasattr(lc_message, "tool_calls") and lc_message.tool_calls:
+            from lfx.schema.content_types import ToolContent
+
+            blocks.extend(
+                ToolContent(name=tc.get("name", ""), tool_input=tc.get("args", {})) for tc in lc_message.tool_calls
+            )
+
+        # Capture usage metadata from AIMessage
+        if hasattr(lc_message, "usage_metadata") and lc_message.usage_metadata:
+            from lfx.schema.content_types import UsageContent
+
+            um = lc_message.usage_metadata
+            blocks.append(
+                UsageContent(
+                    input_tokens=um.get("input_tokens"),
+                    output_tokens=um.get("output_tokens"),
+                    model=lc_message.response_metadata.get("model_name")
+                    if hasattr(lc_message, "response_metadata")
+                    else None,
+                )
+            )
+
+        return cls(content_blocks=blocks, sender=sender, sender_name=sender_name)
 
     @classmethod
     def from_data(cls, data: Data) -> Message:
@@ -221,25 +373,25 @@ class Message(Data):
         Returns:
             The converted Message.
         """
-        return cls(
-            text=data.text,
-            sender=data.sender,
-            sender_name=data.sender_name,
-            files=data.files,
-            session_id=data.session_id,
-            context_id=data.context_id,
-            timestamp=data.timestamp,
-            flow_id=data.flow_id,
-            error=data.error,
-            edit=data.edit,
-            session_metadata=getattr(data, "session_metadata", None),
-        )
-
-    @field_serializer("text", mode="plain")
-    def serialize_text(self, value):
-        if isinstance(value, AsyncIterator | Iterator):
-            return ""
-        return value
+        kwargs: dict[str, Any] = {"text": data.get_text()}
+        # Safely extract optional fields that may not exist on a plain Data object
+        for field in (
+            "sender",
+            "sender_name",
+            "files",
+            "session_id",
+            "context_id",
+            "timestamp",
+            "flow_id",
+            "error",
+            "edit",
+        ):
+            try:
+                value = getattr(data, field)
+                kwargs[field] = value
+            except AttributeError:
+                pass
+        return cls(**kwargs)
 
     # Keep this async method for backwards compatibility
     def get_file_content_dicts(self, model_name: str | None = None):
@@ -431,7 +583,7 @@ class MessageResponse(DefaultModel):
 
     properties: Properties | None = None
     category: str | None = None
-    content_blocks: list[ContentBlock] | None = None
+    content_blocks: list[ContentType | ContentBlock] | None = None
     session_metadata: dict | None = None
 
     @field_validator("content_blocks", mode="before")
@@ -442,6 +594,9 @@ class MessageResponse(DefaultModel):
         if isinstance(v, list):
             return [cls.validate_content_blocks(block) for block in v]
         if isinstance(v, dict):
+            # Flat ContentType (has "type" but no "contents") vs grouped ContentBlock
+            if "type" in v and "contents" not in v:
+                return _CONTENT_TYPE_ADAPTER.validate_python(v)
             return ContentBlock.model_validate(v)
         return v
 
@@ -474,18 +629,25 @@ class MessageResponse(DefaultModel):
     @classmethod
     def from_message(cls, message: Message, flow_id: str | None = None):
         # first check if the record has all the required fields
-        if message.text is None or not message.sender or not message.sender_name:
-            msg = "The message does not have the required fields (text, sender, sender_name)."
+        if not message.sender or not message.sender_name:
+            msg = "The message does not have the required fields (sender, sender_name)."
             raise ValueError(msg)
+        text = message.text
+        if not isinstance(text, str):
+            text = ""
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
-            text=message.text,
+            text=text,
             session_id=message.session_id,
             context_id=message.context_id,
             files=message.files or [],
             timestamp=message.timestamp,
             flow_id=flow_id,
+            edit=message.edit,
+            content_blocks=message.content_blocks,
+            properties=message.properties,
+            category=message.category,
             session_metadata=getattr(message, "session_metadata", None),
         )
 
@@ -557,7 +719,6 @@ class ErrorMessage(Message):
             context_id=context_id,
             sender=source.display_name if source else None,
             sender_name=source.display_name if source else None,
-            text=plain_reason,
             properties=Properties(
                 text_color="red",
                 background_color="red",
@@ -570,6 +731,7 @@ class ErrorMessage(Message):
             category="error",
             error=True,
             content_blocks=[
+                TextContent(text=plain_reason),
                 ContentBlock(
                     title="Error",
                     contents=[
@@ -582,7 +744,7 @@ class ErrorMessage(Message):
                             traceback=traceback.format_exc(),
                         )
                     ],
-                )
+                ),
             ],
             flow_id=flow_id,
             session_metadata=session_metadata,
