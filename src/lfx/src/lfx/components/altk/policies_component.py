@@ -21,10 +21,10 @@ from lfx.base.models.unified_models import (
     get_llm,
     update_model_options_in_build_config,
 )
-from lfx.components.policies.guard_sync_utils import sync_generated_guard_code_inputs
-from lfx.components.policies.guarded_tool import GuardedTool
-from lfx.components.policies.llm_wrapper import LangchainModelWrapper
-from lfx.components.policies.module_utils import unload_module
+from lfx.components.altk.guard_sync_utils import sync_generated_guard_code_inputs
+from lfx.components.altk.guarded_tool import GuardedTool
+from lfx.components.altk.llm_wrapper import LangchainModelWrapper
+from lfx.components.altk.module_utils import unload_module
 from lfx.field_typing import LanguageModel, Tool
 from lfx.io import (
     BoolInput,

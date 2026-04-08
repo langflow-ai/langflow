@@ -4,7 +4,7 @@ from langchain_core.messages import ToolCall
 from toolguard.runtime import PolicyViolationException
 from toolguard.runtime.runtime import ToolguardRuntime
 
-from lfx.components.policies.tool_invoker import ToolInvoker
+from lfx.components.altk.tool_invoker import ToolInvoker
 from lfx.field_typing import Tool
 from lfx.log.logger import logger
 

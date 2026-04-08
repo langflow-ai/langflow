@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from langchain_core.tools import StructuredTool
-from lfx.components.policies.guarded_tool import GuardedTool
+from lfx.components.altk.guarded_tool import GuardedTool
 from pydantic import BaseModel
 from toolguard.runtime import PolicyViolationException
 

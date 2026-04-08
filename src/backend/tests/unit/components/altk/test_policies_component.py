@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lfx.components.policies.policies_component import (
+from lfx.components.altk.policies_component import (
     MODE_GENERATE,
     MODE_GUARD,
     STEP2,
@@ -44,10 +44,10 @@ async def test_cache_mode_success(mock_component, mock_tool):
     # Mock the cache directory exists and toolguard loading
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load_guards,
+        patch("lfx.components.altk.policies_component.load_toolguards") as mock_load_guards,
         patch.object(mock_component, "make_toolguard_result") as mock_make_result,
-        patch("lfx.components.policies.policies_component.load_toolguards_from_memory") as mock_load_memory,
-        patch("lfx.components.policies.policies_component.GuardedTool") as mock_guarded_tool,
+        patch("lfx.components.altk.policies_component.load_toolguards_from_memory") as mock_load_memory,
+        patch("lfx.components.altk.policies_component.GuardedTool") as mock_guarded_tool,
     ):
         mock_tg_result = MagicMock()
         mock_make_result.return_value = mock_tg_result
@@ -93,7 +93,7 @@ async def test_cache_mode_file_not_found(mock_component):
     # Mock the cache directory exists but files are missing
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load_guards,
+        patch("lfx.components.altk.policies_component.load_toolguards") as mock_load_guards,
     ):
         mock_load_guards.side_effect = FileNotFoundError("Guard file not found")
 
@@ -107,7 +107,7 @@ async def test_cache_mode_corrupted_cache(mock_component):
     # Mock the cache directory exists but code is corrupted
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load_guards,
+        patch("lfx.components.altk.policies_component.load_toolguards") as mock_load_guards,
     ):
         mock_load_guards.side_effect = Exception("Invalid Python syntax")
 
@@ -128,8 +128,8 @@ async def test_cache_mode_corrupted_cache(mock_component):
 #     with (
 #         patch.object(Path, "exists", return_value=True),
 #         patch.object(mock_component, "make_toolguard_result") as mock_make_result,
-#         patch("lfx.components.policies.policies_component.load_toolguards_from_memory") as mock_load_memory,
-#         patch("lfx.components.policies.policies_component.GuardedTool") as mock_guarded_tool,
+#         patch("lfx.components.altk.policies_component.load_toolguards_from_memory") as mock_load_memory,
+#         patch("lfx.components.altk.policies_component.GuardedTool") as mock_guarded_tool,
 #     ):
 #         mock_tg_result = MagicMock()
 #         mock_make_result.return_value = mock_tg_result
@@ -260,7 +260,7 @@ async def test_verify_cached_guards_error_messages(mock_component):
     # Test file not found error message
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load,
+        patch("lfx.components.altk.policies_component.load_toolguards") as mock_load,
     ):
         mock_load.side_effect = FileNotFoundError("Missing file")
 
@@ -272,7 +272,7 @@ async def test_verify_cached_guards_error_messages(mock_component):
     # Test general error message
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load,
+        patch("lfx.components.altk.policies_component.load_toolguards") as mock_load,
     ):
         mock_load.side_effect = RuntimeError("Unexpected error")
 

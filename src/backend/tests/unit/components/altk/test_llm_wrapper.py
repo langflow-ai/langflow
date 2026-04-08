@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, LLMResult
-from lfx.components.policies.llm_wrapper import LangchainModelWrapper
+from lfx.components.altk.llm_wrapper import LangchainModelWrapper
 
 
 @pytest.fixture

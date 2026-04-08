@@ -6,13 +6,16 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from .altk_agent import ALTKAgentComponent
+    from .policies_component import PoliciesComponent
 
 _dynamic_imports = {
     "ALTKAgentComponent": "altk_agent",
+    "PoliciesComponent": "policies_component",
 }
 
 __all__ = [
     "ALTKAgentComponent",
+    "PoliciesComponent",
 ]
 
 

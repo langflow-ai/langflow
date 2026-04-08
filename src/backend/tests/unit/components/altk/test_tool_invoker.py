@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from lfx.components.policies.tool_invoker import ToolInvoker
+from lfx.components.altk.tool_invoker import ToolInvoker
 from mcp.types import CallToolResult
 from pydantic import BaseModel
 
