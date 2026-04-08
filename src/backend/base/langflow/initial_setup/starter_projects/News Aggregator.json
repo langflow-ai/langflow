@@ -886,7 +886,7 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.8"
+                    "version": "3.10.15"
                   },
                   {
                     "name": "fastapi",
@@ -1186,7 +1186,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.22"
+                    "version": "1.2.20"
                   }
                 ],
                 "total_dependencies": 3
@@ -1757,7 +1757,7 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.8"
+                    "version": "3.10.15"
                   },
                   {
                     "name": "pandas",
