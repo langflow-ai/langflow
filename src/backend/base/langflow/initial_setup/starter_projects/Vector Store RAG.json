@@ -164,45 +164,18 @@
             "id": "AstraDB-mJvb6",
             "inputTypes": [
               "Data",
-              "DataFrame"
+              "DataFrame",
+              "Table"
             ],
             "type": "other"
           }
         },
         "id": "reactflow__edge-SplitText-NTQIl{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-NTQIlœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-AstraDB-mJvb6{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-mJvb6œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "SplitText-NTQIl",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-NTQIlœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "AstraDB-mJvb6",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-mJvb6œ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-z5C0I",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "search_query",
-            "id": "AstraDB-ZiGZI",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "query"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-z5C0I{œdataTypeœ:œChatInputœ,œidœ:œChatInput-z5C0Iœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-ZiGZI{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-ZiGZIœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
-        "selected": false,
-        "source": "ChatInput-z5C0I",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-z5C0Iœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-ZiGZI",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-ZiGZIœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
+        "source": "SplitText-dswy4",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-dswy4œ, œnameœ: œdataframeœ, œoutput_typesœ: [œTableœ]}",
+        "target": "AstraDB-2kFlp",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-2kFlpœ, œinputTypesœ: [œDataœ, œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -3461,7 +3434,8 @@
                 "info": "",
                 "input_types": [
                   "Data",
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "list": true,
                 "list_add_label": "Add More",
@@ -4296,7 +4270,8 @@
                 "info": "",
                 "input_types": [
                   "Data",
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "list": true,
                 "list_add_label": "Add More",

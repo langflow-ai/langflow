@@ -25,6 +25,7 @@ from lfx.io import (
 )
 from lfx.log import logger
 from lfx.schema.data import Data
+from lfx.schema.dataframe import Table
 
 REQUEST_TIMEOUT = 60
 MAX_RETRIES = 5
@@ -154,7 +155,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 },
             ],
             value=[],
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
         ),
         StrInput(
             name="opensearch_url",
@@ -1981,17 +1982,17 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             for hit in hits
         ]
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> Table:
         """Search documents and return results as Data objects.
 
         This is the main interface method that performs the multi-model search using the
-        configured search_query and returns results in Langflow's Data format.
+        configured search_query and returns results in Langflow's Table format.
 
         Always builds the vector store (triggering ingestion if needed), then performs
         search only if a query is provided.
 
         Returns:
-            List of Data objects containing search results with text and metadata
+            Table: A table containing search results with text and metadata
 
         Raises:
             Exception: If search operation fails
@@ -2010,7 +2011,9 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
 
             # Perform search with the provided query
             raw = self.search(search_query)
-            return [Data(text=hit["page_content"], **hit["metadata"]) for hit in raw]
+            raw_list = [Data(text=hit["page_content"], **hit["metadata"]) for hit in raw]
+
+            return Table(data=raw_list)
         except Exception as e:
             self.log(f"search_documents error: {e}")
             raise
