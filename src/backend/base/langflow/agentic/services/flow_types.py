@@ -15,6 +15,7 @@ STREAMING_EVENT_TIMEOUT_SECONDS = 300.0
 MAX_VALIDATION_RETRIES = 3
 VALIDATION_UI_DELAY_SECONDS = 0.3
 LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
+FLOW_BUILDER_ASSISTANT_FLOW = "flow_builder_assistant"
 TRANSLATION_FLOW = "translation_flow.py"
 
 OFF_TOPIC_REFUSAL_MESSAGE = (
@@ -41,7 +42,7 @@ class IntentResult:
     """Result from intent classification flow."""
 
     translation: str
-    intent: str  # "generate_component", "question", or "off_topic"
+    intent: str  # "generate_component", "build_flow", "question", or "off_topic"
 
 
 @dataclass

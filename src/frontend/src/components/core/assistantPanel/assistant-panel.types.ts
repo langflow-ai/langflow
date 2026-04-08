@@ -2,6 +2,7 @@ import type {
   AgenticProgressState,
   AgenticResult,
   AgenticStepType,
+  FlowAction,
 } from "@/controllers/API/queries/agentic";
 
 export type AssistantMessageStatus =
@@ -21,6 +22,14 @@ export interface AssistantMessage {
   completedSteps?: AgenticStepType[];
   result?: AgenticResult;
   error?: string;
+  flowPreview?: {
+    flow: Record<string, unknown>;
+    name: string;
+    nodeCount: number;
+    edgeCount: number;
+    graph: string;
+  };
+  flowActions?: FlowAction[];
 }
 
 export interface AssistantModel {

@@ -1,4 +1,3 @@
-import { memo, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -7,6 +6,7 @@ import {
   Code2,
   Loader2,
 } from "lucide-react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { AgenticProgressState } from "@/controllers/API/queries/agentic";
 
 interface AssistantLoadingStateProps {

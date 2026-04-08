@@ -1,11 +1,13 @@
 import { useCallback, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
+  type AgenticFlowUpdateEvent,
   type AgenticStepType,
   postAssistStream,
 } from "@/controllers/API/queries/agentic";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useAddComponent } from "@/hooks/use-add-component";
+import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { APIClassType } from "@/types/api";
 import type {
@@ -23,6 +25,11 @@ interface UseAssistantChatReturn {
   currentStep: AgenticStepType | null;
   handleSend: (content: string, model: AssistantModel | null) => Promise<void>;
   handleApprove: (messageId: string, componentCode?: string) => Promise<void>;
+  handleUpdateFlowAction: (
+    messageId: string,
+    actionId: string,
+    status: "applied" | "dismissed",
+  ) => void;
   handleRetry: (messageId: string) => void;
   handleStopGeneration: () => void;
   handleClearHistory: () => void;
@@ -43,6 +50,99 @@ export function useAssistantChat(): UseAssistantChatReturn {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const addComponent = useAddComponent();
   const { mutateAsync: validateComponent } = usePostValidateComponentCode();
+  /** Apply a flow_update event to the canvas in real time */
+  const applyFlowUpdate = useCallback((event: AgenticFlowUpdateEvent) => {
+    switch (event.action) {
+      case "set_flow": {
+        const flow = event.flow as {
+          data?: { nodes?: unknown[]; edges?: unknown[] };
+        };
+        if (flow?.data?.nodes) {
+          const setNodes = useFlowStore.getState().setNodes;
+          const setEdges = useFlowStore.getState().setEdges;
+          setNodes(flow.data.nodes as never[]);
+          setEdges((flow.data.edges ?? []) as never[]);
+        }
+        break;
+      }
+      case "add_component": {
+        const node = event.node as Record<string, unknown>;
+        if (node) {
+          const setNodes = useFlowStore.getState().setNodes;
+          setNodes((prev) => [...prev, node as never]);
+        }
+        break;
+      }
+      case "connect": {
+        const edge = event.edge as Record<string, unknown>;
+        if (edge) {
+          const setEdges = useFlowStore.getState().setEdges;
+          setEdges((prev) => [...prev, edge as never]);
+        }
+        break;
+      }
+      case "remove_component": {
+        const nodeId = event.component_id as string;
+        if (nodeId) {
+          const setNodes = useFlowStore.getState().setNodes;
+          const setEdges = useFlowStore.getState().setEdges;
+          setNodes((prev) =>
+            prev.filter((n) => (n as Record<string, unknown>).id !== nodeId),
+          );
+          setEdges((prev) =>
+            prev.filter((e) => {
+              const edge = e as Record<string, unknown>;
+              return edge.source !== nodeId && edge.target !== nodeId;
+            }),
+          );
+        }
+        break;
+      }
+      case "configure": {
+        const compId = event.component_id as string;
+        const params = event.params as Record<string, unknown>;
+        if (compId && params) {
+          const setNodes = useFlowStore.getState().setNodes;
+          setNodes((prev) =>
+            prev.map((n) => {
+              const node = n as Record<string, unknown>;
+              if (node.id !== compId) return n;
+              const data = node.data as Record<string, unknown>;
+              const innerNode = (data?.node ?? {}) as Record<string, unknown>;
+              const tpl = (innerNode?.template ?? {}) as Record<
+                string,
+                unknown
+              >;
+              return {
+                ...node,
+                data: {
+                  ...data,
+                  node: {
+                    ...innerNode,
+                    template: {
+                      ...tpl,
+                      ...Object.fromEntries(
+                        Object.entries(params).map(([k, v]) => [
+                          k,
+                          {
+                            ...(tpl[k] as Record<string, unknown>),
+                            value: v,
+                          },
+                        ]),
+                      ),
+                    },
+                  },
+                },
+              } as never;
+            }),
+          );
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }, []);
 
   const updateMessage = useCallback(
     (
@@ -132,6 +232,49 @@ export function useAssistantChat(): UseAssistantChatReturn {
                 content: msg.content + event.chunk,
               }));
             },
+            onFlowPreview: (event) => {
+              applyFlowUpdate({
+                event: "flow_update",
+                action: "set_flow",
+                flow: event.flow,
+              });
+              updateMessage(assistantMessageId, () => ({
+                flowPreview: {
+                  flow: event.flow,
+                  name: event.name,
+                  nodeCount: event.node_count,
+                  edgeCount: event.edge_count,
+                  graph: event.graph,
+                },
+              }));
+            },
+            onFlowUpdate: (event) => {
+              if (event.action === "edit_field") {
+                updateMessage(assistantMessageId, (msg) => ({
+                  flowActions: [
+                    ...(msg.flowActions ?? []),
+                    {
+                      id: event.id as string,
+                      type: "edit_field" as const,
+                      description: event.description as string,
+                      component_id: event.component_id as string,
+                      component_type: event.component_type as string,
+                      field: event.field as string,
+                      old_value: event.old_value,
+                      new_value: event.new_value,
+                      patch: event.patch as {
+                        op: string;
+                        path: string;
+                        value: unknown;
+                      }[],
+                      status: "pending" as const,
+                    },
+                  ],
+                }));
+              } else {
+                applyFlowUpdate(event);
+              }
+            },
             onComplete: (event) => {
               updateMessage(assistantMessageId, () => ({
                 status: "complete" as const,
@@ -139,6 +282,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
                 result: {
                   content: event.data.result || "",
                   validated: event.data.validated,
+                  hasFlow: event.data.has_flow,
                   className: event.data.class_name,
                   componentCode: event.data.component_code,
                   validationAttempts: event.data.validation_attempts,
@@ -234,6 +378,17 @@ export function useAssistantChat(): UseAssistantChatReturn {
     [messages, handleSend],
   );
 
+  const handleUpdateFlowAction = useCallback(
+    (messageId: string, actionId: string, status: "applied" | "dismissed") => {
+      updateMessage(messageId, (msg) => ({
+        flowActions: msg.flowActions?.map((a) =>
+          a.id === actionId ? { ...a, status } : a,
+        ),
+      }));
+    },
+    [updateMessage],
+  );
+
   const handleStopGeneration = useCallback(() => {
     abortControllerRef.current?.abort();
 
@@ -278,6 +433,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
     currentStep,
     handleSend,
     handleApprove,
+    handleUpdateFlowAction,
     handleRetry,
     handleStopGeneration,
     handleClearHistory,

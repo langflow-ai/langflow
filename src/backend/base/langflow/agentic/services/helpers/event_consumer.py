@@ -71,6 +71,8 @@ async def consume_streaming_events(
                 chunk = data.get("chunk", "")
                 if chunk:
                     yield ("token", chunk)
+            elif event_type == "flow_preview":
+                yield ("flow_preview", data)
             elif event_type == "end":
                 yield ("end", "")
                 break

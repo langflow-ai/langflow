@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
 import { Check, FileText } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import type { AgenticResult } from "@/controllers/API/queries/agentic";
 import CodeAreaModal from "@/modals/codeAreaModal";
 
@@ -28,7 +28,7 @@ export function parseComponentInfo(code: string | undefined) {
   const description = descMatch?.[1] || null;
 
   // Extract inputs with type (e.g. MessageTextInput, IntInput, etc.)
-  const inputRegex = /(\w+Input)\(\s*(?:[^)]*?)display_name\s*=\s*"([^"]+)"/g;
+  const inputRegex = /(\w+Input)\(\s*(?:[^)]*?)display_name\s*=\s*"([^"]+)"/gs;
   const inputs: FieldInfo[] = [];
   let match;
   while ((match = inputRegex.exec(code)) !== null) {
@@ -46,7 +46,7 @@ export function parseComponentInfo(code: string | undefined) {
 
   // Extract outputs: get display_name and method name, then resolve return type from method signature
   const outputRegex =
-    /Output\(\s*(?:[^)]*?)display_name\s*=\s*"([^"]+)"(?:[^)]*?)method\s*=\s*"(\w+)"/g;
+    /Output\(\s*(?:[^)]*?)display_name\s*=\s*"([^"]+)"(?:[^)]*?)method\s*=\s*"(\w+)"/gs;
   const outputs: FieldInfo[] = [];
   while ((match = outputRegex.exec(code)) !== null) {
     const methodName = match[2];
@@ -103,10 +103,7 @@ export function AssistantComponentResult({
   };
 
   return (
-    <div
-      data-testid="assistant-component-result"
-      className="max-w-[80%] rounded-lg border border-border bg-muted/30 p-4"
-    >
+    <div className="max-w-[80%] rounded-lg border border-border bg-muted/30 p-4">
       {/* Component header */}
       <div className="mb-3 flex items-center gap-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#0EA5E9]">
@@ -174,16 +171,14 @@ export function AssistantComponentResult({
         ) : (
           <button
             type="button"
-            data-testid="assistant-approve-button"
             className="h-8 rounded-[10px] bg-white px-4 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100"
             onClick={handleApprove}
           >
-            Add to Canvas
+            Approve
           </button>
         )}
         <button
           type="button"
-          data-testid="assistant-view-code-button"
           className="h-8 rounded-[10px] bg-zinc-700 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-600"
           onClick={() => setIsViewCodeOpen(true)}
         >

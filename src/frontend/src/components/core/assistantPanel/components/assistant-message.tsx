@@ -10,13 +10,19 @@ import { cn } from "@/utils/utils";
 import type { AssistantMessage } from "../assistant-panel.types";
 import { getRandomThinkingMessage } from "../helpers/messages";
 import { AssistantComponentResult } from "./assistant-component-result";
+import { FlowEditCarousel } from "./assistant-flow-edit-card";
+import { AssistantFlowPreview } from "./assistant-flow-preview";
 import { AssistantLoadingState } from "./assistant-loading-state";
 import { AssistantValidationFailed } from "./assistant-validation-failed";
 
 interface AssistantMessageItemProps {
   message: AssistantMessage;
-  onApprove?: (messageId: string, componentCode?: string) => void;
-  onRetry?: (messageId: string) => void;
+  onApprove?: (messageId: string) => void;
+  onUpdateFlowAction?: (
+    messageId: string,
+    actionId: string,
+    status: "applied" | "dismissed",
+  ) => void;
 }
 
 function ThinkingIndicator({ message }: { message: string }) {
@@ -41,7 +47,7 @@ function ThinkingIndicator({ message }: { message: string }) {
 export function AssistantMessageItem({
   message,
   onApprove,
-  onRetry,
+  onUpdateFlowAction,
 }: AssistantMessageItemProps) {
   const { userData } = useContext(AuthContext);
   const isUser = message.role === "user";
@@ -50,9 +56,8 @@ export function AssistantMessageItem({
     message.result?.validated && message.result?.componentCode;
   const hasValidationError =
     message.result?.validated === false && message.result?.validationError;
-  // Skip animation if the message is already complete on mount (e.g. panel was closed and reopened)
   const [validationAnimationComplete, setValidationAnimationComplete] =
-    useState(message.status === "complete");
+    useState(false);
 
   // Timeout fallback: if message is complete but user hasn't clicked Continue,
   // force transition after 30s to prevent indefinitely stuck loading states
@@ -77,14 +82,19 @@ export function AssistantMessageItem({
   // Generate randomized messages once per message
   const thinkingMessage = useMemo(() => getRandomThinkingMessage(), []);
 
-  // Steps that indicate component generation mode (not just Q&A)
+  // Steps that indicate component/flow generation mode (not just Q&A)
   const componentGenerationSteps = [
     "generating_component",
+    "generating_flow",
     "extracting_code",
     "validating",
     "validation_failed",
     "retrying",
     "validated",
+    "searching_components",
+    "building_flow",
+    "flow_built",
+    "flow_build_failed",
   ];
 
   // Detect component code in streaming content (handles misclassified intent)
@@ -145,12 +155,7 @@ export function AssistantMessageItem({
     // Show validation failure after all retries (only after animation completes)
     const canShowResult = validationAnimationComplete || !message.progress;
     if (hasValidationError && message.result && canShowResult) {
-      return (
-        <AssistantValidationFailed
-          result={message.result}
-          onRetry={onRetry ? () => onRetry(message.id) : undefined}
-        />
-      );
+      return <AssistantValidationFailed result={message.result} />;
     }
 
     // Show successful component result (only after validation animation completes, or if no animation was needed)
@@ -163,37 +168,48 @@ export function AssistantMessageItem({
       );
     }
 
-    // Fallback: component generation where backend returned code in the response
-    // text but didn't set result.validated (e.g., code extraction format mismatch).
-    // Only applies when the message has progress steps from component generation,
-    // NOT for plain Q&A responses that happen to contain example code.
-    const wasComponentGeneration = message.completedSteps?.some((step) =>
-      [
-        "generating_component",
-        "extracting_code",
-        "validating",
-        "validated",
-      ].includes(step),
-    );
-    if (wasComponentGeneration && message.status === "complete") {
-      const componentCodeMatch = message.content?.match(
-        /```python\s*\n([\s\S]*?class\s+(\w+)\s*\(.*Component.*\)[\s\S]*?)```/,
-      );
-      if (componentCodeMatch) {
-        const extractedCode = componentCodeMatch[1];
-        const extractedClassName = componentCodeMatch[2];
-        return (
-          <AssistantComponentResult
-            result={{
-              content: message.content,
-              validated: true,
-              componentCode: extractedCode,
-              className: extractedClassName,
-            }}
-            onApprove={() => onApprove?.(message.id, extractedCode)}
+    // Show flow edit cards when agent proposed changes
+    if (message.flowActions && message.flowActions.length > 0) {
+      return (
+        <div className="flex flex-col gap-3">
+          {message.content && (
+            <Markdown
+              remarkPlugins={[remarkGfm]}
+              className="prose prose-sm max-w-full text-muted-foreground dark:prose-invert prose-p:leading-relaxed prose-p:my-1"
+            >
+              {message.content}
+            </Markdown>
+          )}
+          <FlowEditCarousel
+            actions={message.flowActions}
+            onUpdateAction={(actionId, status) =>
+              onUpdateFlowAction?.(message.id, actionId, status)
+            }
           />
-        );
-      }
+        </div>
+      );
+    }
+
+    // Show flow preview when a flow was built
+    if (message.flowPreview) {
+      // Strip the flow_json code block from the visible content
+      const cleanContent = message.content
+        ?.replace(/```flow_json[\s\S]*?```/gi, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+      return (
+        <div className="flex flex-col gap-3">
+          {cleanContent && (
+            <Markdown
+              remarkPlugins={[remarkGfm]}
+              className="prose prose-sm max-w-full text-muted-foreground dark:prose-invert prose-p:leading-relaxed prose-p:my-1"
+            >
+              {cleanContent}
+            </Markdown>
+          )}
+          <AssistantFlowPreview flowPreview={message.flowPreview} />
+        </div>
+      );
     }
 
     // Default text content with markdown support
@@ -256,7 +272,7 @@ export function AssistantMessageItem({
   }
 
   return (
-    <div className="mb-6" data-testid={`assistant-message-${message.role}`}>
+    <div className="mb-6">
       <div className="flex items-start gap-3">
         {isUser ? (
           <img

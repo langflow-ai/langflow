@@ -4,6 +4,8 @@ import type {
   AgenticCancelledEvent,
   AgenticCompleteEvent,
   AgenticErrorEvent,
+  AgenticFlowPreviewEvent,
+  AgenticFlowUpdateEvent,
   AgenticProgressEvent,
   AgenticSSEEvent,
   AgenticTokenEvent,
@@ -13,6 +15,8 @@ interface StreamCallbacks {
   onProgress?: (event: AgenticProgressEvent) => void;
   onToken?: (event: AgenticTokenEvent) => void;
   onComplete?: (event: AgenticCompleteEvent) => void;
+  onFlowPreview?: (event: AgenticFlowPreviewEvent) => void;
+  onFlowUpdate?: (event: AgenticFlowUpdateEvent) => void;
   onError?: (event: AgenticErrorEvent) => void;
   onCancelled?: (event: AgenticCancelledEvent) => void;
 }
@@ -55,6 +59,12 @@ function processSSELine(
     case "complete":
       callbacks.onComplete?.(event);
       return { done: true };
+    case "flow_preview":
+      callbacks.onFlowPreview?.(event);
+      break;
+    case "flow_update":
+      callbacks.onFlowUpdate?.(event);
+      break;
     case "error":
       callbacks.onError?.(event);
       return { done: true };

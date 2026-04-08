@@ -1,13 +1,14 @@
 """Tools for searching components and building flows on the user's canvas.
 
 These components expose flow_builder capabilities as Agent tools.
-Each mutating tool pushes a flow_update event to a module-level queue
+Each mutating tool pushes a flow_update event to a per-request queue
 so the assistant service can send real-time SSE updates to the frontend.
 """
 
 from __future__ import annotations
 
 from collections import deque
+from contextvars import ContextVar
 from typing import Any
 
 from lfx.custom import Component
@@ -25,89 +26,64 @@ from lfx.mcp.registry import describe_component, search_registry
 from lfx.schema import Data
 
 # ---------------------------------------------------------------------------
-# Module-level state for communicating between tool execution and the
-# assistant service streaming loop. Tools push events here; the service
-# drains them and sends SSE events to the frontend.
+# Per-request state using contextvars. Each async request gets its own
+# working flow, flow ID, and event queue -- safe under concurrency.
 # ---------------------------------------------------------------------------
 
-_flow_events: deque[dict[str, Any]] = deque()
-_working_flow: dict | None = None
-_current_flow_id: str | None = None
+_flow_events_var: ContextVar[deque[dict[str, Any]]] = ContextVar("_flow_events_var")
+_working_flow_var: ContextVar[dict | None] = ContextVar("_working_flow_var", default=None)
+_current_flow_id_var: ContextVar[str | None] = ContextVar("_current_flow_id_var", default=None)
+
+
+def _get_flow_events() -> deque[dict[str, Any]]:
+    """Get the per-request event queue, creating one if needed."""
+    try:
+        return _flow_events_var.get()
+    except LookupError:
+        q: deque[dict[str, Any]] = deque()
+        _flow_events_var.set(q)
+        return q
 
 
 def drain_flow_events() -> list[dict[str, Any]]:
     """Return and clear all pending flow update events."""
-    events = list(_flow_events)
-    _flow_events.clear()
+    q = _get_flow_events()
+    events = list(q)
+    q.clear()
     return events
 
 
 def get_working_flow() -> dict | None:
     """Return the current working flow (for the assistant service)."""
-    return _working_flow
+    return _working_flow_var.get(None)
 
 
 def init_working_flow(flow_data: dict, flow_id: str | None = None) -> None:
     """Initialize working flow from actual canvas data."""
-    global _working_flow, _current_flow_id  # noqa: PLW0603
-    _working_flow = flow_data
-    _current_flow_id = flow_id
-    _flow_events.clear()
+    _working_flow_var.set(flow_data)
+    _current_flow_id_var.set(flow_id)
+    _get_flow_events().clear()
 
 
 def reset_working_flow() -> None:
     """Reset the working flow state between requests."""
-    global _working_flow, _current_flow_id  # noqa: PLW0603
-    _working_flow = None
-    _current_flow_id = None
-    _flow_events.clear()
+    _working_flow_var.set(None)
+    _current_flow_id_var.set(None)
+    _get_flow_events().clear()
 
 
 def _emit(action: str, **data: Any) -> None:
     """Push a flow_update event."""
-    _flow_events.append({"action": action, **data})
-
-
-def _save_working_flow() -> None:
-    """Persist the working flow to the database if we have a flow_id."""
-    if _working_flow is None or _current_flow_id is None:
-        return
-    try:
-        import asyncio
-        from uuid import UUID
-
-        from lfx.services.deps import session_scope
-
-        async def _save():
-            from langflow.services.database.models.flow import Flow
-
-            async with session_scope() as session:
-                flow = await session.get(Flow, UUID(_current_flow_id))
-                if flow:
-                    flow.data = _working_flow.get("data", {})
-                    session.add(flow)
-
-        # Run in the existing event loop
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # We're inside an async context -- schedule as a task
-            # This is safe because session_scope uses the same DB engine
-            import concurrent.futures
-
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                pool.submit(asyncio.run, _save()).result()
-        else:
-            loop.run_until_complete(_save())
-    except Exception:  # noqa: BLE001
-        logger.warning("Failed to save working flow to DB", exc_info=True)
+    _get_flow_events().append({"action": action, **data})
 
 
 def _ensure_working_flow() -> dict:
     """Get or create the working flow."""
-    global _working_flow  # noqa: PLW0603
-    if _working_flow is None:
-        _working_flow = empty_flow()
-    return _working_flow
+    flow = _working_flow_var.get(None)
+    if flow is None:
+        flow = empty_flow()
+        _working_flow_var.set(flow)
+    return flow
 
 
 def _find_node(flow: dict, component_id: str) -> dict | None:
@@ -464,23 +440,16 @@ class ConnectComponents(Component):
 
 class ConfigureComponent(Component):
     display_name = "Configure Component"
-    description = "Set parameter values on a component (e.g. model_name, temperature)."
+    description = "Set one or more parameters on a component. Pass a JSON dict for multiple params at once."
     icon = "Settings"
     name = "ConfigureComponent"
 
     inputs = [
         MessageTextInput(name="component_id", display_name="Component ID", required=True, tool_mode=True),
         MessageTextInput(
-            name="param_name",
-            display_name="Parameter Name",
-            info="The parameter to set (e.g. 'model_name', 'temperature').",
-            required=True,
-            tool_mode=True,
-        ),
-        MessageTextInput(
-            name="param_value",
-            display_name="Value",
-            info="The value to set.",
+            name="params",
+            display_name="Parameters",
+            info='JSON dict of params to set, e.g. \'{"model_name": "gpt-4o", "temperature": 0.7}\'',
             required=True,
             tool_mode=True,
         ),
@@ -491,11 +460,28 @@ class ConfigureComponent(Component):
     ]
 
     def configure_component(self) -> Data:
+        import json
+
         flow = _ensure_working_flow()
+
+        # Accept params as dict (from tool framework) or JSON string
+        raw = self.params
+        if isinstance(raw, dict):
+            params = raw
+        else:
+            raw = (raw or "").strip()
+            try:
+                params = json.loads(raw)
+                if not isinstance(params, dict):
+                    return Data(data={"error": f"params must be a JSON object, got {type(params).__name__}"})
+            except json.JSONDecodeError:
+                return Data(data={"error": f'Invalid JSON in params: {raw!r}. Use format: {{"key": "value"}}'})
+
         try:
-            fb_configure(flow, self.component_id, {self.param_name: self.param_value})
-            _emit("configure", component_id=self.component_id, param_name=self.param_name, param_value=self.param_value)
-            return Data(data={"text": f"Set {self.param_name}={self.param_value} on {self.component_id}"})
+            fb_configure(flow, self.component_id, params)
+            _emit("configure", component_id=self.component_id, params=params)
+            summary = ", ".join(f"{k}={v!r}" for k, v in params.items())
+            return Data(data={"text": f"Set {summary} on {self.component_id}", "configured": list(params.keys())})
         except (ValueError, KeyError) as e:
             logger.warning("configure_component failed: %s", e)
             return Data(data={"error": str(e)})
@@ -535,7 +521,11 @@ class BuildFlowFromSpec(Component):
     ]
 
     def build_flow(self) -> Data:
-        global _working_flow  # noqa: PLW0603
+        existing = get_working_flow()
+        if existing and existing.get("data", {}).get("nodes"):
+            node_count = len(existing["data"]["nodes"])
+            logger.warning("build_flow called on non-empty canvas (%d nodes) -- replacing", node_count)
+
         result = build_flow_from_spec(self.spec)
         if "error" in result:
             error_msg = f"Flow build failed: {result['error']}"
@@ -548,6 +538,6 @@ class BuildFlowFromSpec(Component):
                 f"Flow '{result['name']}' built successfully "
                 f"({result['node_count']} nodes, {result['edge_count']} edges)."
             )
-            _working_flow = result["flow"]
+            _working_flow_var.set(result["flow"])
             _emit("set_flow", flow=result["flow"])
         return Data(data=result)

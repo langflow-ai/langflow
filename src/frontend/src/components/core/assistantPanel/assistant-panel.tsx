@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import type { AgenticStepType } from "@/controllers/API/queries/agentic";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import { cn } from "@/utils/utils";
 import type {
   AssistantModel,
@@ -120,11 +121,21 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     currentStep,
     handleSend,
     handleApprove,
+    handleUpdateFlowAction,
     handleRetry,
     handleStopGeneration,
     handleClearHistory,
     loadSession,
   } = useAssistantChat();
+
+  // Sync processing state to store so the canvas can lock during assistant work
+  const setAssistantProcessing = useAssistantManagerStore(
+    (state) => state.setAssistantProcessing,
+  );
+  useEffect(() => {
+    setAssistantProcessing(isProcessing);
+    return () => setAssistantProcessing(false);
+  }, [isProcessing, setAssistantProcessing]);
 
   const { sessions, saveCurrentSession, switchSession, deleteSession } =
     useSessionHistory(sessionId, messages, loadSession);
@@ -273,6 +284,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   key={msg.id}
                   message={msg}
                   onApprove={handleApproveAndClose}
+                  onUpdateFlowAction={handleUpdateFlowAction}
                   onRetry={hasEnabledModels ? handleRetry : undefined}
                 />
               ))}

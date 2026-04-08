@@ -1,6 +1,6 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { AssistantLoadingState } from "../assistant-loading-state";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { AgenticProgressState } from "@/controllers/API/queries/agentic";
+import { AssistantLoadingState } from "../assistant-loading-state";
 
 function createProgress(
   overrides: Partial<AgenticProgressState> = {},

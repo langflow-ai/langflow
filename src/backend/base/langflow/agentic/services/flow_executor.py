@@ -224,6 +224,8 @@ async def execute_flow_file_streaming(
         async for event_type, chunk in consume_streaming_events(event_queue, is_disconnected, cancel_event):
             if event_type == "token":
                 yield ("token", chunk)
+            elif event_type == "flow_preview":
+                yield ("flow_preview", chunk)
             elif event_type == "end":
                 break
             elif event_type == "cancelled":

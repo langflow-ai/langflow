@@ -8,12 +8,17 @@ from pydantic import BaseModel, Field
 StepType = Literal[
     "generating",  # LLM is generating response
     "generating_component",  # LLM is generating component code
+    "generating_flow",  # LLM is building a flow
     "generation_complete",  # LLM finished generating
     "extracting_code",  # Extracting Python code from response
     "validating",  # Validating component code
     "validated",  # Validation succeeded
     "validation_failed",  # Validation failed
     "retrying",  # About to retry with error context
+    "searching_components",  # Agent is searching for components
+    "building_flow",  # Agent is building a flow from spec
+    "flow_built",  # Flow built successfully
+    "flow_build_failed",  # Flow build failed
 ]
 
 

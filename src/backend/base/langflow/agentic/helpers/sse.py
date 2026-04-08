@@ -58,6 +58,34 @@ def format_token_event(chunk: str) -> str:
     return f"data: {json.dumps({'event': 'token', 'chunk': chunk})}\n\n"
 
 
+def format_flow_update_event(update: dict) -> str:
+    """Format SSE flow_update event for real-time canvas changes."""
+    return f"data: {json.dumps({'event': 'flow_update', **update})}\n\n"
+
+
 def format_cancelled_event() -> str:
     """Format SSE cancelled event when client disconnects."""
     return f"data: {json.dumps({'event': 'cancelled', 'message': 'Generation cancelled by user'})}\n\n"
+
+
+def format_flow_preview_event(
+    flow_data: dict,
+    name: str = "",
+    node_count: int = 0,
+    edge_count: int = 0,
+    graph: str = "",
+) -> str:
+    """Format SSE flow_preview event with the built flow data.
+
+    The frontend can use this to render a preview of the flow
+    without saving it to the server.
+    """
+    payload = {
+        "event": "flow_preview",
+        "flow": flow_data,
+        "name": name,
+        "node_count": node_count,
+        "edge_count": edge_count,
+        "graph": graph,
+    }
+    return f"data: {json.dumps(payload)}\n\n"

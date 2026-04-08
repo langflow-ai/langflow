@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/utils/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/utils/utils";
 import type { AssistantModel } from "../assistant-panel.types";
 import { useEnabledModels } from "../hooks";
 

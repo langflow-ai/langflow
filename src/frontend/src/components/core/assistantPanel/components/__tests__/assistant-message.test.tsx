@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { AssistantMessageItem } from "../assistant-message";
 import type { AssistantMessage } from "../../assistant-panel.types";
+import { AssistantMessageItem } from "../assistant-message";
 
 // --- Mocks ---
 
