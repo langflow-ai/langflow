@@ -52,7 +52,8 @@ export default function InspectionPanelFields({
         const template = data.node?.template[templateField];
         if (isInternalField(templateField)) return false;
         if (HIDDEN_FIELDS[data.type]?.includes(templateField)) return false;
-        if (INSPECTION_PANEL_ONLY_FIELDS[data.type]?.includes(templateField)) return false;
+        if (INSPECTION_PANEL_ONLY_FIELDS[data.type]?.includes(templateField))
+          return false;
         if (
           data.type === "APIRequest" &&
           templateField === "body" &&
