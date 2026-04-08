@@ -18,7 +18,9 @@ The flow works as follows:
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 from typing import Annotated
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query, Request, status
@@ -42,6 +44,45 @@ router = APIRouter(prefix="/mcp/oauth", tags=["mcp-oauth"])
 # Module-level set to hold references to background OAuth tasks, preventing
 # premature garbage collection before the 600-second flow timeout expires.
 _oauth_tasks: set[asyncio.Task] = set()
+
+_BLOCKED_HOSTNAMES = frozenset({"localhost", "localhost.localdomain"})
+
+
+def _validate_server_url(url: str) -> None:
+    """Reject server_url values that point to private or loopback addresses.
+
+    Prevents authenticated SSRF by blocking requests to internal infrastructure.
+    Only http and https schemes are permitted.
+
+    Raises:
+        HTTPException: 400 if the URL is invalid or targets a private address.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid URL scheme '{parsed.scheme}'. Only http and https are allowed.",
+        )
+    hostname = parsed.hostname
+    if not hostname:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid server URL: missing hostname.",
+        )
+    if hostname.lower() in _BLOCKED_HOSTNAMES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Server URL must not point to a private or loopback address.",
+        )
+    try:
+        addr = ipaddress.ip_address(hostname)
+        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_unspecified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Server URL must not point to a private or loopback address.",
+            )
+    except ValueError:
+        pass  # hostname is a domain name, not an IP — allow it
 
 
 # HTML templates for callback responses
@@ -154,6 +195,9 @@ async def initiate_oauth_flow(
     user_id = str(current_user.id)
     server_url = oauth_request.server_url
 
+    # Reject private/loopback addresses to prevent SSRF
+    _validate_server_url(server_url)
+
     # Determine redirect URI for callback
     # Priority: explicit redirect_uri > callback_base_url > backend_url setting > request base URL
     settings = get_settings_service().settings
@@ -175,15 +219,14 @@ async def initiate_oauth_flow(
         callback_uri = f"{base_url}/api/v1/mcp/oauth/callback"
 
     try:
-        # Clear any existing tokens first - if /initiate is called, existing tokens are invalid
-        # This forces the SDK to start a fresh OAuth flow
         from lfx.base.mcp.oauth.provider import get_server_key
 
         state_manager = await get_oauth_state_manager()
         server_key = get_server_key(server_url)
-        await state_manager.delete_tokens(user_id, server_key)
 
-        # Create the flow first so we have a flow_id to return
+        # Create the flow first so we have a flow_id to return.
+        # Token deletion is deferred into run_oauth_flow so that a failed or
+        # cancelled flow never leaves the user with no credentials at all.
         flow_config = {
             "client_id": oauth_request.client_id,
             "client_secret": oauth_request.client_secret,
@@ -193,6 +236,12 @@ async def initiate_oauth_flow(
         # Define the background task that runs the full OAuth flow
         async def run_oauth_flow() -> None:
             try:
+                # Invalidate existing tokens immediately before starting a new exchange.
+                # Placed here (not in the endpoint) so a cancelled/failed flow never
+                # leaves the user with no credentials — the delete only runs when the
+                # task actually starts executing.
+                await state_manager.delete_tokens(user_id, server_key)
+
                 # Create SDK-based provider with the pre-created flow_id
                 provider, _, _cleanup = await create_deployed_oauth_provider(
                     server_url=server_url,
@@ -214,13 +263,28 @@ async def initiate_oauth_flow(
                         server_url,
                         json={"jsonrpc": "2.0", "method": "initialize", "id": 1},
                     )
-                    # If we get here, the OAuth flow completed successfully
-                    await logger.ainfo(f"OAuth flow {flow_id} completed successfully, status: {response.status_code}")
+                    # Verify tokens were actually persisted before declaring success.
+                    # If the probe succeeded but no token was stored, the next MCP
+                    # call would still fail — treat that as a flow failure instead.
+                    tokens = await state_manager.get_tokens(user_id, server_key)
+                    if tokens is None:
+                        msg = f"OAuth exchange finished without persisted tokens (HTTP {response.status_code})"
+                        raise RuntimeError(msg)
+                    await logger.ainfo(
+                        f"OAuth flow {flow_id} completed successfully, status: {response.status_code}"
+                    )
 
-                # Mark flow as complete
+                # Mark flow as complete only after confirming token persistence
                 await state_manager.update_flow(flow_id, {"status": "complete"})
                 await logger.ainfo(f"OAuth flow {flow_id} marked as complete")
 
+            except asyncio.CancelledError:
+                await logger.awarning(f"OAuth flow {flow_id} was cancelled")
+                await state_manager.update_flow(
+                    flow_id,
+                    {"status": "error", "error_message": "OAuth flow was cancelled"},
+                )
+                raise
             except TimeoutError:
                 await logger.awarning(f"OAuth flow {flow_id} timed out waiting for callback")
                 await state_manager.update_flow(
@@ -270,6 +334,10 @@ async def initiate_oauth_flow(
             expires_in=600,
         )
 
+    except HTTPException:
+        # Re-raise explicit HTTP errors (e.g. from the polling loop) unchanged
+        # so their original status code and detail are preserved.
+        raise
     except Exception as e:
         await logger.aexception(f"Failed to initiate OAuth flow: {e}")
         raise HTTPException(

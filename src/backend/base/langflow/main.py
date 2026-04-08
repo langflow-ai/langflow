@@ -547,10 +547,15 @@ def create_app():
 
         The response is wrapped in {"detail": ...} to match FastAPI's standard
         error response format that the frontend expects.
+
+        Note: client_secret is intentionally excluded from the response to
+        prevent credential exposure; the secret is only used server-side.
         """
+        safe_detail = exc.to_dict()
+        safe_detail.pop("client_secret", None)
         return JSONResponse(
             status_code=HTTPStatus.UNAUTHORIZED,
-            content={"detail": exc.to_dict()},
+            content={"detail": safe_detail},
         )
 
     @app.exception_handler(Exception)

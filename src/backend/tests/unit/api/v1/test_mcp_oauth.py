@@ -86,8 +86,8 @@ class TestInitiateOAuthFlow:
         assert "auth_url" in data
         assert "expires_in" in data
 
-    async def test_initiate_clears_existing_tokens(self, client, logged_in_headers, mock_state_manager) -> None:
-        """Initiating a flow deletes existing tokens for the server."""
+    async def test_initiate_creates_flow_for_server(self, client, logged_in_headers, mock_state_manager) -> None:
+        """Initiating a flow creates a new OAuth flow entry in the state manager."""
         with (
             patch(
                 "langflow.api.v1.mcp_oauth.get_oauth_state_manager",
@@ -104,7 +104,7 @@ class TestInitiateOAuthFlow:
                 headers=logged_in_headers,
             )
 
-        mock_state_manager.delete_tokens.assert_awaited_once()
+        mock_state_manager.create_flow.assert_awaited_once()
 
     async def test_initiate_requires_authentication(self, client) -> None:
         """Calling /initiate without a token returns 401/403."""
@@ -164,6 +164,100 @@ class TestInitiateOAuthFlow:
             )
 
         assert response.status_code == 400
+
+    async def test_initiate_rejects_loopback_ip(self, client, logged_in_headers) -> None:
+        """SSRF guard: localhost IP is rejected with 400."""
+        response = await client.post(
+            "api/v1/mcp/oauth/initiate",
+            json={"server_url": "https://127.0.0.1/mcp"},
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 400
+        assert "loopback" in response.json()["detail"].lower() or "private" in response.json()["detail"].lower()
+
+    async def test_initiate_rejects_private_ip(self, client, logged_in_headers) -> None:
+        """SSRF guard: private network IP is rejected with 400."""
+        response = await client.post(
+            "api/v1/mcp/oauth/initiate",
+            json={"server_url": "http://192.168.1.1/mcp"},
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 400
+
+    async def test_initiate_rejects_localhost_hostname(self, client, logged_in_headers) -> None:
+        """SSRF guard: localhost hostname is rejected with 400."""
+        response = await client.post(
+            "api/v1/mcp/oauth/initiate",
+            json={"server_url": "http://localhost/mcp"},
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 400
+
+    async def test_initiate_rejects_non_http_scheme(self, client, logged_in_headers) -> None:
+        """SSRF guard: non-http/https schemes are rejected with 400."""
+        response = await client.post(
+            "api/v1/mcp/oauth/initiate",
+            json={"server_url": "ftp://mcp.example.com/mcp"},
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 400
+        assert "scheme" in response.json()["detail"].lower()
+
+    async def test_initiate_flow_created_before_task_runs(
+        self, client, logged_in_headers
+    ) -> None:
+        """The flow ID is created synchronously so it can be returned to the caller.
+        Token deletion and provider creation happen inside the background task."""
+        mock_manager = _make_state_manager()
+
+        with (
+            patch(
+                "langflow.api.v1.mcp_oauth.get_oauth_state_manager",
+                new=AsyncMock(return_value=mock_manager),
+            ),
+            patch(
+                "langflow.api.v1.mcp_oauth.create_deployed_oauth_provider",
+                new=AsyncMock(),
+            ),
+        ):
+            response = await client.post(
+                "api/v1/mcp/oauth/initiate",
+                json={"server_url": "https://mcp.example.com"},
+                headers=logged_in_headers,
+            )
+
+        # The flow must be created (synchronously) so we have a flow_id to return
+        mock_manager.create_flow.assert_awaited_once()
+        # The response must contain a valid flow_id
+        assert response.status_code == 200
+        assert response.json()["flow_id"] == "flow-123"
+
+    async def test_initiate_http_exception_preserved(self, client, logged_in_headers) -> None:
+        """An HTTPException raised during polling is returned with its original status."""
+        error_manager = _make_state_manager()
+        error_manager.get_flow_by_id = AsyncMock(
+            return_value={"flow_id": "flow-123", "status": "error", "error_message": "forbidden"}
+        )
+
+        with (
+            patch(
+                "langflow.api.v1.mcp_oauth.get_oauth_state_manager",
+                new=AsyncMock(return_value=error_manager),
+            ),
+            patch(
+                "langflow.api.v1.mcp_oauth.create_deployed_oauth_provider",
+                new=AsyncMock(),
+            ),
+        ):
+            response = await client.post(
+                "api/v1/mcp/oauth/initiate",
+                json={"server_url": "https://mcp.example.com"},
+                headers=logged_in_headers,
+            )
+
+        # Should be 400 from the explicit HTTPException, not a re-wrapped 400 with a different message
+        assert response.status_code == 400
+        assert response.json()["detail"] == "forbidden"
 
 
 # ---------------------------------------------------------------------------
