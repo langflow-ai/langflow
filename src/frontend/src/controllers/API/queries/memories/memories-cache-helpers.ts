@@ -12,10 +12,7 @@ const getStringId = (value: unknown): string | undefined => {
   return typeof id === "string" ? id : undefined;
 };
 
-const addMemoryToCacheValue = (
-  old: unknown,
-  memory: MemoryInfo,
-): unknown => {
+const addMemoryToCacheValue = (old: unknown, memory: MemoryInfo): unknown => {
   if (!isRecord(old)) return old;
 
   // InfiniteQuery shape: { pages: [{ items: [...] }, ...], pageParams: [...] }
@@ -23,10 +20,11 @@ const addMemoryToCacheValue = (
     const pages = old.pages;
     if (pages.length === 0) return old;
 
-    const alreadyPresent = pages.some((page) =>
-      isRecord(page) &&
-      Array.isArray(page.items) &&
-      page.items.some((item) => getStringId(item) === memory.id),
+    const alreadyPresent = pages.some(
+      (page) =>
+        isRecord(page) &&
+        Array.isArray(page.items) &&
+        page.items.some((item) => getStringId(item) === memory.id),
     );
     if (alreadyPresent) return old;
 
@@ -35,7 +33,9 @@ const addMemoryToCacheValue = (
 
     const nextFirstItems = [memory, ...firstPage.items];
     const nextFirstTotal =
-      typeof firstPage.total === "number" ? firstPage.total + 1 : firstPage.total;
+      typeof firstPage.total === "number"
+        ? firstPage.total + 1
+        : firstPage.total;
 
     const nextPages = [
       { ...firstPage, items: nextFirstItems, total: nextFirstTotal },
@@ -163,7 +163,8 @@ export const addMemoryToMemoriesCache = (
         const maybeFlowId = Array.isArray(query.queryKey)
           ? query.queryKey[1]
           : undefined;
-        const flowIdInKey = typeof maybeFlowId === "string" ? maybeFlowId : undefined;
+        const flowIdInKey =
+          typeof maybeFlowId === "string" ? maybeFlowId : undefined;
 
         // Update only the relevant flow list, and any unfiltered list.
         return flowIdInKey === undefined || flowIdInKey === memory.flow_id;

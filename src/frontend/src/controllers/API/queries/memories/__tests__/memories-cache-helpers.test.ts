@@ -42,7 +42,7 @@ const makeQueryClient = () =>
     },
   });
 
-const getQueryDataOrThrow = <T,>(
+const getQueryDataOrThrow = <T>(
   queryClient: QueryClient,
   queryKey: readonly unknown[],
 ): T => {
@@ -122,7 +122,10 @@ describe("memories-cache-helpers", () => {
 
     addMemoryToMemoriesCache(queryClient, alreadyPresent);
 
-    const data = getQueryDataOrThrow<InfiniteCache<MemoryInfo>>(queryClient, key);
+    const data = getQueryDataOrThrow<InfiniteCache<MemoryInfo>>(
+      queryClient,
+      key,
+    );
     expect(data.pages[0].items.map((m) => m.id)).toEqual(["existing_a"]);
     expect(data.pages[1].items.map((m) => m.id)).toEqual(["dup"]);
     expect(data.pages[0].total).toBe(2);
@@ -146,7 +149,10 @@ describe("memories-cache-helpers", () => {
 
     removeMemoryFromMemoriesCache(queryClient, "remove_me");
 
-    const data = getQueryDataOrThrow<InfiniteCache<MemoryInfo>>(queryClient, key);
+    const data = getQueryDataOrThrow<InfiniteCache<MemoryInfo>>(
+      queryClient,
+      key,
+    );
     expect(data.pages[0].items.map((m) => m.id)).toEqual(["keep"]);
     expect(data.pages[0].total).toBe(1);
     expect(data.pages[1].items).toEqual([]);
@@ -188,7 +194,11 @@ describe("memories-cache-helpers", () => {
     // Simulate a stale/legacy cache shape that may still exist in the client.
     queryClient.setQueryData(unfilteredKey, { items: [target], total: 1 });
 
-    const updated = makeMemory({ id: "target", flow_id: "flow_a", name: "new" });
+    const updated = makeMemory({
+      id: "target",
+      flow_id: "flow_a",
+      name: "new",
+    });
     updateMemoryInMemoriesCache(queryClient, updated);
 
     const flowAData = getQueryDataOrThrow<InfiniteCache<MemoryInfo>>(
