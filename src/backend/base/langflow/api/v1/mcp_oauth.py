@@ -1,0 +1,540 @@
+"""MCP OAuth API endpoints for deployment-ready authentication.
+
+This module provides REST API endpoints for OAuth authentication with MCP servers,
+using the MCP SDK's OAuthClientProvider for all OAuth operations (metadata discovery,
+PKCE, token exchange, and automatic token refresh).
+
+The flow works as follows:
+1. Frontend calls POST /initiate with server config
+2. Backend starts background task that runs the full OAuth flow
+3. Frontend polls GET /status/{flow_id} to get the auth URL
+4. Frontend opens auth URL in popup
+5. User completes OAuth, provider redirects to GET /callback
+6. Backend stores callback, background task completes token exchange
+7. Frontend polls GET /status/{flow_id} until complete
+8. Tokens are automatically used (with refresh) by MCP component on next connection
+"""
+
+from __future__ import annotations
+
+import asyncio
+import ipaddress
+import socket
+from typing import Annotated
+from urllib.parse import urlparse
+
+import httpx
+from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi.responses import HTMLResponse
+from lfx.base.mcp.oauth.provider import (
+    create_deployed_oauth_provider,
+)
+from lfx.base.mcp.oauth.state_manager import get_oauth_state_manager
+from lfx.log.logger import logger
+
+from langflow.api.utils import CurrentActiveUser
+from langflow.api.v1.schemas import (
+    OAuthInitiateRequest,
+    OAuthInitiateResponse,
+    OAuthRevokeResponse,
+    OAuthStatusResponse,
+)
+
+router = APIRouter(prefix="/mcp/oauth", tags=["mcp-oauth"])
+
+# Module-level set to hold references to background OAuth tasks, preventing
+# premature garbage collection before the 600-second flow timeout expires.
+_oauth_tasks: set[asyncio.Task] = set()
+
+_BLOCKED_HOSTNAMES = frozenset({"localhost", "localhost.localdomain"})
+_SSRF_ERROR = "Server URL must not point to a private or loopback address."
+
+
+def _is_address_blocked(addr_str: str) -> bool:
+    """Return True if the IP address string represents a non-public address."""
+    try:
+        addr = ipaddress.ip_address(addr_str)
+    except ValueError:
+        return False
+    else:
+        return addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_unspecified
+
+
+async def _validate_server_url(url: str) -> None:
+    """Reject server_url values that point to private or loopback addresses.
+
+    Performs two checks to guard against SSRF:
+    1. Literal IP / blocked-hostname check on the parsed hostname.
+    2. DNS resolution — every resolved address is inspected so that domain
+       names that resolve to private/loopback addresses are also blocked.
+
+    Only http and https schemes are permitted.
+
+    Raises:
+        HTTPException: 400 if the URL is invalid or targets a private address.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid URL scheme '{parsed.scheme}'. Only http and https are allowed.",
+        )
+    hostname = parsed.hostname
+    if not hostname:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid server URL: missing hostname.",
+        )
+
+    # --- Check 1: literal IP / known-bad hostname ---
+    if hostname.lower() in _BLOCKED_HOSTNAMES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=_SSRF_ERROR)
+    # If the hostname is already a literal IP, validate it directly and skip DNS.
+    try:
+        ipaddress.ip_address(hostname)
+    except ValueError:
+        pass  # not an IP — fall through to DNS resolution
+    else:
+        # It IS a literal IP — validate it and skip DNS.
+        if _is_address_blocked(hostname):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=_SSRF_ERROR)
+        return  # valid public IP — done
+
+    # --- Check 2: DNS resolution to catch domain-based SSRF ---
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        resolved = await asyncio.get_running_loop().run_in_executor(
+            None,
+            lambda: socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM),
+        )
+    except OSError:
+        # Cannot resolve — block conservatively rather than allowing unknown targets.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot resolve hostname '{hostname}'. Verify the server URL.",
+        ) from None
+
+    for _family, _type, _proto, _canonname, sockaddr in resolved:
+        ip_str = str(sockaddr[0])
+        if _is_address_blocked(ip_str):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=_SSRF_ERROR)
+
+
+# HTML templates for callback responses
+SUCCESS_HTML = """<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Successful</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 { color: #22c55e; margin-bottom: 10px; }
+        p { color: #666; }
+    </style>
+    <script>
+        // Auto-close popup after a short delay
+        setTimeout(function() {
+            if (window.opener) {
+                window.close();
+            }
+        }, 2000);
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Authentication Successful</h1>
+        <p>You can close this window and return to Langflow.</p>
+        <p style="font-size: 12px; color: #999;">This window will close automatically.</p>
+    </div>
+</body>
+</html>"""
+
+ERROR_HTML_TEMPLATE = """<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Failed</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }}
+        .container {{
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 500px;
+        }}
+        h1 {{ color: #ef4444; margin-bottom: 10px; }}
+        p {{ color: #666; }}
+        .error {{ color: #dc2626; font-family: monospace; word-break: break-word; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Authentication Failed</h1>
+        <p class="error">{error_message}</p>
+        <p>Please close this window and try again.</p>
+    </div>
+</body>
+</html>"""
+
+
+@router.post("/initiate", response_model=OAuthInitiateResponse)
+async def initiate_oauth_flow(
+    oauth_request: OAuthInitiateRequest,
+    http_request: Request,
+    current_user: CurrentActiveUser,
+) -> OAuthInitiateResponse:
+    """Initiate an OAuth flow for an MCP server.
+
+    This endpoint uses the MCP SDK's OAuthClientProvider which:
+    1. Discovers OAuth metadata automatically (RFC 8414, RFC 9728)
+    2. Handles PKCE generation
+    3. Registers the client dynamically if needed
+    4. Builds the authorization URL
+
+    When the SDK triggers a redirect, we catch OAuthFlowStarted and return
+    the authorization URL to the frontend.
+
+    Args:
+        oauth_request: The OAuth initiate request with server config.
+        http_request: The FastAPI request object (for determining callback URL).
+        current_user: The authenticated user.
+
+    Returns:
+        The flow ID and authorization URL.
+    """
+    from langflow.services.deps import get_settings_service
+
+    user_id = str(current_user.id)
+    server_url = oauth_request.server_url
+
+    # Reject private/loopback addresses to prevent SSRF (includes DNS resolution)
+    await _validate_server_url(server_url)
+
+    # Determine redirect URI for callback
+    # Priority: explicit redirect_uri > callback_base_url > backend_url setting > request base URL
+    settings = get_settings_service().settings
+
+    if oauth_request.redirect_uri:
+        # Use explicit redirect URI (for OAuth providers with specific callback requirements)
+        callback_uri = oauth_request.redirect_uri
+    elif oauth_request.callback_base_url:
+        # Use the URL provided by the frontend (most reliable in deployed environments)
+        base_url = oauth_request.callback_base_url.rstrip("/")
+        callback_uri = f"{base_url}/api/v1/mcp/oauth/callback"
+    elif getattr(settings, "backend_url", None):
+        # Use explicitly configured backend URL
+        base_url = settings.backend_url.rstrip("/")
+        callback_uri = f"{base_url}/api/v1/mcp/oauth/callback"
+    else:
+        # Fallback to the request's base URL
+        base_url = str(http_request.base_url).rstrip("/")
+        callback_uri = f"{base_url}/api/v1/mcp/oauth/callback"
+
+    try:
+        from lfx.base.mcp.oauth.provider import get_server_key
+
+        state_manager = await get_oauth_state_manager()
+        server_key = get_server_key(server_url)
+
+        # Create the flow first so we have a flow_id to return.
+        # Token deletion is deferred into run_oauth_flow so that a failed or
+        # cancelled flow never leaves the user with no credentials at all.
+        flow_config = {
+            "client_id": oauth_request.client_id,
+            "client_secret": oauth_request.client_secret,
+        }
+        flow_id, _state_param = await state_manager.create_flow(user_id, server_url, flow_config)
+
+        # Define the background task that runs the full OAuth flow
+        async def run_oauth_flow() -> None:
+            # Save any existing tokens so they can be restored if the new flow fails.
+            # This prevents /initiate from permanently breaking a working connection
+            # when the user re-authenticates but the flow is cancelled or times out.
+            previous_tokens = await state_manager.get_tokens(user_id, server_key)
+            try:
+                # Clear existing tokens so the SDK starts a fresh OAuth exchange.
+                # (If we did NOT clear them, the SDK would silently reuse valid
+                # tokens and skip the user-facing OAuth popup entirely.)
+                await state_manager.delete_tokens(user_id, server_key)
+
+                # Create SDK-based provider with the pre-created flow_id.
+                provider, _, _cleanup = await create_deployed_oauth_provider(
+                    server_url=server_url,
+                    user_id=user_id,
+                    redirect_uri=callback_uri,
+                    client_id=oauth_request.client_id,
+                    client_secret=oauth_request.client_secret,
+                    scopes=oauth_request.scopes,
+                    flow_id=flow_id,  # Use the pre-created flow_id
+                )
+
+                # Trigger OAuth - SDK discovers metadata, registers client if needed, and builds auth URL
+                # The redirect_handler will store the auth_url, then the SDK calls callback_handler
+                # which waits for the callback. Once received, SDK completes token exchange.
+                async with httpx.AsyncClient(auth=provider, timeout=600.0) as client:
+                    # Use POST with minimal JSON-RPC message to trigger 401
+                    # MCP servers only check auth on POST requests, not HEAD
+                    response = await client.post(
+                        server_url,
+                        json={"jsonrpc": "2.0", "method": "initialize", "id": 1},
+                    )
+                    # Verify tokens were actually persisted before declaring success.
+                    # If the probe succeeded but no token was stored, the next MCP
+                    # call would still fail — treat that as a flow failure instead.
+                    tokens = await state_manager.get_tokens(user_id, server_key)
+                    if tokens is None:
+                        msg = f"OAuth exchange finished without persisted tokens (HTTP {response.status_code})"
+                        raise RuntimeError(msg)
+                    # New tokens are now confirmed in the cache — previous_tokens
+                    # are no longer needed; the new ones replaced them via
+                    # store_tokens (atomic overwrite of the same cache key).
+                    await logger.ainfo(f"OAuth flow {flow_id} completed successfully, status: {response.status_code}")
+
+                # Mark flow as complete only after confirming token persistence
+                await state_manager.update_flow(flow_id, {"status": "complete"})
+                await logger.ainfo(f"OAuth flow {flow_id} marked as complete")
+
+            except asyncio.CancelledError:
+                await logger.awarning(f"OAuth flow {flow_id} was cancelled")
+                await state_manager.update_flow(
+                    flow_id,
+                    {"status": "error", "error_message": "OAuth flow was cancelled"},
+                )
+                # Restore previous tokens so a cancelled re-auth doesn't break
+                # an otherwise working MCP connection.
+                if previous_tokens is not None:
+                    await state_manager.store_tokens(user_id, server_key, previous_tokens)
+                raise
+            except TimeoutError:
+                await logger.awarning(f"OAuth flow {flow_id} timed out waiting for callback")
+                await state_manager.update_flow(
+                    flow_id,
+                    {"status": "error", "error_message": "OAuth flow timed out"},
+                )
+                if previous_tokens is not None:
+                    await state_manager.store_tokens(user_id, server_key, previous_tokens)
+            except Exception as e:  # noqa: BLE001
+                await logger.aexception(f"OAuth flow {flow_id} failed: {e}")
+                await state_manager.update_flow(
+                    flow_id,
+                    {"status": "error", "error_message": str(e)},
+                )
+                if previous_tokens is not None:
+                    await state_manager.store_tokens(user_id, server_key, previous_tokens)
+
+        # Start the OAuth flow in the background, storing the reference in the
+        # module-level set so the task is not garbage-collected before completion.
+        task = asyncio.create_task(run_oauth_flow())
+        _oauth_tasks.add(task)
+        task.add_done_callback(_oauth_tasks.discard)
+
+        # Wait for auth_url to be available (up to 30 seconds)
+        # This allows the frontend to get the auth_url directly from /initiate
+        auth_url = ""
+        for _ in range(60):  # 60 * 0.5s = 30s timeout
+            await asyncio.sleep(0.5)
+            flow_data = await state_manager.get_flow_by_id(flow_id)
+            if flow_data:
+                if flow_data.get("status") == "awaiting_callback":
+                    auth_url = flow_data.get("auth_url", "")
+                    break
+                if flow_data.get("status") == "error":
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=flow_data.get("error_message", "OAuth flow failed"),
+                    )
+                if flow_data.get("status") == "complete":
+                    # Already authenticated (shouldn't happen but handle it)
+                    auth_url = ""
+                    break
+
+        await logger.ainfo(
+            f"Started OAuth flow {flow_id} for user {user_id}, server {server_url}, "
+            f"auth_url={'present' if auth_url else 'empty'} ({len(auth_url)} chars)"
+        )
+        return OAuthInitiateResponse(
+            flow_id=flow_id,
+            auth_url=auth_url,
+            expires_in=600,
+        )
+
+    except HTTPException:
+        # Re-raise explicit HTTP errors (e.g. from the polling loop) unchanged
+        # so their original status code and detail are preserved.
+        raise
+    except Exception as e:
+        await logger.aexception(f"Failed to initiate OAuth flow: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to initiate OAuth flow: {e}",
+        ) from e
+
+
+@router.get("/callback", response_class=HTMLResponse)
+async def oauth_callback(
+    code: Annotated[str | None, Query()] = None,
+    state: Annotated[str | None, Query()] = None,
+    error: Annotated[str | None, Query()] = None,
+    error_description: Annotated[str | None, Query()] = None,
+) -> HTMLResponse:
+    """Handle OAuth callback from the authorization server.
+
+    This is a PUBLIC endpoint (no auth required) because OAuth providers
+    cannot send authentication headers in the redirect.
+
+    The callback stores the authorization code for the SDK's callback_handler
+    to retrieve and complete the token exchange automatically.
+
+    Args:
+        code: The authorization code (if successful).
+        state: The state parameter from the authorization request.
+        error: OAuth error code (if failed).
+        error_description: OAuth error description (if failed).
+
+    Returns:
+        HTML response that auto-closes the popup.
+    """
+    import html
+
+    # Handle OAuth errors
+    if error:
+        # Escape error message to prevent XSS
+        error_msg = html.escape(error_description or error)
+        await logger.awarning(f"OAuth callback received error: {error_msg}")
+
+        if state:
+            state_manager = await get_oauth_state_manager()
+            await state_manager.fail_flow(state, error_msg)
+
+        return HTMLResponse(
+            content=ERROR_HTML_TEMPLATE.format(error_message=error_msg),
+            status_code=400,
+        )
+
+    # Validate required parameters
+    if not code or not state:
+        error_msg = "Missing code or state parameter"
+        await logger.awarning(f"OAuth callback missing parameters: code={bool(code)}, state={bool(state)}")
+        return HTMLResponse(
+            content=ERROR_HTML_TEMPLATE.format(error_message=error_msg),
+            status_code=400,
+        )
+
+    # Store callback for SDK's callback_handler to retrieve
+    # The SDK will complete the token exchange automatically
+    state_manager = await get_oauth_state_manager()
+    success = await state_manager.store_callback(state, code)
+
+    if not success:
+        error_msg = "OAuth flow expired or not found"
+        await logger.awarning(f"OAuth callback for unknown state: {state[:20]}...")
+        return HTMLResponse(
+            content=ERROR_HTML_TEMPLATE.format(error_message=error_msg),
+            status_code=400,
+        )
+
+    await logger.ainfo(f"OAuth callback received for state {state[:20]}...")
+    return HTMLResponse(content=SUCCESS_HTML, status_code=200)
+
+
+@router.get("/status/{flow_id}", response_model=OAuthStatusResponse)
+async def get_oauth_status(
+    flow_id: str,
+    current_user: CurrentActiveUser,
+) -> OAuthStatusResponse:
+    """Poll the status of an OAuth flow.
+
+    Frontend calls this endpoint repeatedly until status is "complete" or "error".
+    When status is "awaiting_callback", the auth_url field contains the URL to open.
+
+    Args:
+        flow_id: The flow ID returned from /initiate.
+        current_user: The authenticated user (for validation).
+
+    Returns:
+        The current status of the OAuth flow.
+    """
+    state_manager = await get_oauth_state_manager()
+    result = await state_manager.get_flow_status(flow_id, str(current_user.id))
+
+    response = OAuthStatusResponse(
+        status=result.get("status", "expired"),
+        auth_url=result.get("auth_url"),
+        error_message=result.get("error_message"),
+        server_url=result.get("server_url"),
+    )
+    await logger.adebug(
+        f"OAuth status for {flow_id}: {response.status}, auth_url={'present' if response.auth_url else 'none'}"
+    )
+    return response
+
+
+@router.delete("/tokens/{server_key}", response_model=OAuthRevokeResponse)
+async def revoke_oauth_tokens(
+    server_key: str,
+    current_user: CurrentActiveUser,
+) -> OAuthRevokeResponse:
+    """Revoke (delete) stored OAuth tokens for a server.
+
+    Args:
+        server_key: The server key identifying the MCP server.
+        current_user: The authenticated user.
+
+    Returns:
+        Success status and message.
+    """
+    state_manager = await get_oauth_state_manager()
+    deleted = await state_manager.delete_tokens(str(current_user.id), server_key)
+
+    if deleted:
+        return OAuthRevokeResponse(
+            success=True,
+            message=f"OAuth tokens revoked for server: {server_key}",
+        )
+    return OAuthRevokeResponse(
+        success=False,
+        message=f"No OAuth tokens found for server: {server_key}",
+    )
+
+
+@router.get("/tokens/{server_key}/check")
+async def check_oauth_tokens(
+    server_key: str,
+    current_user: CurrentActiveUser,
+) -> dict:
+    """Check if OAuth tokens exist for a server.
+
+    Args:
+        server_key: The server key identifying the MCP server.
+        current_user: The authenticated user.
+
+    Returns:
+        Dict with has_tokens boolean.
+    """
+    state_manager = await get_oauth_state_manager()
+    tokens = await state_manager.get_tokens(str(current_user.id), server_key)
+
+    return {"has_tokens": tokens is not None}
