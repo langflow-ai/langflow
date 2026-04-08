@@ -7,15 +7,17 @@ import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
 import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
-import { ENABLE_MCP } from "@/customization/feature-flags";
+import { ENABLE_DEPLOYMENTS, ENABLE_MCP } from "@/customization/feature-flags";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 
+import type { FlowTabType } from "../../types";
+
 interface HeaderComponentProps {
-  flowType: "flows" | "components" | "mcp";
-  setFlowType: (flowType: "flows" | "components" | "mcp") => void;
+  flowType: FlowTabType;
+  setFlowType: (flowType: FlowTabType) => void;
   view: "list" | "grid";
   setView: (view: "list" | "grid") => void;
   setNewProjectModal: (newProjectModal: boolean) => void;
@@ -73,8 +75,14 @@ const HeaderComponent = ({
     setDebouncedSearch(e.target.value);
   };
 
-  // Determine which tabs to show based on feature flag
-  const tabTypes = isMCPEnabled ? ["mcp", "flows"] : ["components", "flows"];
+  const isDeploymentsEnabled = ENABLE_DEPLOYMENTS;
+
+  // Determine which tabs to show based on feature flags
+  const tabTypes = [
+    ...(isDeploymentsEnabled ? ["deployments"] : []),
+    ...(isMCPEnabled ? ["mcp"] : ["components"]),
+    "flows",
+  ];
 
   const handleDownload = () => {
     downloadFlows({ ids: selectedFlows });
@@ -130,7 +138,7 @@ const HeaderComponent = ({
                 id={`${type}-btn`}
                 data-testid={`${type}-btn`}
                 onClick={() => {
-                  setFlowType(type as "flows" | "components" | "mcp");
+                  setFlowType(type as FlowTabType);
                 }}
                 className={`border-b ${
                   flowType === type
@@ -147,7 +155,7 @@ const HeaderComponent = ({
             ))}
           </div>
           {/* Search and filters */}
-          {flowType !== "mcp" && (
+          {flowType !== "mcp" && flowType !== "deployments" && (
             <div className="flex justify-between">
               <div className="flex w-full xl:w-5/12">
                 <Input

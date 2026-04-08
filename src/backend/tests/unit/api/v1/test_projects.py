@@ -1795,3 +1795,134 @@ async def test_download_project_sanitizes_windows_path_characters(
         assert "\\" not in file_names[0]
         assert ".." not in file_names[0]
         assert file_names[0].endswith(".json")
+
+
+async def _create_other_user(client: AsyncClient) -> tuple[str, dict]:
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.user.model import User
+
+    user_id = str(uuid4())
+    username = f"other_user_{user_id[:8]}"
+    async with session_scope() as session:
+        user = User(
+            username=username,
+            password=get_password_hash("testpassword"),  # pragma: allowlist secret
+            is_active=True,
+            is_superuser=False,
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        created_id = str(user.id)
+
+    response = await client.post(
+        "api/v1/login", data={"username": username, "password": "testpassword"}
+    )  # pragma: allowlist secret
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    return created_id, {"Authorization": f"Bearer {token}"}
+
+
+async def test_create_project_does_not_reassign_other_users_flows(
+    client: AsyncClient,
+    logged_in_headers: dict,
+):
+    """Test that flows_list in create_project only moves flows owned by the requesting user."""
+    _, other_user_headers = await _create_other_user(client)
+
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "user-flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = flow_resp.json()["id"]
+    original_folder_id = flow_resp.json()["folder_id"]
+
+    proj_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "other-project", "flows_list": [flow_id]},
+        headers=other_user_headers,
+    )
+    assert proj_resp.status_code == status.HTTP_201_CREATED
+    other_project_id = proj_resp.json()["id"]
+
+    flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert flow_after.status_code == status.HTTP_200_OK
+    assert flow_after.json()["folder_id"] == original_folder_id
+
+    proj_detail = await client.get(f"api/v1/projects/{other_project_id}", headers=other_user_headers)
+    assert proj_detail.status_code == status.HTTP_200_OK
+    assert len(proj_detail.json().get("flows", [])) == 0
+
+
+async def test_read_project_paginated_only_returns_current_users_flows(
+    client: AsyncClient,
+    logged_in_headers: dict,
+):
+    """Test that paginated GET /projects/{id} does not return flows owned by other users."""
+    _, other_user_headers = await _create_other_user(client)
+
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "user-flow-paginated", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = flow_resp.json()["id"]
+    original_folder_id = flow_resp.json()["folder_id"]
+
+    proj_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "other-project-paginated", "flows_list": [flow_id]},
+        headers=other_user_headers,
+    )
+    assert proj_resp.status_code == status.HTTP_201_CREATED
+    other_project_id = proj_resp.json()["id"]
+
+    paginated = await client.get(
+        f"api/v1/projects/{other_project_id}",
+        params={"page": 1, "size": 50},
+        headers=other_user_headers,
+    )
+    assert paginated.status_code == status.HTTP_200_OK
+    items = paginated.json().get("flows", {}).get("items", [])
+    assert all(item["id"] != flow_id for item in items)
+
+    flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert flow_after.json()["folder_id"] == original_folder_id
+
+
+async def test_create_project_with_own_flows_assigns_them_correctly(
+    client: AsyncClient,
+    logged_in_headers: dict,
+):
+    """Test that flows_list in create_project correctly assigns flows owned by the requesting user."""
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "my-flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = flow_resp.json()["id"]
+
+    proj_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "my-project", "flows_list": [flow_id]},
+        headers=logged_in_headers,
+    )
+    assert proj_resp.status_code == status.HTTP_201_CREATED
+    project_id = proj_resp.json()["id"]
+
+    flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert flow_after.status_code == status.HTTP_200_OK
+    assert flow_after.json()["folder_id"] == project_id
+
+    paginated = await client.get(
+        f"api/v1/projects/{project_id}",
+        params={"page": 1, "size": 50},
+        headers=logged_in_headers,
+    )
+    assert paginated.status_code == status.HTTP_200_OK
+    items = paginated.json().get("flows", {}).get("items", [])
+    assert any(item["id"] == flow_id for item in items)

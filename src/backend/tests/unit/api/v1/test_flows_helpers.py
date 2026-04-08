@@ -72,7 +72,7 @@ async def test_save_flow_to_fs_returns_500_on_os_error(current_user, storage_ser
     )
 
     with (
-        patch("langflow.api.v1.flows_helpers.async_open", side_effect=OSError("disk full")),
+        patch("langflow.api.v1.flows_helpers.aiofiles.open", side_effect=OSError("disk full")),
         pytest.raises(HTTPException) as exc_info,
     ):
         await _save_flow_to_fs(flow, current_user.id, storage_service)

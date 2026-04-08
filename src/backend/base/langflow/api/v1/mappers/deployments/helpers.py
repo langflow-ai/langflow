@@ -21,6 +21,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentType,
     DeploymentUpdateResult,
     SnapshotListParams,
+    SnapshotListResult,
 )
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult as AdapterDeploymentCreateResult,
@@ -32,7 +33,6 @@ from sqlmodel import col, func, select
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
-    DeploymentCreateResponse,
     DeploymentProviderAccountGetResponse,
     DeploymentUpdateRequest,
 )
@@ -54,10 +54,13 @@ from langflow.services.database.models.deployment_provider_account.model import 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+    count_deployment_attachments,
     create_deployment_attachment,
     delete_deployment_attachment,
     get_deployment_attachment,
     list_attachments_by_deployment_ids,
+    list_deployment_attachments,
+    list_deployment_attachments_with_versions,
     update_deployment_attachment_provider_snapshot_id,
 )
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
@@ -307,27 +310,8 @@ def raise_http_for_value_error(exc: ValueError) -> None:
     raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
-def _friendly_conflict_message(raw_message: str) -> str:
-    """Rewrite provider conflict errors into user-friendly messages."""
-    lower = raw_message.lower()
-    if "agent" in lower and ("already exists" in lower or "conflict" in lower):
-        return (
-            "An agent with this name already exists in the provider. "
-            "Please choose a different name or delete the existing agent first."
-        )
-    if "connection" in lower or "app_id" in lower:
-        return (
-            "A connection referenced in this request already exists in the provider. "
-            "Reference it as an existing connection instead of creating a new one."
-        )
-    if "tool" in lower and ("already exists" in lower or "conflict" in lower):
-        return "A tool with this name already exists in the provider. Please choose a different name."
-    # Fall back to a cleaned-up version of the raw message.
-    return f"A resource with this name already exists in the provider. {raw_message}"
-
-
 @contextmanager
-def handle_adapter_errors():
+def handle_adapter_errors(*, mapper: BaseDeploymentMapper | None = None):
     """Map deployment adapter exceptions to appropriate HTTP responses.
 
     Domain exceptions (subclasses of :class:`DeploymentServiceError`) are
@@ -341,18 +325,21 @@ def handle_adapter_errors():
     except DeploymentServiceError as exc:
         http_status = http_status_for_deployment_error(exc)
         detail = exc.message
-        if isinstance(exc, DeploymentConflictError):
-            detail = _friendly_conflict_message(exc.message)
+        if isinstance(exc, DeploymentConflictError) and mapper is not None:
+            detail = mapper.format_conflict_detail(exc.message)
+        logger.exception("Adapter error (status=%s): %s", http_status, detail)
         raise HTTPException(
             status_code=http_status,
             detail=detail,
         ) from exc
     except NotImplementedError as exc:
+        logger.exception("Adapter not-implemented error: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="This operation is not supported by the deployment provider.",
         ) from exc
     except ValueError as exc:
+        logger.exception("Adapter value error: %s", exc)
         raise_http_for_value_error(exc)
     except HTTPException:
         raise
@@ -368,11 +355,11 @@ def resolve_provider_tenant_id(
     *,
     deployment_mapper: BaseDeploymentMapper,
     provider_url: str,
-    provider_tenant_id: str | None,
+    provider_data: dict[str, Any],
 ) -> str | None:
     return deployment_mapper.resolve_provider_tenant_id(
         provider_url=provider_url,
-        provider_tenant_id=provider_tenant_id,
+        provider_data=provider_data,
     )
 
 
@@ -398,6 +385,28 @@ def normalize_flow_version_query_ids(flow_version_ids: list[str] | None) -> list
         seen.add(flow_version_uuid)
         normalized.append(flow_version_uuid)
     return normalized
+
+
+def normalize_flow_ids_query(flow_ids: list[UUID] | None) -> list[UUID]:
+    """Return a deduplicated list from an already-validated ``flow_ids`` query param.
+
+    ``FlowIdsQuery`` (Pydantic) handles UUID parsing and max-length
+    validation, so this is intentionally thin.
+    """
+    if not flow_ids:
+        return []
+    return list(dict.fromkeys(flow_ids))
+
+
+async def flow_version_ids_for_flows(db, *, flow_ids: list[UUID], user_id: UUID) -> list[UUID]:
+    """Return all flow-version IDs belonging to the given flows and user."""
+    if not flow_ids:
+        return []
+    stmt = select(FlowVersion.id).where(
+        col(FlowVersion.flow_id).in_(flow_ids),
+        FlowVersion.user_id == user_id,
+    )
+    return list((await db.exec(stmt)).all())
 
 
 async def get_owned_provider_account_or_404(
@@ -465,7 +474,8 @@ async def resolve_adapter_from_deployment(
     deployment_id: UUID,
     user_id: UUID,
     db: DbSession,
-) -> tuple[Deployment, DeploymentServiceProtocol]:
+) -> tuple[Deployment, DeploymentServiceProtocol, str]:
+    """Returns ``(deployment_row, adapter, provider_key)``."""
     deployment_row = await get_deployment_row_or_404(deployment_id=deployment_id, user_id=user_id, db=db)
     provider_account = await get_owned_provider_account_or_404(
         provider_id=deployment_row.deployment_provider_account_id,
@@ -473,7 +483,7 @@ async def resolve_adapter_from_deployment(
         db=db,
     )
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
-    return deployment_row, deployment_adapter
+    return deployment_row, deployment_adapter, provider_account.provider_key
 
 
 async def resolve_adapter_mapper_from_deployment(
@@ -481,7 +491,8 @@ async def resolve_adapter_mapper_from_deployment(
     deployment_id: UUID,
     user_id: UUID,
     db: DbSession,
-) -> tuple[Deployment, DeploymentServiceProtocol, BaseDeploymentMapper]:
+) -> tuple[Deployment, DeploymentServiceProtocol, BaseDeploymentMapper, str]:
+    """Returns ``(deployment_row, adapter, mapper, provider_key)``."""
     from langflow.api.v1.mappers.deployments.registry import get_deployment_mapper
 
     deployment_row = await get_deployment_row_or_404(deployment_id=deployment_id, user_id=user_id, db=db)
@@ -492,7 +503,7 @@ async def resolve_adapter_mapper_from_deployment(
     )
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
-    return deployment_row, deployment_adapter, deployment_mapper
+    return deployment_row, deployment_adapter, deployment_mapper, provider_account.provider_key
 
 
 async def resolve_project_id_for_deployment_create(
@@ -929,14 +940,14 @@ async def list_deployments_synced(
     size: int,
     deployment_type: DeploymentType | None,
     flow_version_ids: list[UUID] | None = None,
-) -> tuple[list[tuple[Deployment, int, list[str]]], int]:
+) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int]:
     """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
 
     Fetches DB rows in batches, sends each batch's resource keys to the
     provider for validation, and deletes stale rows inline. The cursor does
     not advance for deleted rows (deletion shifts subsequent offsets down).
     """
-    accepted: list[tuple[Deployment, int, list[str]]] = []
+    accepted: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]] = []
     cursor = page_offset(page, size)
     guard = 0
     while len(accepted) < size and guard < (size * 4 + 20):
@@ -1014,6 +1025,77 @@ async def list_deployments_synced(
         flow_version_ids=flow_version_ids,
     )
     return accepted, total
+
+
+async def list_deployment_flow_versions_synced(
+    *,
+    deployment_adapter: DeploymentServiceProtocol,
+    deployment_mapper: BaseDeploymentMapper,
+    user_id: UUID,
+    provider_id: UUID,
+    deployment_id: UUID,
+    db: DbSession,
+    page: int,
+    size: int,
+    flow_ids: list[UUID] | None = None,
+) -> tuple[list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]], int, SnapshotListResult | None]:
+    """Return a paginated deployment attachment view synced against provider snapshots.
+
+    Uses attachment-tracked ``provider_snapshot_id`` values to verify provider
+    snapshot existence in one batched adapter call. Stale attachments are
+    deleted before pagination is applied.
+    """
+    attachments = await list_deployment_attachments(
+        db,
+        user_id=user_id,
+        deployment_id=deployment_id,
+        flow_ids=flow_ids,
+    )
+    snapshot_result: SnapshotListResult | None = None
+    snapshot_ids = list(dict.fromkeys(deployment_mapper.util_snapshot_ids_to_verify(attachments)))
+    if snapshot_ids:
+        try:
+            snapshot_result = await deployment_adapter.list_snapshots(
+                user_id=user_id,
+                db=db,
+                params=SnapshotListParams(snapshot_ids=snapshot_ids),
+            )
+            known_snapshot_ids = {str(item.id) for item in snapshot_result.snapshots if item.id}
+
+            async with db.begin_nested():
+                await sync_attachment_snapshot_ids(
+                    user_id=user_id,
+                    deployment_ids=[deployment_id],
+                    attachments=attachments,
+                    known_snapshot_ids=known_snapshot_ids,
+                    db=db,
+                )
+        except Exception:  # noqa: BLE001
+            snapshot_result = None
+            logger.warning(
+                "Snapshot-level sync failed while listing deployment flow versions for deployment %s "
+                "(provider %s); "
+                "returning DB rows without provider enrichment",
+                deployment_id,
+                provider_id,
+                exc_info=True,
+            )
+
+    rows = await list_deployment_attachments_with_versions(
+        db,
+        user_id=user_id,
+        deployment_id=deployment_id,
+        offset=page_offset(page, size),
+        limit=size,
+        flow_ids=flow_ids,
+    )
+    total = await count_deployment_attachments(
+        db,
+        user_id=user_id,
+        deployment_id=deployment_id,
+        flow_ids=flow_ids,
+    )
+    return rows, total, snapshot_result
 
 
 async def attach_flow_versions(
@@ -1112,18 +1194,3 @@ def resolve_added_snapshot_bindings_for_update(
         msg = f"Missing snapshot bindings for added flow versions on update: {missing_source_refs}"
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
     return snapshot_bindings
-
-
-def to_deployment_create_response(
-    result: AdapterDeploymentCreateResult, deployment_row: Deployment
-) -> DeploymentCreateResponse:
-    payload = result.model_dump(exclude_unset=True)
-    return DeploymentCreateResponse(
-        id=deployment_row.id,
-        name=deployment_row.name,
-        description=deployment_row.description,
-        type=deployment_row.deployment_type,
-        created_at=deployment_row.created_at,
-        updated_at=deployment_row.updated_at,
-        provider_data=payload.get("provider_result"),
-    )
