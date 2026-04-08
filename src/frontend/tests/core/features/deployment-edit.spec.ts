@@ -70,7 +70,7 @@ async function setupRoutes(page: Parameters<typeof test>[2]["page"]) {
 async function navigateToDeployments(page: Parameters<typeof test>[2]["page"]) {
   await awaitBootstrapTest(page, { skipModal: true });
   await page.getByTestId("deployments-btn").click();
-  await page.waitForSelector('[data-testid="new-deployment-btn"]');
+  await page.waitForSelector('[data-testid="subtab-deployments"]');
 }
 
 async function openEditDialog(page: Parameters<typeof test>[2]["page"]) {

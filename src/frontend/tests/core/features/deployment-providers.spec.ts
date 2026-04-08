@@ -11,9 +11,8 @@ async function navigateToProvidersTab(
 ) {
   await awaitBootstrapTest(page, { skipModal: true });
   await page.getByTestId("deployments-btn").click();
-  await page.waitForSelector('[data-testid="new-deployment-btn"]');
+  await page.waitForSelector('[data-testid="subtab-deployments"]');
   await page.getByTestId("subtab-providers").click();
-  await page.waitForSelector('[data-testid="new-provider-btn"]');
 }
 
 test(
@@ -74,7 +73,7 @@ test(
 
     await navigateToProvidersTab(page);
 
-    await page.getByTestId("new-provider-btn").click();
+    await page.getByTestId("add-provider-empty-btn").click();
 
     await expect(page.getByTestId("add-provider-modal-title")).toBeVisible();
     await expect(page.getByTestId("add-provider-save")).toBeDisabled();
@@ -108,7 +107,7 @@ test(
 
     await navigateToProvidersTab(page);
 
-    await page.getByTestId("new-provider-btn").click();
+    await page.getByTestId("add-provider-empty-btn").click();
 
     await expect(page.getByTestId("add-provider-save")).toBeDisabled();
 
@@ -167,7 +166,7 @@ test(
 
     await navigateToProvidersTab(page);
 
-    await page.getByTestId("new-provider-btn").click();
+    await page.getByTestId("add-provider-empty-btn").click();
 
     await page.getByPlaceholder("e.g. Production").fill("My Env");
     await page
