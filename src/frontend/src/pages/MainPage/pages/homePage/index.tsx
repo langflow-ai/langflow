@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { IS_MAC } from "@/constants/constants";
@@ -13,12 +13,13 @@ import {
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { FlowType } from "@/types/flow";
 import HeaderComponent from "../../components/header";
 import ListComponent from "../../components/list";
 import ListSkeleton from "../../components/listSkeleton";
 import ModalsComponent from "../../components/modalsComponent";
 import useFileDrop from "../../hooks/use-on-file-drop";
+import type { FlowTabType } from "../../types";
+import DeploymentsPage from "../deploymentsPage/deployments-page";
 import EmptyFolder from "../emptyFolder";
 
 const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
@@ -28,14 +29,17 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   });
   const [newProjectModal, setNewProjectModal] = useState(false);
   const { folderId } = useParams();
+  const location = useLocation();
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
   const [isEmptyFolder, setIsEmptyFolder] = useState(true);
   const navigate = useCustomNavigate();
 
-  const [flowType, setFlowType] = useState<"flows" | "components" | "mcp">(
-    type,
+  const [flowType, setFlowType] = useState<FlowTabType>(
+    (location.state as Record<string, unknown>)?.flowType === "deployments"
+      ? "deployments"
+      : type,
   );
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
@@ -287,6 +291,8 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                     )
                   ) : flowType === "mcp" ? (
                     <CustomMcpServerTab folderName={folderName} />
+                  ) : flowType === "deployments" ? (
+                    <DeploymentsPage />
                   ) : (flowType === "flows" || flowType === "components") &&
                     data &&
                     data.pagination.total > 0 ? (

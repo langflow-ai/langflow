@@ -17,7 +17,7 @@ import zipfile
 from io import StringIO
 from pathlib import Path
 from shutil import which
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 import httpx
@@ -106,8 +106,14 @@ def get_best_access_host(host: str) -> str:
 
 
 def get_api_key() -> str:
-    """Get the API key from environment variable."""
-    api_key = os.getenv("LANGFLOW_API_KEY")
+    """Get the API key from environment variable.
+
+    Used by ``lfx serve`` to set the superuser key on the local server.
+    For *remote* commands (push, pull, login, …), the per-environment key
+    is resolved via :func:`lfx.config.resolve_environment` and the
+    ``api_key_env`` field in ``.lfx/environments.yaml``.
+    """
+    api_key = os.getenv("LANGFLOW_API_KEY") or os.getenv("LFX_API_KEY")
     if not api_key:
         msg = "LANGFLOW_API_KEY environment variable is not set"
         raise ValueError(msg)
@@ -611,6 +617,31 @@ def download_and_extract_repo(url: str, verbose_print, *, timeout: float = 60.0)
         raise
     else:
         return root_path
+
+
+def load_sdk(command_name: str) -> Any:
+    """Lazily import ``langflow_sdk`` to keep CLI startup fast.
+
+    Raises :class:`typer.BadParameter` with install guidance when the package
+    is not available.
+
+    Args:
+        command_name: Name of the CLI command requesting the SDK (used in
+            the error message).
+    """
+    try:
+        import langflow_sdk  # type: ignore[import-untyped]
+    except ImportError as exc:
+        msg = f"langflow-sdk is required for lfx {command_name}. Install it with: pip install langflow-sdk"
+        raise typer.BadParameter(msg) from exc
+    else:
+        return langflow_sdk
+
+
+def safe_filename(name: str) -> str:
+    """Convert a flow name to a safe filesystem basename (no extension)."""
+    safe = "".join(c if c.isalnum() or c in "-_ " else "_" for c in name)
+    return safe.strip().replace(" ", "_")
 
 
 def extract_script_docstring(script_path: Path) -> str | None:

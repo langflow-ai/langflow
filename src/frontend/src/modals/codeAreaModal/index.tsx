@@ -1,5 +1,6 @@
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { clearHandlesFromAdvancedFields } from "@/utils/reactflowUtils";
 import "ace-builds/src-noconflict/ace";
 import "ace-builds/src-noconflict/ext-language_tools";
@@ -43,7 +44,13 @@ export default function CodeAreaModal({
   open: myOpen,
   setOpen: mySetOpen,
   componentId,
+  size = "x-large",
 }: codeAreaModalPropsType): JSX.Element {
+  const allowCustomComponents = useUtilityStore(
+    (state) => state.allowCustomComponents,
+  );
+  const isBlocked = !allowCustomComponents;
+
   const [code, setCode] = useState(value);
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
@@ -206,7 +213,7 @@ export default function CodeAreaModal({
       }}
       open={open}
       setOpen={setOpen}
-      size="x-large"
+      size={size as "x-large" | "large" | "medium" | "small"}
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
@@ -228,7 +235,7 @@ export default function CodeAreaModal({
           <div className="h-full w-full">
             <AceEditor
               ref={codeRef}
-              readOnly={readonly}
+              readOnly={readonly || isBlocked}
               value={code}
               mode="python"
               setOptions={{ fontFamily: "monospace" }}
@@ -241,7 +248,9 @@ export default function CodeAreaModal({
               theme={dark ? "monokai" : "github"}
               name="CodeEditor"
               onChange={(value) => {
-                setCode(value);
+                if (!isBlocked) {
+                  setCode(value);
+                }
               }}
               className="h-full min-w-full rounded-lg border-[1px] border-border custom-scroll"
             />
@@ -267,16 +276,27 @@ export default function CodeAreaModal({
             </div>
           </div>
           <div className="flex h-fit w-full justify-end">
-            <Button
-              className="mt-3"
-              onClick={processCode}
-              type="submit"
-              id="checkAndSaveBtn"
-              disabled={readonly}
-              data-testid="checkAndSaveBtn"
-            >
-              Check & Save
-            </Button>
+            {readonly ? (
+              <Button
+                className="mt-3"
+                onClick={() => setOpen(false)}
+                type="button"
+                data-testid="codeModalOkBtn"
+              >
+                Done
+              </Button>
+            ) : (
+              <Button
+                className="mt-3"
+                onClick={processCode}
+                type="submit"
+                id="checkAndSaveBtn"
+                disabled={isBlocked}
+                data-testid="checkAndSaveBtn"
+              >
+                Check & Save
+              </Button>
+            )}
           </div>
         </div>
         <ConfirmationModal

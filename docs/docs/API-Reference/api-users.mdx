@@ -2,6 +2,35 @@
 title: Users endpoints
 slug: /api-users
 ---
+import CodeSnippet from '@site/src/components/CodeSnippet';
+import exampleApiUsersAddUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/add-user.sh';
+import resultApiUsersResultAddUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-add-user.json';
+import exampleApiUsersGetCurrentUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/get-current-user.sh';
+import resultApiUsersResultGetCurrentUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-get-current-user.json';
+import exampleApiUsersListAllUsers from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/list-all-users.sh';
+import resultApiUsersResultListAllUsers from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-list-all-users.json';
+import exampleApiUsersUpdateUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/update-user.sh';
+import resultApiUsersResultUpdateUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-update-user.json';
+import exampleApiUsersResetPassword from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/reset-password.sh';
+import resultApiUsersResultResetPassword from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-reset-password.json';
+import exampleApiUsersDeleteUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/delete-user.sh';
+import resultApiUsersResultDeleteUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-delete-user.json';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import examplePythonApiUsersAddUser from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/add-user.py';
+import exampleJavascriptApiUsersAddUser from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/add-user.js';
+import examplePythonApiUsersGetCurrentUser from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/get-current-user.py';
+import exampleJavascriptApiUsersGetCurrentUser from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/get-current-user.js';
+import examplePythonApiUsersListAllUsers from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/list-all-users.py';
+import exampleJavascriptApiUsersListAllUsers from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/list-all-users.js';
+import examplePythonApiUsersUpdateUser from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/update-user.py';
+import exampleJavascriptApiUsersUpdateUser from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/update-user.js';
+import examplePythonApiUsersResetPassword from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/reset-password.py';
+import exampleJavascriptApiUsersResetPassword from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/reset-password.js';
+import examplePythonApiUsersDeleteUser from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/delete-user.py';
+import exampleJavascriptApiUsersDeleteUser from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/delete-user.js';
+
+
 
 Use the `/users` endpoint to manage user accounts in Langflow.
 
@@ -11,16 +40,23 @@ Create a new user account with a given username and password.
 
 Requires authentication as a superuser if the Langflow server has authentication enabled.
 
-```bash
-curl -X POST \
-  "$LANGFLOW_URL/api/v1/users/" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{
-    "username": "newuser2",
-    "password": "securepassword123"
-  }'
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiUsersAddUser} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiUsersAddUser} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiUsersAddUser} language="bash" />
+
+</TabItem>
+</Tabs>
 
 The request returns an object describing the new user.
 The user's UUID is stored in `user_id` in the Langflow database, and returned as `id` in the `/users` API response.
@@ -29,24 +65,7 @@ This `user_id` key is specifically for Langflow user management.
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "id": "10c1c6a2-ab8a-4748-8700-0e4832fd5ce8",
-  "username": "newuser2",
-  "profile_image": null,
-  "store_api_key": null,
-  "is_active": false,
-  "is_superuser": false,
-  "create_at": "2025-05-29T16:02:20.132436",
-  "updated_at": "2025-05-29T16:02:20.132442",
-  "last_login_at": null,
-  "optins": {
-    "github_starred": false,
-    "dialog_dismissed": false,
-    "discord_clicked": false
-  }
-}
-```
+<CodeSnippet source={resultApiUsersResultAddUser} language="json" />
 
 </details>
 
@@ -54,29 +73,28 @@ This `user_id` key is specifically for Langflow user management.
 
 Retrieve information about the authenticated user.
 
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/users/whoami" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiUsersGetCurrentUser} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiUsersGetCurrentUser} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiUsersGetCurrentUser} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "id": "07e5b864-e367-4f52-b647-a48035ae7e5e",
-  "username": "langflow",
-  "profile_image": null,
-  "store_api_key": null,
-  "is_active": true,
-  "is_superuser": true,
-  "create_at": "2025-05-08T17:59:07.855965",
-  "updated_at": "2025-05-29T15:06:56.157860",
-  "last_login_at": "2025-05-29T15:06:56.157016",
-}
-```
+<CodeSnippet source={resultApiUsersResultGetCurrentUser} language="json" />
 
 </details>
 
@@ -86,72 +104,28 @@ Get a paginated list of all users in the system.
 
 Requires authentication as a superuser if the Langflow server has authentication enabled.
 
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/users/?skip=0&limit=10" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiUsersListAllUsers} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiUsersListAllUsers} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiUsersListAllUsers} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "total_count": 3,
-  "users": [
-    {
-      "id": "07e5b864-e367-4f52-b647-a48035ae7e5e",
-      "username": "langflow",
-      "profile_image": null,
-      "store_api_key": null,
-      "is_active": true,
-      "is_superuser": true,
-      "create_at": "2025-05-08T17:59:07.855965",
-      "updated_at": "2025-05-29T15:06:56.157860",
-      "last_login_at": "2025-05-29T15:06:56.157016",
-      "optins": {
-        "github_starred": false,
-        "dialog_dismissed": true,
-        "discord_clicked": false,
-        "mcp_dialog_dismissed": true
-      }
-    },
-    {
-      "id": "c48a1f68-cc7e-491a-a507-a1a627708470",
-      "username": "newuser",
-      "profile_image": null,
-      "store_api_key": null,
-      "is_active": false,
-      "is_superuser": false,
-      "create_at": "2025-05-29T16:00:33.483386",
-      "updated_at": "2025-05-29T16:00:33.483392",
-      "last_login_at": null,
-      "optins": {
-        "github_starred": false,
-        "dialog_dismissed": false,
-        "discord_clicked": false
-      }
-    },
-    {
-      "id": "10c1c6a2-ab8a-4748-8700-0e4832fd5ce8",
-      "username": "newuser2",
-      "profile_image": null,
-      "store_api_key": null,
-      "is_active": false,
-      "is_superuser": false,
-      "create_at": "2025-05-29T16:02:20.132436",
-      "updated_at": "2025-05-29T16:02:20.132442",
-      "last_login_at": null,
-      "optins": {
-        "github_starred": false,
-        "dialog_dismissed": false,
-        "discord_clicked": false
-      }
-    }
-  ]
-}
-```
+<CodeSnippet source={resultApiUsersResultListAllUsers} language="json" />
 
 </details>
 
@@ -163,38 +137,28 @@ Requires authentication as a superuser if the Langflow server has authentication
 
 This example activates the specified user's account and makes them a superuser:
 
-```bash
-curl -X PATCH \
-  "$LANGFLOW_URL/api/v1/users/10c1c6a2-ab8a-4748-8700-0e4832fd5ce8" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{
-    "is_active": true,
-    "is_superuser": true
-  }'
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiUsersUpdateUser} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiUsersUpdateUser} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiUsersUpdateUser} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "id": "10c1c6a2-ab8a-4748-8700-0e4832fd5ce8",
-  "username": "newuser2",
-  "profile_image": null,
-  "store_api_key": null,
-  "is_active": true,
-  "is_superuser": true,
-  "create_at": "2025-05-29T16:02:20.132436",
-  "updated_at": "2025-05-29T16:19:03.514527Z",
-  "last_login_at": null,
-  "optins": {
-    "github_starred": false,
-    "dialog_dismissed": false,
-    "discord_clicked": false
-  }
-}
-```
+<CodeSnippet source={resultApiUsersResultUpdateUser} language="json" />
 
 </details>
 
@@ -204,37 +168,28 @@ Change the specified user's password to a new secure value.
 
 Requires authentication as the target user.
 
-```bash
-curl -X PATCH \
-  "$LANGFLOW_URL/api/v1/users/10c1c6a2-ab8a-4748-8700-0e4832fd5ce8/reset-password" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{
-    "password": "newsecurepassword123"
-  }'
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiUsersResetPassword} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiUsersResetPassword} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiUsersResetPassword} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "id": "10c1c6a2-ab8a-4748-8700-0e4832fd5ce8",
-  "username": "langflow",
-  "profile_image": null,
-  "store_api_key": null,
-  "is_active": true,
-  "is_superuser": true,
-  "create_at": "2025-05-08T17:59:07.855965",
-  "updated_at": "2025-05-29T15:06:56.157860",
-  "last_login_at": "2025-05-29T15:06:56.157016",
-  "optins": {
-    "github_starred": false,
-    "dialog_dismissed": true,
-    "discord_clicked": false
-  }
-}
-```
+<CodeSnippet source={resultApiUsersResultResetPassword} language="json" />
 
 </details>
 
@@ -244,20 +199,27 @@ Remove a user account from the system.
 
 Requires authentication as a superuser if the Langflow server has authentication enabled.
 
-```bash
-curl -X DELETE \
-  "$LANGFLOW_URL/api/v1/users/10c1c6a2-ab8a-4748-8700-0e4832fd5ce8" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiUsersDeleteUser} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiUsersDeleteUser} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiUsersDeleteUser} language="bash" />
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "detail": "User deleted"
-}
-```
+<CodeSnippet source={resultApiUsersResultDeleteUser} language="json" />
 
 </details>
