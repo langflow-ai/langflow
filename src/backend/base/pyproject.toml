@@ -291,7 +291,7 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 
 # Toolguard Integration
-toolguard = ["toolguard>=0.2.13,<1.0.0"]
+toolguard = ["toolguard>=0.2.14,<1.0.0"]
 
 # Additional LangChain integrations
 # Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels (see LE-172)
