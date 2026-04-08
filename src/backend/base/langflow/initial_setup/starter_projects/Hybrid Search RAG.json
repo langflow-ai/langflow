@@ -2523,7 +2523,8 @@
                 "info": "",
                 "input_types": [
                   "Data",
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "list": true,
                 "list_add_label": "Add More",
