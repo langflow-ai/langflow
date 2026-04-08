@@ -400,7 +400,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.1"
+                    "version": "0.135.3"
                   },
                   {
                     "name": "lfx",
@@ -781,7 +781,7 @@
                   },
                   {
                     "name": "validators",
-                    "version": "0.34.0"
+                    "version": "0.35.0"
                   },
                   {
                     "name": "lfx",
@@ -1251,7 +1251,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.22"
+                    "version": "1.2.27"
                   }
                 ],
                 "total_dependencies": 3
