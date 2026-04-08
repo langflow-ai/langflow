@@ -11,7 +11,7 @@ from copy import deepcopy
 
 from lfx.base.tools.component_tool import ComponentToolkit
 from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import MessageTextInput
+from lfx.inputs.inputs import DataInput, MessageTextInput
 from lfx.io import Output
 from lfx.schema.data import Data
 
@@ -140,6 +140,77 @@ def test_should_isolate_inputs_when_component_has_non_picklable_state():
         future2.result()
 
     # Assert - no race condition AND no pickle error
+    assert len(results) == 2
+    for result in results:
+        assert result["product_id_before"] == result["product_id_after"]
+        assert result["label_before"] == result["label_after"]
+
+    product_ids = {r["product_id_before"] for r in results}
+    assert product_ids == {"P1", "P2"}
+
+
+def test_deepcopy_with_non_picklable_input_value():
+    """Deepcopy must not fail when an input value is non-picklable.
+
+    Some components receive complex objects (e.g. LangChain models/clients)
+    in their inputs that hold threading.RLock instances.
+    """
+
+    class MockComponentWithLockValue(Component):
+        inputs = [DataInput(name="input_with_lock")]
+
+        def build(self):
+            return "ok"
+
+    component = MockComponentWithLockValue()
+    lock_val = _FakeServiceWithLock()
+    component.set(input_with_lock=lock_val)
+
+    # Must not raise "cannot pickle '_thread.RLock' object"
+    clone = deepcopy(component)
+
+    assert clone is not component
+    # The non-picklable value should be shared (shallow-copied fallback)
+    assert clone.input_with_lock is lock_val
+
+
+def test_should_isolate_inputs_when_input_has_non_picklable_value():
+    """End-to-end: concurrent tool invocation must work even with non-picklable input values.
+
+    Verified that the tool isolation still works when one of the inputs
+    carries a non-picklable object (forcing the shallow-copy fallback in deepcopy).
+    """
+
+    class SlowToolWithLock(SlowLabelComponent):
+        inputs = [
+            *SlowLabelComponent.inputs,
+            DataInput(name="lock_input", tool_mode=True),
+        ]
+
+    # Arrange
+    lock_val = _FakeServiceWithLock()
+    component = SlowToolWithLock()
+    component.set(lock_input=lock_val)  # Set the non-picklable value on the component
+    toolkit = ComponentToolkit(component=component)
+    tools = toolkit.get_tools()
+    tool = tools[0]
+
+    results = []
+
+    def invoke_tool(product_id: str, label: str) -> None:
+        # We don't pass lock_input here to avoid Pydantic validation of tool arguments
+        # The deepcopy(component) inside tool.invoke() will still encounter lock_val
+        result = tool.invoke({"product_id": product_id, "label": label})
+        results.append(result)
+
+    # Act
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future1 = executor.submit(invoke_tool, "P1", "L1")
+        future2 = executor.submit(invoke_tool, "P2", "L2")
+        future1.result()
+        future2.result()
+
+    # Assert
     assert len(results) == 2
     for result in results:
         assert result["product_id_before"] == result["product_id_after"]
