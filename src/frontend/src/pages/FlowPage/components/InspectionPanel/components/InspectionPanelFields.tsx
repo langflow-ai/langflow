@@ -14,7 +14,7 @@ import type { NodeDataType, targetHandleType } from "@/types/flow";
 import { scapeJSONParse } from "@/utils/reactflowUtils";
 import InspectionPanelEditField from "./InspectionPanelEditField";
 import InspectionPanelField from "./InspectionPanelField";
-import { HIDDEN_FIELDS } from "./hidden-fields";
+import { HIDDEN_FIELDS, INSPECTION_PANEL_ONLY_FIELDS } from "./hidden-fields";
 
 interface InspectionPanelFieldsProps {
   data: NodeDataType;
@@ -52,6 +52,8 @@ export default function InspectionPanelFields({
         const template = data.node?.template[templateField];
         if (isInternalField(templateField)) return false;
         if (HIDDEN_FIELDS[data.type]?.includes(templateField)) return false;
+        if (INSPECTION_PANEL_ONLY_FIELDS[data.type]?.includes(templateField))
+          return false;
         if (
           data.type === "APIRequest" &&
           templateField === "body" &&
