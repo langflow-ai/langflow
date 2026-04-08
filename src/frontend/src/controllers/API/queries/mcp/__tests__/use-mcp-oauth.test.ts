@@ -46,7 +46,14 @@ describe("extractOAuthError", () => {
   it("returns null when detail.error is not 'oauth_required'", () => {
     const err = {
       response: {
-        data: { detail: { error: "forbidden", message: "Not allowed", server_url: "https://mcp.example.com", initiate_endpoint: "/api/v1/mcp/oauth/initiate" } },
+        data: {
+          detail: {
+            error: "forbidden",
+            message: "Not allowed",
+            server_url: "https://mcp.example.com",
+            initiate_endpoint: "/api/v1/mcp/oauth/initiate",
+          },
+        },
       },
     };
     expect(extractOAuthError(err)).toBeNull();
@@ -115,7 +122,11 @@ describe("initiateMCPOAuth", () => {
 
   it("includes optional fields when provided", async () => {
     mockApiPost.mockResolvedValue({
-      data: { flow_id: "f", auth_url: "https://auth.example.com/go", expires_in: 600 },
+      data: {
+        flow_id: "f",
+        auth_url: "https://auth.example.com/go",
+        expires_in: 600,
+      },
     });
 
     await initiateMCPOAuth("https://mcp.example.com", {
@@ -199,7 +210,11 @@ describe("handleMCPOAuthFlow", () => {
 
   it("returns success when OAuth flow completes", async () => {
     mockApiPost.mockResolvedValue({
-      data: { flow_id: "flow-123", auth_url: "https://auth.example.com/go", expires_in: 600 },
+      data: {
+        flow_id: "flow-123",
+        auth_url: "https://auth.example.com/go",
+        expires_in: 600,
+      },
     });
     mockApiGet.mockResolvedValue({ data: { status: "complete" } });
 
@@ -212,7 +227,11 @@ describe("handleMCPOAuthFlow", () => {
 
   it("returns failure when OAuth flow errors", async () => {
     mockApiPost.mockResolvedValue({
-      data: { flow_id: "flow-123", auth_url: "https://auth.example.com/go", expires_in: 600 },
+      data: {
+        flow_id: "flow-123",
+        auth_url: "https://auth.example.com/go",
+        expires_in: 600,
+      },
     });
     mockApiGet.mockResolvedValue({
       data: { status: "error", error_message: "provider rejected" },
@@ -228,7 +247,11 @@ describe("handleMCPOAuthFlow", () => {
 
   it("returns failure when popup cannot be opened", async () => {
     mockApiPost.mockResolvedValue({
-      data: { flow_id: "flow-123", auth_url: "https://auth.example.com/go", expires_in: 600 },
+      data: {
+        flow_id: "flow-123",
+        auth_url: "https://auth.example.com/go",
+        expires_in: 600,
+      },
     });
     (window.open as jest.Mock).mockReturnValue(null); // popup blocked
 
@@ -249,7 +272,11 @@ describe("handleMCPOAuthFlow", () => {
       client_id: "my-client",
     };
     mockApiPost.mockResolvedValue({
-      data: { flow_id: "flow-123", auth_url: "https://auth.example.com/go", expires_in: 600 },
+      data: {
+        flow_id: "flow-123",
+        auth_url: "https://auth.example.com/go",
+        expires_in: 600,
+      },
     });
     mockApiGet.mockResolvedValue({ data: { status: "complete" } });
 
@@ -259,14 +286,21 @@ describe("handleMCPOAuthFlow", () => {
 
     expect(mockApiPost).toHaveBeenCalledWith(
       "/api/v1/mcp/oauth/initiate",
-      expect.objectContaining({ server_url: SERVER_URL, client_id: "my-client" }),
+      expect.objectContaining({
+        server_url: SERVER_URL,
+        client_id: "my-client",
+      }),
     );
     expect(result.success).toBe(true);
   });
 
   it("calls onStatusChange callback with each polled status", async () => {
     mockApiPost.mockResolvedValue({
-      data: { flow_id: "flow-123", auth_url: "https://auth.example.com/go", expires_in: 600 },
+      data: {
+        flow_id: "flow-123",
+        auth_url: "https://auth.example.com/go",
+        expires_in: 600,
+      },
     });
     mockApiGet
       .mockResolvedValueOnce({ data: { status: "pending" } })
@@ -287,7 +321,11 @@ describe("handleMCPOAuthFlow", () => {
 
   it("closes the popup when the flow completes", async () => {
     mockApiPost.mockResolvedValue({
-      data: { flow_id: "flow-123", auth_url: "https://auth.example.com/go", expires_in: 600 },
+      data: {
+        flow_id: "flow-123",
+        auth_url: "https://auth.example.com/go",
+        expires_in: 600,
+      },
     });
     mockApiGet.mockResolvedValue({ data: { status: "complete" } });
 
