@@ -155,7 +155,7 @@ export default function InputGlobalComponent({
     variableOptions = [...variableOptions, currentValue];
   }
 
-  const selectedOption = loadFromDb || isEnvVarName ? currentValue : "";
+  const selectedOption = loadFromDb ? currentValue : "";
 
   if (!showParameter) {
     return null;
