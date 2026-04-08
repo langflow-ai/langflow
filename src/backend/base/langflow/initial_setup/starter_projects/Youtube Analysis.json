@@ -505,7 +505,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.11.10"
                   },
                   {
                     "name": "lfx",
@@ -513,7 +513,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.83"
+                    "version": "0.3.81"
                   }
                 ],
                 "total_dependencies": 3
@@ -1458,7 +1458,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.1"
+                    "version": "0.128.0"
                   },
                   {
                     "name": "lfx",
@@ -1744,7 +1744,7 @@
                   },
                   {
                     "name": "youtube_transcript_api",
-                    "version": "1.2.4"
+                    "version": "1.2.3"
                   },
                   {
                     "name": "lfx",
@@ -2498,7 +2498,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.83"
+                    "version": "0.3.81"
                   }
                 ],
                 "total_dependencies": 3

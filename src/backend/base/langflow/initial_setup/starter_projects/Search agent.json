@@ -115,7 +115,7 @@
                   },
                   {
                     "name": "scrapegraph_py",
-                    "version": "1.46.0"
+                    "version": "1.44.0"
                   }
                 ],
                 "total_dependencies": 2
@@ -575,7 +575,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.1"
+                    "version": "0.128.0"
                   },
                   {
                     "name": "lfx",
@@ -944,7 +944,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.11.10"
                   },
                   {
                     "name": "lfx",
@@ -952,7 +952,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.83"
+                    "version": "0.3.81"
                   }
                 ],
                 "total_dependencies": 3
