@@ -3,7 +3,7 @@ from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from aiofile import async_open
+import aiofiles
 from dotenv import dotenv_values
 
 from lfx.graph.schema import RunOutputs
@@ -57,7 +57,7 @@ async def aload_flow_from_json(
 
     # override env variables with .env file
     if env_file and tweaks is not None:
-        async with async_open(Path(env_file), encoding="utf-8") as f:
+        async with aiofiles.open(Path(env_file), encoding="utf-8") as f:
             content = await f.read()
             env_vars = dotenv_values(stream=StringIO(content))
         tweaks = replace_tweaks_with_env(tweaks=tweaks, env_vars=env_vars)
@@ -66,7 +66,7 @@ async def aload_flow_from_json(
     await update_settings(cache=cache)
 
     if isinstance(flow, str | Path):
-        async with async_open(Path(flow), encoding="utf-8") as f:
+        async with aiofiles.open(Path(flow), encoding="utf-8") as f:
             content = await f.read()
             flow_graph = json.loads(content)
     # If input is a dictionary, assume it's a JSON object

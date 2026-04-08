@@ -42,12 +42,14 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildError
-from langflow.services.auth.utils import get_current_active_user
+from langflow.services.auth.utils import get_current_active_user, get_current_user_optional
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
+    get_settings_service,
     get_telemetry_service,
     session_scope,
 )
@@ -647,6 +649,7 @@ async def build_public_tmp(
     flow_name: str | None = None,
     request: Request,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+    authenticated_user: Annotated[User | None, Depends(get_current_user_optional)] = None,
     event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
 ):
     """Build a public flow without requiring authentication.
@@ -680,6 +683,7 @@ async def build_public_tmp(
         flow_name: Optional name for the flow
         request: FastAPI request object (needed for cookie access)
         queue_service: Queue service for job management
+        authenticated_user: Optional authenticated user (resolved from cookie/token if present)
         event_delivery: Optional event delivery type - default is streaming
 
     Returns:
@@ -688,7 +692,16 @@ async def build_public_tmp(
     try:
         # Verify this is a public flow and get the associated user
         client_id = request.cookies.get("client_id")
-        owner_user, new_flow_id = await verify_public_flow_and_get_user(flow_id=flow_id, client_id=client_id)
+        # Only use authenticated user_id when auto-login is disabled.
+        # When AUTO_LOGIN=TRUE, the frontend uses client_id for UUID v5,
+        # so the backend must match to avoid flow_id mismatch.
+        auth_settings = get_settings_service().auth_settings
+        authenticated_user_id = authenticated_user.id if authenticated_user and not auth_settings.AUTO_LOGIN else None
+        owner_user, new_flow_id = await verify_public_flow_and_get_user(
+            flow_id=flow_id,
+            client_id=client_id,
+            authenticated_user_id=authenticated_user_id,
+        )
 
         # Validate the stored flow data after the public-access boundary.
         # Public flows never accept client-supplied data.
@@ -711,7 +724,7 @@ async def build_public_tmp(
             log_builds=log_builds or False,
             current_user=owner_user,
             queue_service=queue_service,
-            flow_name=flow_name or f"{client_id}_{flow_id}",
+            flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
         )
     except CustomComponentValidationError as exc:
         await logger.awarning(f"Public flow validation failed: {exc}")

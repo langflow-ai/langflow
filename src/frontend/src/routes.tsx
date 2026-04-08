@@ -9,6 +9,7 @@ import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
 import { ProtectedRoute } from "./components/authorization/authGuard";
 import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
+import { PlaygroundAuthGate } from "./components/authorization/playgroundAuthGate";
 import ContextWrapper from "./contexts";
 import CustomDashboardWrapperPage from "./customization/components/custom-DashboardWrapperPage";
 import { CustomNavigate } from "./customization/components/custom-navigate";
@@ -56,7 +57,9 @@ const router = createBrowserRouter(
         path=""
         element={
           <ContextWrapper key={1}>
-            <PlaygroundPage />
+            <PlaygroundAuthGate>
+              <PlaygroundPage />
+            </PlaygroundAuthGate>
           </ContextWrapper>
         }
       />

@@ -13,7 +13,7 @@ from pathlib import Path as StdlibPath
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from aiofile import async_open
+import aiofiles
 from anyio import Path
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
@@ -176,8 +176,7 @@ async def _save_flow_to_fs(flow: Flow, user_id: UUID, storage_service: StorageSe
     try:
         safe_path = _get_safe_flow_path(flow.fs_path, user_id, storage_service)
         await safe_path.parent.mkdir(parents=True, exist_ok=True)
-        # async_open expects a string path, not a Path object
-        async with async_open(str(safe_path), "w") as f:
+        async with aiofiles.open(str(safe_path), "w") as f:
             await f.write(flow.model_dump_json())
     except HTTPException:
         raise

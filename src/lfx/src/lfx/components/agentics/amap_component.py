@@ -29,7 +29,7 @@ from lfx.io import (
 from lfx.schema.dataframe import DataFrame
 
 
-class SemanticMap(BaseAgenticComponent):
+class AMapComponent(BaseAgenticComponent):
     """Transform each row of input data using natural language instructions and a defined output schema.
 
     This component processes input data row-by-row, applying LLM-based transformations to generate
@@ -51,6 +51,7 @@ class SemanticMap(BaseAgenticComponent):
             name="source",
             display_name="Input Table",
             info=("Input DataFrame to transform. The schema is automatically inferred from column names and types."),
+            required=True,
         ),
         get_generated_fields_input(),
         BoolInput(
@@ -110,7 +111,7 @@ class SemanticMap(BaseAgenticComponent):
             schema_fields = build_schema_fields(self.schema)
             atype = create_pydantic_model(schema_fields, name="Target")
             if self.return_multiple_instances:
-                final_atype = create_model("ListOfTarget", items=(list[atype], ...))
+                final_atype = create_model("ListOfTarget", items=(list[atype], ...))  # type: ignore[valid-type]
             else:
                 final_atype = atype
 
@@ -130,6 +131,13 @@ class SemanticMap(BaseAgenticComponent):
                 output = AG(atype=atype, states=appended_states)
 
             elif self.append_to_input_columns:
+                output_field_names = set(output.atype.model_fields.keys())
+                source_field_names = set(source.atype.model_fields.keys())
+                overlapping = source_field_names & output_field_names
+                if overlapping:
+                    non_overlapping = source_field_names - overlapping
+                    deduplicated_atype = source.subset_atype(non_overlapping)
+                    source = source.rebind_atype(deduplicated_atype)
                 output = source.merge_states(output)
 
             return DataFrame(output.to_dataframe().to_dict(orient="records"))
