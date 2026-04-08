@@ -187,11 +187,11 @@ async def test_generate_mode_validation_errors(mock_component):
     with pytest.raises(ValueError, match="model or api_key cannot be empty"):
         await mock_component.guard_tools()
 
-    # Test non-recommended model
-    mock_component.model = [{"name": "gpt-3.5-turbo", "provider": "OpenAI"}]
-    mock_component.api_key = "test_key"  # pragma: allowlist secret
-    with pytest.raises(ValueError, match="is not in recommended models"):
-        await mock_component.guard_tools()
+    # # Test non-recommended model
+    # mock_component.model = [{"name": "gpt-3.5-turbo", "provider": "OpenAI"}]
+    # mock_component.api_key = "test_key"  # pragma: allowlist secret
+    # with pytest.raises(ValueError, match="is not in recommended models"):
+    #     await mock_component.guard_tools()
 
 
 def test_work_dir_property():

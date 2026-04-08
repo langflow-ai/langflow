@@ -22,7 +22,7 @@ async def test_tool_invoker_invoke_with_dict_result():
     """Test invoking a tool that returns a plain dict."""
     tool = MagicMock()
     tool.name = "test_tool"
-    tool.ainvoke = AsyncMock(return_value={"result": "success", "data": 42})
+    tool.ainvoke = AsyncMock(return_value={"result": {"result": "success", "data": 42}})
 
     invoker = ToolInvoker([tool])
     result = await invoker.invoke("test_tool", {"arg1": "value1"}, dict)
@@ -226,9 +226,9 @@ async def test_tool_invoker_multiple_tools():
     result2 = await invoker.invoke("tool2", {}, dict)
     result3 = await invoker.invoke("tool3", {}, dict)
 
-    assert result1 == {"result": "from_tool1"}
-    assert result2 == {"result": "from_tool2"}
-    assert result3 == {"result": "from_tool3"}
+    assert result1 == "from_tool1"
+    assert result2 == "from_tool2"
+    assert result3 == "from_tool3"
 
     tool1.ainvoke.assert_called_once()
     tool2.ainvoke.assert_called_once()
