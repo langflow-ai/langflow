@@ -11,8 +11,8 @@ from fastapi import HTTPException, Query, status
 from fastapi_pagination import Params
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
-    DeploymentConflictError,
     DeploymentServiceError,
+    ResourceConflictError,
     http_status_for_deployment_error,
 )
 from lfx.services.adapters.deployment.schema import (
@@ -325,8 +325,12 @@ def handle_adapter_errors(*, mapper: BaseDeploymentMapper | None = None):
     except DeploymentServiceError as exc:
         http_status = http_status_for_deployment_error(exc)
         detail = exc.message
-        if isinstance(exc, DeploymentConflictError) and mapper is not None:
-            detail = mapper.format_conflict_detail(exc.message)
+        if isinstance(exc, ResourceConflictError) and mapper is not None:
+            detail = mapper.format_conflict_detail(
+                exc.message,
+                resource=getattr(exc, "resource", None),
+                resource_name=getattr(exc, "resource_name", None),
+            )
         logger.exception("Adapter error (status=%s): %s", http_status, detail)
         raise HTTPException(
             status_code=http_status,

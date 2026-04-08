@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.log.logger import logger
-from lfx.services.adapters.deployment.exceptions import DeploymentConflictError, InvalidContentError
+from lfx.services.adapters.deployment.exceptions import InvalidContentError, ResourceConflictError
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import create_config, validate_connection
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
@@ -150,7 +150,7 @@ async def create_connection_with_conflict_mapping(
                 "Use an existing connection by referencing its app_id in operations[*].app_ids, "
                 "or choose a different app_id for connections.raw_payloads."
             )
-            raise DeploymentConflictError(message=msg) from exc
+            raise ResourceConflictError(message=msg, resource="connection", resource_name=app_id) from exc
         raise
 
 

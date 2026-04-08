@@ -6,6 +6,7 @@ regardless of adapter.
 
 from __future__ import annotations
 
+import re
 from typing import NoReturn
 
 from fastapi import status
@@ -68,11 +69,24 @@ class CredentialResolutionError(AuthenticationError):
         super().__init__(message, error_code="credentials_resolution_error", cause=cause)
 
 
-class DeploymentConflictError(DeploymentError):
+class ResourceConflictError(DeploymentError):
     """Raised when a deployment conflict occurs."""
 
-    def __init__(self, message: str = "Deployment conflict occurred", *, cause: Exception | None = None):
+    def __init__(
+        self,
+        message: str = "Deployment conflict occurred",
+        *,
+        resource: str | None = None,
+        resource_name: str | None = None,
+        cause: Exception | None = None,
+    ):
+        self.resource = str(resource).strip().lower() if resource is not None else None
+        self.resource_name = str(resource_name).strip() or None if resource_name is not None else None
         super().__init__(message, error_code="deployment_conflict", cause=cause)
+
+
+# Backward-compatible alias; prefer ResourceConflictError in new code.
+DeploymentConflictError = ResourceConflictError
 
 
 class InvalidContentError(DeploymentError):
@@ -221,14 +235,14 @@ class DeploymentNotConfiguredError(DeploymentError):
 def http_status_for_deployment_error(exc: DeploymentServiceError) -> int:
     """Return the HTTP status code that best represents a domain exception.
 
-    This is the inverse of :func:`raise_for_status_and_detail`: given a
+    This is the inverse of :func:`raise_as_deployment_error`: given a
     domain exception instance, it returns the HTTP status code that an API
     layer should use when surfacing the error to a client.
 
     Order mirrors the except-chain priority in the Langflow route layer:
     more specific exception types are checked before their parents.
     """
-    if isinstance(exc, DeploymentConflictError):
+    if isinstance(exc, ResourceConflictError):
         return status.HTTP_409_CONFLICT
     if isinstance(exc, InvalidDeploymentOperationError):
         return status.HTTP_400_BAD_REQUEST
@@ -261,12 +275,74 @@ def http_status_for_deployment_error(exc: DeploymentServiceError) -> int:
     return status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
+# Word-boundary regexes avoid false matches in identifiers like "Simple_Agent".
+_TOOL_WORD_RE = re.compile(r"\btool\b", re.IGNORECASE)
+_CONNECTION_WORD_RE = re.compile(r"\bconnection\b", re.IGNORECASE)
+_APP_ID_WORD_RE = re.compile(r"\bapp[_\s-]?id\b", re.IGNORECASE)
+_AGENT_WORD_RE = re.compile(r"\bagent\b", re.IGNORECASE)
+_TOOL_NAME_RE = re.compile(r"""tool(?:\s+with\s+name|\s+name)?\s*['"](?P<name>[^'"]+)['"]""", re.IGNORECASE)
+_AGENT_NAME_RE = re.compile(r"""agent(?:\s+with\s+name|\s+name)?\s*['"](?P<name>[^'"]+)['"]""", re.IGNORECASE)
+_APP_ID_QUOTED_RE = re.compile(r"""app[_\s-]?id\s*(?:=|:)?\s*['"](?P<name>[^'"]+)['"]""", re.IGNORECASE)
+_APP_ID_UNQUOTED_RE = re.compile(r"""\bapp[_\s-]?id\b\s*(?:=|:)?\s*(?P<name>[A-Za-z0-9_.:-]+)""", re.IGNORECASE)
+
+
+def _infer_conflict_resource(detail_text: str) -> str | None:
+    """Infer conflict resource from provider detail text, when possible."""
+    if _TOOL_WORD_RE.search(detail_text):
+        return "tool"
+    if _CONNECTION_WORD_RE.search(detail_text) or _APP_ID_WORD_RE.search(detail_text):
+        return "connection"
+    if _AGENT_WORD_RE.search(detail_text):
+        return "agent"
+    return None
+
+
+def _infer_conflict_name(detail_text: str, *, resource: str | None) -> str | None:
+    """Infer conflict name/identifier from provider detail text."""
+    if resource == "tool":
+        match = _TOOL_NAME_RE.search(detail_text)
+        if match:
+            return (match.group("name") or "").strip() or None
+        return None
+    if resource == "agent":
+        match = _AGENT_NAME_RE.search(detail_text)
+        if match:
+            return (match.group("name") or "").strip() or None
+        return None
+    if resource == "connection":
+        match = _APP_ID_QUOTED_RE.search(detail_text) or _APP_ID_UNQUOTED_RE.search(detail_text)
+        if match:
+            candidate = (match.group("name") or "").strip()
+            return candidate or None
+        return None
+    return None
+
+
+def _resolve_conflict_hints(
+    detail_text: str,
+    *,
+    resource: str | None = None,
+    resource_name: str | None = None,
+) -> tuple[str | None, str | None]:
+    normalized_resource = str(resource).strip().lower() if resource is not None else None
+    normalized_resource_name = str(resource_name).strip() or None if resource_name is not None else None
+
+    if normalized_resource is None:
+        normalized_resource = _infer_conflict_resource(detail_text)
+    if normalized_resource_name is None:
+        normalized_resource_name = _infer_conflict_name(detail_text, resource=normalized_resource)
+
+    return normalized_resource, normalized_resource_name
+
+
 # lru+ttl cache?
-def raise_for_status_and_detail(
+def raise_as_deployment_error(
     *,
     status_code: int | None,
     detail: str,
     message_prefix: str | None = None,
+    resource: str | None = None,
+    resource_name: str | None = None,
     cause: Exception | None = None,
 ) -> NoReturn:
     """Raise domain-specific deployment exceptions based on HTTP-like status/detail.
@@ -276,6 +352,9 @@ def raise_for_status_and_detail(
     *cause* to preserve the traceback chain for debugging.  Callers that
     handle security-sensitive errors (e.g. credential verification) should
     set it to None to avoid leaking provider responses through the exception chain.
+
+    For conflict errors, callers should pass ``resource`` and ``resource_name``
+    whenever known. Inference from provider detail text is used only as fallback.
     """
     detail_text = str(detail)
     detail_lower = detail_text.lower()
@@ -301,7 +380,17 @@ def raise_for_status_and_detail(
     if status_code == status.HTTP_410_GONE:
         raise ResourceNotFoundError(message, cause=cause) from cause
     if status_code == status.HTTP_409_CONFLICT:
-        raise DeploymentConflictError(message=message, cause=cause) from cause
+        conflict_resource, conflict_resource_name = _resolve_conflict_hints(
+            detail_text,
+            resource=resource,
+            resource_name=resource_name,
+        )
+        raise ResourceConflictError(
+            message=message,
+            resource=conflict_resource,
+            resource_name=conflict_resource_name,
+            cause=cause,
+        ) from cause
     if status_code == status.HTTP_429_TOO_MANY_REQUESTS:
         raise RateLimitError(message=message, cause=cause) from cause
     if status_code in {status.HTTP_408_REQUEST_TIMEOUT, status.HTTP_504_GATEWAY_TIMEOUT}:
@@ -311,7 +400,17 @@ def raise_for_status_and_detail(
     if "not found" in detail_lower:
         raise ResourceNotFoundError(message, cause=cause) from cause
     if "already exists" in detail_lower or "conflict" in detail_lower:
-        raise DeploymentConflictError(message=message, cause=cause) from cause
+        conflict_resource, conflict_resource_name = _resolve_conflict_hints(
+            detail_text,
+            resource=resource,
+            resource_name=resource_name,
+        )
+        raise ResourceConflictError(
+            message=message,
+            resource=conflict_resource,
+            resource_name=conflict_resource_name,
+            cause=cause,
+        ) from cause
     if "unprocessable" in detail_lower:
         raise InvalidContentError(message=message, cause=cause) from cause
     if "too many requests" in detail_lower or "rate limit" in detail_lower:
@@ -338,3 +437,23 @@ def raise_for_status_and_detail(
     ):
         raise InvalidContentError(message=message, cause=cause) from cause
     raise DeploymentError(message=message, error_code="deployment_error", cause=cause) from cause
+
+
+def raise_for_status_and_detail(
+    *,
+    status_code: int | None,
+    detail: str,
+    message_prefix: str | None = None,
+    resource: str | None = None,
+    resource_name: str | None = None,
+    cause: Exception | None = None,
+) -> NoReturn:
+    """Backward-compatible wrapper for ``raise_as_deployment_error``."""
+    raise_as_deployment_error(
+        status_code=status_code,
+        detail=detail,
+        message_prefix=message_prefix,
+        resource=resource,
+        resource_name=resource_name,
+        cause=cause,
+    )

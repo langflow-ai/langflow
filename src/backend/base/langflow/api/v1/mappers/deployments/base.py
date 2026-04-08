@@ -416,12 +416,19 @@ class BaseDeploymentMapper:
         tenant_id = raw_tenant_id.strip()
         return tenant_id or None
 
-    def format_conflict_detail(self, raw_message: str) -> str:
+    def format_conflict_detail(
+        self,
+        raw_message: str,
+        *,
+        resource: str | None = None,
+        resource_name: str | None = None,
+    ) -> str:
         """Format provider conflict errors for API responses.
 
         Provider-specific mappers may override this to map provider-native
         conflict wording to clearer end-user guidance.
         """
+        _ = (resource, resource_name)
         return f"A resource with this name already exists in the provider. {raw_message}"
 
     def resolve_credential_fields(
