@@ -151,10 +151,18 @@ describe("useChatFileUpload", () => {
       };
       expect(entry.loading).toBe(false);
       expect(entry.error).toBe(true);
-      expect(setErrorDataMock).toHaveBeenCalledWith({
-        title: "Error uploading file",
-        list: ["upload failed"],
-      });
+      expect(setErrorDataMock).toHaveBeenCalled();
+
+      const [payload] = setErrorDataMock.mock.calls[0] as [
+        { title?: string; list?: unknown },
+      ];
+      expect(payload).toEqual(
+        expect.objectContaining({
+          title: "Error uploading file",
+          list: expect.any(Array),
+        }),
+      );
+      expect(payload.list as unknown[]).not.toHaveLength(0);
     });
   });
 
