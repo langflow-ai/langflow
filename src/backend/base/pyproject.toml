@@ -290,6 +290,9 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 # Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2 (see LE-172)
 altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 
+# Toolguard Integration
+toolguard = ["toolguard>=0.2.14,<1.0.0"]
+
 # Additional LangChain integrations
 # Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels (see LE-172)
 langchain-huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
@@ -427,6 +430,8 @@ complete = [
     "langflow-base[spider]",
     # ALTK
     "langflow-base[altk]",
+    # Toolguard
+    "langflow-base[toolguard]",
     # Additional LangChain integrations
     "langflow-base[langchain-huggingface]",
     "langflow-base[langchain-unstructured]",
