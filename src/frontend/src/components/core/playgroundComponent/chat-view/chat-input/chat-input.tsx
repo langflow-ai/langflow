@@ -1,13 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef } from "react";
-import ShortUniqueId from "short-unique-id";
-import {
-  ALLOWED_IMAGE_INPUT_EXTENSIONS,
-  SN_ERROR_TEXT,
-} from "@/constants/constants";
-import i18n from "@/i18n";
-import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
-import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
+import { useChatFileUpload } from "@/shared/hooks/use-chat-file-upload";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -16,7 +9,6 @@ import type { ChatInputType, FilePreviewType } from "@/types/components";
 import InputWrapper from "./components/input-wrapper";
 import NoInputView from "./components/no-input";
 import { useAudioRecording } from "./hooks/use-audio-recording";
-import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 
 interface ChatInputProps
   extends Omit<ChatInputType, "sendMessage" | "inputRef"> {
@@ -36,7 +28,6 @@ export default function ChatInput({
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const { validateFileSize } = useFileSizeValidator();
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const chatValue = useUtilityStore((state) => state.chatValueStore);
@@ -46,8 +37,11 @@ export default function ChatInput({
   );
 
   const inputRef = useRef<HTMLTextAreaElement>(null!);
-
-  const { mutate } = usePostUploadFile();
+  const { handleFileChange } = useChatFileUpload({
+    currentFlowId,
+    setFiles,
+    playgroundPage: true,
+  });
 
   // Audio transcription handler - appends transcribed text to the chat input
   const handleTranscriptionComplete = useCallback(
@@ -83,102 +77,12 @@ export default function ChatInput({
     onError: handleAudioError,
   });
 
-  const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
-  ) => {
-    let file: File | null = null;
-
-    if ("clipboardData" in event) {
-      const items = event.clipboardData?.items;
-      if (items) {
-        for (let i = 0; i < items.length; i++) {
-          const blob = items[i].getAsFile();
-          if (blob) {
-            file = blob;
-            break;
-          }
-        }
-      }
-    } else {
-      const fileInput = event.target as HTMLInputElement;
-      file = fileInput.files?.[0] ?? null;
-    }
-
-    if (file) {
-      const fileExtension = file.name.split(".").pop()?.toLowerCase();
-
-      try {
-        validateFileSize(file);
-      } catch (e) {
-        if (e instanceof Error) {
-          setErrorData({
-            title: e.message,
-          });
-        }
-        return;
-      }
-
-      if (
-        !fileExtension ||
-        !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
-      ) {
-        setErrorData({
-          title: "Error uploading file",
-          list: [i18n.t("misc.fsErrorText"), SN_ERROR_TEXT],
-        });
-        return;
-      }
-
-      const uid = new ShortUniqueId();
-      const id = uid.randomUUID(10);
-
-      const type = file.type.split("/")[0];
-
-      setFiles((prevFiles) => [
-        ...prevFiles,
-        { file, loading: true, error: false, id, type },
-      ]);
-
-      mutate(
-        { file, id: currentFlowId },
-        {
-          onSuccess: (data) => {
-            setFiles((prev) => {
-              const newFiles = [...prev];
-              const updatedIndex = newFiles.findIndex((f) => f.id === id);
-              newFiles[updatedIndex].loading = false;
-              newFiles[updatedIndex].path = data.file_path;
-              return newFiles;
-            });
-          },
-          onError: (error) => {
-            setFiles((prev) => {
-              const newFiles = [...prev];
-              const updatedIndex = newFiles.findIndex((f) => f.id === id);
-              newFiles[updatedIndex].loading = false;
-              newFiles[updatedIndex].error = true;
-              return newFiles;
-            });
-            setErrorData({
-              title: "Error uploading file",
-              list: [error.response?.data?.detail],
-            });
-          },
-        },
-      );
-    }
-
-    if ("target" in event && event.target instanceof HTMLInputElement) {
-      event.target.value = "";
-    }
-  };
-
   useEffect(() => {
     document.addEventListener("paste", handleFileChange);
     return () => {
       document.removeEventListener("paste", handleFileChange);
     };
-  }, [currentFlowId, isBuilding]);
+  }, [handleFileChange]);
 
   const send = async () => {
     // Indicate we are awaiting a bot response so typing animation can start

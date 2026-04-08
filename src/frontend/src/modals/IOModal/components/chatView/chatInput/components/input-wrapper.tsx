@@ -2,7 +2,7 @@ import type React from "react";
 import { useTranslation } from "react-i18next";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import {
-  ENABLE_IMAGE_ON_PLAYGROUND,
+  ENABLE_FILES_ON_PLAYGROUND,
   ENABLE_VOICE_ASSISTANT,
 } from "@/customization/feature-flags";
 import type { FilePreviewType } from "@/types/components";
@@ -22,7 +22,7 @@ interface InputWrapperProps {
   files: FilePreviewType[];
   isDragging: boolean;
   handleDeleteFile: (file: FilePreviewType) => void;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleButtonClick: () => void;
   setShowAudioInput: (value: boolean) => void;
@@ -44,7 +44,6 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   handleFileChange,
   handleButtonClick,
   setShowAudioInput,
-  currentFlowId,
   playgroundPage,
 }) => {
   const { t } = useTranslation();
@@ -75,6 +74,18 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
     e.preventDefault();
   };
 
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Enter" && e.key !== " ") {
+      return;
+    }
+    e.preventDefault();
+    inputRef.current?.focus();
+    inputRef.current?.setSelectionRange(
+      inputRef.current.value.length,
+      inputRef.current.value.length,
+    );
+  };
+
   return (
     <div className="flex w-full flex-col-reverse">
       <div
@@ -82,6 +93,10 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
         className="flex w-full flex-col rounded-md border cursor-text border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary"
         onClick={onClick}
         onMouseDown={onMouseDown}
+        onKeyDown={onKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-label="Focus chat input"
       >
         <TextAreaWrapper
           isBuilding={isBuilding}
@@ -111,7 +126,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
         <div className="flex w-full items-end justify-between">
           <div className={isBuilding ? "cursor-not-allowed" : ""}>
             {(!playgroundPage ||
-              (playgroundPage && ENABLE_IMAGE_ON_PLAYGROUND)) && (
+              (playgroundPage && ENABLE_FILES_ON_PLAYGROUND)) && (
               <UploadFileButton
                 isBuilding={isBuilding}
                 fileInputRef={fileInputRef}
