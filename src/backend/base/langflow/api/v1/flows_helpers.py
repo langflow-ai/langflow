@@ -82,15 +82,18 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
         try:
             requested_path = StdlibPath(normalized_path).resolve()
             requested_resolved = str(requested_path)
-            try:
-                # Ensure it's a subpath of the base directory
-                requested_path.relative_to(base_dir_stdlib)
-            except ValueError:
+            # Ensure resolved path stays within base (prevent symlink attacks)
+            if not requested_resolved.startswith(base_dir_resolved + "/") and requested_resolved != base_dir_resolved:
                 raise HTTPException(
                     status_code=400,
-                    detail=(f"Absolute path must be within your flows directory: {base_dir_resolved}"),
-                ) from None
-            return Path(requested_resolved)
+                    detail=f"Absolute path must be within your flows directory: {base_dir_resolved}",
+                )
+            # Reconstruct the path from the base directory + relative portion
+            # so the returned value is derived from the safe base, not user input.
+            rel = StdlibPath(requested_resolved).relative_to(base_dir_stdlib)
+            return Path(str(base_dir_stdlib / rel))
+        except HTTPException:
+            raise
         except (OSError, ValueError) as e:
             raise HTTPException(
                 status_code=400,
@@ -108,7 +111,7 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
             resolved_str = str(resolved_path)
 
             # Ensure resolved path stays within base (prevent symlink attacks)
-            if not resolved_str.startswith(base_dir_resolved):
+            if not resolved_str.startswith(base_dir_resolved + "/") and resolved_str != base_dir_resolved:
                 raise HTTPException(
                     status_code=400,
                     detail="Invalid path: resolves outside allowed directory",
