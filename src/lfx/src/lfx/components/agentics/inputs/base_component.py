@@ -17,7 +17,7 @@ class BaseAgenticComponent(Component):
     - Unified build configuration handling
     """
 
-    display_name = False  # Hide from sidebar - not meant to be used directly
+    display_name: str | bool = False  # Hide from sidebar - not meant to be used directly
     code_class_base_inheritance: ClassVar[str | None] = None
     _code_class_base_inheritance: ClassVar[str | None] = None
 
