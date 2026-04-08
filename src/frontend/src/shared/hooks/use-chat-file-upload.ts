@@ -16,6 +16,7 @@ import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { isAllowedChatAttachmentFile } from "@/utils/file-validation";
 import useAlertStore from "@/stores/alertStore";
 import type { FilePreviewType } from "@/types/components";
+import { useTranslation } from "react-i18next";
 
 interface UseChatFileUploadParams {
   currentFlowId: string;
@@ -28,6 +29,8 @@ export const useChatFileUpload = ({
   setFiles,
   playgroundPage = false,
 }: UseChatFileUploadParams) => {
+
+  const { t } = useTranslation();
   const { mutate } = usePostUploadFile();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { validateFileSize } = useFileSizeValidator();
@@ -96,10 +99,7 @@ export const useChatFileUpload = ({
 
             setErrorData({
               title: "Error uploading file",
-              list: [
-                error.response?.data?.detail ??
-                  "Unable to upload selected file.",
-              ],
+              list: [t("misc.fsErrorText"), SN_ERROR_TEXT],
             });
           },
         },
