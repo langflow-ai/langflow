@@ -742,8 +742,8 @@ def test_watsonx_mapper_extract_snapshot_bindings_from_provider_view():
     mapper = WatsonxOrchestrateDeploymentMapper()
     provider_view = _mock_provider_view(
         [
-            SimpleNamespace(id="agent-1", provider_data={"snapshot_ids": ["tool-1", "tool-2"]}),
-            SimpleNamespace(id="agent-2", provider_data={"snapshot_ids": ["tool-3"]}),
+            SimpleNamespace(id="agent-1", provider_data={"tool_ids": ["tool-1", "tool-2"]}),
+            SimpleNamespace(id="agent-2", provider_data={"tool_ids": ["tool-3"]}),
         ]
     )
 
@@ -755,26 +755,24 @@ def test_watsonx_mapper_extract_snapshot_bindings_from_provider_view():
     ]
 
 
-def test_watsonx_mapper_extract_snapshot_bindings_requires_provider_data():
+def test_watsonx_mapper_extract_snapshot_bindings_requires_tool_ids():
     mapper = WatsonxOrchestrateDeploymentMapper()
     provider_view = _mock_provider_view(
         [
-            SimpleNamespace(id="agent-1", provider_data=None),
+            SimpleNamespace(id="agent-1", provider_data={}),
         ]
     )
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(ValueError, match=r"^tool_ids is required from wxO adapter\.$"):
         mapper.extract_snapshot_bindings(provider_view)
-    assert exc_info.value.status_code == 500
-    assert "provider_data payload" in str(exc_info.value.detail)
 
 
-def test_watsonx_mapper_extract_snapshot_bindings_allows_empty_snapshot_ids():
+def test_watsonx_mapper_extract_snapshot_bindings_allows_empty_tool_ids():
     mapper = WatsonxOrchestrateDeploymentMapper()
     provider_view = _mock_provider_view(
         [
-            SimpleNamespace(id="agent-1", provider_data={"snapshot_ids": []}),
-            SimpleNamespace(id=None, provider_data={"snapshot_ids": ["tool-ignored"]}),
+            SimpleNamespace(id="agent-1", provider_data={"tool_ids": []}),
+            SimpleNamespace(id=None, provider_data={"tool_ids": ["tool-ignored"]}),
         ]
     )
 
@@ -1453,7 +1451,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_list.side_effect = [[(row, 3, [])], []]
         mock_fetch_rk.return_value = (
             {"rk-1"},
-            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"snapshot_ids": ["snap-1"]})]),
+            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"tool_ids": ["snap-1"]})]),
         )
         mock_count_attachments.return_value = {row.id: 2}
         db = MagicMock()
@@ -1497,7 +1495,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_list.side_effect = [[(row, 0, [])], []]
         mock_fetch_rk.return_value = (
             {"rk-1"},
-            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"snapshot_ids": []})]),
+            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"tool_ids": []})]),
         )
         mock_count_attachments.return_value = {row.id: 0}
         db = MagicMock()
@@ -1540,7 +1538,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_list.side_effect = [[(row, 3, [])], []]
         mock_fetch_rk.return_value = (
             {"rk-1"},
-            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"snapshot_ids": ["snap-1"]})]),
+            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"tool_ids": ["snap-1"]})]),
         )
         mock_delete_unbound.side_effect = RuntimeError("cleanup failed")
         db = MagicMock()
@@ -1582,7 +1580,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_list.side_effect = [[(row, 3, [])], []]
         mock_fetch_rk.return_value = (
             {"rk-1"},
-            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"snapshot_ids": ["snap-1"]})]),
+            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"tool_ids": ["snap-1"]})]),
         )
         mock_count_attachments.return_value = {row.id: 3}
         db = MagicMock()

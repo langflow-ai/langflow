@@ -34,7 +34,7 @@ from lfx.services.adapters.payload import (
     PayloadSlotPolicy,
 )
 from lfx.services.adapters.schema import AdapterType
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
 from langflow.api.v1.mappers.deployments.base import (
     BaseDeploymentMapper,
@@ -147,16 +147,6 @@ def _validate_tool_name(name: str) -> str:
             ),
         )
     return normalized
-
-
-class _WatsonxSnapshotBindingsProviderData(BaseModel):
-    snapshot_ids: list[str]
-
-
-_WXO_SNAPSHOT_BINDINGS_PROVIDER_DATA_SLOT = PayloadSlot(
-    adapter_model=_WatsonxSnapshotBindingsProviderData,
-    policy=PayloadSlotPolicy.VALIDATE_ONLY,
-)
 
 
 @register_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
@@ -653,19 +643,14 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             if not item.id:
                 continue
             resource_key = str(item.id)
-            parsed_provider_data = self._parse_required_payload_slot(
-                slot=_WXO_SNAPSHOT_BINDINGS_PROVIDER_DATA_SLOT,
-                slot_name="deployment_list_item.provider_data",
-                raw=item.provider_data,
-                missing_payload_detail=(
-                    "Invalid deployment list item provider_data payload: missing required snapshot_ids."
-                ),
-                malformed_payload_detail="Invalid deployment list item provider_data payload:",
-            )
-            snapshot_ids = parsed_provider_data.snapshot_ids
+
+            tool_ids = item.provider_data.get("tool_ids", None)
+            if tool_ids is None:
+                msg = "tool_ids is required from wxO adapter."
+                raise ValueError(msg)
             bindings.extend(
                 ProviderSnapshotBinding(resource_key=resource_key, snapshot_id=str(snapshot_id))
-                for snapshot_id in snapshot_ids
+                for snapshot_id in tool_ids
             )
         return bindings
 
