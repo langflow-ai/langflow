@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from sqlalchemy import and_, literal, union_all
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select
 
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
 
 
 async def create_deployment_attachment(
@@ -201,6 +204,61 @@ async def list_attachments_for_flow_with_provider_info(
     )
     rows = (await db.exec(stmt)).all()
     return [(attachment, provider_account_id, provider_key) for attachment, provider_account_id, provider_key in rows]
+
+
+async def delete_unbound_attachments(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_ids: list[UUID],
+    bindings: list[ProviderSnapshotBinding],
+) -> int:
+    from langflow.services.database.models.deployment.model import Deployment
+
+    if not deployment_ids:
+        return 0
+
+    if not bindings:
+        stmt = delete(FlowVersionDeploymentAttachment).where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+        )
+        result = await db.exec(stmt)
+        return int(result.rowcount or 0)
+
+    deduped_bindings = list(dict.fromkeys((binding.resource_key, binding.snapshot_id) for binding in bindings))
+    binding_selects = [
+        select(literal(resource_key).label("resource_key"), literal(snapshot_id).label("snapshot_id"))
+        for resource_key, snapshot_id in deduped_bindings
+    ]
+    provider_bindings_cte = (binding_selects[0] if len(binding_selects) == 1 else union_all(*binding_selects)).cte(
+        "provider_bindings"
+    )
+
+    stale_attachment_ids = (
+        select(FlowVersionDeploymentAttachment.id)
+        .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
+        .outerjoin(
+            provider_bindings_cte,
+            and_(
+                Deployment.resource_key == provider_bindings_cte.c.resource_key,
+                FlowVersionDeploymentAttachment.provider_snapshot_id == provider_bindings_cte.c.snapshot_id,
+            ),
+        )
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+            FlowVersionDeploymentAttachment.provider_snapshot_id.is_not(None),
+            FlowVersionDeploymentAttachment.provider_snapshot_id != "",
+            provider_bindings_cte.c.resource_key.is_(None),  # No provider binding match => stale local attachment
+        )
+    )
+
+    stmt = delete(FlowVersionDeploymentAttachment).where(
+        col(FlowVersionDeploymentAttachment.id).in_(stale_attachment_ids)
+    )
+    result = await db.exec(stmt)
+    return int(result.rowcount or 0)
 
 
 async def count_attachments_by_deployment_ids(

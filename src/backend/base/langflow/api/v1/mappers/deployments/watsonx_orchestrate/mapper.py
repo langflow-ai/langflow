@@ -31,6 +31,7 @@ from lfx.services.adapters.payload import (
     PayloadSlotPolicy,
 )
 from lfx.services.adapters.schema import AdapterType
+from pydantic import BaseModel
 
 from langflow.api.v1.mappers.deployments.base import (
     BaseDeploymentMapper,
@@ -42,6 +43,7 @@ from langflow.api.v1.mappers.deployments.contracts import (
     CreateSnapshotBinding,
     CreateSnapshotBindings,
     FlowVersionPatch,
+    ProviderSnapshotBinding,
     UpdateSnapshotBinding,
     UpdateSnapshotBindings,
 )
@@ -92,6 +94,16 @@ if TYPE_CHECKING:
 
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+
+
+class _WatsonxSnapshotBindingsProviderData(BaseModel):
+    snapshot_ids: list[str]
+
+
+_WXO_SNAPSHOT_BINDINGS_PROVIDER_DATA_SLOT = PayloadSlot(
+    adapter_model=_WatsonxSnapshotBindingsProviderData,
+    policy=PayloadSlotPolicy.VALIDATE_ONLY,
+)
 
 
 @register_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
@@ -527,6 +539,28 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             for att in attachments
             if getattr(att, "provider_snapshot_id", None) and att.provider_snapshot_id.strip()
         ]
+
+    def extract_snapshot_bindings(self, provider_view) -> list[ProviderSnapshotBinding]:
+        bindings: list[ProviderSnapshotBinding] = []
+        for item in provider_view.deployments:
+            if not item.id:
+                continue
+            resource_key = str(item.id)
+            parsed_provider_data = self._parse_required_payload_slot(
+                slot=_WXO_SNAPSHOT_BINDINGS_PROVIDER_DATA_SLOT,
+                slot_name="deployment_list_item.provider_data",
+                raw=item.provider_data,
+                missing_payload_detail=(
+                    "Invalid deployment list item provider_data payload: missing required snapshot_ids."
+                ),
+                malformed_payload_detail="Invalid deployment list item provider_data payload:",
+            )
+            snapshot_ids = parsed_provider_data.snapshot_ids
+            bindings.extend(
+                ProviderSnapshotBinding(resource_key=resource_key, snapshot_id=str(snapshot_id))
+                for snapshot_id in snapshot_ids
+            )
+        return bindings
 
     async def resolve_rollback_update(
         self,

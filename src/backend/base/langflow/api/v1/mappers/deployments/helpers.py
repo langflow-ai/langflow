@@ -27,10 +27,8 @@ from lfx.services.interfaces import DeploymentServiceProtocol
 from sqlalchemy import and_, literal, union_all
 from sqlmodel import col, func, select
 
-from langflow.api.v1.mappers.deployments.sync import (
-    fetch_provider_resource_keys,
-    sync_provider_attachment_snapshots,
-)
+from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
+from langflow.api.v1.mappers.deployments.sync import fetch_provider_resource_keys
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
     DeploymentCreateResponse,
@@ -55,10 +53,11 @@ from langflow.services.database.models.deployment_provider_account.model import 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+    count_attachments_by_deployment_ids,
     create_deployment_attachment,
     delete_deployment_attachment,
+    delete_unbound_attachments,
     get_deployment_attachment,
-    list_attachments_by_deployment_ids,
     update_deployment_attachment_provider_snapshot_id,
 )
 from langflow.services.database.models.folder.model import Folder
@@ -731,10 +730,13 @@ async def list_deployments_synced(
     not advance for deleted rows (deletion shifts subsequent offsets down).
     """
     accepted: list[tuple[Deployment, int, list[str]]] = []
+    accepted_deployment_ids: list[UUID] = []
+    provider_bindings: list[ProviderSnapshotBinding] = []
     cursor = page_offset(page, size)
-    guard = 0
-    while len(accepted) < size and guard < (size * 4 + 20):
-        guard += 1
+    max_sync_rounds = 2  # Initial pass + one refill pass.
+    for _ in range(max_sync_rounds):
+        if len(accepted) >= size:
+            break
         batch = await list_deployments_page(
             db,
             user_id=user_id,
@@ -746,7 +748,7 @@ async def list_deployments_synced(
         if not batch:
             break
 
-        known = await fetch_provider_resource_keys(
+        known, provider_view = await fetch_provider_resource_keys(
             deployment_adapter=deployment_adapter,
             user_id=user_id,
             provider_id=provider_id,
@@ -754,6 +756,7 @@ async def list_deployments_synced(
             resource_keys=[row.resource_key for row, _, _ in batch],
             deployment_type=deployment_type,
         )
+        provider_bindings.extend(deployment_mapper.extract_snapshot_bindings(provider_view))
 
         for row, attached_count, matched_flow_versions in batch:
             if row.resource_key not in known:
@@ -769,35 +772,31 @@ async def list_deployments_synced(
                 await delete_deployment_by_id(db, user_id=user_id, deployment_id=row.id)
                 continue
             accepted.append((row, attached_count, matched_flow_versions))
+            accepted_deployment_ids.append(row.id)
             cursor += 1
 
-    # Phase 2: snapshot-level sync.
-    # Ask the mapper which attachment snapshot IDs are provider-verifiable,
-    # verify them in a single batched provider call, and delete stale rows.
-    # Best-effort — a provider outage should not block the list response.
+    # Phase 2: binding-level sync.
+    # Remove stale local attachments based on provider bindings, then recount.
+    # Best-effort - provider or DB failures should not block the list response.
     if accepted:
         try:
-            deployment_ids_for_sync = [row.id for row, _count, _matched in accepted]
-            all_attachments = await list_attachments_by_deployment_ids(
-                db, user_id=user_id, deployment_ids=deployment_ids_for_sync
-            )
-            corrected_counts = await sync_provider_attachment_snapshots(
-                deployment_adapter=deployment_adapter,
-                deployment_mapper=deployment_mapper,
+            async with db.begin_nested():
+                await delete_unbound_attachments(
+                    db,
+                    user_id=user_id,
+                    deployment_ids=accepted_deployment_ids,
+                    bindings=provider_bindings,
+                )
+
+            corrected_counts = await count_attachments_by_deployment_ids(
+                db,
                 user_id=user_id,
-                provider_id=provider_id,
-                db=db,
-                attachments=all_attachments,
-                deployment_ids=deployment_ids_for_sync,
+                deployment_ids=accepted_deployment_ids,
             )
-            if corrected_counts is not None:
-                accepted = [(row, corrected_counts[row.id], matched) for row, _attached_count, matched in accepted]
-            # else: no attachments carry a provider-verifiable snapshot ID,
-            # so there is nothing to check against the provider. The
-            # original attached_count from the DB is kept as-is.
+            accepted = [(row, corrected_counts.get(row.id, 0), matched) for row, _attached_count, matched in accepted]
         except Exception:  # noqa: BLE001
             logger.warning(
-                "Snapshot-level sync failed for list_deployments_synced; returning unverified attachment counts",
+                "Binding-level sync failed for list_deployments_synced; returning unverified attachment counts",
                 exc_info=True,
             )
 

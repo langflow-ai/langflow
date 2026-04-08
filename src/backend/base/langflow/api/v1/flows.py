@@ -4,7 +4,8 @@ import asyncio
 import io
 import threading
 import zipfile
-from typing import Annotated
+from collections.abc import Awaitable, Callable
+from typing import Annotated, TypeVar
 from uuid import UUID
 
 import orjson
@@ -82,23 +83,30 @@ def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
+T = TypeVar("T")
 
 
-async def _try_flow_deployment_sync(
+async def _retry_on_deployment_guard(
     *,
     db: DbSession,
-    flow_ids: list[UUID],
     user_id: UUID,
-    warning_message: str,
-    warning_args: tuple[object, ...] = (),
-) -> None:
-    """Sync deployment state without blocking guarded flow operations on failure."""
-    from lfx.log import logger
-
+    flow_ids: list[UUID] | None = None,
+    operation: Callable[[], Awaitable[T]],
+) -> T:
+    """Try an operation; if a deployment guard trigger fires, sync and retry once."""
     try:
+        async with db.begin_nested():
+            return await operation()
+    except Exception as exc:
+        guard_error = parse_deployment_guard_error(exc)
+        if not guard_error:
+            raise
+
+    if flow_ids:
         await sync_flow_deployment_state(db=db, flow_ids=flow_ids, user_id=user_id)
-    except Exception:  # noqa: BLE001
-        await logger.awarning(warning_message, *warning_args, exc_info=True)
+
+    async with db.begin_nested():
+        return await operation()
 
 
 @router.post("/", response_model=FlowRead, status_code=201)
@@ -240,24 +248,24 @@ async def update_flow(
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
         folder_id_will_change = "folder_id" in update_data and update_data.get("folder_id") != db_flow.folder_id
-        if folder_id_will_change:
-            await _try_flow_deployment_sync(
-                db=session,
-                flow_ids=[flow_id],
+
+        async def operation() -> FlowRead:
+            return await _patch_flow(
+                session=session,
+                db_flow=db_flow,
+                flow=flow,
                 user_id=current_user.id,
-                warning_message=(
-                    "Best-effort sync failed before moving flow %s; continuing with DB guard enforcement."
-                ),
-                warning_args=(flow_id,),
+                storage_service=storage_service,
             )
 
-        return await _patch_flow(
-            session=session,
-            db_flow=db_flow,
-            flow=flow,
-            user_id=current_user.id,
-            storage_service=storage_service,
-        )
+        if folder_id_will_change:
+            return await _retry_on_deployment_guard(
+                db=session,
+                user_id=current_user.id,
+                flow_ids=[flow_id],
+                operation=operation,
+            )
+        return await operation()
     except DeploymentGuardError:
         raise
     except HTTPException:
@@ -298,25 +306,25 @@ async def upsert_flow(
             folder_id_will_change = (
                 "folder_id" in update_data and update_data.get("folder_id") != existing_flow.folder_id
             )
-            if folder_id_will_change:
-                await _try_flow_deployment_sync(
-                    db=session,
-                    flow_ids=[existing_flow.id],
-                    user_id=current_user.id,
-                    warning_message=(
-                        "Best-effort sync failed before moving flow %s; continuing with DB guard enforcement."
-                    ),
-                    warning_args=(existing_flow.id,),
+
+            async def update_operation() -> FlowRead:
+                return await _update_existing_flow(
+                    session=session,
+                    existing_flow=existing_flow,
+                    flow=flow,
+                    current_user=current_user,
+                    storage_service=storage_service,
                 )
 
-            # UPDATE path
-            flow_read = await _update_existing_flow(
-                session=session,
-                existing_flow=existing_flow,
-                flow=flow,
-                current_user=current_user,
-                storage_service=storage_service,
-            )
+            if folder_id_will_change:
+                flow_read = await _retry_on_deployment_guard(
+                    db=session,
+                    user_id=current_user.id,
+                    flow_ids=[existing_flow.id],
+                    operation=update_operation,
+                )
+            else:
+                flow_read = await update_operation()
             status_code = 200
         else:
             # CREATE path - flow doesn't exist
@@ -359,14 +367,12 @@ async def delete_flow(
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
-    await _try_flow_deployment_sync(
+    await _retry_on_deployment_guard(
         db=session,
-        flow_ids=[flow.id],
         user_id=current_user.id,
-        warning_message="Best-effort sync failed before deleting flow %s; continuing with DB guard enforcement.",
-        warning_args=(flow.id,),
+        flow_ids=[flow.id],
+        operation=lambda: cascade_delete_flow(session, flow.id),
     )
-    await cascade_delete_flow(session, flow.id)
     return {"message": "Flow deleted successfully"}
 
 
@@ -474,23 +480,24 @@ async def delete_multiple_flows(
 ):
     """Delete multiple flows by their IDs."""
     try:
-        if flow_ids:
-            await _try_flow_deployment_sync(
-                db=db,
-                flow_ids=flow_ids,
-                user_id=user.id,
-                warning_message=(
-                    "Best-effort sync failed before deleting multiple flows; continuing with DB guard enforcement."
-                ),
-            )
-        flows_to_delete = (
-            await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
-        ).all()
-        for flow in flows_to_delete:
-            await cascade_delete_flow(db, flow.id)
 
-        await db.flush()
-        return {"deleted": len(flows_to_delete)}
+        async def _delete_operation() -> int:
+            if not flow_ids:
+                return 0
+            flows_to_delete = (
+                await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
+            ).all()
+            for flow in flows_to_delete:
+                await cascade_delete_flow(db, flow.id)
+            await db.flush()
+            return len(flows_to_delete)
+
+        deleted_count = await _retry_on_deployment_guard(
+            db=db,
+            user_id=user.id,
+            flow_ids=flow_ids,
+            operation=_delete_operation,
+        )
     except DeploymentGuardError:
         raise
     except Exception as exc:
@@ -498,6 +505,8 @@ async def delete_multiple_flows(
 
         _logging.getLogger(__name__).exception("Error deleting multiple flows")
         raise HTTPException(status_code=500, detail="An internal error occurred while deleting flows.") from exc
+    else:
+        return {"deleted": deleted_count}
 
 
 @router.post("/download/", status_code=200)

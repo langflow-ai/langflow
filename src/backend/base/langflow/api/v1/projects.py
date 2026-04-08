@@ -1,5 +1,6 @@
 import warnings
-from typing import Annotated, cast
+from collections.abc import Awaitable, Callable
+from typing import Annotated, TypeVar, cast
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Response, UploadFile, status
@@ -43,11 +44,38 @@ from langflow.services.deps import get_service, get_settings_service
 from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
+T = TypeVar("T")
 
 
 def _escape_like(value: str) -> str:
     """Escape LIKE wildcards and the escape character itself."""
     return value.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+
+
+async def _retry_on_deployment_guard(
+    *,
+    db: DbSession,
+    user_id: UUID,
+    flow_ids: list[UUID] | None = None,
+    project_id: UUID | None = None,
+    operation: Callable[[], Awaitable[T]],
+) -> T:
+    """Try an operation; if a deployment guard trigger fires, sync and retry once."""
+    try:
+        async with db.begin_nested():
+            return await operation()
+    except Exception as exc:
+        guard_error = parse_deployment_guard_error(exc)
+        if not guard_error:
+            raise
+
+    if flow_ids:
+        await sync_flow_deployment_state(db=db, flow_ids=flow_ids, user_id=user_id)
+    elif project_id:
+        await sync_project_deployments(db=db, project_id=project_id, user_id=user_id)
+
+    async with db.begin_nested():
+        return await operation()
 
 
 @router.post("/", response_model=FolderRead, status_code=201)
@@ -117,28 +145,29 @@ async def create_project(
             await register_mcp_servers_for_project(new_project, mcp_auth, current_user, session)
 
         flow_ids_for_sync = list(dict.fromkeys((project.flows_list or []) + (project.components_list or [])))
-        if flow_ids_for_sync:
-            try:
-                await sync_flow_deployment_state(db=session, flow_ids=flow_ids_for_sync, user_id=current_user.id)
-            except Exception:  # noqa: BLE001
-                await logger.awarning(
-                    "Best-effort sync failed before moving flows into new project %s; "
-                    "continuing with DB guard enforcement.",
-                    new_project.id,
-                    exc_info=True,
+
+        async def _move_flows_into_project() -> None:
+            if project.components_list:
+                update_statement_components = (
+                    update(Flow).where(Flow.id.in_(project.components_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
                 )
+                await session.exec(update_statement_components)
 
-        if project.components_list:
-            update_statement_components = (
-                update(Flow).where(Flow.id.in_(project.components_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
-            )
-            await session.exec(update_statement_components)
+            if project.flows_list:
+                update_statement_flows = (
+                    update(Flow).where(Flow.id.in_(project.flows_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
+                )
+                await session.exec(update_statement_flows)
 
-        if project.flows_list:
-            update_statement_flows = (
-                update(Flow).where(Flow.id.in_(project.flows_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
+        if flow_ids_for_sync:
+            await _retry_on_deployment_guard(
+                db=session,
+                user_id=current_user.id,
+                flow_ids=flow_ids_for_sync,
+                operation=_move_flows_into_project,
             )
-            await session.exec(update_statement_flows)
+        else:
+            await _move_flows_into_project()
 
         # Convert to FolderRead while session is still active to avoid detached instance errors
         folder_read = FolderRead.model_validate(new_project, from_attributes=True)
@@ -331,27 +360,30 @@ async def update_project(
         excluded_flows = list(set(flows_ids) - set(project.flows))
 
         my_collection_project = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
-        if my_collection_project:
-            if excluded_flows:
-                try:
-                    await sync_flow_deployment_state(db=session, flow_ids=excluded_flows, user_id=current_user.id)
-                except Exception:  # noqa: BLE001
-                    await logger.awarning(
-                        "Best-effort sync failed before moving flows out of project %s; "
-                        "continuing with DB guard enforcement.",
-                        existing_project.id,
-                        exc_info=True,
-                    )
-            update_statement_my_collection = (
-                update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_project.id)  # type: ignore[attr-defined]
-            )
-            await session.exec(update_statement_my_collection)
+        flow_ids_for_sync = list(dict.fromkeys(excluded_flows + concat_project_components))
 
-        if concat_project_components:
-            update_statement_components = (
-                update(Flow).where(Flow.id.in_(concat_project_components)).values(folder_id=existing_project.id)  # type: ignore[attr-defined]
+        async def _move_flows_for_project_update() -> None:
+            if my_collection_project and excluded_flows:
+                update_statement_my_collection = (
+                    update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_project.id)  # type: ignore[attr-defined]
+                )
+                await session.exec(update_statement_my_collection)
+
+            if concat_project_components:
+                update_statement_components = (
+                    update(Flow).where(Flow.id.in_(concat_project_components)).values(folder_id=existing_project.id)  # type: ignore[attr-defined]
+                )
+                await session.exec(update_statement_components)
+
+        if flow_ids_for_sync:
+            await _retry_on_deployment_guard(
+                db=session,
+                user_id=current_user.id,
+                flow_ids=flow_ids_for_sync,
+                operation=_move_flows_for_project_update,
             )
-            await session.exec(update_statement_components)
+        else:
+            await _move_flows_for_project_update()
 
         # Convert to FolderRead while session is still active to avoid detached instance errors
         folder_read = FolderRead.model_validate(existing_project, from_attributes=True)
@@ -378,27 +410,9 @@ async def delete_project(
     current_user: CurrentActiveUser,
 ):
     try:
-        await sync_project_deployments(db=session, project_id=project_id, user_id=current_user.id)
-    except Exception:  # noqa: BLE001
-        await logger.awarning(
-            "Best-effort sync failed before deleting project %s; continuing with DB guard enforcement.",
-            project_id,
-            exc_info=True,
-        )
-
-    try:
-        flows = (
-            await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id))
-        ).all()
-        if len(flows) > 0:
-            for flow in flows:
-                await cascade_delete_flow(session, flow.id)
-
         project = (
             await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
         ).first()
-    except DeploymentGuardError:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -416,12 +430,32 @@ async def delete_project(
 
     await cleanup_mcp_on_delete(project, project_id, current_user, session)
 
-    try:
-        await session.delete(project)
+    async def _delete_project_operation() -> None:
+        flows = (
+            await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id))
+        ).all()
+        for flow in flows:
+            await cascade_delete_flow(session, flow.id)
+
+        project_row = (
+            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+        ).first()
+        if not project_row:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        await session.delete(project_row)
         # Flush eagerly so DB triggers/constraints run before returning 204.
         # Without this, trigger errors may surface only during teardown commit,
         # bypassing our endpoint-level DeploymentGuardError translation path.
         await session.flush()
+
+    try:
+        await _retry_on_deployment_guard(
+            db=session,
+            user_id=current_user.id,
+            project_id=project_id,
+            operation=_delete_project_operation,
+        )
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except DeploymentGuardError:
         raise

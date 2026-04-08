@@ -82,6 +82,7 @@ from .contracts import (
     CreateFlowArtifactProviderData,
     CreateSnapshotBindings,
     FlowVersionPatch,
+    ProviderSnapshotBinding,
     UpdateSnapshotBindings,
 )
 from .helpers import build_project_scoped_flow_artifacts_from_flow_versions, page_offset
@@ -537,6 +538,22 @@ class BaseDeploymentMapper:
         must override this to extract those IDs.
         """
         _ = attachments
+        return []
+
+    def extract_snapshot_bindings(
+        self,
+        provider_view: DeploymentListResult,
+    ) -> list[ProviderSnapshotBinding]:
+        """Extract per-deployment snapshot bindings from an already-fetched provider list response.
+
+        Returns a flat list of (resource_key, snapshot_id) pairs representing
+        the authoritative binding state on the provider. Deployments absent
+        from the response (e.g. deleted) produce no entries.
+
+        Base returns empty — providers that don't track per-deployment
+        snapshot bindings get a no-op attachment sync.
+        """
+        _ = provider_view
         return []
 
     async def resolve_rollback_update(

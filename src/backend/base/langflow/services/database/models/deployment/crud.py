@@ -232,6 +232,7 @@ async def list_deployments_for_flows_with_provider_info(
     *,
     user_id: UUID,
     flow_ids: list[UUID],
+    provider_account_id: UUID | None = None,
 ) -> list[tuple[Deployment, str]]:
     """Return distinct deployments linked to any flow in *flow_ids* with provider key."""
     if not flow_ids:
@@ -268,6 +269,8 @@ async def list_deployments_for_flows_with_provider_info(
             Deployment.id,
         )
     )
+    if provider_account_id is not None:
+        stmt = stmt.where(Deployment.deployment_provider_account_id == provider_account_id)
     return list((await db.exec(stmt)).all())
 
 
@@ -276,6 +279,7 @@ async def list_project_deployments_with_provider_info(
     *,
     user_id: UUID,
     project_id: UUID,
+    provider_account_id: UUID | None = None,
 ) -> list[tuple[Deployment, str]]:
     """Return project deployments with provider key for provider-scoped sync."""
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
@@ -296,6 +300,8 @@ async def list_project_deployments_with_provider_info(
             Deployment.id,
         )
     )
+    if provider_account_id is not None:
+        stmt = stmt.where(Deployment.deployment_provider_account_id == provider_account_id)
     return list((await db.exec(stmt)).all())
 
 
