@@ -40,7 +40,6 @@ export default function ChatView({
   playgroundPage,
   sidebarOpen,
 }: chatViewProps): JSX.Element {
-
   const inputs = useFlowStore((state) => state.inputs);
   const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = useGetFlowId();
@@ -100,7 +99,6 @@ export default function ChatView({
           content_blocks: message.content_blocks || [],
           category: message.category || "",
           properties: message.properties || {},
-          
         };
       });
 

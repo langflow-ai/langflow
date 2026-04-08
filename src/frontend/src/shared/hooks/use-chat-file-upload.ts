@@ -29,7 +29,6 @@ export const useChatFileUpload = ({
   setFiles,
   playgroundPage = false,
 }: UseChatFileUploadParams) => {
-
   const { t } = useTranslation();
   const { mutate } = usePostUploadFile();
   const setErrorData = useAlertStore((state) => state.setErrorData);
