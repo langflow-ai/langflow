@@ -147,7 +147,7 @@ export default function StepType() {
           Model <span className="text-destructive">*</span>
         </span>
         <Select value={selectedLlm} onValueChange={setSelectedLlm}>
-          <SelectTrigger className="bg-muted">
+          <SelectTrigger className="bg-muted focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-foreground">
             <SelectValue
               placeholder={llmsLoading ? "Loading models..." : "Select a model"}
             />
