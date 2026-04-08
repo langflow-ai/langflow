@@ -11,7 +11,8 @@ type InfiniteQueryOptions = {
 const useInfiniteQueryMock = jest.fn();
 
 jest.mock("@tanstack/react-query", () => ({
-  useInfiniteQuery: (options: InfiniteQueryOptions) => useInfiniteQueryMock(options),
+  useInfiniteQuery: (options: InfiniteQueryOptions) =>
+    useInfiniteQueryMock(options),
 }));
 
 const apiGetMock = jest.fn();
@@ -41,7 +42,8 @@ describe("useGetMemorySessionMessages", () => {
 
     expect(useInfiniteQueryMock).toHaveBeenCalledTimes(1);
 
-    const opts = useInfiniteQueryMock.mock.calls[0]?.[0] as InfiniteQueryOptions;
+    const opts = useInfiniteQueryMock.mock
+      .calls[0]?.[0] as InfiniteQueryOptions;
     expect(opts.enabled).toBe(false);
     expect(apiGetMock).not.toHaveBeenCalled();
   });
@@ -51,7 +53,8 @@ describe("useGetMemorySessionMessages", () => {
       useGetMemorySessionMessages({ memoryId: "m1", sessionId: "" }),
     );
 
-    const opts = useInfiniteQueryMock.mock.calls[0]?.[0] as InfiniteQueryOptions;
+    const opts = useInfiniteQueryMock.mock
+      .calls[0]?.[0] as InfiniteQueryOptions;
     expect(opts.enabled).toBe(false);
     expect(apiGetMock).not.toHaveBeenCalled();
   });
@@ -64,7 +67,8 @@ describe("useGetMemorySessionMessages", () => {
       ),
     );
 
-    const opts = useInfiniteQueryMock.mock.calls[0]?.[0] as InfiniteQueryOptions;
+    const opts = useInfiniteQueryMock.mock
+      .calls[0]?.[0] as InfiniteQueryOptions;
 
     await expect(opts.queryFn({ pageParam: 1 })).rejects.toThrow(
       "memoryId is required",
@@ -79,7 +83,8 @@ describe("useGetMemorySessionMessages", () => {
       ),
     );
 
-    const opts = useInfiniteQueryMock.mock.calls[0]?.[0] as InfiniteQueryOptions;
+    const opts = useInfiniteQueryMock.mock
+      .calls[0]?.[0] as InfiniteQueryOptions;
 
     await expect(opts.queryFn({ pageParam: 1 })).rejects.toThrow(
       "sessionId is required",

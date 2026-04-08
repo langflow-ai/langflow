@@ -73,7 +73,6 @@ jest.mock("@tanstack/react-query", () => ({
   },
 }));
 
-
 import { useCreateMemory } from "../use-create-memory";
 import { useDeleteMemory } from "../use-delete-memory";
 import { useUpdateMemory } from "../use-update-memory";
@@ -81,9 +80,7 @@ import { mapMemoryApiToMemoryInfo } from "../mappers";
 import type { MemoryApiDTO } from "../types";
 
 describe("memories mutation hooks cache wiring", () => {
-  const buildMemoryDto = (
-    overrides?: Partial<MemoryApiDTO>,
-  ): MemoryApiDTO => ({
+  const buildMemoryDto = (overrides?: Partial<MemoryApiDTO>): MemoryApiDTO => ({
     id: "m-new",
     name: "New Memory",
     flow_id: "flow-1",
@@ -107,7 +104,11 @@ describe("memories mutation hooks cache wiring", () => {
   });
 
   it("useCreateMemory seeds details cache and inserts into memories list cache", async () => {
-    const dto = buildMemoryDto({ id: "m3", flow_id: "flow-1", auto_capture: false });
+    const dto = buildMemoryDto({
+      id: "m3",
+      flow_id: "flow-1",
+      auto_capture: false,
+    });
     apiPostMock.mockResolvedValueOnce({ data: dto });
 
     const { result } = renderHook(() => useCreateMemory());

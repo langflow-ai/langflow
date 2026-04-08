@@ -84,7 +84,8 @@ describe("MemoryDetailsHeader", () => {
       screen.getByRole("button", { name: "Toggle auto-capture" }),
     );
 
-    const firstCallArg = (props.handleToggleActive as jest.Mock).mock.calls[0]?.[0];
+    const firstCallArg = (props.handleToggleActive as jest.Mock).mock
+      .calls[0]?.[0];
     expect(firstCallArg).toEqual(expect.any(Function));
     expect(firstCallArg(true)).toBe(false);
   });
