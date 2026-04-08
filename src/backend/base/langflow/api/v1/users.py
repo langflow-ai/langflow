@@ -59,13 +59,20 @@ async def read_all_users(
     *,
     skip: int = 0,
     limit: int = 10,
+    search: str | None = None,
     session: DbSession,
 ) -> UsersResponse:
     """Retrieve a list of users from the database with pagination."""
-    query: SelectOfScalar = select(User).offset(skip).limit(limit)
-    users = (await session.exec(query)).fetchall()
-
+    query: SelectOfScalar = select(User)
     count_query = select(func.count()).select_from(User)
+
+    if search:
+        search_filter = User.username.ilike(f"%{search}%")  # type: ignore[attr-defined]
+        query = query.where(search_filter)
+        count_query = count_query.where(search_filter)
+
+    query = query.offset(skip).limit(limit)
+    users = (await session.exec(query)).fetchall()
     total_count = (await session.exec(count_query)).first()
 
     return UsersResponse(

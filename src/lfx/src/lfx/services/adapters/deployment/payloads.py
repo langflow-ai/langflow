@@ -50,6 +50,10 @@ T_VerifyCredentialsResultModel = TypeVar("T_VerifyCredentialsResultModel", bound
 # Flow artifact provider_data pair
 T_FlowProviderData = TypeVar("T_FlowProviderData", default=AdapterPayload)
 T_FlowProviderDataModel = TypeVar("T_FlowProviderDataModel", bound=BaseModel, default=BaseModel)
+T_SnapshotItemData = TypeVar("T_SnapshotItemData", default=AdapterPayload)
+T_SnapshotItemDataModel = TypeVar("T_SnapshotItemDataModel", bound=BaseModel, default=BaseModel)
+T_ConfigItemData = TypeVar("T_ConfigItemData", default=AdapterPayload)
+T_ConfigItemDataModel = TypeVar("T_ConfigItemDataModel", bound=BaseModel, default=BaseModel)
 
 # Outbound payload pairs
 T_DeploymentCreateResult = TypeVar("T_DeploymentCreateResult", default=AdapterPayload)
@@ -64,11 +68,16 @@ T_DeploymentUpdateResultModel = TypeVar("T_DeploymentUpdateResultModel", bound=B
 T_DeploymentListResult = TypeVar("T_DeploymentListResult", default=AdapterPayload)
 T_DeploymentListResultModel = TypeVar("T_DeploymentListResultModel", bound=BaseModel, default=BaseModel)
 
+T_DeploymentLlmListResult = TypeVar("T_DeploymentLlmListResult", default=AdapterPayload)
+T_DeploymentLlmListResultModel = TypeVar("T_DeploymentLlmListResultModel", bound=BaseModel, default=BaseModel)
+
 T_ConfigListResult = TypeVar("T_ConfigListResult", default=AdapterPayload)
 T_ConfigListResultModel = TypeVar("T_ConfigListResultModel", bound=BaseModel, default=BaseModel)
 
 T_SnapshotListResult = TypeVar("T_SnapshotListResult", default=AdapterPayload)
 T_SnapshotListResultModel = TypeVar("T_SnapshotListResultModel", bound=BaseModel, default=BaseModel)
+
+T_SnapshotUpdateResult = TypeVar("T_SnapshotUpdateResult", default=AdapterPayload)
 
 T_ExecutionResult = TypeVar("T_ExecutionResult", default=AdapterPayload)
 T_ExecutionResultModel = TypeVar("T_ExecutionResultModel", bound=BaseModel, default=BaseModel)
@@ -122,8 +131,11 @@ class DeploymentPayloadFields(ProviderPayloadSchemas):
     deployment_operation_result: PayloadSlot[T_DeploymentOperationResultModel] | None = None
     deployment_update_result: PayloadSlot[T_DeploymentUpdateResultModel] | None = None
     deployment_list_result: PayloadSlot[T_DeploymentListResultModel] | None = None
+    deployment_llm_list_result: PayloadSlot[T_DeploymentLlmListResultModel] | None = None
     config_list_result: PayloadSlot[T_ConfigListResultModel] | None = None
+    config_item_data: PayloadSlot[T_ConfigItemDataModel] | None = None
     snapshot_list_result: PayloadSlot[T_SnapshotListResultModel] | None = None
+    snapshot_item_data: PayloadSlot[T_SnapshotItemDataModel] | None = None
     execution_create_result: PayloadSlot[T_ExecutionCreateResultModel] | None = None
     execution_status_result: PayloadSlot[T_ExecutionStatusResultModel] | None = None
     deployment_item_data: PayloadSlot[T_DeploymentItemDataModel] | None = None

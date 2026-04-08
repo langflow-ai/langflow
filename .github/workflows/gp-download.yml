@@ -1,19 +1,40 @@
 name: GP Download Translations
 
 on:
+  schedule:
+    - cron: "0 23 * * *" # 11 PM UTC — 1h before nightly build at midnight
   workflow_dispatch:
 
 jobs:
-  frontend:
+  download:
     runs-on: ubuntu-latest
-    name: Download frontend translations from GP
+    name: Download translations from Globalization Pipeline
     environment: GP-test
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
-      - name: Checkout repository
+      - name: Resolve latest release branch
+        id: resolve-branch
+        run: |
+          BRANCH=$(git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
+            | awk '{print $2}' \
+            | sed 's|refs/heads/||' \
+            | grep -E '^release-[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -V \
+            | tail -n 1)
+          if [ -z "$BRANCH" ]; then
+            echo "No release-* branch found in ${{ github.repository }}"
+            exit 1
+          fi
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "Using release branch: $BRANCH"
+
+      - name: Checkout release branch
         uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve-branch.outputs.branch }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -23,7 +44,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r scripts/gp/requirements.txt
 
-      - name: Download frontend translations from GP
+      - name: Download translations from GP
         working-directory: scripts/gp
         env:
           GP_ADMIN_USER_ID: ${{ secrets.GP_ADMIN_USER_ID }}
@@ -32,48 +53,55 @@ jobs:
           GP_BUNDLE: ${{ vars.GP_BUNDLE }}
         run: python download_translations.py --output ../../src/frontend/src/locales/
 
-      - name: Commit and push translated files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/frontend/src/locales/*.json
-          git diff --staged --quiet || git commit -m "chore: update translations from Globalization Pipeline [skip ci]"
-          git push
+      - name: Close stale translation PRs
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+            for (const pull of pulls) {
+              if (pull.title === "chore: update translations from Globalization Pipeline") {
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pull.number,
+                  state: 'closed'
+                });
+              }
+            }
 
-  backend:
-    runs-on: ubuntu-latest
-    name: Download backend translations from GP
-    environment: GP-test
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Create Pull Request
+        id: create-pr
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          branch-token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ steps.resolve-branch.outputs.branch }}
+          commit-message: "chore: update translations from Globalization Pipeline [skip ci]"
+          title: "chore: update translations from Globalization Pipeline"
+          body: |
+            Automated PR to update locale files from IBM Globalization Pipeline.
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+            This PR was automatically created by the `gp-download` workflow.
+            If no files changed, this PR will be empty and can be closed.
+          branch: translations/update-gp
+          branch-suffix: timestamp
+          delete-branch: true
+          maintainer-can-modify: true
+          add-paths: src/frontend/src/locales/*.json
 
-      - name: Install dependencies
-        run: pip install -r scripts/gp/requirements.txt
-
-      - name: Download backend translations from GP
-        working-directory: scripts/gp
+      - name: Enable auto-merge
+        if: steps.create-pr.outputs.pull-request-number != ''
         env:
-          GP_ADMIN_USER_ID: ${{ secrets.GP_ADMIN_USER_ID }}
-          GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
-          GP_INSTANCE: ${{ vars.GP_INSTANCE }}
-          GP_BACKEND_BUNDLE: ${{ vars.GP_BACKEND_BUNDLE }}
-        run: python download_backend_translations.py --output ../../src/backend/base/langflow/locales/
-
-      - name: Commit and push translated files
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/backend/base/langflow/locales/*.json
-          git diff --staged --quiet || git commit -m "chore: update backend translations from Globalization Pipeline [skip ci]"
-          git push
+          gh pr merge ${{ steps.create-pr.outputs.pull-request-number }} --auto --squash \
+            --repo ${{ github.repository }}
+
+      - name: Report GP download failure
+        if: failure()
+        run: echo "::warning::GP translation download failed — translations may be out of date. Check the 'Download translations from GP' step above for details."

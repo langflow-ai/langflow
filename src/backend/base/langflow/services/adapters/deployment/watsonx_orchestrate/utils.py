@@ -18,20 +18,15 @@ from lfx.services.adapters.deployment.exceptions import (
 from lfx.services.adapters.deployment.schema import _normalize_and_validate_id
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
-    DEFAULT_WXO_AGENT_LLM,
     WXO_SANITIZE_RE,
     WXO_TRANSLATE,
     ErrorPrefix,
-)
-from langflow.services.adapters.deployment.watsonx_orchestrate.resource_name_prefix import (
-    validate_resource_name_prefix_for_provider,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from lfx.services.adapters.deployment.schema import (
-        BaseDeploymentData,
         ConfigListParams,
         SnapshotListParams,
     )
@@ -55,17 +50,6 @@ def validate_wxo_name(name: str) -> str:
     return normalized_name
 
 
-def resolve_resource_name_prefix(
-    *,
-    caller_prefix: str,
-) -> str:
-    """Validate caller prefix and return WxO create prefix with enforced ``lf_`` namespace."""
-    try:
-        return validate_resource_name_prefix_for_provider(caller_prefix)
-    except ValueError as exc:
-        raise InvalidContentError(message=str(exc)) from exc
-
-
 def require_tool_id(tool_response: dict[str, Any]) -> str:
     tool_id = tool_response.get("id")
     if not tool_id:
@@ -85,17 +69,14 @@ def normalize_and_dedupe_ids(values: list[Any] | None, *, field_name: str) -> li
     return dedupe_list([_normalize_and_validate_id(str(value), field_name=field_name) for value in values])
 
 
-def _require_single_deployment_id(
+def require_single_deployment_id(
     params: ConfigListParams | SnapshotListParams | None,
     *,
     resource_label: str,
 ) -> str:
     deployment_ids = params.deployment_ids if params else None
     if not deployment_ids:
-        msg = (
-            f"watsonx Orchestrate {resource_label} listing requires exactly one "
-            "deployment_id. Global listing is not supported by this adapter."
-        )
+        msg = f"watsonx Orchestrate {resource_label} listing requires exactly one deployment_id."
         raise OperationNotSupportedError(message=msg)
     if len(deployment_ids) != 1:
         msg = (
@@ -178,23 +159,6 @@ def raise_as_deployment_error(
     raise DeploymentError(message=msg, error_code="deployment_error") from exc
 
 
-def build_agent_payload(
-    *,
-    data: BaseDeploymentData,
-    tool_ids: Sequence[str],
-) -> dict[str, Any]:
-    if data.provider_spec is None:
-        msg = "Deployment data must include provider_spec with a non-empty name and display_name."
-        raise InvalidContentError(message=msg)
-    return build_agent_payload_from_values(
-        agent_name=str(data.provider_spec["name"]),
-        agent_display_name=str(data.provider_spec["display_name"]),
-        deployment_name=str(data.name),
-        description=str(data.description or ""),
-        tool_ids=tool_ids,
-    )
-
-
 def build_agent_payload_from_values(
     *,
     agent_name: str,
@@ -202,6 +166,7 @@ def build_agent_payload_from_values(
     deployment_name: str,
     description: str,
     tool_ids: Sequence[str],
+    llm: str,
 ) -> dict[str, Any]:
     return {
         "name": agent_name,
@@ -209,9 +174,7 @@ def build_agent_payload_from_values(
         "description": str(description).strip() or f"Langflow deployment {deployment_name}",
         "tools": list(tool_ids),
         "style": "default",
-        # TODO: make configurable; the llm field is required by the wxO api
-        # but retrieving available llms requires an extra api request.
-        "llm": DEFAULT_WXO_AGENT_LLM,
+        "llm": str(llm).strip(),
     }
 
 
