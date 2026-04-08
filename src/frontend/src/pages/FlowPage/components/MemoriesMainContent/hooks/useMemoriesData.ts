@@ -127,13 +127,12 @@ export function useMemoriesData({
       }),
   });
 
-  const { autoCaptureDraft, handleToggleActive } = useAutoCaptureDebouncedToggle(
-    {
+  const { autoCaptureDraft, handleToggleActive } =
+    useAutoCaptureDebouncedToggle({
       memory,
       updateMemoryMutation,
       debounceMs: 300,
-    },
-  );
+    });
 
   const {
     docsData,

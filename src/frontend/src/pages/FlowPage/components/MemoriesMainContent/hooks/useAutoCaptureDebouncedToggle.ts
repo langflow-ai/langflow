@@ -20,10 +20,14 @@ export const useAutoCaptureDebouncedToggle = ({
   updateMemoryMutation,
   debounceMs = 300,
 }: UseAutoCaptureDebouncedToggleArgs) => {
-  const autoCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const committedIsActiveRef = useRef<boolean | null>(null);
 
-  const [autoCaptureDraft, setAutoCaptureDraft] = useState<boolean | null>(null);
+  const [autoCaptureDraft, setAutoCaptureDraft] = useState<boolean | null>(
+    null,
+  );
 
   useEffect(() => {
     committedIsActiveRef.current = memory?.is_active ?? null;
