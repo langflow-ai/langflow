@@ -13,7 +13,7 @@ import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/common/sanitizedHTMLWrapper";
-import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
+import { useTranslation } from "react-i18next";
 import useAlertStore from "../../../../../stores/alertStore";
 import type { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
@@ -30,6 +30,7 @@ export default function ChatMessage({
   closeChat,
   playgroundPage,
 }: chatMessagePropsType): JSX.Element {
+  const { t } = useTranslation();
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const [streamUrl, setStreamUrl] = useState(chat.stream_url);
@@ -403,7 +404,7 @@ export default function ChatMessage({
                         )}
                         data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                       >
-                        {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
+                        {isEmpty ? t("input.noInputMessage") : decodedMessage}
                         {editedFlag}
                       </div>
                     </>

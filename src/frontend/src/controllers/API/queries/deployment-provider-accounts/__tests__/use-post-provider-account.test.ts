@@ -12,18 +12,22 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
   getURL: jest.fn(() => "/api/v1/deployments/providers"),
 }));
 
+const mockMutate = jest.fn(
+  // biome-ignore lint/suspicious/noExplicitAny: test mock
+  (_key: any, fn: any, options: any) => ({
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    mutate: async (payload: any) => {
+      const result = await fn(payload);
+      options?.onSuccess?.(result);
+      options?.onSettled?.(result);
+      return result;
+    },
+  }),
+);
+
 jest.mock("@/controllers/API/services/request-processor", () => ({
   UseRequestProcessor: jest.fn(() => ({
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    mutate: jest.fn((_key: any, fn: any, options: any) => ({
-      // biome-ignore lint/suspicious/noExplicitAny: test mock
-      mutate: async (payload: any) => {
-        const result = await fn(payload);
-        options?.onSuccess?.(result);
-        options?.onSettled?.(result);
-        return result;
-      },
-    })),
+    mutate: mockMutate,
     queryClient: mockQueryClient,
   })),
 }));
@@ -74,6 +78,13 @@ describe("usePostProviderAccount", () => {
     expect(mockQueryClient.refetchQueries).toHaveBeenCalledWith({
       queryKey: ["useGetProviderAccounts"],
     });
+  });
+
+  it("disables automatic retries", () => {
+    usePostProviderAccount();
+
+    const options = mockMutate.mock.calls[0][2];
+    expect(options.retry).toBe(0);
   });
 
   it("returns created provider account", async () => {

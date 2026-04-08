@@ -382,12 +382,34 @@ class Component(CustomComponent):
             return memo[id(self)]
         # Shallow-copy config/inputs: they may contain non-picklable services
         # (e.g. _tracing_service holds ServiceManager with threading.RLock).
-        kwargs = dict(self.__config)
-        kwargs["inputs"] = dict(self.__inputs)
+        # use the mangled names to access the private attributes
+        config = getattr(self, "_Component__config", {})
+        inputs_raw = getattr(self, "_Component__inputs", {})
+
+        kwargs = dict(config)
+        kwargs["inputs"] = dict(inputs_raw)
         new_component = type(self)(**kwargs)
         new_component._code = self._code
         new_component._outputs_map = self._outputs_map
-        new_component._inputs = deepcopy(self._inputs, memo)
+
+        # Safe deepcopy of inputs
+        new_inputs = {}
+        for k, v in self._inputs.items():
+            try:
+                # Attempt to deepcopy the entire input object
+                new_inputs[k] = deepcopy(v, memo)
+            except Exception:  # noqa: BLE001
+                # If deepcopy fails (e.g. due to RLock), handle the value carefully
+                # Pydantic's model_copy(deep=False) creates a shallow copy
+                input_copy = v.model_copy()
+                try:
+                    input_copy.value = deepcopy(v.value, memo)
+                except Exception:  # noqa: BLE001
+                    # Keep the original value (shallow copy) if it can't be deepcopied
+                    input_copy.value = v.value
+                new_inputs[k] = input_copy
+
+        new_component._inputs = new_inputs
         new_component._edges = self._edges
         new_component._components = self._components
         new_component._parameters = dict(self._parameters)

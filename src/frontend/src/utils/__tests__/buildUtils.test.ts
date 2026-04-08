@@ -71,8 +71,8 @@ jest.mock("@/utils/utils", () => ({
   tryParseJson: jest.fn((s: string) => null),
 }));
 
-jest.mock("@/constants/alerts_constants", () => ({
-  MISSED_ERROR_ALERT: "MISSED_ERROR_ALERT",
+jest.mock("../../i18n", () => ({
+  default: { t: jest.fn((key: string) => key) },
 }));
 
 jest.mock("@/constants/constants", () => ({
