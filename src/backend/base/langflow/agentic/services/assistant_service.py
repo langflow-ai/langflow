@@ -6,9 +6,9 @@ import asyncio
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
-from lfx.components.tools.flow_builder_tools import drain_flow_events, init_working_flow, reset_working_flow
 from lfx.graph.flow_builder.flow import flow_to_spec_summary
 from lfx.log.logger import logger
+from lfx.mcp.flow_builder_tools import drain_flow_events, init_working_flow, reset_working_flow
 
 from langflow.agentic.helpers.code_extraction import extract_component_code, extract_flow_json
 from langflow.agentic.helpers.code_security import scan_code_security

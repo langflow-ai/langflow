@@ -440,23 +440,16 @@ class ConnectComponents(Component):
 
 class ConfigureComponent(Component):
     display_name = "Configure Component"
-    description = "Set parameter values on a component (e.g. model_name, temperature)."
+    description = "Set one or more parameters on a component. Pass a JSON dict for multiple params at once."
     icon = "Settings"
     name = "ConfigureComponent"
 
     inputs = [
         MessageTextInput(name="component_id", display_name="Component ID", required=True, tool_mode=True),
         MessageTextInput(
-            name="param_name",
-            display_name="Parameter Name",
-            info="The parameter to set (e.g. 'model_name', 'temperature').",
-            required=True,
-            tool_mode=True,
-        ),
-        MessageTextInput(
-            name="param_value",
-            display_name="Value",
-            info="The value to set.",
+            name="params",
+            display_name="Parameters",
+            info='JSON dict of params to set, e.g. \'{"model_name": "gpt-4o", "temperature": 0.7}\'',
             required=True,
             tool_mode=True,
         ),
@@ -467,11 +460,23 @@ class ConfigureComponent(Component):
     ]
 
     def configure_component(self) -> Data:
+        import json
+
         flow = _ensure_working_flow()
+
+        raw = self.params.strip() if self.params else ""
         try:
-            fb_configure(flow, self.component_id, {self.param_name: self.param_value})
-            _emit("configure", component_id=self.component_id, param_name=self.param_name, param_value=self.param_value)
-            return Data(data={"text": f"Set {self.param_name}={self.param_value} on {self.component_id}"})
+            params = json.loads(raw)
+            if not isinstance(params, dict):
+                return Data(data={"error": f"params must be a JSON object, got {type(params).__name__}"})
+        except json.JSONDecodeError:
+            return Data(data={"error": f'Invalid JSON in params: {raw!r}. Use format: {{"key": "value"}}'})
+
+        try:
+            fb_configure(flow, self.component_id, params)
+            _emit("configure", component_id=self.component_id, params=params)
+            summary = ", ".join(f"{k}={v!r}" for k, v in params.items())
+            return Data(data={"text": f"Set {summary} on {self.component_id}", "configured": list(params.keys())})
         except (ValueError, KeyError) as e:
             logger.warning("configure_component failed: %s", e)
             return Data(data={"error": str(e)})
@@ -511,6 +516,21 @@ class BuildFlowFromSpec(Component):
     ]
 
     def build_flow(self) -> Data:
+        existing = get_working_flow()
+        if existing and existing.get("data", {}).get("nodes"):
+            node_count = len(existing["data"]["nodes"])
+            logger.warning("build_flow called on non-empty canvas (%d nodes) -- this replaces everything", node_count)
+            return Data(
+                data={
+                    "error": (
+                        f"The canvas already has {node_count} component(s). "
+                        "build_flow replaces the entire canvas. "
+                        "Use add_component, connect_components, or configure_component to modify the existing flow. "
+                        "Use propose_field_edit to change field values."
+                    ),
+                }
+            )
+
         result = build_flow_from_spec(self.spec)
         if "error" in result:
             error_msg = f"Flow build failed: {result['error']}"

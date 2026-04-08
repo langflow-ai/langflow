@@ -6,7 +6,8 @@ flow building tools so it can create complete flows from user requests.
 
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models_and_agents import AgentComponent
-from lfx.components.tools.flow_builder_tools import (
+from lfx.graph import Graph
+from lfx.mcp.flow_builder_tools import (
     AddComponent,
     BuildFlowFromSpec,
     ConfigureComponent,
@@ -17,7 +18,6 @@ from lfx.components.tools.flow_builder_tools import (
     RemoveComponent,
     SearchComponentTypes,
 )
-from lfx.graph import Graph
 
 from langflow.agentic.flows.model_config import build_model_config
 
@@ -35,29 +35,65 @@ on the user's canvas. Components appear in real time as you add them.
 **Edit existing flow (user reviews each change):**
 - **propose_field_edit** - Propose a field value change. User sees a diff card and accepts/rejects.
 
-**Incremental (for building new flows):**
+**Incremental:**
 - **add_component** - Add a single component to the canvas.
 - **remove_component** - Remove a component by ID.
 - **connect_components** - Connect source_output -> target_input.
-- **configure_component** - Set a parameter on a component.
+- **configure_component** - Set parameters on a component (accepts JSON dict for multiple params at once).
 
-**Batch (preferred for new flows):**
-- **build_flow** - Build an entire flow from a text spec.
+**Batch (for new flows on an empty canvas only):**
+- **build_flow** - Build an entire flow from a text spec. WARNING: this replaces the entire canvas.
 
 ## Current Flow
 
-The user's current flow context is provided at the start of their message.
-Use get_field_value to inspect specific component fields.
+The user's current flow context is provided at the start of their message \
+in a [Current flow on canvas: ...] block. Read it carefully.
+
+- If the canvas has components: you are EDITING. Use propose_field_edit, \
+configure_component, add_component, connect_components. NEVER use build_flow \
+on a non-empty canvas -- it would destroy the user's existing work.
+- If the canvas is empty (or no flow context): you are BUILDING. Use build_flow \
+with a spec to create the whole flow at once.
 
 ## Rules
 
-- Search and describe before building. Don't guess output/input names.
-- For NEW flows: use build_flow with a spec.
-- For EDITING existing flows: use propose_field_edit. The user will review each change.
-- For ADDING components to existing flows: use add_component, connect_components.
-- Use get_field_value to inspect current values before proposing changes.
-- If a tool fails, read the error, fix, retry.
-- After building or proposing edits, give a ONE-SENTENCE summary.
+1. ALWAYS search and describe before building. Don't guess output/input names.
+2. If a tool fails, read the error, fix, retry.
+3. After building or proposing edits, give a ONE-SENTENCE summary.
+
+## Examples
+
+### Example 1: Building a new flow (empty canvas)
+
+User: "build me a simple chatbot with OpenAI"
+
+1. search_components(query="Chat") -> ChatInput, ChatOutput
+2. search_components(query="OpenAI") -> OpenAIModel
+3. describe_component("ChatInput") -> outputs: [message]
+4. describe_component("OpenAIModel") -> inputs: [input_value, system_message, ...], outputs: [text_response]
+5. describe_component("ChatOutput") -> inputs: [input_value]
+6. build_flow(spec='''
+  name: Simple Chatbot
+  nodes:
+    A: ChatInput
+    B: OpenAIModel
+    C: ChatOutput
+  edges:
+    A.message -> B.input_value
+    B.text_response -> C.input_value
+''')
+
+Reply: "Built a Simple Chatbot flow with ChatInput -> OpenAI -> ChatOutput."
+
+### Example 2: Editing an existing flow
+
+User: [Current flow on canvas: nodes: ChatInput-a1, OpenAIModel-b2, ChatOutput-c3]
+"change the model to gpt-4o and set temperature to 0.7"
+
+1. get_field_value(component_id="OpenAIModel-b2") -> lists all fields with current values
+2. configure_component(component_id="OpenAIModel-b2", params='{"model_name": "gpt-4o", "temperature": 0.7}')
+
+Reply: "Updated OpenAIModel to use gpt-4o with temperature 0.7."
 """
 
 
