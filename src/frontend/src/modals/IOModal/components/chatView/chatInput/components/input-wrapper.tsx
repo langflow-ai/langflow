@@ -1,11 +1,11 @@
 import type React from "react";
+import { useTranslation } from "react-i18next";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import {
   ENABLE_IMAGE_ON_PLAYGROUND,
   ENABLE_VOICE_ASSISTANT,
 } from "@/customization/feature-flags";
 import type { FilePreviewType } from "@/types/components";
-import { CHAT_INPUT_PLACEHOLDER } from "../../../../../../constants/constants";
 import FilePreview from "../../fileComponent/components/file-preview";
 import ButtonSendWrapper from "./button-send-wrapper";
 import TextAreaWrapper from "./text-area-wrapper";
@@ -47,6 +47,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   currentFlowId,
   playgroundPage,
 }) => {
+  const { t } = useTranslation();
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
 
   // Check if voice mode is available
@@ -88,7 +89,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
           send={send}
           noInput={noInput}
           chatValue={chatValue}
-          CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
+          CHAT_INPUT_PLACEHOLDER={t("chat.inputPlaceholder")}
           inputRef={inputRef}
           files={files}
           isDragging={isDragging}
