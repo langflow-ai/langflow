@@ -646,6 +646,14 @@ class BaseFileComponent(Component, ABC):
                     resolved_path = Path(self.resolve_path(path_str))
 
                 if not resolved_path.exists():
+                    if delete_after_processing:
+                        # File may have already been processed and deleted by a concurrent output call.
+                        # Silently skip to avoid a false error in this race condition.
+                        self.log(
+                            f"Server file '{path}' not found - skipping as it may have been "
+                            "already processed and deleted by a concurrent call."
+                        )
+                        return
                     msg = f"File not found: '{path}' (resolved to: '{resolved_path}'). Please upload the file again."
                     self.log(msg)
                     if not self.silent_errors:

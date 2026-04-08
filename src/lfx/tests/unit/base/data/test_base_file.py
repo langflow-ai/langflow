@@ -249,3 +249,54 @@ class TestLoadFilesMessage:
         assert "Field extraction" in result_text
         # JSON content should be present in some form
         assert "parsed" in result_text or "Dict content" in result_text
+
+
+class TestDeleteAfterProcessingRaceCondition:
+    """Tests for race condition when delete_server_file_after_processing=True."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.component = TestFileComponent()
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.temp_path = Path(self.temp_dir.name)
+
+    def teardown_method(self):
+        """Clean up test fixtures."""
+        self.temp_dir.cleanup()
+
+    def test_validate_and_resolve_paths_skips_missing_file_when_delete_after_processing(self):
+        """When delete_after_processing=True, a missing server file should be silently skipped.
+
+        This covers the race condition where multiple concurrent output calls both invoke
+        load_files_base(). The first call processes and deletes the server file; the second
+        call must not raise ValueError when it finds the file already gone.
+        """
+        # Create a real file, then delete it to simulate the race condition
+        server_file = self.temp_path / "server_file.txt"
+        server_file.write_text("content", encoding="utf-8")
+
+        # Set up the component with the server file path via file_path Data input
+        file_data = Data(data={"file_path": str(server_file)})
+        self.component.file_path = file_data
+        self.component.delete_server_file_after_processing = True
+        self.component.silent_errors = False  # Ensure errors would normally propagate
+
+        # First call: processes and deletes the file
+        self.component.load_files_base()
+        assert not server_file.exists(), "File should have been deleted after first call"
+
+        # Second call: file is already gone; should NOT raise ValueError
+        result = self.component.load_files_base()
+        assert result == [], "Second call on deleted server file should return empty list"
+
+    def test_validate_raises_for_missing_file_when_not_delete_after_processing(self):
+        """When delete_after_processing=False, a missing file should still raise ValueError."""
+        missing_path = self.temp_path / "nonexistent.txt"
+
+        self.component.path = [str(missing_path)]
+        self.component.delete_server_file_after_processing = False
+        self.component.silent_errors = False
+
+        import pytest
+        with pytest.raises(ValueError, match="File not found"):
+            self.component.load_files_base()
