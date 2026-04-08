@@ -13,6 +13,8 @@ interface GetDeploymentLlmsParams {
   providerId: string;
 }
 
+const STALE_TIME = 1000 * 60 * 1; // 1 minute
+
 export const useGetDeploymentLlms: useQueryFunctionType<
   GetDeploymentLlmsParams,
   DeploymentLlmListResponse
@@ -35,6 +37,6 @@ export const useGetDeploymentLlms: useQueryFunctionType<
   return query(["useGetDeploymentLlms", { providerId }], getDeploymentLlmsFn, {
     ...options,
     retry: false,
-    staleTime: 1000 * 60 * 5,
+    staleTime: STALE_TIME,
   });
 };
