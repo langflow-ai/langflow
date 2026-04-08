@@ -139,7 +139,7 @@ def raise_as_deployment_error(
     *,
     error_prefix: ErrorPrefix,
     log_msg: str,
-    resource: str | None,
+    resource: str | None = None,
     resource_name: str | None = None,
     pass_through: tuple[type[DeploymentServiceError], ...] = (),
 ) -> NoReturn:
