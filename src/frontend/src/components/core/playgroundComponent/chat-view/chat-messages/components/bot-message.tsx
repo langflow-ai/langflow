@@ -3,7 +3,7 @@ import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import IconComponent, {
   ForwardedIconComponent,
 } from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
+import MessageMetadata from "@/components/common/messageMetadataComponent";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
@@ -11,7 +11,6 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { chatMessagePropsType } from "@/types/components";
-import { formatTokenCount } from "@/utils/format-token-count";
 import { cn } from "@/utils/utils";
 import { useMessageDuration } from "../hooks/use-message-duration";
 import { useStreamingMessage } from "../hooks/use-streaming-message";
@@ -127,42 +126,6 @@ export const BotMessage = memo(
         ? persistedDuration
         : liveDisplayTime;
 
-    const formattedTokenCount = formatTokenCount(
-      chat.properties?.usage?.total_tokens,
-    );
-
-    const tokenTooltipContent =
-      displayTime > 0 ? (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center text-xxs text-secondary-foreground">
-            <div>Last run:</div>
-            <div className="ml-1">{chat.timestamp}</div>
-          </div>
-          <div className="flex items-center text-xxs text-secondary-foreground">
-            <div>Duration:</div>
-            <div className="ml-auto">{formatSeconds(displayTime)}</div>
-          </div>
-          {chat.properties?.usage?.input_tokens != null && (
-            <div className="flex items-center text-xxs text-secondary-foreground">
-              <div>Input:</div>
-              <div className="ml-auto flex items-center gap-1 font-mono text-xs">
-                <ForwardedIconComponent name="Coins" className="h-3 w-3" />
-                {formatTokenCount(chat.properties.usage.input_tokens)}
-              </div>
-            </div>
-          )}
-          {chat.properties?.usage?.output_tokens != null && (
-            <div className="flex items-center text-xxs text-secondary-foreground">
-              <div>Output:</div>
-              <div className="ml-auto flex items-center gap-1 font-mono text-xs">
-                <ForwardedIconComponent name="Coins" className="h-3 w-3" />
-                {formatTokenCount(chat.properties.usage.output_tokens)}
-              </div>
-            </div>
-          )}
-        </div>
-      ) : null;
-
     return (
       <>
         <div className="w-full word-break-break-word mt-2">
@@ -204,28 +167,11 @@ export const BotMessage = memo(
                         <span className="text-muted-foreground">
                           Finished in
                         </span>
-                        <ShadTooltip
-                          content={tokenTooltipContent}
-                          styleClasses="border rounded-xl p-2 bg-zinc-700"
-                          side="bottom"
-                        >
-                          <span className="flex cursor-help items-center gap-1 font-mono text-xs text-accent-emerald-foreground">
-                            {formattedTokenCount && (
-                              <span
-                                className="flex items-center gap-1"
-                                data-testid="chat-message-token-usage"
-                              >
-                                <ForwardedIconComponent
-                                  name="Coins"
-                                  className="h-3 w-3 text-muted-foreground"
-                                />
-                                <span>{formattedTokenCount}</span>
-                                <span className="text-muted-foreground">|</span>
-                              </span>
-                            )}
-                            <span>{formatSeconds(displayTime)}</span>
-                          </span>
-                        </ShadTooltip>
+                        <MessageMetadata
+                          duration={displayTime}
+                          usage={chat.properties?.usage}
+                          timestamp={chat.timestamp}
+                        />
                       </>
                     ) : null}
                   </span>

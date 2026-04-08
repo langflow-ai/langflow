@@ -10,7 +10,6 @@ from uuid import UUID
 import pytest
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import (
-    BaseDeploymentData,
     ConfigListParams,
     ConfigListResult,
     DeploymentCreateResult,
@@ -33,7 +32,7 @@ from lfx.services.adapters.payload import (
     PayloadSlot,
     PayloadSlotPolicy,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class _SpecModel(BaseModel):
@@ -74,6 +73,12 @@ class _SnapshotFilterModel(BaseModel):
 
 
 class _ApiLikeConfigModel(BaseModel):
+    retries: int
+
+
+class _StrictApiLikeConfigModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     retries: int
 
 
@@ -141,6 +146,15 @@ def test_payload_validation_error_formats_non_missing_with_field_path() -> None:
         slot.parse({"retries": "not-an-int"})
 
     assert exc.value.format_first_error() == "Invalid value for field 'retries'."
+
+
+def test_payload_validation_error_formats_extra_field_as_invalid_field() -> None:
+    slot = PayloadSlot(_StrictApiLikeConfigModel)
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload") as exc:
+        slot.parse({"retries": 3, "resource_name_prefix": "lf_"})
+
+    assert exc.value.format_first_error() == "Invalid field 'resource_name_prefix'. Please remove it."
 
 
 def test_payload_slot_raises_typed_missing_error_for_none() -> None:
@@ -211,19 +225,12 @@ def test_deployment_payload_schemas_defaults_to_no_active_slots() -> None:
 
 
 def test_generic_parametrization_applies_to_provider_fields() -> None:
-    typed_spec = BaseDeploymentData[_SpecModel](
-        name="dep",
-        description="",
-        type=DeploymentType.AGENT,
-        provider_spec={"region": "us-east-1"},
-    )
     typed_status = DeploymentStatusResult[_StatusModel](
         id="dep_1",
         provider_data={"healthy": True},
     )
     typed_params = DeploymentListParams[_FilterModel](provider_params={"env": "prod"})
 
-    assert isinstance(typed_spec.provider_spec, _SpecModel)
     assert isinstance(typed_status.provider_data, _StatusModel)
     assert isinstance(typed_params.provider_params, _FilterModel)
 
@@ -270,7 +277,7 @@ def test_generic_parametrization_applies_to_result_and_list_models() -> None:
         configs=[],
         provider_result={"external_url": "https://dep.example"},
     )
-    typed_snapshot_list = SnapshotListResult[_ResultModel](
+    typed_snapshot_list = SnapshotListResult[_ResultModel, _StatusModel](
         snapshots=[],
         provider_result={"external_url": "https://dep.example"},
     )
@@ -291,16 +298,7 @@ def test_generic_parametrization_applies_to_result_and_list_models() -> None:
     assert isinstance(typed_snapshot_params.provider_params, _SnapshotFilterModel)
 
 
-def test_unparametrized_models_keep_dict_passthrough_behavior() -> None:
-    payload = {"region": "us-east-1"}
-    data = BaseDeploymentData(
-        name="dep",
-        description="",
-        type=DeploymentType.AGENT,
-        provider_spec=payload,
-    )
-    assert data.provider_spec == payload
-
+def test_payload_slot_dump_json_serializes_rich_payload() -> None:
     now = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
     rich_slot = PayloadSlot(_RichPayload)
     dumped = rich_slot.dump(
