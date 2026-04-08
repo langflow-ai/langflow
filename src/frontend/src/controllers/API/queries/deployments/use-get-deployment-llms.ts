@@ -27,9 +27,8 @@ export const useGetDeploymentLlms: useQueryFunctionType<
     return data;
   };
 
-  return query(
-    ["useGetDeploymentLlms", { providerId }],
-    getDeploymentLlmsFn,
-    options,
-  );
+  return query(["useGetDeploymentLlms", { providerId }], getDeploymentLlmsFn, {
+    ...options,
+    staleTime: 1000 * 60 * 5,
+  });
 };
