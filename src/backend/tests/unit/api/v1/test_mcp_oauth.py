@@ -207,7 +207,9 @@ class TestInitiateOAuthFlow:
         self, client, logged_in_headers
     ) -> None:
         """The flow ID is created synchronously so it can be returned to the caller.
-        Token deletion and provider creation happen inside the background task."""
+
+        Token deletion and provider creation happen inside the background task.
+        """
         mock_manager = _make_state_manager()
 
         with (
