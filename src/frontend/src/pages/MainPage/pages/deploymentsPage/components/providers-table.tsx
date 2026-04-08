@@ -24,6 +24,12 @@ interface ProvidersTableProps {
   onDeleteProvider?: (provider: ProviderAccount) => void;
 }
 
+function truncateMiddle(text: string, maxLength = 50): string {
+  if (text.length <= maxLength) return text;
+  const half = Math.floor((maxLength - 3) / 2);
+  return `${text.slice(0, half)}...${text.slice(-half)}`;
+}
+
 function formatDate(iso: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString(undefined, {
@@ -62,8 +68,8 @@ export default function ProvidersTable({
                 <span className="font-medium">{provider.name}</span>
               </TableCell>
               <TableCell>
-                <span className="max-w-[300px] truncate text-sm text-muted-foreground">
-                  {provider.url}
+                <span className="text-sm text-muted-foreground">
+                  {truncateMiddle(provider.url)}
                 </span>
               </TableCell>
               <TableCell>
