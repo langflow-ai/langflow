@@ -270,9 +270,7 @@ async def initiate_oauth_flow(
                     if tokens is None:
                         msg = f"OAuth exchange finished without persisted tokens (HTTP {response.status_code})"
                         raise RuntimeError(msg)
-                    await logger.ainfo(
-                        f"OAuth flow {flow_id} completed successfully, status: {response.status_code}"
-                    )
+                    await logger.ainfo(f"OAuth flow {flow_id} completed successfully, status: {response.status_code}")
 
                 # Mark flow as complete only after confirming token persistence
                 await state_manager.update_flow(flow_id, {"status": "complete"})

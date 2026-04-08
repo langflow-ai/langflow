@@ -203,9 +203,7 @@ class TestInitiateOAuthFlow:
         assert response.status_code == 400
         assert "scheme" in response.json()["detail"].lower()
 
-    async def test_initiate_flow_created_before_task_runs(
-        self, client, logged_in_headers
-    ) -> None:
+    async def test_initiate_flow_created_before_task_runs(self, client, logged_in_headers) -> None:
         """The flow ID is created synchronously so it can be returned to the caller.
 
         Token deletion and provider creation happen inside the background task.
