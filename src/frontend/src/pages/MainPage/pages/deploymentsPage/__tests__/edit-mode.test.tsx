@@ -417,6 +417,159 @@ describe("Edit mode — pre-populated provider data", () => {
   });
 });
 
+describe("Edit mode — connection updates on pre-existing flows", () => {
+  const upsertFlowType = {} as {
+    upsert_flows?: Array<{
+      flow_version_id?: string;
+      add_app_ids?: string[];
+      remove_app_ids?: string[];
+      tool_name?: string;
+    }>;
+    connections?: Array<unknown>;
+  };
+
+  it("sends add_app_ids when adding a connection to a pre-existing flow", () => {
+    const { result } = renderEditHook();
+
+    act(() => {
+      result.current.setAttachedConnectionByFlow(
+        new Map([["flow-1", ["app-1", "app-2"]]]),
+      );
+    });
+
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const upsertFlows =
+      (payload.provider_data as typeof upsertFlowType)?.upsert_flows ?? [];
+    expect(upsertFlows).toHaveLength(1);
+    expect(upsertFlows[0].flow_version_id).toBe("ver-1");
+    expect(upsertFlows[0].add_app_ids).toEqual(["app-2"]);
+    expect(upsertFlows[0].remove_app_ids).toEqual([]);
+  });
+
+  it("sends remove_app_ids when removing a connection from a pre-existing flow", () => {
+    const { result } = renderEditHook();
+
+    act(() => {
+      result.current.setAttachedConnectionByFlow(
+        new Map([["flow-1", []]]), // removed app-1
+      );
+    });
+
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const upsertFlows =
+      (payload.provider_data as typeof upsertFlowType)?.upsert_flows ?? [];
+    expect(upsertFlows).toHaveLength(1);
+    expect(upsertFlows[0].flow_version_id).toBe("ver-1");
+    expect(upsertFlows[0].add_app_ids).toEqual([]);
+    expect(upsertFlows[0].remove_app_ids).toEqual(["app-1"]);
+  });
+
+  it("sends both add and remove when swapping connections on a pre-existing flow", () => {
+    const { result } = renderEditHook();
+
+    act(() => {
+      result.current.setAttachedConnectionByFlow(
+        new Map([["flow-1", ["app-2", "app-3"]]]), // removed app-1, added app-2 & app-3
+      );
+    });
+
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const upsertFlows =
+      (payload.provider_data as typeof upsertFlowType)?.upsert_flows ?? [];
+    expect(upsertFlows).toHaveLength(1);
+    expect(upsertFlows[0].add_app_ids).toEqual(["app-2", "app-3"]);
+    expect(upsertFlows[0].remove_app_ids).toEqual(["app-1"]);
+  });
+
+  it("does NOT send upsert for pre-existing flow when connections are unchanged", () => {
+    const { result } = renderEditHook();
+    // flow-1 starts with ["app-1"], no changes
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const upsertFlows =
+      (payload.provider_data as typeof upsertFlowType)?.upsert_flows ?? [];
+    // No flows should appear since nothing changed
+    expect(
+      upsertFlows.filter((o) => o.flow_version_id === "ver-1"),
+    ).toHaveLength(0);
+  });
+
+  it("sends connection changes alongside tool_name rename on the same flow", () => {
+    const { result } = renderEditHook();
+
+    act(() => {
+      result.current.setAttachedConnectionByFlow(
+        new Map([["flow-1", ["app-1", "app-2"]]]),
+      );
+      result.current.setToolNameByFlow(
+        new Map([
+          ["flow-1", "renamed_tool"],
+          ["flow-2", "custom_tool_two"],
+        ]),
+      );
+    });
+
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const upsertFlows =
+      (payload.provider_data as typeof upsertFlowType)?.upsert_flows ?? [];
+    expect(upsertFlows).toHaveLength(1);
+    expect(upsertFlows[0].flow_version_id).toBe("ver-1");
+    expect(upsertFlows[0].tool_name).toBe("renamed_tool");
+    expect(upsertFlows[0].add_app_ids).toEqual(["app-2"]);
+    expect(upsertFlows[0].remove_app_ids).toEqual([]);
+  });
+
+  it("includes connections on a newly attached flow with connections", () => {
+    const { result } = renderEditHook();
+
+    act(() => {
+      result.current.handleSelectVersion("flow-new", "ver-new", "v1");
+      result.current.setAttachedConnectionByFlow(
+        new Map([
+          ["flow-1", ["app-1"]], // unchanged
+          ["flow-new", ["app-10", "app-11"]],
+        ]),
+      );
+    });
+
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const upsertFlows =
+      (payload.provider_data as typeof upsertFlowType)?.upsert_flows ?? [];
+    const newFlowEntry = upsertFlows.find(
+      (o) => o.flow_version_id === "ver-new",
+    );
+    expect(newFlowEntry).toBeDefined();
+    expect(newFlowEntry!.add_app_ids).toEqual(["app-10", "app-11"]);
+    expect(newFlowEntry!.remove_app_ids).toEqual([]);
+  });
+});
+
+describe("Edit mode — undo restores connections", () => {
+  it("handleUndoRemoveFlow restores connections from initialConnectionsByFlow", () => {
+    const { result } = renderEditHook();
+
+    // flow-1 starts with connections ["app-1"]
+    act(() => result.current.handleRemoveAttachedFlow("flow-1"));
+    expect(result.current.attachedConnectionByFlow.has("flow-1")).toBe(false);
+
+    act(() => result.current.handleUndoRemoveFlow("flow-1"));
+    expect(result.current.attachedConnectionByFlow.get("flow-1")).toEqual([
+      "app-1",
+    ]);
+
+    // Payload should show no connection diff since it's restored to original
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const upsertFlows =
+      (
+        payload.provider_data as {
+          upsert_flows?: Array<{ flow_version_id?: string }>;
+        }
+      )?.upsert_flows ?? [];
+    expect(
+      upsertFlows.filter((o) => o.flow_version_id === "ver-1"),
+    ).toHaveLength(0);
+  });
+});
+
 describe("Edit mode — tool_name updates", () => {
   it("sends upsert_flows tool_name for renamed pre-existing flow", () => {
     const { result } = renderEditHook();
