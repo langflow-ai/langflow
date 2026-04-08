@@ -1,10 +1,10 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
-import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -62,6 +62,7 @@ export default function Dropdown({
   inspectionPanel,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
+  const { t } = useTranslation();
   const validOptions = useMemo(
     () => filterNullOptions(options),
     [options, value],
@@ -388,7 +389,7 @@ export default function Dropdown({
             {value && <>{renderSelectedIcon()}</>}
             <span className="truncate">
               {disabled ? (
-                RECEIVING_INPUT_VALUE
+                t("component.receivingInput")
               ) : (
                 <>
                   {
@@ -399,16 +400,16 @@ export default function Dropdown({
                       "connect_other_models" ? (
                       <span className="text-muted-foreground">
                         <LoadingTextComponent
-                          text={placeholder || SELECT_AN_OPTION}
+                          text={placeholder || t("component.selectOption")}
                         />
                       </span>
                     ) : (
-                      placeholder || SELECT_AN_OPTION
+                      placeholder || t("component.selectOption")
                     )
                     // ) : (
                     //   <span className="text-muted-foreground">
                     //     <LoadingTextComponent
-                    //       text={placeholder || SELECT_AN_OPTION}
+                    //       text={placeholder || t("component.selectOption")}
                     //     />
                     //   </span>
                     // )}
