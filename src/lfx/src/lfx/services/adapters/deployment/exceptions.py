@@ -85,10 +85,6 @@ class ResourceConflictError(DeploymentError):
         super().__init__(message, error_code="deployment_conflict", cause=cause)
 
 
-# Backward-compatible alias; prefer ResourceConflictError in new code.
-DeploymentConflictError = ResourceConflictError
-
-
 class InvalidContentError(DeploymentError):
     """Raised when a deployment request entity is unprocessable."""
 
@@ -437,23 +433,3 @@ def raise_as_deployment_error(
     ):
         raise InvalidContentError(message=message, cause=cause) from cause
     raise DeploymentError(message=message, error_code="deployment_error", cause=cause) from cause
-
-
-def raise_for_status_and_detail(
-    *,
-    status_code: int | None,
-    detail: str,
-    message_prefix: str | None = None,
-    resource: str | None = None,
-    resource_name: str | None = None,
-    cause: Exception | None = None,
-) -> NoReturn:
-    """Backward-compatible wrapper for ``raise_as_deployment_error``."""
-    raise_as_deployment_error(
-        status_code=status_code,
-        detail=detail,
-        message_prefix=message_prefix,
-        resource=resource,
-        resource_name=resource_name,
-        cause=cause,
-    )
