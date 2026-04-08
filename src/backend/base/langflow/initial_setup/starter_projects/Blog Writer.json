@@ -542,7 +542,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.1"
+                    "version": "0.135.3"
                   },
                   {
                     "name": "lfx",
@@ -1037,7 +1037,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.33.0"
+                    "version": "2.33.1"
                   },
                   {
                     "name": "bs4",
