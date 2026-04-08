@@ -31,8 +31,8 @@ def mock_component(mock_tool):
         component.policies = ["Policy 1: Do not allow negative numbers", "Policy 2: Validate input"]
         component.model = [{"name": "gpt-5.1", "provider": "OpenAI"}]
         component.api_key = "test_api_key"  # pragma: allowlist secret
-        component.active = True
-        component.build_mode = MODE_GUARD
+        component.enabled = True
+        component.mode = MODE_GUARD
         return component
 
 
@@ -147,9 +147,9 @@ async def test_cache_mode_corrupted_cache(mock_component):
 
 
 @pytest.mark.asyncio
-async def test_inactive_returns_original_tools(mock_component, mock_tool):
-    """Test PoliciesComponent when active=False returns original tools."""
-    mock_component.active = False
+async def test_inenabled_returns_original_tools(mock_component, mock_tool):
+    """Test PoliciesComponent when enabled=False returns original tools."""
+    mock_component.enabled = False
 
     result = await mock_component.guard_tools()
 
@@ -162,7 +162,7 @@ async def test_inactive_returns_original_tools(mock_component, mock_tool):
 @pytest.mark.asyncio
 async def test_generate_mode_validation_errors(mock_component):
     """Test PoliciesComponent in generate mode with validation errors."""
-    mock_component.build_mode = MODE_GENERATE
+    mock_component.mode = MODE_GENERATE
 
     # Test empty project
     mock_component.project = ""
