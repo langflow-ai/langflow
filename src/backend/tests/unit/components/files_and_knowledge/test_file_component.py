@@ -21,6 +21,32 @@ class TestFileComponentDynamicOutputs:
         assert "message" in output_names  # Raw content
         assert "path" in output_names  # File path
 
+    def test_update_outputs_single_xlsx_file(self):
+        """Test single XLSX file shows structured + raw outputs."""
+        component = FileComponent()
+        frontend_node = {"outputs": [], "template": {"path": {"file_path": ["test.xlsx"]}}}
+
+        result = component.update_outputs(frontend_node, "path", ["test.xlsx"])
+
+        assert len(result["outputs"]) == 3
+        output_names = [output.name for output in result["outputs"]]
+        assert "dataframe" in output_names
+        assert "message" in output_names
+        assert "path" in output_names
+
+    def test_update_outputs_single_xls_file(self):
+        """Test single XLS file shows structured + raw outputs."""
+        component = FileComponent()
+        frontend_node = {"outputs": [], "template": {"path": {"file_path": ["test.xls"]}}}
+
+        result = component.update_outputs(frontend_node, "path", ["test.xls"])
+
+        assert len(result["outputs"]) == 3
+        output_names = [output.name for output in result["outputs"]]
+        assert "dataframe" in output_names
+        assert "message" in output_names
+        assert "path" in output_names
+
     def test_update_outputs_single_json_file(self):
         """Test single JSON file shows JSON + raw outputs."""
         component = FileComponent()
@@ -112,6 +138,36 @@ class TestFileComponentDynamicOutputs:
         }
 
         result = component.update_build_config(build_config, ["test.csv"], "path")
+
+        assert result["advanced_mode"]["show"] is False
+        assert result["advanced_mode"]["value"] is False
+
+    def test_advanced_mode_not_available_for_xlsx(self):
+        """Test advanced mode is hidden for XLSX files."""
+        component = FileComponent()
+        build_config = {
+            "advanced_mode": {"show": True, "value": False},
+            "pipeline": {"show": False},
+            "ocr_engine": {"show": False},
+            "path": {"file_path": ["test.xlsx"]},
+        }
+
+        result = component.update_build_config(build_config, ["test.xlsx"], "path")
+
+        assert result["advanced_mode"]["show"] is False
+        assert result["advanced_mode"]["value"] is False
+
+    def test_advanced_mode_not_available_for_xls(self):
+        """Test advanced mode is hidden for XLS files."""
+        component = FileComponent()
+        build_config = {
+            "advanced_mode": {"show": True, "value": False},
+            "pipeline": {"show": False},
+            "ocr_engine": {"show": False},
+            "path": {"file_path": ["test.xls"]},
+        }
+
+        result = component.update_build_config(build_config, ["test.xls"], "path")
 
         assert result["advanced_mode"]["show"] is False
         assert result["advanced_mode"]["value"] is False
