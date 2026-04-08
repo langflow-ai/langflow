@@ -4976,6 +4976,20 @@ def test_get_authenticator_unknown_url():
         get_authenticator("https://example.com", "test-key")
 
 
+def test_get_authenticator_sets_http_timeout_on_iam():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_authenticator
+
+    auth = get_authenticator("https://api.region-foobar.cloud.ibm.com", "test-key")
+    assert auth.token_manager.http_config == {"timeout": (10, 30)}
+
+
+def test_get_authenticator_sets_http_timeout_on_mcsp():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_authenticator
+
+    auth = get_authenticator("https://api.wxo.ibm.com", "test-key")
+    assert auth.token_manager.http_config == {"timeout": (10, 30)}
+
+
 def test_get_authenticator_uses_default_iam_urls_when_unset(monkeypatch):
     try:
         with monkeypatch.context() as context:
