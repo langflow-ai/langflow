@@ -20,15 +20,21 @@ export const useGetDeploymentLlms: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getDeploymentLlmsFn = async (): Promise<DeploymentLlmListResponse> => {
-    const { data } = await api.get<DeploymentLlmListResponse>(
+    const response = await api.get<DeploymentLlmListResponse>(
       `${getURL("DEPLOYMENTS")}/llms`,
       { params: { provider_id: providerId } },
     );
-    return data;
+    if (!response) {
+      throw new Error(
+        "Failed to load models. Please check your provider credentials.",
+      );
+    }
+    return response.data;
   };
 
   return query(["useGetDeploymentLlms", { providerId }], getDeploymentLlmsFn, {
     ...options,
+    retry: false,
     staleTime: 1000 * 60 * 5,
   });
 };
