@@ -144,6 +144,7 @@ override-dependencies = [
     "Markdown>=3.8.0",
     "dynaconf>=3.2.13",
     "pillow>=12.0.0",  # Force Pillow 12+ to prevent CVE-vulnerable 11.x versions
+    "aiohttp>=3.13.4",
 ]
 
 [project.scripts]
