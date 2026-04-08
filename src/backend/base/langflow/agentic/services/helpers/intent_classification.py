@@ -86,18 +86,18 @@ async def classify_intent(
                     except json.JSONDecodeError:
                         pass
 
-                # Fallback 3: plain text mentioning known intents
-                if "generate_component" in response_text:
-                    logger.info("Extracted generate_component intent from non-JSON response")
-                    return IntentResult(translation=text, intent="generate_component")
+                # Fallback 3: look for intent as a quoted JSON value
+                # Use strict patterns to avoid matching prompt-echoes
+                import re
 
-                if "build_flow" in response_text:
-                    logger.info("Extracted build_flow intent from non-JSON response")
-                    return IntentResult(translation=text, intent="build_flow")
-
-                if "off_topic" in response_text:
-                    logger.info("Extracted off_topic intent from non-JSON response")
-                    return IntentResult(translation=text, intent="off_topic")
+                intent_match = re.search(
+                    r'["\']intent["\']\s*:\s*["\'](generate_component|build_flow|off_topic)["\']',
+                    response_text,
+                )
+                if intent_match:
+                    matched_intent = intent_match.group(1)
+                    logger.info("Extracted %s intent from non-JSON response via pattern match", matched_intent)
+                    return IntentResult(translation=text, intent=matched_intent)
 
                 logger.warning("Intent flow returned non-JSON, treating as question")
                 return IntentResult(translation=response_text, intent="question")

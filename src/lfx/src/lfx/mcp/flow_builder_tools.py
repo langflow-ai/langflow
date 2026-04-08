@@ -524,17 +524,7 @@ class BuildFlowFromSpec(Component):
         existing = get_working_flow()
         if existing and existing.get("data", {}).get("nodes"):
             node_count = len(existing["data"]["nodes"])
-            logger.warning("build_flow called on non-empty canvas (%d nodes) -- this replaces everything", node_count)
-            return Data(
-                data={
-                    "error": (
-                        f"The canvas already has {node_count} component(s). "
-                        "build_flow replaces the entire canvas. "
-                        "Use add_component, connect_components, or configure_component to modify the existing flow. "
-                        "Use propose_field_edit to change field values."
-                    ),
-                }
-            )
+            logger.warning("build_flow called on non-empty canvas (%d nodes) -- replacing", node_count)
 
         result = build_flow_from_spec(self.spec)
         if "error" in result:

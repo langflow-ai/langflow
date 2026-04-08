@@ -99,8 +99,10 @@ class TestClassifyIntent:
 
     @pytest.mark.asyncio
     async def test_should_extract_intent_from_text_containing_generate_component(self):
-        """Models that return plain text mentioning generate_component should still be classified."""
-        mock_result = {"result": "The intent is generate_component. Translation: create a sum component"}
+        """Fallback should extract intent from malformed JSON-like text with quoted intent value."""
+        mock_result = {
+            "result": 'The result is "intent": "generate_component" and translation is create a sum component'
+        }
 
         with patch(
             "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
@@ -116,8 +118,8 @@ class TestClassifyIntent:
 
     @pytest.mark.asyncio
     async def test_should_extract_build_flow_intent_from_plaintext(self):
-        """Plaintext fallback should recognize build_flow intent."""
-        mock_result = {"result": "The intent is build_flow. Translation: build a chatbot flow"}
+        """Fallback should extract build_flow from quoted intent value."""
+        mock_result = {"result": 'I would classify this as "intent": "build_flow"'}
 
         with patch(
             "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
@@ -133,8 +135,8 @@ class TestClassifyIntent:
 
     @pytest.mark.asyncio
     async def test_should_extract_off_topic_intent_from_plaintext(self):
-        """Plaintext fallback should recognize off_topic intent."""
-        mock_result = {"result": "The intent is off_topic. Translation: how does kubernetes work"}
+        """Fallback should extract off_topic from quoted intent value."""
+        mock_result = {"result": 'Classification: "intent": "off_topic"'}
 
         with patch(
             "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
@@ -147,6 +149,28 @@ class TestClassifyIntent:
             )
 
             assert result.intent == "off_topic"
+
+    @pytest.mark.asyncio
+    async def test_should_not_match_bare_intent_substring_in_prompt_echo(self):
+        """Bare mention of build_flow without JSON quoting should NOT trigger fallback."""
+        mock_result = {
+            "result": (
+                "The intent classification options are generate_component, build_flow, "
+                "question, and off_topic. I cannot determine which one applies."
+            )
+        }
+
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ):
+            result = await classify_intent(
+                text="something ambiguous",
+                global_variables={},
+            )
+
+            assert result.intent == "question"
 
     @pytest.mark.asyncio
     async def test_should_extract_json_with_surrounding_text(self):
