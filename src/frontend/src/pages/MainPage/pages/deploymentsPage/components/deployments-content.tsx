@@ -1,0 +1,172 @@
+import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useDeleteDeployment } from "@/controllers/API/queries/deployments/use-delete-deployment";
+import { useGetDeploymentsByProviders } from "@/controllers/API/queries/deployments/use-get-deployments-by-providers";
+import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation";
+import { useProviderFilter } from "../hooks/use-provider-filter";
+import { useTestDeploymentModal } from "../hooks/use-test-deployment-modal";
+import type { Deployment, ProviderAccount } from "../types";
+import DeploymentDetailsModal from "./deployment-details-modal/deployment-details-modal";
+import DeploymentStepperModal from "./deployment-stepper-modal";
+import DeploymentsEmptyState from "./deployments-empty-state";
+import DeploymentsLoadingSkeleton from "./deployments-loading-skeleton";
+import DeploymentsTable from "./deployments-table";
+import TestDeploymentModal from "./test-deployment-modal/test-deployment-modal";
+import TypeToConfirmDeleteDialog from "./type-to-confirm-delete-dialog";
+
+const buildDeploymentDeleteParams = (id: string) => ({ deployment_id: id });
+
+interface DeploymentsContentProps {
+  isLoadingProviders: boolean;
+  providers: ProviderAccount[];
+  stepperOpen: boolean;
+  setStepperOpen: (open: boolean) => void;
+  onGoToProviders: () => void;
+}
+
+export default function DeploymentsContent({
+  isLoadingProviders,
+  providers,
+  stepperOpen,
+  setStepperOpen,
+  onGoToProviders,
+}: DeploymentsContentProps) {
+  const {
+    selectedProviderId,
+    setSelectedProviderId,
+    providerIdsToQuery,
+    providerMap,
+  } = useProviderFilter(providers);
+
+  const { deployments, isLoading: isLoadingDeployments } =
+    useGetDeploymentsByProviders(providerIdsToQuery);
+
+  const testModal = useTestDeploymentModal();
+
+  const { mutate: deleteDeployment } = useDeleteDeployment();
+
+  const deploymentDelete = useDeleteWithConfirmation<
+    Deployment,
+    { deployment_id: string }
+  >(deleteDeployment, buildDeploymentDeleteParams, "Error deleting deployment");
+
+  const [editingDeployment, setEditingDeployment] = useState<Deployment | null>(
+    null,
+  );
+
+  const [detailsDeployment, setDetailsDeployment] = useState<Deployment | null>(
+    null,
+  );
+
+  const isLoading = isLoadingProviders || isLoadingDeployments;
+  const hasProviders = providers.length > 0;
+
+  const content = (() => {
+    if (isLoading) return <DeploymentsLoadingSkeleton />;
+    if (!hasProviders)
+      return (
+        <DeploymentsEmptyState
+          variant="no-providers"
+          onAction={onGoToProviders}
+        />
+      );
+    if (deployments.length === 0)
+      return (
+        <DeploymentsEmptyState
+          variant="no-deployments"
+          onAction={() => setStepperOpen(true)}
+        />
+      );
+    return (
+      <DeploymentsTable
+        deployments={deployments}
+        providerMap={providerMap}
+        deletingId={deploymentDelete.deletingId}
+        onTestDeployment={testModal.handleTestDeployment}
+        onViewDetails={(deployment) => setDetailsDeployment(deployment)}
+        onUpdateDeployment={(deployment) => {
+          setEditingDeployment(deployment);
+          setStepperOpen(true);
+        }}
+        onDeleteDeployment={deploymentDelete.requestDelete}
+      />
+    );
+  })();
+
+  return (
+    <>
+      {providers.length >= 1 && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Environment:</span>
+          <Select
+            value={selectedProviderId}
+            onValueChange={setSelectedProviderId}
+          >
+            <SelectTrigger className="w-[220px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {providers.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {content}
+
+      <DeploymentStepperModal
+        open={stepperOpen}
+        setOpen={(open) => {
+          setStepperOpen(open);
+          if (!open) setEditingDeployment(null);
+        }}
+        onTestDeployment={testModal.handleTestFromStepper}
+        editingDeployment={editingDeployment}
+        initialInstance={
+          editingDeployment?.provider_account_id
+            ? providers.find(
+                (p) => p.id === editingDeployment.provider_account_id,
+              )
+            : undefined
+        }
+      />
+
+      <TestDeploymentModal
+        open={testModal.open}
+        setOpen={testModal.setOpen}
+        deployment={testModal.testTarget}
+        providerId={testModal.testProviderId}
+      />
+
+      <DeploymentDetailsModal
+        open={!!detailsDeployment}
+        setOpen={(open) => {
+          if (!open) setDetailsDeployment(null);
+        }}
+        deployment={detailsDeployment}
+        providerName={
+          detailsDeployment
+            ? (providerMap[detailsDeployment.provider_account_id ?? ""] ?? "—")
+            : ""
+        }
+      />
+
+      <TypeToConfirmDeleteDialog
+        open={!!deploymentDelete.target}
+        onOpenChange={deploymentDelete.setModalOpen}
+        deploymentName={deploymentDelete.target?.name ?? ""}
+        onConfirm={deploymentDelete.confirmDelete}
+      />
+    </>
+  );
+}

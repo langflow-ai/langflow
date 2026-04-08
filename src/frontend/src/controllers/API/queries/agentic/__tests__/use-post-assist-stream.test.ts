@@ -10,6 +10,7 @@ import {
   TextDecoder as NodeTextDecoder,
   TextEncoder as NodeTextEncoder,
 } from "util";
+
 global.TextEncoder = NodeTextEncoder as unknown as typeof TextEncoder;
 global.TextDecoder = NodeTextDecoder as unknown as typeof TextDecoder;
 
@@ -262,6 +263,31 @@ describe("buffer handling", () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
+  it("should_call_onError_when_sse_event_contains_malformed_json", async () => {
+    // Bug: malformed JSON in SSE is silently discarded without notifying the UI.
+    // The onError callback should fire so the user gets feedback.
+    const text =
+      `data: {not valid json}\n\n` +
+      sseData({ event: "complete", data: { result: "", validated: true } });
+    mockFetch.mockResolvedValue(createMockResponse(200, [encode(text)]));
+
+    const onError = jest.fn();
+    const onComplete = jest.fn();
+    await postAssistStream(
+      { flow_id: "f1", input_value: "" },
+      { onError, onComplete },
+    );
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "error",
+        message: expect.stringContaining("malformed"),
+      }),
+    );
+    // Stream should continue processing after the malformed event
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
   it("should reassemble data split across chunks", async () => {
     const fullLine = `data: ${JSON.stringify({ event: "token", chunk: "hello" })}\n\n`;
     // Split in the middle of the JSON
@@ -395,44 +421,42 @@ describe("bugs and edge cases", () => {
     },
   );
 
-  it.failing(
-    "BUG: should cancel reader before releasing lock to close connection",
-    async () => {
-      // L144: reader.releaseLock() without reader.cancel() — the underlying TCP
-      // connection may remain open. Proper cleanup is cancel() then releaseLock().
-      const cancelMock = jest.fn().mockResolvedValue(undefined);
-      const releaseLockMock = jest.fn();
+  it("should_cancel_reader_before_releasing_lock_to_close_connection", async () => {
+    // Bug: reader.releaseLock() without reader.cancel() — the underlying TCP
+    // connection may remain open. Proper cleanup is cancel() then releaseLock().
+    const cancelMock = jest.fn().mockResolvedValue(undefined);
+    const releaseLockMock = jest.fn();
 
-      const mockReader = {
-        read: jest
-          .fn()
-          .mockResolvedValueOnce({
-            done: false,
-            value: encode(
-              sseData({
-                event: "complete",
-                data: { result: "", validated: true },
-              }),
-            ),
-          })
-          .mockResolvedValue({ done: true, value: undefined }),
-        cancel: cancelMock,
-        releaseLock: releaseLockMock,
-      };
+    const mockReader = {
+      read: jest
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: encode(
+            sseData({
+              event: "complete",
+              data: { result: "", validated: true },
+            }),
+          ),
+        })
+        .mockResolvedValue({ done: true, value: undefined }),
+      cancel: cancelMock,
+      releaseLock: releaseLockMock,
+    };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        body: { getReader: () => mockReader },
-      } as unknown as Response);
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: { getReader: () => mockReader },
+    } as unknown as Response);
 
-      await postAssistStream(
-        { flow_id: "f1", input_value: "" },
-        { onComplete: jest.fn() },
-      );
+    await postAssistStream(
+      { flow_id: "f1", input_value: "" },
+      { onComplete: jest.fn() },
+    );
 
-      // reader.cancel() should be called before releaseLock()
-      expect(cancelMock).toHaveBeenCalled();
-    },
-  );
+    // reader.cancel() should be called before releaseLock()
+    expect(cancelMock).toHaveBeenCalled();
+    expect(releaseLockMock).toHaveBeenCalled();
+  });
 });

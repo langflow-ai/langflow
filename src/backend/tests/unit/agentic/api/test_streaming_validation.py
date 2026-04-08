@@ -272,7 +272,7 @@ class TestStreamingValidationFlow:
         complete_events = [e for e in parsed_events if e.get("event") == "complete"]
         assert len(complete_events) == 1
         assert complete_events[0]["data"]["validated"] is True
-        assert complete_events[0]["data"]["validation_attempts"] == 1
+        assert complete_events[0]["data"]["validation_attempts"] == 2  # first attempt fails, second succeeds
 
     @pytest.mark.asyncio
     async def test_all_retries_fail_returns_validation_error(self):
@@ -304,13 +304,13 @@ class TestStreamingValidationFlow:
         generating_events = [
             e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating_component"
         ]
-        assert len(generating_events) == 3
+        assert len(generating_events) == 3  # max_retries=2 means 3 total attempts
 
         complete_events = [e for e in parsed_events if e.get("event") == "complete"]
         assert len(complete_events) == 1
         assert complete_events[0]["data"]["validated"] is False
         assert complete_events[0]["data"]["validation_error"] is not None
-        assert complete_events[0]["data"]["validation_attempts"] == 2
+        assert complete_events[0]["data"]["validation_attempts"] == 3  # 3 total attempts
 
     @pytest.mark.asyncio
     async def test_no_code_in_response_returns_as_is(self):
@@ -428,9 +428,10 @@ class TestValidationRetryBehavior:
 
         assert len(captured_inputs) == 2
         assert captured_inputs[0] == "create a component"
-        assert "error" in captured_inputs[1].lower()
-        assert "fix" in captured_inputs[1].lower() or "correct" in captured_inputs[1].lower()
-        assert INVALID_COMPONENT_CODE.strip() in captured_inputs[1] or "BrokenComponent" in captured_inputs[1]
+        retry_input = str(captured_inputs[1])
+        assert "error" in retry_input.lower()
+        assert "fix" in retry_input.lower() or "correct" in retry_input.lower()
+        assert INVALID_COMPONENT_CODE.strip() in retry_input or "BrokenComponent" in retry_input
 
 
 class TestNonStreamingValidation:
@@ -753,7 +754,7 @@ Here's the implementation:
         complete_data = complete_events[0]["data"]
 
         assert complete_data["validated"] is False
-        assert complete_data["validation_attempts"] == 2
+        assert complete_data["validation_attempts"] == 3  # max_retries=2 means 3 total attempts
 
     @pytest.mark.asyncio
     async def test_cutoff_code_retry_gets_valid_code(self):
@@ -792,7 +793,7 @@ Here's the implementation:
         complete_data = complete_events[0]["data"]
 
         assert complete_data["validated"] is True
-        assert complete_data["validation_attempts"] == 2
+        assert complete_data["validation_attempts"] == 3
         assert complete_data["class_name"] == "HelloWorldComponent"
 
     def test_code_extraction_from_exact_user_response(self):

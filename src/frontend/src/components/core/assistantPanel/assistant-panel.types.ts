@@ -49,3 +49,20 @@ export interface AssistantPanelProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+/** AssistantMessage with Date serialized as ISO string and progress stripped. */
+export type SerializedAssistantMessage = Omit<
+  AssistantMessage,
+  "timestamp" | "progress"
+> & {
+  timestamp: string;
+};
+
+/** A saved session entry stored in localStorage. */
+export interface SessionHistoryEntry {
+  sessionId: string;
+  firstUserMessage: string;
+  messageCount: number;
+  lastActiveAt: string;
+  messages: SerializedAssistantMessage[];
+}

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { AssistantMessageItem } from "../assistant-message";
 import type { AssistantMessage } from "../../assistant-panel.types";
+import { AssistantMessageItem } from "../assistant-message";
 
 // --- Mocks ---
 
@@ -54,9 +54,20 @@ jest.mock("../assistant-loading-state", () => ({
 jest.mock("../assistant-validation-failed", () => ({
   AssistantValidationFailed: ({
     result,
+    onRetry,
   }: {
     result: { validationError?: string };
-  }) => <div data-testid="validation-failed">{result.validationError}</div>,
+    onRetry?: () => void;
+  }) => (
+    <div data-testid="validation-failed">
+      {result.validationError}
+      {onRetry && (
+        <button data-testid="retry-button" onClick={onRetry}>
+          Try again
+        </button>
+      )}
+    </div>
+  ),
 }));
 
 jest.mock("../../helpers/messages", () => ({
@@ -258,6 +269,27 @@ describe("AssistantMessageItem", () => {
         screen.getByText("SyntaxError: invalid syntax"),
       ).toBeInTheDocument();
     });
+
+    it("should_show_retry_button_when_validation_fails", () => {
+      // Bug: AssistantValidationFailed is rendered without onRetry prop,
+      // so the "Try again" button never appears.
+      const message = createMessage({
+        role: "assistant",
+        content: "",
+        status: "complete",
+        result: {
+          content: "",
+          validated: false,
+          validationError: "SyntaxError: invalid syntax",
+          componentCode: "class Bad(Component): pass",
+        },
+      });
+
+      const onRetry = jest.fn();
+      render(<AssistantMessageItem message={message} onRetry={onRetry} />);
+
+      expect(screen.getByTestId("retry-button")).toBeInTheDocument();
+    });
   });
 
   describe("plain text response", () => {
@@ -273,6 +305,43 @@ describe("AssistantMessageItem", () => {
       expect(screen.getByTestId("markdown-content")).toHaveTextContent(
         "Langflow is a visual flow builder.",
       );
+    });
+
+    it("should_render_markdown_when_qa_response_contains_example_component_code", () => {
+      // Bug: User asks "how do I create a custom component?" and the LLM
+      // responds with explanation + example code. The frontend regex fallback
+      // detects "class SumComponent(Component)" in the example and renders
+      // a component card instead of the text answer.
+      const qaWithExampleCode = [
+        "To create a custom component:\n\n",
+        "1. Create a Python file\n",
+        "2. Define a class extending Component\n\n",
+        "```python\n",
+        "from lfx.custom import Component\n",
+        "from lfx.io import Output\n",
+        "from lfx.schema import Data\n\n",
+        "class SumComponent(Component):\n",
+        "    display_name = 'Sum'\n",
+        "    inputs = []\n",
+        "    outputs = [Output(name='result', display_name='Result', method='run')]\n\n",
+        "    def run(self) -> Data:\n",
+        "        return Data(data={'result': 42})\n",
+        "```\n\n",
+        "Save the file and restart Langflow.",
+      ].join("");
+
+      const message = createMessage({
+        role: "assistant",
+        content: qaWithExampleCode,
+        status: "complete",
+        // No result — this is a Q&A response, not a component generation
+      });
+
+      render(<AssistantMessageItem message={message} />);
+
+      // Should render as markdown text, NOT as a component card
+      expect(screen.getByTestId("markdown-content")).toBeInTheDocument();
+      expect(screen.queryByTestId("component-result")).not.toBeInTheDocument();
     });
   });
 });

@@ -10,11 +10,14 @@ import { AssistantHeader } from "./components/assistant-header";
 import { AssistantInput } from "./components/assistant-input";
 import { AssistantMessageItem } from "./components/assistant-message";
 import { AssistantNoModelsState } from "./components/assistant-no-models-state";
-import { useAssistantChat, useEnabledModels } from "./hooks";
+import { useAssistantChat, useEnabledModels, useSessionHistory } from "./hooks";
+
+// Module-level draft cache — survives panel unmount/remount
+let draftMessageCache = "";
 
 const PANEL_SIZE_KEY = "langflow-assistant-panel-size";
 const DEFAULT_SIZE = { width: 620, height: 600 };
-const MIN_SIZE = { width: 400, height: 400 };
+const MIN_SIZE = { width: 456, height: 400 };
 const MAX_SIZE = { width: 900, height: 800 };
 
 function getStoredSize(): { width: number; height: number } {
@@ -37,6 +40,8 @@ interface AssistantInputWithScrollProps {
   isProcessing: boolean;
   currentStep: AgenticStepType | null;
   autoFocus?: boolean;
+  draftMessage?: string;
+  onDraftChange?: (draft: string) => void;
 }
 
 function AssistantInputWithScroll({
@@ -46,6 +51,8 @@ function AssistantInputWithScroll({
   isProcessing,
   currentStep,
   autoFocus,
+  draftMessage,
+  onDraftChange,
 }: AssistantInputWithScrollProps) {
   const { scrollToBottom } = useStickToBottomContext();
 
@@ -62,6 +69,8 @@ function AssistantInputWithScroll({
       isProcessing={isProcessing}
       currentStep={currentStep}
       autoFocus={autoFocus}
+      draftMessage={draftMessage}
+      onDraftChange={onDraftChange}
       compact
     />
   );
@@ -106,17 +115,30 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   }, [isOpen, onClose]);
   const {
     messages,
+    sessionId,
     isProcessing,
     currentStep,
     handleSend,
     handleApprove,
     handleUpdateFlowAction,
+    handleRetry,
     handleStopGeneration,
     handleClearHistory,
+    loadSession,
   } = useAssistantChat();
 
-  const handleApproveAndClose = (messageId: string) => {
-    handleApprove(messageId);
+  const { sessions, saveCurrentSession, switchSession, deleteSession } =
+    useSessionHistory(sessionId, messages, loadSession);
+
+  const handleNewSession = useCallback(() => {
+    handleStopGeneration();
+    saveCurrentSession();
+    draftMessageCache = "";
+    handleClearHistory();
+  }, [handleStopGeneration, saveCurrentSession, handleClearHistory]);
+
+  const handleApproveAndClose = (messageId: string, componentCode?: string) => {
+    handleApprove(messageId, componentCode);
     onClose();
   };
 
@@ -135,6 +157,14 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
 
   const useExpandedSize = hasMessages || hasExpandedOnce;
   const [panelSize, setPanelSize] = useState(getStoredSize);
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
+
+  // Clean up resize listeners if the component unmounts mid-drag
+  useEffect(() => {
+    return () => {
+      resizeCleanupRef.current?.();
+    };
+  }, []);
 
   const handleEdgeResize = useCallback(
     (e: React.MouseEvent, edges: { x?: "left" | "right"; y?: "top" }) => {
@@ -165,59 +195,73 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
         });
       };
 
-      const handleMouseUp = () => {
+      const cleanup = () => {
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
+        resizeCleanupRef.current = null;
+      };
+
+      const handleMouseUp = () => {
+        cleanup();
         setPanelSize((prev) => {
-          localStorage.setItem(PANEL_SIZE_KEY, JSON.stringify(prev));
+          try {
+            localStorage.setItem(PANEL_SIZE_KEY, JSON.stringify(prev));
+          } catch {
+            // localStorage may be unavailable (private browsing)
+          }
           return prev;
         });
       };
 
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
+      resizeCleanupRef.current = cleanup;
     },
     [panelSize],
   );
 
+  if (!isOpen) return null;
+
   const containerClasses = cn(
     "flex flex-col transition-[opacity,transform] duration-200 fixed shadow-xl will-change-[opacity,transform]",
     "z-50 bottom-16 left-[calc(50%+140px)] -translate-x-1/2 rounded-2xl border border-border",
-    isOpen
-      ? "opacity-100 translate-y-0"
-      : "opacity-0 translate-y-4 pointer-events-none",
+    "opacity-100 translate-y-0 max-w-[calc(100vw-2rem)]",
   );
 
   const containerStyle = useExpandedSize
     ? {
         width: panelSize.width,
         height: panelSize.height,
+        minWidth: "28.5rem",
+        minHeight: MIN_SIZE.height,
       }
     : {
         width: panelSize.width,
+        minWidth: "28.5rem",
       };
 
   return (
-    <div ref={panelRef} className={containerClasses} style={containerStyle}>
+    <div
+      ref={panelRef}
+      data-testid="assistant-panel"
+      className={containerClasses}
+      style={containerStyle}
+    >
       <div className="absolute inset-0 rounded-2xl bg-background" />
 
       <div className="relative z-10 flex h-full min-h-0 flex-col overflow-hidden">
         <AssistantHeader
           onClose={onClose}
-          onNewSession={handleClearHistory}
+          onNewSession={handleNewSession}
           hasMessages={hasMessages}
+          sessions={sessions}
+          activeSessionId={sessionId}
+          onSelectSession={switchSession}
+          onDeleteSession={deleteSession}
+          isExpanded={useExpandedSize}
         />
-        {!hasEnabledModels ? (
-          <>
-            <div className="flex flex-1 flex-col overflow-hidden">
-              <AssistantNoModelsState />
-            </div>
-            <AssistantInput
-              onSend={handleSend}
-              disabled={true}
-              placeholder="Configure Model Providers..."
-            />
-          </>
+        {!hasEnabledModels && !hasMessages ? (
+          <AssistantNoModelsState />
         ) : hasMessages ? (
           <StickToBottom
             className="flex flex-1 flex-col overflow-hidden"
@@ -231,28 +275,40 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   message={msg}
                   onApprove={handleApproveAndClose}
                   onUpdateFlowAction={handleUpdateFlowAction}
+                  onRetry={hasEnabledModels ? handleRetry : undefined}
                 />
               ))}
             </StickToBottom.Content>
             <AssistantInputWithScroll
               onSend={handleSend}
               onStop={handleStopGeneration}
-              disabled={isProcessing}
+              disabled={!hasEnabledModels || isProcessing}
               isProcessing={isProcessing}
               currentStep={currentStep}
-              autoFocus={isOpen}
+              autoFocus={isOpen && hasEnabledModels}
+              draftMessage={draftMessageCache}
+              onDraftChange={(draft) => {
+                draftMessageCache = draft;
+              }}
             />
           </StickToBottom>
         ) : (
-          <AssistantInput
-            onSend={handleSend}
-            onStop={handleStopGeneration}
-            disabled={false}
-            isProcessing={isProcessing}
-            currentStep={currentStep}
-            compact={hasExpandedOnce}
-            autoFocus={isOpen}
-          />
+          <>
+            {hasExpandedOnce && <div className="flex-1" />}
+            <AssistantInput
+              onSend={handleSend}
+              onStop={handleStopGeneration}
+              disabled={false}
+              isProcessing={isProcessing}
+              currentStep={currentStep}
+              compact={hasExpandedOnce}
+              autoFocus={isOpen}
+              draftMessage={draftMessageCache}
+              onDraftChange={(draft) => {
+                draftMessageCache = draft;
+              }}
+            />
+          </>
         )}
       </div>
 

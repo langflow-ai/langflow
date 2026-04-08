@@ -8,7 +8,6 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from langflow.agentic.services.assistant_service import (
     execute_flow_with_validation_streaming,
 )
@@ -19,6 +18,14 @@ MODULE = "langflow.agentic.services.assistant_service"
 
 def _make_intent(intent="generate_component", translation="test"):
     return IntentResult(intent=intent, translation=translation)
+
+
+def _safe_security():
+    """Return a mock SecurityScanResult that passes."""
+    result = MagicMock()
+    result.is_safe = True
+    result.violations = ()
+    return result
 
 
 def _parse_sse_events(raw_events: list[str]) -> list[dict]:
@@ -42,16 +49,14 @@ async def _collect_raw_events(gen) -> list[str]:
 
 
 class TestValidatingStepIncludesCode:
-    """The 'validating' progress event must include component_code
-    so the frontend can show a live preview before validation completes."""
+    """The 'validating' progress event must include component_code.
+
+    So the frontend can show a live preview before validation completes.
+    """
 
     @pytest.mark.asyncio
     async def test_should_include_component_code_in_validating_event(self):
-        component_code = (
-            "from langflow.custom import Component\n\n"
-            "class MyComp(Component):\n"
-            "    inputs = []\n"
-        )
+        component_code = "from langflow.custom import Component\n\nclass MyComp(Component):\n    inputs = []\n"
         mock_validation = MagicMock()
         mock_validation.is_valid = True
         mock_validation.class_name = "MyComp"
@@ -66,6 +71,8 @@ class TestValidatingStepIncludesCode:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -85,8 +92,10 @@ class TestValidatingStepIncludesCode:
 
     @pytest.mark.asyncio
     async def test_should_include_component_code_before_validation_result(self):
-        """The validating event should arrive BEFORE the validated event,
-        giving the frontend time to show the code preview."""
+        """The validating event should arrive BEFORE the validated event.
+
+        Giving the frontend time to show the code preview.
+        """
         component_code = "class PreviewComp(Component):\n    pass"
         mock_validation = MagicMock()
         mock_validation.is_valid = True
@@ -102,6 +111,8 @@ class TestValidatingStepIncludesCode:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -120,8 +131,10 @@ class TestValidatingStepIncludesCode:
 
 
 class TestValidationFailedIncludesDetails:
-    """The 'validation_failed' progress event must include error,
-    class_name, and component_code for debugging in the UI."""
+    """The 'validation_failed' progress event must include error details.
+
+    Includes class_name and component_code for debugging in the UI.
+    """
 
     @pytest.mark.asyncio
     async def test_should_include_error_and_code_in_validation_failed(self):
@@ -141,6 +154,7 @@ class TestValidationFailedIncludesDetails:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_fail),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -179,6 +193,7 @@ class TestValidationFailedIncludesDetails:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_fail),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -186,7 +201,7 @@ class TestValidationFailedIncludesDetails:
                 flow_filename="TestFlow",
                 input_value="create a component",
                 global_variables={},
-                max_retries=0,
+                max_retries=1,
             )
             raw_events = await _collect_raw_events(gen)
             events = _parse_sse_events(raw_events)
@@ -196,8 +211,10 @@ class TestValidationFailedIncludesDetails:
 
 
 class TestRetryingStepIncludesError:
-    """The 'retrying' progress event must include the error that
-    caused the retry, so the UI can show why it's retrying."""
+    """The 'retrying' progress event must include the error that caused the retry.
+
+    So the UI can show why it's retrying.
+    """
 
     @pytest.mark.asyncio
     async def test_should_include_error_in_retrying_event(self):
@@ -221,6 +238,8 @@ class TestRetryingStepIncludesError:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", side_effect=[mock_fail, mock_success]),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -261,6 +280,8 @@ class TestRetryingStepIncludesError:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", side_effect=[mock_fail, mock_success]),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -274,18 +295,22 @@ class TestRetryingStepIncludesError:
             events = _parse_sse_events(raw_events)
 
             retrying = _filter_events_by_step(events, "retrying")[0]
-            assert retrying["attempt"] == 0  # First attempt that failed
-            assert retrying["max_attempts"] == 2
+            assert retrying["attempt"] == 1  # First attempt (1-indexed)
+            assert retrying["max_attempts"] == 3  # max_retries=2 means 3 total attempts
 
 
 class TestProgressEventSequence:
-    """Tests for the correct ordering and completeness of progress events
-    in the component generation pipeline."""
+    """Tests for the correct ordering and completeness of progress events.
+
+    Covers the component generation pipeline.
+    """
 
     @pytest.mark.asyncio
     async def test_should_emit_full_success_sequence(self):
-        """Successful generation should emit:
-        generating_component → generation_complete → extracting_code → validating → validated → complete"""
+        """Successful generation should emit the full event sequence.
+
+        generating_component → generation_complete → extracting_code → validating → validated → complete
+        """
         component_code = "class SeqComp(Component):\n    pass"
         mock_validation = MagicMock()
         mock_validation.is_valid = True
@@ -301,6 +326,8 @@ class TestProgressEventSequence:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -324,9 +351,11 @@ class TestProgressEventSequence:
 
     @pytest.mark.asyncio
     async def test_should_emit_retry_sequence_on_failure(self):
-        """Failed validation with retry should emit:
+        """Failed validation with retry should emit the retry sequence.
+
         generating_component → generation_complete → extracting_code → validating →
-        validation_failed → retrying → generating_component → ..."""
+        validation_failed → retrying → generating_component → ...
+        """
         component_code = "class RetrySeq(Component): pass"
         mock_fail = MagicMock()
         mock_fail.is_valid = False
@@ -347,6 +376,8 @@ class TestProgressEventSequence:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", side_effect=[mock_fail, mock_success]),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -394,6 +425,8 @@ class TestProgressEventSequence:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -431,6 +464,7 @@ class TestProgressEventSequence:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_fail),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):

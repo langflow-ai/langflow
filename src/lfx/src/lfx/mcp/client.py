@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING, Any
 import httpx
 from starlette.status import HTTP_204_NO_CONTENT
 
+from lfx.log.logger import logger
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
@@ -54,9 +56,8 @@ class LangflowClient:
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
-        token = self.access_token or self.api_key
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
+        if self.access_token:
+            headers["Authorization"] = f"Bearer {self.access_token}"
         if self.api_key:
             headers["x-api-key"] = self.api_key
         return headers
@@ -107,6 +108,7 @@ class LangflowClient:
                 try:
                     yield json.loads(line)
                 except json.JSONDecodeError:
+                    logger.debug("stream_post: skipping non-JSON SSE line: %s", line[:200])
                     continue
 
     async def patch(self, path: str, json_data: Any = None, **kwargs: Any) -> Any:
@@ -163,7 +165,7 @@ class LangflowClient:
 
             # Create API key
             resp = await client.post(
-                self._url("/api_key"),
+                self._url("/api_key/"),
                 headers=self._headers(),
                 json={"name": "mcp-client"},
                 timeout=30.0,
@@ -181,3 +183,10 @@ class LangflowClient:
             msg = f"Login failed: {exc}"
             raise RuntimeError(msg) from exc
         return self.api_key
+
+    async def post_event(self, flow_id: str, event_type: str, summary: str = "") -> None:
+        """Post an event to the flow events queue. Best-effort -- does not raise on failure."""
+        try:
+            await self.post(f"/flows/{flow_id}/events", json_data={"type": event_type, "summary": summary})
+        except Exception:  # noqa: BLE001
+            logger.warning("Failed to post flow event (flow_id=%s, type=%s)", flow_id, event_type, exc_info=True)

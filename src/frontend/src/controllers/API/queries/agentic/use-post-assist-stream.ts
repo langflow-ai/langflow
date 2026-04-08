@@ -42,6 +42,10 @@ function processSSELine(
   const event = parseSSEEvent(data);
 
   if (!event) {
+    callbacks.onError?.({
+      event: "error",
+      message: "Received malformed event from server",
+    });
     return { done: false };
   }
 
@@ -151,6 +155,7 @@ export async function postAssistStream(
       processSSELine(buffer.trim(), callbacks);
     }
   } finally {
+    await reader.cancel();
     reader.releaseLock();
   }
 }

@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         DeploymentDeleteResult,
         DeploymentDuplicateResult,
         DeploymentGetResult,
+        DeploymentListLlmsResult,
         DeploymentListParams,
         DeploymentListResult,
         DeploymentListTypesResult,
@@ -33,6 +34,8 @@ if TYPE_CHECKING:
         RedeployResult,
         SnapshotListParams,
         SnapshotListResult,
+        VerifyCredentials,
+        VerifyCredentialsResult,
     )
     from lfx.services.settings.base import Settings
 
@@ -268,6 +271,16 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
+    async def list_llms(
+        self,
+        *,
+        user_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentListLlmsResult:
+        """List provider-available LLM model names for deployment configuration."""
+        ...
+
+    @abstractmethod
     async def list(
         self,
         *,
@@ -301,6 +314,8 @@ class DeploymentServiceProtocol(Protocol):
         db: AsyncSession,
     ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
+        # TODO: Add a rollback-update interface contract for adapters so callers
+        # can compensate provider-side updates when downstream local sync fails.
         ...
 
     @abstractmethod
@@ -394,6 +409,16 @@ class DeploymentServiceProtocol(Protocol):
         db: AsyncSession,
     ) -> SnapshotListResult:
         """List snapshots visible to this adapter."""
+        ...
+
+    @abstractmethod
+    async def verify_credentials(
+        self,
+        *,
+        user_id: IdLike,
+        payload: VerifyCredentials,
+    ) -> VerifyCredentialsResult:
+        """Verify provider credentials before account creation."""
         ...
 
     @abstractmethod

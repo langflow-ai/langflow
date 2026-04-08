@@ -80,6 +80,63 @@ class TestClassifyIntent:
             assert result.translation == "This is not valid JSON response"
 
     @pytest.mark.asyncio
+    async def test_should_extract_json_from_markdown_code_block(self):
+        """Models like IBM granite may wrap JSON in markdown code blocks."""
+        mock_result = {"result": '```json\n{"translation": "create a component", "intent": "generate_component"}\n```'}
+
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ):
+            result = await classify_intent(
+                text="crie um componente",
+                global_variables={},
+            )
+
+            assert result.intent == "generate_component"
+            assert result.translation == "create a component"
+
+    @pytest.mark.asyncio
+    async def test_should_extract_intent_from_text_containing_generate_component(self):
+        """Models that return plain text mentioning generate_component should still be classified."""
+        mock_result = {"result": "The intent is generate_component. Translation: create a sum component"}
+
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ):
+            result = await classify_intent(
+                text="crie um componente que soma",
+                global_variables={},
+            )
+
+            assert result.intent == "generate_component"
+
+    @pytest.mark.asyncio
+    async def test_should_extract_json_with_surrounding_text(self):
+        """Models may return JSON embedded in explanatory text."""
+        mock_result = {
+            "result": (
+                'Here is the classification:\n{"translation": "build a parser", "intent": "generate_component"}\nDone.'
+            )
+        }
+
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ):
+            result = await classify_intent(
+                text="construa um parser",
+                global_variables={},
+            )
+
+            assert result.intent == "generate_component"
+            assert result.translation == "build a parser"
+
+    @pytest.mark.asyncio
     async def test_should_default_to_question_on_flow_error(self):
         """Should default to question intent when flow execution fails."""
         with patch(
@@ -214,7 +271,7 @@ class TestClassifyIntent:
             )
 
             call_kwargs = mock_execute.call_args[1]
-            assert call_kwargs["flow_filename"] == "TranslationFlow.json"
+            assert call_kwargs["flow_filename"] == "translation_flow.py"
 
 
 class TestIntentResult:

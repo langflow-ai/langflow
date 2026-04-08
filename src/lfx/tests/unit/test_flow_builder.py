@@ -47,6 +47,18 @@ def _make_template(display_name, outputs=None, template_fields=None):
 
 REGISTRY = {
     "ChatInput": _make_template("Chat Input"),
+    "ToolOutput": _make_template(
+        "Tool Output",
+        outputs=[{"name": "tool", "types": ["Tool"]}],
+        template_fields={
+            "tools": {
+                "display_name": "Tools",
+                "type": "other",
+                "value": "",
+                "input_types": ["Tool"],
+            },
+        },
+    ),
     "ChatOutput": _make_template(
         "Chat Output",
         outputs=[{"name": "message", "types": ["Message"]}],
@@ -644,22 +656,31 @@ class TestConnectErrorCases:
         with pytest.raises(ValueError, match="Input 'bad_input' not found"):
             add_connection(flow, r1["id"], "message", r2["id"], "bad_input")
 
+    def test_connect_incompatible_types_raises(self):
+        flow = _fresh_flow()
+        r1 = add_component(flow, "ChatInput", REGISTRY)
+        r2 = add_component(flow, "ToolOutput", REGISTRY)
+        with pytest.raises(ValueError, match="Type mismatch"):
+            add_connection(flow, r1["id"], "message", r2["id"], "tools")
+        assert len(flow["data"]["edges"]) == 0
+
     def test_explicit_types_bypass_validation(self):
-        """When types are explicitly provided, no validation needed."""
+        """When explicit types are provided, type-compatibility is not enforced."""
         flow = _fresh_flow()
         r1 = add_component(flow, "ChatInput", REGISTRY)
         r2 = add_component(flow, "ChatOutput", REGISTRY)
-        # With explicit types, even "wrong" port names work (user's choice)
+        # Incompatible explicit types -- succeeds because validation is skipped
         edge = add_connection(
             flow,
             r1["id"],
             "message",
             r2["id"],
             "input_value",
-            source_types=["Custom"],
-            target_types=["Custom"],
+            source_types=["Incompatible"],
+            target_types=["Mismatch"],
         )
-        assert edge["data"]["sourceHandle"]["output_types"] == ["Custom"]
+        assert edge["data"]["sourceHandle"]["output_types"] == ["Incompatible"]
+        assert edge["data"]["targetHandle"]["inputTypes"] == ["Mismatch"]
 
 
 class TestConnectExtended:

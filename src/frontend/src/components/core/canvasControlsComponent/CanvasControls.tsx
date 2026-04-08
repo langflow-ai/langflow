@@ -1,12 +1,11 @@
 import { Panel, useStoreApi } from "@xyflow/react";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import langflowAssistantIcon from "@/assets/langflow_assistant.svg";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import type { AllNodeType } from "@/types/flow";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
@@ -15,16 +14,16 @@ import HelpDropdown from "./HelpDropdown";
 const CanvasControls = ({
   children,
   selectedNode,
+  effectiveLocked,
 }: {
   children?: ReactNode;
   selectedNode: AllNodeType | null;
+  effectiveLocked?: boolean;
 }) => {
   const reactFlowStoreApi = useStoreApi();
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
-  const undo = useFlowsManagerStore((state) => state.undo);
-  const redo = useFlowsManagerStore((state) => state.redo);
   const setAssistantSidebarOpen = useAssistantManagerStore(
     (state) => state.setAssistantSidebarOpen,
   );
@@ -42,13 +41,28 @@ const CanvasControls = ({
     setAssistantSidebarOpen(!assistantSidebarOpen);
   };
 
+  const [isAddNoteActive, setIsAddNoteActive] = useState(false);
+
+  const handleAddNote = useCallback(() => {
+    window.dispatchEvent(new Event("lf:start-add-note"));
+    setIsAddNoteActive(true);
+  }, []);
+
+  useEffect(() => {
+    const onEnd = () => setIsAddNoteActive(false);
+    window.addEventListener("lf:end-add-note", onEnd);
+    return () => window.removeEventListener("lf:end-add-note", onEnd);
+  }, []);
+
+  const locked = effectiveLocked ?? isFlowLocked;
+
   useEffect(() => {
     reactFlowStoreApi.setState({
-      nodesDraggable: !isFlowLocked,
-      nodesConnectable: !isFlowLocked,
-      elementsSelectable: !isFlowLocked,
+      nodesDraggable: !locked,
+      nodesConnectable: !locked,
+      elementsSelectable: !locked,
     });
-  }, [isFlowLocked, reactFlowStoreApi]);
+  }, [locked, reactFlowStoreApi]);
 
   return (
     <>
@@ -67,6 +81,7 @@ const CanvasControls = ({
           <Button
             unstyled
             size="icon"
+            data-testid="assistant-button"
             className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md hover:bg-muted"
             onClick={handleAssistantClick}
           >
@@ -95,45 +110,32 @@ const CanvasControls = ({
             />
           </Button>
         </div>
-        <Button
-          unstyled
-          size="icon"
-          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-          title="Undo"
-          onClick={undo}
-        >
-          <ForwardedIconComponent
-            name="Undo2"
-            className="h-[18px] w-[18px] text-muted-foreground group-hover:text-foreground"
-          />
-        </Button>
-        <Button
-          unstyled
-          size="icon"
-          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-          title="Redo"
-          onClick={redo}
-        >
-          <ForwardedIconComponent
-            name="Redo2"
-            className="h-[18px] w-[18px] text-muted-foreground group-hover:text-foreground"
-          />
-        </Button>
         <CanvasControlsDropdown selectedNode={selectedNode} />
+        <Button
+          unstyled
+          size="icon"
+          data-testid="canvas-add-note-button"
+          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
+          title="Add Sticky Note"
+          onClick={handleAddNote}
+        >
+          <ForwardedIconComponent
+            name="sticky-note"
+            className={`h-[18px] w-[18px] transition-colors ${
+              isAddNoteActive
+                ? "text-foreground"
+                : "text-muted-foreground group-hover:text-foreground"
+            }`}
+          />
+        </Button>
         <HelpDropdown />
         {children}
-      </Panel>
-      {ENABLE_INSPECTION_PANEL && (
-        <Panel
-          data-testid="canvas_controls_inspector"
-          className="react-flow__controls !left-auto !m-2 flex !flex-row rounded-md border border-border bg-background fill-foreground stroke-foreground text-primary [&>button]:border-0"
-          position="bottom-right"
-        >
+        {ENABLE_INSPECTION_PANEL && (
           <Button
             unstyled
             size="icon"
             data-testid="canvas_controls_toggle_inspector"
-            className={`group rounded-none px-2 py-2 flex items-center justify-center disabled:pointer-events-none disabled:opacity-50 ${inspectionPanelVisible ? "bg-accent" : "hover:bg-muted"}`}
+            className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
             title={
               !selectedNode
                 ? "Select a node to open the Inspector Panel"
@@ -141,16 +143,15 @@ const CanvasControls = ({
                   ? "Hide Inspector Panel"
                   : "Show Inspector Panel"
             }
-            disabled={!selectedNode}
             onClick={() => setInspectionPanelVisible(!inspectionPanelVisible)}
           >
             <ForwardedIconComponent
               name={inspectionPanelVisible ? "PanelRightClose" : "PanelRight"}
-              className={`${inspectionPanelVisible ? "text-primary" : "text-muted-foreground group-hover:text-primary"} !h-5 !w-5`}
+              className="!h-5 !w-5 text-muted-foreground group-hover:text-foreground"
             />
           </Button>
-        </Panel>
-      )}
+        )}
+      </Panel>
     </>
   );
 };

@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from lfx.graph.edge.base import types_compatible
+
 # Langflow uses oe (U+0153) as a quote replacement in ReactFlow handle strings
 _Q = "\u0153"
 
@@ -100,16 +102,29 @@ def add_connection(
     source_types: list[str] | None = None,
     target_types: list[str] | None = None,
 ) -> dict:
-    """Add a connection (edge) between two components."""
+    """Add a connection (edge) between two components.
+
+    When source_types/target_types are None they are resolved from the flow
+    and type-compatibility is enforced.  When the caller passes explicit types
+    the check is skipped (the caller is taking responsibility).
+    """
     source_type = source_id.rsplit("-", 1)[0] if "-" in source_id else source_id
 
     # Resolve types from the flow's node data if not explicitly provided
+    types_resolved = source_types is None and target_types is None
     if source_types is None:
         source_types = _resolve_output_types(flow, source_id, source_output)
     if target_types is None:
         target_types, target_field_type = _resolve_input_types(flow, target_id, target_input)
     else:
         target_field_type = "str"
+
+    if types_resolved and not types_compatible(source_types, target_types):
+        msg = (
+            f"Type mismatch: output '{source_output}' on '{source_id}' produces {source_types}, "
+            f"but input '{target_input}' on '{target_id}' accepts {target_types}"
+        )
+        raise ValueError(msg)
 
     source_handle_dict = {
         "dataType": source_type,

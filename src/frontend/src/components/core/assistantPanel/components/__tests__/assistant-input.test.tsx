@@ -177,6 +177,43 @@ describe("AssistantInput", () => {
     });
   });
 
+  describe("draft persistence", () => {
+    it("should_initialize_with_draft_message_when_provided", () => {
+      // Bug: input text is lost when closing and reopening the panel.
+      // The draftMessage prop allows restoring previously typed text.
+      render(<AssistantInput {...defaultProps} draftMessage="saved draft" />);
+
+      expect(screen.getByRole("textbox")).toHaveValue("saved draft");
+    });
+
+    it("should_call_onDraftChange_when_user_types", async () => {
+      const onDraftChange = jest.fn();
+      render(
+        <AssistantInput {...defaultProps} onDraftChange={onDraftChange} />,
+      );
+
+      await userEvent.type(screen.getByRole("textbox"), "hi");
+
+      expect(onDraftChange).toHaveBeenCalledWith("h");
+      expect(onDraftChange).toHaveBeenCalledWith("hi");
+    });
+
+    it("should_clear_draft_on_send", async () => {
+      const onDraftChange = jest.fn();
+      render(
+        <AssistantInput
+          {...defaultProps}
+          draftMessage="to send"
+          onDraftChange={onDraftChange}
+        />,
+      );
+
+      await userEvent.type(screen.getByRole("textbox"), "{enter}");
+
+      expect(onDraftChange).toHaveBeenLastCalledWith("");
+    });
+  });
+
   describe("message clearing", () => {
     it("should clear textarea after sending", async () => {
       render(<AssistantInput {...defaultProps} />);

@@ -11,7 +11,9 @@ from lfx.graph.flow_builder.flow import flow_to_spec_summary
 from lfx.log.logger import logger
 
 from langflow.agentic.helpers.code_extraction import extract_component_code, extract_flow_json
+from langflow.agentic.helpers.code_security import scan_code_security
 from langflow.agentic.helpers.error_handling import extract_friendly_error
+from langflow.agentic.helpers.input_sanitization import REFUSAL_MESSAGE, sanitize_input
 from langflow.agentic.helpers.sse import (
     format_cancelled_event,
     format_complete_event,
@@ -21,7 +23,7 @@ from langflow.agentic.helpers.sse import (
     format_progress_event,
     format_token_event,
 )
-from langflow.agentic.helpers.validation import validate_component_code
+from langflow.agentic.helpers.validation import validate_component_code, validate_component_runtime
 from langflow.agentic.services.flow_executor import (
     execute_flow_file,
     execute_flow_file_streaming,
@@ -30,10 +32,16 @@ from langflow.agentic.services.flow_executor import (
 from langflow.agentic.services.flow_types import (
     FLOW_BUILDER_ASSISTANT_FLOW,
     MAX_VALIDATION_RETRIES,
+    OFF_TOPIC_REFUSAL_MESSAGE,
     VALIDATION_RETRY_TEMPLATE,
     VALIDATION_UI_DELAY_SECONDS,
 )
 from langflow.agentic.services.helpers.intent_classification import classify_intent
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Callable, Coroutine
+
+    from langflow.agentic.api.schemas import StepType
 
 
 async def _get_current_flow_summary(flow_id: str | None) -> str | None:
@@ -83,7 +91,13 @@ async def execute_flow_with_validation(
     If validation fails, re-executes the flow with error context.
     Continues until valid code is generated or max retries reached.
     """
-    current_input = input_value
+    # Layer 1: Input sanitization
+    sanitization = sanitize_input(input_value)
+    if not sanitization.is_safe:
+        logger.warning(f"Input sanitization blocked request: {sanitization.violation}")
+        return {"result": REFUSAL_MESSAGE}
+
+    current_input = sanitization.sanitized_input
     attempt = 0
 
     while attempt <= max_retries:
@@ -119,6 +133,24 @@ async def execute_flow_with_validation(
 
         logger.info("Validating generated component code...")
         validation = validate_component_code(code)
+
+        # Layer 3: Security scan on generated code
+        security_result = scan_code_security(code)
+        if not security_result.is_safe:
+            violations_str = "; ".join(security_result.violations)
+            logger.warning(f"Code security violations detected: {violations_str}")
+            if attempt > max_retries:
+                return {
+                    **result,
+                    "validated": False,
+                    "validation_error": f"Security violations: {violations_str}",
+                    "validation_attempts": attempt,
+                }
+            current_input = VALIDATION_RETRY_TEMPLATE.format(
+                error=f"Security violations: {violations_str}. Do NOT use dangerous functions.",
+                code=code,
+            )
+            continue
 
         if validation.is_valid:
             logger.info(f"Component '{validation.class_name}' validated successfully!")
@@ -180,20 +212,33 @@ async def execute_flow_with_validation_streaming(
 
     Note: Component generation is detected by analyzing the user's input.
     """
-    current_input = input_value
+    # Layer 1: Input sanitization (before any LLM call)
+    sanitization = sanitize_input(input_value)
+    if not sanitization.is_safe:
+        logger.warning(f"Input sanitization blocked request: {sanitization.violation}")
+        yield format_complete_event({"result": REFUSAL_MESSAGE})
+        return
+
+    current_input = sanitization.sanitized_input
 
     # Classify intent using LLM (handles multi-language support)
     # This translates the input and determines if user wants to generate a component or ask a question
     # Use a separate session for intent classification to prevent
     # TranslationFlow messages from contaminating the assistant's memory
     intent_result = await classify_intent(
-        text=input_value,
+        text=current_input,
         global_variables=global_variables,
         user_id=user_id,
         provider=provider,
         model_name=model_name,
         api_key_var=api_key_var,
     )
+
+    # Layer 4: Off-topic rejection (saves LLM API costs)
+    if intent_result.intent == "off_topic":
+        logger.info("Off-topic request detected, returning refusal")
+        yield format_complete_event({"result": OFF_TOPIC_REFUSAL_MESSAGE})
+        return
 
     # Route based on intent classification
     is_component_request = intent_result.intent == "generate_component"
@@ -225,9 +270,10 @@ async def execute_flow_with_validation_streaming(
         return False
 
     try:
-        # First attempt (attempt=0) doesn't count as retry
-        # Retries are attempt 1, 2, 3... up to max_retries
-        for attempt in range(max_retries + 1):  # 0 = first try, 1..max_retries = retries
+        # max_retries=0 means 1 attempt (no retries), matching non-streaming semantics
+        total_attempts = max_retries + 1
+
+        for attempt in range(total_attempts):
             # Check if client disconnected before starting
             if await check_cancelled():
                 logger.info("Client disconnected, cancelling generation")
@@ -245,8 +291,8 @@ async def execute_flow_with_validation_streaming(
                 step_name = "generating"
             yield format_progress_event(
                 step_name,
-                attempt,  # 0 for first try, 1+ for retries
-                max_retries,  # max retries (not counting first try)
+                attempt + 1,
+                total_attempts,
                 message="Generating response...",
             )
 
@@ -321,8 +367,8 @@ async def execute_flow_with_validation_streaming(
             # Step 2: Generation complete
             yield format_progress_event(
                 "generation_complete",
-                attempt,
-                max_retries,
+                attempt + 1,
+                total_attempts,
                 message="Response ready",
             )
 
@@ -352,16 +398,17 @@ async def execute_flow_with_validation_streaming(
                 yield format_complete_event({**result, "has_flow": True})
                 return
 
-            # Try to extract component code from the response.
-            # This handles both explicit component generation and follow-up
-            # modification requests that produce component code.
+            # For Q&A responses, return immediately without code extraction/validation.
+            # This prevents example code snippets in explanatory answers from being
+            # mistakenly treated as component generation results.
+            if not is_component_request:
+                yield format_complete_event(result)
+                return
+
+            # Extract and validate component code from generation responses
             code = extract_component_code(response_text)
 
-            # Only proceed with validation if the code looks like a Langflow component
-            has_component_code = code and "class " in code and "Component" in code
-
-            if not has_component_code or code is None:
-                # No component code or flow found — return as plain text response
+            if not code:
                 yield format_complete_event(result)
                 return
 
@@ -374,8 +421,8 @@ async def execute_flow_with_validation_streaming(
             # Step 3: Extracting code (only shown when code is found)
             yield format_progress_event(
                 "extracting_code",
-                attempt,
-                max_retries,
+                attempt + 1,
+                total_attempts,
                 message="Extracting Python code from response...",
             )
             await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
@@ -389,8 +436,8 @@ async def execute_flow_with_validation_streaming(
             # Step 4: Validating (include code so frontend can show preview)
             yield format_progress_event(
                 "validating",
-                attempt,
-                max_retries,
+                attempt + 1,
+                total_attempts,
                 message="Validating component code...",
                 component_code=code,
             )
@@ -398,8 +445,62 @@ async def execute_flow_with_validation_streaming(
 
             validation = validate_component_code(code)
 
+            # Layer 3: Security scan on generated code
+            security_result = scan_code_security(code)
+            if not security_result.is_safe:
+                violations_str = "; ".join(security_result.violations)
+                logger.warning(f"Code security violations detected: {violations_str}")
+                yield format_progress_event(
+                    "validation_failed",
+                    attempt,
+                    max_retries,
+                    message="Security violations detected in generated code",
+                    error=f"Security violations: {violations_str}",
+                    component_code=code,
+                )
+                await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
+
+                if attempt >= total_attempts - 1:
+                    yield format_complete_event(
+                        {
+                            **result,
+                            "validated": False,
+                            "validation_error": f"Security violations: {violations_str}",
+                            "validation_attempts": attempt + 1,
+                            "component_code": code,
+                        }
+                    )
+                    return
+
+                yield format_progress_event(
+                    "retrying",
+                    attempt,
+                    max_retries,
+                    message=f"Retrying with security context (attempt {attempt + 1}/{max_retries})...",
+                    error=f"Security violations: {violations_str}",
+                )
+                await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
+                current_input = VALIDATION_RETRY_TEMPLATE.format(
+                    error=f"Security violations: {violations_str}. "
+                    "Do NOT use dangerous functions like os.system, subprocess, exec, eval. "
+                    "Use Langflow's built-in integrations instead.",
+                    code=code,
+                )
+                continue
+
             if validation.is_valid:
-                # Step 5a: Validated successfully
+                # Runtime validation: try to actually instantiate the component
+                runtime_error = validate_component_runtime(code, user_id=user_id)
+                if runtime_error:
+                    logger.warning(f"Runtime validation failed (attempt {attempt}): {runtime_error}")
+                    validation = type(validation)(
+                        is_valid=False,
+                        code=code,
+                        error=runtime_error,
+                        class_name=validation.class_name,
+                    )
+
+            if validation.is_valid:
                 logger.info(f"Component '{validation.class_name}' validated successfully")
                 yield format_progress_event(
                     "validated",
@@ -417,7 +518,7 @@ async def execute_flow_with_validation_streaming(
                         "validated": True,
                         "class_name": validation.class_name,
                         "component_code": code,
-                        "validation_attempts": attempt,
+                        "validation_attempts": attempt + 1,
                     }
                 )
                 return
@@ -426,8 +527,8 @@ async def execute_flow_with_validation_streaming(
             logger.warning(f"Validation failed (attempt {attempt}): {validation.error}")
             yield format_progress_event(
                 "validation_failed",
-                attempt,
-                max_retries,
+                attempt + 1,
+                total_attempts,
                 message="Validation failed",
                 error=validation.error,
                 class_name=validation.class_name,
@@ -435,14 +536,14 @@ async def execute_flow_with_validation_streaming(
             )
             await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
 
-            if attempt >= max_retries:
+            if attempt >= total_attempts - 1:
                 # Max attempts reached, return with error
                 yield format_complete_event(
                     {
                         **result,
                         "validated": False,
                         "validation_error": validation.error,
-                        "validation_attempts": attempt,
+                        "validation_attempts": attempt + 1,
                         "component_code": code,
                     }
                 )
@@ -451,9 +552,9 @@ async def execute_flow_with_validation_streaming(
             # Step 6: Retrying
             yield format_progress_event(
                 "retrying",
-                attempt,
-                max_retries,
-                message=f"Retrying with error context (attempt {attempt + 1}/{max_retries})...",
+                attempt + 1,
+                total_attempts,
+                message="Retrying with error context...",
                 error=validation.error,
             )
             await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)

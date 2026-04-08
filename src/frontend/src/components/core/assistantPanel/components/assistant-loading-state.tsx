@@ -1,4 +1,3 @@
-import { memo, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -7,6 +6,7 @@ import {
   Code2,
   Loader2,
 } from "lucide-react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { AgenticProgressState } from "@/controllers/API/queries/agentic";
 
 interface AssistantLoadingStateProps {
@@ -59,7 +59,17 @@ function AssistantLoadingStateComponent({
         )}
       </div>
 
-      <div className="px-4 pb-4">
+      <div
+        className={
+          showStreamingPreview ||
+          progress.error ||
+          progress.attempt > 0 ||
+          finalCode ||
+          isReady
+            ? "px-4 pb-4"
+            : ""
+        }
+      >
         {/* Live streaming — the main content while LLM generates */}
         {showStreamingPreview && (
           <pre
@@ -72,21 +82,21 @@ function AssistantLoadingStateComponent({
 
         {/* Validation error */}
         {progress.error && (
-          <div className="mt-3 rounded-md bg-destructive/5 px-3 py-2 text-xs text-destructive">
+          <div className="mt-2 w-fit rounded-md bg-destructive/5 px-3 py-2 text-xs text-destructive">
             {progress.error}
           </div>
         )}
 
         {/* Retry counter */}
-        {progress.attempt > 0 && (
-          <div className="mt-2 text-xs text-muted-foreground">
-            Attempt {progress.attempt + 1} of {progress.maxAttempts}
+        {progress.attempt > 1 && (
+          <div className="mt-3 text-xs text-muted-foreground">
+            Attempt {progress.attempt} of {progress.maxAttempts}
           </div>
         )}
 
         {/* Final extracted code — replaces streaming preview */}
         {finalCode && (
-          <div>
+          <div className="mt-3">
             <button
               type="button"
               onClick={() => setCodeOpen((prev) => !prev)}
@@ -112,6 +122,7 @@ function AssistantLoadingStateComponent({
         {isReady && (
           <button
             type="button"
+            data-testid="assistant-continue-button"
             onClick={() => onValidationComplete?.()}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-accent-emerald-foreground/10 px-4 py-2.5 text-sm font-medium text-accent-emerald-foreground transition-colors hover:bg-accent-emerald-foreground/20"
           >

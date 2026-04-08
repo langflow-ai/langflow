@@ -12,7 +12,7 @@ import PartialDockerDoclingDeps from '@site/docs/_partial-docker-docling-deps.md
 
 In Langflow version 1.7.0, this component was renamed from **File** to **Read File**.
 
-The **Read File** component loads and parses files, converts the content into a `Data`, `DataFrame`, or `Message` object.
+The **Read File** component loads and parses files, converts the content into a `JSON`, `Table`, or `Message` object.
 It supports multiple file types, provides parameters for parallel processing and error handling, and supports advanced parsing with the Docling library.
 
 You can add files to the **Read File** component in the visual editor or at runtime, and you can upload multiple files at once.
@@ -71,12 +71,12 @@ For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hid
 | Name | Display Name | Info |
 |------|--------------|------|
 | path | Files | Input parameter. The path to files to load. Can be local or in [Langflow file management](/concepts-file-management). Supports individual files and bundled archives. |
-| file_path | Server File Path | Input parameter. A `Data` object with a `file_path` property pointing to a file in [Langflow file management](/concepts-file-management) or a `Message` object with a path to the file. Supersedes **Files** (`path`) but supports the same file types. |
+| file_path | Server File Path | Input parameter. A `JSON` object with a `file_path` property pointing to a file in [Langflow file management](/concepts-file-management) or a `Message` object with a path to the file. Supersedes **Files** (`path`) but supports the same file types. |
 | separator | Separator | Input parameter. The separator to use between multiple outputs in `Message` format. |
 | silent_errors | Silent Errors | Input parameter. If `true`, errors in the component don't raise an exception. Default: Disabled (`false`). |
 | delete_server_file_after_processing | Delete Server File After Processing | Input parameter. If `true` (default), the **Server File Path** (`file_path`) is deleted after processing. |
 | ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If enabled (`true`), files with unsupported extensions are accepted but not processed. If disabled (`false`), the **Read File** component either can throw an error if an unsupported file type is provided. The default is `true`. |
-| ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If `true`, `Data` with no `file_path` property is ignored. If `false` (default), the component errors when a file isn't specified. |
+| ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If `true`, `JSON` with no `file_path` property is ignored. If `false` (default), the component errors when a file isn't specified. |
 | concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. Ignored for single-file uploads and advanced parsing. |
 | advanced_parser | Advanced Parser | Input parameter. If `true`, enables [advanced parsing](#advanced-parsing). Only available for single-file uploads of compatible file types. Default: Disabled (`false`). |
 
@@ -145,8 +145,8 @@ If advanced parsing is disabled and you upload one file, the following output ty
 
 - **Structured Content**: Available only for `.csv`, `.xlsx`, `.parquet`, and `.json` files.
 
-    - For `.csv` files, produces a [`DataFrame`](/data-types#dataframe) representing the table data.
-    - For `.json` files, produces a [`Data`](/data-types#data) object with the parsed JSON data.
+    - For `.csv` files, produces a [`Table`](/data-types#table) representing the table data.
+    - For `.json` files, produces a [`JSON`](/data-types#json) object with the parsed JSON data.
 
 - **Raw Content**: A [`Message`](/data-types#message) containing the file's raw text content.
 
@@ -157,7 +157,7 @@ If advanced parsing is disabled and you upload one file, the following output ty
 
 If advanced parsing is enabled and you upload one file, the following output types are available:
 
-- **Structured Output**: A [`DataFrame`](/data-types#dataframe) containing the Docling-processed document data with text elements, page numbers, and metadata.
+- **Structured Output**: A [`Table`](/data-types#table) containing the Docling-processed document data with text elements, page numbers, and metadata.
 
 - **Markdown**: A [`Message`](/data-types#message) containing the uploaded document contents in Markdown format with image placeholders.
 
@@ -166,7 +166,7 @@ If advanced parsing is enabled and you upload one file, the following output typ
 </TabItem>
 <TabItem value="multi" label="Multiple files">
 
-If you upload multiple files, the component outputs **Files**, which is a [`DataFrame`](/data-types#dataframe) containing the content and metadata of all selected files.
+If you upload multiple files, the component outputs **Files**, which is a [`Table`](/data-types#table) containing the content and metadata of all selected files.
 
 [Advanced parsing](#advanced-parsing) doesn't support multiple files; it processes only the first file.
 

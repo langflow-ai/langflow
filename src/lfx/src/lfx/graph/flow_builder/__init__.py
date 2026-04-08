@@ -16,7 +16,7 @@ from lfx.graph.flow_builder.connect import (
     list_connections,
     remove_connection,
 )
-from lfx.graph.flow_builder.flow import empty_flow, flow_graph_repr, flow_info
+from lfx.graph.flow_builder.flow import empty_flow, flow_graph_repr, flow_info, flow_to_spec_summary
 from lfx.graph.flow_builder.layout import layout_flow
 from lfx.graph.flow_builder.spec import parse_flow_spec
 
@@ -27,6 +27,7 @@ __all__ = [
     "empty_flow",
     "flow_graph_repr",
     "flow_info",
+    "flow_to_spec_summary",
     "get_component",
     "layout_flow",
     "list_components",

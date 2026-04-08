@@ -118,38 +118,91 @@ class TestQAResponse:
             assert len(final_complete) == 1
 
     @pytest.mark.asyncio
-    async def test_should_extract_code_from_misclassified_qa(self):
-        """Q&A response containing component code should still validate it."""
+    async def test_should_return_plain_text_for_qa_with_component_code(self):
+        """Q&A response containing component code should NOT trigger validation.
+
+        When intent is "question", code extraction is skipped entirely to prevent
+        example code in explanatory answers from being treated as component generation.
+        """
         component_code = (
             "from langflow.custom import Component\n\n"
             "class MyComponent(Component):\n"
             "    description = 'test'\n"
             "    inputs = []\n"
         )
-        mock_validation = MagicMock()
-        mock_validation.is_valid = True
-        mock_validation.class_name = "MyComponent"
 
-        response_text = f"```python\n{component_code}\n```"
+        response_text = f"Here's an example:\n\n```python\n{component_code}\n```\n\nHope that helps!"
         flow_gen = _make_flow_events([("end", {"result": response_text})])
 
         with (
             patch(f"{MODULE}.classify_intent", new_callable=AsyncMock, return_value=_make_intent("question")),
             patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
-            patch(f"{MODULE}.extract_component_code", return_value=component_code),
-            patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
-            patch("asyncio.sleep", new_callable=AsyncMock),
         ):
             gen = execute_flow_with_validation_streaming(
                 flow_filename="TestFlow",
-                input_value="what about this code?",
+                input_value="how do I create a component?",
                 global_variables={},
             )
             events = await _collect_events(gen)
 
-            # Should contain a complete event with validated component
-            complete_events = [e for e in events if "validated" in e.lower() or "complete" in e.lower()]
-            assert len(complete_events) >= 1
+            # Should NOT contain validation events — Q&A skips code extraction
+            validation_events = [e for e in events if "extracting_code" in e or '"validating"' in e]
+            assert len(validation_events) == 0
+
+            # Should contain a complete event with the full text response
+            complete_events = [e for e in events if '"event": "complete"' in e]
+            assert len(complete_events) == 1
+
+    @pytest.mark.asyncio
+    async def test_should_return_plain_text_when_question_response_contains_example_code(self):
+        """Q&A response with example component code should NOT trigger validation.
+
+        Bug: User asks "how do I create a custom component?" and the LLM responds
+        with an explanation plus an example code snippet. The fallback code extraction
+        detects 'class SumComponent(Component)' in the example and triggers the
+        validation pipeline, showing a component card instead of the text answer.
+        """
+        # Use a raw string with triple-backtick code block (real markdown)
+        explanation_with_example = (
+            "To create a custom component, you need to:\n\n"
+            "1. Create a Python file\n"
+            "2. Define a class\n\n"
+            "```python\n"
+            "from lfx.custom import Component\n"
+            "from lfx.io import Output\n"
+            "from lfx.schema import Data\n\n"
+            "class SumComponent(Component):\n"
+            "    display_name = 'Sum'\n"
+            "    description = 'Adds two numbers'\n"
+            "    inputs = []\n"
+            "    outputs = [Output(name='result', display_name='Result', method='run')]\n\n"
+            "    def run(self) -> Data:\n"
+            "        return Data(data={'result': 42})\n"
+            "```\n"
+        )
+        flow_gen = _make_flow_events([("end", {"result": explanation_with_example})])
+
+        with (
+            patch(f"{MODULE}.classify_intent", new_callable=AsyncMock, return_value=_make_intent("question")),
+            patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="how do I create a custom component?",
+                global_variables={},
+            )
+            events = await _collect_events(gen)
+
+            # Should NOT contain validation-related events (extracting_code, validating, validated)
+            validation_events = [e for e in events if "extracting_code" in e or "validating" in e]
+            assert len(validation_events) == 0, (
+                f"Q&A response with example code should not trigger validation. "
+                f"Got validation events: {validation_events}"
+            )
+
+            # Should contain a complete event with the full text (not component card)
+            complete_events = [e for e in events if '"event": "complete"' in e]
+            assert len(complete_events) == 1
 
 
 class TestComponentGeneration:
@@ -171,6 +224,7 @@ class TestComponentGeneration:
             patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -216,6 +270,7 @@ class TestComponentGeneration:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", side_effect=[mock_fail, mock_success]),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -336,105 +391,3 @@ class TestErrorHandling:
 
             error_events = [e for e in events if "error" in e.lower() or "no result" in e.lower()]
             assert len(error_events) >= 1
-
-
-class TestFlowPreview:
-    """Tests for flow_preview event emission when agent builds a flow."""
-
-    @pytest.mark.asyncio
-    async def test_should_emit_flow_update_when_tool_pushes_event(self):
-        """When a flow builder tool pushes an event, assistant should emit flow_update."""
-        import json
-
-        import lfx.components.tools.flow_builder_tools as tools_module
-
-        test_flow = {"name": "Test", "data": {"nodes": [{"data": {"type": "ChatInput"}}], "edges": []}}
-
-        # Create a flow generator that pushes a flow event between tokens,
-        # simulating what happens when the agent calls build_flow mid-execution.
-        async def flow_gen_with_tool_call():
-            yield ("token", "Building...")
-            # Simulate the tool pushing an event during execution
-            tools_module._flow_events.append({"action": "set_flow", "flow": test_flow})
-            yield ("token", " Done!")
-            yield ("end", {"result": "Building... Done!"})
-
-        with (
-            patch(f"{MODULE}.classify_intent", new_callable=AsyncMock, return_value=_make_intent("build_flow")),
-            patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen_with_tool_call()),
-        ):
-            gen = execute_flow_with_validation_streaming(
-                flow_filename="flow_builder_assistant",
-                input_value="build me a simple chat flow",
-                global_variables={},
-            )
-            events = await _collect_events(gen)
-
-            # Should have flow_update event
-            flow_update_events = [e for e in events if "flow_update" in e]
-            assert len(flow_update_events) >= 1, f"Expected flow_update event, got events: {events}"
-
-            # Parse the flow_update SSE event
-            update_data = json.loads(flow_update_events[0].split("data: ")[1].strip())
-            assert update_data["event"] == "flow_update"
-            assert update_data["action"] == "set_flow"
-
-            # Should also have complete event with has_flow
-            complete_events = [e for e in events if '"event": "complete"' in e]
-            assert len(complete_events) == 1
-            complete_data = json.loads(complete_events[0].split("data: ")[1].strip())
-            assert complete_data["data"].get("has_flow") is True
-
-        # Verify events were drained
-        assert len(tools_module._flow_events) == 0
-
-    @pytest.mark.asyncio
-    async def test_should_not_emit_flow_preview_for_qa(self):
-        """Q&A responses should not emit flow_preview even if tool ran previously."""
-        import lfx.components.tools.flow_builder_tools as tools_module
-
-        # Ensure no leftover flow data
-        tools_module._last_built_flow = None
-
-        flow_gen = _make_flow_events(
-            [
-                ("token", "Langflow is a tool for building AI flows."),
-                ("end", {"result": "Langflow is a tool for building AI flows."}),
-            ]
-        )
-
-        with (
-            patch(f"{MODULE}.classify_intent", new_callable=AsyncMock, return_value=_make_intent("question")),
-            patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
-        ):
-            gen = execute_flow_with_validation_streaming(
-                flow_filename="TestFlow",
-                input_value="what is langflow?",
-                global_variables={},
-            )
-            events = await _collect_events(gen)
-
-            flow_preview_events = [e for e in events if "flow_preview" in e]
-            assert len(flow_preview_events) == 0
-
-    @pytest.mark.asyncio
-    async def test_should_route_build_flow_intent_to_flow_builder(self):
-        """build_flow intent should use the flow builder assistant flow."""
-        flow_gen = _make_flow_events([("end", {"result": "done"})])
-
-        mock_streaming = MagicMock(return_value=flow_gen())
-
-        with (
-            patch(f"{MODULE}.classify_intent", new_callable=AsyncMock, return_value=_make_intent("build_flow")),
-            patch(f"{MODULE}.execute_flow_file_streaming", mock_streaming),
-        ):
-            gen = execute_flow_with_validation_streaming(
-                flow_filename="LangflowAssistant.json",
-                input_value="build me a chatbot",
-                global_variables={},
-            )
-            await _collect_events(gen)
-
-            # Verify it used the flow builder assistant, not the original flow
-            call_kwargs = mock_streaming.call_args[1]
-            assert call_kwargs["flow_filename"] == "flow_builder_assistant"

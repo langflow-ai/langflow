@@ -9,7 +9,6 @@ import pytest
 from langflow.agentic.helpers.sse import (
     format_complete_event,
     format_error_event,
-    format_flow_preview_event,
     format_progress_event,
     format_token_event,
 )
@@ -275,41 +274,6 @@ class TestSSEFormatConsistency:
         for event in test_cases:
             json_str = event[6:-2]
             json.loads(json_str)
-
-
-class TestFormatFlowPreviewEvent:
-    """Tests for format_flow_preview_event function."""
-
-    def test_should_format_flow_preview_event(self):
-        flow_data = {"data": {"nodes": [{"id": "1"}], "edges": []}}
-        result = format_flow_preview_event(flow_data, name="Test Flow", node_count=1, edge_count=0)
-
-        assert result.startswith("data: ")
-        assert result.endswith("\n\n")
-        parsed = json.loads(result[6:-2])
-        assert parsed["event"] == "flow_preview"
-        assert parsed["flow"] == flow_data
-        assert parsed["name"] == "Test Flow"
-        assert parsed["node_count"] == 1
-        assert parsed["edge_count"] == 0
-
-    def test_should_handle_empty_flow(self):
-        result = format_flow_preview_event({}, name="", node_count=0, edge_count=0)
-        parsed = json.loads(result[6:-2])
-        assert parsed["event"] == "flow_preview"
-        assert parsed["flow"] == {}
-
-    def test_should_preserve_complex_flow_data(self):
-        flow_data = {
-            "name": "RAG Pipeline",
-            "data": {
-                "nodes": [{"data": {"type": "ChatInput"}}, {"data": {"type": "OpenAIModel"}}],
-                "edges": [{"source": "a", "target": "b"}],
-            },
-        }
-        result = format_flow_preview_event(flow_data, name="RAG Pipeline", node_count=2, edge_count=1)
-        parsed = json.loads(result[6:-2])
-        assert parsed["flow"]["data"]["nodes"][1]["data"]["type"] == "OpenAIModel"
 
 
 class TestBugsAndEdgeCases:

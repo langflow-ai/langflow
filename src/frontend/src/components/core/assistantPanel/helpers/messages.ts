@@ -99,46 +99,19 @@ function getRandomMessage(messages: string[]): string {
   return messages[index];
 }
 
-// Generate a consistent set of messages for a single generation session
-export interface ReasoningMessages {
-  analyzing: string;
-  identifyingInputs: string;
-  checkingDependencies: string;
-  generatingCode: string;
-}
-
-export interface ValidationMessages {
-  validating: string;
-  validationFailed: string;
-  retrying: string;
-}
-
-export function getRandomReasoningMessages(): ReasoningMessages {
-  return {
-    analyzing: getRandomMessage(ANALYZING_MESSAGES),
-    identifyingInputs: getRandomMessage(IDENTIFYING_INPUTS_MESSAGES),
-    checkingDependencies: getRandomMessage(CHECKING_DEPENDENCIES_MESSAGES),
-    generatingCode: getRandomMessage(GENERATING_CODE_MESSAGES),
-  };
-}
-
-export function getRandomValidationMessages(): ValidationMessages {
-  return {
-    validating: getRandomMessage(VALIDATING_MESSAGES),
-    validationFailed: getRandomMessage(VALIDATION_FAILED_MESSAGES),
-    retrying: getRandomMessage(RETRYING_MESSAGES),
-  };
-}
-
-export function getRandomReasoningHeader(): string {
-  return getRandomMessage(REASONING_HEADER_MESSAGES);
-}
-
 export function getRandomThinkingMessage(): string {
   return getRandomMessage(REASONING_HEADER_MESSAGES);
 }
 
-// Alias for placeholder - uses same thinking messages
+// Descriptive messages shown in the input placeholder during post-generation steps
+const PLACEHOLDER_PROGRESS_MESSAGES = [
+  ...ANALYZING_MESSAGES,
+  ...IDENTIFYING_INPUTS_MESSAGES,
+  ...CHECKING_DEPENDENCIES_MESSAGES,
+  ...GENERATING_CODE_MESSAGES,
+  ...VALIDATING_MESSAGES,
+];
+
 export function getRandomPlaceholderMessage(): string {
-  return getRandomMessage(REASONING_HEADER_MESSAGES);
+  return getRandomMessage(PLACEHOLDER_PROGRESS_MESSAGES);
 }

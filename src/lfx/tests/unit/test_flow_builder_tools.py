@@ -1,6 +1,6 @@
 """Tests for flow_builder_tools components."""
 
-from lfx.components.tools.flow_builder_tools import (
+from lfx.mcp.flow_builder_tools import (
     AddComponent,
     BuildFlowFromSpec,
     ConnectComponents,

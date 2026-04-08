@@ -91,7 +91,7 @@ edges:
 """
         result = build_flow_from_spec(spec)
         assert "error" in result
-        assert "unknown node" in result["error"].lower()
+        assert "unknown" in result["error"].lower()
 
     def test_unknown_node_in_config(self):
         spec = """\
@@ -105,7 +105,7 @@ config:
 """
         result = build_flow_from_spec(spec)
         assert "error" in result
-        assert "unknown node" in result["error"].lower()
+        assert "unknown" in result["error"].lower()
 
     def test_invalid_spec_syntax(self):
         result = build_flow_from_spec("just some random text")

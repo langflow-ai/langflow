@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
 import { Check, FileText } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import type { AgenticResult } from "@/controllers/API/queries/agentic";
 import CodeAreaModal from "@/modals/codeAreaModal";
 

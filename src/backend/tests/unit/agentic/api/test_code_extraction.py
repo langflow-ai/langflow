@@ -1,7 +1,7 @@
 """Tests for code extraction from LLM responses.
 
 Tests extract_python_code, helper functions (_find_code_blocks, _find_unclosed_code_block,
-_is_complete_component), validate_component_code, and the extract-validate integration flow.
+_find_component_code), validate_component_code, and the extract-validate integration flow.
 """
 
 import pytest
@@ -9,7 +9,6 @@ from langflow.agentic.helpers.code_extraction import (
     _find_code_blocks,
     _find_component_code,
     _find_unclosed_code_block,
-    _is_complete_component,
     extract_component_code,
     extract_python_code,
 )
@@ -300,36 +299,6 @@ class TestFindUnclosedCodeBlock:
         assert "`inline`" in result[0]
 
 
-class TestIsCompleteComponent:
-    """Tests for _is_complete_component helper function."""
-
-    def test_should_return_true_for_component_with_inputs(self):
-        """Should return True for Component subclass with inputs defined."""
-        code = "class MyComp(Component):\n    inputs = [Input(name='x')]\n"
-        assert _is_complete_component(code) is True
-
-    def test_should_return_true_for_component_with_outputs(self):
-        """Should return True for Component subclass with outputs only."""
-        code = "class MyComp(Component):\n    outputs = [Output(name='y')]\n"
-        assert _is_complete_component(code) is True
-
-    def test_should_return_true_for_custom_component_subclass(self):
-        """Should recognize CustomComponent and LCToolComponent as valid bases."""
-        for base in ["CustomComponent", "LCToolComponent"]:
-            code = f"class MyComp({base}):\n    inputs = [Input(name='x')]\n"
-            assert _is_complete_component(code) is True, f"Failed for base: {base}"
-
-    def test_should_return_false_without_component_class(self):
-        """Should return False when no Component/CustomComponent/LCToolComponent class."""
-        code = "class MyHelper:\n    inputs = [Input(name='x')]\n"
-        assert _is_complete_component(code) is False
-
-    def test_should_return_false_without_inputs_or_outputs(self):
-        """Should return False when Component class exists but no inputs/outputs."""
-        code = "class MyComp(Component):\n    display_name = 'Test'\n"
-        assert _is_complete_component(code) is False
-
-
 class TestValidateComponentCode:
     """Tests for validate_component_code function."""
 
@@ -374,15 +343,19 @@ class TestValidateComponentCode:
         assert result.is_valid is False
         assert result.error is not None
 
-    def test_fails_for_missing_imports(self):
-        """Should fail validation when required imports are missing."""
+    def test_passes_static_validation_without_imports(self):
+        """Static validation accepts syntactically valid code even without imports.
+
+        Import validation happens at runtime when the component is loaded into a flow,
+        not during static analysis.
+        """
         code_without_imports = """class BrokenComponent(Component):
     display_name = "Broken"
 """
         result = validate_component_code(code_without_imports)
 
-        assert result.is_valid is False
-        assert result.error is not None
+        assert result.is_valid is True
+        assert result.class_name == "BrokenComponent"
 
 
 class TestCodeExtractionAndValidationIntegration:
@@ -496,22 +469,6 @@ class TestBugsAndEdgeCases:
         result = extract_python_code(text)
         assert result is not None
         assert '```"' in result
-
-    @pytest.mark.xfail(
-        reason="BUG: L44 'inputs' in code matches substring in comments/strings",
-        strict=True,
-    )
-    def test_is_complete_component_false_positive_with_inputs_in_comment(self):
-        """_is_complete_component should not match 'inputs' in comments."""
-        code = (
-            "# This component has no real inputs defined\n"
-            "data = [1, 2, 3]\n"
-            "\n"
-            "class FakeComponent(Component):\n"
-            '    """A component without real inputs."""\n'
-            "    pass\n"
-        )
-        assert _is_complete_component(code) is False
 
     @pytest.mark.xfail(
         reason="BUG: L90 'Component' in match matches ComponentFactory, not just inheritance",

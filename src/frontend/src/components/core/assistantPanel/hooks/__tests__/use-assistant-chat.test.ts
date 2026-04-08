@@ -465,94 +465,80 @@ describe("useAssistantChat", () => {
   });
 
   describe("bugs and edge cases", () => {
-    it.failing(
-      "BUG: completedSteps should track step transitions — array stays empty forever",
-      async () => {
-        // L69: completedSteps = [] (empty)
-        // L82: event.step !== completedSteps[completedSteps.length - 1] → always true (undefined)
-        // L83: if (completedSteps.length > 0) → always false because array is empty
-        // Nothing is ever pushed → completedSteps stays [] for the entire session.
-        const progressSteps: string[] = [];
+    it("completedSteps should track step transitions", async () => {
+      const progressSteps: string[] = [];
 
-        mockPostAssistStream.mockImplementation(
-          async (_request: unknown, callbacks: Record<string, Function>) => {
-            callbacks.onProgress({
-              event: "progress",
-              step: "generating",
-              attempt: 1,
-              max_attempts: 3,
-            });
-            callbacks.onProgress({
-              event: "progress",
-              step: "validating",
-              attempt: 1,
-              max_attempts: 3,
-            });
-            callbacks.onProgress({
-              event: "progress",
-              step: "validated",
-              attempt: 1,
-              max_attempts: 3,
-            });
-            callbacks.onComplete({
-              event: "complete",
-              data: { result: "done", validated: true },
-            });
-          },
-        );
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onProgress({
+            event: "progress",
+            step: "generating",
+            attempt: 1,
+            max_attempts: 3,
+          });
+          callbacks.onProgress({
+            event: "progress",
+            step: "validating",
+            attempt: 1,
+            max_attempts: 3,
+          });
+          callbacks.onProgress({
+            event: "progress",
+            step: "validated",
+            attempt: 1,
+            max_attempts: 3,
+          });
+          callbacks.onComplete({
+            event: "complete",
+            data: { result: "done", validated: true },
+          });
+        },
+      );
 
-        const { result } = renderHook(() => useAssistantChat());
+      const { result } = renderHook(() => useAssistantChat());
 
-        await act(async () => {
-          await result.current.handleSend("create", TEST_MODEL);
-        });
+      await act(async () => {
+        await result.current.handleSend("create", TEST_MODEL);
+      });
 
-        const assistantMsg = result.current.messages[1];
-        // completedSteps should contain the previous steps
-        expect(assistantMsg.completedSteps).toBeDefined();
-        expect(assistantMsg.completedSteps!.length).toBeGreaterThan(0);
-      },
-    );
+      const assistantMsg = result.current.messages[1];
+      // completedSteps should contain the previous steps
+      expect(assistantMsg.completedSteps).toBeDefined();
+      expect(assistantMsg.completedSteps!.length).toBeGreaterThan(0);
+    });
 
-    it.failing(
-      "BUG: completedSteps should contain the previous step when a new step arrives",
-      async () => {
-        // L83: The inner `if (completedSteps.length > 0)` check means the very first
-        // step transition never records anything. Even if the outer check passes,
-        // the array starts at length 0, so the push is skipped.
-        // Additionally, L84-86 pushes completedSteps[last] instead of event.step.
-        mockPostAssistStream.mockImplementation(
-          async (_request: unknown, callbacks: Record<string, Function>) => {
-            callbacks.onProgress({
-              event: "progress",
-              step: "generating",
-              attempt: 1,
-              max_attempts: 3,
-            });
-            callbacks.onProgress({
-              event: "progress",
-              step: "validating",
-              attempt: 1,
-              max_attempts: 3,
-            });
-            callbacks.onComplete({
-              event: "complete",
-              data: { result: "done", validated: true },
-            });
-          },
-        );
+    it("completedSteps should contain the previous step when a new step arrives", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onProgress({
+            event: "progress",
+            step: "generating",
+            attempt: 1,
+            max_attempts: 3,
+          });
+          callbacks.onProgress({
+            event: "progress",
+            step: "validating",
+            attempt: 1,
+            max_attempts: 3,
+          });
+          callbacks.onComplete({
+            event: "complete",
+            data: { result: "done", validated: true },
+          });
+        },
+      );
 
-        const { result } = renderHook(() => useAssistantChat());
+      const { result } = renderHook(() => useAssistantChat());
 
-        await act(async () => {
-          await result.current.handleSend("create", TEST_MODEL);
-        });
+      await act(async () => {
+        await result.current.handleSend("create", TEST_MODEL);
+      });
 
-        const assistantMsg = result.current.messages[1];
-        // When "validating" arrives, "generating" should be in completedSteps
-        expect(assistantMsg.completedSteps).toContain("generating");
-      },
-    );
+      const assistantMsg = result.current.messages[1];
+      // When "validating" arrives, "generating" should be in completedSteps
+      expect(assistantMsg.completedSteps).toContain("generating");
+    });
 
     it("should use same session_id across multiple sends", async () => {
       // Must call onComplete so isProcessing resets to false between sends
@@ -598,6 +584,32 @@ describe("useAssistantChat", () => {
       const sessionAfter = mockPostAssistStream.mock.calls[1][0].session_id;
 
       expect(sessionBefore).not.toBe(sessionAfter);
+    });
+
+    it("should_prefix_session_id_with_agentic_to_isolate_from_playground", async () => {
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("hello", TEST_MODEL);
+      });
+
+      const sessionId = mockPostAssistStream.mock.calls[0][0].session_id;
+      expect(sessionId).toMatch(/^agentic_/);
+    });
+
+    it("should_prefix_session_id_with_agentic_after_clear_history", async () => {
+      const { result } = renderHook(() => useAssistantChat());
+
+      act(() => {
+        result.current.handleClearHistory();
+      });
+
+      await act(async () => {
+        await result.current.handleSend("after clear", TEST_MODEL);
+      });
+
+      const sessionId = mockPostAssistStream.mock.calls[0][0].session_id;
+      expect(sessionId).toMatch(/^agentic_/);
     });
   });
 });

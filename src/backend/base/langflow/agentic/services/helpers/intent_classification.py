@@ -1,6 +1,7 @@
 """Intent classification for assistant requests."""
 
 import json
+import re
 
 from lfx.log.logger import logger
 
@@ -12,6 +13,11 @@ from langflow.agentic.services.flow_types import (
     TRANSLATION_FLOW,
     IntentResult,
 )
+
+# Pattern to extract JSON from markdown code blocks (```json ... ``` or ``` ... ```)
+_MARKDOWN_JSON_RE = re.compile(r"```(?:json)?\s*\n?(.*?)\n?```", re.DOTALL)
+# Pattern to find JSON object in surrounding text
+_EMBEDDED_JSON_RE = re.compile(r"\{[^{}]*\"intent\"[^{}]*\}", re.DOTALL)
 
 
 async def classify_intent(
@@ -56,6 +62,39 @@ async def classify_intent(
                 logger.debug(f"Intent: {intent}, Translation: '{translation[:50]}'")
                 return IntentResult(translation=translation, intent=intent)
             except json.JSONDecodeError:
+                # Fallback 1: JSON wrapped in markdown code block (```json ... ```)
+                md_match = _MARKDOWN_JSON_RE.search(response_text)
+                if md_match:
+                    try:
+                        parsed = json.loads(md_match.group(1).strip())
+                        return IntentResult(
+                            translation=parsed.get("translation", text),
+                            intent=parsed.get("intent", "question"),
+                        )
+                    except json.JSONDecodeError:
+                        pass
+
+                # Fallback 2: JSON embedded in surrounding text
+                json_match = _EMBEDDED_JSON_RE.search(response_text)
+                if json_match:
+                    try:
+                        parsed = json.loads(json_match.group(0))
+                        return IntentResult(
+                            translation=parsed.get("translation", text),
+                            intent=parsed.get("intent", "question"),
+                        )
+                    except json.JSONDecodeError:
+                        pass
+
+                # Fallback 3: plain text mentioning known intents
+                if "generate_component" in response_text:
+                    logger.info("Extracted generate_component intent from non-JSON response")
+                    return IntentResult(translation=text, intent="generate_component")
+
+                if "off_topic" in response_text:
+                    logger.info("Extracted off_topic intent from non-JSON response")
+                    return IntentResult(translation=text, intent="off_topic")
+
                 logger.warning("Intent flow returned non-JSON, treating as question")
                 return IntentResult(translation=response_text, intent="question")
 

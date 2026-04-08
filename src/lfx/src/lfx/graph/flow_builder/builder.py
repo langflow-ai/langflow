@@ -14,7 +14,7 @@ from lfx.graph.flow_builder.component import add_component, configure_component
 from lfx.graph.flow_builder.connect import add_connection
 from lfx.graph.flow_builder.flow import empty_flow
 from lfx.graph.flow_builder.layout import layout_flow
-from lfx.graph.flow_builder.spec import parse_flow_spec
+from lfx.graph.flow_builder.spec import parse_flow_spec, validate_spec_references
 from lfx.log.logger import logger
 
 _INDEX_PATH = Path(__file__).resolve().parent.parent.parent / "_assets" / "component_index.json"
@@ -83,18 +83,10 @@ def build_flow_from_spec(spec: str) -> dict[str, Any]:
         }
 
     # Validate node references in edges and config
-    node_ids = {n["id"] for n in parsed["nodes"]}
-    available = sorted(node_ids)
-    for edge in parsed.get("edges", []):
-        src = edge["source_id"]
-        if src not in node_ids:
-            return {"error": f"Edge references unknown node '{src}'", "details": f"Available: {available}"}
-        tgt = edge["target_id"]
-        if tgt not in node_ids:
-            return {"error": f"Edge references unknown node '{tgt}'", "details": f"Available: {available}"}
-    for config_id in parsed.get("config", {}):
-        if config_id not in node_ids:
-            return {"error": f"Config references unknown node '{config_id}'", "details": f"Available: {available}"}
+    try:
+        validate_spec_references(parsed)
+    except ValueError as e:
+        return {"error": str(e), "details": str(e)}
 
     # Build the flow
     flow = empty_flow(

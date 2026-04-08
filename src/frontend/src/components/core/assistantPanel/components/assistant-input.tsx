@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import type { AgenticStepType } from "@/controllers/API/queries/agentic";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import type { AgenticStepType } from "@/controllers/API/queries/agentic";
 import { cn } from "@/utils/utils";
 import { getAssistantPlaceholder } from "../assistant-panel.constants";
 import type { AssistantModel } from "../assistant-panel.types";
@@ -44,6 +44,7 @@ function useAnimatedPlaceholder(
 }
 
 const ASSISTANT_MODEL_STORAGE_KEY = "langflow-assistant-selected-model";
+const MAX_MESSAGE_LENGTH = 500;
 
 interface AssistantInputProps {
   onSend: (message: string, model: AssistantModel | null) => void;
@@ -54,6 +55,8 @@ interface AssistantInputProps {
   placeholder?: string;
   compact?: boolean;
   autoFocus?: boolean;
+  draftMessage?: string;
+  onDraftChange?: (draft: string) => void;
 }
 
 export function AssistantInput({
@@ -65,8 +68,10 @@ export function AssistantInput({
   placeholder,
   compact = false,
   autoFocus = false,
+  draftMessage = "",
+  onDraftChange,
 }: AssistantInputProps) {
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(draftMessage);
   const [idlePlaceholder] = useState(getAssistantPlaceholder);
 
   // Show animated placeholder only during post-generation steps (when thinking animation is done)
@@ -116,11 +121,16 @@ export function AssistantInput({
     }
   }, [selectedModel]);
 
+  const updateMessage = (value: string) => {
+    setMessage(value);
+    onDraftChange?.(value);
+  };
+
   const handleSend = () => {
     const trimmedMessage = message.trim();
-    if (!trimmedMessage || disabled) return;
+    if (!trimmedMessage || disabled || isProcessing) return;
     onSend(trimmedMessage, selectedModel);
-    setMessage("");
+    updateMessage("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -134,9 +144,11 @@ export function AssistantInput({
   };
 
   const canSend = message.trim().length > 0 && !disabled;
+  const charsRemaining = MAX_MESSAGE_LENGTH - message.length;
+  const showCharCount = message.length > MAX_MESSAGE_LENGTH * 0.8;
 
   return (
-    <div className="relative px-2 pb-1">
+    <div className="relative px-2 pb-2">
       {/* Glow effect below input */}
       <div
         className="pointer-events-none absolute -bottom-2 left-1/2 h-16 w-3/4 -translate-x-1/2 rounded-full opacity-60 blur-2xl"
@@ -156,7 +168,9 @@ export function AssistantInput({
           <Textarea
             ref={textareaRef}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            maxLength={MAX_MESSAGE_LENGTH}
+            onChange={(e) => updateMessage(e.target.value)}
+            data-testid="assistant-input-textarea"
             onKeyDown={handleKeyDown}
             placeholder={
               isProcessing
@@ -190,29 +204,45 @@ export function AssistantInput({
               onModelChange={setSelectedModel}
             />
           </div>
-          {isProcessing ? (
-            <button
-              type="button"
-              onClick={onStop}
-              title="Stop generation"
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted-foreground/15 text-muted-foreground transition-colors hover:bg-muted-foreground/25"
-            >
-              <ForwardedIconComponent
-                name="Square"
-                className="h-3 w-3 fill-current"
-              />
-            </button>
-          ) : (
-            <Button
-              size="icon"
-              className="h-8 w-8 rounded-lg"
-              onClick={handleSend}
-              disabled={!canSend}
-              title="Send message"
-            >
-              <ForwardedIconComponent name="ArrowUp" className="h-4 w-4" />
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {showCharCount && (
+              <span
+                className={cn(
+                  "text-xs tabular-nums",
+                  charsRemaining <= 20
+                    ? "text-destructive"
+                    : "text-muted-foreground",
+                )}
+              >
+                {charsRemaining}
+              </span>
+            )}
+            {isProcessing ? (
+              <button
+                type="button"
+                onClick={onStop}
+                title="Stop generation"
+                data-testid="assistant-stop-button"
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted-foreground/15 text-muted-foreground transition-colors hover:bg-muted-foreground/25"
+              >
+                <ForwardedIconComponent
+                  name="Square"
+                  className="h-3 w-3 fill-current"
+                />
+              </button>
+            ) : (
+              <Button
+                size="icon"
+                data-testid="assistant-send-button"
+                className="h-8 w-8 rounded-lg"
+                onClick={handleSend}
+                disabled={!canSend}
+                title="Send message"
+              >
+                <ForwardedIconComponent name="ArrowUp" className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

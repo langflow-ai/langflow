@@ -6,64 +6,12 @@
 
 import {
   getRandomPlaceholderMessage,
-  getRandomReasoningHeader,
-  getRandomReasoningMessages,
   getRandomThinkingMessage,
-  getRandomValidationMessages,
 } from "../messages";
 
-describe("getRandomReasoningMessages", () => {
-  it("should return all expected keys", () => {
-    const result = getRandomReasoningMessages();
-
-    expect(result).toHaveProperty("analyzing");
-    expect(result).toHaveProperty("identifyingInputs");
-    expect(result).toHaveProperty("checkingDependencies");
-    expect(result).toHaveProperty("generatingCode");
-  });
-
-  it("should return non-empty strings for all values", () => {
-    const result = getRandomReasoningMessages();
-
-    for (const value of Object.values(result)) {
-      expect(typeof value).toBe("string");
-      expect(value.length).toBeGreaterThan(0);
-    }
-  });
-
-  it("should return varied results across multiple calls", () => {
-    const results = new Set<string>();
-    for (let i = 0; i < 50; i++) {
-      const msg = getRandomReasoningMessages();
-      results.add(msg.analyzing);
-    }
-    // 8 variations — 50 calls should produce at least 2 unique values
-    expect(results.size).toBeGreaterThanOrEqual(2);
-  });
-});
-
-describe("getRandomValidationMessages", () => {
-  it("should return all expected keys", () => {
-    const result = getRandomValidationMessages();
-
-    expect(result).toHaveProperty("validating");
-    expect(result).toHaveProperty("validationFailed");
-    expect(result).toHaveProperty("retrying");
-  });
-
-  it("should return non-empty strings for all values", () => {
-    const result = getRandomValidationMessages();
-
-    for (const value of Object.values(result)) {
-      expect(typeof value).toBe("string");
-      expect(value.length).toBeGreaterThan(0);
-    }
-  });
-});
-
-describe("getRandomReasoningHeader", () => {
+describe("getRandomThinkingMessage", () => {
   it("should return a non-empty string ending with '...'", () => {
-    const result = getRandomReasoningHeader();
+    const result = getRandomThinkingMessage();
 
     expect(typeof result).toBe("string");
     expect(result.length).toBeGreaterThan(0);
@@ -71,33 +19,50 @@ describe("getRandomReasoningHeader", () => {
   });
 });
 
-describe("getRandomThinkingMessage", () => {
-  it("should return from same pool as reasoning header", () => {
-    // Both use REASONING_HEADER_MESSAGES — deterministic with Math.random = 0
-    const spy = jest.spyOn(Math, "random").mockReturnValue(0);
-    const header = getRandomReasoningHeader();
-    const thinking = getRandomThinkingMessage();
-    spy.mockRestore();
-
-    expect(header).toBe(thinking);
-  });
-});
-
 describe("getRandomPlaceholderMessage", () => {
-  it("should return from same pool as reasoning header", () => {
+  it("should return from a different pool than thinking messages", () => {
     const spy = jest.spyOn(Math, "random").mockReturnValue(0);
-    const header = getRandomReasoningHeader();
+    const thinking = getRandomThinkingMessage();
     const placeholder = getRandomPlaceholderMessage();
     spy.mockRestore();
 
-    expect(header).toBe(placeholder);
+    // Placeholder messages are descriptive progress messages,
+    // not the generic "Thinking..." headers
+    expect(placeholder).not.toBe(thinking);
+  });
+
+  it("should_return_descriptive_progress_message_when_used_as_placeholder", () => {
+    // Bug: getRandomPlaceholderMessage() returns from REASONING_HEADER_MESSAGES
+    // ("Thinking...", "Processing...") instead of descriptive progress messages.
+    // Placeholder messages should describe what the assistant is doing,
+    // not generic "Thinking..." headers.
+    const headerMessages = [
+      "Thinking...",
+      "Processing...",
+      "Working on it...",
+      "Analyzing...",
+      "Reasoning...",
+      "Please wait...",
+      "Just a moment...",
+      "Almost there...",
+    ];
+
+    // Sample with deterministic Math.random to get the first message
+    const spy = jest.spyOn(Math, "random").mockReturnValue(0);
+    const firstPlaceholder = getRandomPlaceholderMessage();
+    spy.mockRestore();
+
+    // The first placeholder message must NOT be one of the generic headers
+    expect(headerMessages).not.toContain(firstPlaceholder);
+    // It should be a descriptive progress message (longer, more specific)
+    expect(firstPlaceholder.length).toBeGreaterThan(15);
   });
 });
 
 describe("deterministic Math.random", () => {
   it("should return first element when Math.random is 0", () => {
     const spy = jest.spyOn(Math, "random").mockReturnValue(0);
-    const result = getRandomReasoningHeader();
+    const result = getRandomThinkingMessage();
     spy.mockRestore();
 
     // Math.floor(0 * 8) = 0 → first element "Thinking..."
@@ -106,7 +71,7 @@ describe("deterministic Math.random", () => {
 
   it("should return last element when Math.random is 0.999", () => {
     const spy = jest.spyOn(Math, "random").mockReturnValue(0.999);
-    const result = getRandomReasoningHeader();
+    const result = getRandomThinkingMessage();
     spy.mockRestore();
 
     // Math.floor(0.999 * 8) = Math.floor(7.992) = 7 → last element "Almost there..."

@@ -201,3 +201,28 @@ def parse_flow_spec(text: str) -> dict:
         raise ValueError(msg)
 
     return result
+
+
+def validate_spec_references(parsed: dict) -> None:
+    """Validate that all edge and config references point to existing nodes.
+
+    This is extracted as a shared function because the same validation
+    is needed in create_flow_from_spec, update_flow_from_spec, and
+    build_flow_from_spec. Keeping it in one place prevents the three
+    copies from drifting out of sync.
+
+    Raises:
+        ValueError: If any reference points to an unknown node.
+    """
+    node_ids = {n["id"] for n in parsed.get("nodes", [])}
+    for spec_id in parsed.get("config", {}):
+        if spec_id not in node_ids:
+            msg = f"Config references unknown node '{spec_id}'. Available: {sorted(node_ids)}"
+            raise ValueError(msg)
+    for edge in parsed.get("edges", []):
+        if edge["source_id"] not in node_ids:
+            msg = f"Edge references unknown source '{edge['source_id']}'. Available: {sorted(node_ids)}"
+            raise ValueError(msg)
+        if edge["target_id"] not in node_ids:
+            msg = f"Edge references unknown target '{edge['target_id']}'. Available: {sorted(node_ids)}"
+            raise ValueError(msg)

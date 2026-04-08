@@ -29,6 +29,9 @@ class _ReturnChecker(ast.NodeVisitor):
                 break
         self.generic_visit(node)
 
+    # Langflow components commonly use async output methods
+    visit_AsyncFunctionDef = visit_FunctionDef  # noqa: N815
+
 
 def _extract_class_name_regex(code: str) -> str | None:
     """Extract class name using regex (fallback for syntax errors)."""
@@ -119,6 +122,30 @@ def _extract_output_methods(tree: ast.Module, class_name: str) -> list[str]:
             if method is not None:
                 methods.append(method)
     return methods
+
+
+def validate_component_runtime(code: str, user_id: str | None = None) -> str | None:
+    """Try to instantiate the component at runtime to catch import/class errors.
+
+    Returns None if validation passes, or an error message string if it fails.
+    This catches issues that static AST validation cannot detect, such as:
+    - Wrong import paths (e.g., 'from lfx.base import Component' instead of 'from lfx.custom import Component')
+    - Missing dependencies
+    - Invalid class hierarchy
+    """
+    try:
+        from lfx.custom.custom_component.component import Component as ComponentClass
+        from lfx.custom.utils import build_custom_component_template
+
+        component_instance = ComponentClass(_code=code)
+        build_custom_component_template(component_instance, user_id=user_id)
+    except Exception as e:  # noqa: BLE001
+        # Extract just the root cause, not the full traceback
+        root = e.__cause__ or e
+        error_type = type(root).__name__
+        error_msg = str(root).split("\n")[0].strip() if str(root) else str(e).split("\n")[0].strip()
+        return f"{error_type}: {error_msg}" if error_msg else error_type
+    return None
 
 
 def validate_component_code(code: str) -> ValidationResult:
