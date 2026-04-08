@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
-from pydantic import field_serializer, field_validator
+from pydantic import ConfigDict, field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
@@ -121,8 +121,7 @@ class TransactionBase(SQLModel):
     flow_id: UUID = Field()
 
     # Needed for Column(JSON)
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def __init__(self, **data):
         # Sanitize inputs and outputs to remove sensitive data before storing
