@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import DeploymentConflictError, InvalidContentError
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import create_config, validate_connection
@@ -35,8 +35,6 @@ if TYPE_CHECKING:
         WatsonxFlowArtifactProviderData,
     )
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
-
-logger = logging.getLogger(__name__)
 
 
 class OrderedUniqueStrs:
@@ -121,6 +119,7 @@ async def create_connection_with_conflict_mapping(
 ) -> str:
     from lfx.services.adapters.deployment.schema import DeploymentConfig
 
+    logger.debug("create_connection_with_conflict_mapping: app_id='%s'", app_id)
     config_payload = DeploymentConfig(
         name=app_id,
         description=None,
@@ -144,11 +143,12 @@ async def create_connection_with_conflict_mapping(
             error_detail = str(extract_error_detail(str(exc.detail)))
         is_conflict = status_code == status.HTTP_409_CONFLICT or "already exists" in error_detail.lower()
         if is_conflict:
+            logger.debug("create_connection_with_conflict_mapping: conflict for app_id='%s': %s", app_id, error_detail)
             prefix = f"{error_prefix}: " if error_prefix else ""
             msg = (
                 f"{prefix}A connection with app_id '{app_id}' already exists in the provider. "
-                "Use an existing connection by referencing it in connections.existing_app_ids, "
-                "or choose a different app_id."
+                "Use an existing connection by referencing its app_id in operations[*].app_ids, "
+                "or choose a different app_id for connections.raw_payloads."
             )
             raise DeploymentConflictError(message=msg) from exc
         raise
@@ -165,6 +165,11 @@ async def resolve_connections_for_operations(
     validate_connection_fn: Callable[..., Awaitable[object]] = validate_connection,
     create_connection_fn: Callable[..., Awaitable[str]] = create_connection_with_conflict_mapping,
 ) -> ConnectionResolutionResult:
+    logger.debug(
+        "resolve_connections_for_operations: existing_app_ids=%s, raw_to_create=%d",
+        existing_app_ids,
+        len(raw_connections_to_create),
+    )
     operation_to_provider_app_id = {app_id: app_id for app_id in existing_app_ids}
     resolved_connections: dict[str, str] = {}
 
@@ -211,6 +216,11 @@ async def resolve_connections_for_operations(
         created_app_ids_journal.append(result)
     created_app_ids = list(dict.fromkeys(created_app_ids_journal))
     if create_connection_errors:
+        logger.debug(
+            "resolve_connections_for_operations: %d errors, created_app_ids=%s",
+            len(create_connection_errors),
+            created_app_ids,
+        )
         raise ConnectionCreateBatchError(created_app_ids=created_app_ids, errors=create_connection_errors)
 
     validated_created_connections: list[object] = await asyncio.gather(
@@ -226,6 +236,12 @@ async def resolve_connections_for_operations(
     for create_plan, connection in zip(raw_connections_to_create, validated_created_connections, strict=True):
         operation_to_provider_app_id[create_plan.operation_app_id] = create_plan.provider_app_id
         resolved_connections[create_plan.provider_app_id] = connection.connection_id  # type: ignore[attr-defined]
+
+    logger.debug(
+        "resolve_connections_for_operations: resolved_connections=%s, created_app_ids=%s",
+        resolved_connections,
+        created_app_ids,
+    )
 
     return ConnectionResolutionResult(
         operation_to_provider_app_id=operation_to_provider_app_id,
@@ -268,7 +284,6 @@ async def create_raw_tools_with_bindings(
     raw_tools_to_create: list[RawToolCreatePlan],
     operation_to_provider_app_id: dict[str, str],
     resolved_connections: dict[str, str],
-    resource_prefix: str,
     create_and_upload_tools_fn: Callable[..., Awaitable[list[str]]] = create_and_upload_wxo_flow_tools_with_bindings,
 ) -> RawToolCreateResult:
     if not raw_tools_to_create:
@@ -282,7 +297,6 @@ async def create_raw_tools_with_bindings(
     raw_create_results = await create_and_upload_tools_fn(
         clients=clients,
         tool_bindings=tool_bindings,
-        tool_name_prefix=resource_prefix,
     )
 
     created_tool_ids: list[str] = []
@@ -315,5 +329,5 @@ async def rollback_created_app_ids(
     for app_id in reversed(created_app_ids):
         try:
             await retry_rollback(delete_config_if_exists, clients, app_id=app_id)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Rollback failed for created app_id=%s — resource may be orphaned", app_id)

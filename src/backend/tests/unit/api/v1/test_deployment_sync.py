@@ -21,7 +21,12 @@ from langflow.api.v1.mappers.deployments.contracts import (
     UpdateSnapshotBindings,
 )
 from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
-from lfx.services.adapters.deployment.schema import DeploymentCreateResult, DeploymentUpdateResult
+from lfx.services.adapters.deployment.schema import (
+    DeploymentCreateResult,
+    DeploymentUpdateResult,
+    SnapshotItem,
+    SnapshotListResult,
+)
 
 try:
     from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
@@ -232,7 +237,8 @@ class TestListDeploymentsSynced:
         """Rows whose resource_key is in the provider's known set are kept."""
         row1 = _mock_deployment_row("rk-1")
         row2 = _mock_deployment_row("rk-2")
-        mock_list.side_effect = [[(row1, 0, []), (row2, 1, ["fv-1"])], []]
+        fv_id = uuid4()
+        mock_list.side_effect = [[(row1, 0, []), (row2, 1, [(fv_id, "snap-1")])], []]
         mock_fetch.return_value = {"rk-1", "rk-2"}
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -678,12 +684,27 @@ def test_resolve_flow_version_patch_for_update_watsonx_operations():
     from langflow.api.v1.mappers.deployments.helpers import resolve_flow_version_patch_for_update
 
     add_id = uuid4()
+    unbind_only_id = uuid4()
     remove_id = uuid4()
     add_ids, remove_ids = resolve_flow_version_patch_for_update(
-        deployment_mapper=_FakeMapper(),
+        deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
         payload=DeploymentUpdateRequest(
-            add_flow_version_ids=[add_id],
-            remove_flow_version_ids=[remove_id],
+            provider_data={
+                "llm": "test-llm",
+                "upsert_flows": [
+                    {
+                        "flow_version_id": str(add_id),
+                        "add_app_ids": ["app-one"],
+                        "remove_app_ids": [],
+                    },
+                    {
+                        "flow_version_id": str(unbind_only_id),
+                        "add_app_ids": [],
+                        "remove_app_ids": ["app-one"],
+                    },
+                ],
+                "remove_flows": [str(remove_id)],
+            }
         ),
     )
 
@@ -1203,6 +1224,7 @@ class TestWxoResolveRollbackUpdate:
         )
 
         assert result is not None
+        assert result.spec is not None
         assert result.spec.name == "test-dep"
         assert result.spec.description == "desc"
         provider_data = result.provider_data
@@ -1230,6 +1252,7 @@ class TestWxoResolveRollbackUpdate:
 
         assert result is not None
         assert result.provider_data["put_tools"] == []
+        assert result.spec is not None
         assert result.spec.description == ""
 
 
@@ -1408,3 +1431,336 @@ class TestListDeploymentsSyncedSnapshotPhase:
         assert len(accepted) == 1
         assert accepted[0][1] == 3
         db.begin_nested.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# list_deployment_flow_versions_synced
+# ---------------------------------------------------------------------------
+
+
+class TestListDeploymentFlowVersionsSynced:
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployment_attachments", new_callable=AsyncMock, return_value=2)
+    @patch(f"{MODULE}.list_deployment_attachments_with_versions", new_callable=AsyncMock)
+    @patch(f"{MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployment_attachments", new_callable=AsyncMock)
+    async def test_syncs_snapshots_with_snapshot_ids_and_returns_enrichment(
+        self,
+        mock_list_attachments,
+        mock_sync_snapshot_ids,
+        mock_list_with_versions,
+        mock_count_attachments,
+    ):
+        deployment_id = uuid4()
+        attachments = [
+            _mock_attachment(provider_snapshot_id="snap-1", deployment_id=deployment_id),
+            _mock_attachment(provider_snapshot_id="snap-stale", deployment_id=deployment_id),
+            _mock_attachment(provider_snapshot_id=None, deployment_id=deployment_id),
+        ]
+        mock_list_attachments.return_value = attachments
+        rows = [(SimpleNamespace(provider_snapshot_id="snap-1"), SimpleNamespace())]
+        mock_list_with_versions.return_value = rows
+
+        adapter = AsyncMock()
+        adapter.list_snapshots.return_value = SnapshotListResult(
+            snapshots=[
+                SnapshotItem(
+                    id="snap-1",
+                    name="tool-1",
+                    provider_data={"connections": {"cfg-1": "conn-1"}},
+                )
+            ]
+        )
+        mapper = WatsonxOrchestrateDeploymentMapper()
+        db = MagicMock()
+        db.begin_nested.return_value = _AsyncNoopSavepoint()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployment_flow_versions_synced
+
+        out_rows, total, snapshot_result = await list_deployment_flow_versions_synced(
+            deployment_adapter=adapter,
+            deployment_mapper=mapper,
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            deployment_id=deployment_id,
+            db=db,
+            page=2,
+            size=3,
+        )
+
+        assert out_rows == rows
+        assert total == 2
+        assert isinstance(snapshot_result, SnapshotListResult)
+        assert [snapshot.id for snapshot in snapshot_result.snapshots] == ["snap-1"]
+        adapter.list_snapshots.assert_awaited_once()
+        adapter_params = adapter.list_snapshots.call_args.kwargs["params"]
+        assert adapter_params.snapshot_ids == ["snap-1", "snap-stale"]
+        mock_sync_snapshot_ids.assert_awaited_once()
+        assert mock_sync_snapshot_ids.call_args.kwargs["known_snapshot_ids"] == {"snap-1"}
+        assert mock_list_with_versions.call_args.kwargs["offset"] == 3
+        assert mock_list_with_versions.call_args.kwargs["limit"] == 3
+        mock_count_attachments.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployment_attachments", new_callable=AsyncMock, return_value=1)
+    @patch(f"{MODULE}.list_deployment_attachments_with_versions", new_callable=AsyncMock)
+    @patch(f"{MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployment_attachments", new_callable=AsyncMock)
+    async def test_skips_adapter_call_when_no_provider_snapshot_ids(
+        self,
+        mock_list_attachments,
+        mock_sync_snapshot_ids,
+        mock_list_with_versions,
+        mock_count_attachments,
+    ):
+        deployment_id = uuid4()
+        attachments = [
+            _mock_attachment(provider_snapshot_id=None, deployment_id=deployment_id),
+            _mock_attachment(provider_snapshot_id="", deployment_id=deployment_id),
+        ]
+        mock_list_attachments.return_value = attachments
+        rows = [(SimpleNamespace(provider_snapshot_id=None), SimpleNamespace())]
+        mock_list_with_versions.return_value = rows
+
+        adapter = AsyncMock()
+        mapper = WatsonxOrchestrateDeploymentMapper()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployment_flow_versions_synced
+
+        out_rows, total, snapshot_result = await list_deployment_flow_versions_synced(
+            deployment_adapter=adapter,
+            deployment_mapper=mapper,
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            deployment_id=deployment_id,
+            db=AsyncMock(),
+            page=1,
+            size=10,
+        )
+
+        assert out_rows == rows
+        assert total == 1
+        assert snapshot_result is None
+        adapter.list_snapshots.assert_not_awaited()
+        mock_sync_snapshot_ids.assert_not_awaited()
+        mock_count_attachments.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployment_attachments", new_callable=AsyncMock, return_value=1)
+    @patch(f"{MODULE}.list_deployment_attachments_with_versions", new_callable=AsyncMock)
+    @patch(f"{MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployment_attachments", new_callable=AsyncMock)
+    async def test_snapshot_sync_savepoint_failure_clears_enrichment_payload(
+        self,
+        mock_list_attachments,
+        mock_sync_snapshot_ids,
+        mock_list_with_versions,
+        mock_count_attachments,
+    ):
+        deployment_id = uuid4()
+        mock_list_attachments.return_value = [
+            _mock_attachment(provider_snapshot_id="snap-1", deployment_id=deployment_id)
+        ]
+        rows = [(SimpleNamespace(provider_snapshot_id="snap-1"), SimpleNamespace())]
+        mock_list_with_versions.return_value = rows
+
+        adapter = AsyncMock()
+        adapter.list_snapshots.return_value = SnapshotListResult(
+            snapshots=[
+                SnapshotItem(
+                    id="snap-1",
+                    name="tool-1",
+                    provider_data={"connections": {"cfg-1": "conn-1"}},
+                )
+            ]
+        )
+        mock_sync_snapshot_ids.side_effect = RuntimeError("savepoint failed")
+        mapper = WatsonxOrchestrateDeploymentMapper()
+        db = MagicMock()
+        db.begin_nested.return_value = _AsyncNoopSavepoint()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployment_flow_versions_synced
+
+        out_rows, total, snapshot_result = await list_deployment_flow_versions_synced(
+            deployment_adapter=adapter,
+            deployment_mapper=mapper,
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            deployment_id=deployment_id,
+            db=db,
+            page=1,
+            size=20,
+        )
+
+        assert out_rows == rows
+        assert total == 1
+        assert snapshot_result is None
+        adapter.list_snapshots.assert_awaited_once()
+        mock_sync_snapshot_ids.assert_awaited_once()
+        mock_count_attachments.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployment_attachments", new_callable=AsyncMock, return_value=1)
+    @patch(f"{MODULE}.list_deployment_attachments_with_versions", new_callable=AsyncMock)
+    @patch(f"{MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployment_attachments", new_callable=AsyncMock)
+    async def test_snapshot_sync_errors_fall_back_to_db_rows_without_enrichment(
+        self,
+        mock_list_attachments,
+        mock_sync_snapshot_ids,
+        mock_list_with_versions,
+        mock_count_attachments,
+    ):
+        deployment_id = uuid4()
+        mock_list_attachments.return_value = [
+            _mock_attachment(provider_snapshot_id="snap-1", deployment_id=deployment_id)
+        ]
+        rows = [(SimpleNamespace(provider_snapshot_id="snap-1"), SimpleNamespace())]
+        mock_list_with_versions.return_value = rows
+
+        adapter = AsyncMock()
+        adapter.list_snapshots.side_effect = RuntimeError("provider down")
+        mapper = WatsonxOrchestrateDeploymentMapper()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployment_flow_versions_synced
+
+        out_rows, total, snapshot_result = await list_deployment_flow_versions_synced(
+            deployment_adapter=adapter,
+            deployment_mapper=mapper,
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            deployment_id=deployment_id,
+            db=AsyncMock(),
+            page=1,
+            size=20,
+        )
+
+        assert out_rows == rows
+        assert total == 1
+        assert snapshot_result is None
+        mock_sync_snapshot_ids.assert_not_awaited()
+        mock_count_attachments.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployment_attachments", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.list_deployment_attachments_with_versions", new_callable=AsyncMock, return_value=[])
+    @patch(f"{MODULE}.list_deployment_attachments", new_callable=AsyncMock, return_value=[])
+    async def test_forwards_flow_ids_filter_to_attachment_queries(
+        self,
+        mock_list_attachments,
+        mock_list_with_versions,
+        mock_count_attachments,
+    ):
+        deployment_id = uuid4()
+        flow_id = uuid4()
+        adapter = AsyncMock()
+        mapper = WatsonxOrchestrateDeploymentMapper()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployment_flow_versions_synced
+
+        await list_deployment_flow_versions_synced(
+            deployment_adapter=adapter,
+            deployment_mapper=mapper,
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            deployment_id=deployment_id,
+            db=AsyncMock(),
+            page=1,
+            size=10,
+            flow_ids=[flow_id],
+        )
+
+        assert mock_list_attachments.call_args.kwargs["flow_ids"] == [flow_id]
+        assert mock_list_with_versions.call_args.kwargs["flow_ids"] == [flow_id]
+        assert mock_count_attachments.call_args.kwargs["flow_ids"] == [flow_id]
+
+
+# ---------------------------------------------------------------------------
+# flow_version_deployment_attachment CRUD helpers
+# ---------------------------------------------------------------------------
+
+
+class _FakeAllResult:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def all(self):
+        return self._rows
+
+
+class _FakeOneResult:
+    def __init__(self, value):
+        self._value = value
+
+    def one(self):
+        return self._value
+
+
+class _CaptureDb:
+    def __init__(self, result):
+        self._result = result
+        self.statements = []
+
+    async def exec(self, statement):
+        self.statements.append(statement)
+        return self._result
+
+
+class TestFlowVersionDeploymentAttachmentCrud:
+    @pytest.mark.asyncio
+    async def test_list_deployment_attachments_with_versions_orders_by_attachment_timestamps(self):
+        from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+            list_deployment_attachments_with_versions,
+        )
+
+        rows = [(SimpleNamespace(), SimpleNamespace())]
+        db = _CaptureDb(_FakeAllResult(rows))
+
+        result = await list_deployment_attachments_with_versions(
+            db,
+            user_id=uuid4(),
+            deployment_id=uuid4(),
+            offset=5,
+            limit=10,
+        )
+
+        assert result == rows
+        statement_text = str(db.statements[0]).lower()
+        assert "order by" in statement_text
+        assert "created_at desc" in statement_text
+        assert "updated_at desc" in statement_text
+
+    @pytest.mark.asyncio
+    async def test_list_deployment_attachments_with_versions_skips_query_when_limit_non_positive(self):
+        from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+            list_deployment_attachments_with_versions,
+        )
+
+        db = _CaptureDb(_FakeAllResult([]))
+        result = await list_deployment_attachments_with_versions(
+            db,
+            user_id=uuid4(),
+            deployment_id=uuid4(),
+            offset=0,
+            limit=0,
+        )
+
+        assert result == []
+        assert db.statements == []
+
+    @pytest.mark.asyncio
+    async def test_count_deployment_attachments_returns_scalar_count(self):
+        from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+            count_deployment_attachments,
+        )
+
+        db = _CaptureDb(_FakeOneResult(4))
+
+        total = await count_deployment_attachments(
+            db,
+            user_id=uuid4(),
+            deployment_id=uuid4(),
+        )
+
+        assert total == 4
+        assert len(db.statements) == 1

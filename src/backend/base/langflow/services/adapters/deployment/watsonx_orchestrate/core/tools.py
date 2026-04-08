@@ -7,7 +7,7 @@ import copy
 import importlib.metadata as md
 import io
 import json
-import logging
+import os
 import zipfile
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 from cachetools import func
 from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import LangflowTool
 from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool as _create_langflow_tool
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import InvalidContentError, InvalidDeploymentOperationError
 from lfx.utils.flow_requirements import generate_requirements_from_flow
 
@@ -29,8 +30,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     require_tool_id,
 )
 from langflow.utils.version import get_version_info
-
-logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from lfx.services.adapters.deployment.schema import BaseFlowArtifact, SnapshotItems, SnapshotListResult
@@ -104,6 +103,35 @@ def ensure_langflow_connections_binding(tool_payload: dict[str, Any]) -> dict[st
     return _ensure_dict(langflow, "connections")
 
 
+def verify_langflow_owned(tool: dict[str, Any], *, tool_id: str) -> None:
+    """Raise ``InvalidContentError`` if the tool lacks ``binding.langflow``.
+
+    Call before any mutating operation on an existing tool to ensure
+    Langflow created it.  Tools created manually in the wxO console or
+    by other integrations will not have this marker.
+    """
+    binding = tool.get("binding")
+    if not isinstance(binding, dict) or "langflow" not in binding:
+        msg = f"Cannot modify tool '{tool_id}': it does not have a Langflow binding and may not be managed by Langflow."
+        raise InvalidContentError(message=msg)
+
+
+def extract_langflow_connections_binding(tool_payload: dict[str, Any]) -> dict[str, str]:
+    """Extract ``binding.langflow.connections`` from a provider tool payload.
+
+    Read-path helper: returns ``{}`` for missing or malformed nested shapes
+    without mutating the input payload.
+    """
+    binding = tool_payload.get("binding")
+    if not isinstance(binding, dict):
+        return {}
+    langflow = binding.get("langflow")
+    if not isinstance(langflow, dict):
+        return {}
+    connections = langflow.get("connections")
+    return connections if isinstance(connections, dict) else {}
+
+
 async def update_existing_tool_connection_bindings(
     *,
     clients: WxOClient,
@@ -129,7 +157,10 @@ async def update_existing_tool_connection_bindings(
 
     tool_updates: list[tuple[str, dict[str, Any]]] = []
     for tool_id in existing_target_tool_ids:
-        original_tool = to_writable_tool_payload(tool_by_id[tool_id])
+        tool = tool_by_id[tool_id]
+        verify_langflow_owned(tool, tool_id=tool_id)
+
+        original_tool = to_writable_tool_payload(tool)
         original_tools[tool_id] = original_tool
         writable_tool = copy.deepcopy(original_tool)
         connections = ensure_langflow_connections_binding(writable_tool)
@@ -178,6 +209,7 @@ def build_langflow_artifact_bytes(
     flow_filename: str | None = None,
 ) -> bytes:
     filename = flow_filename or f"{tool.__tool_spec__.name}.json"
+
     lfx_requirement = _resolve_lfx_requirement()
     requirements = generate_requirements_from_flow(
         flow_definition,
@@ -187,6 +219,8 @@ def build_langflow_artifact_bytes(
     requirements = [lfx_requirement, *requirements]
     requirements = dedupe_list(requirements)
     requirements_content = "\n".join(requirements) + "\n"
+    logger.debug("build_langflow_artifact_bytes: filename='%s', requirements=%s", filename, requirements)
+
     flow_content = json.dumps(flow_definition, indent=2)
 
     buffer = io.BytesIO()
@@ -214,7 +248,6 @@ def create_wxo_flow_tool(
     *,
     flow_payload: BaseFlowArtifact[WatsonxFlowArtifactProviderData],
     connections: dict[str, str],
-    tool_name_prefix: str,
 ) -> tuple[dict[str, Any], bytes]:
     """Create a Watsonx Orchestrate flow tool specification.
 
@@ -226,7 +259,6 @@ def create_wxo_flow_tool(
     Args:
         flow_payload: The flow payload to create the tool specification for.
         connections: The connections dictionary to create the tool specification for.
-        tool_name_prefix: Deterministic prefix for the resulting tool name.
 
     Returns:
         Tuple[dict[str, Any], bytes]: a tuple containing:
@@ -236,6 +268,12 @@ def create_wxo_flow_tool(
     """
     # provider_data might break tool runtime expectations with unexpected top-level keys
     flow_definition = flow_payload.model_dump(exclude={"provider_data"})
+    logger.debug(
+        "create_wxo_flow_tool: flow name='%s', id='%s', connections=%s",
+        flow_definition.get("name"),
+        flow_definition.get("id"),
+        connections,
+    )
 
     flow_provider_data = flow_payload.provider_data
     if not isinstance(flow_provider_data, WatsonxFlowArtifactProviderData):
@@ -279,12 +317,16 @@ def create_wxo_flow_tool(
     )
 
     current_name = str(tool_payload.get("name") or "").strip()
-
     if current_name:
-        normalized_current_name = normalize_wxo_name(current_name)
-        tool_payload["name"] = f"{tool_name_prefix}{normalized_current_name}"
+        tool_payload["name"] = normalize_wxo_name(current_name)
 
     (tool_payload.setdefault("binding", {}).setdefault("langflow", {})["project_id"]) = project_id
+    logger.debug(
+        "create_wxo_flow_tool: tool name='%s', project_id='%s', binding=%s",
+        tool_payload.get("name"),
+        project_id,
+        tool_payload.get("binding", {}).get("langflow"),
+    )
 
     artifacts: bytes = build_langflow_artifact_bytes(
         tool=tool,
@@ -313,7 +355,6 @@ async def create_and_upload_wxo_flow_tools(
     clients: WxOClient,
     flow_payloads: list[BaseFlowArtifact[WatsonxFlowArtifactProviderData]],
     connections: dict[str, str],
-    tool_name_prefix: str,
 ) -> list[str]:
     tool_bindings = [
         FlowToolBindingSpec(
@@ -325,7 +366,6 @@ async def create_and_upload_wxo_flow_tools(
     return await create_and_upload_wxo_flow_tools_with_bindings(
         clients=clients,
         tool_bindings=tool_bindings,
-        tool_name_prefix=tool_name_prefix,
     )
 
 
@@ -333,13 +373,12 @@ async def create_and_upload_wxo_flow_tools_with_bindings(
     *,
     clients: WxOClient,
     tool_bindings: list[FlowToolBindingSpec],
-    tool_name_prefix: str,
 ) -> list[str]:
+    logger.debug("create_and_upload_wxo_flow_tools_with_bindings: %d tool bindings", len(tool_bindings))
     specs = [
         create_wxo_flow_tool(
             flow_payload=tool_binding.flow_payload,
             connections=tool_binding.connections,
-            tool_name_prefix=tool_name_prefix,
         )
         for tool_binding in tool_bindings
     ]
@@ -380,6 +419,9 @@ async def upload_wxo_flow_tool(
 ) -> str:
     tool_response = await retry_create(asyncio.to_thread, clients.tool.create, tool_payload)
     tool_id = require_tool_id(tool_response)
+    logger.debug(
+        "upload_wxo_flow_tool: created tool_id='%s', uploading artifact (%d bytes)", tool_id, len(artifact_bytes)
+    )
     if created_tool_ids_journal is not None:
         created_tool_ids_journal.append(tool_id)
 
@@ -396,7 +438,6 @@ async def upload_wxo_flow_tool(
 def build_snapshot_tool_names(
     *,
     snapshots: SnapshotItems | None,
-    tool_name_prefix: str,
 ) -> list[str]:
     if snapshots is None:
         return []
@@ -407,7 +448,7 @@ def build_snapshot_tool_names(
         if not normalized_tool_name:
             msg = "Snapshot name must include at least one alphanumeric character."
             raise InvalidContentError(message=msg)
-        tool_names.append(f"{tool_name_prefix}{normalized_tool_name}")
+        tool_names.append(normalized_tool_name)
     return tool_names
 
 
@@ -415,14 +456,9 @@ async def process_raw_flows_with_app_id(
     clients: WxOClient,
     app_id: str,
     flows: list[BaseFlowArtifact[WatsonxFlowArtifactProviderData]],
-    tool_name_prefix: str,
 ) -> list[WatsonxToolRefBinding]:
     """Create langflow tools in wxO and connect them to the given app_id."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
-
-    if not tool_name_prefix.strip():
-        msg = "Snapshot creation requires a non-empty tool_name_prefix."
-        raise InvalidDeploymentOperationError(message=msg)
 
     connection = await validate_connection(clients.connections, app_id=app_id)
 
@@ -430,7 +466,6 @@ async def process_raw_flows_with_app_id(
         clients=clients,
         flow_payloads=flows,
         connections={app_id: connection.connection_id},
-        tool_name_prefix=tool_name_prefix,
     )
     if len(created_tool_ids) != len(flows):
         msg = "Flow upload result mismatch: created tool ids count does not match the number of flow payloads."
@@ -456,25 +491,30 @@ def _resolve_flow_source_ref(flow_payload: BaseFlowArtifact[WatsonxFlowArtifactP
     raise InvalidContentError(message=msg)
 
 
-# TODO(WXO): find a way to make this fallback not hard-coded.
-_LFX_MINIMUM_REQUIREMENT = "lfx>=0.3.0"
-
-
 @func.ttl_cache(maxsize=1, ttl=60)
 def _pin_requirement_name(package_name: str) -> str:
     return f"{package_name}=={md.version(package_name)}"
 
 
 def _resolve_lfx_requirement() -> str:
-    """Pin lfx to the installed version, falling back to a minimum spec."""
+    """Pin lfx to the installed version, falling back to a minimum spec.
+
+    If the ``WXO_LFX_REQUIREMENT_OVERRIDE`` environment variable is set, its
+    value is used verbatim as the lfx requirement line (e.g.
+    ``lfx-nightly==0.4.0.dev32``) instead of resolving from the installed
+    package metadata.
+    """
+    override = os.environ.get("WXO_LFX_REQUIREMENT_OVERRIDE", "").strip()
+    if override:
+        logger.debug("Using wxO lfx requirement override: %s", override)
+        return override
     try:
         return _pin_requirement_name("lfx")
-    except (md.PackageNotFoundError, ValueError):
-        logger.warning(
-            "Could not determine installed lfx version; falling back to minimum requirement '%s'",
-            _LFX_MINIMUM_REQUIREMENT,
-        )
-        return _LFX_MINIMUM_REQUIREMENT
+    except (md.PackageNotFoundError, ValueError) as exc:
+        # Prefer failing fast here instead of falling back, as wxO does not
+        # return useful error messages on dependency failures during deployment.
+        message = "Could not determine installed lfx version. Failing deployment."
+        raise ValueError(message) from exc
 
 
 async def verify_tools_by_ids(
@@ -500,13 +540,33 @@ async def verify_tools_by_ids(
             log_msg="Unexpected error while verifying wxO tool snapshots by ID",
         )
 
-    return SnapshotListResult(
-        snapshots=[
+    snapshots: list[SnapshotItem] = []
+    for tool in tools or []:
+        if not isinstance(tool, dict) or not tool.get("id"):
+            continue
+        connections = extract_langflow_connections_binding(tool)
+        normalized_connections: dict[str, str] = {
+            key: value
+            for raw_key, raw_value in connections.items()
+            if isinstance(raw_key, str)
+            and isinstance(raw_value, str)
+            and (key := raw_key.strip())
+            and (value := raw_value.strip())
+        }
+
+        if len(normalized_connections) < len(connections):
+            logger.warning(
+                "Tool %s returned malformed langflow connection bindings; defaulting to empty mapping",
+                tool["id"],
+            )
+            provider_data: dict[str, dict[str, str]] = {"connections": {}}
+        else:
+            provider_data = {"connections": normalized_connections}
+        snapshots.append(
             SnapshotItem(
                 id=tool["id"],
                 name=tool.get("name") or tool["id"],
+                provider_data=provider_data,
             )
-            for tool in (tools or [])
-            if isinstance(tool, dict) and tool.get("id")
-        ],
-    )
+        )
+    return SnapshotListResult(snapshots=snapshots)

@@ -299,13 +299,14 @@ The mapper is the **single** component that understands a provider's credential 
 **Update assembly (API → DB):**
 
 - The mapper's `resolve_provider_account_update(payload=..., existing_account=...)` assembles the complete update kwargs dict. Only fields present in `payload.model_fields_set` are included so the CRUD layer receives a minimal diff.
-- Provider mappers override this method to add cross-field logic. For example, WXO's override re-derives `provider_tenant_id` whenever `provider_url` changes, because the tenant is embedded in the URL path and the two must stay consistent.
-- The base mapper provides a concrete default that handles name, URL, credentials, and tenant independently. Provider overrides call `super()` for the common fields and only add their own cross-field rules.
+- Provider mappers override this method to add provider-specific update logic. Provider-account updates currently allow changing display name and credentials only; URL/tenant identifiers must remain immutable after create.
+- The base mapper provides a concrete default that handles common mutable fields (display name + credentials). Provider overrides call `super()` for the common fields and only add their own cross-field rules.
 
 **Defense-in-depth (DB model validator):**
 
 - The `DeploymentProviderAccount` model has a `model_validator` that calls `validate_tenant_url_consistency()`. This catches inconsistent tenant/URL pairs regardless of entry point — even if a future code path bypasses the mapper.
 - The validation logic lives in `deployment_provider_account/utils.py` as the single source of truth. Both the model validator and the WXO mapper's `resolve_provider_tenant_id` delegate to the same `extract_tenant_from_url()` function.
+- Provider metadata such as tenant/account identifiers should arrive via `provider_data`; mappers extract and normalize them before persistence.
 
 ---
 
@@ -411,6 +412,7 @@ Use this checklist before merge:
 - [ ] Provider-account update logic lives in mapper, not in route conditionals
 - [ ] Provider-specific cross-field rules (e.g. tenant/URL coupling) are implemented as mapper overrides calling `super()`, not as base-class conditionals
 - [ ] Credential extraction uses `resolve_credential_fields`, not route-level assumptions about `provider_data` contents
+- [ ] Non-persisted provider-originated fields are placed in `provider_data` (never top-level)
 - [ ] DB-level consistency validators exist as defense-in-depth for cross-field invariants
 - [ ] Tests cover both base mapper defaults and provider overrides
 - [ ] Failure cases for missing/unexpected bindings are covered
@@ -555,3 +557,14 @@ When adding a new field to an execution or deployment response:
 1. Is Langflow the source of truth for this value? → top level.
 2. Does this value come from the provider and Langflow just relays it? → inside `provider_data`.
 3. Does the provider supply it but Langflow persists and indexes it (like `resource_key`)? → top level is acceptable.
+
+### 14.4 Hard placement rule for non-persisted provider data
+
+If data is not persisted in the Langflow DB and comes directly from the provider,
+it must go into `provider_data`.
+
+Rules:
+
+- Top-level response fields are reserved for values that Langflow persists and controls.
+- Provider-originated data that Langflow only relays must stay in `provider_data` without exception.
+- Examples: provider tool names, execution metadata/status/timestamps, connection types, environments.
