@@ -37,6 +37,11 @@ The model catalog still uses ``GET …/models/list`` (not orchestrate ``/models`
 Optional: ``LANGFLOW_WXO_LOCAL_INSTANCE_HOSTS`` — comma-separated extra hostnames
 treated like loopback for URL layout, auth (JWT), and ``http://`` allowance
 (e.g. ``host.docker.internal`` when Langflow runs in Docker but wxO is on the host).
+
+Optional: ``LANGFLOW_WXO_DUMP_TOOL_ARTIFACTS`` — absolute or relative directory path.
+Every wxO tool artifact upload (deploy or snapshot refresh) writes ``{tool_id}.zip``
+there. Unzip to inspect the same ``*.json`` flow and ``requirements.txt`` sent to
+wxO TRM — see ``upload_tool_artifact_bytes`` in ``tools.py``.
 """
 
 from __future__ import annotations

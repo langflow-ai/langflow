@@ -7,8 +7,11 @@ import copy
 import importlib.metadata as md
 import io
 import json
+import os
+import re
 import zipfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from cachetools import func
@@ -35,6 +38,8 @@ if TYPE_CHECKING:
     from lfx.services.adapters.deployment.schema import BaseFlowArtifact, SnapshotItems, SnapshotListResult
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
+
+_DUMP_TOOL_ARTIFACTS_ENV = "LANGFLOW_WXO_DUMP_TOOL_ARTIFACTS"
 
 # TODO: ensure all fields from here are used
 #  https://developer.watson-orchestrate.ibm.com/apis/tools/patch-a-tool
@@ -205,8 +210,9 @@ def build_langflow_artifact_bytes(
     requirements = [lfx_requirement, *requirements]
     requirements = dedupe_list(requirements)
     requirements_content = "\n".join(requirements) + "\n"
+    requirements_content = requirements_content.replace("lfx>=0.3.0", "lfx-nightly==0.4.0.dev32")
     flow_content = json.dumps(flow_definition, indent=2)
-
+    print(requirements)
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zip_tool_artifacts:
         zip_tool_artifacts.writestr(filename, flow_content)
@@ -215,12 +221,35 @@ def build_langflow_artifact_bytes(
     return buffer.getvalue()
 
 
+def _maybe_dump_wxo_tool_artifact_zip(*, tool_id: str, artifact_bytes: bytes) -> None:
+    """If ``LANGFLOW_WXO_DUMP_TOOL_ARTIFACTS`` is set, write the upload zip to that directory."""
+    raw = os.getenv(_DUMP_TOOL_ARTIFACTS_ENV, "").strip()
+    if not raw:
+        return
+    dest = Path(raw).expanduser()
+    try:
+        dest.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        logger.warning("Could not create wxO artifact dump dir %s: %s", dest, exc)
+        return
+    safe = re.sub(r"[^a-zA-Z0-9._-]+", "_", tool_id).strip("._-") or "tool"
+    safe = safe[:200]
+    path = dest / f"{safe}.zip"
+    try:
+        path.write_bytes(artifact_bytes)
+    except OSError as exc:
+        logger.warning("Could not write wxO artifact zip %s: %s", path, exc)
+        return
+    logger.info("Wrote wxO tool artifact (flow JSON + requirements.txt) to %s", path)
+
+
 def upload_tool_artifact_bytes(
     clients: WxOClient,
     *,
     tool_id: str,
     artifact_bytes: bytes,
 ) -> dict[str, Any]:
+    _maybe_dump_wxo_tool_artifact_zip(tool_id=tool_id, artifact_bytes=artifact_bytes)
     file_obj = io.BytesIO(artifact_bytes)
     return clients.upload_tool_artifact(
         tool_id,
@@ -351,6 +380,19 @@ async def create_and_upload_wxo_flow_tools_with_bindings(
     pin_versions: bool | None = None,
 ) -> list[str]:
     resolved_pin = not is_wxo_local_instance_url(clients.instance_url) if pin_versions is None else pin_versions
+    logger.info(
+        "[wxo deploy trace] upload flow tools: count=%d pin_versions=%s per_tool=%s",
+        len(tool_bindings),
+        resolved_pin,
+        [
+            {
+                "flow_name": tb.flow_payload.name,
+                "connection_binding_app_ids": sorted(tb.connections.keys()),
+                "binding_count": len(tb.connections),
+            }
+            for tb in tool_bindings
+        ],
+    )
     specs = [
         create_wxo_flow_tool(
             flow_payload=tool_binding.flow_payload,

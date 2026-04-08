@@ -8,6 +8,7 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 qdrant_storage
+wxo-tool-artifacts/
 
 .dspy_cache
 # Mac

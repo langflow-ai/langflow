@@ -226,6 +226,46 @@ def test_wxo_client_get_models_raw_normalizes_resources_envelope(monkeypatch):
     ]
 
 
+def test_wxo_client_get_models_raw_normalizes_items_envelope(monkeypatch):
+    monkeypatch.delenv("LANGFLOW_WXO_LOCAL_API_ROOT", raising=False)
+    client = WxOClient(
+        instance_url="http://127.0.0.1:4321",
+        authenticator=StaticJwtAuthenticator("t"),
+    )
+
+    def fake_get(path, params=None):  # noqa: ARG001
+        return {"items": [{"id": "watsonx/ibm/granite-3-1-8b-base", "label": "g"}]}
+
+    monkeypatch.setattr(client.tool, "_get", fake_get)
+    assert client.get_models_raw() == [{"model_name": "watsonx/ibm/granite-3-1-8b-base"}]
+
+
+def test_wxo_client_get_models_raw_falls_back_to_models_path_on_404(monkeypatch):
+    from types import SimpleNamespace
+
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    monkeypatch.delenv("LANGFLOW_WXO_LOCAL_API_ROOT", raising=False)
+    client = WxOClient(
+        instance_url="http://127.0.0.1:4321",
+        authenticator=StaticJwtAuthenticator("t"),
+    )
+    paths: list[str] = []
+
+    def fake_get(path, params=None):  # noqa: ARG001
+        paths.append(path)
+        if path == "/models/list":
+            raise ClientAPIException(response=SimpleNamespace(status_code=404))
+        if path == "/models":
+            return {"resources": [{"id": "from-models"}]}
+        msg = f"unexpected path {path}"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(client.tool, "_get", fake_get)
+    assert client.get_models_raw() == [{"model_name": "from-models"}]
+    assert paths == ["/models/list", "/models"]
+
+
 def test_wxo_client_get_models_raw_normalizes_nested_data_resources(monkeypatch):
     monkeypatch.delenv("LANGFLOW_WXO_LOCAL_API_ROOT", raising=False)
     client = WxOClient(
@@ -312,3 +352,28 @@ def test_wxo_client_get_connection_draft_parses_list_response(monkeypatch):
     assert got is not None
     assert got.connection_id == "c-9"
     assert got.app_id == "flowconn"
+
+
+def test_upload_tool_artifact_bytes_dumps_zip_when_env_set(monkeypatch, tmp_path):
+    from unittest.mock import MagicMock
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import upload_tool_artifact_bytes
+
+    monkeypatch.setenv("LANGFLOW_WXO_DUMP_TOOL_ARTIFACTS", str(tmp_path))
+    clients = MagicMock()
+    clients.upload_tool_artifact.return_value = {"ok": True}
+    payload = b"fake-zip"
+    upload_tool_artifact_bytes(clients, tool_id="wxo-tool-1", artifact_bytes=payload)
+    assert (tmp_path / "wxo-tool-1.zip").read_bytes() == payload
+
+
+def test_upload_tool_artifact_bytes_skips_dump_when_env_unset(monkeypatch, tmp_path):
+    from unittest.mock import MagicMock
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import upload_tool_artifact_bytes
+
+    monkeypatch.delenv("LANGFLOW_WXO_DUMP_TOOL_ARTIFACTS", raising=False)
+    clients = MagicMock()
+    clients.upload_tool_artifact.return_value = {}
+    upload_tool_artifact_bytes(clients, tool_id="t2", artifact_bytes=b"x")
+    assert not any(tmp_path.iterdir())

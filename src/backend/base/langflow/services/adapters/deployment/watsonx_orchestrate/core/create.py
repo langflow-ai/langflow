@@ -32,6 +32,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.shared impor
     create_raw_tools_with_bindings,
     log_batch_errors,
     resolve_connections_for_operations,
+    wxo_deploy_trace_raw_payloads_summary,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
     ToolUploadBatchError,
@@ -149,7 +150,7 @@ def build_provider_create_plan(
         for raw_name, app_ids in raw_tool_app_ids.items()
     ]
 
-    return ProviderCreatePlan(
+    plan = ProviderCreatePlan(
         deployment_name=normalized_deployment_name,
         llm=provider_create.llm,
         existing_tool_ids=existing_tool_ids.to_list(),
@@ -159,6 +160,18 @@ def build_provider_create_plan(
         raw_tools_to_create=raw_tools_to_create,
         selected_operation_app_ids=selected_operation_app_ids.to_list(),
     )
+    logger.info(
+        "[wxo deploy trace] create plan: deployment=%s llm=%s existing_tool_ids=%d "
+        "existing_app_ids=%d raw_payloads=%s raw_tools=%d selected_op_app_ids=%d",
+        plan.deployment_name,
+        plan.llm,
+        len(plan.existing_tool_ids),
+        len(plan.existing_app_ids),
+        wxo_deploy_trace_raw_payloads_summary(plan.raw_connections_to_create),
+        len(plan.raw_tools_to_create),
+        len(plan.selected_operation_app_ids),
+    )
+    return plan
 
 
 async def apply_provider_create_plan_with_rollback(
@@ -194,6 +207,7 @@ async def apply_provider_create_plan_with_rollback(
     operation_to_provider_app_id: dict[str, str] = {}
     resolved_connections: dict[str, str] = {}
 
+    logger.info("[wxo deploy trace] apply create plan: deployment=%s", plan.deployment_name)
     try:
         try:
             connection_result = await resolve_connections_for_operations(
@@ -209,6 +223,12 @@ async def apply_provider_create_plan_with_rollback(
             operation_to_provider_app_id = connection_result.operation_to_provider_app_id
             resolved_connections = connection_result.resolved_connections
             created_app_ids.extend(connection_result.created_app_ids)
+            logger.info(
+                "[wxo deploy trace] apply create: connections phase ok created_connection_app_ids=%s "
+                "operation_to_provider_app_id=%s",
+                connection_result.created_app_ids,
+                operation_to_provider_app_id,
+            )
         except ConnectionCreateBatchError as exc:
             created_app_ids.extend(exc.created_app_ids)
             log_batch_errors(error_label="Connection create batch error", errors=exc.errors)
@@ -230,6 +250,15 @@ async def apply_provider_create_plan_with_rollback(
                     created_tool_ids=tool_create_result.created_tool_ids,
                     operation_to_provider_app_id=operation_to_provider_app_id,
                 )
+            )
+            logger.info(
+                "[wxo deploy trace] apply create: tools phase ok created_tool_ids=%s tool_app_bindings=%s",
+                tool_create_result.created_tool_ids,
+                [
+                    {"tool_id": b.tool_id, "app_ids": b.app_ids}
+                    for b in created_tool_app_bindings
+                    if b.tool_id in tool_create_result.created_tool_ids
+                ],
             )
         except ToolUploadBatchError as exc:
             created_tool_ids.extend(exc.created_tool_ids)

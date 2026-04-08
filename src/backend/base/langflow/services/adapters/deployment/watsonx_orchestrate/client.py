@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator, MCSPAuthenticator
 from ibm_watsonx_orchestrate_core.types.connections import KeyValueConnectionCredentials
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import AuthSchemeError, CredentialResolutionError
 from lfx.services.adapters.deployment.schema import EnvVarSource, EnvVarValueSpec, IdLike
 
@@ -251,6 +252,12 @@ async def resolve_runtime_credentials(
             user_id=user_id,
             db=db,
         )
+    # Log credential *key* names only — never values (secrets).
+    logger.info(
+        "[wxo deploy trace] runtime_credentials: resolved_key_count=%d keys=%s",
+        len(resolved),
+        sorted(resolved.keys()),
+    )
     return KeyValueConnectionCredentials(resolved)
 
 

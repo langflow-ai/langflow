@@ -7,6 +7,7 @@ guarantee thread safety when accessed from ``asyncio.to_thread`` workers.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
@@ -25,6 +26,8 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.local_dev import 
 
 if TYPE_CHECKING:
     from ibm_cloud_sdk_core.authenticators import Authenticator
+
+_logger = logging.getLogger(__name__)
 
 
 def _wxo_de_pick_application_record(raw: Any, app_id: str) -> dict[str, Any] | None:
@@ -64,7 +67,12 @@ def _normalize_wxo_model_catalog_items(items: list[Any]) -> list[dict[str, Any]]
         if item.get("model_name") is not None:
             out.append({"model_name": str(item["model_name"])})
             continue
-        mid = item.get("id") or item.get("name")
+        mid = (
+            item.get("id")
+            or item.get("name")
+            or item.get("modelId")
+            or item.get("model_id")
+        )
         if mid is not None:
             out.append({"model_name": str(mid)})
     return out
@@ -99,8 +107,17 @@ def _normalize_wxo_models_catalog_response(raw: Any) -> Any:
         nested_resources = _wxo_nested_model_resources_list(raw)
         if nested_resources is not None:
             return _normalize_wxo_models_catalog_from_resources(nested_resources)
-        if isinstance(raw.get("models"), list):
-            return _normalize_wxo_model_catalog_items(raw["models"])
+        for key in ("models", "items", "results", "records"):
+            chunk = raw.get(key)
+            if isinstance(chunk, list):
+                return _normalize_wxo_model_catalog_items(chunk)
+        data_val = raw.get("data")
+        if isinstance(data_val, list):
+            return _normalize_wxo_model_catalog_items(data_val)
+        _logger.warning(
+            "wxO model catalog JSON shape not recognized (keys=%s); list_llms may fall back on loopback",
+            list(raw.keys()),
+        )
     return raw
 
 
@@ -202,7 +219,13 @@ class WxOClient:
         # ``LANGFLOW_WXO_LOCAL_API_ROOT`` is set — that flag only changes base_url but must
         # not switch to ``base._get("/models")`` (orchestrate layout), which breaks DE.
         if is_wxo_local_instance_url(self.instance_url):
-            raw = self.tool._get("/models/list", params=params)  # noqa: SLF001
+            try:
+                raw = self.tool._get("/models/list", params=params)  # noqa: SLF001
+            except ClientAPIException as exc:
+                if getattr(exc.response, "status_code", None) == HTTPStatus.NOT_FOUND:
+                    raw = self.tool._get("/models", params=params)  # noqa: SLF001
+                else:
+                    raise
         else:
             raw = self.base._get("/models", params=params)  # noqa: SLF001
         return _normalize_wxo_models_catalog_response(raw)
@@ -214,12 +237,12 @@ class WxOClient:
         create, ``get_models_raw`` / ``GET .../models/list`` should include the new
         model for the deployment LLM picker.
         """
-        if wxo_local_use_default_api_v1_layout(self.instance_url):
+        if is_wxo_local_instance_url(self.instance_url):
             return self.tool._post("/models", data=data)  # noqa: SLF001
         return self.base._post("/models", data=data)  # noqa: SLF001
 
     def get_tools_raw(self, params: dict[str, Any] | None = None) -> Any:
-        if wxo_local_use_default_api_v1_layout(self.instance_url):
+        if is_wxo_local_instance_url(self.instance_url):
             return self.tool._get("/tools", params=params)  # noqa: SLF001
         return self.base._get("/tools", params=params)  # noqa: SLF001
 
@@ -230,7 +253,7 @@ class WxOClient:
         return self.base._get(f"/runs/{run_id}")  # noqa: SLF001
 
     def upload_tool_artifact(self, tool_id: str, *, files: dict[str, Any]) -> Any:
-        if wxo_local_use_default_api_v1_layout(self.instance_url):
+        if is_wxo_local_instance_url(self.instance_url):
             return self.tool._post(f"/tools/{tool_id}/upload", files=files)  # noqa: SLF001
         return self.base._post(f"/tools/{tool_id}/upload", files=files)  # noqa: SLF001
 

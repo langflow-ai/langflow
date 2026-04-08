@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
@@ -89,6 +89,21 @@ class ConnectionCreateBatchError(RuntimeError):
         super().__init__("One or more connection creations failed.")
 
 
+def wxo_deploy_trace_raw_payloads_summary(raw_connections_to_create: list[RawConnectionCreatePlan]) -> list[dict[str, Any]]:
+    """Summarize planned connection creates for deploy tracing (key names only, never values)."""
+    details: list[dict[str, Any]] = []
+    for plan in raw_connections_to_create:
+        env = plan.payload.environment_variables or {}
+        details.append(
+            {
+                "app_id": plan.provider_app_id,
+                "env_key_count": len(env),
+                "env_keys": sorted(env.keys()),
+            }
+        )
+    return details
+
+
 def log_batch_errors(*, error_label: str, errors: list[Exception]) -> None:
     """Log each error from a concurrent batch while preserving first-failure raising."""
     for i, err in enumerate(errors):
@@ -118,6 +133,21 @@ async def create_connection_with_conflict_mapping(
     error_prefix: str,
 ) -> str:
     from lfx.services.adapters.deployment.schema import DeploymentConfig
+
+    env_map = payload.environment_variables or {}
+    env_keys = sorted(env_map.keys())
+    logger.info(
+        "[wxo deploy trace] create_connection: app_id=%s env_var_key_count=%d env_keys=%s",
+        app_id,
+        len(env_keys),
+        env_keys,
+    )
+    if not env_keys:
+        logger.warning(
+            "[wxo deploy trace] create_connection: app_id=%s has empty environment_variables; "
+            "WXO tools-runtime may inject zero env vars (e.g. OPENAI_API_KEY missing at runtime).",
+            app_id,
+        )
 
     config_payload = DeploymentConfig(
         name=app_id,
@@ -163,6 +193,11 @@ async def resolve_connections_for_operations(
     validate_connection_fn: Callable[..., Awaitable[object]] = validate_connection,
     create_connection_fn: Callable[..., Awaitable[str]] = create_connection_with_conflict_mapping,
 ) -> ConnectionResolutionResult:
+    logger.info(
+        "[wxo deploy trace] resolve_connections: start existing_app_ids=%d raw_to_create=%d",
+        len(existing_app_ids),
+        len(raw_connections_to_create),
+    )
     operation_to_provider_app_id = {app_id: app_id for app_id in existing_app_ids}
     resolved_connections: dict[str, str] = {}
 
@@ -174,6 +209,11 @@ async def resolve_connections_for_operations(
             resolved_connections[app_id] = connection.connection_id  # type: ignore[attr-defined]
 
     if not raw_connections_to_create:
+        logger.info(
+            "[wxo deploy trace] resolve_connections: done (no raw creates) "
+            "resolved_app_id_to_connection_id=%s",
+            resolved_connections,
+        )
         return ConnectionResolutionResult(
             operation_to_provider_app_id=operation_to_provider_app_id,
             resolved_connections=resolved_connections,
@@ -239,6 +279,13 @@ async def resolve_connections_for_operations(
     for create_plan, connection in zip(raw_connections_to_create, validated_created_connections, strict=True):
         operation_to_provider_app_id[create_plan.operation_app_id] = create_plan.provider_app_id
         resolved_connections[create_plan.provider_app_id] = connection.connection_id  # type: ignore[attr-defined]
+
+    logger.info(
+        "[wxo deploy trace] resolve_connections: done created_connection_app_ids=%s "
+        "resolved_app_id_to_connection_id=%s",
+        created_app_ids,
+        resolved_connections,
+    )
 
     return ConnectionResolutionResult(
         operation_to_provider_app_id=operation_to_provider_app_id,

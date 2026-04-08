@@ -30,6 +30,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.shared impor
     log_batch_errors,
     resolve_connections_for_operations,
     rollback_created_app_ids,
+    wxo_deploy_trace_raw_payloads_summary,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
     ToolUploadBatchError,
@@ -113,7 +114,7 @@ def build_provider_update_plan(
     # put_tools is a standalone full replacement of the agent's tool list
     # (no operations accompany it).
     if provider_update.put_tools is not None:
-        return ProviderUpdatePlan(
+        plan = ProviderUpdatePlan(
             existing_app_ids=[],
             raw_connections_to_create=[],
             existing_tool_deltas={},
@@ -123,6 +124,11 @@ def build_provider_update_plan(
             removed_existing_tool_refs=[],
             existing_tool_refs=[],
         )
+        logger.info(
+            "[wxo deploy trace] update plan: put_tools only tool_count=%d",
+            len(plan.final_existing_tool_ids),
+        )
+        return plan
 
     agent_tool_ids = extract_agent_tool_ids(agent)
     final_existing_tool_ids = OrderedUniqueStrs.from_values(agent_tool_ids)
@@ -242,7 +248,7 @@ def build_provider_update_plan(
     raw_app_ids = {raw_payload.app_id for raw_payload in (provider_update.connections.raw_payloads or [])}
     existing_app_ids = [app_id for app_id in operation_app_ids.to_list() if app_id not in raw_app_ids]
 
-    return ProviderUpdatePlan(
+    plan = ProviderUpdatePlan(
         existing_app_ids=existing_app_ids,
         raw_connections_to_create=raw_connections_to_create,
         existing_tool_deltas=existing_tool_deltas,
@@ -252,6 +258,15 @@ def build_provider_update_plan(
         removed_existing_tool_refs=deduped_removed_existing_tool_refs,
         existing_tool_refs=deduped_existing_tool_refs,
     )
+    logger.info(
+        "[wxo deploy trace] update plan: existing_app_ids=%d raw_payloads=%s raw_tools=%d "
+        "tool_deltas=%d",
+        len(plan.existing_app_ids),
+        wxo_deploy_trace_raw_payloads_summary(plan.raw_connections_to_create),
+        len(plan.raw_tools_to_create),
+        len(plan.existing_tool_deltas),
+    )
+    return plan
 
 
 async def _update_existing_tool_connection_deltas(
@@ -372,6 +387,7 @@ async def apply_provider_update_plan_with_rollback(
     final_update_payload = dict(update_payload)
     rollback_agent_payload: dict[str, Any] = {}
 
+    logger.info("[wxo deploy trace] apply update plan: agent_id=%s", agent_id)
     try:
         try:
             connection_result = await resolve_connections_for_operations(
@@ -387,6 +403,12 @@ async def apply_provider_update_plan_with_rollback(
             operation_to_provider_app_id = connection_result.operation_to_provider_app_id
             resolved_connections.update(connection_result.resolved_connections)
             created_app_ids.extend(connection_result.created_app_ids)
+            logger.info(
+                "[wxo deploy trace] apply update: connections phase ok created_connection_app_ids=%s "
+                "operation_to_provider_app_id=%s",
+                connection_result.created_app_ids,
+                operation_to_provider_app_id,
+            )
         except ConnectionCreateBatchError as exc:
             created_app_ids.extend(exc.created_app_ids)
             log_batch_errors(error_label="Connection create batch error", errors=exc.errors)
@@ -404,6 +426,10 @@ async def apply_provider_update_plan_with_rollback(
             created_snapshot_ids.extend(tool_create_result.created_tool_ids)
             added_snapshot_ids.extend(tool_create_result.created_tool_ids)
             created_snapshot_bindings.extend(tool_create_result.snapshot_bindings)
+            logger.info(
+                "[wxo deploy trace] apply update: tools phase ok created_tool_ids=%s",
+                tool_create_result.created_tool_ids,
+            )
         except ToolUploadBatchError as exc:
             created_tool_ids.extend(exc.created_tool_ids)
             created_snapshot_ids.extend(exc.created_tool_ids)
