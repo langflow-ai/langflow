@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FilesTab from "./components/FilesTab";
+import FlowFilesTab from "./components/flowFilesTab";
 
 export const FilesPage = () => {
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [quantitySelected, setQuantitySelected] = useState(0);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
   const [quickFilterText, setQuickFilterText] = useState("");
+  const [activeTab, setActiveTab] = useState("my-files");
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -67,7 +70,27 @@ export const FilesPage = () => {
               Files
             </div>
             <div className="flex h-full flex-col">
-              <FilesTab {...tabProps} />
+              <Tabs
+                value={activeTab}
+                onValueChange={(value) => {
+                  setActiveTab(value);
+                  setSelectedFiles([]);
+                  setQuantitySelected(0);
+                  setQuickFilterText("");
+                }}
+                className="flex h-full flex-col"
+              >
+                <TabsList className="mb-4">
+                  <TabsTrigger value="my-files">My Files</TabsTrigger>
+                  <TabsTrigger value="flow-files">Flow Files</TabsTrigger>
+                </TabsList>
+                <TabsContent value="my-files" className="flex-1">
+                  <FilesTab {...tabProps} />
+                </TabsContent>
+                <TabsContent value="flow-files" className="flex-1">
+                  <FlowFilesTab />
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         </div>
