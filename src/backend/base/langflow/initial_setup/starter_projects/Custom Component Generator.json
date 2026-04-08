@@ -925,7 +925,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.32.5"
+                    "version": "2.33.0"
                   },
                   {
                     "name": "bs4",
@@ -1322,7 +1322,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.32.5"
+                    "version": "2.33.0"
                   },
                   {
                     "name": "bs4",
@@ -1725,7 +1725,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.32.5"
+                    "version": "2.33.0"
                   },
                   {
                     "name": "bs4",
@@ -2396,7 +2396,7 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.10.15"
+                    "version": "3.11.8"
                   },
                   {
                     "name": "fastapi",
