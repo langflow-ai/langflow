@@ -18,6 +18,8 @@ describe("MemoryKnowledgeBaseSection", () => {
         message_id: "msg-1",
         session_id: "session-1",
         sender: "user",
+        ingestion_job_id: "job-1",
+        ingestion_timestamp: "2025-01-01T10:00:01.000Z",
         content: "hello",
         timestamp: "2025-01-01T10:00:00.000Z",
       },

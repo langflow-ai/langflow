@@ -503,7 +503,7 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.8"
+                    "version": "3.10.15"
                   },
                   {
                     "name": "fastapi",
@@ -824,7 +824,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.33.0"
+                    "version": "2.32.5"
                   },
                   {
                     "name": "bs4",
@@ -1717,7 +1717,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.22"
+                    "version": "1.2.20"
                   }
                 ],
                 "total_dependencies": 3
@@ -2300,7 +2300,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.22"
+                    "version": "1.2.20"
                   }
                 ],
                 "total_dependencies": 3
@@ -2883,7 +2883,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.22"
+                    "version": "1.2.20"
                   }
                 ],
                 "total_dependencies": 3

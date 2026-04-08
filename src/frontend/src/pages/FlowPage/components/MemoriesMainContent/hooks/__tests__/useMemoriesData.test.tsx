@@ -91,6 +91,7 @@ jest.mock("@/controllers/API/queries/memories/use-get-memory-sessions", () => ({
     data: memorySessionsData,
     isLoading: false,
     isError: false,
+    refetch: jest.fn(),
   }),
 }));
 

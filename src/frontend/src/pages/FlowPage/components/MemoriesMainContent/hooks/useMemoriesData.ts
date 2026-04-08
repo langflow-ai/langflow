@@ -96,13 +96,20 @@ export function useMemoriesData({
     },
   );
 
-  const { data: memorySessions = [] } = useGetMemorySessions(
-    { memoryId: selectedMemoryId ?? "" },
-    {
-      enabled: !!selectedMemoryId,
-      retry: false,
-    },
-  );
+  const { data: memorySessions = [], refetch: refetchMemorySessions } =
+    useGetMemorySessions(
+      { memoryId: selectedMemoryId ?? "" },
+      {
+        enabled: !!selectedMemoryId,
+        retry: false,
+      },
+    );
+
+  useEffect(() => {
+    if (!selectedMemoryId) return;
+    if (!selectedSession) return;
+    refetchMemorySessions();
+  }, [selectedMemoryId, selectedSession, refetchMemorySessions]);
 
   const resolveDefaultSessionId = (sessions: MemorySessionInfo[]) => {
     if (!sessions.length) return null;
@@ -200,6 +207,7 @@ export function useMemoriesData({
       .flatMap((p) => p?.items ?? [])
       .map((m) => {
         const ingestionJobId = String(m?.ingestion_job_id ?? "");
+        const ingestionTimestamp = String(m?.ingestion_timestamp ?? "");
         const timestamp = String(m?.timestamp ?? "");
         const sender = String(m?.sender ?? "");
         const sessionId = String(m?.session_id ?? "");
@@ -214,6 +222,10 @@ export function useMemoriesData({
           sender,
           content: String(m?.text ?? ""),
           timestamp,
+          ...(ingestionJobId ? { ingestion_job_id: ingestionJobId } : {}),
+          ...(ingestionTimestamp
+            ? { ingestion_timestamp: ingestionTimestamp }
+            : {}),
         };
       })
       .filter((d) => d.content);
@@ -226,7 +238,7 @@ export function useMemoriesData({
       new Set(
         (memorySessions ?? [])
           .map((s) => s.session_id)
-          .filter((sid): sid is string => !!sid && sid !== "(no session)"),
+          .filter((sid): sid is string => !!sid),
       ),
     );
 

@@ -29,7 +29,6 @@ export type SidebarSection =
   | "bundles"
   | "mcp"
   | "versions"
-  | "add_note"
   | "traces"
   | "memories";
 

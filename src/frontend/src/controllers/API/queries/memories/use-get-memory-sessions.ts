@@ -20,11 +20,11 @@ export const useGetMemorySessions: useQueryFunctionType<
       throw new Error("memoryId is required");
     }
 
-    const res = await api.get<MemorySessionInfo[]>(
+    const { data } = await api.get<{ items: MemorySessionInfo[] }>(
       `${getURL("MEMORIES")}/${params.memoryId}/sessions`,
     );
 
-    return Array.isArray(res.data) ? res.data : [];
+    return Array.isArray(data.items) ? data.items : [];
   };
 
   const queryResult: UseQueryResult<MemorySessionInfo[], any> = query(
