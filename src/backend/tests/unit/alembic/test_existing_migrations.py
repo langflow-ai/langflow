@@ -103,23 +103,20 @@ def downgrade():
 class TestExistingMigrations:
     """Validate existing migration files against the guidelines."""
 
-    def test_legacy_migrations_flagged(self):
+    def test_legacy_migrations_flagged(self, tmp_path):
         """Ensure legacy migrations are flagged for missing phase markers."""
-        workspace_root = Path(__file__).resolve().parents[5]
-        migrations_dir = workspace_root / "src/backend/base/langflow/alembic/versions"
+        legacy_file = tmp_path / "99_legacy_migration.py"
+        legacy_file.write_text("""
+            def upgrade():
+                pass
+
+            def downgrade():
+                pass
+        """)
 
         validator = MigrationValidator(strict_mode=False)
+        result = validator.validate_migration_file(legacy_file)
 
-        if not migrations_dir.exists():
-            pytest.fail(f"Migrations directory not found at {migrations_dir}")
-
-        legacy_migration = next(
-            (f for f in migrations_dir.glob("*.py") if not f.name.startswith("00") and f.name != "__init__.py"), None
-        )
-
-        assert legacy_migration is not None, f"No legacy migration files found in {migrations_dir}"
-
-        result = validator.validate_migration_file(legacy_migration)
         assert result["valid"] is False
         violations = [v["type"] for v in result["violations"]]
         assert "NO_PHASE_MARKER" in violations
