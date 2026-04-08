@@ -54,8 +54,6 @@ export const useCreateMemory: useMutationFunctionType<
         userOnSuccess?.(data, variables, onMutateResult, context);
       },
       onSettled: (data, error, variables, onMutateResult, context) => {
-        // Keep parity with other mutations that used to invalidate onSettled.
-        queryClient.invalidateQueries({ queryKey: ["useCreateMemory"] });
         userOnSettled?.(data, error, variables, onMutateResult, context);
       },
       // POST is not safe to retry by default (risk of duplicates).

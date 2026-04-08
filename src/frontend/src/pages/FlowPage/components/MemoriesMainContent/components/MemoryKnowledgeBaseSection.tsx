@@ -54,6 +54,7 @@ export function MemoryKnowledgeBaseSection({
               name="Database"
               className="mb-2 h-8 w-8 text-muted-foreground opacity-50"
             />
+            <p className="text-xs font-medium">No chunks yet.</p>
           </div>
         ) : (
           <Table>

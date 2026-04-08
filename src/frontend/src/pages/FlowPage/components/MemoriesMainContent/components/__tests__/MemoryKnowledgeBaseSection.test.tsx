@@ -1,5 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryKnowledgeBaseSection } from "../MemoryKnowledgeBaseSection";
+import type { MemoryKnowledgeBaseSectionProps } from "../../types";
+import type { MemoryDocumentItem } from "@/controllers/API/queries/memories/types";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -13,7 +15,7 @@ jest.mock("@/components/ui/loading", () => ({
 
 describe("MemoryKnowledgeBaseSection", () => {
   const makeBaseProps = () => {
-    const documents = [
+    const documents: MemoryDocumentItem[] = [
       {
         message_id: "msg-1",
         session_id: "session-1",
@@ -25,7 +27,7 @@ describe("MemoryKnowledgeBaseSection", () => {
       },
     ];
 
-    return {
+    const base: MemoryKnowledgeBaseSectionProps = {
       docsData: {
         total: 1,
         sessions: ["session-1"],
@@ -35,16 +37,36 @@ describe("MemoryKnowledgeBaseSection", () => {
       fetchNextMessagesPage: jest.fn(),
       hasNextMessagesPage: false,
       isFetchingNextMessagesPage: false,
+      selectedSession: null,
       setSelectedSession: jest.fn(),
       groupedBySession: new Map([["session-1", documents]]),
       handleOpenDocumentPanel: jest.fn(),
-    } as any;
+    };
+
+    return base;
   };
 
   it("shows loading state", () => {
     const props = makeBaseProps();
     render(<MemoryKnowledgeBaseSection {...props} docsLoading />);
     expect(screen.getByText("loading...")).toBeInTheDocument();
+  });
+
+  it("shows empty state message when there are no documents", () => {
+    const props = {
+      ...makeBaseProps(),
+      docsData: {
+        total: 0,
+        sessions: [],
+        documents: [],
+      },
+      groupedBySession: new Map(),
+    };
+
+    render(<MemoryKnowledgeBaseSection {...props} />);
+
+    expect(screen.getByText("No chunks yet.")).toBeInTheDocument();
+ 
   });
 
   it("opens document panel when row is clicked", () => {
