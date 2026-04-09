@@ -34,6 +34,7 @@ class TestExtractBackendStrings:
 
     def test_writes_keys_in_order_returned_by_collect_strings(self, tmp_path):
         """main() writes keys in the order collect_strings() returns them.
+
         collect_strings() always returns sorted keys, so the output is sorted in practice.
         """
         output_file = tmp_path / "en.json"

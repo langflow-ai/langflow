@@ -518,10 +518,7 @@ def create_app():
         """
         accept_lang = request.headers.get("Accept-Language", "en")
         primary = accept_lang.split(",")[0].strip()
-        if primary.lower().startswith("zh-hans"):
-            locale = "zh-Hans"
-        else:
-            locale = primary.split("-")[0] or "en"
+        locale = "zh-Hans" if primary.lower().startswith("zh-hans") else primary.split("-")[0] or "en"
         request.state.locale = locale
         return await call_next(request)
 

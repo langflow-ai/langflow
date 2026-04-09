@@ -51,7 +51,7 @@ def collect_strings() -> dict[str, str]:
             print(f"  SKIP {modname}: {e}")
             continue
 
-        for attr_name, cls in vars(module).items():
+        for cls in vars(module).values():
             if not isinstance(cls, type):
                 continue
             # Only process classes defined in this module (avoid re-processing imports)
@@ -109,7 +109,9 @@ def main() -> None:
     print("Scanning lfx.components for translatable strings...")
     strings = collect_strings()
     print(
-        f"Found {len(strings)} translatable keys across {sum(1 for k in strings if k.endswith('.display_name') and '.inputs.' not in k and '.outputs.' not in k)} components."
+        f"Found {len(strings)} translatable keys across "
+        f"{sum(1 for k in strings if k.endswith('.display_name') and '.inputs.' not in k and '.outputs.' not in k)}"
+        " components."
     )
 
     new_content = json.dumps(strings, ensure_ascii=False, indent=2) + "\n"
