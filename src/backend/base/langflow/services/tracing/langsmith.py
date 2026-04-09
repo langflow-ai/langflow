@@ -25,7 +25,9 @@ if TYPE_CHECKING:
 
 
 class LangSmithTracer(BaseTracer):
-    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID, session_id: str | None = None):
+    def __init__(
+        self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID, session_id: str | None = None
+    ):
         try:
             self._ready = self.setup_langsmith()
             if not self._ready:
