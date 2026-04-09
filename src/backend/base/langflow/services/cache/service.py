@@ -1,8 +1,11 @@
 import asyncio
+import os
 import pickle
+import tempfile
 import threading
 import time
 from collections import OrderedDict
+from pathlib import Path
 from typing import Generic, Union
 
 import dill
@@ -17,6 +20,33 @@ from langflow.services.cache.base import (
     ExternalAsyncBaseCacheService,
     LockType,
 )
+
+_redis_cache_experimental_warning_lock = threading.Lock()
+_redis_cache_experimental_warning_emitted = False
+
+
+def _warn_redis_experimental_once() -> None:
+    """Emit the RedisCache experimental warning only once per server run."""
+    global _redis_cache_experimental_warning_emitted  # noqa: PLW0603
+
+    with _redis_cache_experimental_warning_lock:
+        if _redis_cache_experimental_warning_emitted:
+            return
+        _redis_cache_experimental_warning_emitted = True
+
+    # Cross-process deduplication: all workers forked from the same master
+    # share the same getppid() value, so they all target the same sentinel.
+    sentinel = Path(tempfile.gettempdir()) / f"langflow_redis_cache_warned_{os.getppid()}.sentinel"
+    try:
+        fd = os.open(sentinel, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.close(fd)
+    except FileExistsError:
+        return  # Another worker already logged the warning
+
+    logger.warning(
+        "RedisCache is an experimental feature and may not work as expected."
+        " Please report any issues to our GitHub repository."
+    )
 
 
 class ThreadingInMemoryCache(CacheService, Generic[LockType]):
@@ -212,10 +242,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         # Redis is a main dependency, no need to import check
         from redis.asyncio import StrictRedis
 
-        logger.warning(
-            "RedisCache is an experimental feature and may not work as expected."
-            " Please report any issues to our GitHub repository."
-        )
+        _warn_redis_experimental_once()
         if url:
             self._client = StrictRedis.from_url(url)
         else:
