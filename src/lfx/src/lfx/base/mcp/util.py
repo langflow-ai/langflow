@@ -510,9 +510,7 @@ def _convert_mcp_result(result: Any) -> Any:
 
     if not needs_list:
         # Text-only: join all text blocks into a single string (backward compat)
-        return "\n".join(
-            getattr(block, "text", "") for block in content if getattr(block, "type", None) == "text"
-        )
+        return "\n".join(getattr(block, "text", "") for block in content if getattr(block, "type", None) == "text")
 
     # Mixed or non-text: build a list of LangChain content blocks
     blocks: list[dict] = []
