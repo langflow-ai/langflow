@@ -43,7 +43,7 @@ dependencies = [
     "alembic>=1.13.0,<2.0.0",
     "passlib>=1.7.4,<2.0.0",
     "bcrypt==4.0.1",
-    "pillow>=12.0.0,<13.0.0",
+    "pillow>=12.1.1,<13.0.0",
     "docstring-parser>=0.16,<1.0.0",
     "PyJWT>=2.12.1",
     "pandas==2.2.3",
