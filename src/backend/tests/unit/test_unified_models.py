@@ -741,6 +741,50 @@ def test_handle_model_input_update_returns_dict():
     assert isinstance(result, dict)
 
 
+def test_handle_model_input_update_api_key_change_preserves_model_selection():
+    """Changing the api_key field must NOT reset the selected model value.
+
+    Regression test: previously, the default-model logic checked ``field_value``
+    (the api_key text) instead of the model field's own value.  When the api_key
+    was empty or falsy (e.g. selecting a global variable), the model was
+    incorrectly reset to the first option.
+    """
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    options = [
+        {"name": "claude-3-opus", "provider": "Anthropic", "metadata": {}},
+        {"name": "gpt-4o", "provider": "OpenAI", "metadata": {}},
+    ]
+    build_config = {
+        "model": _make_model_field(value=selected_model, options=options),
+        "api_key": {"show": True, "required": True, "value": "old-key"},
+    }
+
+    # Simulate typing a new api_key (non-empty field_value)
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value="sk-new-key",
+        field_name="api_key",
+        get_options_func=lambda user_id=None: options,  # noqa: ARG005
+    )
+    assert result["model"]["value"] == selected_model, "Model should be preserved when api_key is non-empty"
+
+    # Simulate clearing the api_key / selecting a global variable (empty field_value)
+    build_config2 = {
+        "model": _make_model_field(value=selected_model, options=options),
+        "api_key": {"show": True, "required": True, "value": ""},
+    }
+    result2 = handle_model_input_update(
+        component,
+        build_config2,
+        field_value="",
+        field_name="api_key",
+        get_options_func=lambda user_id=None: options,  # noqa: ARG005
+    )
+    assert result2["model"]["value"] == selected_model, "Model should be preserved even when api_key is empty"
+
+
 def test_handle_model_input_update_custom_model_field_name():
     """handle_model_input_update should support a custom model_field_name."""
     component = _make_mock_component()

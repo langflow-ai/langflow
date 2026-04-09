@@ -25,8 +25,7 @@ let mockAttachmentsData: {
     version_number: number;
     attached_at: string | null;
     provider_snapshot_id: string | null;
-    tool_name: string | null;
-    provider_data: { app_ids?: string[] } | null;
+    provider_data: { app_ids?: string[]; tool_name?: string | null } | null;
   }>;
 } | null = null;
 let mockIsFetchingAttachments = false;
@@ -112,8 +111,7 @@ beforeEach(() => {
         version_number: 3,
         attached_at: "2025-06-01T00:00:00Z",
         provider_snapshot_id: "snap-1",
-        tool_name: "sales_tool",
-        provider_data: { app_ids: ["cfg-1", "cfg-2"] },
+        provider_data: { app_ids: ["cfg-1", "cfg-2"], tool_name: "sales_tool" },
       },
     ],
   };
@@ -195,6 +193,29 @@ describe("Flow list with versions and connections", () => {
     renderModal();
     expect(screen.getByText("Sales Flow")).toBeInTheDocument();
     expect(screen.getByText("v3")).toBeInTheDocument();
+  });
+
+  it("shows tool name from provider_data", () => {
+    renderModal();
+    expect(screen.getByText("sales_tool")).toBeInTheDocument();
+  });
+
+  it("does not render tool section when tool_name is null", () => {
+    mockAttachmentsData = {
+      flow_versions: [
+        {
+          id: "fv-1",
+          flow_id: "flow-1",
+          flow_name: "Sales Flow",
+          version_number: 3,
+          attached_at: null,
+          provider_snapshot_id: null,
+          provider_data: { app_ids: [] },
+        },
+      ],
+    };
+    renderModal();
+    expect(screen.queryByTestId("icon-Wrench")).not.toBeInTheDocument();
   });
 
   it("maps connection IDs to names via configMap", () => {
