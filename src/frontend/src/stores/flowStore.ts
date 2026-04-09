@@ -314,6 +314,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       positionDictionary: {},
       rightClickedNodeId: null,
     });
+    // Patch translatable fields if types are already loaded in the new language
+    syncNodeTranslations();
   },
   setIsBuilding: (isBuilding) => {
     const current = get();
@@ -1294,6 +1296,57 @@ export function recomputeComponentsToUpdateIfNeeded(): void {
   if (nodes.length > 0) {
     updateComponentsToUpdate(nodes);
   }
+}
+
+export function syncNodeTranslations(): void {
+  const { nodes } = useFlowStore.getState();
+  if (nodes.length === 0) return;
+
+  const { data: typesData, types } = useTypesStore.getState();
+
+  const updatedNodes = nodes.map((node) => {
+    const nodeType = node.data.type;
+    const category = types[nodeType];
+
+    // Skip custom/group nodes not in the types catalog
+    if (!category || !typesData[category]?.[nodeType]) return node;
+
+    const freshDef = typesData[category][nodeType];
+
+    // Update input field display_names
+    const updatedTemplate = { ...node.data.node!.template };
+    for (const fieldName of Object.keys(updatedTemplate)) {
+      if (freshDef.template?.[fieldName]?.display_name !== undefined) {
+        updatedTemplate[fieldName] = {
+          ...updatedTemplate[fieldName],
+          display_name: freshDef.template[fieldName].display_name,
+        };
+      }
+    }
+
+    // Update output display_names
+    const updatedOutputs = node.data.node!.outputs?.map((output, i) =>
+      freshDef.outputs?.[i]?.display_name !== undefined
+        ? { ...output, display_name: freshDef.outputs[i].display_name }
+        : output,
+    );
+
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        node: {
+          ...node.data.node!,
+          display_name: freshDef.display_name,
+          description: freshDef.description,
+          template: updatedTemplate,
+          ...(updatedOutputs && { outputs: updatedOutputs }),
+        },
+      },
+    };
+  });
+
+  useFlowStore.setState({ nodes: updatedNodes });
 }
 
 export default useFlowStore;
