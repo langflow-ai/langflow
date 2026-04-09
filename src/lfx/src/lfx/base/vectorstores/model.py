@@ -88,10 +88,15 @@ class LCVectorStoreComponent(Component):
             info=(
                 "Performs semantic similarity search in the vector store to find relevant documents/files. "
                 "Input: A natural language search query (str). "
-                "Returns: A list of dicts. Each dict has a 'data' key containing a nested dict. "
-                "result['data']['text'] always contains the matched document text. "
-                "Other keys under 'data' depend on what was indexed (common: 'file_path', 'source')."
+                "Returns: A list of Data objects (dicts). Each result has structure: {'data': {'text': '...', ...}}. "
+                "The 'text' field always contains the matched document content. "
+                "Other metadata fields depend on what was indexed "
+                "(may include: 'file_path', 'source', 'page', etc.). "
+                "IMPORTANT: To extract metadata like file_path, use: "
+                "result['data'].get('file_path') or result.data.get('file_path'). "
+                "Check what fields are available by inspecting result['data'].keys() or the first search result."
             ),
+            tool_mode=True,
         ),
         Output(
             display_name="Table",
@@ -102,8 +107,12 @@ class LCVectorStoreComponent(Component):
                 "and returns results as a pandas DataFrame. "
                 "Input: A natural language search query (str). "
                 "Returns: A DataFrame with columns from the matched documents' metadata and content. "
+                "The 'text' column always contains document content. Other columns depend on indexed metadata. "
+                "IMPORTANT: Check available columns with df.columns before accessing specific fields. "
+                "Common metadata columns include: 'file_path', 'source', 'page', etc. "
                 "Use standard pandas operations (.shape, .columns, .head(), etc.) on the result."
             ),
+            tool_mode=True,
         ),
     ]
 
