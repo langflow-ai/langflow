@@ -2682,3 +2682,137 @@ class TestStripNoneRecursive:
 
         # Assert — None items in list preserved (stripping applies to dict keys only)
         assert result == [1, None, "hello", None]
+
+
+class TestConvertMcpResult:
+    """Tests for _convert_mcp_result.
+
+    Ensures MCP CallToolResult objects are properly converted into formats
+    that LangChain agents can consume, including multimodal image support.
+
+    Bug: MCP tools returning image content were passing the raw
+    CallToolResult Python object as a string to the LLM instead of
+    converting it to the image_url format required for vision models.
+    Fixes issue #11812.
+    """
+
+    def _make_text_block(self, text: str):
+        block = MagicMock()
+        block.type = "text"
+        block.text = text
+        return block
+
+    def _make_image_block(self, data: str = "abc123", mime: str = "image/png"):
+        block = MagicMock()
+        block.type = "image"
+        block.data = data
+        block.mimeType = mime
+        return block
+
+    def _make_result(self, content):
+        result = MagicMock()
+        result.content = content
+        return result
+
+    def test_should_return_empty_string_for_none_result(self):
+        """None result must return empty string without raising."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        assert _convert_mcp_result(None) == ""
+
+    def test_should_return_empty_string_for_empty_content(self):
+        """Result with empty content list must return empty string."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result([])
+        assert _convert_mcp_result(result) == ""
+
+    def test_should_return_empty_string_for_missing_content_attr(self):
+        """Result without a content attribute must return empty string."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = MagicMock(spec=[])  # no attributes
+        assert _convert_mcp_result(result) == ""
+
+    def test_should_return_plain_string_for_single_text_block(self):
+        """Single text block must return a plain string (backward compatible)."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result([self._make_text_block("hello world")])
+        assert _convert_mcp_result(result) == "hello world"
+
+    def test_should_join_multiple_text_blocks_with_newline(self):
+        """Multiple text blocks must be joined with newline."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result([
+            self._make_text_block("first"),
+            self._make_text_block("second"),
+        ])
+        assert _convert_mcp_result(result) == "first\nsecond"
+
+    def test_should_convert_image_block_to_image_url_format(self):
+        """Image content must be converted to LangChain image_url format."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        # Arrange — reproduces the exact scenario from issue #11812
+        b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg=="
+        result = self._make_result([self._make_image_block(data=b64, mime="image/png")])
+
+        # Act
+        converted = _convert_mcp_result(result)
+
+        # Assert — must be a list with a single image_url block
+        assert isinstance(converted, list)
+        assert len(converted) == 1
+        assert converted[0]["type"] == "image_url"
+        assert converted[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+    def test_should_handle_mixed_text_and_image_blocks(self):
+        """Mixed text + image content must return a list preserving order."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        b64 = "abc123=="
+        result = self._make_result([
+            self._make_text_block("Here is the screenshot:"),
+            self._make_image_block(data=b64, mime="image/jpeg"),
+        ])
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 2
+        assert converted[0] == {"type": "text", "text": "Here is the screenshot:"}
+        assert converted[1] == {
+            "type": "image_url",
+            "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+        }
+
+    def test_should_default_mime_type_to_image_png_when_missing(self):
+        """Image block with no mimeType must default to image/png."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        block = MagicMock()
+        block.type = "image"
+        block.data = "xyz=="
+        block.mimeType = None  # missing MIME
+
+        result = self._make_result([block])
+        converted = _convert_mcp_result(result)
+
+        assert converted[0]["image_url"]["url"].startswith("data:image/png;base64,")
+
+    def test_should_handle_multiple_image_blocks(self):
+        """Multiple image blocks must all be converted."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result([
+            self._make_image_block(data="img1==", mime="image/png"),
+            self._make_image_block(data="img2==", mime="image/jpeg"),
+        ])
+
+        converted = _convert_mcp_result(result)
+
+        assert len(converted) == 2
+        assert converted[0]["image_url"]["url"] == "data:image/png;base64,img1=="
+        assert converted[1]["image_url"]["url"] == "data:image/jpeg;base64,img2=="
