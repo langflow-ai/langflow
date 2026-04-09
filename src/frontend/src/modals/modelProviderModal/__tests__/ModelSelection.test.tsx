@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ModelSelection from "../components/ModelSelection";
 import { Model } from "../components/types";
@@ -146,6 +146,23 @@ describe("ModelSelection", () => {
       await user.click(toggle);
 
       expect(onModelToggle).toHaveBeenCalledWith("gpt-4", expect.any(Boolean));
+    });
+
+    it("should not call onModelToggle when a toggle is hovered", () => {
+      const onModelToggle = jest.fn();
+
+      render(
+        <ModelSelection {...defaultProps} onModelToggle={onModelToggle} />,
+      );
+
+      const toggle = screen.getByTestId(
+        "embeddings-toggle-text-embedding-ada-002",
+      );
+
+      fireEvent.mouseEnter(toggle);
+      fireEvent.mouseMove(toggle);
+
+      expect(onModelToggle).not.toHaveBeenCalled();
     });
   });
 
