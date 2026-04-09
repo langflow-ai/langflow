@@ -5913,7 +5913,6 @@ name = "langflow"
 version = "1.9.0"
 source = { editable = "." }
 dependencies = [
-    { name = "click" },
     { name = "langflow-base", extra = ["complete"] },
 ]
 
@@ -5994,7 +5993,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "cassio", marker = "extra == 'cassio'", specifier = ">=0.1.7" },
-    { name = "click", specifier = ">=8.3.2" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
