@@ -226,4 +226,6 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
         top_fields[fname] = (py_type, Field(default, **field_kwargs))
 
-    return create_model("InputSchema", **top_fields)
+    # Same JSON Schema rule applies at the root: preserve extras unless explicitly forbidden.
+    top_extra_mode = "ignore" if schema.get("additionalProperties") is False else "allow"
+    return create_model("InputSchema", __config__=ConfigDict(extra=top_extra_mode), **top_fields)

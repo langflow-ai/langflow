@@ -1407,6 +1407,31 @@ class TestMCPUtilityFunctions:
         assert dumped["filter"].get("id") == "abc"
         assert "rogue" not in dumped["filter"]
 
+    def test_top_level_extras_preserved_when_root_does_not_forbid(self):
+        """Root schema with no additionalProperties must pass top-level extras through (PR #12601 review)."""
+        # JSON Schema spec: additionalProperties defaults to true at any depth, including root.
+        # The fix in _build_model handles nested objects; this test guards the symmetric behaviour
+        # for the top-level create_model("InputSchema", ...).
+        schema = {
+            "type": "object",
+            "properties": {"declared": {"type": "string"}},
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        dumped = model.model_validate({"declared": "ok", "extra": "preserved"}).model_dump(exclude_none=True)
+        assert dumped == {"declared": "ok", "extra": "preserved"}
+
+    def test_top_level_strict_mode_when_root_forbids_additional_properties(self):
+        """Root schema with additionalProperties:false must still strip top-level extras."""
+        schema = {
+            "type": "object",
+            "properties": {"declared": {"type": "string"}},
+            "additionalProperties": False,
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        dumped = model.model_validate({"declared": "ok", "rogue": "x"}).model_dump(exclude_none=True)
+        assert dumped == {"declared": "ok"}
+        assert "rogue" not in dumped
+
     def test_deeply_nested_dict_round_trip_preserves_all_levels(self):
         """4-level nested dict under a permissive object must round-trip intact."""
         schema = {
