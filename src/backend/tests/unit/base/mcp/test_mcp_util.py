@@ -1755,6 +1755,7 @@ class TestMCPStructuredTool:
                     return raw
                 from langchain_core.messages import ToolMessage
                 from lfx.base.mcp.util import _convert_mcp_result
+
                 converted = _convert_mcp_result(raw) if hasattr(raw, "content") else raw
                 return ToolMessage(content=converted, tool_call_id=tool_call_id, artifact=raw)
 
@@ -1778,6 +1779,7 @@ class TestMCPStructuredTool:
                     return raw
                 from langchain_core.messages import ToolMessage
                 from lfx.base.mcp.util import _convert_mcp_result
+
                 converted = _convert_mcp_result(raw) if hasattr(raw, "content") else raw
                 return ToolMessage(content=converted, tool_call_id=tool_call_id, artifact=raw)
 
