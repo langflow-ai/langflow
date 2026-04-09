@@ -48,6 +48,7 @@ export type shortcutsStoreType = {
   toggleSidebar: string;
   freezePath: string;
   toolMode: string;
+  aiAssistant: string;
   shortcuts: Array<{
     name: string;
     display_name: string;

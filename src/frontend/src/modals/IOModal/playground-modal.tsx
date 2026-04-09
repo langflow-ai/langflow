@@ -1,6 +1,7 @@
 //import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
@@ -10,6 +11,7 @@ import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
+import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
 import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
@@ -38,6 +40,7 @@ export default function IOModal({
   canvasOpen,
   playgroundPage,
 }: IOModalPropsType): JSX.Element {
+  const { t } = useTranslation();
   const setIOModalOpen = useFlowsManagerStore((state) => state.setIOModalOpen);
   const inputs = useFlowStore((state) => state.inputs);
   const outputs = useFlowStore((state) => state.outputs);
@@ -127,7 +130,7 @@ export default function IOModal({
 
     // Delete the session (which will delete all associated messages on the backend)
     deleteSessionFunction(
-      { sessionId: session_id },
+      { sessionId: session_id, flowId: currentFlowId },
       {
         onSuccess: () => {
           // Remove the session from local state
@@ -136,14 +139,15 @@ export default function IOModal({
           // Remove all messages for this session from local state
           const messageIdsToRemove = messages
             .filter((msg) => msg.session_id === session_id)
-            .map((msg) => msg.id);
+            .map((msg) => msg.id)
+            .filter((id): id is string => id != null);
 
           if (messageIdsToRemove.length > 0) {
             removeMessages(messageIdsToRemove);
           }
 
           setSuccessData({
-            title: "Session deleted successfully.",
+            title: t("success.sessionDeleted"),
           });
         },
         onError: () => {
@@ -153,7 +157,7 @@ export default function IOModal({
           }
 
           setErrorData({
-            title: "Error deleting session.",
+            title: t("errors.deleteSession"),
           });
         },
       },
@@ -228,7 +232,7 @@ export default function IOModal({
   );
 
   useEffect(() => {
-    if (playgroundPage && messages.length > 0) {
+    if (playgroundPage && !isAuthenticatedPlayground() && messages.length > 0) {
       window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
     }
     if (newChatOnPlayground && !sessionsLoading) {
@@ -391,7 +395,7 @@ export default function IOModal({
                   <ShadTooltip
                     styleClasses="z-50"
                     side="right"
-                    content="Hide sidebar"
+                    content={t("modal.io.hideSidebar")}
                   >
                     <Button
                       variant="ghost"
@@ -420,7 +424,7 @@ export default function IOModal({
                 {sidebarOpen && showPublishOptions && (
                   <div className="absolute bottom-2 left-0 flex w-full flex-col gap-8 border-t border-border px-2 py-4 transition-all">
                     <div className="flex items-center justify-between px-2">
-                      <div className="text-sm">Theme</div>
+                      <div className="text-sm">{t("modal.io.theme")}</div>
                       <ThemeButtons />
                     </div>
                     <Button
@@ -429,7 +433,9 @@ export default function IOModal({
                       className="w-full !rounded-xl shadow-lg"
                     >
                       <LangflowLogoColor />
-                      <div className="text-sm">Built with Langflow</div>
+                      <div className="text-sm">
+                        {t("modal.io.builtWithLangflow")}
+                      </div>
                     </Button>
                   </div>
                 )}
@@ -440,7 +446,7 @@ export default function IOModal({
                 <ShadTooltip
                   styleClasses="z-50"
                   side="right"
-                  content="Built with Langflow"
+                  content={t("modal.io.builtWithLangflowTooltip")}
                 >
                   <Button
                     variant="primary"

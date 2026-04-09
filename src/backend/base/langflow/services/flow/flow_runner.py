@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from aiofile import async_open
+import aiofiles
 from lfx.graph import Graph
 from lfx.graph.vertex.param_handler import ParameterHandler
 from lfx.log.logger import configure, logger
@@ -254,7 +254,7 @@ class LangflowRunnerExperimental:
     @staticmethod
     async def get_flow_dict(flow: Path | str | dict) -> dict:
         if isinstance(flow, str | Path):
-            async with async_open(Path(flow), encoding="utf-8") as f:
+            async with aiofiles.open(Path(flow), encoding="utf-8") as f:
                 content = await f.read()
                 return json.loads(content)
         # If input is a dictionary, assume it's a JSON object
