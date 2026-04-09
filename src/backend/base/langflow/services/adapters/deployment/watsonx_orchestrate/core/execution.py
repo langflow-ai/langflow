@@ -24,10 +24,16 @@ def build_orchestrate_run_payload(
     if message_payload is None:
         message_payload = resolve_execution_message(provider_data.get("input"))
 
-    return {
+    payload: dict[str, Any] = {
         "message": message_payload,
         "agent_id": str(provider_data.get("agent_id") or deployment_id),
     }
+
+    thread_id = provider_data.get("thread_id")
+    if thread_id:
+        payload["thread_id"] = str(thread_id)
+
+    return payload
 
 
 async def create_agent_run(
@@ -99,6 +105,11 @@ def create_agent_run_result(payload: dict[str, Any] | None) -> dict[str, Any]:
         msg = "Watsonx Orchestrate accepted the execution but did not return an execution identifier."
         raise DeploymentError(message=msg, error_code="missing_execution_id")
     result["execution_id"] = run_id
+
+    thread_id = payload.get("thread_id")
+    if thread_id:
+        result["thread_id"] = str(thread_id)
+
     return result
 
 
@@ -116,6 +127,7 @@ async def get_agent_run(client: WxOClient, *, run_id: str) -> dict[str, Any]:
 
     passthrough_fields = [
         "agent_id",
+        "thread_id",
         "started_at",
         "completed_at",
         "failed_at",

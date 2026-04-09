@@ -13,11 +13,11 @@ from tempfile import TemporaryDirectory
 from typing import AnyStr
 from uuid import UUID
 
+import aiofiles
 import anyio
 import httpx
 import orjson
 import sqlalchemy as sa
-from aiofile import async_open
 from emoji import demojize, purely_emoji
 from lfx.base.constants import (
     FIELD_FORMAT_ATTRIBUTES,
@@ -676,7 +676,7 @@ def get_project_data(project):
 
 async def update_project_file(project_path: anyio.Path, project: dict, updated_project_data) -> None:
     project["data"] = updated_project_data
-    async with async_open(str(project_path), "w", encoding="utf-8") as f:
+    async with aiofiles.open(str(project_path), "w", encoding="utf-8") as f:
         await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
     await logger.adebug(f"Updated starter project {project['name']} file")
 
@@ -803,7 +803,7 @@ async def load_agentic_flows() -> list[tuple[anyio.Path, dict]]:
     await logger.adebug("Loading agentic flows")
     async for file in folder.glob("*.json"):
         try:
-            async with async_open(str(file), "r", encoding="utf-8") as f:
+            async with aiofiles.open(str(file), encoding="utf-8") as f:
                 content = await f.read()
             flow = orjson.loads(content)
             agentic_flows.append((file, flow))
@@ -961,7 +961,7 @@ async def load_flows_from_directory() -> None:
             if not await anyio.Path(file_path).is_file() or file_path.suffix != ".json":
                 continue
             await logger.ainfo(f"Loading flow from file: {file_path.name}")
-            async with async_open(str(file_path), "r", encoding="utf-8") as f:
+            async with aiofiles.open(str(file_path), encoding="utf-8") as f:
                 content = await f.read()
             await upsert_flow_from_file(content, file_path.stem, session, user.id)
 

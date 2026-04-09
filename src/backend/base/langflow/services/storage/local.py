@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from aiofile import async_open
+import aiofiles
 
 from langflow.logging.logger import logger
 from langflow.services.storage.service import StorageService
@@ -169,7 +169,7 @@ class LocalStorageService(StorageService):
 
         try:
             mode = "ab" if append else "wb"
-            async with async_open(str(file_path), mode) as f:
+            async with aiofiles.open(str(file_path), mode) as f:
                 await f.write(data)
             action = "appended to" if append else "saved"
             await logger.ainfo(f"File {file_name} {action} successfully in flow {flow_id}.")
@@ -196,7 +196,7 @@ class LocalStorageService(StorageService):
             msg = f"File {file_name} not found in flow {flow_id}"
             raise FileNotFoundError(msg)
 
-        async with async_open(str(file_path), "rb") as f:
+        async with aiofiles.open(str(file_path), "rb") as f:
             content = await f.read()
 
         logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
@@ -210,7 +210,7 @@ class LocalStorageService(StorageService):
             msg = f"File {file_name} not found in flow {flow_id}"
             raise FileNotFoundError(msg)
 
-        async with async_open(str(file_path), "rb") as f:
+        async with aiofiles.open(str(file_path), "rb") as f:
             while True:
                 chunk = await f.read(chunk_size)
                 if not chunk:

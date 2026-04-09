@@ -29,23 +29,21 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar
 from uuid import UUID
 
+from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadFields
 from lfx.services.adapters.deployment.schema import (
+    BaseDeploymentData,
     BaseDeploymentDataUpdate,
     BaseFlowArtifact,
-    ConfigDeploymentBindingUpdate,
-    ConfigItem,
     ConfigListParams,
     ConfigListResult,
     DeploymentCreateResult,
     DeploymentListLlmsResult,
     DeploymentListResult,
-    DeploymentType,
     DeploymentUpdateResult,
     ExecutionCreate,
     ExecutionCreateResult,
     ExecutionStatusResult,
-    SnapshotItems,
     SnapshotListParams,
     SnapshotListResult,
     VerifyCredentials,
@@ -59,16 +57,17 @@ from lfx.services.adapters.deployment.schema import (
 from lfx.services.adapters.payload import PayloadSlot
 
 from langflow.api.v1.schemas.deployments import (
-    DeploymentConfigListItem,
     DeploymentConfigListResponse,
     DeploymentCreateRequest,
+    DeploymentCreateResponse,
+    DeploymentFlowVersionListItem,
+    DeploymentFlowVersionListResponse,
     DeploymentListItem,
     DeploymentListResponse,
     DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountUpdateRequest,
-    DeploymentSnapshotListItem,
     DeploymentSnapshotListResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
@@ -84,13 +83,18 @@ from .contracts import (
     FlowVersionPatch,
     UpdateSnapshotBindings,
 )
-from .helpers import build_project_scoped_flow_artifacts_from_flow_versions, page_offset
+from .helpers import page_offset
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.flow_version.model import FlowVersion
+    from langflow.services.database.models.flow_version_deployment_attachment.model import (
+        FlowVersionDeploymentAttachment,
+    )
 
 
 @dataclass(frozen=True)
@@ -144,38 +148,14 @@ class BaseDeploymentMapper:
         db: AsyncSession,
         payload: DeploymentCreateRequest,
     ) -> AdapterDeploymentCreate:
-        snapshot_payloads: list[BaseFlowArtifact] | None = None
-        if payload.flow_version_ids:
-            flow_artifacts = await build_project_scoped_flow_artifacts_from_flow_versions(
-                reference_ids=payload.flow_version_ids,
-                user_id=user_id,
-                project_id=project_id,
-                db=db,
-            )
-            snapshot_payloads = [
-                artifact.model_copy(
-                    update={
-                        "provider_data": self.util_create_flow_artifact_provider_data(
-                            project_id=project_id,
-                            flow_version_id=flow_version_id,
-                        ).model_dump(exclude_none=True),
-                    }
-                )
-                for flow_version_id, artifact in flow_artifacts
-            ]
-        adapter_snapshot = SnapshotItems(raw_payloads=snapshot_payloads) if snapshot_payloads else None
-        adapter_config = (
-            ConfigItem(reference_id=payload.config.reference_id)
-            if payload.config is not None and payload.config.reference_id is not None
-            else ConfigItem(raw_payload=payload.config.raw_payload)
-            if payload.config is not None
-            else None
-        )
+        _ = (user_id, project_id)
         provider_data = self._validate_slot(self.api_payloads.deployment_create, payload.provider_data)
         return AdapterDeploymentCreate(
-            spec=payload.spec,
-            snapshot=adapter_snapshot,
-            config=adapter_config,
+            spec=BaseDeploymentData(
+                name=payload.name,
+                description=payload.description,
+                type=payload.type,
+            ),
             provider_data=provider_data,
         )
 
@@ -196,8 +176,8 @@ class BaseDeploymentMapper:
         )
         return AdapterDeploymentUpdate(
             spec=BaseDeploymentDataUpdate(
-                name=payload.spec.name,
-                description=payload.spec.description,
+                name=payload.name,
+                description=payload.description,
             ),
             provider_data=create_payload.provider_data,
         )
@@ -211,15 +191,17 @@ class BaseDeploymentMapper:
         payload: DeploymentUpdateRequest,
     ) -> AdapterDeploymentUpdate:
         _ = (user_id, deployment_db_id)
-        adapter_config = (
-            ConfigDeploymentBindingUpdate(**payload.config.model_dump(exclude_unset=True))
-            if payload.config is not None
+        adapter_spec = (
+            BaseDeploymentDataUpdate(
+                name=payload.name,
+                description=payload.description,
+            )
+            if payload.name is not None or payload.description is not None
             else None
         )
         provider_data = self._validate_slot(self.api_payloads.deployment_update, payload.provider_data)
         return AdapterDeploymentUpdate(
-            spec=payload.spec,
-            config=adapter_config,
+            spec=adapter_spec,
             provider_data=provider_data,
         )
 
@@ -248,6 +230,49 @@ class BaseDeploymentMapper:
 
     async def resolve_snapshot_list_params(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
         return self._validate_slot(self.api_payloads.snapshot_list_params, raw)
+
+    def resolve_snapshot_update_artifact(
+        self,
+        *,
+        flow_version: FlowVersion,
+        flow_row: Flow | None,
+        deployment: Deployment,
+    ) -> BaseFlowArtifact:
+        """Build a ``BaseFlowArtifact`` for a snapshot content update.
+
+        The base implementation assembles the artifact from the flow version
+        data and the parent flow's metadata.  Provider-specific mappers
+        override this to inject ``provider_data``.
+
+        Raises ``HTTPException(422)`` when the artifact cannot be built
+        (e.g. the parent flow has been deleted or the data is malformed).
+        """
+        from pydantic import ValidationError
+
+        flow_name = getattr(flow_row, "name", None) or ""
+        if not flow_name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"Cannot build deployment artifact: the parent flow for version "
+                    f"'{flow_version.id}' has been deleted or has no name."
+                ),
+            )
+        try:
+            return BaseFlowArtifact(
+                id=flow_version.flow_id,
+                name=flow_name,
+                description=getattr(flow_row, "description", None),
+                data=flow_version.data,
+            )
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"Flow version '{flow_version.id}' cannot be used as a deployment "
+                    f"artifact: {exc.errors()[0]['msg']}"
+                ),
+            ) from exc
 
     async def resolve_config_list_adapter_params(
         self,
@@ -278,12 +303,15 @@ class BaseDeploymentMapper:
     def shape_deployment_list_items(
         self,
         *,
-        rows_with_counts: list[tuple[Deployment, int, list[str]]],
-        matched_flow_version_filter_ids: list[UUID] | None = None,
+        rows_with_counts: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]],
+        has_flow_filter: bool = False,
+        provider_key: str,
     ) -> list[DeploymentListItem]:
         return [
             DeploymentListItem(
                 id=row.id,
+                provider_id=row.deployment_provider_account_id,
+                provider_key=provider_key,
                 resource_key=row.resource_key,
                 type=row.deployment_type,
                 name=row.name,
@@ -291,36 +319,110 @@ class BaseDeploymentMapper:
                 attached_count=attached_count,
                 created_at=row.created_at,
                 updated_at=row.updated_at,
-                provider_data={"matched_flow_version_ids": matched_flow_versions}
-                if matched_flow_version_filter_ids
-                else None,
+                flow_version_ids=[fv_id for fv_id, _ in matched_attachments] if has_flow_filter else None,
             )
-            for row, attached_count, matched_flow_versions in rows_with_counts
+            for row, attached_count, matched_attachments in rows_with_counts
         ]
 
-    def shape_deployment_create_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
-        return provider_result
-
-    def shape_deployment_update_result(
+    def shape_flow_version_list_result(
         self,
-        result: DeploymentUpdateResult,
+        *,
+        rows: list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]],
+        snapshot_result: SnapshotListResult | None,
+        page: int,
+        size: int,
+        total: int,
+    ) -> DeploymentFlowVersionListResponse:
+        _ = snapshot_result
+        flow_versions = [
+            DeploymentFlowVersionListItem(
+                id=flow_version.id,
+                flow_id=flow_version.flow_id,
+                flow_name=flow_name,
+                version_number=flow_version.version_number,
+                attached_at=attachment.created_at,
+                provider_snapshot_id=(attachment.provider_snapshot_id or "").strip() or None,
+                provider_data=None,
+            )
+            for attachment, flow_version, flow_name in rows
+        ]
+        return DeploymentFlowVersionListResponse(
+            flow_versions=flow_versions,
+            page=page,
+            size=size,
+            total=total,
+        )
+
+    def shape_deployment_create_result(
+        self,
+        result: DeploymentCreateResult,
         deployment_row: Deployment,
-    ) -> DeploymentUpdateResponse:
+        *,
+        provider_key: str,
+    ) -> DeploymentCreateResponse:
         provider_data = result.provider_result if isinstance(result.provider_result, dict) else None
-        return DeploymentUpdateResponse(
+        return DeploymentCreateResponse(
             id=deployment_row.id,
+            provider_id=deployment_row.deployment_provider_account_id,
+            provider_key=provider_key,
             name=deployment_row.name,
             description=deployment_row.description,
             type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
             updated_at=deployment_row.updated_at,
+            resource_key=deployment_row.resource_key,
             provider_data=provider_data,
         )
 
-    def resolve_provider_tenant_id(self, *, provider_url: str, provider_tenant_id: str | None) -> str | None:
+    def shape_deployment_update_result(
+        self,
+        result: DeploymentUpdateResult,
+        deployment_row: Deployment,
+        *,
+        provider_key: str,
+    ) -> DeploymentUpdateResponse:
+        provider_data = result.provider_result if isinstance(result.provider_result, dict) else None
+        return DeploymentUpdateResponse(
+            id=deployment_row.id,
+            provider_id=deployment_row.deployment_provider_account_id,
+            provider_key=provider_key,
+            name=deployment_row.name,
+            description=deployment_row.description,
+            type=deployment_row.deployment_type,
+            created_at=deployment_row.created_at,
+            updated_at=deployment_row.updated_at,
+            resource_key=deployment_row.resource_key,
+            provider_data=provider_data,
+        )
+
+    def resolve_provider_tenant_id(
+        self,
+        *,
+        provider_url: str,
+        provider_data: dict[str, Any],
+    ) -> str | None:
         """Resolve provider tenant id for provider-account create/update."""
         _ = provider_url
-        return provider_tenant_id
+        return self.resolve_provider_tenant_id_from_data(provider_data=provider_data)
+
+    def resolve_provider_tenant_id_from_data(self, *, provider_data: dict[str, Any]) -> str | None:
+        """Extract optional tenant/account identifier from provider_data."""
+        raw_tenant_id = provider_data.get("tenant_id")
+        if raw_tenant_id is None:
+            return None
+        if not isinstance(raw_tenant_id, str):
+            msg = "provider_data.tenant_id must be a string when provided."
+            raise ValueError(msg)  # noqa: TRY004 - route layer maps ValueError to HTTP 4xx
+        tenant_id = raw_tenant_id.strip()
+        return tenant_id or None
+
+    def format_conflict_detail(self, raw_message: str) -> str:
+        """Format provider conflict errors for API responses.
+
+        Provider-specific mappers may override this to map provider-native
+        conflict wording to clearer end-user guidance.
+        """
+        return f"A resource with this name already exists in the provider. {raw_message}"
 
     def resolve_credential_fields(
         self,
@@ -345,24 +447,19 @@ class BaseDeploymentMapper:
         """Assemble DB column-value kwargs for a provider-account update.
 
         Only fields present in ``payload.model_fields_set`` are included so
-        the CRUD layer receives a minimal diff.  Provider mappers may override
-        to add cross-field logic (e.g. re-deriving tenant from URL).
+        the CRUD layer receives a minimal diff. Provider-account update fields
+        are intentionally limited to mutable values (display name and
+        credentials).
         """
+        _ = existing_account
         update_kwargs: dict[str, Any] = {}
         if "name" in payload.model_fields_set:
             update_kwargs["name"] = payload.name
-        if "provider_url" in payload.model_fields_set:
-            update_kwargs["provider_url"] = payload.provider_url
         if "provider_data" in payload.model_fields_set:
             if payload.provider_data is None:
                 msg = "'provider_data' cannot be null when provided."
                 raise ValueError(msg)
             update_kwargs.update(self.resolve_credential_fields(provider_data=payload.provider_data))
-        if "provider_tenant_id" in payload.model_fields_set:
-            update_kwargs["provider_tenant_id"] = self.resolve_provider_tenant_id(
-                provider_url=payload.provider_url or existing_account.provider_url,
-                provider_tenant_id=payload.provider_tenant_id,
-            )
         return update_kwargs
 
     def resolve_verify_credentials(
@@ -377,7 +474,7 @@ class BaseDeploymentMapper:
         provider mapper overrides.
         """
         return VerifyCredentials(
-            base_url=payload.provider_url,
+            base_url=payload.url,
         )
 
     def resolve_verify_credentials_for_update(
@@ -388,12 +485,12 @@ class BaseDeploymentMapper:
     ) -> VerifyCredentials | None:
         """Build adapter verify-credentials input for provider-account updates.
 
-        Returns ``None`` when the update does not touch credentials or URL.
+        Returns ``None`` when the update does not touch credentials.
         Provider-specific mappers must override this when update-time
         verification is supported.
         """
         _ = existing_account
-        if "provider_url" not in payload.model_fields_set and "provider_data" not in payload.model_fields_set:
+        if "provider_data" not in payload.model_fields_set:
             return None
         msg = "Credential verification for provider account updates is not implemented for this provider."
         raise NotImplementedError(msg)
@@ -405,12 +502,25 @@ class BaseDeploymentMapper:
         return DeploymentProviderAccountGetResponse(
             id=provider_account.id,
             name=provider_account.name,
-            provider_tenant_id=provider_account.provider_tenant_id,
             provider_key=provider_account.provider_key,
-            provider_url=provider_account.provider_url,
+            url=provider_account.provider_url,
+            provider_data=self.shape_provider_account_provider_data(provider_account),
             created_at=provider_account.created_at,
             updated_at=provider_account.updated_at,
         )
+
+    def shape_provider_account_provider_data(
+        self,
+        provider_account: DeploymentProviderAccount,
+    ) -> dict[str, Any] | None:
+        """Return non-sensitive provider metadata for provider-account responses."""
+        raw_tenant_id = provider_account.provider_tenant_id
+        if raw_tenant_id is None:
+            return None
+        tenant_id = str(raw_tenant_id).strip()
+        if not tenant_id:
+            return None
+        return {"tenant_id": tenant_id}
 
     def util_create_flow_artifact_provider_data(
         self,
@@ -427,7 +537,8 @@ class BaseDeploymentMapper:
 
     def util_create_flow_version_ids(self, payload: DeploymentCreateRequest) -> list[UUID]:
         """Resolve flow-version ids referenced by create payload."""
-        return list(payload.flow_version_ids or [])
+        _ = payload
+        return []
 
     def util_existing_deployment_resource_key_for_create(
         self,
@@ -515,10 +626,8 @@ class BaseDeploymentMapper:
 
         Contract schema: ``FlowVersionPatch``.
         """
-        return FlowVersionPatch(
-            add_flow_version_ids=list(payload.add_flow_version_ids or []),
-            remove_flow_version_ids=list(payload.remove_flow_version_ids or []),
-        )
+        _ = payload
+        return FlowVersionPatch()
 
     def util_snapshot_ids_to_verify(
         self,
@@ -565,27 +674,29 @@ class BaseDeploymentMapper:
     def shape_deployment_list_result(
         self,
         result: DeploymentListResult,
-        *,
-        deployment_type: DeploymentType | None,
     ) -> DeploymentListResponse:
-        entries = [
-            {
-                "resource_key": str(item.id),
-                "name": item.name,
-                "type": item.type,
-                "description": getattr(item, "description", None),
-                "created_at": item.created_at,
-                "updated_at": item.updated_at,
-                "provider_data": self.shape_deployment_item_data(
-                    item.provider_data if isinstance(item.provider_data, dict) else None
-                ),
-            }
-            for item in result.deployments
-            if str(item.id).strip()
-        ]
+        entries = []
+        for item in result.deployments:
+            item_id = str(item.id).strip()
+            if not item_id:
+                continue
+            item_provider_data = (
+                self.shape_deployment_item_data(item.provider_data if isinstance(item.provider_data, dict) else None)
+                or {}
+            )
+            entries.append(
+                {
+                    "id": item_id,
+                    "name": item.name,
+                    "type": item.type,
+                    "description": getattr(item, "description", None),
+                    "created_at": item.created_at,
+                    "updated_at": item.updated_at,
+                    **item_provider_data,
+                }
+            )
         return DeploymentListResponse(
             deployments=[],
-            deployment_type=deployment_type,
             page=1,
             size=len(entries),
             total=len(entries),
@@ -608,20 +719,16 @@ class BaseDeploymentMapper:
             self.api_payloads.config_list_result,
             result.provider_result if isinstance(result.provider_result, dict) else None,
         )
-        configs_all = [
-            DeploymentConfigListItem(
-                id=str(item.id),
-                name=item.name,
-                created_at=item.created_at,
-                updated_at=item.updated_at,
-                provider_data=item.provider_data if isinstance(item.provider_data, dict) else None,
-            )
-            for item in result.configs
-        ]
-        total = len(configs_all)
+        items_all = [item.model_dump(mode="json", exclude_none=True) for item in result.configs]
+        total = len(items_all)
         offset = page_offset(page, size)
+        provider_result = result.provider_result if isinstance(result.provider_result, dict) else {}
+        provider_data: dict[str, Any] = {
+            **provider_result,
+            "configs": items_all[offset : offset + size],
+        }
         return DeploymentConfigListResponse(
-            configs=configs_all[offset : offset + size],
+            provider_data=provider_data or None,
             page=page,
             size=size,
             total=total,
@@ -638,20 +745,16 @@ class BaseDeploymentMapper:
             self.api_payloads.snapshot_list_result,
             result.provider_result if isinstance(result.provider_result, dict) else None,
         )
-        snapshots_all = [
-            DeploymentSnapshotListItem(
-                id=str(item.id),
-                name=item.name,
-                created_at=item.created_at,
-                updated_at=item.updated_at,
-                provider_data=item.provider_data if isinstance(item.provider_data, dict) else None,
-            )
-            for item in result.snapshots
-        ]
-        total = len(snapshots_all)
+        items_all = [item.model_dump(mode="json", exclude_none=True) for item in result.snapshots]
+        total = len(items_all)
         offset = page_offset(page, size)
+        provider_result = result.provider_result if isinstance(result.provider_result, dict) else {}
+        provider_data: dict[str, Any] = {
+            **provider_result,
+            "snapshots": items_all[offset : offset + size],
+        }
         return DeploymentSnapshotListResponse(
-            snapshots=snapshots_all[offset : offset + size],
+            provider_data=provider_data or None,
             page=page,
             size=size,
             total=total,

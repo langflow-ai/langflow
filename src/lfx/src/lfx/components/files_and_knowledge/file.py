@@ -1254,7 +1254,7 @@ class FileComponent(BaseFileComponent):
             return final_return
 
         # Standard multi-file (or single non-advanced) path
-        concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)
+        concurrency = max(1, self.concurrency_multithreading)
 
         file_paths = [str(f.path) for f in file_list]
         self.log(f"Starting parallel processing of {len(file_paths)} files with concurrency: {concurrency}.")

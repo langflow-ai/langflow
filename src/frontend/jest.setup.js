@@ -1,5 +1,17 @@
 // Jest setup file to mock globals and Vite-specific syntax
 
+// Mock react-i18next globally so t(key) returns the English string from en.json
+const enTranslations = require("./src/locales/en.json");
+jest.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key) => enTranslations[key] ?? key,
+    i18n: { changeLanguage: jest.fn(), language: "en" },
+  }),
+  Trans: ({ children }) => children,
+  initReactI18next: { type: "3rdParty", init: jest.fn() },
+  withTranslation: () => (Component) => Component,
+}));
+
 // Mock import.meta
 global.import = {
   meta: {
