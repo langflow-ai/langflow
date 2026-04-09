@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import AliasChoices, BaseModel, Field, create_model
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, create_model
 
 from lfx.log.logger import logger
 
@@ -196,7 +196,16 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
                 fields[prop_name] = (py_type, Field(default, **field_kwargs))
 
-            model_cls = create_model(name, **fields)
+            # JSON Schema default for `additionalProperties` is `true`, so unknown
+            # nested keys MUST flow through validation/dump untouched. Pydantic's
+            # default `extra='ignore'` would silently drop them, which broke MCP
+            # tools whose servers ship loose object schemas with one or two
+            # placeholder properties (issues #9881 / #10975 — nested dicts like
+            # `{'msg': {'linear': {...}, 'angular': {...}}}` were arriving as
+            # `{'msg': {}}`). Only switch to strict mode when the schema author
+            # explicitly opts in via `additionalProperties: false`.
+            extra_mode = "ignore" if subschema.get("additionalProperties") is False else "allow"
+            model_cls = create_model(name, __config__=ConfigDict(extra=extra_mode), **fields)
         finally:
             building.discard(name)
         model_cache[name] = model_cls

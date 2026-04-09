@@ -622,6 +622,98 @@ class TestUpdateToolsStdioHeaders:
         assert original_args == ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
 
 
+class TestUpdateToolsPerToolResilience:
+    """Test that update_tools is fault-tolerant on a per-tool basis (issue #11229).
+
+    Background: when Langflow lists tools from a remote MCP server, each tool's JSON Schema
+    is converted to a Pydantic model via ``create_input_schema_from_json_schema``. If a single
+    tool's schema triggers an unexpected exception (e.g. ``TypeError: unhashable type: 'list'``
+    reported in #11229 against the Linear MCP server, where one tool out of ~25 has a schema
+    construct the parser cannot handle), the previous behaviour was to abort the WHOLE
+    listing and return ``Configuration data error: ...`` to the user — none of the 24 healthy
+    tools were available either. The fix makes the per-tool loop catch the broader Exception
+    so a single rogue schema can only cost the user that one tool, and logs the offending
+    schema with enough context (server name, tool name) to file a focused bug report.
+    """
+
+    @staticmethod
+    def _make_tool(name: str, schema: dict) -> MagicMock:
+        tool = MagicMock()
+        tool.name = name
+        tool.description = f"{name} description"
+        tool.inputSchema = schema
+        tool.outputSchema = None
+        return tool
+
+    @pytest.mark.asyncio
+    async def test_one_bad_tool_does_not_drop_the_other_tools_issue_11229(self):
+        """A TypeError raised while parsing one tool's schema must not abort the listing.
+
+        The healthy tools must still be returned and the broken tool must be logged with its
+        name so the operator can identify which Linear (or other) MCP tool is at fault.
+        """
+        good_tool_a = self._make_tool(
+            "good_a",
+            {"type": "object", "properties": {"q": {"type": "string"}}, "required": ["q"]},
+        )
+        bad_tool = self._make_tool(
+            "bad_linear_like",
+            {
+                # Surrogate for the unknown Linear schema construct that crashes the parser:
+                # the test forces the converter to raise unconditionally for this tool only.
+                "type": "object",
+                "properties": {"x": {"type": "string"}},
+            },
+        )
+        good_tool_b = self._make_tool(
+            "good_b",
+            {"type": "object", "properties": {"n": {"type": "integer"}}, "required": ["n"]},
+        )
+
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = [good_tool_a, bad_tool, good_tool_b]
+        mock_stdio._connected = True
+
+        # Real converter for the healthy tools, TypeError for the bad one — same surface
+        # symptom as #11229 ("unhashable type: 'list'") but produced deterministically.
+        from lfx.schema.json_schema import create_input_schema_from_json_schema as real_converter
+
+        def selective_converter(schema):
+            if schema is bad_tool.inputSchema:
+                msg = "unhashable type: 'list'"
+                raise TypeError(msg)
+            return real_converter(schema)
+
+        with (
+            patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=selective_converter),
+            patch("lfx.base.mcp.util.logger") as mock_logger,
+        ):
+            mode, tool_list, tool_cache = await update_tools(
+                server_name="linear-like",
+                server_config={"command": "fake-cmd", "args": []},
+                mcp_stdio_client=mock_stdio,
+            )
+
+        # The two healthy tools must survive even though the middle one was malformed.
+        loaded_names = [t.name for t in tool_list]
+        assert "good_a" in loaded_names, "first healthy tool was dropped because of the broken middle tool"
+        assert "good_b" in loaded_names, "third healthy tool was dropped because of the earlier broken tool"
+        assert "bad_linear_like" not in loaded_names
+        assert set(tool_cache.keys()) == {"good_a", "good_b"}
+        assert mode == "Stdio"
+
+        # The broken tool MUST be logged with its name so the operator can act on it.
+        # Without this, the user only sees "Configuration data error" with no clue which
+        # tool is at fault — the original #11229 user experience.
+        all_log_calls = (
+            mock_logger.error.call_args_list + mock_logger.warning.call_args_list + mock_logger.exception.call_args_list
+        )
+        joined = " | ".join(str(call) for call in all_log_calls)
+        assert "bad_linear_like" in joined, (
+            f"the failing tool name must appear in the log so users can identify it (#11229); got: {joined!r}"
+        )
+
+
 class TestFieldNameConversion:
     """Test camelCase to snake_case field name conversion functionality."""
 
@@ -1223,6 +1315,102 @@ class TestMCPUtilityFunctions:
         deep_validated = model_class.model_validate(deep_input)
         deep_result = deep_validated.model_dump()
         assert deep_result["msg"] == {"level1": {"level2": {"level3": "value"}}}
+
+    def test_nested_dict_preservation_with_declared_properties_issue_10975(self):
+        """Nested dictionaries must be preserved even when the object has at least one declared property.
+
+        Regression test for issues #9881 and #10975: when an MCP tool's inputSchema declares an
+        object field with one or more ``properties`` (e.g. a placeholder property used by ROS- or
+        FHIR-style MCP servers that ship a permissive object), the LLM-generated nested keys
+        (``linear``/``angular`` for ROS, ``component-reference-gene...`` for FHIR) used to be
+        silently dropped by Pydantic's default ``extra='ignore'`` behaviour. The model_validate +
+        model_dump round-trip in ``create_tool_coroutine`` would then forward an empty ``{}`` to
+        the MCP server. JSON Schema's default for ``additionalProperties`` is ``true``, so a
+        permissive nested object MUST preserve unknown keys.
+        """
+        # FHIR-MCP shape from #10975: searchParam declared as object with one property,
+        # additionalProperties not explicitly forbidden.
+        fhir_schema = {
+            "type": "object",
+            "required": ["type", "searchParam"],
+            "properties": {
+                "type": {"type": "string"},
+                "searchParam": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        fhir_model = util.create_input_schema_from_json_schema(fhir_schema)
+        fhir_input = {
+            "type": "Observation",
+            "searchParam": {
+                "component-reference-gene.component-code-value-concept": "48018-6$BRCA2",
+            },
+        }
+        fhir_dump = fhir_model.model_validate(fhir_input).model_dump(exclude_none=True)
+        assert fhir_dump["searchParam"] == {
+            "component-reference-gene.component-code-value-concept": "48018-6$BRCA2",
+        }, "FHIR-MCP nested searchParam dict was stripped (issue #10975)"
+
+        # ROS-MCP shape from #9881: msg declared as object with a placeholder property.
+        ros_schema = {
+            "type": "object",
+            "required": ["msg", "msg_type", "topic"],
+            "properties": {
+                "topic": {"type": "string"},
+                "msg_type": {"type": "string"},
+                "msg": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        ros_model = util.create_input_schema_from_json_schema(ros_schema)
+        ros_input = {
+            "topic": "/turtle1/cmd_vel",
+            "msg_type": "geometry_msgs/msg/Twist",
+            "msg": {
+                "linear": {"x": 1, "y": 0, "z": 0},
+                "angular": {"x": 0, "y": 0, "z": 0},
+            },
+        }
+        ros_dump = ros_model.model_validate(ros_input).model_dump(exclude_none=True)
+        assert ros_dump["msg"] == {
+            "linear": {"x": 1, "y": 0, "z": 0},
+            "angular": {"x": 0, "y": 0, "z": 0},
+        }, "ROS-MCP nested msg dict was stripped (issue #9881)"
+        # Sibling primitive fields must continue to round-trip unchanged.
+        assert ros_dump["topic"] == "/turtle1/cmd_vel"
+        assert ros_dump["msg_type"] == "geometry_msgs/msg/Twist"
+
+    def test_object_with_additional_properties_false_still_drops_extras(self):
+        """When the schema explicitly forbids additional properties, extras MUST still be dropped.
+
+        Companion to ``test_nested_dict_preservation_with_declared_properties_issue_10975``: the
+        fix for #9881/#10975 must NOT relax validation when ``additionalProperties: false`` is
+        explicitly declared. JSON Schema semantics: ``additionalProperties: false`` means "no
+        unknown keys allowed", so the model should still strip them (or refuse them).
+        """
+        strict_schema = {
+            "type": "object",
+            "properties": {
+                "filter": {
+                    "type": "object",
+                    "properties": {"id": {"type": "string"}},
+                    "additionalProperties": False,
+                },
+            },
+        }
+        strict_model = util.create_input_schema_from_json_schema(strict_schema)
+        # Extras under a strict object must NOT survive the round-trip.
+        dumped = strict_model.model_validate({"filter": {"id": "abc", "rogue": "x"}}).model_dump(
+            exclude_none=True,
+        )
+        assert dumped["filter"].get("id") == "abc"
+        assert "rogue" not in dumped["filter"], (
+            "additionalProperties:false was declared, rogue keys must not pass through"
+        )
 
     @pytest.mark.asyncio
     async def test_validate_connection_params(self):
