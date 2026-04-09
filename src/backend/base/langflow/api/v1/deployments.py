@@ -632,7 +632,7 @@ async def list_deployments(
     if load_from_provider and project_id is not None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="project_id filtering is not supported when load_from_provider=true.",
+            detail="project_id filtering is not supported when loading deployments directly from the provider.",
         )
     if normalized_flow_ids:
         resolved = await flow_version_ids_for_flows(session, flow_ids=normalized_flow_ids, user_id=current_user.id)
