@@ -107,6 +107,7 @@ jobs:
         run: echo "::warning::GP translation download failed — translations may be out of date. Check the 'Download translations from GP' step above for details."
 
   download-backend:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     name: Download backend translations from Globalization Pipeline
     environment: GP-test
