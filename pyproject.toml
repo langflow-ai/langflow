@@ -17,8 +17,8 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "click>=8.3.2",
     "langflow-base[complete]~=0.9.0",
+    "click>=8.3.2",
 ]
 
 
