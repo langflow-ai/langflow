@@ -274,6 +274,7 @@ class BaseFileComponent(Component, ABC):
                 file_size = 0
 
         # Basic file metadata
+        metadata["file_path"] = file_path
         metadata["filename"] = filename
         metadata["file_size"] = file_size
 

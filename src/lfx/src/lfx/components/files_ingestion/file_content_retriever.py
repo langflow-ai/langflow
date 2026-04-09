@@ -52,7 +52,7 @@ class FileContentRetrieverComponent(Component):
         HandleInput(
             name="file_data",
             display_name="File Data",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "DataFrame", "Message"],
             is_list=True,
             info="Output from a Read File component.",
         ),
@@ -133,6 +133,13 @@ class FileContentRetrieverComponent(Component):
                             text = str(row["text"]) if pd.notna(row["text"]) else ""
                             if text:
                                 text_map[path_str] = text
+            elif isinstance(item, Message):
+                fp = getattr(item, "file_path", "") or ""
+                text = item.get_text() or ""
+                if not fp:
+                    continue
+                if text:
+                    text_map[fp] = text
             elif isinstance(item, Data):
                 fp = item.data.get("file_path", "")
                 text = item.get_text() or ""

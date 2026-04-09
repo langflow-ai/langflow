@@ -133,6 +133,51 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
 
         assert result.text == "text content"
 
+    def test_retrieve_content_with_message_input(self, component_class):
+        """Test retrieving content from Message input with file_path in metadata."""
+        msg = Message(text="message file content", file_path="/path/to/report.txt")
+
+        component = component_class()
+        component.set_attributes({"file_data": [msg]})
+        result = component.retrieve_content(file_path="/path/to/report.txt")
+
+        assert isinstance(result, Message)
+        assert result.text == "message file content"
+
+    def test_retrieve_content_message_without_file_path(self, component_class):
+        """Test that Message without file_path is skipped."""
+        msg = Message(text="no path content")
+
+        component = component_class()
+        component.set_attributes(
+            {
+                "file_data": [
+                    msg,
+                    Data(text="has path", data={"file_path": "valid.txt"}),
+                ],
+            }
+        )
+        result = component.retrieve_content(file_path="valid.txt")
+        assert result.text == "has path"
+
+    def test_retrieve_content_mixed_message_data_dataframe(self, component_class):
+        """Test with mixed Message, Data, and DataFrame inputs."""
+        msg = Message(text="msg content", file_path="msg_file.txt")
+        data_obj = Data(text="data content", data={"file_path": "data_file.txt"})
+        df = DataFrame(pd.DataFrame({"col1": [1, 2]}))
+        df.attrs["source_file_path"] = "df_file.csv"
+
+        component = component_class()
+        component.set_attributes({"file_data": [msg, data_obj, df]})
+
+        result_msg = component.retrieve_content(file_path="msg_file.txt")
+        assert result_msg.text == "msg content"
+
+        component._cached_text_map = None
+        component._cached_dataframe_map = None
+        result_data = component.retrieve_content(file_path="data_file.txt")
+        assert result_data.text == "data content"
+
     def test_retrieve_content_data_without_file_path(self, component_class):
         """Test Data objects without file_path are ignored in file map."""
         component = component_class()

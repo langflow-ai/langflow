@@ -18,6 +18,7 @@ from pathlib import Path
 from lfx.custom.custom_component.component import Component
 from lfx.io import HandleInput, IntInput, Output, StrInput
 from lfx.schema.data import Data
+from lfx.schema.message import Message
 
 
 def _dbg(msg: str) -> None:
@@ -117,6 +118,13 @@ class FileDescriptionGeneratorComponent(Component):
                             f"  WARNING: item[{i}] DataFrame has no source_file_path"
                             " in attrs or file_path column, skipping"
                         )
+                elif isinstance(item, Message):
+                    fp = getattr(item, "file_path", "") or ""
+                    _dbg(f"  item[{i}] Message file_path={fp!r}")
+                    if fp:
+                        file_paths.append(str(Path(fp)))
+                    else:
+                        _dbg(f"  WARNING: item[{i}] Message has no file_path, skipping")
                 elif isinstance(item, Data):
                     fp = item.data.get("file_path", "")
                     _dbg(f"  item[{i}] Data file_path={fp!r}")
