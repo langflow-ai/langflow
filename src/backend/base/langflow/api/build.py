@@ -212,7 +212,8 @@ async def create_flow_response(
 
     def on_disconnect() -> None:
         logger.debug("Client disconnected, closing tasks")
-        event_task.cancel()
+        if event_task is not None:
+            event_task.cancel()
         event_manager.on_end(data={})
 
     return DisconnectHandlerStreamingResponse(

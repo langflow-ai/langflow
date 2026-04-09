@@ -196,6 +196,8 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         b = cache["b"]
     """
 
+    KEY_PREFIX = "langflow:cache:"
+
     def __init__(self, host="localhost", port=6379, db=0, url=None, expiration_time=60 * 60) -> None:
         """Initialize a new RedisCache instance.
 
@@ -220,6 +222,10 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             self._client = StrictRedis(host=host, port=port, db=db)
         self.expiration_time = expiration_time
 
+    def _key(self, key) -> str:
+        """Return the namespaced Redis key."""
+        return f"{self.KEY_PREFIX}{key}"
+
     async def is_connected(self) -> bool:
         """Check if the Redis client is connected."""
         import redis
@@ -236,14 +242,14 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
     async def get(self, key, lock=None):
         if key is None:
             return CACHE_MISS
-        value = await self._client.get(str(key))
+        value = await self._client.get(self._key(key))
         return dill.loads(value) if value else CACHE_MISS
 
     @override
     async def set(self, key, value, lock=None) -> None:
         try:
             if pickled := dill.dumps(value, recurse=True):
-                result = await self._client.setex(str(key), self.expiration_time, pickled)
+                result = await self._client.setex(self._key(key), self.expiration_time, pickled)
                 if not result:
                     msg = "RedisCache could not set the value."
                     raise ValueError(msg)
@@ -273,18 +279,25 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
 
     @override
     async def delete(self, key, lock=None) -> None:
-        await self._client.delete(key)
+        await self._client.delete(self._key(key))
 
     @override
     async def clear(self, lock=None) -> None:
-        """Clear all items from the cache."""
-        await self._client.flushdb()
+        """Clear all items from the cache using a key-prefix scan to avoid nuking unrelated data."""
+        cursor = 0
+        pattern = f"{self.KEY_PREFIX}*"
+        while True:
+            cursor, keys = await self._client.scan(cursor, match=pattern, count=100)
+            if keys:
+                await self._client.delete(*keys)
+            if cursor == 0:
+                break
 
     async def contains(self, key) -> bool:
         """Check if the key is in the cache."""
         if key is None:
             return False
-        return bool(await self._client.exists(str(key)))
+        return bool(await self._client.exists(self._key(key)))
 
     @override
     async def teardown(self) -> None:
