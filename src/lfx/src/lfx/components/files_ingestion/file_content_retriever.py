@@ -33,6 +33,21 @@ class FileContentRetrieverComponent(Component):
         self._cached_text_map: dict[str, str] | None = None
         self._cached_dataframe_map: dict[str, DataFrame] | None = None
 
+    def __deepcopy__(self, memo: dict) -> FileContentRetrieverComponent:
+        """Override deepcopy to preserve cached maps across tool invocations."""
+        from copy import deepcopy as _deepcopy
+        from typing import cast
+
+        new_component = cast("FileContentRetrieverComponent", super().__deepcopy__(memo))
+        # Copy the cached maps so they don't need to be rebuilt, but avoid sharing mutable state
+        new_component._cached_text_map = (  # noqa: SLF001
+            _deepcopy(self._cached_text_map, memo) if self._cached_text_map else None
+        )
+        new_component._cached_dataframe_map = (  # noqa: SLF001
+            _deepcopy(self._cached_dataframe_map, memo) if self._cached_dataframe_map else None
+        )
+        return new_component
+
     inputs = [
         HandleInput(
             name="file_data",
@@ -58,8 +73,9 @@ class FileContentRetrieverComponent(Component):
             name="content",
             method="retrieve_content",
             info="Retrieves file content as text. "
-            "IMPORTANT: Pass ONLY the file path as a string argument (e.g., '/Users/name/document.txt'). "
-            "Do NOT pass search results, Data objects, or other complex types. "
+            "IMPORTANT: Pass ONLY the file path as a string (e.g., '/Users/name/document.txt'). "
+            "If you have search results from a vector store, you MUST extract the file_path string first. "
+            "Example: file_path = result['data']['file_path'], then call retrieve_content(file_path). "
             "Returns: A Message containing the file's text content. "
             "Raises ValueError if file path is missing or file not found.",
             tool_mode=True,
@@ -69,8 +85,9 @@ class FileContentRetrieverComponent(Component):
             name="dataframe",
             method="retrieve_content_as_dataframe",
             info="Retrieves file content as a pandas DataFrame. "
-            "IMPORTANT: Pass ONLY the file path as a string argument (e.g., '/Users/name/data.csv'). "
-            "Do NOT pass search results, Data objects, or other complex types. "
+            "IMPORTANT: Pass ONLY the file path as a string (e.g., '/Users/name/data.csv'). "
+            "If you have search results from a vector store, you MUST extract the file_path string first. "
+            "Example: file_path = result['data']['file_path'], then call retrieve_content_as_dataframe(file_path). "
             "Supported formats: CSV, Excel (.xlsx, .xls), Parquet, JSON, TSV. "
             "Returns: A DataFrame with the file's tabular data. "
             "Raises ValueError if file not found, unsupported format, or parsing fails.",
@@ -131,22 +148,29 @@ class FileContentRetrieverComponent(Component):
                 )
 
         # For text entries that don't have a pre-built DataFrame, try to parse
-        # CSV/TSV content into a DataFrame eagerly so it's ready for tool calls.
-        tabular_extensions = {".csv": ",", ".tsv": "\t"}
+        # CSV/TSV/JSON content into a DataFrame eagerly so it's ready for tool calls.
+        from io import StringIO
+
         for fp, text in text_map.items():
             if fp in dataframe_map:
                 continue
             ext = Path(fp).suffix.lower()
-            sep = tabular_extensions.get(ext)
-            if sep is None:
-                continue
-            try:
-                from io import StringIO
 
-                dataframe_map[fp] = DataFrame(pd.read_csv(StringIO(text), sep=sep))
+            try:
+                if ext == ".csv":
+                    df = DataFrame(pd.read_csv(StringIO(text)))
+                elif ext == ".tsv":
+                    df = DataFrame(pd.read_csv(StringIO(text), sep="\t"))
+                elif ext == ".json":
+                    df = DataFrame(pd.read_json(StringIO(text)))
+                else:
+                    continue
+
+                df.attrs["source_file_path"] = fp
+                dataframe_map[fp] = df
                 logger.debug(f"FileContentRetriever: Parsed text into DataFrame for '{fp}'")
-            except (ValueError, pd.errors.ParserError):
-                logger.debug(f"FileContentRetriever: Could not parse text as DataFrame for '{fp}'")
+            except (ValueError, pd.errors.ParserError) as e:
+                logger.debug(f"FileContentRetriever: Could not parse text as DataFrame for '{fp}': {e}")
 
         self._cached_text_map = text_map
         self._cached_dataframe_map = dataframe_map
@@ -262,8 +286,9 @@ class FileContentRetrieverComponent(Component):
             return df
 
         available = sorted({*text_map.keys(), *dataframe_map.keys()})
-        preview = available[:5]
-        extra = f" (and {len(available) - 5} more)" if len(available) > 5 else ""
+        max_preview = 5
+        preview = available[:max_preview]
+        extra = f" (and {len(available) - max_preview} more)" if len(available) > max_preview else ""
         if available:
             msg = f"File '{query}' not found. Available: {preview}{extra}"
         else:
