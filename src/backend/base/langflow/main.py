@@ -508,9 +508,17 @@ def create_app():
         the request, it can advertise the original prefix via X-Forwarded-Prefix.
         We propagate this into the ASGI ``root_path`` so that transports like
         MCP SSE include the prefix in the POST-back URLs they hand to clients.
+
+        This middleware is only active when ``root_path`` is configured in
+        settings (i.e. the operator has explicitly opted into reverse-proxy
+        mode).  The header value takes precedence over the static setting
+        because the proxy is the runtime source of truth for the prefix.
         """
+        if not settings.root_path:
+            return await call_next(request)
+
         prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
-        if prefix:
+        if prefix and prefix.startswith("/") and "://" not in prefix and "?" not in prefix and "#" not in prefix:
             request.scope["root_path"] = prefix
         return await call_next(request)
 
