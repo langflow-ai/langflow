@@ -256,7 +256,7 @@ async def create_provider_account(
     deployment_adapter = resolve_deployment_adapter(payload.provider_key)
 
     with handle_adapter_errors(mapper=deployment_mapper):
-        verify_input = deployment_mapper.resolve_verify_credentials(payload=payload)
+        verify_input = deployment_mapper.resolve_verify_credentials_for_create(payload=payload)
         await deployment_adapter.verify_credentials(
             user_id=current_user.id,
             payload=verify_input,

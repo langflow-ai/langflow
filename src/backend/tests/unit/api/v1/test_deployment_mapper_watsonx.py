@@ -227,28 +227,56 @@ def test_watsonx_mapper_formats_conflict_detail(raw_message: str, expected: str)
     assert detail == expected
 
 
-def test_watsonx_mapper_shapes_flow_version_item_data_from_connections() -> None:
+def test_watsonx_mapper_flow_version_item_data_from_snapshot_connections() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
+    snapshot_result = SnapshotListResult(
+        snapshots=[
+            SnapshotItem(
+                id="tool-1",
+                name="Tool 1",
+                provider_data={"connections": {"cfg-1": "conn-1", "cfg-2": "conn-2"}},
+            )
+        ]
+    )
+    shaped_by_snapshot_id = mapper._resolve_flow_version_item_data_by_snapshot_id(snapshot_result=snapshot_result)
 
-    shaped = mapper.shape_deployment_flow_version_item_data(
-        snapshot_data={"connections": {"cfg-1": "conn-1", "cfg-2": "conn-2"}},
-        tool_name="Tool 1",
+    assert shaped_by_snapshot_id == {"tool-1": {"app_ids": ["cfg-1", "cfg-2"], "tool_name": "Tool 1"}}
+
+
+def test_wxo_mapper_flow_version_item_data_rejects_empty_tool_name() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    snapshot_result = SnapshotListResult(
+        snapshots=[
+            SnapshotItem(
+                id="tool-1",
+                name="",
+                provider_data={"connections": {}},
+            )
+        ]
     )
 
-    assert shaped == {"app_ids": ["cfg-1", "cfg-2"], "tool_name": "Tool 1"}
+    with pytest.raises(HTTPException) as exc_info:
+        mapper._resolve_flow_version_item_data_by_snapshot_id(snapshot_result=snapshot_result)
+    assert exc_info.value.status_code == 500
+    assert "Invalid flow-version provider_data payload:" in str(exc_info.value.detail)
 
 
-def test_watsonx_mapper_flow_version_item_data_handles_missing_invalid_and_empty_connections() -> None:
+def test_wxo_mapper_flow_version_item_data_rejects_empty_provider_data() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
+    snapshot_result = SnapshotListResult(
+        snapshots=[
+            SnapshotItem(
+                id="tool-1",
+                name="Tool 1",
+                provider_data={},
+            )
+        ]
+    )
 
-    assert mapper.shape_deployment_flow_version_item_data(snapshot_data=None) is None
-    assert mapper.shape_deployment_flow_version_item_data(snapshot_data={}) is None
-    assert mapper.shape_deployment_flow_version_item_data(snapshot_data={"connections": []}) is None
-    assert mapper.shape_deployment_flow_version_item_data(snapshot_data={"connections": {}}) is None
-    assert mapper.shape_deployment_flow_version_item_data(snapshot_data=None, tool_name="Tool 1") == {
-        "app_ids": [],
-        "tool_name": "Tool 1",
-    }
+    with pytest.raises(HTTPException) as exc_info:
+        mapper._resolve_flow_version_item_data_by_snapshot_id(snapshot_result=snapshot_result)
+    assert exc_info.value.status_code == 500
+    assert "snapshot provider_data must be a non-empty object" in str(exc_info.value.detail)
 
 
 def test_watsonx_mapper_shapes_flow_version_list_result_with_enrichment() -> None:
@@ -1627,6 +1655,30 @@ def test_watsonx_mapper_resolve_provider_tenant_id_from_url() -> None:
     )
 
 
+def test_wxo_mapper_provider_account_response_includes_tenant_id() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    timestamp = datetime.now(tz=timezone.utc)
+    account = SimpleNamespace(
+        id=uuid4(),
+        name="staging",
+        provider_tenant_id="tenant-1",
+        provider_key="watsonx-orchestrate",
+        provider_url="https://provider.example",
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+
+    shaped = mapper.resolve_provider_account_response(account)
+
+    assert shaped.id == account.id
+    assert shaped.name == "staging"
+    assert shaped.provider_key == "watsonx-orchestrate"
+    assert shaped.provider_data == {
+        "url": "https://provider.example",
+        "tenant_id": "tenant-1",
+    }
+
+
 def test_watsonx_mapper_trusts_top_level_deployment_id() -> None:
     """WXO mapper inherits base behavior: trust result.deployment_id directly."""
     from lfx.services.adapters.deployment.schema import ExecutionStatusResult
@@ -1641,11 +1693,11 @@ def test_watsonx_mapper_trusts_top_level_deployment_id() -> None:
 
 
 # ---------------------------------------------------------------------------
-# resolve_verify_credentials
+# resolve_verify_credentials_for_create
 # ---------------------------------------------------------------------------
 
 
-def test_wxo_mapper_resolve_verify_credentials_filters_non_credential_fields() -> None:
+def test_wxo_mapper_verify_credentials_create_filters_non_credential_fields() -> None:
     """WXO mapper forwards only credential fields to adapter verification."""
     from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
     from lfx.services.adapters.deployment.schema import VerifyCredentials
@@ -1660,12 +1712,30 @@ def test_wxo_mapper_resolve_verify_credentials_filters_non_credential_fields() -
             "api_key": "my-secret-key",  # pragma: allowlist secret
         },
     )
-    result = mapper.resolve_verify_credentials(payload=payload)
+    result = mapper.resolve_verify_credentials_for_create(payload=payload)
     assert isinstance(result, VerifyCredentials)
     assert "cloud.ibm.com" in result.base_url
     assert result.provider_data is not None
     assert result.provider_data["api_key"] == "my-secret-key"  # pragma: allowlist secret
     assert "tenant_id" not in result.provider_data
+
+
+def test_wxo_mapper_verify_credentials_create_requires_tenant() -> None:
+    """Create verify path should reject payloads with no explicit/URL tenant."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentProviderAccountCreateRequest(
+        name="test-account",
+        provider_key="watsonx-orchestrate",
+        provider_data={
+            "url": "https://api.us-south.wxo.cloud.ibm.com",
+            "api_key": "my-secret-key",  # pragma: allowlist secret
+        },
+    )
+
+    with pytest.raises(ValueError, match=r"provider_data\.tenant_id is required"):
+        mapper.resolve_verify_credentials_for_create(payload=payload)
 
 
 def test_wxo_mapper_resolve_credentials_returns_api_key() -> None:
@@ -1689,7 +1759,7 @@ def test_wxo_mapper_resolve_credentials_rejects_tenant_metadata() -> None:
     assert "tenant_id" in exc_info.value.detail
 
 
-def test_wxo_mapper_resolve_verify_credentials_rejects_unknown_non_metadata_fields() -> None:
+def test_wxo_mapper_verify_credentials_create_rejects_unknown_fields() -> None:
     """Mapper rejects unexpected provider_data keys."""
     from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
 
@@ -1705,7 +1775,7 @@ def test_wxo_mapper_resolve_verify_credentials_rejects_unknown_non_metadata_fiel
         },
     )
     with pytest.raises(HTTPException) as exc_info:
-        mapper.resolve_verify_credentials(payload=payload)
+        mapper.resolve_verify_credentials_for_create(payload=payload)
     assert exc_info.value.status_code == 422
     assert "Invalid field 'unexpected'" in exc_info.value.detail
 
@@ -1736,7 +1806,7 @@ def test_wxo_mapper_resolve_credentials_rejects_empty() -> None:
     assert "api_key" in exc_info.value.detail
 
 
-def test_wxo_mapper_resolve_provider_account_create_assembles_model() -> None:
+def test_wxo_mapper_provider_account_create_assembles_model() -> None:
     from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
 
     mapper = WatsonxOrchestrateDeploymentMapper()
@@ -1754,6 +1824,23 @@ def test_wxo_mapper_resolve_provider_account_create_assembles_model() -> None:
     assert result.provider_url == "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-123"
     assert result.provider_tenant_id == "tenant-123"
     assert result.api_key == "my-secret-key"  # pragma: allowlist secret
+
+
+def test_wxo_mapper_provider_account_create_uses_url_tenant_fallback() -> None:
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentProviderAccountCreateRequest(
+        name="test-account",
+        provider_key="watsonx-orchestrate",
+        provider_data={
+            "url": "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-123",
+            "api_key": "my-secret-key",  # pragma: allowlist secret
+        },
+    )
+
+    result = mapper.resolve_provider_account_create(payload=payload, user_id=uuid4())
+    assert result.provider_tenant_id == "tenant-123"
 
 
 # ---------------------------------------------------------------------------

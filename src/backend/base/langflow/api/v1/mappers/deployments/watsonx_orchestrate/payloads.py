@@ -537,25 +537,17 @@ class WatsonxApiSnapshotListProviderData(BaseModel):
 
 
 class WatsonxApiDeploymentFlowVersionItemData(BaseModel):
-    """API-facing provider_data contract for deployment flow-version list items."""
+    """API-facing provider_data contract for deployment flow-version list items.
+
+    ``tool_name`` is required (non-empty) because wxO snapshots always carry a
+    name.  Missing or blank names indicate corrupt provider data and the mapper
+    intentionally rejects them with a 500 so the issue surfaces immediately.
+    """
 
     model_config = {"extra": "forbid"}
 
-    app_ids: list[str] = Field(default_factory=list)
-    tool_name: str | None = None
-
-    @field_validator("app_ids", mode="before")
-    @classmethod
-    def normalize_app_ids(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        return [str(app_id).strip() for app_id in value if str(app_id).strip()]
-
-    @field_validator("tool_name", mode="before")
-    @classmethod
-    def normalize_optional_tool_name(cls, value: Any) -> str | None:
-        normalized = str(value or "").strip()
-        return normalized or None
+    app_ids: list[NormalizedStr] = Field(default_factory=list)
+    tool_name: NormalizedStr
 
 
 class WatsonxApiRenameToolOperation(BaseModel):

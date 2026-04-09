@@ -730,10 +730,7 @@ def test_base_mapper_shapes_provider_account_response() -> None:
     shaped = mapper.resolve_provider_account_response(account)
     assert shaped.id == account.id
     assert shaped.name == "staging"
-    assert shaped.provider_data == {
-        "url": "https://provider.example",
-        "tenant_id": "tenant-1",
-    }
+    assert shaped.provider_data == {"url": "https://provider.example"}
     assert shaped.provider_key == "watsonx-orchestrate"
 
 
@@ -779,7 +776,7 @@ def test_mapper_registry_get_returns_cached_instance_for_key() -> None:
 
 
 # ---------------------------------------------------------------------------
-# resolve_verify_credentials
+# resolve_verify_credentials_for_create
 # ---------------------------------------------------------------------------
 
 
@@ -797,7 +794,7 @@ def test_base_mapper_resolve_verify_credentials_extracts_url() -> None:
             "api_key": "secret-key",  # pragma: allowlist secret
         },
     )
-    result = mapper.resolve_verify_credentials(payload=payload)
+    result = mapper.resolve_verify_credentials_for_create(payload=payload)
     assert isinstance(result, VerifyCredentials)
     assert "cloud.ibm.com" in result.base_url
     assert result.provider_data is None

@@ -969,7 +969,7 @@ class TestProviderAccountRoutes:
         from langflow.api.v1.deployments import create_provider_account
 
         mapper = MagicMock()
-        mapper.resolve_verify_credentials.return_value = MagicMock()
+        mapper.resolve_verify_credentials_for_create.return_value = MagicMock()
         mapper.resolve_provider_account_create.return_value = MagicMock()
         mock_get_mapper.return_value = mapper
 

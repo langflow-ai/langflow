@@ -214,7 +214,27 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             return tenant_id
         return extract_tenant_from_url(provider_url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
 
-    def validate_provider_url(
+    def _resolve_required_provider_tenant_id(
+        self,
+        *,
+        parsed_provider_data: WatsonxApiProviderAccountCreate,
+    ) -> str:
+        tenant_id = str(parsed_provider_data.tenant_id or "").strip()
+        if tenant_id:
+            return tenant_id
+        url_tenant_id = extract_tenant_from_url(
+            parsed_provider_data.url,
+            WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+        )
+        if url_tenant_id:
+            return url_tenant_id
+        msg = (
+            "provider_data.tenant_id is required for watsonx-orchestrate provider accounts. "
+            "Provide tenant_id explicitly or use a provider_data.url containing /instances/{tenant_id}."
+        )
+        raise ValueError(msg)
+
+    def validate_create_provider_url(
         self,
         *,
         provider_data: dict[str, Any],
@@ -253,18 +273,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         check_provider_url_allowed(parsed.url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
         return parsed
 
-    def _validate_verify_credentials_provider_data(
-        self,
-        *,
-        api_key: str,
-    ) -> dict[str, Any]:
-        verify_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.verify_credentials
-        credential_payload = {"api_key": api_key}
-        if verify_slot:
-            validated = verify_slot.apply(credential_payload)
-            return validated if isinstance(validated, dict) else dict(validated)
-        return credential_payload
-
     def resolve_credentials(
         self,
         *,
@@ -275,8 +283,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot_name="provider_account_update",
             raw=provider_data,
         )
-        validated = self._validate_verify_credentials_provider_data(api_key=parsed.api_key)
-        return {"api_key": str(validated["api_key"]).strip()}
+        return {"api_key": parsed.api_key}
 
     def resolve_provider_account_create(
         self,
@@ -285,28 +292,41 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         user_id: UUID | str,
     ) -> DeploymentProviderAccount:
         parsed = self._parse_create_provider_data(payload.provider_data)
+        tenant_id = self._resolve_required_provider_tenant_id(
+            parsed_provider_data=parsed,
+        )
         return DeploymentProviderAccount(
             user_id=user_id,
             name=payload.name,
-            provider_tenant_id=self.resolve_provider_tenant_id(
-                provider_url=parsed.url,
-                provider_data=payload.provider_data,
-            ),
+            provider_tenant_id=tenant_id,
             provider_key=payload.provider_key,
             provider_url=parsed.url,
             api_key=parsed.api_key,
         )
 
-    def resolve_verify_credentials(
+    def resolve_provider_account_provider_data(
+        self,
+        provider_account: DeploymentProviderAccount,
+    ) -> dict[str, Any] | None:
+        provider_data: dict[str, Any] = {"url": provider_account.provider_url}
+        tenant_id = str(provider_account.provider_tenant_id or "").strip()
+        if tenant_id:
+            provider_data["tenant_id"] = tenant_id
+        return provider_data
+
+    def resolve_verify_credentials_for_create(
         self,
         *,
         payload: DeploymentProviderAccountCreateRequest,
     ) -> VerifyCredentials:
         parsed = self._parse_create_provider_data(payload.provider_data)
-        validated = self._validate_verify_credentials_provider_data(api_key=parsed.api_key)
+        # Fail fast on create when tenant is not resolvable from provider_data.
+        self._resolve_required_provider_tenant_id(
+            parsed_provider_data=parsed,
+        )
         return VerifyCredentials(
             base_url=parsed.url,
-            provider_data=validated,
+            provider_data={"api_key": parsed.api_key},
         )
 
     def resolve_verify_credentials_for_update(
@@ -324,11 +344,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot_name="provider_account_update",
             raw=payload.provider_data,
         )
-        provider_data = self._validate_verify_credentials_provider_data(api_key=parsed.api_key)
 
         return VerifyCredentials(
             base_url=existing_account.provider_url,
-            provider_data=provider_data,
+            provider_data={"api_key": parsed.api_key},
         )
 
     def util_create_flow_artifact_provider_data(
@@ -1145,10 +1164,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         total: int,
     ) -> DeploymentFlowVersionListResponse:
         normalized_rows = self._normalize_flow_version_attachment_rows(rows)
-        snapshot_data_by_id = self._resolve_snapshot_data_by_id(
-            snapshot_result=snapshot_result,
-        )
-        snapshot_name_by_id = self._resolve_snapshot_name_by_id(
+        flow_version_item_data_by_snapshot_id = self._resolve_flow_version_item_data_by_snapshot_id(
             snapshot_result=snapshot_result,
         )
 
@@ -1160,10 +1176,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 version_number=row.flow_version.version_number,
                 attached_at=row.attachment.created_at,
                 provider_snapshot_id=row.snapshot_id,
-                provider_data=self.shape_deployment_flow_version_item_data(
-                    snapshot_data=snapshot_data_by_id.get(row.snapshot_id),
-                    tool_name=snapshot_name_by_id.get(row.snapshot_id),
-                ),
+                provider_data=flow_version_item_data_by_snapshot_id.get(row.snapshot_id),
             )
             for row in normalized_rows
         ]
@@ -1195,81 +1208,51 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             )
         return normalized_rows
 
-    def _resolve_snapshot_data_by_id(
+    def _resolve_flow_version_item_data_by_snapshot_id(
         self,
         *,
         snapshot_result: SnapshotListResult | None,
-    ) -> dict[str, dict[str, Any] | None]:
+    ) -> dict[str, dict[str, Any]]:
+        """Build API flow-version item provider_data keyed by snapshot id."""
         if snapshot_result is None:
             return {}
         if not snapshot_result.snapshots:
             return {}
 
-        snapshot_data_by_id: dict[str, dict[str, Any] | None] = {}
+        item_data_by_snapshot_id: dict[str, dict[str, Any]] = {}
         for snapshot in snapshot_result.snapshots:
             snapshot_id = str(snapshot.id).strip()
             if not snapshot_id:
-                continue
+                msg = "Invalid flow-version provider_data payload: snapshot id must be a non-empty string."
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+
             provider_data = snapshot.provider_data
-            snapshot_data_by_id[snapshot_id] = provider_data if isinstance(provider_data, dict) else None
 
-        return snapshot_data_by_id
+            if not isinstance(provider_data, dict) or not provider_data:
+                msg = "Invalid flow-version provider_data payload: snapshot provider_data must be a non-empty object."
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
 
-    @staticmethod
-    def _resolve_snapshot_name_by_id(
-        *,
-        snapshot_result: SnapshotListResult | None,
-    ) -> dict[str, str]:
-        """Map snapshot IDs to their provider tool names.
+            raw_connections = provider_data.get("connections")
+            if not isinstance(raw_connections, dict):
+                msg = "Invalid flow-version provider_data payload: connections must be a dict."
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
 
-        The tool name is the wxO-side name, which may differ from the
-        Langflow flow name if the user provided a custom ``tool_name``
-        at deploy time or renamed the tool directly in the wxO console.
+            try:
+                item_data_by_snapshot_id[snapshot_id] = self._validate_slot(
+                    self.api_payloads.deployment_item_data,
+                    {
+                        "app_ids": list(raw_connections.keys()),
+                        "tool_name": snapshot.name,
+                    },
+                )
+            except AdapterPayloadValidationError as exc:
+                detail = exc.format_first_error()
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Invalid flow-version provider_data payload: {detail}",
+                ) from exc
 
-        Edge cases:
-        - Provider unreachable / snapshot_result is None: returns ``{}``.
-          ``provider_data.tool_name`` will be absent/``None`` and the frontend
-          falls back to the Langflow flow name for display.
-        - Tool renamed in wxO console: the new name is returned here since
-          ``snapshot_result`` is fetched fresh on each request.
-        - Tool deleted in wxO: missing from ``snapshot_result.snapshots``,
-          so no entry in the returned dict. ``provider_data.tool_name`` will be
-          absent/``None``.
-        """
-        if not snapshot_result or not snapshot_result.snapshots:
-            return {}
-        result: dict[str, str] = {}
-        for snapshot in snapshot_result.snapshots:
-            snapshot_id = str(snapshot.id).strip()
-            name = str(snapshot.name or "").strip()
-            if snapshot_id and name:
-                result[snapshot_id] = name
-        return result
-
-    def shape_deployment_flow_version_item_data(
-        self,
-        *,
-        snapshot_data: dict[str, Any] | None,
-        tool_name: str | None = None,
-    ) -> dict[str, Any] | None:
-        raw_connections = snapshot_data.get("connections") if snapshot_data else None
-        app_ids = list(raw_connections.keys()) if isinstance(raw_connections, dict) else []
-        if not app_ids and not tool_name:
-            return None
-        try:
-            return self._validate_slot(
-                self.api_payloads.deployment_item_data,
-                {
-                    "app_ids": app_ids,
-                    "tool_name": tool_name,
-                },
-            )
-        except AdapterPayloadValidationError as exc:
-            detail = exc.format_first_error()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Invalid flow-version provider_data payload: {detail}",
-            ) from exc
+        return item_data_by_snapshot_id
 
     def _shape_provider_deployment_list_entry(self, item: Any) -> dict[str, Any]:
         item_provider_data = item.provider_data

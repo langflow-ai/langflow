@@ -6,9 +6,10 @@ Provider-account credential contract
 Provider credentials arrive in the API request as an opaque
 ``provider_data: dict`` and leave via two mapper methods:
 
-* **API -> Adapter** (``resolve_verify_credentials``): packs the request's
-  ``provider_data`` into the adapter-layer ``VerifyCredentials`` model so the
-  deployment adapter can validate the credentials against the provider.
+* **API -> Adapter** (``resolve_verify_credentials_for_create``): packs the
+  request's ``provider_data`` into the adapter-layer ``VerifyCredentials``
+  model so the deployment adapter can validate the credentials against the
+  provider.
 
 * **API -> DB** (``resolve_credentials``): extracts credentials from
   ``provider_data`` and returns DB column-value pairs
@@ -411,12 +412,12 @@ class BaseDeploymentMapper:
         _ = provider_url
         return self.resolve_provider_tenant_id_from_data(provider_data=provider_data)
 
-    def validate_provider_url(
+    def validate_create_provider_url(
         self,
         *,
         provider_data: dict[str, Any],
     ) -> str:
-        """Resolve and validate provider URL from provider_data."""
+        """Resolve and validate provider URL from create provider_data."""
         raw_url = provider_data.get("url")
         if not isinstance(raw_url, str):
             msg = "provider_data.url must be a string."
@@ -513,7 +514,7 @@ class BaseDeploymentMapper:
             update_kwargs.update(self.resolve_credentials(provider_data=payload.provider_data))
         return update_kwargs
 
-    def resolve_verify_credentials(
+    def resolve_verify_credentials_for_create(
         self,
         *,
         payload: DeploymentProviderAccountCreateRequest,
@@ -524,7 +525,7 @@ class BaseDeploymentMapper:
         ``provider_data.url``. Credentials are provider-specific and must be
         packed into ``provider_data`` by provider mapper overrides.
         """
-        provider_url = self.validate_provider_url(
+        provider_url = self.validate_create_provider_url(
             provider_data=payload.provider_data,
         )
         return VerifyCredentials(
@@ -567,13 +568,7 @@ class BaseDeploymentMapper:
         provider_account: DeploymentProviderAccount,
     ) -> dict[str, Any] | None:
         """Return non-sensitive provider metadata for provider-account responses."""
-        provider_data: dict[str, Any] = {"url": provider_account.provider_url}
-        raw_tenant_id = provider_account.provider_tenant_id
-        if raw_tenant_id is not None:
-            tenant_id = str(raw_tenant_id).strip()
-            if tenant_id:
-                provider_data["tenant_id"] = tenant_id
-        return provider_data
+        return {"url": provider_account.provider_url}
 
     def util_create_flow_artifact_provider_data(
         self,
