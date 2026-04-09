@@ -1749,8 +1749,14 @@ class TestMCPStructuredTool:
                 # Convert camelCase parameters to snake_case
                 converted_input = self._convert_parameters(parsed_input)
 
-                # Call the parent run method with converted parameters
-                return super().run(converted_input, config=config, **kwargs)
+                tool_call_id = kwargs.pop("tool_call_id", None)
+                raw = super().run(converted_input, config=config, **kwargs)
+                if tool_call_id is None:
+                    return raw
+                from langchain_core.messages import ToolMessage
+                from lfx.base.mcp.util import _convert_mcp_result
+                converted = _convert_mcp_result(raw) if hasattr(raw, "content") else raw
+                return ToolMessage(content=converted, tool_call_id=tool_call_id, artifact=raw)
 
             async def arun(self, tool_input: str | dict, config=None, **kwargs):
                 """Override the main arun method to handle parameter conversion before validation."""
@@ -1766,8 +1772,14 @@ class TestMCPStructuredTool:
                 # Convert camelCase parameters to snake_case
                 converted_input = self._convert_parameters(parsed_input)
 
-                # Call the parent arun method with converted parameters
-                return await super().arun(converted_input, config=config, **kwargs)
+                tool_call_id = kwargs.pop("tool_call_id", None)
+                raw = await super().arun(converted_input, config=config, **kwargs)
+                if tool_call_id is None:
+                    return raw
+                from langchain_core.messages import ToolMessage
+                from lfx.base.mcp.util import _convert_mcp_result
+                converted = _convert_mcp_result(raw) if hasattr(raw, "content") else raw
+                return ToolMessage(content=converted, tool_call_id=tool_call_id, artifact=raw)
 
             def _convert_parameters(self, input_dict):
                 if not input_dict or not isinstance(input_dict, dict):
@@ -2822,3 +2834,107 @@ class TestConvertMcpResult:
         assert len(converted) == 2
         assert converted[0]["image_url"]["url"] == "data:image/png;base64,img1=="
         assert converted[1]["image_url"]["url"] == "data:image/jpeg;base64,img2=="
+
+
+class TestMCPStructuredToolToolCallId:
+    """Tests for the tool_call_id branching inside MCPStructuredTool.
+
+    Uses update_tools() with a mocked stdio client so the real MCPStructuredTool
+    class (defined inline in update_tools) is exercised instead of a local copy.
+
+    When tool_call_id is absent the tool must return the raw CallToolResult
+    (preserving backward compatibility for mcp_component and ToolInvoker).
+    When tool_call_id is present it must return a ToolMessage whose content
+    is multimodal-ready and whose artifact holds the original CallToolResult.
+    """
+
+    def _make_raw_result(self, text: str = "ok", image_data: str | None = None):
+        """Build a minimal CallToolResult-like mock."""
+        text_block = MagicMock()
+        text_block.type = "text"
+        text_block.text = text
+
+        content = [text_block]
+        if image_data:
+            img_block = MagicMock()
+            img_block.type = "image"
+            img_block.data = image_data
+            img_block.mimeType = "image/png"
+            content.append(img_block)
+
+        result = MagicMock()
+        result.content = content
+        result.structuredContent = None
+        return result
+
+    async def _build_tool_via_update_tools(self, raw_result):
+        """Get a real MCPStructuredTool from update_tools() with a mocked client."""
+        mock_tool = MagicMock()
+        mock_tool.name = "get_image"
+        mock_tool.description = "Returns content"
+        mock_tool.inputSchema = {"type": "object", "properties": {}, "required": []}
+        mock_tool.outputSchema = None
+
+        mock_client = AsyncMock(spec=MCPStdioClient)
+        mock_client.connect_to_server = AsyncMock(return_value=[mock_tool])
+        mock_client.run_tool = AsyncMock(return_value=raw_result)
+        mock_client._connected = True
+
+        server_config = {"command": "fake-server"}
+        _, tools, _ = await update_tools("test-server", server_config, mcp_stdio_client=mock_client)
+        assert tools, "update_tools() must return at least one tool"
+        return tools[0]
+
+    @pytest.mark.asyncio
+    async def test_no_tool_call_id_returns_raw_result(self):
+        """Without tool_call_id the raw CallToolResult must be returned (mcp_component compat)."""
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({})
+
+        assert result is raw
+
+    @pytest.mark.asyncio
+    async def test_with_tool_call_id_returns_tool_message(self):
+        """With tool_call_id the result must be a ToolMessage."""
+        from langchain_core.messages import ToolMessage
+
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-abc-123")
+
+        assert isinstance(result, ToolMessage)
+        assert result.tool_call_id == "call-abc-123"
+
+    @pytest.mark.asyncio
+    async def test_tool_message_artifact_holds_raw_call_tool_result(self):
+        """The artifact on the returned ToolMessage must be the original raw result."""
+        from langchain_core.messages import ToolMessage
+
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-abc-123")
+
+        assert isinstance(result, ToolMessage)
+        assert result.artifact is raw
+
+    @pytest.mark.asyncio
+    async def test_image_content_converted_in_tool_message(self):
+        """Image blocks must appear as image_url inside the ToolMessage content."""
+        from langchain_core.messages import ToolMessage
+
+        b64 = "abc123=="
+        raw = self._make_raw_result(image_data=b64)
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-img-001")
+
+        assert isinstance(result, ToolMessage)
+        content = result.content
+        assert isinstance(content, list)
+        image_blocks = [b for b in content if b.get("type") == "image_url"]
+        assert len(image_blocks) == 1
+        assert image_blocks[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"

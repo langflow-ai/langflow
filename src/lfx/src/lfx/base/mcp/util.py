@@ -18,6 +18,7 @@ from uuid import UUID
 import httpx
 from anyio import ClosedResourceError
 from httpx import codes as httpx_codes
+from langchain_core.messages import ToolMessage
 from langchain_core.tools import StructuredTool
 from mcp import ClientSession
 from mcp.shared.exceptions import McpError
@@ -550,8 +551,7 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
 
         try:
             arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
-            result = await client.run_tool(tool_name, arguments=arguments)
-            return _convert_mcp_result(result)
+            return await client.run_tool(tool_name, arguments=arguments)
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -581,8 +581,7 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
 
         try:
             arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
-            result = run_until_complete(client.run_tool(tool_name, arguments=arguments))
-            return _convert_mcp_result(result)
+            return run_until_complete(client.run_tool(tool_name, arguments=arguments))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -1920,8 +1919,22 @@ async def update_tools(
                     # Convert camelCase parameters to snake_case
                     converted_input = self._convert_parameters(parsed_input)
 
-                    # Call the parent run method with converted parameters
-                    return super().run(converted_input, config=config, **kwargs)
+                    # Pop tool_call_id before calling super() so BaseTool does not
+                    # stringify the raw CallToolResult (base.py:1272).
+                    # Without tool_call_id, programmatic callers (mcp_component,
+                    # ToolInvoker) keep receiving the raw result unchanged.
+                    tool_call_id = kwargs.pop("tool_call_id", None)
+                    raw = super().run(converted_input, config=config, **kwargs)
+
+                    if tool_call_id is None:
+                        # Direct / programmatic caller — preserve raw CallToolResult.
+                        return raw
+
+                    # Agent path: convert for multimodal LLMs and attach the raw
+                    # CallToolResult as artifact so downstream consumers can still
+                    # access structuredContent or content blocks if needed.
+                    converted = _convert_mcp_result(raw) if hasattr(raw, "content") else raw
+                    return ToolMessage(content=converted, tool_call_id=tool_call_id, artifact=raw)
 
                 async def arun(self, tool_input: str | dict, config=None, **kwargs):
                     """Override the main arun method to handle parameter conversion before validation."""
@@ -1937,8 +1950,22 @@ async def update_tools(
                     # Convert camelCase parameters to snake_case
                     converted_input = self._convert_parameters(parsed_input)
 
-                    # Call the parent arun method with converted parameters
-                    return await super().arun(converted_input, config=config, **kwargs)
+                    # Pop tool_call_id before calling super() so BaseTool does not
+                    # stringify the raw CallToolResult (base.py:1274).
+                    # Without tool_call_id, programmatic callers (mcp_component,
+                    # ToolInvoker) keep receiving the raw result unchanged.
+                    tool_call_id = kwargs.pop("tool_call_id", None)
+                    raw = await super().arun(converted_input, config=config, **kwargs)
+
+                    if tool_call_id is None:
+                        # Direct / programmatic caller — preserve raw CallToolResult.
+                        return raw
+
+                    # Agent path: convert for multimodal LLMs and attach the raw
+                    # CallToolResult as artifact so downstream consumers can still
+                    # access structuredContent or content blocks if needed.
+                    converted = _convert_mcp_result(raw) if hasattr(raw, "content") else raw
+                    return ToolMessage(content=converted, tool_call_id=tool_call_id, artifact=raw)
 
                 def _convert_parameters(self, input_dict):
                     if not input_dict or not isinstance(input_dict, dict):
