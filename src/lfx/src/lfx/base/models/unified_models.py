@@ -14,6 +14,7 @@ import contextlib
 import json
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
+from lfx.base.models.custom_provider_utils import get_custom_provider_credentials, get_custom_provider_options
 from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
@@ -1080,6 +1081,12 @@ def get_language_model_options(
 
             options.append(option)
 
+    # Append custom provider models (per-user, from DB)
+    custom_options = get_custom_provider_options(user_id)
+    if tool_calling is not None:
+        custom_options = [opt for opt in custom_options if opt.get("metadata", {}).get("tool_calling") == tool_calling]
+    options.extend(custom_options)
+
     # Add disabled providers (providers that exist in metadata but have no enabled models)
     if user_id:
         for provider, metadata in model_provider_metadata.items():
@@ -1350,11 +1357,13 @@ def get_embedding_model_options(
 
 def normalize_model_names_to_dicts(
     model_names: list[str] | str,
+    user_id: UUID | str | None = None,
 ) -> list[dict[str, Any]]:
     """Convert simple model name(s) to list of dicts format.
 
     Args:
         model_names: A string or list of strings representing model names
+        user_id: Optional user ID to look up custom provider models
 
     Returns:
         A list of dicts with full model metadata including runtime info
@@ -1422,6 +1431,13 @@ def normalize_model_names_to_dicts(
                 "metadata": full_metadata,
             }
 
+    # Also include custom provider models so rehydration preserves their metadata
+    custom_options = get_custom_provider_options(user_id) if user_id else []
+    for opt in custom_options:
+        model_name = opt.get("name")
+        if model_name and model_name not in model_lookup:
+            model_lookup[model_name] = opt
+
     # Convert string list to dict list
     result = []
     for name in model_names:
@@ -1483,6 +1499,39 @@ def get_llm(
     model_name = model.get("name")
     provider = model.get("provider")
     metadata = model.get("metadata", {})
+
+    # --- Custom provider fast path ---
+    if metadata.get("is_custom_provider") and metadata.get("custom_provider_id"):
+        custom_provider_id = metadata["custom_provider_id"]
+
+        creds = get_custom_provider_credentials(custom_provider_id, user_id)
+        if creds is None:
+            msg = (
+                f"Custom provider '{custom_provider_id}' not found. "
+                "It may have been deleted. Please reconfigure the model in Settings → Model Providers."
+            )
+            raise ValueError(msg)
+
+        base_url, decrypted_key = creds
+        cp_model_class = get_model_class("ChatOpenAI")
+
+        cp_kwargs: dict[str, Any] = {
+            "model": model_name,
+            "base_url": base_url,
+            "api_key": decrypted_key,
+            "streaming": stream,
+        }
+        if temperature is not None:
+            cp_kwargs["temperature"] = temperature
+        if max_tokens is not None and max_tokens != "":
+            try:
+                max_tokens_int = int(max_tokens)
+                if max_tokens_int >= 1:
+                    cp_kwargs["max_tokens"] = max_tokens_int
+            except (TypeError, ValueError):
+                pass
+
+        return cp_model_class(**cp_kwargs)
 
     # Get model class and parameter names from metadata
     api_key_param = metadata.get("api_key_param", "api_key")
