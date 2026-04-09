@@ -291,3 +291,41 @@ async def test_get_config_authenticated_returns_full_config(client: AsyncClient,
     assert "auto_saving_interval" in result, "Authenticated response must contain 'auto_saving_interval'"
     assert "health_check_max_retries" in result, "Authenticated response must contain 'health_check_max_retries'"
     assert "feature_flags" in result, "Authenticated response must contain 'feature_flags'"
+
+
+async def test_get_config_returns_mcp_base_url(client: AsyncClient, logged_in_headers: dict):
+    """Test that /config includes mcp_base_url for both authenticated and unauthenticated responses."""
+    # Authenticated
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert "mcp_base_url" in result, "Authenticated response must contain 'mcp_base_url'"
+    assert isinstance(result["mcp_base_url"], str), "mcp_base_url must be a string"
+
+    # Unauthenticated
+    response = await client.get("api/v1/config")
+    result = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert "mcp_base_url" in result, "Public response must contain 'mcp_base_url'"
+    assert isinstance(result["mcp_base_url"], str), "mcp_base_url must be a string"
+
+
+async def test_get_config_mcp_base_url_defaults_to_empty(client: AsyncClient, logged_in_headers: dict):
+    """Test that mcp_base_url defaults to empty string when LANGFLOW_MCP_BASE_URL is not set."""
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert result["mcp_base_url"] == ""
+
+
+async def test_get_config_mcp_base_url_from_settings(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """Test that mcp_base_url reflects the value from settings."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "mcp_base_url", "https://langflow.example.com")
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert result["mcp_base_url"] == "https://langflow.example.com"

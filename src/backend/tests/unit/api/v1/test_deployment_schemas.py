@@ -23,6 +23,8 @@ from langflow.api.v1.schemas.deployments import (
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from pydantic import ValidationError
 
+TEST_API_KEY = "key"  # pragma: allowlist secret
+
 # ---------------------------------------------------------------------------
 # Security: credentials must never appear in response schemas
 # ---------------------------------------------------------------------------
@@ -63,7 +65,7 @@ class TestProviderAccountName:
         account = DeploymentProviderAccountCreateRequest(
             name="production",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_data={"url": "https://api.us-south.wxo.cloud.ibm.com", "api_key": "key"},
+            provider_data={"url": "https://api.us-south.wxo.cloud.ibm.com", "api_key": TEST_API_KEY},
         )
         assert account.name == "production"
 
@@ -71,7 +73,7 @@ class TestProviderAccountName:
         account = DeploymentProviderAccountCreateRequest(
             name="  staging  ",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_data={"url": "https://api.us-south.wxo.cloud.ibm.com", "api_key": "key"},
+            provider_data={"url": "https://api.us-south.wxo.cloud.ibm.com", "api_key": TEST_API_KEY},
         )
         assert account.name == "staging"
 
@@ -80,7 +82,7 @@ class TestProviderAccountName:
             DeploymentProviderAccountCreateRequest(
                 name="",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-                provider_data={"url": "https://example.com", "api_key": "key"},
+                provider_data={"url": "https://example.com", "api_key": TEST_API_KEY},
             )
 
     def test_create_rejects_whitespace_only_name(self):
@@ -88,14 +90,14 @@ class TestProviderAccountName:
             DeploymentProviderAccountCreateRequest(
                 name="   ",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-                provider_data={"url": "https://example.com", "api_key": "key"},
+                provider_data={"url": "https://example.com", "api_key": TEST_API_KEY},
             )
 
     def test_create_rejects_missing_name(self):
         with pytest.raises(ValidationError):
             DeploymentProviderAccountCreateRequest(
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-                provider_data={"url": "https://example.com", "api_key": "key"},
+                provider_data={"url": "https://example.com", "api_key": TEST_API_KEY},
             )
 
     def test_update_accepts_name(self):
@@ -124,7 +126,7 @@ class TestProviderAccountProviderDataBoundary:
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_data={
                 "url": "https://api.us-south.wxo.cloud.ibm.com/v1",
-                "api_key": "key",
+                "api_key": TEST_API_KEY,
             },
         )
         assert account.provider_data["url"] == "https://api.us-south.wxo.cloud.ibm.com/v1"
@@ -143,7 +145,7 @@ class TestProviderAccountProviderDataBoundary:
                 name="staging",
                 tenant_id="tenant-1",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-                provider_data={"url": "https://api.us-south.wxo.cloud.ibm.com/v1", "api_key": "key"},
+                provider_data={"url": "https://api.us-south.wxo.cloud.ibm.com/v1", "api_key": TEST_API_KEY},
             )
 
     def test_create_rejects_top_level_url_field(self):
@@ -152,7 +154,7 @@ class TestProviderAccountProviderDataBoundary:
                 name="staging",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
                 url="https://api.us-south.wxo.cloud.ibm.com/v1",
-                provider_data={"api_key": "key"},
+                provider_data={"api_key": TEST_API_KEY},
             )
 
 
@@ -161,7 +163,7 @@ class TestProviderKeyEnum:
         account = DeploymentProviderAccountCreateRequest(
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_data={"url": "https://api.us-south.wxo.cloud.ibm.com", "api_key": "key"},
+            provider_data={"url": "https://api.us-south.wxo.cloud.ibm.com", "api_key": TEST_API_KEY},
         )
         assert account.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
 
@@ -169,7 +171,7 @@ class TestProviderKeyEnum:
         account = DeploymentProviderAccountCreateRequest(
             name="staging",
             provider_key="watsonx-orchestrate",
-            provider_data={"url": "https://api.us-south.wxo.cloud.ibm.com", "api_key": "key"},
+            provider_data={"url": "https://api.us-south.wxo.cloud.ibm.com", "api_key": TEST_API_KEY},
         )
         assert account.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
 
@@ -178,7 +180,7 @@ class TestProviderKeyEnum:
             DeploymentProviderAccountCreateRequest(
                 name="staging",
                 provider_key="unknown-provider",
-                provider_data={"url": "https://example.com", "api_key": "key"},
+                provider_data={"url": "https://example.com", "api_key": TEST_API_KEY},
             )
 
     def test_rejects_empty_string(self):
@@ -186,7 +188,7 @@ class TestProviderKeyEnum:
             DeploymentProviderAccountCreateRequest(
                 name="staging",
                 provider_key="",
-                provider_data={"url": "https://example.com", "api_key": "key"},
+                provider_data={"url": "https://example.com", "api_key": TEST_API_KEY},
             )
 
 

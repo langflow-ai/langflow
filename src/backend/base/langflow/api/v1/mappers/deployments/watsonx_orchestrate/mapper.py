@@ -60,6 +60,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiAddFlowItem,
     WatsonxApiAgentExecutionCreateResultData,
     WatsonxApiAgentExecutionStatusResultData,
+    WatsonxApiConfigListItem,
     WatsonxApiConfigListProviderData,
     WatsonxApiCreatedTool,
     WatsonxApiCreateUpsertToolItem,
@@ -114,6 +115,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from langflow.services.database.models.deployment.model import Deployment
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.flow_version.model import FlowVersion
     from langflow.services.database.models.flow_version_deployment_attachment.model import (
         FlowVersionDeploymentAttachment,
@@ -1210,12 +1212,13 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
 
         Edge cases:
         - Provider unreachable / snapshot_result is None: returns ``{}``.
-          The ``tool_name`` field in the response will be ``None`` and the
-          frontend falls back to the Langflow flow name for display.
+          ``provider_data.tool_name`` will be absent/``None`` and the frontend
+          falls back to the Langflow flow name for display.
         - Tool renamed in wxO console: the new name is returned here since
           ``snapshot_result`` is fetched fresh on each request.
         - Tool deleted in wxO: missing from ``snapshot_result.snapshots``,
-          so no entry in the returned dict. ``tool_name`` will be ``None``.
+          so no entry in the returned dict. ``provider_data.tool_name`` will be
+          absent/``None``.
         """
         if not snapshot_result or not snapshot_result.snapshots:
             return {}
@@ -1229,17 +1232,21 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
 
     def shape_deployment_flow_version_item_data(
         self,
+        *,
         snapshot_data: dict[str, Any] | None,
+        tool_name: str | None = None,
     ) -> dict[str, Any] | None:
-        if not snapshot_data:
-            return None
-        raw_connections = snapshot_data.get("connections")
-        if raw_connections is None or not isinstance(raw_connections, dict):
+        raw_connections = snapshot_data.get("connections") if snapshot_data else None
+        app_ids = list(raw_connections.keys()) if isinstance(raw_connections, dict) else []
+        if not app_ids and not tool_name:
             return None
         try:
             return self._validate_slot(
                 self.api_payloads.deployment_item_data,
-                {"app_ids": list(raw_connections.keys())},
+                {
+                    "app_ids": app_ids,
+                    "tool_name": tool_name,
+                },
             )
         except AdapterPayloadValidationError as exc:
             detail = exc.format_first_error()
@@ -1286,6 +1293,15 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         if config_type:
             payload["type"] = config_type
         return payload
+
+    def shape_config_item_data(self, provider_data: dict[str, Any]) -> WatsonxApiConfigListItem:
+        return self._parse_required_payload_slot(
+            slot=self.api_payloads.config_item_data,
+            slot_name="config_item_data",
+            raw=provider_data,
+            missing_payload_detail="Config item provider_data payload is missing.",
+            malformed_payload_detail="Invalid config item provider_data payload:",
+        )
 
     def _parse_required_payload_slot(
         self,

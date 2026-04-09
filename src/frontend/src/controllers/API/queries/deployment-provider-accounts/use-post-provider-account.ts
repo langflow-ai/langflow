@@ -7,8 +7,8 @@ import { UseRequestProcessor } from "../../services/request-processor";
 export interface ProviderAccountCreateRequest {
   name: string;
   provider_key: string;
+  url: string;
   provider_data: {
-    url: string;
     api_key: string;
   };
 }
@@ -32,6 +32,7 @@ export const usePostProviderAccount: useMutationFunctionType<
 
   return mutate(["usePostProviderAccount"], fn, {
     ...options,
+    retry: 0,
     onSuccess: () => {
       return queryClient.refetchQueries({
         queryKey: ["useGetProviderAccounts"],

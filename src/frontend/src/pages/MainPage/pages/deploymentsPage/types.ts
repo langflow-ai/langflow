@@ -27,13 +27,11 @@ export interface ProviderAccount {
   id: string;
   name: string;
   provider_key: string;
-  provider_data?: Record<string, unknown> & { url?: string };
+  url: string;
+  provider_data?: Record<string, unknown>;
   created_at: string | null;
   updated_at: string | null;
 }
-
-export const getProviderAccountUrl = (provider: ProviderAccount): string =>
-  String(provider.provider_data?.url ?? "");
 
 export interface ProviderCredentials {
   name: string;

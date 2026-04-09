@@ -53,10 +53,8 @@ export default function AddProviderModal({
       await createProviderAccount({
         name: credentials.name.trim(),
         provider_key: credentials.provider_key,
-        provider_data: {
-          url: credentials.url.trim(),
-          api_key: credentials.api_key.trim(),
-        },
+        url: credentials.url.trim(),
+        provider_data: { api_key: credentials.api_key.trim() },
       });
       setCredentials(EMPTY_CREDENTIALS);
       setOpen(false);
@@ -70,7 +68,9 @@ export default function AddProviderModal({
   return (
     <Dialog open={open} onOpenChange={(value) => !value && handleClose()}>
       <DialogContent className="sm:max-w-[500px]">
-        <DialogTitle>Add Environment</DialogTitle>
+        <DialogTitle data-testid="add-provider-modal-title">
+          Add Environment
+        </DialogTitle>
         <DialogDescription>
           Configure your watsonx Orchestrate credentials below.
         </DialogDescription>
@@ -91,10 +91,19 @@ export default function AddProviderModal({
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-4">
-          <Button variant="outline" onClick={handleClose} disabled={isSaving}>
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSaving}
+            data-testid="add-provider-cancel"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!canSave || isSaving}>
+          <Button
+            onClick={handleSave}
+            disabled={!canSave || isSaving}
+            data-testid="add-provider-save"
+          >
             {isSaving ? "Saving..." : "Save"}
           </Button>
         </div>

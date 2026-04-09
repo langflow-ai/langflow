@@ -17,8 +17,6 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   onToggleConnection,
   newConnectionName,
   onNameChange,
-  newConnectionDescription,
-  onDescriptionChange,
   envVars,
   detectedVarCount,
   globalVariableOptions,
@@ -38,8 +36,6 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   onToggleConnection: (id: string) => void;
   newConnectionName: string;
   onNameChange: (v: string) => void;
-  newConnectionDescription: string;
-  onDescriptionChange: (v: string) => void;
   envVars: EnvVarEntry[];
   detectedVarCount: number;
   globalVariableOptions: string[];
@@ -124,14 +120,11 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                 </div>
               ) : (
                 <>
-                  <div className="relative min-w-0">
-                    <ForwardedIconComponent
-                      name="Search"
-                      className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                    />
+                  <div className="min-w-0">
                     <Input
+                      icon="Search"
                       placeholder="Search connections..."
-                      className="bg-muted pl-9"
+                      className="bg-muted"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -179,15 +172,6 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                     A connection with this name already exists.
                   </span>
                 )}
-              </div>
-              <div className="flex flex-col">
-                <span className="pb-2 text-sm font-medium">Description</span>
-                <Input
-                  placeholder="e.g., Production sales bot connection"
-                  className="bg-muted"
-                  value={newConnectionDescription}
-                  onChange={(e) => onDescriptionChange(e.target.value)}
-                />
               </div>
               <div className="flex flex-col">
                 <span className="pb-2 text-sm font-medium">
@@ -246,10 +230,18 @@ export const ConnectionPanel = memo(function ConnectionPanel({
 
         {/* Footer buttons */}
         <div className="flex min-w-0 flex-wrap items-center gap-3 pt-4">
-          <Button variant="outline" onClick={onChangeFlow}>
+          <Button
+            variant="outline"
+            onClick={onChangeFlow}
+            data-testid="connection-change-flow"
+          >
             Change Flow
           </Button>
-          <Button variant="outline" onClick={onSkipConnection}>
+          <Button
+            variant="outline"
+            onClick={onSkipConnection}
+            data-testid="connection-skip"
+          >
             Skip
           </Button>
           {connectionTab === "available" ? (
@@ -257,6 +249,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
               className="ml-auto w-full text-center whitespace-normal sm:w-auto sm:min-w-[220px] sm:whitespace-nowrap"
               disabled={selectedConnections.size === 0}
               onClick={onAttachConnection}
+              data-testid="connection-attach"
             >
               Attach Connection to Flow
             </Button>
@@ -265,6 +258,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
               className="ml-auto w-full text-center whitespace-normal sm:w-auto sm:min-w-[220px] sm:whitespace-nowrap"
               disabled={newConnectionName.trim() === "" || isDuplicateName}
               onClick={onCreateConnection}
+              data-testid="connection-create"
             >
               Create Connection
             </Button>

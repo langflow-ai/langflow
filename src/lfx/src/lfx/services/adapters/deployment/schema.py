@@ -2,12 +2,13 @@ import datetime
 import json
 from enum import Enum
 from functools import lru_cache
-from typing import Annotated, Any, Generic
+from typing import Annotated, Generic
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 from lfx.services.adapters.deployment.payloads import (
+    T_ConfigItemData,
     T_ConfigListParams,
     T_ConfigListResult,
     T_DeploymentConfig,
@@ -314,14 +315,14 @@ class ConfigDeploymentBindingUpdate(BaseModel):
         return self
 
 
-class ConfigListItem(BaseModel):
+class ConfigListItem(BaseModel, Generic[T_ConfigItemData]):
     """Model representing a result for a config list item."""
 
     id: IdLike = Field(description="The id of the config item")
     name: str = Field(description="The name of the config item")
     created_at: datetime.datetime | None = Field(None, description="The created timestamp of the config item")
     updated_at: datetime.datetime | None = Field(None, description="The last updated timestamp of the config item")
-    provider_data: dict[str, Any] | None = Field(None, description="Provider-specific data for the config item")
+    provider_data: T_ConfigItemData | None = Field(None, description="Provider-specific data for the config item")
 
 
 class ProviderDataModel(BaseModel, Generic[T_ProviderData]):
@@ -402,10 +403,13 @@ class DeploymentListLlmsResult(ProviderResultModel[T_DeploymentLlmListResult]):
     """Provider payload container for listing available deployment LLM metadata."""
 
 
-class ConfigListResult(ProviderResultModel[T_ConfigListResult]):
+class ConfigListResult(
+    ProviderResultModel[T_ConfigListResult],
+    Generic[T_ConfigListResult, T_ConfigItemData],
+):
     """Model representing a result for a config list operation."""
 
-    configs: list[ConfigListItem] = Field(description="The list of configs")
+    configs: list[ConfigListItem[T_ConfigItemData]] = Field(description="The list of configs")
 
 
 class SnapshotListResult(

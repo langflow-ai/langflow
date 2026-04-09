@@ -3,11 +3,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
-import {
-  type DeploymentProvider,
-  getProviderAccountUrl,
-  type ProviderAccount,
-} from "../types";
+import type { DeploymentProvider, ProviderAccount } from "../types";
 import ProviderCredentialsForm from "./provider-credentials-form";
 import { RadioSelectItem } from "./radio-select-item";
 
@@ -82,13 +78,14 @@ function EnvironmentList({
               value={environment.id}
               selected={isSelected}
               onChange={() => onSelectEnvironment(environment)}
+              data-testid={`provider-item-${environment.id}`}
             >
               <span className="flex flex-col">
                 <span className="text-sm font-medium leading-tight">
                   {environment.name}
                 </span>
                 <span className="text-sm leading-tight text-muted-foreground">
-                  {getProviderAccountUrl(environment)}
+                  {environment.url}
                 </span>
               </span>
             </RadioSelectItem>

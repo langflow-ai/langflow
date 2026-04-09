@@ -367,7 +367,12 @@ async def ingest_files_to_knowledge_base(
 
         # Create job record in database for both async and sync paths
         await job_service.create_job(
-            job_id=job_id, flow_id=job_id, job_type=JobType.INGESTION, asset_id=asset_id, asset_type="knowledge_base"
+            job_id=job_id,
+            flow_id=job_id,
+            job_type=JobType.INGESTION,
+            asset_id=asset_id,
+            asset_type="knowledge_base",
+            user_id=current_user.id,
         )
 
         # Always use async path: fire and forget the ingestion logic wrapped in status updates
@@ -547,6 +552,7 @@ async def get_knowledge_base_chunks(
     search: Annotated[str, Query(description="Filter chunks whose text contains this substring")] = "",
 ) -> PaginatedChunkResponse:
     """Get chunks from a specific knowledge base with pagination."""
+    kb_path: Path | None = None
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
 
@@ -626,7 +632,8 @@ async def get_knowledge_base_chunks(
     finally:
         client = None
         chroma = None
-        KBStorageHelper.release_chroma_resources(kb_path)
+        if kb_path is not None:
+            KBStorageHelper.release_chroma_resources(kb_path)
 
 
 @router.delete("/{kb_name}", status_code=HTTPStatus.OK)

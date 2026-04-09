@@ -5,7 +5,7 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface ProviderAccountListResponse {
-  providers: ProviderAccount[];
+  provider_accounts: ProviderAccount[];
   page: number;
   size: number;
   total: number;

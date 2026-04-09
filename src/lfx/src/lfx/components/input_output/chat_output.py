@@ -144,6 +144,17 @@ class ChatOutput(ChatComponent):
             self.message.value = stored_message
             message = stored_message
 
+        # Set accumulated token usage from all upstream LLM vertices.
+        # This must happen AFTER send_message() because streaming captures
+        # usage from chunks and would overwrite accumulated totals.
+        if hasattr(self, "_vertex") and self._vertex is not None:
+            accumulated_usage = self._vertex._accumulate_upstream_token_usage()  # noqa: SLF001
+            if accumulated_usage:
+                message.properties.usage = accumulated_usage
+                if self.should_store_message and message.get_id():
+                    message = await self._update_stored_message(message)
+                    await self._send_message_event(message, id_=message.get_id())
+
         self.status = message
         return message
 

@@ -112,7 +112,6 @@ export default function StepAttachFlows() {
     new Set(),
   );
   const [newConnectionName, setNewConnectionName] = useState("");
-  const [newConnectionDescription, setNewConnectionDescription] = useState("");
   const [envVars, setEnvVars] = useState<EnvVarEntry[]>(() => [
     { id: crypto.randomUUID(), key: "", value: "" },
   ]);
@@ -295,7 +294,6 @@ export default function StepAttachFlows() {
     );
     setConnectionTab("available");
     setNewConnectionName("");
-    setNewConnectionDescription("");
     setEnvVars([{ id: crypto.randomUUID(), key: "", value: "" }]);
   }, [envVars, newConnectionName, setConnections]);
 
@@ -425,8 +423,6 @@ export default function StepAttachFlows() {
               }
               newConnectionName={newConnectionName}
               onNameChange={setNewConnectionName}
-              newConnectionDescription={newConnectionDescription}
-              onDescriptionChange={setNewConnectionDescription}
               envVars={envVars}
               detectedVarCount={detectedVarCount}
               globalVariableOptions={globalVariableOptions}

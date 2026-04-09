@@ -69,7 +69,7 @@ def normalize_and_dedupe_ids(values: list[Any] | None, *, field_name: str) -> li
     return dedupe_list([_normalize_and_validate_id(str(value), field_name=field_name) for value in values])
 
 
-def _require_single_deployment_id(
+def require_single_deployment_id(
     params: ConfigListParams | SnapshotListParams | None,
     *,
     resource_label: str,

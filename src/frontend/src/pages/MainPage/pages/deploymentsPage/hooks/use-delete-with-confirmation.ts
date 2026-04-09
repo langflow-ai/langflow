@@ -6,7 +6,6 @@ interface DeleteWithConfirmation<T extends { id: string; name: string }> {
   deletingId: string | null;
   requestDelete: (item: T) => void;
   confirmDelete: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
-  cancelDelete: () => void;
   setModalOpen: (open: boolean) => void;
 }
 
@@ -46,10 +45,6 @@ export function useDeleteWithConfirmation<
     [target, mutateFn, buildParams, errorMessage, showError],
   );
 
-  const cancelDelete = useCallback(() => {
-    setTarget(null);
-  }, []);
-
   const setModalOpen = useCallback((open: boolean) => {
     if (!open) setTarget(null);
   }, []);
@@ -59,7 +54,6 @@ export function useDeleteWithConfirmation<
     deletingId,
     requestDelete,
     confirmDelete,
-    cancelDelete,
     setModalOpen,
   };
 }

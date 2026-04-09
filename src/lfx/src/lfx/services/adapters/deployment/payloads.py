@@ -52,6 +52,8 @@ T_FlowProviderData = TypeVar("T_FlowProviderData", default=AdapterPayload)
 T_FlowProviderDataModel = TypeVar("T_FlowProviderDataModel", bound=BaseModel, default=BaseModel)
 T_SnapshotItemData = TypeVar("T_SnapshotItemData", default=AdapterPayload)
 T_SnapshotItemDataModel = TypeVar("T_SnapshotItemDataModel", bound=BaseModel, default=BaseModel)
+T_ConfigItemData = TypeVar("T_ConfigItemData", default=AdapterPayload)
+T_ConfigItemDataModel = TypeVar("T_ConfigItemDataModel", bound=BaseModel, default=BaseModel)
 
 # Outbound payload pairs
 T_DeploymentCreateResult = TypeVar("T_DeploymentCreateResult", default=AdapterPayload)
@@ -131,6 +133,7 @@ class DeploymentPayloadFields(ProviderPayloadSchemas):
     deployment_list_result: PayloadSlot[T_DeploymentListResultModel] | None = None
     deployment_llm_list_result: PayloadSlot[T_DeploymentLlmListResultModel] | None = None
     config_list_result: PayloadSlot[T_ConfigListResultModel] | None = None
+    config_item_data: PayloadSlot[T_ConfigItemDataModel] | None = None
     snapshot_list_result: PayloadSlot[T_SnapshotListResultModel] | None = None
     snapshot_item_data: PayloadSlot[T_SnapshotItemDataModel] | None = None
     execution_create_result: PayloadSlot[T_ExecutionCreateResultModel] | None = None

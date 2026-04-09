@@ -2,11 +2,11 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 
 interface DeploymentsEmptyStateProps {
-  onCreateDeployment: () => void;
+  onAction: () => void;
 }
 
 export default function DeploymentsEmptyState({
-  onCreateDeployment,
+  onAction,
 }: DeploymentsEmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-24">
@@ -18,7 +18,7 @@ export default function DeploymentsEmptyState({
         variant="outline"
         className="mt-4"
         data-testid="create-deployment-empty-btn"
-        onClick={onCreateDeployment}
+        onClick={onAction}
       >
         <ForwardedIconComponent name="Plus" className="h-4 w-4" />
         Create Deployment
