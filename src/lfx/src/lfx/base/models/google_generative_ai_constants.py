@@ -70,28 +70,28 @@ GOOGLE_GENERATIVE_AI_MODELS_DETAILED = [
         provider="Google Generative AI",
         name="gemini-3.1-pro-preview",
         icon="GoogleGenerativeAI",
-        tool_calling=False,  # TODO: When Google GenAI has been upgraded, tool calling should be enabled for Gemini 3
+        tool_calling=True,
         preview=True,
     ),
     create_model_metadata(
         provider="Google Generative AI",
         name="gemini-3-pro-preview",
         icon="GoogleGenerativeAI",
-        tool_calling=False,
+        tool_calling=True,
         preview=True,
     ),
     create_model_metadata(
         provider="Google Generative AI",
         name="gemini-3-flash-preview",
         icon="GoogleGenerativeAI",
-        tool_calling=False,
+        tool_calling=True,
         preview=True,
     ),
     create_model_metadata(
         provider="Google Generative AI",
         name="gemini-3-pro-image-preview",
         icon="GoogleGenerativeAI",
-        tool_calling=False,
+        tool_calling=True,
         preview=True,
     ),
 ]
