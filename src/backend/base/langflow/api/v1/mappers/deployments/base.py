@@ -113,6 +113,7 @@ class DeploymentApiPayloads(DeploymentPayloadFields):
 
     provider_account_create: PayloadSlot | None = None
     provider_account_update: PayloadSlot | None = None
+    provider_account_response: PayloadSlot | None = None
 
 
 class BaseDeploymentMapper:

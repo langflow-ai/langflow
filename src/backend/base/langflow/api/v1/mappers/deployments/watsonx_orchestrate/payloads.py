@@ -18,6 +18,7 @@ from pydantic import (
 
 from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
 from langflow.api.v1.schemas.deployments import ValidatedUrl
+from langflow.services.database.models.deployment_provider_account.utils import validate_provider_url
 
 WatsonxApiLlmName = Annotated[
     str,
@@ -63,6 +64,22 @@ class WatsonxApiProviderAccountUpdate(BaseModel):
     model_config = {"extra": "forbid"}
 
     api_key: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class WatsonxApiProviderAccountResponse(BaseModel):
+    """WXO provider-account provider_data contract for API responses."""
+
+    model_config = {"extra": "forbid"}
+
+    url: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    tenant_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+    @field_validator("url")
+    @classmethod
+    def validate_url_without_rewriting(cls, value: str) -> str:
+        # Validate URL policy but preserve stored representation.
+        validate_provider_url(value, field_name="url")
+        return value
 
 
 class WatsonxApiFlowArtifactProviderData(CreateFlowArtifactProviderData):

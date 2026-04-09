@@ -72,6 +72,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiDeploymentUpdateResultData,
     WatsonxApiFlowArtifactProviderData,
     WatsonxApiProviderAccountCreate,
+    WatsonxApiProviderAccountResponse,
     WatsonxApiProviderAccountUpdate,
     WatsonxApiProviderDeploymentListItem,
     WatsonxApiSnapshotListProviderData,
@@ -205,6 +206,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         ),
         provider_account_create=PayloadSlot(adapter_model=WatsonxApiProviderAccountCreate),
         provider_account_update=PayloadSlot(adapter_model=WatsonxApiProviderAccountUpdate),
+        provider_account_response=PayloadSlot(
+            adapter_model=WatsonxApiProviderAccountResponse,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
     )
 
     def resolve_provider_tenant_id(
@@ -312,11 +317,17 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         self,
         provider_account: DeploymentProviderAccount,
     ) -> dict[str, Any] | None:
-        provider_data: dict[str, Any] = {"url": provider_account.provider_url}
-        tenant_id = str(provider_account.provider_tenant_id or "").strip()
-        if tenant_id:
-            provider_data["tenant_id"] = tenant_id
-        return provider_data
+        parsed = self._parse_required_payload_slot(
+            slot=self.api_payloads.provider_account_response,
+            slot_name="provider_account_response",
+            raw={
+                "url": provider_account.provider_url,
+                "tenant_id": provider_account.provider_tenant_id,
+            },
+            missing_payload_detail="Deployment provider account response payload is missing.",
+            malformed_payload_detail="Invalid deployment provider account response payload:",
+        )
+        return parsed.model_dump(mode="json", exclude_none=True)
 
     def resolve_verify_credentials_for_create(
         self,
