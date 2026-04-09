@@ -5,7 +5,7 @@
 FRONTEND_DIR = src/frontend
 NPM = npm
 
-.PHONY: install_frontend install_frontendci install_frontendc frontend_deps_check build_frontend run_frontend frontend frontendc format_frontend tests_frontend test_frontend test_frontend_watch test_frontend_coverage test_frontend_verbose test_frontend_ci test_frontend_clean test_frontend_file test_frontend_pattern test_frontend_snapshots test_frontend_config test_frontend_bail test_frontend_silent test_frontend_coverage_open help_frontend
+.PHONY: install_frontend install_frontendci install_frontendc frontend_deps_check build_frontend run_frontend frontend frontendc format_frontend tests_frontend test_frontend test_frontend_watch test_frontend_coverage test_frontend_verbose test_frontend_ci test_frontend_clean test_frontend_file test_frontend_pattern test_frontend_snapshots test_frontend_config test_frontend_bail test_frontend_silent test_frontend_coverage_open help_frontend storybook storybook_build storybook_network
 
 ######################
 # FRONTEND DEPENDENCIES
@@ -167,40 +167,72 @@ test_frontend_coverage_open: test_frontend_coverage ## run tests with coverage a
 	fi
 
 ######################
+# STORYBOOK
+######################
+
+storybook: frontend_deps_check ## run Storybook development server and open in browser
+	@echo "Starting Storybook development server on http://localhost:6006..."
+	@cd $(FRONTEND_DIR) && $(NPM) run storybook
+
+storybook_build: frontend_deps_check ## build static Storybook
+	@echo "Building static Storybook..."
+	@cd $(FRONTEND_DIR) && $(NPM) run build-storybook
+	@echo "Storybook built to $(FRONTEND_DIR)/storybook-static"
+
+storybook_network: frontend_deps_check ## run Storybook accessible on network (0.0.0.0:6006)
+	@echo "Starting Storybook development server accessible on network..."
+	@cd $(FRONTEND_DIR) && $(NPM) run storybook:network
+
+######################
 # FRONTEND HELP
 ######################
 
 help_frontend: ## show frontend help
-	@echo "Frontend Commands:"
-	@echo ""
-	@echo "Dependencies:"
-	@echo "  install_frontend     - Install frontend dependencies"
-	@echo "  install_frontendci   - Install frontend dependencies with npm ci"
-	@echo "  install_frontendc    - Clean install frontend dependencies"
-	@echo ""
-	@echo "Build & Development:"
-	@echo "  build_frontend       - Build frontend static files"
-	@echo "  run_frontend         - Run the frontend development server"
-	@echo "  frontend             - Install dependencies and run frontend in dev mode"
-	@echo "  frontendc            - Clean install dependencies and run frontend"
-	@echo ""
-	@echo "Code Quality:"
-	@echo "  format_frontend      - Format frontend code"
-	@echo ""
-	@echo "Testing:"
-	@echo "  tests_frontend       - Run frontend Playwright e2e tests"
-	@echo "  test_frontend        - Run frontend Jest unit tests"
-	@echo "  test_frontend_watch  - Run unit tests in watch mode"
-	@echo "  test_frontend_coverage - Run unit tests with coverage"
-	@echo "  test_frontend_coverage_open - Run coverage and open report"
-	@echo "  test_frontend_verbose - Run unit tests with verbose output"
-	@echo "  test_frontend_ci     - Run unit tests in CI mode"
-	@echo "  test_frontend_clean  - Clean cache and run unit tests"
-	@echo "  test_frontend_bail   - Run unit tests with bail"
-	@echo "  test_frontend_silent - Run unit tests silently"
-	@echo ""
-	@echo "Targeted Testing:"
-	@echo "  test_frontend_file path         - Run tests for specific file"
-	@echo "  test_frontend_pattern pattern   - Run tests matching pattern"
-	@echo "  test_frontend_snapshots         - Update Jest snapshots"
-	@echo "  test_frontend_config            - Show Jest configuration"
+	@echo ''
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo "$(GREEN)                    FRONTEND COMMANDS                              $(NC)"
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo ''
+	@echo "$(GREEN)Dependencies:$(NC)"
+	@echo "  $(GREEN)make install_frontend$(NC)     - Install frontend dependencies"
+	@echo "  $(GREEN)make install_frontendci$(NC)   - Install frontend dependencies with npm ci"
+	@echo "  $(GREEN)make install_frontendc$(NC)    - Clean install frontend dependencies"
+	@echo ''
+	@echo "$(GREEN)Build & Development:$(NC)"
+	@echo "  $(GREEN)make build_frontend$(NC)       - Build frontend static files"
+	@echo "  $(GREEN)make run_frontend$(NC)         - Run the frontend development server"
+	@echo "  $(GREEN)make frontend$(NC)             - Install dependencies and run frontend in dev mode"
+	@echo "  $(GREEN)make frontendc$(NC)            - Clean install dependencies and run frontend"
+	@echo ''
+	@echo "$(GREEN)Code Quality:$(NC)"
+	@echo "  $(GREEN)make format_frontend$(NC)      - Format frontend code"
+	@echo "  $(GREEN)make format_frontend_check$(NC) - Check frontend formatting (biome)"
+	@echo ''
+	@echo "$(GREEN)E2E Testing (Playwright):$(NC)"
+	@echo "  $(GREEN)make tests_frontend$(NC)       - Run Playwright e2e tests"
+	@echo "  $(GREEN)make tests_frontend UI=true$(NC) - Run Playwright e2e tests with UI"
+	@echo ''
+	@echo "$(GREEN)Unit Testing (Jest):$(NC)"
+	@echo "  $(GREEN)make test_frontend$(NC)        - Run Jest unit tests"
+	@echo "  $(GREEN)make test_frontend_watch$(NC)  - Run unit tests in watch mode"
+	@echo "  $(GREEN)make test_frontend_coverage$(NC) - Run unit tests with coverage"
+	@echo "  $(GREEN)make test_frontend_coverage_open$(NC) - Run coverage and open report"
+	@echo "  $(GREEN)make test_frontend_verbose$(NC) - Run unit tests with verbose output"
+	@echo "  $(GREEN)make test_frontend_ci$(NC)     - Run unit tests in CI mode"
+	@echo "  $(GREEN)make test_frontend_clean$(NC)  - Clean cache and run unit tests"
+	@echo "  $(GREEN)make test_frontend_bail$(NC)   - Run unit tests with bail"
+	@echo "  $(GREEN)make test_frontend_silent$(NC) - Run unit tests silently"
+	@echo ''
+	@echo "$(GREEN)Targeted Testing:$(NC)"
+	@echo "  $(GREEN)make test_frontend_file path$(NC) - Run tests for specific file"
+	@echo "  $(GREEN)make test_frontend_pattern pattern$(NC) - Run tests matching pattern"
+	@echo "  $(GREEN)make test_frontend_snapshots$(NC) - Update Jest snapshots"
+	@echo "  $(GREEN)make test_frontend_config$(NC) - Show Jest configuration"
+	@echo ''
+	@echo "$(GREEN)Storybook:$(NC)"
+	@echo "  $(GREEN)make storybook$(NC)            - Run Storybook dev server and open in browser"
+	@echo "  $(GREEN)make storybook_build$(NC)      - Build static Storybook"
+	@echo "  $(GREEN)make storybook_network$(NC)    - Run Storybook accessible on network"
+	@echo ''
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo ''

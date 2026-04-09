@@ -101,11 +101,11 @@ class GleanAPIWrapper(BaseModel):
 class GleanSearchAPIComponent(LCToolComponent):
     display_name: str = "Glean Search API"
     description: str = "Search using Glean's API."
-    documentation: str = "https://docs.langflow.org/Components/components-tools#glean-search-api"
+    documentation: str = "https://docs.langflow.org/bundles-glean"
     icon: str = "Glean"
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
+        Output(display_name="Table", name="dataframe", method="fetch_content_dataframe"),
     ]
 
     inputs = [

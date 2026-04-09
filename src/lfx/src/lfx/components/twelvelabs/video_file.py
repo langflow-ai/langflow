@@ -3,6 +3,13 @@ from pathlib import Path
 from lfx.base.data import BaseFileComponent
 from lfx.io import FileInput
 from lfx.schema import Data, DataFrame
+from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
+
+disable_component_in_astra_cloud_msg = (
+    "Video processing is not supported in Astra cloud environment. "
+    "Video components require local file system access for processing. "
+    "Please use local storage mode or process videos locally before uploading."
+)
 
 
 class VideoFileComponent(BaseFileComponent):
@@ -97,6 +104,8 @@ class VideoFileComponent(BaseFileComponent):
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
         """Process video files."""
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
         self.log(f"DEBUG: Processing video files: {len(file_list)}")
 
         if not file_list:
@@ -137,6 +146,9 @@ class VideoFileComponent(BaseFileComponent):
 
     def load_files(self) -> DataFrame:
         """Load video files and return a list of Data objects."""
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
+
         try:
             self.log("DEBUG: Starting video file load")
             if not hasattr(self, "file_path") or not self.file_path:

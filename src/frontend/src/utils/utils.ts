@@ -410,7 +410,7 @@ export function extractColumnsFromRows(
     }
     for (const row of rows) {
       for (const key in columnsKeys) {
-        if (!row[key]) {
+        if (!(key in row)) {
           delete columnsKeys[key];
         }
       }
@@ -425,7 +425,6 @@ export function extractColumnsFromRows(
           filter: true,
           cellRenderer: TableAutoCellRender,
           suppressAutoSize: true,
-          tooltipField: key,
         };
       }
     }
@@ -1024,10 +1023,14 @@ export const setAuthCookie = (
   tokenName: string,
   value: string,
 ) => {
+  // Only use secure flag if the connection is HTTPS
+  const isSecure =
+    typeof window !== "undefined" && window.location.protocol === "https:";
+
   cookies.set(tokenName, value, {
     path: "/",
-    secure: true,
-    sameSite: "strict",
+    secure: isSecure,
+    sameSite: isSecure ? "strict" : "lax",
   });
 };
 

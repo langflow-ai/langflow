@@ -2,7 +2,7 @@
 
 These instructions will walk you through the process of running a Langflow demo via GitHub Codespaces.
 
-If you want a faster and easier demo experience with Langflow, DataStax Langflow is a hosted environment with zero setup: [Sign up for a free account.](https://astra.datastax.com/signup?type=langflow)
+If you want a faster and easier demo experience with Langflow, download and install [Langflow Desktop](https://docs.langflow.org/get-started-installation#install-and-run-langflow-desktop) for the least complicated setup experience.
 
 ## Create a Codespace in GitHub
 

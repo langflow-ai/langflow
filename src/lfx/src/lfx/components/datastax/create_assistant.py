@@ -10,6 +10,7 @@ class AssistantsCreateAssistant(ComponentWithCache):
     icon = "AstraDB"
     display_name = "Create Assistant"
     description = "Creates an Assistant and returns it's id"
+    legacy = True
 
     inputs = [
         StrInput(

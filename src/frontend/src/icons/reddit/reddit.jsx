@@ -1,5 +1,5 @@
 const RedditIconSVG = (props) => (
-  <svg viewBox="0 0 16 16" width="23px" height="23px" {...props}>
+  <svg viewBox="0 0 16 16" width="20" height="20" {...props}>
     <path
       fill="#fe3155"
       d="M8,0c4.418,0,8,3.582,8,8s-3.582,8-8,8s-8-3.582-8-8S3.582,0,8,0z"

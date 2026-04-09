@@ -18,7 +18,7 @@ class TestExceptionTelemetry:
             exception_type="ValueError",
             exception_message="Test error message",
             exception_context="handler",
-            stack_trace_hash="abc123def456",
+            stack_trace_hash="abc123def456",  # pragma: allowlist secret
         )
 
         # Test serialization with aliases
@@ -28,7 +28,7 @@ class TestExceptionTelemetry:
             "exceptionType": "ValueError",
             "exceptionMessage": "Test error message",
             "exceptionContext": "handler",
-            "stackTraceHash": "abc123def456",
+            "stackTraceHash": "abc123def456",  # pragma: allowlist secret
         }
 
         assert data == expected_fields
@@ -80,6 +80,11 @@ class TestExceptionTelemetry:
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.common_telemetry_fields = {
+            "langflow_version": "1.0.0",
+            "platform": "python_package",
+            "os": "linux",
+        }
 
         # Mock HTTP client
         mock_response = MagicMock()
@@ -105,15 +110,17 @@ class TestExceptionTelemetry:
         # Check URL
         assert call_args[0][0] == "https://mock-telemetry.example.com/exception"
 
-        # Check query parameters
-        expected_params = {
-            "exceptionType": "ValueError",
-            "exceptionMessage": "Test error",
-            "exceptionContext": "handler",
-            "stackTraceHash": "abc123",
-            "clientType": "oss",
-        }
-        assert call_args[1]["params"] == expected_params
+        # Check query parameters (should include common telemetry fields)
+        params = call_args[1]["params"]
+        assert params["exceptionType"] == "ValueError"
+        assert params["exceptionMessage"] == "Test error"
+        assert params["exceptionContext"] == "handler"
+        assert params["stackTraceHash"] == "abc123"
+        assert params["clientType"] == "oss"
+        assert params["langflow_version"] == "1.0.0"
+        assert params["platform"] == "python_package"
+        assert params["os"] == "linux"
+        assert "timestamp" in params
 
     @pytest.mark.asyncio
     async def test_send_telemetry_data_respects_do_not_track(self):
@@ -123,6 +130,11 @@ class TestExceptionTelemetry:
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = True
         telemetry_service.client_type = "oss"
+        telemetry_service.common_telemetry_fields = {
+            "langflow_version": "1.0.0",
+            "platform": "python_package",
+            "os": "linux",
+        }
 
         # Mock HTTP client
         mock_client = AsyncMock()
@@ -173,6 +185,11 @@ class TestExceptionTelemetry:
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.common_telemetry_fields = {
+            "langflow_version": "1.0.0",
+            "platform": "python_package",
+            "os": "linux",
+        }
 
         # Create payload with very long message
         long_message = "A" * 2000  # Very long message
@@ -203,6 +220,11 @@ class TestExceptionTelemetry:
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.common_telemetry_fields = {
+            "langflow_version": "1.0.0",
+            "platform": "python_package",
+            "os": "linux",
+        }
 
         # Create payload with special characters
         special_message = "Error with special chars: &?=#@!$%^&*()"
@@ -235,6 +257,11 @@ class TestExceptionTelemetry:
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.common_telemetry_fields = {
+            "langflow_version": "1.0.0",
+            "platform": "python_package",
+            "os": "linux",
+        }
 
         # Create payload with potentially sensitive data
         sensitive_message = "Password: secret123, API Key: sk-abc123, Token: xyz789"
@@ -267,6 +294,11 @@ class TestExceptionTelemetry:
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.common_telemetry_fields = {
+            "langflow_version": "1.0.0",
+            "platform": "python_package",
+            "os": "linux",
+        }
 
         # Create payload with unicode characters
         unicode_message = "Error with unicode: 世界, 🚀, émojis"

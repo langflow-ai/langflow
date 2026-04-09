@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import os
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -129,6 +128,8 @@ class ParameterHandler:
 
     def should_skip_field(self, field_name: str, field: dict, params: dict[str, Any]) -> bool:
         """Determine if field should be skipped."""
+        if field.get("override_skip"):
+            return False
         return (
             field.get("type") == "other"
             or field_name in params
@@ -137,7 +138,10 @@ class ParameterHandler:
         )
 
     def process_file_field(self, field_name: str, field: dict, params: dict[str, Any]) -> dict[str, Any]:
-        """Process file type fields."""
+        """Process file type fields.
+
+        Converts logical paths (flow_id/filename) to component-ready paths.
+        """
         if file_path := field.get("file_path"):
             try:
                 full_path: str | list[str] = ""
@@ -146,12 +150,11 @@ class ParameterHandler:
                     if isinstance(file_path, str):
                         file_path = [file_path]
                     for p in file_path:
-                        flow_id, file_name = os.path.split(p)
-                        path = self.storage_service.build_full_path(flow_id, file_name)
-                        full_path.append(path)
+                        resolved = self.storage_service.resolve_component_path(p)
+                        full_path.append(resolved)
                 else:
-                    flow_id, file_name = os.path.split(file_path)
-                    full_path = self.storage_service.build_full_path(flow_id, file_name)
+                    full_path = self.storage_service.resolve_component_path(file_path)
+
             except ValueError as e:
                 if "too many values to unpack" in str(e):
                     full_path = file_path
@@ -263,8 +266,23 @@ class ParameterHandler:
         """Handle dictionary field type."""
         match val:
             case list():
-                params[field_name] = {k: v for item in val for k, v in item.items()}
+                # Convert list of {"key": k, "value": v} pairs to a flat dict.
+                # e.g. [{"key": "h1", "value": "v1"}, {"key": "h2", "value": "v2"}] -> {"h1": "v1", "h2": "v2"}
+                if val and all(isinstance(item, dict) and "key" in item and "value" in item for item in val):
+                    params[field_name] = {item["key"]: item["value"] for item in val}
+                else:
+                    # Merge generic list of dicts into a single dict.
+                    # e.g. [{"a": 1}, {"b": 2}] -> {"a": 1, "b": 2}
+                    params[field_name] = {k: v for item in val for k, v in item.items()}
             case dict():
+                params[field_name] = val
+            case _:
+                logger.warning(
+                    "Unexpected type %s for dict field '%s'; expected list or dict, got %r",
+                    type(val).__name__,
+                    field_name,
+                    val,
+                )
                 params[field_name] = val
         return params
 

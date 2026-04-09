@@ -1,20 +1,46 @@
 import pytest
 from langflow.services.auth.utils import verify_password
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_settings_service
-from langflow.services.utils import initialize_services, setup_superuser, teardown_superuser
+from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.utils import setup_superuser, teardown_superuser
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from sqlmodel import select
 
 
-@pytest.mark.asyncio
-async def test_initialize_services_creates_default_superuser_when_auto_login_true(client):  # noqa: ARG001
-    from langflow.services.deps import session_scope
+@pytest.fixture
+async def initialized_services(monkeypatch, tmp_path):
+    """Lightweight fixture: initializes DB + services WITHOUT starting the full app.
 
+    Unlike the `client` fixture, this does NOT create a FastAPI app or use
+    LifespanManager. This avoids the heavy lifespan startup/shutdown (MCP servers,
+    background tasks, streamable HTTP) that causes hangs on CI Linux.
+    """
+    from langflow.services.utils import initialize_services, teardown_services
+    from lfx.services.manager import get_service_manager
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+
+    get_service_manager().factories.clear()
+    get_service_manager().services.clear()
+
+    await initialize_services()
+
+    yield
+
+    await teardown_services()
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(30)
+async def test_initialize_services_creates_default_superuser_when_auto_login_true(initialized_services):  # noqa: ARG001
+    """Test that setup_superuser creates the default superuser when AUTO_LOGIN=True."""
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = True
 
-    await initialize_services()
+    async with session_scope() as session:
+        await setup_superuser(settings, session)
 
     async with session_scope() as session:
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
@@ -24,17 +50,14 @@ async def test_initialize_services_creates_default_superuser_when_auto_login_tru
 
 
 @pytest.mark.asyncio
-async def test_teardown_superuser_removes_default_if_never_logged(client):  # noqa: ARG001
-    from langflow.services.deps import session_scope
-
+@pytest.mark.timeout(30)
+async def test_teardown_superuser_removes_default_if_never_logged(initialized_services):  # noqa: ARG001
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = False
 
-    # Ensure default exists and has never logged in
-    await initialize_services()
-
+    # The initialized_services fixture already called initialize_services(),
+    # which created the default superuser. Ensure it exists and has never logged in.
     async with session_scope() as session:
-        # Create default manually if missing
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
         user = (await session.exec(stmt)).first()
         if not user:
@@ -63,20 +86,16 @@ async def test_teardown_superuser_removes_default_if_never_logged(client):  # no
 
 
 @pytest.mark.asyncio
-async def test_teardown_superuser_preserves_logged_in_default(client):  # noqa: ARG001
+@pytest.mark.timeout(30)
+async def test_teardown_superuser_preserves_logged_in_default(initialized_services):  # noqa: ARG001
     """Test that teardown preserves default superuser if they have logged in."""
     from datetime import datetime, timezone
-
-    from langflow.services.deps import session_scope
 
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = False
 
-    # Ensure default exists
-    await initialize_services()
-
+    # The initialized_services fixture already created the default superuser.
     async with session_scope() as session:
-        # Create default manually if missing and mark as logged in
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
         user = (await session.exec(stmt)).first()
         if not user:
@@ -107,10 +126,9 @@ async def test_teardown_superuser_preserves_logged_in_default(client):  # noqa: 
 
 
 @pytest.mark.asyncio
-async def test_setup_superuser_with_no_configured_credentials(client):  # noqa: ARG001
+@pytest.mark.timeout(30)
+async def test_setup_superuser_with_no_configured_credentials(initialized_services):  # noqa: ARG001
     """Test setup_superuser behavior when no superuser credentials are configured."""
-    from langflow.services.deps import session_scope
-
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = False
     settings.auth_settings.SUPERUSER = ""
@@ -129,9 +147,9 @@ async def test_setup_superuser_with_no_configured_credentials(client):  # noqa: 
 
 
 @pytest.mark.asyncio
-async def test_setup_superuser_with_custom_credentials(client):  # noqa: ARG001
+@pytest.mark.timeout(30)
+async def test_setup_superuser_with_custom_credentials(initialized_services):  # noqa: ARG001
     """Test setup_superuser behavior with custom superuser credentials."""
-    from langflow.services.deps import session_scope
     from pydantic import SecretStr
 
     settings = get_settings_service()

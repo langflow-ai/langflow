@@ -5,7 +5,9 @@ import json
 import os
 import platform
 import re
+import shlex
 import shutil
+import subprocess
 import unicodedata
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -23,6 +25,7 @@ from pydantic import BaseModel
 from lfx.log.logger import logger
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
+from lfx.utils.async_helpers import run_until_complete
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
@@ -35,13 +38,33 @@ HTTP_INTERNAL_SERVER_ERROR = 500
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
 
-# MCP Session Manager constants
-settings = get_settings_service().settings
-MAX_SESSIONS_PER_SERVER = (
-    settings.mcp_max_sessions_per_server
-)  # Maximum number of sessions per server to prevent resource exhaustion
-SESSION_IDLE_TIMEOUT = settings.mcp_session_idle_timeout  # 5 minutes idle timeout for sessions
-SESSION_CLEANUP_INTERVAL = settings.mcp_session_cleanup_interval  # Cleanup interval in seconds
+# MCP Session Manager constants - lazy loaded
+_mcp_settings_cache: dict[str, Any] = {}
+
+
+def _get_mcp_setting(key: str, default: Any = None) -> Any:
+    """Lazy load MCP settings from settings service."""
+    if key not in _mcp_settings_cache:
+        settings = get_settings_service().settings
+        _mcp_settings_cache[key] = getattr(settings, key, default)
+    return _mcp_settings_cache[key]
+
+
+def get_max_sessions_per_server() -> int:
+    """Get maximum number of sessions per server to prevent resource exhaustion."""
+    return _get_mcp_setting("mcp_max_sessions_per_server")
+
+
+def get_session_idle_timeout() -> int:
+    """Get 5 minutes idle timeout for sessions."""
+    return _get_mcp_setting("mcp_session_idle_timeout")
+
+
+def get_session_cleanup_interval() -> int:
+    """Get cleanup interval in seconds."""
+    return _get_mcp_setting("mcp_session_cleanup_interval")
+
+
 # RFC 7230 compliant header name pattern: token = 1*tchar
 # tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
 #         "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
@@ -63,6 +86,46 @@ ALLOWED_HEADERS = {
     "x-mcp-client",
     "x-requested-with",
 }
+
+
+def create_mcp_http_client_with_ssl_option(
+    headers: dict[str, str] | None = None,
+    timeout: httpx.Timeout | None = None,
+    auth: httpx.Auth | None = None,
+    *,
+    verify_ssl: bool = True,
+) -> httpx.AsyncClient:
+    """Create an httpx AsyncClient with configurable SSL verification.
+
+    This is a custom factory that extends the standard MCP client factory
+    to support disabling SSL verification for self-signed certificates.
+
+    Args:
+        headers: Optional headers to include with all requests.
+        timeout: Request timeout as httpx.Timeout object.
+        auth: Optional authentication handler.
+        verify_ssl: Whether to verify SSL certificates (default: True).
+
+    Returns:
+        Configured httpx.AsyncClient instance.
+    """
+    kwargs: dict[str, Any] = {
+        "follow_redirects": True,
+        "verify": verify_ssl,
+    }
+
+    if timeout is None:
+        kwargs["timeout"] = httpx.Timeout(30.0)
+    else:
+        kwargs["timeout"] = timeout
+
+    if headers is not None:
+        kwargs["headers"] = headers
+
+    if auth is not None:
+        kwargs["auth"] = auth
+
+    return httpx.AsyncClient(**kwargs)
 
 
 def validate_headers(headers: dict[str, str]) -> dict[str, str]:
@@ -291,8 +354,7 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
             _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
         try:
-            loop = asyncio.get_event_loop()
-            return loop.run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
+            return run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -345,18 +407,20 @@ def _is_valid_key_value_item(item: Any) -> bool:
     return isinstance(item, dict) and "key" in item and "value" in item
 
 
-def _process_headers(headers: Any) -> dict:
-    """Process the headers input into a valid dictionary.
+def _process_headers(headers: Any, request_variables: dict[str, str] | None = None) -> dict:
+    """Process the headers input into a valid dictionary and resolve global variables.
 
     Args:
         headers: The headers to process, can be dict, str, or list
+        request_variables: Optional dict of global variables to resolve header values
     Returns:
-        Processed and validated dictionary
+        Processed and validated dictionary with resolved global variable values
     """
     if headers is None:
         return {}
     if isinstance(headers, dict):
-        return validate_headers(headers)
+        resolved_headers = _resolve_global_variables_in_headers(headers, request_variables)
+        return validate_headers(resolved_headers)
     if isinstance(headers, list):
         processed_headers = {}
         try:
@@ -368,8 +432,32 @@ def _process_headers(headers: Any) -> dict:
                 processed_headers[key] = value
         except (KeyError, TypeError, ValueError):
             return {}  # Return empty dictionary instead of None
-        return validate_headers(processed_headers)
+        resolved_headers = _resolve_global_variables_in_headers(processed_headers, request_variables)
+        return validate_headers(resolved_headers)
     return {}
+
+
+def _resolve_global_variables_in_headers(headers: dict, request_variables: dict[str, str] | None) -> dict:
+    """Resolve global variable names in header values to their actual values.
+
+    Args:
+        headers: Dictionary of headers where values might be global variable names
+        request_variables: Dictionary of global variables from request context
+
+    Returns:
+        Dictionary with resolved header values
+    """
+    if not request_variables:
+        return headers
+
+    resolved = {}
+    for key, value in headers.items():
+        # If the value matches a global variable name, replace it with the actual value
+        if isinstance(value, str) and value in request_variables:
+            resolved[key] = request_variables[value]
+        else:
+            resolved[key] = value
+    return resolved
 
 
 def _validate_node_installation(command: str) -> str:
@@ -432,7 +520,7 @@ class MCPSessionManager:
         """Periodically clean up idle sessions."""
         while True:
             try:
-                await asyncio.sleep(SESSION_CLEANUP_INTERVAL)
+                await asyncio.sleep(get_session_cleanup_interval())
                 await self._cleanup_idle_sessions()
             except asyncio.CancelledError:
                 break
@@ -450,7 +538,7 @@ class MCPSessionManager:
             sessions_to_remove = []
 
             for session_id, session_info in list(sessions.items()):
-                if current_time - session_info["last_used"] > SESSION_IDLE_TIMEOUT:
+                if current_time - session_info["last_used"] > get_session_idle_timeout():
                     sessions_to_remove.append(session_id)
 
             # Clean up idle sessions
@@ -573,7 +661,7 @@ class MCPSessionManager:
                 await self._cleanup_session_by_id(server_key, session_id)
 
         # Check if we've reached the maximum number of sessions for this server
-        if len(sessions) >= MAX_SESSIONS_PER_SERVER:
+        if len(sessions) >= get_max_sessions_per_server():
             # Remove the oldest session
             oldest_session_id = min(sessions.keys(), key=lambda x: sessions[x]["last_used"])
             await logger.ainfo(
@@ -675,7 +763,7 @@ class MCPSessionManager:
 
         Args:
             session_id: Unique identifier for this session
-            connection_params: Connection parameters including URL, headers, timeouts
+            connection_params: Connection parameters including URL, headers, timeouts, verify_ssl
             preferred_transport: If set to "sse", skip Streamable HTTP and go directly to SSE
 
         Returns:
@@ -691,6 +779,19 @@ class MCPSessionManager:
         # Track which transport succeeded
         used_transport: list[str] = []
 
+        # Get verify_ssl option from connection params, default to True
+        verify_ssl = connection_params.get("verify_ssl", True)
+
+        # Create custom httpx client factory with SSL verification option
+        def custom_httpx_factory(
+            headers: dict[str, str] | None = None,
+            timeout: httpx.Timeout | None = None,
+            auth: httpx.Auth | None = None,
+        ) -> httpx.AsyncClient:
+            return create_mcp_http_client_with_ssl_option(
+                headers=headers, timeout=timeout, auth=auth, verify_ssl=verify_ssl
+            )
+
         async def session_task():
             """Background task that keeps the session alive."""
             streamable_error = None
@@ -705,6 +806,7 @@ class MCPSessionManager:
                         url=connection_params["url"],
                         headers=connection_params["headers"],
                         timeout=connection_params["timeout_seconds"],
+                        httpx_client_factory=custom_httpx_factory,
                     ) as (read, write, _):
                         session = ClientSession(read, write)
                         async with session:
@@ -745,6 +847,7 @@ class MCPSessionManager:
                         connection_params["headers"],
                         connection_params["timeout_seconds"],
                         sse_read_timeout,
+                        httpx_client_factory=custom_httpx_factory,
                     ) as (read, write):
                         session = ClientSession(read, write)
                         async with session:
@@ -955,7 +1058,7 @@ class MCPStdioClient:
         """Connect to MCP server using stdio transport (SDK style)."""
         from mcp import StdioServerParameters
 
-        command = command_str.split(" ")
+        command = shlex.split(command_str)
         env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env or {})}
 
         if platform.system() == "Windows":
@@ -963,7 +1066,7 @@ class MCPStdioClient:
                 command="cmd",
                 args=[
                     "/c",
-                    f"{command[0]} {' '.join(command[1:])} || echo Command failed with exit code %errorlevel% 1>&2",
+                    f"{subprocess.list2cmdline(command)} || echo Command failed with exit code %errorlevel% 1>&2",
                 ],
                 env=env_data,
             )
@@ -1196,6 +1299,8 @@ class MCPStreamableHttpClient:
         headers: dict[str, str] | None = None,
         timeout_seconds: int = 30,
         sse_read_timeout_seconds: int = 30,
+        *,
+        verify_ssl: bool = True,
     ) -> list[StructuredTool]:
         """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style)."""
         # Validate and sanitize headers early
@@ -1213,12 +1318,13 @@ class MCPStreamableHttpClient:
                 msg = f"Invalid Streamable HTTP or SSE URL ({url}): {error_msg}"
                 raise ValueError(msg)
             # Store connection parameters for later use in run_tool
-            # Include SSE read timeout for fallback
+            # Include SSE read timeout for fallback and SSL verification option
             self._connection_params = {
                 "url": url,
                 "headers": validated_headers,
                 "timeout_seconds": timeout_seconds,
                 "sse_read_timeout_seconds": sse_read_timeout_seconds,
+                "verify_ssl": verify_ssl,
             }
         elif headers:
             self._connection_params["headers"] = validated_headers
@@ -1238,11 +1344,18 @@ class MCPStreamableHttpClient:
         return response.tools
 
     async def connect_to_server(
-        self, url: str, headers: dict[str, str] | None = None, sse_read_timeout_seconds: int = 30
+        self,
+        url: str,
+        headers: dict[str, str] | None = None,
+        sse_read_timeout_seconds: int = 30,
+        *,
+        verify_ssl: bool = True,
     ) -> list[StructuredTool]:
         """Connect to MCP server using Streamable HTTP with SSE fallback transport (SDK style)."""
         return await asyncio.wait_for(
-            self._connect_to_server(url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds),
+            self._connect_to_server(
+                url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds, verify_ssl=verify_ssl
+            ),
             timeout=get_settings_service().settings.mcp_server_timeout,
         )
 
@@ -1432,8 +1545,18 @@ async def update_tools(
     mcp_stdio_client: MCPStdioClient | None = None,
     mcp_streamable_http_client: MCPStreamableHttpClient | None = None,
     mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
+    request_variables: dict[str, str] | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
-    """Fetch server config and update available tools."""
+    """Fetch server config and update available tools.
+
+    Args:
+        server_name: Name of the MCP server
+        server_config: Server configuration dictionary
+        mcp_stdio_client: Optional stdio client instance
+        mcp_streamable_http_client: Optional streamable HTTP client instance
+        mcp_sse_client: Optional SSE client instance (backward compatibility)
+        request_variables: Optional dict of global variables to resolve in headers
+    """
     if server_config is None:
         server_config = {}
     if not server_name:
@@ -1454,7 +1577,7 @@ async def update_tools(
     command = server_config.get("command", "")
     url = server_config.get("url", "")
     tools = []
-    headers = _process_headers(server_config.get("headers", {}))
+    headers = _process_headers(server_config.get("headers", {}), request_variables)
 
     try:
         await _validate_connection_params(mode, command, url)
@@ -1465,15 +1588,58 @@ async def update_tools(
     # Determine connection type and parameters
     client: MCPStdioClient | MCPStreamableHttpClient | None = None
     if mode == "Stdio":
-        # Stdio connection
-        args = server_config.get("args", [])
+        args = list(server_config.get("args", []))
         env = server_config.get("env", {})
-        full_command = " ".join([command, *args])
+        # For stdio mode, inject component headers as --headers CLI args.
+        # This enables passing headers through proxy tools like mcp-proxy
+        # that forward them to the upstream HTTP server.
+        if headers:
+            extra_args = []
+            for key, value in headers.items():
+                extra_args.extend(["--headers", key, str(value)])
+            if "--headers" in args:
+                # Insert before the existing --headers flag so all header
+                # flags are grouped together
+                idx = args.index("--headers")
+                for i, arg in enumerate(extra_args):
+                    args.insert(idx + i, arg)
+            else:
+                # No existing --headers flag; try to insert before the last
+                # positional arg (typically the URL in mcp-proxy commands).
+                # Scan args to find the last true positional token by skipping
+                # flag+value pairs so we don't mistake a flag's value for a
+                # positional argument (e.g. "--port 8080").
+                last_positional_idx: int | None = None
+                i = 0
+                while i < len(args):
+                    if args[i].startswith("-"):
+                        # Skip the flag and its value (assumes each flag
+                        # takes at most one value argument; boolean flags
+                        # are handled correctly since the next token will
+                        # start with '-' or be a URL-like positional).
+                        i += 1
+                        if (
+                            i < len(args)
+                            and not args[i].startswith("-")
+                            and not args[i].startswith("http://")
+                            and not args[i].startswith("https://")
+                        ):
+                            i += 1
+                    else:
+                        last_positional_idx = i
+                        i += 1
+
+                if last_positional_idx is not None:
+                    args = args[:last_positional_idx] + extra_args + args[last_positional_idx:]
+                else:
+                    args.extend(extra_args)
+        full_command = shlex.join([*shlex.split(command), *args])
         tools = await mcp_stdio_client.connect_to_server(full_command, env)
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:
         # Streamable HTTP connection with SSE fallback
-        tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers)
+        verify_ssl = server_config.get("verify_ssl", True)
+        tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
         client = mcp_streamable_http_client
     else:
         logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from uuid import UUID
 
 from pydantic import BeforeValidator
 
@@ -112,3 +113,18 @@ def timestamp_with_fractional_seconds(timestamp: datetime | str) -> str:
 timestamp_to_str_validator = BeforeValidator(timestamp_to_str)
 timestamp_with_fractional_seconds_validator = BeforeValidator(timestamp_with_fractional_seconds)
 str_to_timestamp_validator = BeforeValidator(str_to_timestamp)
+
+
+def uuid_validator(uuid_str: str | UUID, message: str | None = None) -> UUID:
+    if isinstance(uuid_str, UUID):
+        return uuid_str
+    try:
+        return UUID(uuid_str)
+    except (ValueError, AttributeError, TypeError) as e:
+        raise ValueError(message or f"Invalid UUID: {uuid_str}") from e
+
+
+def null_check_validator(value: str | None, message: str | None = None) -> str | None:
+    if value is None:
+        raise ValueError(message or "Value is required")
+    return value

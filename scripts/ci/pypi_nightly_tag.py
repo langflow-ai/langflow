@@ -4,6 +4,7 @@
 import sys
 
 import packaging.version
+import requests
 from packaging.version import Version
 
 PYPI_LANGFLOW_URL = "https://pypi.org/pypi/langflow/json"
@@ -16,8 +17,6 @@ ARGUMENT_NUMBER = 2
 
 
 def get_latest_published_version(build_type: str, *, is_nightly: bool) -> Version:
-    import requests
-
     url = ""
     if build_type == "base":
         url = PYPI_LANGFLOW_BASE_NIGHTLY_URL if is_nightly else PYPI_LANGFLOW_BASE_URL
@@ -28,6 +27,7 @@ def get_latest_published_version(build_type: str, *, is_nightly: bool) -> Versio
         raise ValueError(msg)
 
     res = requests.get(url, timeout=10)
+    res.raise_for_status()
     try:
         version_str = res.json()["info"]["version"]
     except Exception as e:
@@ -37,16 +37,31 @@ def get_latest_published_version(build_type: str, *, is_nightly: bool) -> Versio
 
 
 def create_tag(build_type: str):
-    current_version = get_latest_published_version(build_type, is_nightly=False)
-    current_nightly_version = get_latest_published_version(build_type, is_nightly=True)
+    from pathlib import Path
+
+    import tomllib
+
+    # Read version from pyproject.toml
+    main_tag_pyproject_path = Path(__file__).parent.parent.parent / "pyproject.toml"
+    pyproject_data = tomllib.loads(main_tag_pyproject_path.read_text())
+
+    current_version_str = pyproject_data["project"]["version"]
+    current_version = Version(current_version_str)
+
+    try:
+        current_nightly_version = get_latest_published_version(build_type, is_nightly=True)
+    except (requests.RequestException, KeyError, ValueError):
+        # If nightly doesn't exist yet
+        current_nightly_version = None
 
     build_number = "0"
     latest_base_version = current_version.base_version
-    nightly_base_version = current_nightly_version.base_version
+    nightly_base_version = current_nightly_version.base_version if current_nightly_version else None
 
     if latest_base_version == nightly_base_version:
         # If the latest version is the same as the nightly version, increment the build number
-        build_number = str(current_nightly_version.dev + 1)
+        dev_number = (current_nightly_version.dev or 0) if current_nightly_version else 0
+        build_number = str(dev_number + 1)
 
     new_nightly_version = latest_base_version + ".dev" + build_number
 
@@ -59,7 +74,7 @@ def create_tag(build_type: str):
     # This takes the base version of the current version and appends the
     # current date. If the last release was on the same day, we exit, as
     # pypi does not allow for overwriting the same version.
-    #
+
     # We could use a different versioning scheme, such as just incrementing
     # an integer.
     # version_with_date = (

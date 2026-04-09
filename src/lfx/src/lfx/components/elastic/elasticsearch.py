@@ -1,7 +1,7 @@
 from typing import Any
 
 from elasticsearch import Elasticsearch
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_elasticsearch import ElasticsearchStore
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store

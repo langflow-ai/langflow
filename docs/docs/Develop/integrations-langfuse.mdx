@@ -27,52 +27,37 @@ If you need a flow to test the Langfuse integration, see the [Langflow quickstar
 
 2. Copy the following API key information:
 
-    - Secret Key
-    - Public Key
-    - Host URL
+    - Secret key
+    - Public key
+    - Base URL
 
-3. Set your Langfuse project credentials as environment variables in the same environment where you run Langflow.
+    :::tip
+    Langflow previously used `LANGFUSE_HOST` as the variable for the Langfuse base URL.
+    This is still supported for backward compatibility, but `LANGFUSE_BASE_URL` is now the preferred environment variable and will be used if both values are set.
+    :::
 
-    In the following examples, replace `SECRET_KEY`, `PUBLIC_KEY`, and `HOST_URL` with your API key details from Langfuse.
+3. Set your Langfuse project credentials as environment variables.
 
-    <Tabs>
-    <TabItem value="linux-macos" label="Linux or macOS" default>
-
-    These commands set the environment variables in a Linux or macOS terminal session:
-
-    ```
-    export LANGFUSE_SECRET_KEY=SECRET_KEY
-    export LANGFUSE_PUBLIC_KEY=PUBLIC_KEY
-    export LANGFUSE_HOST=HOST_URL
-    ```
-
-    </TabItem>
-    <TabItem value="windows" label="Windows">
-
-    These commands set the environment variables in a Windows command prompt session:
-
-    ```
-    set LANGFUSE_SECRET_KEY=SECRET_KEY
-    set LANGFUSE_PUBLIC_KEY=PUBLIC_KEY
-    set LANGFUSE_HOST=HOST_URL
-    ```
-
-    </TabItem>
-    </Tabs>
-
-## Start Langflow and view traces in Langfuse
-
-1. Start Langflow in the same environment where you set the Langfuse environment variables:
+    In the following examples, replace `SECRET_KEY`, `PUBLIC_KEY`, and `LANGFUSE_BASE_URL` with your API key details from Langfuse.
+    Add the following entries to your `.env` file:
 
     ```bash
-    uv run langflow run
+    LANGFUSE_SECRET_KEY=sk-...
+    LANGFUSE_PUBLIC_KEY=pk-...
+    LANGFUSE_BASE_URL=https://us.cloud.langfuse.com
     ```
 
-2. Run a flow.
+4. Start Langflow with the configuration in the `.env` file:
+
+    ```bash
+    uv run langflow run --env-file .env
+    ```
+
+5. Run a flow.
 
     Langflow automatically collects and sends tracing data about the flow execution to Langfuse.
 
-3. View the collected data in your [Langfuse dashboard](https://langfuse.com/docs/analytics/overview).
+6. View the collected data in your [Langfuse dashboard](https://langfuse.com/docs/analytics/overview).
 
     Langfuse also provides a [public live trace example dashboard](https://cloud.langfuse.com/project/cm0nywmaa005c3ol2msoisiho/traces/f016ae6d-4527-43f5-93ba-9d78388cd3d9).
 
@@ -88,9 +73,15 @@ As an alternative to the previous setup, particularly for self-hosted Langfuse, 
 
 2. Copy the following API key information:
 
-    - Secret Key
-    - Public Key
-    - Host URL
+    - Secret key
+    - Public key
+    - Base URL
+
+    :::tip
+    Langflow previously used `LANGFUSE_HOST` as the variable for the Langfuse base URL.
+    `LANGFUSE_HOST` is still supported for backward compatibility, but `LANGFUSE_BASE_URL` is the preferred environment variable.
+    If both values are set, then `LANGFLOW_BASE_URL` is used.
+    :::
 
 3. Add your Langflow credentials to your Langflow `docker-compose.yml` file in the `environment` section.
 
@@ -111,7 +102,7 @@ As an alternative to the previous setup, particularly for self-hosted Langfuse, 
           - LANGFLOW_CONFIG_DIR=app/langflow
           - LANGFUSE_SECRET_KEY=sk-...
           - LANGFUSE_PUBLIC_KEY=pk-...
-          - LANGFUSE_HOST=https://us.cloud.langfuse.com
+          - LANGFUSE_BASE_URL=https://us.cloud.langfuse.com
         volumes:
           - langflow-data:/app/langflow
 
@@ -140,10 +131,10 @@ As an alternative to the previous setup, particularly for self-hosted Langfuse, 
 5. To confirm Langfuse is connected to your Langflow container, run the following command:
 
     ```sh
-    docker compose exec langflow python -c "import requests, os; addr = os.environ.get('LANGFUSE_HOST'); print(addr); res = requests.get(addr, timeout=5); print(res.status_code)"
+    docker compose exec langflow python -c "import requests, os; addr = os.environ.get('LANGFUSE_BASE_URL'); print(addr); res = requests.get(addr, timeout=5); print(res.status_code)"
     ```
 
-    If there is an error, make sure you have set the `LANGFUSE_HOST` environment variable in your terminal session.
+    If there is an error, make sure you have set the `LANGFUSE_BASE_URL` environment variable in your `docker-compose.yml` file.
 
     Output similar to the following indicates success:
 

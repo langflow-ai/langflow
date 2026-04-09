@@ -1,0 +1,162 @@
+const SvgIBM = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={16}
+    height={7}
+    viewBox="0 0 16 7"
+    fill="none"
+    {...props}
+  >
+    <g clipPath="url(#clip0_1341_6038)">
+      <path
+        d="M3.11111 5.93939H0V6.34343H3.11111V5.93939Z"
+        fill="currentColor"
+      />
+      <path
+        d="M3.11111 5.49495H0V5.09091H3.11111V5.49495Z"
+        fill="currentColor"
+      />
+      <path
+        d="M2.22222 4.64647H0.888889V4.24242H2.22222V4.64647Z"
+        fill="currentColor"
+      />
+      <path
+        d="M2.22222 3.79798H0.888889V3.39394H2.22222V3.79798Z"
+        fill="currentColor"
+      />
+      <path
+        d="M2.22222 2.9495H0.888889V2.54545H2.22222V2.9495Z"
+        fill="currentColor"
+      />
+      <path
+        d="M0.888889 1.69697H2.22222V2.10101H0.888889V1.69697Z"
+        fill="currentColor"
+      />
+      <path
+        d="M3.11111 1.25253H0V0.848485H3.11111V1.25253Z"
+        fill="currentColor"
+      />
+      <path d="M3.11111 0.40404H0V0H3.11111V0.40404Z" fill="currentColor" />
+      <path
+        d="M6.82828 6.34343H3.55556V5.93939H7.92687C7.63071 6.19111 7.24727 6.34343 6.82828 6.34343Z"
+        fill="currentColor"
+      />
+      <path
+        d="M8.29778 5.49495H3.55556V5.09091H8.46626C8.42747 5.23394 8.37051 5.3697 8.29778 5.49495Z"
+        fill="currentColor"
+      />
+      <path
+        d="M5.77778 4.64647H4.44444V4.24242H5.77778V4.64647Z"
+        fill="currentColor"
+      />
+      <path
+        d="M4.44444 2.9495V2.54545H8.29737C8.2097 2.69657 8.09939 2.83232 7.97131 2.9495H4.44444Z"
+        fill="currentColor"
+      />
+      <path
+        d="M8.29778 0.848485C8.37051 0.973737 8.42747 1.1095 8.46626 1.25253H3.55556V0.848485H8.29778Z"
+        fill="currentColor"
+      />
+      <path
+        d="M5.77778 2.10101H4.44444V1.69697H5.77778V2.10101Z"
+        fill="currentColor"
+      />
+      <path
+        d="M8.47596 2.10101H7.0303V1.69697H8.52525C8.52525 1.83636 8.50747 1.97131 8.47596 2.10101Z"
+        fill="currentColor"
+      />
+      <path
+        d="M7.0303 4.64647V4.24242H8.47596C8.50747 4.37212 8.52525 4.50707 8.52525 4.64647H7.0303Z"
+        fill="currentColor"
+      />
+      <path
+        d="M4.44444 3.39394H7.97131C8.09939 3.51111 8.2097 3.64687 8.29737 3.79798H4.44444V3.39394Z"
+        fill="currentColor"
+      />
+      <path
+        d="M6.82828 0C7.24727 0 7.63071 0.152323 7.92687 0.40404H3.55556V0H6.82828Z"
+        fill="currentColor"
+      />
+      <path
+        d="M11.1111 6.34343H8.88889V5.93939H11.1111V6.34343Z"
+        fill="currentColor"
+      />
+      <path
+        d="M11.1111 5.49495H8.88889V5.09091H11.1111V5.49495Z"
+        fill="currentColor"
+      />
+      <path
+        d="M11.1111 4.64647H9.77778V4.24242H11.1111V4.64647Z"
+        fill="currentColor"
+      />
+      <path
+        d="M11.1111 3.79798H9.77778V3.39394H11.1111V3.79798Z"
+        fill="currentColor"
+      />
+      <path d="M16 6.34343H13.7778V5.93939H16V6.34343Z" fill="currentColor" />
+      <path d="M16 5.49495H13.7778V5.09091H16V5.49495Z" fill="currentColor" />
+      <path
+        d="M15.1111 4.64647H13.7778V4.24242H15.1111V4.64647Z"
+        fill="currentColor"
+      />
+      <path
+        d="M13.7778 3.39394H15.1111V3.79798H13.7778V3.39394Z"
+        fill="currentColor"
+      />
+      <path
+        d="M15.1111 2.9495H13.7774V2.56485L13.6416 2.9495H12.4715L12.6117 2.54545H15.1111V2.9495Z"
+        fill="currentColor"
+      />
+      <path
+        d="M12.9063 1.69697H15.1111V2.10101H12.7661L12.9063 1.69697Z"
+        fill="currentColor"
+      />
+      <path
+        d="M13.3547 0.40404L13.4949 0H16V0.40404H13.3547Z"
+        fill="currentColor"
+      />
+      <path
+        d="M12.5863 5.93939L12.4444 6.34343L12.3026 5.93939H12.5863Z"
+        fill="currentColor"
+      />
+      <path
+        d="M12.7434 5.49495H12.1459L12.0032 5.09091H12.8861L12.7434 5.49495Z"
+        fill="currentColor"
+      />
+      <path
+        d="M13.0428 4.64647H11.8461L11.7034 4.24242H13.1855L13.0428 4.64647Z"
+        fill="currentColor"
+      />
+      <path
+        d="M13.3426 3.79798H11.5467L11.404 3.39394H13.4853L13.3426 3.79798Z"
+        fill="currentColor"
+      />
+      <path
+        d="M12.1228 2.10101H9.77778V1.69697H11.9826L12.1228 2.10101Z"
+        fill="currentColor"
+      />
+      <path
+        d="M16 1.25253H13.0602L13.2004 0.848485H16V1.25253Z"
+        fill="currentColor"
+      />
+      <path
+        d="M8.88889 0.848485H11.6881L11.8283 1.25253H8.88889V0.848485Z"
+        fill="currentColor"
+      />
+      <path
+        d="M8.88889 0H11.3939L11.5341 0.40404H8.88889V0Z"
+        fill="currentColor"
+      />
+      <path
+        d="M12.2772 2.54545L12.4174 2.9495H11.2469L11.1111 2.56606V2.9495H9.77778V2.54545H12.2772Z"
+        fill="currentColor"
+      />
+    </g>
+    <defs>
+      <clipPath id="clip0_1341_6038">
+        <rect width={16} height={6.38384} fill="white" />
+      </clipPath>
+    </defs>
+  </svg>
+);
+export default SvgIBM;

@@ -116,7 +116,7 @@ export function VoiceAssistant({
   }, [globalVariables]);
 
   const hasElevenLabsApiKeyEnv = useMemo(() => {
-    return Boolean(process.env?.ELEVENLABS_API_KEY);
+    return Boolean(import.meta?.env?.ELEVENLABS_API_KEY);
   }, [variables, addKey]);
 
   useEffect(() => {

@@ -25,14 +25,14 @@ test(
     // Add URL component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
-    await page.waitForSelector('[data-testid="dataURL"]', {
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 1000,
     });
 
     await zoomOut(page, 3);
 
     await page
-      .getByTestId("dataURL")
+      .getByTestId("data_sourceURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 100 },
       });
@@ -40,12 +40,12 @@ test(
     // Add Loop component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("loop");
-    await page.waitForSelector('[data-testid="logicLoop"]', {
+    await page.waitForSelector('[data-testid="flow_controlsLoop"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("logicLoop")
+      .getByTestId("flow_controlsLoop")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 280, y: 100 },
@@ -54,15 +54,17 @@ test(
     // Add Update Data component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("data operations");
-    await page.waitForSelector('[data-testid="processingData Operations"]', {
+    await page.waitForSelector('[data-testid="processingJSON Operations"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingData Operations")
+      .getByTestId("processingJSON Operations")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 100 },
       });
+
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     // Add Parse Data component
     await page.getByTestId("sidebar-search-input").click();
@@ -74,25 +76,21 @@ test(
     await page
       .getByTestId("processingParser")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 720, y: 100 },
+        targetPosition: { x: 600, y: 200 },
       });
 
     //This one is for testing the wrong loop message
 
     await page.getByTestId("sidebar-search-input").fill("Read File");
-    await page.waitForSelector('[data-testid="dataRead File"]', {
+    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("dataRead File")
+      .getByTestId("files_and_knowledgeRead File")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 720, y: 400 },
+        targetPosition: { x: 600, y: 400 },
       });
-
-    await page
-      .getByTestId("handle-parsercomponent-shownode-parsed text-right")
-      .click();
 
     const _loopItemInput = await page
       .getByTestId("handle-loopcomponent-shownode-item-left")
@@ -110,7 +108,7 @@ test(
     await page
       .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 940, y: 100 },
+        targetPosition: { x: 200, y: 100 },
       });
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
@@ -122,7 +120,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-dataoperations-shownode-data-left")
+      .getByTestId("handle-dataoperations-shownode-json-left")
       .first()
       .click();
 
@@ -142,7 +140,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
+      .getByTestId("handle-parsercomponent-shownode-json or table-left")
       .first()
       .click();
 
@@ -159,8 +157,7 @@ test(
 
     await page.getByTestId("canvas_controls_dropdown").click();
 
-    await zoomOut(page, 2);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await page.getByTestId("div-generic-node").nth(5).click();
 
@@ -176,9 +173,12 @@ test(
       .getByTestId("inputlist_str_urls_1")
       .fill("https://en.wikipedia.org/wiki/Human_intelligence");
 
-    await page.getByTestId("div-generic-node").nth(2).click();
+    await page.getByTestId("title-JSON Operations").click();
 
-    await page.getByTestId("button_open_list_selection").click();
+    await page.waitForTimeout(1000);
+
+    // Click on the "Select Operation" text/button in the Data Operations component
+    await page.getByText("Select Operation").click();
 
     await page.getByTestId("list_item_append_or_update").click();
 
@@ -203,7 +203,7 @@ test(
     // Update Data -> Loop Item (left side)
 
     await page
-      .getByTestId("handle-dataoperations-shownode-data-right")
+      .getByTestId("handle-dataoperations-shownode-json-right")
       .first()
       .click();
     await page

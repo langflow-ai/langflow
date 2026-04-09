@@ -31,7 +31,29 @@ from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
-from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
+from langflow.services.telemetry.schema import ComponentInputsPayload, ComponentPayload, PlaygroundPayload
+
+
+def _log_component_input_telemetry(
+    vertex,
+    vertex_id: str,
+    component_run_id: str,
+    background_tasks: BackgroundTasks,
+    telemetry_service,
+) -> None:
+    """Log component input telemetry if available."""
+    if hasattr(vertex, "custom_component") and vertex.custom_component:
+        inputs_dict = vertex.custom_component.get_telemetry_input_values()
+        if inputs_dict:
+            background_tasks.add_task(
+                telemetry_service.log_package_component_inputs,
+                ComponentInputsPayload(
+                    component_run_id=component_run_id,
+                    component_id=vertex_id,
+                    component_name=vertex_id.split("-")[0],
+                    component_inputs=inputs_dict,
+                ),
+            )
 
 
 async def start_flow_build(
@@ -47,8 +69,25 @@ async def start_flow_build(
     current_user: CurrentActiveUser,
     queue_service: JobQueueService,
     flow_name: str | None = None,
+    source_flow_id: uuid.UUID | None = None,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
+
+    Args:
+        flow_id: The flow ID used for tracking, sessions, and messages.
+        background_tasks: FastAPI background tasks handler.
+        inputs: Optional input values for the flow.
+        data: Optional flow data request.
+        files: Optional list of file paths.
+        stop_component_id: Optional component ID to stop the build at.
+        start_component_id: Optional component ID to start the build from.
+        log_builds: Whether to log builds.
+        current_user: The current authenticated user.
+        queue_service: The job queue service.
+        flow_name: Optional flow name override.
+        source_flow_id: If provided, the actual flow ID to load from DB.
+            Used by public flows where flow_id is a virtual UUID for session isolation
+            but the flow data must be loaded from the original flow in the database.
 
     Returns:
         the job_id.
@@ -68,6 +107,7 @@ async def start_flow_build(
             log_builds=log_builds,
             current_user=current_user,
             flow_name=flow_name,
+            source_flow_id=source_flow_id,
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
@@ -187,6 +227,7 @@ async def generate_flow_events(
     log_builds: bool,
     current_user: CurrentActiveUser,
     flow_name: str | None = None,
+    source_flow_id: uuid.UUID | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -204,12 +245,14 @@ async def generate_flow_events(
         start_time = time.perf_counter()
         components_count = 0
         graph = None
+        run_id = str(uuid.uuid4())
         try:
             flow_id_str = str(flow_id)
             # Create a fresh session for database operations
             async with session_scope() as fresh_session:
                 graph = await create_graph(fresh_session, flow_id_str, flow_name)
 
+            graph.set_run_id(run_id)
             first_layer = sort_vertices(graph)
 
             for vertex_id in first_layer:
@@ -222,19 +265,24 @@ async def generate_flow_events(
             vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
 
             await chat_service.set_cache(flow_id_str, graph)
-            await log_telemetry(start_time, components_count, success=True)
+            await log_telemetry(start_time, components_count, run_id=run_id, success=True)
 
         except Exception as exc:
-            await log_telemetry(start_time, components_count, success=False, error_message=str(exc))
+            await log_telemetry(start_time, components_count, run_id=run_id, success=False, error_message=str(exc))
 
             if "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
-            await logger.aexception("Error checking build status")
+            await logger.aexception("Error checking build status: " + str(exc))
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         return first_layer, vertices_to_run, graph
 
     async def log_telemetry(
-        start_time: float, components_count: int, *, success: bool, error_message: str | None = None
+        start_time: float,
+        components_count: int,
+        *,
+        run_id: str | None = None,
+        success: bool,
+        error_message: str | None = None,
     ):
         background_tasks.add_task(
             telemetry_service.log_package_playground,
@@ -243,6 +291,7 @@ async def generate_flow_events(
                 playground_component_count=components_count,
                 playground_success=success,
                 playground_error_message=str(error_message) if error_message else "",
+                playground_run_id=run_id,
             ),
         )
 
@@ -253,13 +302,19 @@ async def generate_flow_events(
             effective_session_id = flow_id_str
 
         if not data:
-            return await build_graph_from_db(
-                flow_id=flow_id,
+            # For public flows, source_flow_id is the real DB ID, flow_id is virtual.
+            # Load from DB using the real ID, then override graph.flow_id with virtual.
+            db_flow_id = source_flow_id if source_flow_id is not None else flow_id
+            graph = await build_graph_from_db(
+                flow_id=db_flow_id,
                 session=fresh_session,
                 chat_service=chat_service,
                 user_id=str(current_user.id),
                 session_id=effective_session_id,
             )
+            if source_flow_id is not None:
+                graph.flow_id = str(flow_id)
+            return graph
 
         if not flow_name:
             result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
@@ -286,6 +341,7 @@ async def generate_flow_events(
         top_level_vertices = []
         start_time = time.perf_counter()
         error_message = None
+
         try:
             vertex = graph.get_vertex(vertex_id)
             try:
@@ -341,6 +397,7 @@ async def generate_flow_events(
                 await chat_service.set_cache(flow_id_str, graph)
 
             timedelta = time.perf_counter() - start_time
+
             duration = format_elapsed_time(timedelta)
             result_data_response.duration = duration
             result_data_response.timedelta = timedelta
@@ -372,23 +429,37 @@ async def generate_flow_events(
                 id=vertex.id,
                 data=result_data_response,
             )
+
+            # Extract and send component input telemetry (separate payload)
+            _log_component_input_telemetry(vertex, vertex_id, graph.run_id, background_tasks, telemetry_service)
+
+            # Send component execution telemetry
             background_tasks.add_task(
                 telemetry_service.log_package_component,
                 ComponentPayload(
                     component_name=vertex_id.split("-")[0],
+                    component_id=vertex_id,
                     component_seconds=int(time.perf_counter() - start_time),
                     component_success=valid,
                     component_error_message=error_message,
+                    component_run_id=graph.run_id,
                 ),
             )
         except Exception as exc:
+            if "vertex" in locals():
+                # Extract and send component input telemetry even on error (separate payload)
+                _log_component_input_telemetry(vertex, vertex_id, graph.run_id, background_tasks, telemetry_service)
+
+            # Send component execution telemetry (error case)
             background_tasks.add_task(
                 telemetry_service.log_package_component,
                 ComponentPayload(
                     component_name=vertex_id.split("-")[0],
+                    component_id=vertex_id,
                     component_seconds=int(time.perf_counter() - start_time),
                     component_success=False,
                     component_error_message=str(exc),
+                    component_run_id=graph.run_id,
                 ),
             )
             await logger.aexception("Error building Component")
@@ -401,6 +472,7 @@ async def generate_flow_events(
         vertex_id: str,
         graph: Graph,
         event_manager: EventManager,
+        vertex_timedeltas: list[float],
     ) -> None:
         """Build vertices and handle their events.
 
@@ -408,12 +480,17 @@ async def generate_flow_events(
             vertex_id: The ID of the vertex to build
             graph: The graph instance
             event_manager: Manager for handling events
+            vertex_timedeltas: Shared list to accumulate each vertex's timedelta
         """
         try:
             vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
         except asyncio.CancelledError as exc:
             await logger.ainfo(f"Build cancelled: {exc}")
             raise
+
+        # Accumulate the vertex timedelta
+        if vertex_build_response.data.timedelta is not None:
+            vertex_timedeltas.append(vertex_build_response.data.timedelta)
 
         # send built event or error event
         try:
@@ -433,6 +510,7 @@ async def generate_flow_events(
                         next_vertex_id,
                         graph,
                         event_manager,
+                        vertex_timedeltas,
                     )
                 )
                 tasks.append(task)
@@ -450,9 +528,11 @@ async def generate_flow_events(
 
     event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
 
+    vertex_timedeltas: list[float] = []
+    event_manager.on_build_start(data={})
     tasks = []
     for vertex_id in ids:
-        task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager))
+        task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager, vertex_timedeltas))
         tasks.append(task)
     try:
         await asyncio.gather(*tasks)
@@ -472,7 +552,8 @@ async def generate_flow_events(
         event_manager.on_error(data=error_message.data)
         raise
 
-    event_manager.on_end(data={})
+    build_duration = sum(vertex_timedeltas)
+    event_manager.on_end(data={"build_duration": build_duration})
     await graph.end_all_traces()
     await event_manager.queue.put((None, None, time.time()))
 

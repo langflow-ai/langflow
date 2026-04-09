@@ -70,7 +70,7 @@ class TestArXivComponent(ComponentTestBaseWithClient):
 
         # Assert
         assert "http://export.arxiv.org/api/query?" in url
-        assert "search_query=all%3Aquantum%20computing" in url
+        assert "search_query=quantum%20computing" in url  # Note: no more "all" needed as prefix
         assert "max_results=10" in url
 
     def test_parse_atom_response(self, component_class, default_kwargs):

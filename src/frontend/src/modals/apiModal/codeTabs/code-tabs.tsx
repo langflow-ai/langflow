@@ -90,8 +90,7 @@ export default function APITabsComponent() {
   );
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isAutoLogin = useIsAutoLogin();
-  const shouldDisplayApiKey = isAuthenticated && !isAutoLogin;
+  const shouldDisplayApiKey = isAuthenticated;
 
   const tabsList = [
     {

@@ -68,12 +68,20 @@ class NoopSession:
             def one_or_none(self):
                 return None
 
+            def __iter__(self):
+                return iter([])
+
         return _NoopResult()
 
     @property
     def no_autoflush(self):
         """Context manager that disables autoflush (no-op implementation)."""
         return self
+
+    @property
+    def is_active(self):
+        """Check if session is active (always True for NoopSession)."""
+        return True
 
     def __enter__(self):
         return self

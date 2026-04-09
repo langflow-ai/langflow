@@ -43,7 +43,7 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
-          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+          - '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
         default: ubuntu-latest
 env:
   POETRY_VERSION: "1.8.2"
@@ -54,7 +54,6 @@ env:
 
 jobs:
   build:
-
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
@@ -63,12 +62,12 @@ jobs:
         splitCount: [5]
         group: [1, 2, 3, 4, 5]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -94,7 +93,7 @@ jobs:
       - name: Run unit tests
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 12
+          timeout_minutes: 15
           max_attempts: 2
           command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-config=src/backend/.coveragerc --cov-report=xml --cov-report=html"
 
@@ -110,7 +109,7 @@ jobs:
           directory: ./
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: matrix.python-version == '3.10'
         with:
           name: backend-coverage-report-group-${{ matrix.group }}
@@ -119,7 +118,6 @@ jobs:
             htmlcov/
           retention-days: 30
 
-
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
@@ -127,7 +125,7 @@ jobs:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
@@ -145,7 +143,6 @@ jobs:
           PYLEAK_LOG_LEVEL: debug # enable pyleak logging
           DO_NOT_TRACK: true # disable telemetry reporting
 
-
   lfx-tests:
     name: LFX Tests - Python ${{ matrix.python-version }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
@@ -153,7 +150,7 @@ jobs:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
@@ -164,9 +161,30 @@ jobs:
           python-version: ${{ matrix.python-version }}
           prune-cache: false
       - name: Run lfx tests
-        run: make lfx_tests
+        run: uv run make lfx_tests
         env:
           DO_NOT_TRACK: true # disable telemetry reporting
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: matrix.python-version == '3.10'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./src/lfx/coverage.xml
+          flags: lfx
+          name: lfx-coverage
+          fail_ci_if_error: false
+          directory: ./src/lfx/
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v6
+        if: matrix.python-version == '3.10'
+        with:
+          name: lfx-coverage-report
+          path: |
+            src/lfx/coverage.xml
+            src/lfx/htmlcov/
+          retention-days: 30
 
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}
@@ -176,7 +194,7 @@ jobs:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
@@ -235,4 +253,3 @@ jobs:
           else
             echo "Server terminated successfully"
           fi
-

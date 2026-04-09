@@ -8,8 +8,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-const _ERROR_DISPLAY_INTERVAL = 10000;
-const _ERROR_DISPLAY_COUNT = 1;
+const MAX_ERROR_DISPLAY_COUNT = 1;
 
 interface PollingItem {
   interval: NodeJS.Timeout;
@@ -119,15 +118,38 @@ export const useGetBuildsMutation: useMutationFunctionType<
       const res = await api.get<any>(`${getURL("BUILDS")}`, config);
 
       if (currentFlow) {
-        const flowPool = res?.data?.vertex_builds;
-        if (Object.keys(flowPool).length > 0) {
-          setFlowPool(flowPool);
+        const newFlowPool = res?.data?.vertex_builds;
+        if (Object.keys(newFlowPool).length > 0) {
+          // Merge with existing flow pool to preserve duration from SSE events
+          const existingFlowPool = useFlowStore.getState().flowPool;
+          const mergedFlowPool = { ...newFlowPool };
+
+          // For each vertex, preserve duration from SSE if polling data doesn't have it
+          Object.keys(mergedFlowPool).forEach((key) => {
+            const existingEntries = existingFlowPool[key];
+            const newEntries = mergedFlowPool[key];
+
+            if (existingEntries && newEntries && newEntries.length > 0) {
+              // Find duration from existing SSE data
+              const existingDuration =
+                existingEntries[existingEntries.length - 1]?.data?.duration;
+
+              // If we have duration from SSE but polling doesn't have it, add it
+              if (existingDuration && newEntries[newEntries.length - 1]?.data) {
+                const lastEntry = newEntries[newEntries.length - 1];
+                if (!lastEntry.data.duration) {
+                  lastEntry.data.duration = existingDuration;
+                }
+              }
+            }
+          });
+
+          setFlowPool(mergedFlowPool);
         }
 
-        // Check for errors only if we haven't displayed them yet
-        if (errorDisplayCountRef.current === 0) {
-          Object.keys(flowPool).forEach((key) => {
-            const nodeBuild = flowPool[key];
+        if (errorDisplayCountRef.current < MAX_ERROR_DISPLAY_COUNT) {
+          Object.keys(newFlowPool).forEach((key) => {
+            const nodeBuild = newFlowPool[key];
             if (nodeBuild.length > 0 && nodeBuild[0]?.valid === false) {
               const errorMessage = nodeBuild?.[0]?.params || "Unknown error";
               if (errorMessage) {
@@ -135,7 +157,7 @@ export const useGetBuildsMutation: useMutationFunctionType<
                   title: "Last build failed",
                   list: [errorMessage],
                 });
-                errorDisplayCountRef.current = 1;
+                errorDisplayCountRef.current = MAX_ERROR_DISPLAY_COUNT;
               }
             }
           });

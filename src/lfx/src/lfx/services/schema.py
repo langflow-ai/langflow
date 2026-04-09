@@ -1,9 +1,12 @@
 """Service schema definitions for lfx package."""
 
+from __future__ import annotations
+
 from enum import Enum
 
 
 class ServiceType(str, Enum):
+    AUTH_SERVICE = "auth_service"
     DATABASE_SERVICE = "database_service"
     STORAGE_SERVICE = "storage_service"
     SETTINGS_SERVICE = "settings_service"
@@ -19,3 +22,4 @@ class ServiceType(str, Enum):
     JOB_QUEUE_SERVICE = "job_queue_service"
     SHARED_COMPONENT_CACHE_SERVICE = "shared_component_cache_service"
     MCP_COMPOSER_SERVICE = "mcp_composer_service"
+    TRANSACTION_SERVICE = "transaction_service"

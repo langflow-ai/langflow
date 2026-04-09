@@ -11,6 +11,7 @@
  * software for all.
  */
 
+// biome-ignore-all lint/suspicious/noExplicitAny: TODO We need to fix this. added suppression for 1.7.1 merge
 import {
   type Connection,
   type Edge,
@@ -27,6 +28,7 @@ import {
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
 import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
+import { customDownloadNodeJson } from "@/customization/utils/custom-download-json";
 import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
 import useFlowStore from "@/stores/flowStore";
 import getFieldTitle from "../CustomNodes/utils/get-field-title";
@@ -61,6 +63,10 @@ import type {
   generateFlowType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
+import {
+  cleanMcpConfig,
+  type MCPServerValue,
+} from "./helpers/clean-mcp-config";
 import { getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 
@@ -75,6 +81,45 @@ export function checkWebhookInput(nodes: Node[]) {
 }
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
+  const brokenEdges: {
+    source: {
+      nodeDisplayName: string;
+      outputDisplayName?: string;
+    };
+    target: {
+      displayName: string;
+      field: string;
+    };
+  }[] = [];
+
+  function generateAlertObject(sourceNode, targetNode, edge) {
+    const targetHandleObject: targetHandleType = scapeJSONParse(
+      edge.targetHandle,
+    );
+    const sourceHandleObject: sourceHandleType = scapeJSONParse(
+      edge.sourceHandle,
+    );
+    const name = sourceHandleObject.name;
+    const output = sourceNode.data.node!.outputs?.find(
+      (output) => output.name === name,
+    );
+
+    return {
+      source: {
+        nodeDisplayName: sourceNode.data.node!.display_name,
+        outputDisplayName: output?.display_name,
+      },
+      target: {
+        displayName: targetNode.data.node!.display_name,
+        field:
+          targetNode.data.node!.template[targetHandleObject.fieldName]
+            ?.display_name ??
+          targetHandleObject.fieldName ??
+          targetHandleObject.name,
+      },
+    };
+  }
+
   let newEdges: EdgeType[] = cloneDeep(
     edges.map((edge) => ({ ...edge, selected: false, animated: false })),
   );
@@ -95,9 +140,22 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       let id: targetHandleType | sourceHandleType;
 
       const templateFieldType = targetNode.data.node!.template[field]?.type;
-      const inputTypes = targetNode.data.node!.template[field]?.input_types;
+      const rawInputTypes = targetNode.data.node!.template[field]?.input_types;
+      const modelType = targetNode.data.node!.template[field]?.model_type;
+      // For ModelInput types, default based on model_type:
+      // - "embedding" -> ["Embeddings"]
+      // - "language" (default) -> ["LanguageModel"]
+      const isModelType = templateFieldType === "model";
+      const defaultModelInputType =
+        modelType === "embedding" ? "Embeddings" : "LanguageModel";
+      const inputTypes = rawInputTypes?.length
+        ? rawInputTypes
+        : isModelType
+          ? [defaultModelInputType]
+          : rawInputTypes;
       const hasProxy = targetNode.data.node!.template[field]?.proxy;
       const isToolMode = targetNode.data.node!.template[field]?.tool_mode;
+      const isAdvanced = targetNode.data.node!.template[field]?.advanced;
 
       if (
         !field &&
@@ -105,10 +163,15 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         targetNode.type === "genericNode"
       ) {
         const dataType = targetNode.data.type;
+        const output = targetNode.data.node!.outputs?.find(
+          (output) => output.name === targetHandleObject.name,
+        );
+        const baseTypes = output?.types ?? [];
+        // Include loop_types for loop inputs (allows_loop=true)
         const outputTypes =
-          targetNode.data.node!.outputs?.find(
-            (output) => output.name === targetHandleObject.name,
-          )?.types ?? [];
+          output?.allows_loop && output?.loop_types
+            ? [output.selected ?? baseTypes[0], ...output.loop_types]
+            : baseTypes;
 
         id = {
           dataType: dataType ?? "",
@@ -127,11 +190,22 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
+      // Check if target is an loop input (allows_loop=true)
+      const targetOutput = targetNode.data.node!.outputs?.find(
+        (output) => output.name === targetHandleObject.name,
+      );
+      const isLoopInput = targetOutput?.allows_loop === true;
+
+      // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
+      const expectedTargetHandle = scapedJSONStringfy(id);
       if (
-        scapedJSONStringfy(id) !== targetHandle ||
-        (targetNode.data.node?.tool_mode && isToolMode)
+        (!handlesMatch(expectedTargetHandle, targetHandle) ||
+          (targetNode.data.node?.tool_mode && isToolMode) ||
+          isAdvanced) &&
+        !isLoopInput
       ) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
+        brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
       }
     }
     if (sourceHandle) {
@@ -163,18 +237,28 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             dataType: sourceNode.data.type,
           };
 
-          if (scapedJSONStringfy(id) !== sourceHandle) {
+          // Skip edge cleanup for outputs with allows_loop=true
+          const hasAllowsLoop = output?.allows_loop === true;
+          // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
+          const expectedSourceHandle = scapedJSONStringfy(id);
+          if (
+            !handlesMatch(expectedSourceHandle, sourceHandle) &&
+            !hasAllowsLoop
+          ) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
+            brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           }
         } else {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
+          brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
         }
       }
     }
 
     newEdges = filterHiddenFieldsEdges(edge, newEdges, targetNode);
   });
-  return newEdges;
+
+  return { edges: newEdges, brokenEdges };
 }
 
 export function clearHandlesFromAdvancedFields(
@@ -236,129 +320,6 @@ export function filterHiddenFieldsEdges(
   return newEdges;
 }
 
-export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
-  function generateAlertObject(sourceNode, targetNode, edge) {
-    const targetHandleObject: targetHandleType = scapeJSONParse(
-      edge.targetHandle,
-    );
-    const sourceHandleObject: sourceHandleType = scapeJSONParse(
-      edge.sourceHandle,
-    );
-    const name = sourceHandleObject.name;
-    const output = sourceNode.data.node!.outputs?.find(
-      (output) => output.name === name,
-    );
-
-    return {
-      source: {
-        nodeDisplayName: sourceNode.data.node!.display_name,
-        outputDisplayName: output?.display_name,
-      },
-      target: {
-        displayName: targetNode.data.node!.display_name,
-        field:
-          targetNode.data.node!.template[targetHandleObject.fieldName]
-            ?.display_name ??
-          targetHandleObject.fieldName ??
-          targetHandleObject.name,
-      },
-    };
-  }
-  let newEdges = cloneDeep(edges);
-  const BrokenEdges: {
-    source: {
-      nodeDisplayName: string;
-      outputDisplayName?: string;
-    };
-    target: {
-      displayName: string;
-      field: string;
-    };
-  }[] = [];
-  edges.forEach((edge) => {
-    // check if the source and target node still exists
-    const sourceNode = nodes.find((node) => node.id === edge.source);
-    const targetNode = nodes.find((node) => node.id === edge.target);
-    if (!sourceNode || !targetNode) {
-      newEdges = newEdges.filter((edg) => edg.id !== edge.id);
-      return;
-    }
-    // check if the source and target handle still exists
-    const sourceHandle = edge.sourceHandle; //right
-    const targetHandle = edge.targetHandle; //left
-    if (targetHandle) {
-      const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
-      const field = targetHandleObject.fieldName;
-      let id: sourceHandleType | targetHandleType;
-
-      const templateFieldType = targetNode.data.node!.template[field]?.type;
-      const inputTypes = targetNode.data.node!.template[field]?.input_types;
-      const hasProxy = targetNode.data.node!.template[field]?.proxy;
-
-      if (
-        !field &&
-        targetHandleObject.name &&
-        targetNode.type === "genericNode"
-      ) {
-        const dataType = targetNode.data.type;
-        const outputTypes =
-          targetNode.data.node!.outputs?.find(
-            (output) => output.name === targetHandleObject.name,
-          )?.types ?? [];
-
-        id = {
-          dataType: dataType ?? "",
-          name: targetHandleObject.name,
-          id: targetNode.data.id,
-          output_types: outputTypes,
-        };
-      } else {
-        id = {
-          type: templateFieldType,
-          fieldName: field,
-          id: targetNode.data.id,
-          inputTypes: inputTypes,
-        };
-        if (hasProxy) {
-          id.proxy = targetNode.data.node!.template[field]?.proxy;
-        }
-      }
-      if (scapedJSONStringfy(id) !== targetHandle) {
-        newEdges = newEdges.filter((e) => e.id !== edge.id);
-        BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
-      }
-    }
-    if (sourceHandle) {
-      const parsedSourceHandle = scapeJSONParse(sourceHandle);
-      const name = parsedSourceHandle.name;
-      if (sourceNode.type == "genericNode") {
-        const output = sourceNode.data.node!.outputs?.find(
-          (output) => output.name === name,
-        );
-        if (output) {
-          const outputTypes =
-            output!.types.length === 1 ? output!.types : [output!.selected!];
-
-          const id: sourceHandleType = {
-            id: sourceNode.data.id,
-            name: name,
-            output_types: outputTypes,
-            dataType: sourceNode.data.type,
-          };
-          if (scapedJSONStringfy(id) !== sourceHandle) {
-            newEdges = newEdges.filter((e) => e.id !== edge.id);
-            BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
-          }
-        } else {
-          newEdges = newEdges.filter((e) => e.id !== edge.id);
-          BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
-        }
-      }
-    }
-  });
-  return BrokenEdges;
-}
-
 export function unselectAllNodesEdges(nodes: Node[], edges: Edge[]) {
   nodes.forEach((node: Node) => {
     node.selected = false;
@@ -410,21 +371,47 @@ export function isValidConnection(
     return null;
   };
 
-  if (
-    targetHandleObject.inputTypes?.some(
-      (n) => n === sourceHandleObject.dataType,
+  // Check if target is an loop input (loop component)
+  const isLoopInput = !!targetHandleObject.output_types;
+
+  // For loop inputs, check if source types match any of the configured target output_types
+  // (which already includes original type + loop_types from the output configuration)
+  // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
+  const loopInputTypeCheck =
+    isLoopInput &&
+    (typesAreCompatible(
+      sourceHandleObject.output_types,
+      targetHandleObject.output_types || [],
     ) ||
+      typeIsCompatibleWith(
+        sourceHandleObject.dataType,
+        targetHandleObject.output_types || [],
+      ));
+  if (
+    typeIsCompatibleWith(
+      sourceHandleObject.dataType,
+      targetHandleObject.inputTypes || [],
+    ) ||
+    loopInputTypeCheck ||
     (targetHandleObject.output_types &&
-      (targetHandleObject.output_types?.some(
-        (n) => n === sourceHandleObject.dataType,
+      !loopInputTypeCheck &&
+      (typeIsCompatibleWith(
+        sourceHandleObject.dataType,
+        targetHandleObject.output_types || [],
       ) ||
-        sourceHandleObject.output_types.some((t) =>
-          targetHandleObject.output_types?.some((n) => n === t),
+        typesAreCompatible(
+          sourceHandleObject.output_types,
+          targetHandleObject.output_types || [],
         ))) ||
-    sourceHandleObject.output_types.some(
-      (t) =>
-        targetHandleObject.inputTypes?.some((n) => n === t) ||
-        t === targetHandleObject.type,
+    typesAreCompatible(
+      sourceHandleObject.output_types,
+      targetHandleObject.inputTypes || [],
+    ) ||
+    typeIsCompatibleWith(sourceHandleObject.dataType, [
+      targetHandleObject.type,
+    ]) ||
+    sourceHandleObject.output_types.some((t) =>
+      typeIsCompatibleWith(t, [targetHandleObject.type]),
     )
   ) {
     const targetNode = nodesArray.find((node) => node.id === target!);
@@ -470,17 +457,45 @@ export function isValidConnection(
   return false;
 }
 
+export function looksLikeVariableName(value: unknown): boolean {
+  if (typeof value !== "string" || !value.trim()) return false;
+  return /^[A-Z][A-Z0-9_]*$/i.test(value.trim());
+}
+
 export function removeApiKeys(flow: FlowType): FlowType {
-  const cleanFLow = cloneDeep(flow);
-  cleanFLow.data!.nodes.forEach((node) => {
+  const cleanFlow = cloneDeep(flow);
+  cleanFlow.data!.nodes.forEach((node) => {
     if (node.type !== "genericNode") return;
-    for (const key in node.data.node!.template) {
-      if (node.data.node!.template[key].password) {
-        node.data.node!.template[key].value = "";
+    const template = node.data.node!.template;
+    for (const key in template) {
+      const field = template[key];
+
+      if (field.password) {
+        // Preserve env/global variable names for api_key so imported flows
+        // can still resolve credentials, but strip any raw secrets.
+        if (
+          key === "api_key" &&
+          ((typeof field.value === "string" &&
+            looksLikeVariableName(field.value)) ||
+            field.load_from_db === true)
+        ) {
+          continue;
+        }
+        field.value = "";
+        field.load_from_db = false;
+      }
+
+      // Handle MCP server configurations
+      if (
+        key === "mcp_server" &&
+        field.value &&
+        typeof field.value === "object"
+      ) {
+        cleanMcpConfig(field.value as MCPServerValue);
       }
     }
   });
-  return cleanFLow;
+  return cleanFlow;
 }
 
 export function updateTemplate(
@@ -750,6 +765,21 @@ function hasLoop(
         const sourceHandleObject = scapeJSONParse(
           firstEdge?.sourceHandle ?? edge?.sourceHandle ?? "",
         );
+        const targetHandleObject: targetHandleType = scapeJSONParse(
+          e.targetHandle!,
+        );
+
+        // For loop inputs, compare by name and id instead of full stringified comparison
+        // This handles the case where loop inputs have additional loop_types in output_types
+        if (
+          targetHandleObject.output_types &&
+          sourceHandleObject.name === targetHandleObject.name &&
+          sourceHandleObject.id === targetHandleObject.id
+        ) {
+          return true;
+        }
+
+        // Fallback to original comparison for non-loop inputs
         const sourceHandleParsed = scapedJSONStringfy(sourceHandleObject);
         if (sourceHandleParsed === e.targetHandle) {
           return true;
@@ -1074,6 +1104,243 @@ export function scapeJSONParse(json: string): any {
   return JSON.parse(parsed);
 }
 
+/**
+ * Map of old types to new types for migration compatibility.
+ * Allows edges saved with old types (Data/DataFrame) to work with new types (JSON/Table).
+ */
+const TYPE_MIGRATIONS: Record<string, string> = {
+  Data: "JSON",
+  DataFrame: "Table",
+};
+
+/**
+ * Check if a single type is compatible with any type in a list, considering migrations.
+ * @param sourceType The type from the source output
+ * @param targetTypes The list of acceptable types from the target input
+ * @returns true if sourceType matches any targetType directly or via migration
+ */
+export function typeIsCompatibleWith(
+  sourceType: string,
+  targetTypes: string[],
+): boolean {
+  const migratedSource = TYPE_MIGRATIONS[sourceType] || sourceType;
+  return targetTypes.some((targetType) => {
+    const migratedTarget = TYPE_MIGRATIONS[targetType] || targetType;
+    return (
+      sourceType === targetType ||
+      migratedSource === targetType ||
+      sourceType === migratedTarget ||
+      migratedSource === migratedTarget
+    );
+  });
+}
+
+/**
+ * Check if any type from sourceTypes is compatible with any type in targetTypes.
+ * @param sourceTypes The types from the source output
+ * @param targetTypes The list of acceptable types from the target input
+ * @returns true if any sourceType matches any targetType directly or via migration
+ */
+export function typesAreCompatible(
+  sourceTypes: string[],
+  targetTypes: string[],
+): boolean {
+  return sourceTypes.some((sourceType) =>
+    typeIsCompatibleWith(sourceType, targetTypes),
+  );
+}
+
+/**
+ * Check if two handles match, considering type migrations (Data→JSON, DataFrame→Table).
+ * This allows edges saved with old types to be compatible with new types.
+ */
+export function handlesMatch(
+  expectedHandle: string,
+  actualHandle: string,
+): boolean {
+  if (expectedHandle === actualHandle) {
+    return true;
+  }
+
+  try {
+    // Parse both handles to compare their components
+    const expected = scapeJSONParse(expectedHandle);
+    const actual = scapeJSONParse(actualHandle);
+
+    // Check all properties except output_types/inputTypes
+    if (expected.id !== actual.id || expected.name !== actual.name) {
+      return false;
+    }
+
+    // For source handles (have dataType)
+    if (
+      expected.dataType !== undefined &&
+      expected.dataType !== actual.dataType
+    ) {
+      return false;
+    }
+
+    // For target handles (have fieldName)
+    if (
+      expected.fieldName !== undefined &&
+      expected.fieldName !== actual.fieldName
+    ) {
+      return false;
+    }
+    if (expected.type !== undefined && expected.type !== actual.type) {
+      return false;
+    }
+
+    // Compare output_types with migration tolerance
+    const expectedTypes = expected.output_types || expected.inputTypes || [];
+    const actualTypes = actual.output_types || actual.inputTypes || [];
+
+    if (expectedTypes.length !== actualTypes.length) {
+      // Allow mismatch if one is migrated version of other
+      return typesMatchWithMigration(expectedTypes, actualTypes);
+    }
+
+    // Check if types match exactly or via migration
+    return typesMatchWithMigration(expectedTypes, actualTypes);
+  } catch {
+    // If parsing fails, fall back to direct comparison
+    return false;
+  }
+}
+
+/**
+ * Check if two type arrays match, considering type migrations.
+ */
+function typesMatchWithMigration(
+  expectedTypes: string[],
+  actualTypes: string[],
+): boolean {
+  if (expectedTypes.length === 0 && actualTypes.length === 0) {
+    return true;
+  }
+
+  // Check each expected type against actual types
+  for (const expectedType of expectedTypes) {
+    const migratedExpected = TYPE_MIGRATIONS[expectedType] || expectedType;
+    const found = actualTypes.some((actualType) => {
+      const migratedActual = TYPE_MIGRATIONS[actualType] || actualType;
+      return (
+        expectedType === actualType ||
+        migratedExpected === actualType ||
+        expectedType === migratedActual ||
+        migratedExpected === migratedActual
+      );
+    });
+    if (found) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Migrate TypeConverter nodes to sync outputs with output_type value.
+ * This fixes the bug where loading a template shows "Message Output" even when output_type is "JSON".
+ */
+export function migrateTypeConverterNodes(
+  nodes: AllNodeType[],
+  edges?: EdgeType[],
+): void {
+  // Track which nodes were migrated and their new output types
+  const migratedNodes = new Map<string, string[]>();
+
+  nodes.forEach((node) => {
+    // Only migrate TypeConverter components
+    if (node.data?.node?.display_name !== "Type Convert") {
+      return;
+    }
+
+    // Type guard: ensure this is a NodeDataType (not NoteDataType)
+    if (!("node" in node.data)) {
+      return;
+    }
+
+    const outputType = node.data.node?.template?.output_type?.value;
+    const currentOutputs = node.data.node?.outputs || [];
+
+    // Determine correct output based on output_type
+    let correctOutput: OutputFieldType;
+    let selectedOutput: string;
+    let outputTypes: string[];
+
+    if (outputType === "JSON" || outputType === "Data") {
+      outputTypes = ["JSON"];
+      correctOutput = {
+        types: outputTypes,
+        selected: "JSON",
+        name: "data_output",
+        display_name: "JSON Output",
+        method: "convert_to_data",
+      };
+      selectedOutput = "data_output";
+    } else if (outputType === "Table" || outputType === "DataFrame") {
+      outputTypes = ["Table"];
+      correctOutput = {
+        types: outputTypes,
+        selected: "Table",
+        name: "dataframe_output",
+        display_name: "Table Output",
+        method: "convert_to_dataframe",
+      };
+      selectedOutput = "dataframe_output";
+    } else {
+      // Default to Message
+      outputTypes = ["Message"];
+      correctOutput = {
+        types: outputTypes,
+        selected: "Message",
+        name: "message_output",
+        display_name: "Message Output",
+        method: "convert_to_message",
+      };
+      selectedOutput = "message_output";
+    }
+
+    // Check if migration is needed
+    const needsMigration =
+      currentOutputs.length !== 1 ||
+      currentOutputs[0]?.name !== correctOutput.name;
+
+    if (needsMigration) {
+      // Update outputs
+      node.data.node.outputs = [correctOutput];
+      (node.data as any).selected_output = selectedOutput;
+
+      // Track this migration for edge updates
+      migratedNodes.set(node.id, outputTypes);
+    }
+  });
+
+  // Update edges that connect to migrated nodes
+  if (edges && migratedNodes.size > 0) {
+    edges.forEach((edge) => {
+      // Check if source node was migrated
+      const sourceOutputTypes = migratedNodes.get(edge.source);
+      if (sourceOutputTypes && edge.sourceHandle) {
+        try {
+          const sourceHandle = scapeJSONParse(edge.sourceHandle);
+          // Update output_types in the handle
+          sourceHandle.output_types = sourceOutputTypes;
+          edge.sourceHandle = scapedJSONStringfy(sourceHandle);
+
+          // Also update in edge.data if it exists
+          if (edge.data?.sourceHandle) {
+            edge.data.sourceHandle.output_types = sourceOutputTypes;
+          }
+        } catch {
+          // Handle parse error silently
+        }
+      }
+    });
+  }
+}
+
 // this function receives an array of edges and return true if any of the handles are not a json string
 export function checkOldEdgesHandles(edges: Edge[]): boolean {
   return edges.some(
@@ -1246,8 +1513,8 @@ export function filterFlow(
 
 export function findLastNode({ nodes, edges }: findLastNodeType) {
   /*
-		this function receives a flow and return the last node
-	*/
+    this function receives a flow and return the last node
+  */
   const lastNode = nodes.find((n) => !edges.some((e) => e.source === n.id));
   return lastNode;
 }
@@ -1341,7 +1608,7 @@ export function validateSelection(
 }
 function updateGroupNodeTemplate(template: APITemplateType) {
   /*this function receives a template, iterates for it's items
-	updating the visibility of all basic types setting it to advanced true*/
+  updating the visibility of all basic types setting it to advanced true*/
   Object.keys(template).forEach((key) => {
     const type = template[key].type;
     const input_types = template[key].input_types;
@@ -1367,10 +1634,10 @@ export function mergeNodeTemplates({
   edges: Edge[];
 }): APITemplateType {
   /* this function receives a flow and iterate throw each node
-		and merge the templates with only the visible fields
-		if there are two keys with the same name in the flow, we will update the display name of each one
-		to show from which node it came from
-	*/
+    and merge the templates with only the visible fields
+    if there are two keys with the same name in the flow, we will update the display name of each one
+    to show from which node it came from
+  */
   const template: APITemplateType = {};
   nodes.forEach((node) => {
     const nodeTemplate = cloneDeep(node.data.node!.template);
@@ -1407,8 +1674,8 @@ export function isTargetHandleConnected(
   nodeId: string,
 ) {
   /*
-		this function receives a flow and a handleId and check if there is a connection with this handle
-	*/
+    this function receives a flow and a handleId and check if there is a connection with this handle
+  */
   if (!field) return true;
   if (field.proxy) {
     if (
@@ -1447,8 +1714,8 @@ export function isTargetHandleConnected(
 
 export function generateNodeTemplate(Flow: FlowType) {
   /*
-		this function receives a flow and generate a template for the group node
-	*/
+    this function receives a flow and generate a template for the group node
+  */
   const template = mergeNodeTemplates({
     nodes: Flow.data!.nodes,
     edges: Flow.data!.edges,
@@ -1750,14 +2017,8 @@ export function createFlowComponent(
   return flowNode;
 }
 
-export function downloadNode(NodeFLow: FlowType) {
-  const element = document.createElement("a");
-  const file = new Blob([JSON.stringify(NodeFLow)], {
-    type: "application/json",
-  });
-  element.href = URL.createObjectURL(file);
-  element.download = `${NodeFLow?.name ?? "node"}.json`;
-  element.click();
+export async function downloadNode(NodeFLow: FlowType) {
+  await customDownloadNodeJson(NodeFLow);
 }
 
 export function updateComponentNameAndType(
@@ -2032,6 +2293,7 @@ export const createNewFlow = (
     folder_id: folderId,
     endpoint_name: flow?.endpoint_name ?? undefined,
     tags: flow?.tags ?? [],
+    locked: flow?.locked,
     mcp_enabled: true,
   };
 };
@@ -2184,9 +2446,18 @@ export function checkHasToolMode(template: APITemplateType): boolean {
 
   const templateKeys = Object.keys(template);
 
-  // Check if the template has no additional fields
-  const hasNoAdditionalFields =
-    templateKeys.length === 2 &&
+  // System/metadata fields that are not actual input fields
+  const systemFields = ["code", "is_refresh", "tools_metadata"];
+
+  // Count only fields that are actual inputs (not internal, not system fields)
+  const inputFields = templateKeys.filter(
+    (key) => !key.startsWith("_") && !systemFields.includes(key),
+  );
+
+  // Check if the template has no input fields
+  // This means the component can support tool mode (it only has code and metadata)
+  const hasNoInputFields =
+    inputFields.length === 0 &&
     Boolean(template.code) &&
     Boolean(template._type);
 
@@ -2194,15 +2465,12 @@ export function checkHasToolMode(template: APITemplateType): boolean {
   const hasToolModeFields = Object.values(template).some((field) =>
     Boolean(field.tool_mode),
   );
-  // Check if the component is already in tool mode
-  // This occurs when the template has exactly 3 fields: _type, code, and tools_metadata
-  const isInToolMode =
-    templateKeys.length === 3 &&
-    Boolean(template.code) &&
-    Boolean(template._type) &&
-    Boolean(template.tools_metadata);
 
-  return hasNoAdditionalFields || hasToolModeFields || isInToolMode;
+  // Check if the component is already in tool mode
+  // This occurs when the template has tools_metadata field
+  const isInToolMode = Boolean(template.tools_metadata);
+
+  return hasNoInputFields || hasToolModeFields || isInToolMode;
 }
 
 export function buildPositionDictionary(nodes: AllNodeType[]) {
