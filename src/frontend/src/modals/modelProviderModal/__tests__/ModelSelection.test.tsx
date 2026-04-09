@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ModelSelection from "../components/ModelSelection";
 import { Model } from "../components/types";
@@ -148,21 +148,27 @@ describe("ModelSelection", () => {
       expect(onModelToggle).toHaveBeenCalledWith("gpt-4", expect.any(Boolean));
     });
 
-    it("should not call onModelToggle when a toggle is hovered", () => {
+    it("should not bubble toggle clicks to parent containers", async () => {
       const onModelToggle = jest.fn();
+      const onParentClick = jest.fn();
+      const user = userEvent.setup();
 
       render(
-        <ModelSelection {...defaultProps} onModelToggle={onModelToggle} />,
+        <div onClick={onParentClick}>
+          <ModelSelection {...defaultProps} onModelToggle={onModelToggle} />
+        </div>,
       );
 
       const toggle = screen.getByTestId(
         "embeddings-toggle-text-embedding-ada-002",
       );
+      await user.click(toggle);
 
-      fireEvent.mouseEnter(toggle);
-      fireEvent.mouseMove(toggle);
-
-      expect(onModelToggle).not.toHaveBeenCalled();
+      expect(onModelToggle).toHaveBeenCalledWith(
+        "text-embedding-ada-002",
+        expect.any(Boolean),
+      );
+      expect(onParentClick).not.toHaveBeenCalled();
     });
   });
 

@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Switch } from "@/components/ui/switch";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
@@ -19,46 +20,6 @@ interface ModelRowProps {
   testIdPrefix: string;
   isEnabledModel?: boolean;
 }
-
-interface ModelToggleSwitchProps {
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-  testId: string;
-  modelName: string;
-}
-
-const ModelToggleSwitch = ({
-  checked,
-  onCheckedChange,
-  testId,
-  modelName,
-}: ModelToggleSwitchProps) => (
-  <button
-    type="button"
-    role="switch"
-    aria-checked={checked}
-    aria-label={`${checked ? "Disable" : "Enable"} ${modelName}`}
-    data-testid={testId}
-    className={cn(
-      "inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent px-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
-      checked ? "bg-primary" : "bg-input",
-    )}
-    onPointerDown={(event) => {
-      event.stopPropagation();
-    }}
-    onClick={(event) => {
-      event.stopPropagation();
-      onCheckedChange(!checked);
-    }}
-  >
-    <span
-      className={cn(
-        "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
-        checked ? "translate-x-5" : "translate-x-0",
-      )}
-    />
-  </button>
-);
 
 /** Single row displaying a model with its toggle switch */
 const ModelRow = ({
@@ -81,12 +42,27 @@ const ModelRow = ({
       </span>
     </div>
     {isEnabledModel && (
-      <ModelToggleSwitch
-        checked={enabled}
-        onCheckedChange={(checked) => onToggle(model.model_name, checked)}
-        testId={`${testIdPrefix}-toggle-${model.model_name}`}
-        modelName={model.model_name}
-      />
+      <div
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+        }}
+      >
+        <Switch
+          checked={enabled}
+          onCheckedChange={(checked) => onToggle(model.model_name, checked)}
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+          data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
+          aria-label={`${enabled ? "Disable" : "Enable"} ${model.model_name}`}
+        />
+      </div>
     )}
   </div>
 );
