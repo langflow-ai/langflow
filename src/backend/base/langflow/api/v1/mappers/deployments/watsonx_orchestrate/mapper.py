@@ -223,7 +223,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         *,
         parsed_provider_data: WatsonxApiProviderAccountCreate,
     ) -> str:
-        tenant_id = str(parsed_provider_data.tenant_id or "").strip()
+        tenant_id = parsed_provider_data.tenant_id
         if tenant_id:
             return tenant_id
         url_tenant_id = extract_tenant_from_url(
