@@ -3304,7 +3304,7 @@
   "components.Memory.inputs.session_id.display_name": "Session ID",
   "components.Memory.inputs.template.display_name": "Template",
   "components.Memory.outputs.dataframe.display_name": "Table",
-  "components.Memory.outputs.messages_text.display_name": "Message",
+  "components.Memory.outputs.messages_text.display_name": "Messages",
   "components.MergeDataComponent.description": "Combines data using different operations",
   "components.MergeDataComponent.display_name": "Combine Data",
   "components.MergeDataComponent.inputs.data_inputs.display_name": "Data Inputs",
