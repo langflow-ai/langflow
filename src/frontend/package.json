@@ -12,7 +12,8 @@
     "test-exclude": "^7.0.0",
     "picomatch": ">=4.0.4",
     "playwright": "^1.59.1",
-    "brace-expansion": ">=5.0.5"
+    "brace-expansion": ">=5.0.5",
+    "handlebars": ">=4.7.9"
   },
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
