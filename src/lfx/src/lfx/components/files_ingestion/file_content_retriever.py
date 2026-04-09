@@ -33,12 +33,11 @@ class FileContentRetrieverComponent(Component):
         self._cached_text_map: dict[str, str] | None = None
         self._cached_dataframe_map: dict[str, DataFrame] | None = None
 
-    def __deepcopy__(self, memo: dict) -> FileContentRetrieverComponent:
+    def __deepcopy__(self, memo: dict):
         """Override deepcopy to preserve cached maps across tool invocations."""
         from copy import deepcopy as _deepcopy
-        from typing import cast
 
-        new_component = cast("FileContentRetrieverComponent", super().__deepcopy__(memo))
+        new_component = super().__deepcopy__(memo)
         # Copy the cached maps so they don't need to be rebuilt, but avoid sharing mutable state
         new_component._cached_text_map = (  # noqa: SLF001
             _deepcopy(self._cached_text_map, memo) if self._cached_text_map else None
