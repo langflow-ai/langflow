@@ -34,19 +34,22 @@ export default function DeploymentDetailsModal({
 
   const { data: details, isFetching: isFetchingDetails } = useGetDeployment(
     { deploymentId },
-    { enabled: open && !!deploymentId },
+    { enabled: open && !!deploymentId, refetchOnWindowFocus: false },
   );
 
   const { data: attachmentsData, isFetching: isFetchingAttachments } =
     useGetDeploymentAttachments(
       { deploymentId },
-      { enabled: open && !!deploymentId },
+      { enabled: open && !!deploymentId, refetchOnWindowFocus: false },
     );
 
   const providerId = deployment?.provider_account_id ?? "";
 
   const { data: configsData, isFetching: isFetchingConfigs } =
-    useGetDeploymentConfigs({ providerId }, { enabled: open && !!providerId });
+    useGetDeploymentConfigs(
+      { providerId },
+      { enabled: open && !!providerId, refetchOnWindowFocus: false },
+    );
 
   const isLoading =
     isFetchingDetails || isFetchingAttachments || isFetchingConfigs;
