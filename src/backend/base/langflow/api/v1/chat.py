@@ -583,6 +583,7 @@ async def build_public_tmp(
     background_tasks: LimitVertexBuildBackgroundTasks,
     flow_id: uuid.UUID,
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
+    data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
     files: list[str] | None = None,
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
@@ -597,16 +598,10 @@ async def build_public_tmp(
     This endpoint is specifically for public flows that don't require authentication.
     It uses a client_id cookie to create a deterministic flow ID for tracking purposes.
 
-    Security Note:
-    - The 'data' parameter is NOT accepted to prevent flow definition tampering
-    - Public flows must execute the stored flow definition only
-    - The flow definition is always loaded from the database
-
     The endpoint:
     1. Verifies the requested flow is marked as public in the database
     2. Creates a deterministic UUID based on client_id and flow_id
     3. Uses the flow owner's permissions to build the flow
-    4. Always loads the flow definition from the database
 
     Requirements:
     - The flow must be marked as PUBLIC in the database
@@ -616,6 +611,7 @@ async def build_public_tmp(
         flow_id: UUID of the public flow to build
         background_tasks: Background tasks manager
         inputs: Optional input values for the flow
+        data: Optional flow data
         files: Optional files to include
         stop_component_id: Optional ID of component to stop at
         start_component_id: Optional ID of component to start from
@@ -633,13 +629,14 @@ async def build_public_tmp(
         client_id = request.cookies.get("client_id")
         owner_user, new_flow_id = await verify_public_flow_and_get_user(flow_id=flow_id, client_id=client_id)
 
-        # Start the flow build using the new flow ID
-        # data is always None for public flows - they load from database only
+        # flow_id=new_flow_id for tracking/sessions/messages (virtual, per-user isolation).
+        # source_flow_id=flow_id to load the actual flow data from the database.
         job_id = await start_flow_build(
             flow_id=new_flow_id,
+            source_flow_id=flow_id,
             background_tasks=background_tasks,
             inputs=inputs,
-            data=None,  # Always None - public flows load from database only
+            data=data,
             files=files,
             stop_component_id=stop_component_id,
             start_component_id=start_component_id,
@@ -660,3 +657,54 @@ async def build_public_tmp(
         queue_service=queue_service,
         event_delivery=event_delivery,
     )
+
+
+@router.get("/build_public_tmp/{job_id}/events")
+async def get_build_events_public(
+    job_id: str,
+    queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+    *,
+    event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
+):
+    """Get events for a public flow build job.
+
+    This endpoint does not require authentication, matching the public build endpoint.
+    It is used by the shareable playground to consume build events.
+    """
+    return await get_flow_events_response(
+        job_id=job_id,
+        queue_service=queue_service,
+        event_delivery=event_delivery,
+    )
+
+
+@router.post(
+    "/build_public_tmp/{job_id}/cancel",
+    response_model=CancelFlowResponse,
+)
+async def cancel_build_public(
+    job_id: str,
+    queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+):
+    """Cancel a public flow build job.
+
+    This endpoint does not require authentication, matching the public build endpoint.
+    It is used by the shareable playground to cancel builds.
+    """
+    try:
+        cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
+
+        if cancellation_success:
+            return CancelFlowResponse(success=True, message="Flow build cancelled successfully")
+        return CancelFlowResponse(success=False, message="Failed to cancel flow build")
+    except asyncio.CancelledError:
+        await logger.aerror(f"Failed to cancel public flow build for job_id {job_id} (CancelledError caught)")
+        return CancelFlowResponse(success=False, message="Failed to cancel flow build")
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except JobQueueNotFoundError as exc:
+        await logger.aerror(f"Public job not found: {job_id}. Error: {exc!s}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job not found: {exc!s}") from exc
+    except Exception as exc:
+        await logger.aexception(f"Error cancelling public flow build for job_id {job_id}: {exc}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc

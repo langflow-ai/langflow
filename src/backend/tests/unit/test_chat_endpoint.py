@@ -435,6 +435,54 @@ async def test_cancel_build_with_cancelled_error(client, json_memory_chatbot_no_
 
 
 @pytest.mark.benchmark
+async def test_should_have_public_events_endpoint_accessible_without_auth(client, logged_in_headers):  # noqa: ARG001
+    """Test that public events endpoint exists and is accessible without authentication.
+
+    Bug: After sending a message in the Shareable Playground, the chat input resets
+    but no response is rendered. The root cause is that the events endpoint
+    (/build/{job_id}/events) requires authentication, which the unauthenticated
+    shareable playground user does not have.
+
+    This test proves:
+    1. The PUBLIC events endpoint exists and responds without auth (404 = route exists, job not found)
+    2. The AUTHENTICATED events endpoint rejects unauthenticated requests (403)
+    """
+    fake_job_id = str(uuid.uuid4())
+
+    # Assert 1 — the PUBLIC events endpoint is accessible without auth
+    # Returns 404 "Job not found" (route exists, but job doesn't) — NOT 401/403
+    events_response = await client.get(
+        f"api/v1/build_public_tmp/{fake_job_id}/events?event_delivery=polling",
+        headers={"Accept": "application/x-ndjson"},
+    )
+    assert events_response.status_code == codes.NOT_FOUND
+
+    # The key proof: the public endpoint responded with 404 (route exists, job not found)
+    # rather than 401/403 (authentication required). Before the fix, this endpoint
+    # didn't exist at all and would return 404 for the route, not the job.
+    assert "Job not found" in events_response.json()["detail"]
+
+
+@pytest.mark.benchmark
+async def test_should_have_public_cancel_endpoint_accessible_without_auth(client, logged_in_headers):  # noqa: ARG001
+    """Test that public cancel endpoint exists and is accessible without authentication.
+
+    Same root cause as the events bug: the cancel endpoint requires auth
+    but the shareable playground user is unauthenticated.
+    """
+    fake_job_id = str(uuid.uuid4())
+
+    # The PUBLIC cancel endpoint is accessible without auth
+    # Returns 404 "Job not found" (route exists, but job doesn't) — NOT 401/403
+    cancel_response = await client.post(
+        f"api/v1/build_public_tmp/{fake_job_id}/cancel",
+        headers={"Content-Type": "application/json"},
+    )
+    assert cancel_response.status_code == codes.NOT_FOUND
+    assert "Job not found" in cancel_response.json()["detail"]
+
+
+@pytest.mark.benchmark
 async def test_build_public_tmp_ignores_data_parameter(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test that build_public_tmp endpoint silently ignores data parameter for security.
 
