@@ -18,7 +18,7 @@ from uuid import UUID
 import httpx
 from anyio import ClosedResourceError
 from httpx import codes as httpx_codes
-from langchain_core.messages import ToolMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import StructuredTool
 from mcp import ClientSession
 from mcp.shared.exceptions import McpError
@@ -1916,9 +1916,12 @@ async def update_tools(
 
             # Create a custom StructuredTool that bypasses schema validation
             class MCPStructuredTool(StructuredTool):
-                def run(self, tool_input: str | dict, config=None, **kwargs):
-                    """Override the main run method to handle parameter conversion before validation."""
-                    # Parse tool_input if it's a string
+                _tool_call_id_key = "_lf_tool_call_id"
+
+                def _to_args_and_kwargs(
+                    self, tool_input: str | dict, tool_call_id: str | None
+                ) -> tuple[tuple, dict[str, Any]]:
+                    """Normalize MCP tool input before LangChain validates it."""
                     if isinstance(tool_input, str):
                         try:
                             parsed_input = json.loads(tool_input)
@@ -1927,56 +1930,27 @@ async def update_tools(
                     else:
                         parsed_input = tool_input or {}
 
-                    # Convert camelCase parameters to snake_case
                     converted_input = self._convert_parameters(parsed_input)
+                    tool_args, tool_kwargs = super()._to_args_and_kwargs(converted_input, tool_call_id)
+                    if tool_call_id is not None:
+                        tool_kwargs[self._tool_call_id_key] = tool_call_id
+                    return tool_args, tool_kwargs
 
-                    # Pop tool_call_id before calling super() so BaseTool does not
-                    # stringify the raw CallToolResult (base.py:1272).
-                    # Without tool_call_id, programmatic callers (mcp_component,
-                    # ToolInvoker) keep receiving the raw result unchanged.
-                    tool_call_id = kwargs.pop("tool_call_id", None)
-                    raw = super().run(converted_input, config=config, **kwargs)
+                def _run(self, *args: Any, config: RunnableConfig, run_manager=None, **kwargs: Any) -> tuple[Any, Any]:
+                    """Return converted content plus the raw MCP result as artifact."""
+                    tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                    raw = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
+                    content = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                    return content, raw
 
-                    if tool_call_id is None:
-                        # Direct / programmatic caller — preserve raw CallToolResult.
-                        return raw
-
-                    # Agent path: convert for multimodal LLMs and attach the raw
-                    # CallToolResult as artifact so downstream consumers can still
-                    # access structuredContent or content blocks if needed.
-                    converted = _convert_mcp_result(raw) if hasattr(raw, "content") else raw
-                    return ToolMessage(content=converted, tool_call_id=tool_call_id, artifact=raw)
-
-                async def arun(self, tool_input: str | dict, config=None, **kwargs):
-                    """Override the main arun method to handle parameter conversion before validation."""
-                    # Parse tool_input if it's a string
-                    if isinstance(tool_input, str):
-                        try:
-                            parsed_input = json.loads(tool_input)
-                        except json.JSONDecodeError:
-                            parsed_input = {"input": tool_input}
-                    else:
-                        parsed_input = tool_input or {}
-
-                    # Convert camelCase parameters to snake_case
-                    converted_input = self._convert_parameters(parsed_input)
-
-                    # Pop tool_call_id before calling super() so BaseTool does not
-                    # stringify the raw CallToolResult (base.py:1274).
-                    # Without tool_call_id, programmatic callers (mcp_component,
-                    # ToolInvoker) keep receiving the raw result unchanged.
-                    tool_call_id = kwargs.pop("tool_call_id", None)
-                    raw = await super().arun(converted_input, config=config, **kwargs)
-
-                    if tool_call_id is None:
-                        # Direct / programmatic caller — preserve raw CallToolResult.
-                        return raw
-
-                    # Agent path: convert for multimodal LLMs and attach the raw
-                    # CallToolResult as artifact so downstream consumers can still
-                    # access structuredContent or content blocks if needed.
-                    converted = _convert_mcp_result(raw) if hasattr(raw, "content") else raw
-                    return ToolMessage(content=converted, tool_call_id=tool_call_id, artifact=raw)
+                async def _arun(
+                    self, *args: Any, config: RunnableConfig, run_manager=None, **kwargs: Any
+                ) -> tuple[Any, Any]:
+                    """Return converted content plus the raw MCP result as artifact."""
+                    tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                    raw = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+                    content = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                    return content, raw
 
                 def _convert_parameters(self, input_dict):
                     if not input_dict or not isinstance(input_dict, dict):
@@ -2016,6 +1990,7 @@ async def update_tools(
                 coroutine=create_tool_coroutine(tool.name, args_schema, client),
                 tags=[tool.name],
                 metadata={"server_name": server_name, "output_schema": getattr(tool, "outputSchema", None)},
+                response_format="content_and_artifact",
             )
 
             tool_list.append(tool_obj)

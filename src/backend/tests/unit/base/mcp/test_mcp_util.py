@@ -1731,13 +1731,15 @@ class TestMCPStructuredTool:
 
         # Import the MCPStructuredTool class from the actual code
         # We need to recreate it here since it's defined inline in the update_tools function
+        from langchain_core.runnables import RunnableConfig
         from langchain_core.tools import StructuredTool
         from lfx.base.mcp.util import create_tool_coroutine, create_tool_func
 
         class MCPStructuredTool(StructuredTool):
-            def run(self, tool_input: str | dict, config=None, **kwargs):
-                """Override the main run method to handle parameter conversion before validation."""
-                # Parse tool_input if it's a string
+            _tool_call_id_key = "_lf_tool_call_id"
+
+            def _to_args_and_kwargs(self, tool_input: str | dict, tool_call_id: str | None):
+                """Normalize MCP tool input before LangChain validates it."""
                 if isinstance(tool_input, str):
                     try:
                         parsed_input = json.loads(tool_input)
@@ -1746,42 +1748,27 @@ class TestMCPStructuredTool:
                 else:
                     parsed_input = tool_input or {}
 
-                # Convert camelCase parameters to snake_case
                 converted_input = self._convert_parameters(parsed_input)
+                tool_args, tool_kwargs = super()._to_args_and_kwargs(converted_input, tool_call_id)
+                if tool_call_id is not None:
+                    tool_kwargs[self._tool_call_id_key] = tool_call_id
+                return tool_args, tool_kwargs
 
-                tool_call_id = kwargs.pop("tool_call_id", None)
-                raw = super().run(converted_input, config=config, **kwargs)
-                if tool_call_id is None:
-                    return raw
-                from langchain_core.messages import ToolMessage
+            def _run(self, *args, config: RunnableConfig, run_manager=None, **kwargs):
                 from lfx.base.mcp.util import _convert_mcp_result
 
-                converted = _convert_mcp_result(raw) if hasattr(raw, "content") else raw
-                return ToolMessage(content=converted, tool_call_id=tool_call_id, artifact=raw)
+                tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                raw = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
+                converted = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                return converted, raw
 
-            async def arun(self, tool_input: str | dict, config=None, **kwargs):
-                """Override the main arun method to handle parameter conversion before validation."""
-                # Parse tool_input if it's a string
-                if isinstance(tool_input, str):
-                    try:
-                        parsed_input = json.loads(tool_input)
-                    except json.JSONDecodeError:
-                        parsed_input = {"input": tool_input}
-                else:
-                    parsed_input = tool_input or {}
-
-                # Convert camelCase parameters to snake_case
-                converted_input = self._convert_parameters(parsed_input)
-
-                tool_call_id = kwargs.pop("tool_call_id", None)
-                raw = await super().arun(converted_input, config=config, **kwargs)
-                if tool_call_id is None:
-                    return raw
-                from langchain_core.messages import ToolMessage
+            async def _arun(self, *args, config: RunnableConfig, run_manager=None, **kwargs):
                 from lfx.base.mcp.util import _convert_mcp_result
 
-                converted = _convert_mcp_result(raw) if hasattr(raw, "content") else raw
-                return ToolMessage(content=converted, tool_call_id=tool_call_id, artifact=raw)
+                tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                raw = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+                converted = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                return converted, raw
 
             def _convert_parameters(self, input_dict):
                 if not input_dict or not isinstance(input_dict, dict):
@@ -1814,6 +1801,7 @@ class TestMCPStructuredTool:
             args_schema=test_schema,
             func=create_tool_func("test_tool", test_schema, mock_client),
             coroutine=create_tool_coroutine("test_tool", test_schema, mock_client),
+            response_format="content_and_artifact",
         )
 
     def test_convert_parameters_exact_match(self, mcp_tool):
@@ -2975,6 +2963,7 @@ class TestMCPStructuredToolToolCallId:
         result = await tool.arun({}, tool_call_id="call-abc-123")
 
         assert isinstance(result, ToolMessage)
+        assert result.name == "get_image"
         assert result.tool_call_id == "call-abc-123"
 
     @pytest.mark.asyncio
@@ -3007,3 +2996,46 @@ class TestMCPStructuredToolToolCallId:
         image_blocks = [b for b in content if b.get("type") == "image_url"]
         assert len(image_blocks) == 1
         assert image_blocks[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+    @pytest.mark.asyncio
+    async def test_tool_call_id_is_preserved_for_callbacks(self):
+        """Callbacks must still see tool_call_id and the formatted ToolMessage output."""
+        from langchain_core.callbacks.base import AsyncCallbackHandler
+        from langchain_core.messages import ToolMessage
+
+        class RecordingHandler(AsyncCallbackHandler):
+            def __init__(self):
+                self.tool_call_ids = []
+                self.outputs = []
+
+            async def on_tool_start(
+                self,
+                serialized,
+                input_str,
+                *,
+                run_id,
+                parent_run_id=None,
+                tags=None,
+                metadata=None,
+                inputs=None,
+                **kwargs,
+            ):
+                _ = (serialized, input_str, run_id, parent_run_id, tags, metadata, inputs)
+                self.tool_call_ids.append(kwargs.get("tool_call_id"))
+
+            async def on_tool_end(self, output, *, run_id, parent_run_id=None, **kwargs):
+                _ = (run_id, parent_run_id, kwargs)
+                self.outputs.append(output)
+
+        raw = self._make_raw_result(image_data="abc123==")
+        tool = await self._build_tool_via_update_tools(raw)
+        handler = RecordingHandler()
+
+        result = await tool.arun({}, tool_call_id="call-img-001", callbacks=[handler])
+
+        assert handler.tool_call_ids == ["call-img-001"]
+        assert len(handler.outputs) == 1
+        assert isinstance(handler.outputs[0], ToolMessage)
+        assert handler.outputs[0].name == "get_image"
+        assert handler.outputs[0].artifact is raw
+        assert result.name == "get_image"
