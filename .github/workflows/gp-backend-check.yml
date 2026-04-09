@@ -4,7 +4,6 @@ on:
   pull_request:
     paths:
       - "src/lfx/src/lfx/components/**"
-      - "src/backend/base/langflow/locales/en.json"
 
 jobs:
   auto-commit:
