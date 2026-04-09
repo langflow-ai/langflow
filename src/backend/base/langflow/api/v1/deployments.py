@@ -31,8 +31,6 @@ from langflow.api.v1.mappers.deployments.helpers import (
     handle_adapter_errors,
     list_deployment_flow_versions_synced,
     list_deployments_synced,
-    normalize_flow_ids_query,
-    normalize_flow_version_query_ids,
     page_offset,
     raise_http_for_value_error,
     resolve_adapter_from_deployment,
@@ -601,30 +599,29 @@ async def list_deployments(
         ),
     ] = None,
 ):
-    normalized_flow_version_ids = normalize_flow_version_query_ids(flow_version_ids)
-    normalized_flow_ids = normalize_flow_ids_query(flow_ids)
-    if normalized_flow_ids and normalized_flow_version_ids:
+    if flow_ids and flow_version_ids:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="flow_ids and flow_version_ids are mutually exclusive.",
         )
-    if load_from_provider and normalized_flow_version_ids:
+    if load_from_provider and flow_version_ids:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="flow_version_ids filtering is not supported when load_from_provider=true.",
         )
-    if load_from_provider and normalized_flow_ids:
+    if load_from_provider and flow_ids:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="flow_ids filtering is not supported when load_from_provider=true.",
         )
-    if normalized_flow_ids:
-        resolved = await flow_version_ids_for_flows(session, flow_ids=normalized_flow_ids, user_id=current_user.id)
+    effective_flow_version_ids = flow_version_ids
+    if flow_ids:
+        resolved = await flow_version_ids_for_flows(session, flow_ids=flow_ids, user_id=current_user.id)
         if not resolved:
             return DeploymentListResponse(
                 deployments=[], page=params.page, size=params.size, total=0, deployment_type=deployment_type
             )
-        normalized_flow_version_ids = resolved
+        effective_flow_version_ids = resolved
     provider_account = await get_owned_provider_account_or_404(
         provider_id=provider_id, user_id=current_user.id, db=session
     )
@@ -649,11 +646,11 @@ async def list_deployments(
             page=params.page,
             size=params.size,
             deployment_type=deployment_type,
-            flow_version_ids=normalized_flow_version_ids or None,
+            flow_version_ids=effective_flow_version_ids,
         )
     deployments = deployment_mapper.shape_deployment_list_items(
         rows_with_counts=rows_with_counts,
-        has_flow_filter=bool(normalized_flow_version_ids),
+        has_flow_filter=bool(effective_flow_version_ids),
         provider_key=provider_account.provider_key,
     )
     return DeploymentListResponse(
@@ -1348,7 +1345,6 @@ async def list_deployment_flow_versions(
         ),
     ] = None,
 ):
-    normalized_flow_ids = normalize_flow_ids_query(flow_ids)
     deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
@@ -1367,7 +1363,7 @@ async def list_deployment_flow_versions(
             db=session,
             page=page,
             size=size,
-            flow_ids=normalized_flow_ids or None,
+            flow_ids=flow_ids,
         )
     return deployment_mapper.shape_flow_version_list_result(
         rows=rows,

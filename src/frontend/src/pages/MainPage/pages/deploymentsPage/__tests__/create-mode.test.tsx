@@ -534,8 +534,10 @@ describe("Create mode — buildProviderAccountPayload", () => {
     expect(payload).toEqual({
       name: "My Account",
       provider_key: "watsonx-orchestrate",
-      url: "https://api.example.com",
-      provider_data: { api_key: "secret-key-123" }, // pragma: allowlist secret
+      provider_data: {
+        url: "https://api.example.com",
+        api_key: "secret-key-123", // pragma: allowlist secret
+      },
     });
   });
 
@@ -555,7 +557,7 @@ describe("Create mode — buildProviderAccountPayload", () => {
     expect(payload).toBeDefined();
     if (!payload) return;
     expect(payload.name).toBe("padded");
-    expect(payload.url).toBe("https://padded.com");
+    expect(payload.provider_data.url).toBe("https://padded.com");
     expect(payload.provider_data.api_key).toBe("padded-key"); // pragma: allowlist secret
   });
 });

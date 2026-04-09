@@ -179,6 +179,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             adapter_model=WatsonxApiConfigListProviderData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
+        config_item_data=PayloadSlot(
+            adapter_model=WatsonxApiConfigListItem,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
         snapshot_list_result=PayloadSlot(
             adapter_model=WatsonxApiSnapshotListProviderData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
@@ -1002,7 +1006,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             cancelled_at=adapter_provider_result.cancelled_at,
             last_error=adapter_provider_result.last_error,
         )
-        provider_result = api_provider_result.model_dump(exclude_none=True) or None
+        provider_result = api_provider_result.model_dump() or None
         return ExecutionCreateResponse(
             deployment_id=deployment_id,
             provider_data=provider_result,
@@ -1033,7 +1037,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             cancelled_at=adapter_provider_result.cancelled_at,
             last_error=adapter_provider_result.last_error,
         )
-        provider_result = api_provider_result.model_dump(exclude_none=True) or None
+        provider_result = api_provider_result.model_dump() or None
         return ExecutionStatusResponse(
             deployment_id=deployment_id,
             provider_data=provider_result,

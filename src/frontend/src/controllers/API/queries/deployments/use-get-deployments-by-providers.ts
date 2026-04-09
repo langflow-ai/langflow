@@ -30,13 +30,10 @@ export function useGetDeploymentsByProviders(
     })),
     combine: (results): UseGetDeploymentsByProvidersResult => {
       const merged: Deployment[] = [];
-      for (let i = 0; i < results.length; i++) {
-        const data = results[i].data;
+      for (const result of results) {
+        const data = result.data;
         if (data?.deployments) {
-          const pid = providerIds[i];
-          for (const dep of data.deployments) {
-            merged.push({ ...dep, provider_account_id: pid });
-          }
+          merged.push(...data.deployments);
         }
       }
       return {

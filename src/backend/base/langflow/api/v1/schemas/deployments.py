@@ -100,15 +100,15 @@ ValidatedUrl = Annotated[str, AfterValidator(validate_provider_url)]
 """URL type that enforces HTTPS and normalizes."""
 
 
-def _validate_flow_version_ids(values: list[str] | None) -> list[str] | None:
+def _validate_flow_version_ids(values: list[UUID] | None) -> list[UUID] | None:
     """AfterValidator for optional flow_version_ids query parameter."""
     if values is None:
         return None
-    return _validate_str_id_list(values, field_name="flow_version_ids")
+    return _validate_uuid_list(values, field_name="flow_version_ids")
 
 
-FlowVersionIdsQuery = Annotated[list[str] | None, AfterValidator(_validate_flow_version_ids)]
-"""Query parameter type that validates and cleans an optional list of flow version id strings."""
+FlowVersionIdsQuery = Annotated[list[UUID] | None, AfterValidator(_validate_flow_version_ids)]
+"""Query parameter type that validates and cleans an optional list of flow version id UUIDs."""
 
 
 def _validate_flow_ids(values: list[UUID] | None) -> list[UUID] | None:

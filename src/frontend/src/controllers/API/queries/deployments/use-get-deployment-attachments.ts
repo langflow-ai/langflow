@@ -40,7 +40,7 @@ export interface DeploymentFlowVersionListResponse {
 
 interface GetDeploymentAttachmentsParams {
   deploymentId: string;
-  flow_ids?: string;
+  flow_ids?: string[];
 }
 
 export const useGetDeploymentAttachments: useQueryFunctionType<
@@ -50,9 +50,16 @@ export const useGetDeploymentAttachments: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const fn = async (): Promise<DeploymentFlowVersionListResponse> => {
+    const params = {
+      size: 50,
+      ...(flow_ids && flow_ids.length > 0 ? { flow_ids } : {}),
+    };
     const { data } = await api.get<DeploymentFlowVersionListResponse>(
       `${getURL("DEPLOYMENTS")}/${deploymentId}/flows`,
-      { params: { size: 50, flow_ids } },
+      {
+        params,
+        paramsSerializer: { indexes: null },
+      },
     );
     return data;
   };

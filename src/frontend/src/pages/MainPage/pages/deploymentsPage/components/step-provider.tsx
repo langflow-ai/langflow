@@ -85,7 +85,9 @@ function EnvironmentList({
                   {environment.name}
                 </span>
                 <span className="text-sm leading-tight text-muted-foreground">
-                  {environment.url}
+                  {typeof environment.provider_data?.url === "string"
+                    ? environment.provider_data.url
+                    : "—"}
                 </span>
               </span>
             </RadioSelectItem>

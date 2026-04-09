@@ -44,6 +44,7 @@ describe("useGetDeploymentAttachments", () => {
 
     expect(mockApiGet).toHaveBeenCalledWith("/api/v1/deployments/dep-1/flows", {
       params: { size: 50 },
+      paramsSerializer: { indexes: null },
     });
   });
 
