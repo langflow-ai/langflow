@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict, field_serializer, field_validator
-from sqlalchemy import Text
+from sqlalchemy import Index, Text, text
 from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.schema.content_block import ContentBlock
@@ -134,6 +134,18 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
 
     __tablename__ = "message"
+    __table_args__ = (
+        Index(
+            "ix_message_session_metadata_tenant",
+            text("(session_metadata->>'tenant_id')"),
+            postgresql_using="btree",
+        ).ddl_if(dialect="postgresql"),
+        Index(
+            "ix_message_session_metadata_user",
+            text("(session_metadata->>'user_id')"),
+            postgresql_using="btree",
+        ).ddl_if(dialect="postgresql"),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     flow_id: UUID | None = Field(default=None)
