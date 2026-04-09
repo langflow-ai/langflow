@@ -368,6 +368,7 @@ class TestCORSIntegration:
             mock_settings.settings.prometheus_enabled = False
             mock_settings.settings.mcp_server_enabled = False
             mock_settings.settings.sentry_dsn = None  # Disable Sentry
+            mock_settings.settings.root_path = ""
             mock_get_settings.return_value = mock_settings
 
             from langflow.main import create_app
@@ -416,6 +417,7 @@ class TestCORSIntegration:
             mock_settings.settings.prometheus_enabled = False
             mock_settings.settings.mcp_server_enabled = False
             mock_settings.settings.sentry_dsn = None  # Disable Sentry
+            mock_settings.settings.root_path = ""
             mock_get_settings.return_value = mock_settings
 
             from langflow.main import create_app
