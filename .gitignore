@@ -292,3 +292,4 @@ sso-config.yaml
 AGENTS.md
 CLAUDE.local.md
 langflow.log.*
+tmp_toolguard/
