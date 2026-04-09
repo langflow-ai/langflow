@@ -105,13 +105,17 @@ class TestExtractBackendStrings:
     def test_collect_strings_skips_deactivated_modules(self):
         """collect_strings() must skip any module whose name contains 'deactivated'."""
         import pkgutil
+        import sys
+        import types
 
         fake_modules = [
             pkgutil.ModuleInfo(module_finder=None, name="lfx.components.active", ispkg=False),
             pkgutil.ModuleInfo(module_finder=None, name="lfx.components.deactivated.old", ispkg=False),
         ]
 
-        import types
+        fake_components_pkg = types.ModuleType("lfx.components")
+        fake_components_pkg.__path__ = []
+        fake_components_pkg.__name__ = "lfx.components"
 
         active_module = types.ModuleType("lfx.components.active")
         active_module.__name__ = "lfx.components.active"
@@ -128,6 +132,7 @@ class TestExtractBackendStrings:
         active_module.FakeComponent = FakeComponent
 
         with (
+            patch.dict(sys.modules, {"lfx": types.ModuleType("lfx"), "lfx.components": fake_components_pkg}),
             patch("pkgutil.walk_packages", return_value=fake_modules),
             patch("importlib.import_module", return_value=active_module),
         ):
