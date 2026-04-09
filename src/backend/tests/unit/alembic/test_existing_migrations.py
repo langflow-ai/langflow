@@ -114,7 +114,12 @@ class TestExistingMigrations:
             pytest.fail(f"Migrations directory not found at {migrations_dir}")
 
         legacy_migration = next(
-            (f for f in migrations_dir.glob("*.py") if not f.name.startswith("00") and f.name != "__init__.py"), None
+            (
+                f
+                for f in sorted(migrations_dir.glob("*.py"))
+                if not f.name.startswith("00") and f.name != "__init__.py" and "Phase:" not in f.read_text()
+            ),
+            None,
         )
 
         assert legacy_migration is not None, f"No legacy migration files found in {migrations_dir}"
