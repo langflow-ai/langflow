@@ -160,6 +160,13 @@ def _get_deployment_registry() -> AdapterRegistry[DeploymentServiceProtocol]:
 
 
 _deployment_discovery_lock = threading.Lock()
+_DEPLOYMENT_GUARD_PREFIX = "DEPLOYMENT_GUARD:"
+_DETAIL_TRUNCATION_MARKERS = (
+    " [SQL:",
+    "\n[SQL:",
+    " (Background on this error at:",
+    "\n(Background on this error at:",
+)
 
 
 def get_deployment_adapter(
@@ -189,6 +196,38 @@ def get_deployment_adapter(
 def _resolve_adapter_config_dir() -> Path:
     """Resolve config directory for adapter discovery."""
     return resolve_config_dir(None, settings_service=get_settings_service())
+
+
+def _extract_deployment_guard_detail(exc: BaseException) -> str | None:
+    """Return deployment-guard detail text when present in an exception chain."""
+    seen: set[int] = set()
+    current: BaseException | None = exc
+
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+
+        # Prefer structured detail when the normalized exception is already raised.
+        if type(current).__name__ == "DeploymentGuardError":
+            detail = getattr(current, "detail", None)
+            if isinstance(detail, str) and detail.strip():
+                return detail.strip()
+
+        message = str(current).strip()
+        _before_prefix, separator, after_prefix = message.partition(_DEPLOYMENT_GUARD_PREFIX)
+        if separator and ":" in after_prefix:
+            _error_code, human_message = after_prefix.split(":", 1)
+            cleaned = human_message.strip()
+            for marker in _DETAIL_TRUNCATION_MARKERS:
+                if marker in cleaned:
+                    cleaned = cleaned.split(marker, 1)[0].strip()
+            if "\n" in cleaned:
+                cleaned = cleaned.split("\n", 1)[0].strip()
+            if cleaned:
+                return cleaned
+
+        current = current.__cause__ or current.__context__
+
+    return None
 
 
 async def get_session():
@@ -233,8 +272,13 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
                     await session.rollback()
             raise
         except Exception as e:
-            # Actual application/database errors - log at error level
-            await logger.aexception("An error occurred during the session scope.", exception=e)
+            guard_detail = _extract_deployment_guard_detail(e)
+            if guard_detail:
+                # Expected business-rule conflict: keep logs concise and avoid traceback noise.
+                await logger.aerror(f"Session scope rolled back due to deployment guard: {guard_detail}")
+            else:
+                # Actual application/database errors - log at error level with traceback
+                await logger.aexception("An error occurred during the session scope.", exception=e)
 
             # Only rollback if session is still in a valid state
             if session.is_active:

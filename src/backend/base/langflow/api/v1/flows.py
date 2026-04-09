@@ -250,9 +250,13 @@ async def update_flow(
         folder_id_will_change = "folder_id" in update_data and update_data.get("folder_id") != db_flow.folder_id
 
         async def operation() -> FlowRead:
+            # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
+            db_flow_for_attempt = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
+            if not db_flow_for_attempt:
+                raise HTTPException(status_code=404, detail="Flow not found")
             return await _patch_flow(
                 session=session,
-                db_flow=db_flow,
+                db_flow=db_flow_for_attempt,
                 flow=flow,
                 user_id=current_user.id,
                 storage_service=storage_service,
@@ -308,9 +312,13 @@ async def upsert_flow(
             )
 
             async def update_operation() -> FlowRead:
+                # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
+                existing_flow_for_attempt = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
+                if existing_flow_for_attempt is None:
+                    raise HTTPException(status_code=404, detail="Flow not found")
                 return await _update_existing_flow(
                     session=session,
-                    existing_flow=existing_flow,
+                    existing_flow=existing_flow_for_attempt,
                     flow=flow,
                     current_user=current_user,
                     storage_service=storage_service,

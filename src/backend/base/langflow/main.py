@@ -537,13 +537,15 @@ def create_app():
     # Discover and register additional routers from plugins (langflow.plugins entry-point)
     load_plugin_routes(app)
 
+    @app.exception_handler(DeploymentGuardError)
+    async def deployment_guard_exception_handler(_request: Request, exc: DeploymentGuardError):
+        return JSONResponse(
+            status_code=HTTPStatus.CONFLICT,
+            content={"detail": exc.detail},
+        )
+
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
-        if isinstance(exc, DeploymentGuardError):
-            return JSONResponse(
-                status_code=HTTPStatus.CONFLICT,
-                content={"detail": exc.detail},
-            )
         if isinstance(exc, HTTPException):
             await logger.aerror(f"HTTPException: {exc}", exc_info=exc)
             return JSONResponse(
