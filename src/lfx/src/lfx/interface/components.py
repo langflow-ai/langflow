@@ -154,10 +154,17 @@ def _read_component_index(custom_path: str | None = None) -> dict | None:
             return None
 
         # Version check: ensure index matches installed lfx version
-        from importlib.metadata import version
+        from importlib.metadata import PackageNotFoundError, version
 
-        installed_version = version("lfx")
-        if blob.get("version") != installed_version:
+        try:
+            installed_version = version("lfx")
+        except PackageNotFoundError:
+            # In some deployment environments (e.g. Docker with workspace installs),
+            # lfx may be importable but lack dist-info metadata. Skip version check.
+            logger.debug("Could not determine installed lfx version (no package metadata); skipping version check")
+            installed_version = None
+
+        if installed_version is not None and blob.get("version") != installed_version:
             logger.debug(
                 f"Component index version mismatch: index={blob.get('version')}, installed={installed_version}"
             )

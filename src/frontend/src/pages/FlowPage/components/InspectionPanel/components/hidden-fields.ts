@@ -14,16 +14,11 @@ export const HIDDEN_FIELDS: Record<string, string[]> = {
     "autoset_encoding",
   ],
   UnifiedWebSearch: ["ceid"],
-  Agent: ["api_key", "format_instructions", "output_schema", "verbose"],
-  EmbeddingModel: ["show_progress_bar", "chunk_size", "api_key"],
-  LanguageModelComponent: ["api_key"],
+  Agent: ["format_instructions", "output_schema", "verbose"],
+  EmbeddingModel: ["show_progress_bar", "chunk_size"],
   Memory: ["sender_type"],
-  BatchRunComponent: ["api_key"],
-  GuardrailValidator: ["api_key"],
-  SmartRouter: ["api_key"],
-  "Smart Transform": ["api_key"],
-  StructuredOutput: ["api_key", "system_prompt", "schema_name"],
-  KnowledgeBase: ["api_key", "include_embeddings"],
+  StructuredOutput: ["system_prompt", "schema_name"],
+  KnowledgeBase: ["include_embeddings"],
   DynamicCreateData: ["include_metadata"],
   SplitText: ["keep_separator"],
   File: [
@@ -37,4 +32,18 @@ export const HIDDEN_FIELDS: Record<string, string[]> = {
     "doc_key",
     "use_multithreading",
   ],
+};
+
+// Fields to show in the InspectionPanel but hide from the advanced settings edit mode.
+// These fields are intentionally surfaced only in the InspectionPanel for a streamlined UX.
+export const INSPECTION_PANEL_ONLY_FIELDS: Record<string, string[]> = {
+  Agent: ["api_key"],
+  EmbeddingModel: ["api_key"],
+  LanguageModelComponent: ["api_key"],
+  BatchRunComponent: ["api_key"],
+  GuardrailValidator: ["api_key"],
+  SmartRouter: ["api_key"],
+  "Smart Transform": ["api_key"],
+  StructuredOutput: ["api_key"],
+  KnowledgeBase: ["api_key"],
 };
