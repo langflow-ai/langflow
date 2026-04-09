@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
@@ -12,6 +13,7 @@ const SidebarMenuButtons = ({
   addComponent,
   isLoading = false,
 }) => {
+  const { t } = useTranslation();
   const { activeSection } = useSidebar();
   const [addMcpOpen, setAddMcpOpen] = useState(false);
   const navigate = useCustomNavigate();
@@ -46,7 +48,7 @@ const SidebarMenuButtons = ({
             className="h-4 w-4 text-muted-foreground"
           />
           <span className="group-data-[state=open]/collapsible:font-semibold">
-            Add MCP Server
+            {t("sidebar.mcp.add")}
           </span>
         </Button>
       </SidebarMenuButton>
@@ -65,7 +67,7 @@ const SidebarMenuButtons = ({
             className="h-4 w-4 text-muted-foreground"
           />
           <span className="group-data-[state=open]/collapsible:font-semibold">
-            Manage Servers
+            {t("sidebar.mcp.manage")}
           </span>
         </Button>
       </SidebarMenuButton>
@@ -89,7 +91,7 @@ const SidebarMenuButtons = ({
           className="h-4 w-4 text-muted-foreground"
         />
         <span className="group-data-[state=open]/collapsible:font-semibold">
-          New Custom Component
+          {t("sidebar.newCustomComponent")}
         </span>
       </Button>
     </SidebarMenuButton>

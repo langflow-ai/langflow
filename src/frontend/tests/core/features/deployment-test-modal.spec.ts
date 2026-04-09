@@ -37,7 +37,7 @@ async function setupBaseRoutes(page: Page) {
 async function navigateToDeploymentsPage(page: Page) {
   await awaitBootstrapTest(page, { skipModal: true });
   await page.getByTestId("deployments-btn").click();
-  await page.waitForSelector('[data-testid="new-deployment-btn"]');
+  await page.waitForSelector('[data-testid="subtab-deployments"]');
 }
 
 test(

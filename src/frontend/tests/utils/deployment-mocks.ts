@@ -108,6 +108,42 @@ export const DEPLOY_RESPONSE = {
   status: "deploying",
 };
 
+// Attachments with provider_data for edit-mode connection tests.
+// flow "f1" is already attached with connection "existing-app".
+export const ATTACHMENTS_WITH_CONNECTIONS_MOCK = {
+  flow_versions: [
+    {
+      id: "fv1",
+      flow_id: "f1",
+      flow_name: "My Flow",
+      version_number: 1,
+      attached_at: "2026-04-06T00:00:00Z",
+      provider_snapshot_id: null,
+      tool_name: "my-flow",
+      provider_data: {
+        tool_name: "my-flow",
+        app_ids: ["existing-app"],
+      },
+    },
+  ],
+  page: 1,
+  size: 50,
+  total: 1,
+};
+
+// Configs (available connections) returned by the provider.
+export const CONFIGS_WITH_CONNECTIONS_MOCK = {
+  provider_data: {
+    connections: [
+      { connection_id: "conn-1", app_id: "existing-app" },
+      { connection_id: "conn-2", app_id: "new-app" },
+    ],
+    page: 1,
+    size: 10000,
+    total: 2,
+  },
+};
+
 export const POST_EXECUTION_RESPONSE = {
   deployment_id: "dep-1",
   provider_data: {
