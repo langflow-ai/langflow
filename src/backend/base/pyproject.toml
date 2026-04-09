@@ -312,6 +312,7 @@ scrapegraph = ["scrapegraph-py>=1.12.0"]
 pydantic-ai = ["pydantic-ai>=0.0.19"]
 apify = ["apify-client>=1.8.1"]
 spider = ["spider-client>=0.0.27,<1.0.0"]
+mrscraper = ["mrscraper-sdk>=0.1.2,<1.0.0"]
 
 # ALTK (Agent Lifecycle Toolkit)
 altk = ["agent-lifecycle-toolkit~=0.4.4"]
@@ -443,6 +444,7 @@ complete = [
     "langflow-base[pydantic-ai]",
     "langflow-base[apify]",
     "langflow-base[spider]",
+    "langflow-base[mrscraper]",
     # ALTK
     "langflow-base[altk]",
     # Additional LangChain integrations
