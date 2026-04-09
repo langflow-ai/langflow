@@ -1,6 +1,6 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
-  RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
   STATUS_INACTIVE,
@@ -57,22 +57,25 @@ const ValidationDetails = ({
   validationString,
   lastRunTime,
   validationStatus,
-}) => (
-  <div className="flex max-h-100 flex-col gap-1">
-    {validationString && (
-      <div className="break-words text-sm text-foreground">
-        {validationString}
-      </div>
-    )}
-    {lastRunTime && (
-      <TimeStamp prefix={RUN_TIMESTAMP_PREFIX} time={lastRunTime} />
-    )}
-    <Duration duration={validationStatus?.data.duration} />
-    {validationStatus?.data?.token_usage && (
-      <TokenUsageDisplay tokenUsage={validationStatus.data.token_usage} />
-    )}
-  </div>
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex max-h-100 flex-col gap-1">
+      {validationString && (
+        <div className="break-words text-sm text-foreground">
+          {validationString}
+        </div>
+      )}
+      {lastRunTime && (
+        <TimeStamp prefix={t("flow.runTimestampPrefix")} time={lastRunTime} />
+      )}
+      <Duration duration={validationStatus?.data.duration} />
+      {validationStatus?.data?.token_usage && (
+        <TokenUsageDisplay tokenUsage={validationStatus.data.token_usage} />
+      )}
+    </div>
+  );
+};
 
 const BuildStatusDisplay = ({
   buildStatus,
@@ -80,21 +83,23 @@ const BuildStatusDisplay = ({
   validationString,
   lastRunTime,
 }) => {
+  const { t } = useTranslation();
+
   if (buildStatus === BuildStatus.BUILDING) {
-    return <StatusMessage>{STATUS_BUILDING}</StatusMessage>;
+    return <StatusMessage>{t("flow.statusBuilding")}</StatusMessage>;
   }
 
   if (buildStatus === BuildStatus.INACTIVE) {
-    return <StatusMessage>{STATUS_INACTIVE}</StatusMessage>;
+    return <StatusMessage>{t("flow.statusInactive")}</StatusMessage>;
   }
 
   if (buildStatus === BuildStatus.ERROR && !validationStatus) {
     // If the build status is error and there is no validation status, it means that it failed before building, so show the Missing Required Fields error message
-    return <StatusMessage>{STATUS_MISSING_FIELDS_ERROR}</StatusMessage>;
+    return <StatusMessage>{t("flow.statusMissingFieldsError")}</StatusMessage>;
   }
 
   if (!validationStatus) {
-    return <StatusMessage>{STATUS_BUILD}</StatusMessage>;
+    return <StatusMessage>{t("flow.statusBuild")}</StatusMessage>;
   }
 
   return (

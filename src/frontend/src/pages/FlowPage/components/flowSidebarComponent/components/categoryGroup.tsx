@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -24,11 +25,12 @@ export const CategoryGroup = memo(function CategoryGroup({
   showConfig,
   setShowConfig,
 }: CategoryGroupProps) {
+  const { t } = useTranslation();
   return (
     <SidebarGroup className="p-3 pr-2">
       {ENABLE_NEW_SIDEBAR && (
         <SidebarGroupLabel className="cursor-default flex items-center justify-between w-full">
-          <span>Components</span>
+          <span>{t("sidebar.components")}</span>
           <SearchConfigTrigger
             showConfig={showConfig}
             setShowConfig={setShowConfig}

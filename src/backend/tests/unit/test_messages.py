@@ -1,4 +1,6 @@
+import base64
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
@@ -15,7 +17,7 @@ from langflow.memory import (
 )
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
-from langflow.schema.message import Message
+from langflow.schema.message import MAX_ATTACHMENT_SIZE_BYTES, Message
 from langflow.schema.properties import Properties, Source
 
 # Assuming you have these imports available
@@ -169,6 +171,99 @@ def test_convert_to_langchain(method_name):
     assert lc_message.type == "ai"
     expected_len = 2
     assert len(list(iterator)) == expected_len
+
+
+def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
+    warnings: list[str] = []
+
+    def warning(event: str, **_kwargs):
+        warnings.append(event)
+
+    monkeypatch.setattr(
+        "lfx.schema.message.logger",
+        SimpleNamespace(warning=warning, error=lambda *_args, **_kwargs: None),
+    )
+
+    message = Message(
+        text="Hello",
+        sender="User",
+        sender_name="User",
+        session_id="session-id",
+        files=["nonexistent.unsupported"],
+    )
+
+    lc_message = message.to_lc_message()
+
+    assert lc_message.type == "human"
+    assert lc_message.content == [{"type": "text", "text": "Hello"}]
+    assert any("Skipping attachment during message conversion" in event for event in warnings)
+
+
+def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
+    csv_path = tmp_path / "table.csv"
+    csv_path.write_text("name,role\nAda,Engineer\n", encoding="utf-8")
+
+    message = Message(
+        text="Hello",
+        sender="User",
+        sender_name="User",
+        session_id="session-id",
+        files=[str(csv_path)],
+    )
+
+    lc_message = message.to_lc_message()
+
+    assert lc_message.type == "human"
+    assert isinstance(lc_message.content, list)
+    assert lc_message.content[0] == {"type": "text", "text": "Hello"}
+    assert lc_message.content[1]["type"] == "text"
+    assert "Attachment: table.csv" in lc_message.content[1]["text"]
+    assert "name,role" in lc_message.content[1]["text"]
+
+
+def test_to_lc_message_keeps_supported_image_attachments(tmp_path):
+    image_path = tmp_path / "image.png"
+    image_content = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+    )
+    image_path.write_bytes(image_content)
+
+    message = Message(
+        text="Hello",
+        sender="User",
+        sender_name="User",
+        session_id="session-id",
+        files=[str(image_path)],
+    )
+
+    lc_message = message.to_lc_message()
+
+    assert lc_message.type == "human"
+    assert isinstance(lc_message.content, list)
+    assert lc_message.content[0] == {"type": "text", "text": "Hello"}
+    assert lc_message.content[1]["type"] == "image_url"
+
+
+def test_to_lc_message_skips_oversized_file_attachments(tmp_path):
+    big_path = tmp_path / "big.txt"
+
+    big_size = MAX_ATTACHMENT_SIZE_BYTES + 1
+    with big_path.open("wb") as handle:
+        handle.seek(big_size - 1)
+        handle.write(b"\0")
+
+    message = Message(
+        text="Hello",
+        sender="User",
+        sender_name="User",
+        session_id="session-id",
+        files=[str(big_path)],
+    )
+
+    lc_message = message.to_lc_message()
+
+    assert lc_message.type == "human"
+    assert lc_message.content == [{"type": "text", "text": "Hello"}]
 
 
 @pytest.mark.usefixtures("client")
