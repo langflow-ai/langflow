@@ -463,9 +463,18 @@ The following environment variables set base Langflow server configuration, such
 
 ### High-load and multi-worker environments
 
-For deployments with higher `LANGFLOW_WORKERS` values we recommend to set experimental `LANGFLOW_GUNICORN_PRELOAD=true`.
-The Redis-backed job queue is also recommended so build and queue traffic stays consistent when requests are handled by different workers. Set `LANGFLOW_JOB_QUEUE_TYPE=redis` so queue events can be shared across workers.
-A dedicated Redis DB should always be different than the one set up for the cache.
+### High-load and multi-worker environments
+
+For high-concurrency deployments (such as when increasing `LANGFLOW_WORKERS`), consider the following best practices:
+- **Enable Gunicorn preload (experimental):**
+  Set `LANGFLOW_GUNICORN_PRELOAD=true` to enable Gunicorn’s `preload_app` mode, which can reduce per-worker startup overhead (non-Windows only).
+- **Use Redis-backed job queue:**
+  Set `LANGFLOW_JOB_QUEUE_TYPE=redis` to share queue events across workers.
+  **Note:** Always configure a dedicated Redis database for the job queue, separate from the cache database.
+- **Disable tracing:**
+  Set `LANGFLOW_DEACTIVATE_TRACING=True` to turn off tracing, which may cause concurrency bottlenecks under high load or in multi-worker environments.
+- **Use PostgreSQL instead of SQLite:**
+  SQLite can experience database locks and deadlocks with concurrent, write-heavy usage. For production or multi-worker environments, configure Langflow to use PostgreSQL by setting the `LANGFLOW_DATABASE_URL` environment variable (see [Memory management options](/memory#configure-external-memory)). This is strongly recommended to avoid operational issues.
 
 For more information about deploying Langflow servers, see [Langflow deployment overview](/deployment-overview).
 
