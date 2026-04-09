@@ -270,7 +270,8 @@ async def test_tool_invoker_invoke_primitive_type_conversion():
 
 @pytest.mark.asyncio
 async def test_tool_invoker_invoke_with_tool_message_artifact():
-    """Defensive: if ainvoke returns a ToolMessage whose artifact is a CallToolResult,
+    """Defensive: if ainvoke returns a ToolMessage whose artifact is a CallToolResult.
+
     ToolInvoker must extract structuredContent from the artifact.
     """
     from langchain_core.messages import ToolMessage

@@ -2837,6 +2837,73 @@ class TestConvertMcpResult:
         assert converted[0]["image_url"]["url"] == "data:image/png;base64,img1=="
         assert converted[1]["image_url"]["url"] == "data:image/jpeg;base64,img2=="
 
+    def _make_resource_block(self, uri: str = "file:///data.csv", mime: str = "text/csv"):
+        block = MagicMock()
+        block.type = "resource"
+        block.model_dump.return_value = {"type": "resource", "uri": uri, "mimeType": mime}
+        return block
+
+    def test_should_serialise_resource_only_result_as_text_block(self):
+        """A resource-only result must not be dropped — serialised as JSON text block."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        resource = self._make_resource_block()
+        result = self._make_result([resource])
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 1
+        assert converted[0]["type"] == "text"
+        parsed = json.loads(converted[0]["text"])
+        assert parsed["type"] == "resource"
+        assert "uri" in parsed
+
+    def test_should_preserve_all_blocks_in_mixed_image_and_resource_result(self):
+        """Mixed image + resource must produce a list with both blocks, nothing dropped."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        b64 = "abc123=="
+        image = self._make_image_block(data=b64, mime="image/png")
+        resource = self._make_resource_block(uri="file:///chart.csv")
+        result = self._make_result([image, resource])
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 2
+
+        # First block: image
+        assert converted[0]["type"] == "image_url"
+        assert converted[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+        # Second block: resource serialised as text
+        assert converted[1]["type"] == "text"
+        parsed = json.loads(converted[1]["text"])
+        assert parsed["type"] == "resource"
+        assert parsed["uri"] == "file:///chart.csv"
+
+    def test_should_handle_unknown_block_type_without_model_dump(self):
+        """Block without model_dump must still produce a text fallback, not raise."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        block = MagicMock(spec=[])  # no model_dump attribute
+        block.type = "audio"
+
+        result = self._make_result([block])
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert converted[0]["type"] == "text"
+        # Must be valid JSON
+        json.loads(converted[0]["text"])
+
 
 class TestMCPStructuredToolToolCallId:
     """Tests for the tool_call_id branching inside MCPStructuredTool.
