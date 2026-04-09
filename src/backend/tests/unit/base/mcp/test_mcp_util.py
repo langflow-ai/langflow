@@ -2745,10 +2745,12 @@ class TestConvertMcpResult:
         """Multiple text blocks must be joined with newline."""
         from lfx.base.mcp.util import _convert_mcp_result
 
-        result = self._make_result([
-            self._make_text_block("first"),
-            self._make_text_block("second"),
-        ])
+        result = self._make_result(
+            [
+                self._make_text_block("first"),
+                self._make_text_block("second"),
+            ]
+        )
         assert _convert_mcp_result(result) == "first\nsecond"
 
     def test_should_convert_image_block_to_image_url_format(self):
@@ -2773,10 +2775,12 @@ class TestConvertMcpResult:
         from lfx.base.mcp.util import _convert_mcp_result
 
         b64 = "abc123=="
-        result = self._make_result([
-            self._make_text_block("Here is the screenshot:"),
-            self._make_image_block(data=b64, mime="image/jpeg"),
-        ])
+        result = self._make_result(
+            [
+                self._make_text_block("Here is the screenshot:"),
+                self._make_image_block(data=b64, mime="image/jpeg"),
+            ]
+        )
 
         converted = _convert_mcp_result(result)
 
@@ -2806,10 +2810,12 @@ class TestConvertMcpResult:
         """Multiple image blocks must all be converted."""
         from lfx.base.mcp.util import _convert_mcp_result
 
-        result = self._make_result([
-            self._make_image_block(data="img1==", mime="image/png"),
-            self._make_image_block(data="img2==", mime="image/jpeg"),
-        ])
+        result = self._make_result(
+            [
+                self._make_image_block(data="img1==", mime="image/png"),
+                self._make_image_block(data="img2==", mime="image/jpeg"),
+            ]
+        )
 
         converted = _convert_mcp_result(result)
 
