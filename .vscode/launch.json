@@ -24,9 +24,7 @@
         "--reload-include",
         "./src/lfx/*",
         "--reload-exclude",
-        "*.db*",
-        "--reload-exclude",
-        "./tmp_toolguard/*"
+        "*.db*"
       ],
       "jinja": true,
       "justMyCode": false,
