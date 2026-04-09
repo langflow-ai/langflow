@@ -486,6 +486,46 @@ def _strip_none_recursive(obj: Any) -> Any:
     return obj
 
 
+def _convert_mcp_result(result: Any) -> Any:
+    """Convert a CallToolResult into a format LangChain agents can consume.
+
+    - Text-only results → plain string (backward compatible).
+    - Results containing at least one image → list of LangChain content blocks
+      so that vision-capable LLMs receive proper multimodal input instead of a
+      raw base64 string (fixes issue #11812).
+    - Mixed text + image → list preserving order.
+    """
+    if result is None:
+        return ""
+
+    content = getattr(result, "content", None)
+    if not content:
+        return ""
+
+    has_image = any(getattr(block, "type", None) == "image" for block in content)
+
+    if not has_image:
+        # Text-only: join all text blocks into a single string
+        return "\n".join(
+            getattr(block, "text", "") for block in content if getattr(block, "type", None) == "text"
+        )
+
+    # Mixed or image-only: build a list of LangChain content blocks
+    blocks: list[dict] = []
+    for block in content:
+        block_type = getattr(block, "type", None)
+        if block_type == "text":
+            blocks.append({"type": "text", "text": getattr(block, "text", "")})
+        elif block_type == "image":
+            mime = getattr(block, "mimeType", None) or "image/png"
+            data = getattr(block, "data", "")
+            blocks.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime};base64,{data}"},
+            })
+    return blocks
+
+
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
@@ -510,7 +550,8 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
 
         try:
             arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
-            return await client.run_tool(tool_name, arguments=arguments)
+            result = await client.run_tool(tool_name, arguments=arguments)
+            return _convert_mcp_result(result)
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -540,7 +581,8 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
 
         try:
             arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
-            return run_until_complete(client.run_tool(tool_name, arguments=arguments))
+            result = run_until_complete(client.run_tool(tool_name, arguments=arguments))
+            return _convert_mcp_result(result)
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
