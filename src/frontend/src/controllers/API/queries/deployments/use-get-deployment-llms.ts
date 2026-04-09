@@ -13,6 +13,8 @@ interface GetDeploymentLlmsParams {
   providerId: string;
 }
 
+const STALE_TIME = 1000 * 60 * 1; // 1 minute
+
 export const useGetDeploymentLlms: useQueryFunctionType<
   GetDeploymentLlmsParams,
   DeploymentLlmListResponse
@@ -20,16 +22,21 @@ export const useGetDeploymentLlms: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getDeploymentLlmsFn = async (): Promise<DeploymentLlmListResponse> => {
-    const { data } = await api.get<DeploymentLlmListResponse>(
+    const response = await api.get<DeploymentLlmListResponse>(
       `${getURL("DEPLOYMENTS")}/llms`,
       { params: { provider_id: providerId } },
     );
-    return data;
+    if (!response) {
+      throw new Error(
+        "Failed to load models. Please check your provider credentials.",
+      );
+    }
+    return response.data;
   };
 
-  return query(
-    ["useGetDeploymentLlms", { providerId }],
-    getDeploymentLlmsFn,
-    options,
-  );
+  return query(["useGetDeploymentLlms", { providerId }], getDeploymentLlmsFn, {
+    ...options,
+    retry: false,
+    staleTime: STALE_TIME,
+  });
 };
