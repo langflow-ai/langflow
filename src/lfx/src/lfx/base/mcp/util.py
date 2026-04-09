@@ -1944,16 +1944,11 @@ async def update_tools(
             logger.error(f"Failed to create tool '{tool.name}' from server '{server_name}': {e}")
             msg = f"Failed to create tool '{tool.name}' from server '{server_name}': {e}"
             raise ValueError(msg) from e
-        except Exception as e:  # noqa: BLE001
-            # Per-tool resilience for issue #11229: a single tool whose JSON Schema trips an
-            # unexpected exception during parsing (e.g. ``TypeError: unhashable type: 'list'``
-            # against the Linear MCP server) used to abort the WHOLE listing, leaving the
-            # operator with a generic ``Configuration data error`` and zero usable tools.
-            # Skip this one tool, log enough context for a focused bug report, and keep
-            # building the rest of the toolset so the other healthy tools remain available.
+        except (TypeError, AttributeError, KeyError, NameError, RecursionError) as e:
+            # Per-tool resilience (#11229): isolate one bad schema, keep the rest of the toolset.
             logger.exception(
                 f"Skipping tool '{getattr(tool, 'name', '<unknown>')}' from MCP server "
-                f"'{server_name}' due to unexpected schema-processing error: "
+                f"'{server_name}' due to schema-processing error: "
                 f"{type(e).__name__}: {e}. inputSchema={getattr(tool, 'inputSchema', None)!r}"
             )
             continue

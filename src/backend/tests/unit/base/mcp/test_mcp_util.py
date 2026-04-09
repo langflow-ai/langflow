@@ -623,18 +623,7 @@ class TestUpdateToolsStdioHeaders:
 
 
 class TestUpdateToolsPerToolResilience:
-    """Test that update_tools is fault-tolerant on a per-tool basis (issue #11229).
-
-    Background: when Langflow lists tools from a remote MCP server, each tool's JSON Schema
-    is converted to a Pydantic model via ``create_input_schema_from_json_schema``. If a single
-    tool's schema triggers an unexpected exception (e.g. ``TypeError: unhashable type: 'list'``
-    reported in #11229 against the Linear MCP server, where one tool out of ~25 has a schema
-    construct the parser cannot handle), the previous behaviour was to abort the WHOLE
-    listing and return ``Configuration data error: ...`` to the user — none of the 24 healthy
-    tools were available either. The fix makes the per-tool loop catch the broader Exception
-    so a single rogue schema can only cost the user that one tool, and logs the offending
-    schema with enough context (server name, tool name) to file a focused bug report.
-    """
+    """update_tools must isolate per-tool schema-parsing failures (#11229)."""
 
     @staticmethod
     def _make_tool(name: str, schema: dict) -> MagicMock:
@@ -647,23 +636,14 @@ class TestUpdateToolsPerToolResilience:
 
     @pytest.mark.asyncio
     async def test_one_bad_tool_does_not_drop_the_other_tools_issue_11229(self):
-        """A TypeError raised while parsing one tool's schema must not abort the listing.
-
-        The healthy tools must still be returned and the broken tool must be logged with its
-        name so the operator can identify which Linear (or other) MCP tool is at fault.
-        """
+        """One bad schema must not abort the listing; the bad tool must be logged by name."""
         good_tool_a = self._make_tool(
             "good_a",
             {"type": "object", "properties": {"q": {"type": "string"}}, "required": ["q"]},
         )
         bad_tool = self._make_tool(
             "bad_linear_like",
-            {
-                # Surrogate for the unknown Linear schema construct that crashes the parser:
-                # the test forces the converter to raise unconditionally for this tool only.
-                "type": "object",
-                "properties": {"x": {"type": "string"}},
-            },
+            {"type": "object", "properties": {"x": {"type": "string"}}},
         )
         good_tool_b = self._make_tool(
             "good_b",
@@ -674,8 +654,6 @@ class TestUpdateToolsPerToolResilience:
         mock_stdio.connect_to_server.return_value = [good_tool_a, bad_tool, good_tool_b]
         mock_stdio._connected = True
 
-        # Real converter for the healthy tools, TypeError for the bad one — same surface
-        # symptom as #11229 ("unhashable type: 'list'") but produced deterministically.
         from lfx.schema.json_schema import create_input_schema_from_json_schema as real_converter
 
         def selective_converter(schema):
@@ -694,24 +672,60 @@ class TestUpdateToolsPerToolResilience:
                 mcp_stdio_client=mock_stdio,
             )
 
-        # The two healthy tools must survive even though the middle one was malformed.
         loaded_names = [t.name for t in tool_list]
-        assert "good_a" in loaded_names, "first healthy tool was dropped because of the broken middle tool"
-        assert "good_b" in loaded_names, "third healthy tool was dropped because of the earlier broken tool"
+        assert "good_a" in loaded_names
+        assert "good_b" in loaded_names
         assert "bad_linear_like" not in loaded_names
         assert set(tool_cache.keys()) == {"good_a", "good_b"}
         assert mode == "Stdio"
 
-        # The broken tool MUST be logged with its name so the operator can act on it.
-        # Without this, the user only sees "Configuration data error" with no clue which
-        # tool is at fault — the original #11229 user experience.
         all_log_calls = (
             mock_logger.error.call_args_list + mock_logger.warning.call_args_list + mock_logger.exception.call_args_list
         )
         joined = " | ".join(str(call) for call in all_log_calls)
-        assert "bad_linear_like" in joined, (
-            f"the failing tool name must appear in the log so users can identify it (#11229); got: {joined!r}"
-        )
+        assert "bad_linear_like" in joined, f"failing tool name must appear in log; got: {joined!r}"
+
+    @pytest.mark.asyncio
+    async def test_resilience_under_many_mixed_tools(self):
+        """Stress: 20 tools, 10 healthy + 10 broken with varied error types — all 10 good survive."""
+        from lfx.schema.json_schema import create_input_schema_from_json_schema as real_converter
+
+        error_types = [TypeError, AttributeError, KeyError, NameError, RecursionError]
+        tools = []
+        bad_schemas: dict[int, type[Exception]] = {}
+        for i in range(20):
+            schema = {
+                "type": "object",
+                "properties": {"k": {"type": "string"}},
+                "required": ["k"],
+            }
+            tool = self._make_tool(f"tool_{i:02d}", schema)
+            tools.append(tool)
+            if i % 2 == 1:  # 10 odd indices fail with rotated error types
+                bad_schemas[id(schema)] = error_types[(i // 2) % len(error_types)]
+
+        def selective_converter(schema):
+            err_cls = bad_schemas.get(id(schema))
+            if err_cls is not None:
+                msg = f"simulated {err_cls.__name__}"
+                raise err_cls(msg)
+            return real_converter(schema)
+
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = tools
+        mock_stdio._connected = True
+
+        with patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=selective_converter):
+            _, tool_list, tool_cache = await update_tools(
+                server_name="stress",
+                server_config={"command": "fake-cmd", "args": []},
+                mcp_stdio_client=mock_stdio,
+            )
+
+        loaded = {t.name for t in tool_list}
+        expected_good = {f"tool_{i:02d}" for i in range(20) if i % 2 == 0}
+        assert loaded == expected_good, f"expected exactly the 10 healthy tools, got {loaded}"
+        assert set(tool_cache.keys()) == expected_good
 
 
 class TestFieldNameConversion:
@@ -1317,17 +1331,7 @@ class TestMCPUtilityFunctions:
         assert deep_result["msg"] == {"level1": {"level2": {"level3": "value"}}}
 
     def test_nested_dict_preservation_with_declared_properties_issue_10975(self):
-        """Nested dictionaries must be preserved even when the object has at least one declared property.
-
-        Regression test for issues #9881 and #10975: when an MCP tool's inputSchema declares an
-        object field with one or more ``properties`` (e.g. a placeholder property used by ROS- or
-        FHIR-style MCP servers that ship a permissive object), the LLM-generated nested keys
-        (``linear``/``angular`` for ROS, ``component-reference-gene...`` for FHIR) used to be
-        silently dropped by Pydantic's default ``extra='ignore'`` behaviour. The model_validate +
-        model_dump round-trip in ``create_tool_coroutine`` would then forward an empty ``{}`` to
-        the MCP server. JSON Schema's default for ``additionalProperties`` is ``true``, so a
-        permissive nested object MUST preserve unknown keys.
-        """
+        """Nested dicts must survive when the object also declares properties (#9881, #10975)."""
         # FHIR-MCP shape from #10975: searchParam declared as object with one property,
         # additionalProperties not explicitly forbidden.
         fhir_schema = {
@@ -1385,13 +1389,7 @@ class TestMCPUtilityFunctions:
         assert ros_dump["msg_type"] == "geometry_msgs/msg/Twist"
 
     def test_object_with_additional_properties_false_still_drops_extras(self):
-        """When the schema explicitly forbids additional properties, extras MUST still be dropped.
-
-        Companion to ``test_nested_dict_preservation_with_declared_properties_issue_10975``: the
-        fix for #9881/#10975 must NOT relax validation when ``additionalProperties: false`` is
-        explicitly declared. JSON Schema semantics: ``additionalProperties: false`` means "no
-        unknown keys allowed", so the model should still strip them (or refuse them).
-        """
+        """additionalProperties:false must keep stripping extras after the #9881/#10975 fix."""
         strict_schema = {
             "type": "object",
             "properties": {
@@ -1403,14 +1401,96 @@ class TestMCPUtilityFunctions:
             },
         }
         strict_model = util.create_input_schema_from_json_schema(strict_schema)
-        # Extras under a strict object must NOT survive the round-trip.
         dumped = strict_model.model_validate({"filter": {"id": "abc", "rogue": "x"}}).model_dump(
             exclude_none=True,
         )
         assert dumped["filter"].get("id") == "abc"
-        assert "rogue" not in dumped["filter"], (
-            "additionalProperties:false was declared, rogue keys must not pass through"
-        )
+        assert "rogue" not in dumped["filter"]
+
+    def test_deeply_nested_dict_round_trip_preserves_all_levels(self):
+        """4-level nested dict under a permissive object must round-trip intact."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "envelope": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+            "required": ["envelope"],
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        deep = {
+            "envelope": {
+                "level1": {"level2": {"level3": {"level4": {"leaf": "value", "n": 42}}}},
+            },
+        }
+        out = model.model_validate(deep).model_dump(exclude_none=True)
+        assert out["envelope"]["level1"]["level2"]["level3"]["level4"]["leaf"] == "value"
+        assert out["envelope"]["level1"]["level2"]["level3"]["level4"]["n"] == 42
+
+    def test_array_of_objects_extras_are_preserved(self):
+        """Extras inside objects nested in arrays must also survive validation."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {"role": {"type": "string"}},
+                    },
+                },
+            },
+            "required": ["messages"],
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        payload = {
+            "messages": [
+                {"role": "user", "content": "hi", "metadata": {"lang": "pt-BR"}},
+                {"role": "assistant", "content": "olá", "tool_calls": [{"id": "x"}]},
+            ],
+        }
+        out = model.model_validate(payload).model_dump(exclude_none=True)
+        assert out["messages"][0]["content"] == "hi"
+        assert out["messages"][0]["metadata"] == {"lang": "pt-BR"}
+        assert out["messages"][1]["tool_calls"] == [{"id": "x"}]
+
+    def test_additional_properties_typed_schema_still_preserves_extras(self):
+        """additionalProperties:{type:...} is permissive — extras must survive."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "headers": {
+                    "type": "object",
+                    "properties": {"known": {"type": "string"}},
+                    "additionalProperties": {"type": "string"},
+                },
+            },
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        out = model.model_validate(
+            {"headers": {"x-custom-1": "a", "x-custom-2": "b"}},
+        ).model_dump(exclude_none=True)
+        assert out["headers"]["x-custom-1"] == "a"
+        assert out["headers"]["x-custom-2"] == "b"
+
+    def test_nested_object_with_none_or_empty_does_not_crash(self):
+        """None and {} for permissive nested object must round-trip cleanly."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        out_none = model.model_validate({"msg": None}).model_dump(exclude_none=True)
+        assert "msg" not in out_none
+        out_empty = model.model_validate({"msg": {}}).model_dump(exclude_none=True)
+        assert out_empty == {"msg": {}}
 
     @pytest.mark.asyncio
     async def test_validate_connection_params(self):
