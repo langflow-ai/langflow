@@ -17,6 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
+    "click>=8.3.2",
     "langflow-base[complete]~=0.9.0",
 ]
 
@@ -145,6 +146,7 @@ override-dependencies = [
     "dynaconf>=3.2.13",
     "pillow>=12.0.0",  # Force Pillow 12+ to prevent CVE-vulnerable 11.x versions
     "aiohttp>=3.13.4",
+    "click>=8.3.2",  # Override transitive dependency constraint. from toolguard>mellea>click
 ]
 
 [project.scripts]
