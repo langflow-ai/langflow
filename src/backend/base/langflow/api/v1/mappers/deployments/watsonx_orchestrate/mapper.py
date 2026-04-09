@@ -10,7 +10,6 @@ from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
-    ConfigListItem,
     ConfigListResult,
     DeploymentCreateResult,
     DeploymentListLlmsResult,
@@ -1060,11 +1059,26 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             msg = "Watsonx config_list_result payload slot is not configured."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
 
-        items_all = [self._shape_config_list_item(item) for item in result.configs]
+        items_all: list[WatsonxApiConfigListItem] = []
+        for item in result.configs:
+            if not isinstance(item.provider_data, dict):
+                msg = "Invalid config item provider_data payload: expected non-null object."
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+            items_all.append(
+                self.shape_config_item_data(
+                    {
+                        **item.provider_data,
+                        "connection_id": item.id,
+                        "app_id": item.name,
+                    }
+                )
+            )
         total = len(items_all)
         offset = page_offset(page, size)
         provider_payload = {
-            "connections": items_all[offset : offset + size],
+            "connections": [
+                item.model_dump(mode="json", exclude_none=True) for item in items_all[offset : offset + size]
+            ],
             "page": page,
             "size": size,
             "total": total,
@@ -1146,8 +1160,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 version_number=row.flow_version.version_number,
                 attached_at=row.attachment.created_at,
                 provider_snapshot_id=row.snapshot_id,
-                tool_name=snapshot_name_by_id.get(row.snapshot_id),
-                provider_data=self.shape_deployment_flow_version_item_data(snapshot_data_by_id.get(row.snapshot_id)),
+                provider_data=self.shape_deployment_flow_version_item_data(
+                    snapshot_data=snapshot_data_by_id.get(row.snapshot_id),
+                    tool_name=snapshot_name_by_id.get(row.snapshot_id),
+                ),
             )
             for row in normalized_rows
         ]
@@ -1282,17 +1298,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Invalid deployment list item provider_data payload: {detail}",
             ) from exc
-
-    def _shape_config_list_item(self, item: ConfigListItem) -> dict[str, Any]:
-        payload: dict[str, Any] = {
-            "connection_id": str(item.id).strip(),
-            "app_id": str(item.name).strip(),
-        }
-        item_provider_data = item.provider_data if isinstance(item.provider_data, dict) else {}
-        config_type = str(item_provider_data.get("type") or "").strip()
-        if config_type:
-            payload["type"] = config_type
-        return payload
 
     def shape_config_item_data(self, provider_data: dict[str, Any]) -> WatsonxApiConfigListItem:
         return self._parse_required_payload_slot(

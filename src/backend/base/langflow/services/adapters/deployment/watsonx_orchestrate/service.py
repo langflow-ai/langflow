@@ -28,7 +28,6 @@ from lfx.services.adapters.deployment.exceptions import (
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseFlowArtifact,
-    ConfigListItem,
     ConfigListParams,
     ConfigListResult,
     DeploymentCreate,
@@ -141,49 +140,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             raise RuntimeError(msg)
         self.settings_service = settings_service
         self.set_ready()
-
-    @staticmethod
-    def _build_config_list_item(
-        *,
-        connection_id: str,
-        app_id: str,
-        config_type: str | None = None,
-    ) -> ConfigListItem:
-        """Build a normalized config list item from resolved identifiers."""
-        provider_data = {"type": config_type} if config_type else None
-        return ConfigListItem(
-            id=connection_id,
-            name=app_id,
-            provider_data=provider_data,
-        )
-
-    @staticmethod
-    def _normalize_optional_text(value: object | None) -> str | None:
-        """Normalize SDK scalar/enum/tuple values to optional text.
-
-        Guards against two quirks in the upstream SDK model definitions:
-
-        * **Tuple defaults** - Several ``ListConfigsResponse`` fields are
-          declared with trailing commas (e.g. ``security_scheme: ... = None,``)
-          which makes the Python default ``(None,)`` instead of ``None``.
-          Pydantic coerces this away when the field *is* supplied, but we
-          unwrap single-element tuples defensively in case a future SDK
-          version or edge case surfaces the raw default.
-        * **str-Enum coercion** - ``ConnectionSecurityScheme(str, Enum)``
-          inherits from ``str``, yet ``str()`` returns the class-qualified
-          name (``"ConnectionSecurityScheme.KEY_VALUE"``) in Python 3.11+.
-          Extracting ``.value`` yields the raw string we need.
-        """
-        if isinstance(value, tuple):
-            if len(value) == 1:
-                value = value[0]
-            else:
-                logger.debug("_normalize_optional_text: ignoring multi-element tuple: %s", value)
-                return None
-        if hasattr(value, "value"):
-            value = value.value
-        normalized = str(value or "").strip()
-        return normalized or None
 
     async def _get_provider_clients(self, *, user_id: IdLike, db: AsyncSession) -> WxOClient:
         """Resolve provider clients through a service-level seam.

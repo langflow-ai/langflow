@@ -39,8 +39,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
 
 logger = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
