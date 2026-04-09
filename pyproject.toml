@@ -144,6 +144,7 @@ override-dependencies = [
     "Markdown>=3.8.0",
     "dynaconf>=3.2.13",
     "pillow>=12.0.0",  # Force Pillow 12+ to prevent CVE-vulnerable 11.x versions
+    "aiohttp>=3.13.4",
 ]
 
 [project.scripts]
@@ -250,6 +251,13 @@ external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
+"scripts/gp/tests/*" = [
+    "D1",      # Missing docstrings
+    "PLR2004", # Magic value comparisons
+    "S101",    # Use of assert (required for pytest)
+    "TRY003",  # Long exception messages
+    "EM101",   # String literals in exceptions
+]
 "src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]
 "src/backend/base/langflow/custom/__init__.py" = [
     "I001",  # Import order affects initialization - must import custom module first
