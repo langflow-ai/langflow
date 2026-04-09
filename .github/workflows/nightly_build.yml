@@ -73,7 +73,7 @@ jobs:
            echo "Using release branch: $BRANCH"
   create-nightly-tag:
     if: github.repository == 'langflow-ai/langflow'
-    needs: [validate-inputs, resolve-release-branch, download-gp-bundle, download-gp-backend-bundle]
+    needs: [validate-inputs, resolve-release-branch, download-gp-bundle]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -261,53 +261,6 @@ jobs:
       - name: Report GP download failure
         if: failure()
         run: echo "::warning::GP translation download failed — translations may be out of date. Check the 'Download translations from GP' step above for details."
-
-  download-gp-backend-bundle:
-    if: github.repository == 'langflow-ai/langflow'
-    name: Download backend translations from Globalization Pipeline
-    needs: [validate-inputs, resolve-release-branch]
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    environment: GP-test
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.resolve-release-branch.outputs.branch }}
-          persist-credentials: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install -r scripts/gp/requirements.txt
-
-      - name: Download backend translations from GP
-        working-directory: scripts/gp
-        env:
-          GP_ADMIN_USER_ID: ${{ secrets.GP_ADMIN_USER_ID }}
-          GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
-          GP_INSTANCE: ${{ vars.GP_INSTANCE }}
-          GP_BACKEND_BUNDLE: ${{ vars.GP_BACKEND_BUNDLE }}
-        run: |
-          python download_backend_translations.py \
-            --output ../../src/backend/base/langflow/locales/
-
-      - name: Commit and push translated files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/backend/base/langflow/locales/*.json
-          git diff --staged --quiet || git commit -m "chore: update backend translations from Globalization Pipeline [skip ci]"
-          git push
-
-      - name: Report GP backend download failure
-        if: failure()
-        run: echo "::warning::GP backend translation download failed — backend translations may be out of date. Check the 'Download backend translations from GP' step above for details."
 
   frontend-tests-linux:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
