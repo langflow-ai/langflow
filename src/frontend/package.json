@@ -1,12 +1,13 @@
 {
   "name": "langflow",
-  "version": "1.8.0",
+  "version": "1.8.4",
   "private": true,
   "engines": {
     "node": ">=20.19.0"
   },
   "overrides": {
     "tar": "^7.5.7",
+    "tar-fs": ">=2.1.4",
     "glob": "^11.1.0",
     "test-exclude": "^7.0.0"
   },
@@ -60,7 +61,7 @@
     "framer-motion": "^11.2.10",
     "fuse.js": "^7.0.0",
     "lodash": "^4.17.23",
-    "lucide-react": "^0.503.0",
+    "lucide-react": "^0.575.0",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.48",
     "mustache": "^4.2.0",

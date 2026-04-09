@@ -86,10 +86,16 @@ function SafariScrollFixInner() {
       }
     };
 
+    const onForceSticky = () => {
+      stickyRef.current = true;
+      lastKnownScrollTop.current = scrollEl.scrollTop;
+    };
+
     scrollEl.addEventListener("wheel", onWheel, { passive: true });
     scrollEl.addEventListener("touchstart", onTouchStart, { passive: true });
     scrollEl.addEventListener("touchmove", onTouchMove, { passive: true });
     scrollEl.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("langflow-scroll-to-bottom", onForceSticky);
 
     let rafId: ReturnType<typeof requestAnimationFrame>;
     const tick = () => {
@@ -120,6 +126,7 @@ function SafariScrollFixInner() {
       scrollEl.removeEventListener("touchstart", onTouchStart);
       scrollEl.removeEventListener("touchmove", onTouchMove);
       scrollEl.removeEventListener("scroll", onScroll);
+      window.removeEventListener("langflow-scroll-to-bottom", onForceSticky);
       cancelAnimationFrame(rafId);
     };
   }, [scrollRef, stopScroll]);

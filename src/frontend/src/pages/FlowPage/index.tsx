@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import {
   SimpleSidebar,
   SimpleSidebarProvider,
@@ -10,9 +10,9 @@ import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import { useWebhookEvents } from "@/hooks/use-webhook-events";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
@@ -27,6 +27,35 @@ import {
   FlowSidebarComponent,
 } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
+import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
+
+function FlowPageMainContent({
+  flowId,
+  setIsLoading,
+}: {
+  flowId?: string;
+  setIsLoading: (isLoading: boolean) => void;
+}): JSX.Element {
+  const { activeSection } = useSidebar();
+  const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
+
+  if (showTraces) {
+    return (
+      <div
+        className="flex h-full w-full flex-col overflow-hidden"
+        data-testid="flow-insights-embedded"
+      >
+        <FlowInsightsContent
+          flowId={flowId}
+          refreshOnMount
+          showFlowActivityHeader
+        />
+      </div>
+    );
+  }
+
+  return <Page setIsLoading={setIsLoading} />;
+}
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
@@ -61,7 +90,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const { mutateAsync: getFlow } = useGetFlow();
-  const { refreshAllModelInputs } = useRefreshModelInputs();
+  const applyFlowToCanvas = useApplyFlowToCanvas();
 
   // Connect to webhook events SSE for real-time feedback
   useWebhookEvents();
@@ -138,8 +167,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
     return () => {
       setOnFlowPage(false);
-      console.warn("unmounting");
-
       setCurrentFlow(undefined);
       // Reset playground state when leaving the flow
       setSlidingContainerOpen(false);
@@ -170,8 +197,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const getFlowToAddToCanvas = async (id: string) => {
     const flow = await getFlow({ id });
-    setCurrentFlow(flow);
-    refreshAllModelInputs({ silent: true });
+    applyFlowToCanvas(flow);
   };
 
   const isMobile = useIsMobile();
@@ -235,7 +261,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         maxWidth={0.6}
         open={isSlidingContainerOpen}
         onOpenChange={(open) => {
+          const wasOpen = isSlidingContainerOpen;
           setSlidingContainerOpen(open);
+          if (open && !wasOpen) {
+            setIsFullscreen(true);
+          }
         }}
         fullscreen={isFullscreen}
         onMaxWidth={() => {
@@ -262,7 +292,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                     )}
                   >
                     <div className="h-full w-full">
-                      <Page setIsLoading={setIsLoading} />
+                      <FlowPageMainContent
+                        flowId={id}
+                        setIsLoading={setIsLoading}
+                      />
                     </div>
                   </main>
                 </FlowSearchProvider>

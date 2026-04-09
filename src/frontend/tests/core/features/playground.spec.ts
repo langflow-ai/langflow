@@ -114,16 +114,17 @@ test(
     await page.getByTestId("cancel-button").click();
     await expect(page.getByTestId("chat-message-AI-edit_bot_1")).toBeVisible();
 
-    // check table messages view
-    await page.getByTestId("chat-header-more-menu").click();
+    // check table messages view (use sidebar session more menu — header menu hidden in fullscreen)
+    await page
+      .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
+      .first()
+      .click();
     await page.getByTestId("message-logs-option").click();
     await expect(page.getByText("Page 1 of 1", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Close" }).click();
 
-    // create new session
-    await page.getByTestId("session-selector-trigger").click();
-    await page.getByText("New Session").click();
-    await page.keyboard.press("Escape");
+    // create new session (use sidebar new-chat button)
+    await page.getByTestId("new-chat").click();
     await expect(page.getByTitle("New Session 0")).toBeVisible();
 
     // check rename session
@@ -134,7 +135,11 @@ test(
     await page
       .getByTestId("chat-message-User-session_after_delete")
       .isVisible();
-    await page.getByTestId("chat-header-more-menu").click();
+    // Use sidebar session more menu for rename
+    await page
+      .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
+      .last()
+      .click();
     await page.getByTestId("rename-session-option").click();
     await page.getByTestId("session-rename-input").fill("my first session");
     await page.keyboard.press("Enter");
@@ -143,7 +148,10 @@ test(
     ).toBeVisible();
 
     // check cancel rename (using Escape key)
-    await page.getByTestId("chat-header-more-menu").click();
+    await page
+      .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
+      .last()
+      .click();
     await page.getByTestId("rename-session-option").click();
     await page.getByTestId("session-rename-input").fill("cancel name");
     await page.keyboard.press("Escape");
@@ -152,14 +160,15 @@ test(
     ).toBeVisible();
 
     // check delete session
-    await page.getByTestId("chat-header-more-menu").click();
+    await page
+      .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
+      .last()
+      .click();
     await page.getByTestId("delete-session-option").click();
     await expect(page.getByTitle("Default Session")).toBeVisible();
 
     //create new session
-    await page.getByTestId("session-selector-trigger").click();
-    await page.getByText("New Session", { exact: true }).click();
-    await page.keyboard.press("Escape");
+    await page.getByTestId("new-chat").click();
     await page.getByTestId("input-chat-playground").click();
     await page
       .getByTestId("input-chat-playground")

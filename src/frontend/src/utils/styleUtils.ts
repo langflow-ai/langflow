@@ -122,6 +122,7 @@ export const nodeColors: { [char: string]: string } = {
   unknown: "#9CA3AF",
   Document: "#65a30d",
   Data: "#dc2626",
+  JSON: "#dc2626",
   Message: "#4f46e5",
   number: "#7E22CF",
   Prompt: "#7c3aed",
@@ -131,6 +132,8 @@ export const nodeColors: { [char: string]: string } = {
   Agent: "#903BBE",
   AgentExecutor: "#903BBE",
   Tool: "#00fbfc",
+  DataFrame: "#ec4899",
+  Table: "#ec4899",
 };
 
 export const nodeColorsName: { [char: string]: string } = {
@@ -174,6 +177,7 @@ export const nodeColorsName: { [char: string]: string } = {
   unknown: "gray",
   Document: "lime",
   Data: "red",
+  JSON: "red",
   Message: "indigo",
   Prompt: "violet",
   Embeddings: "emerald",
@@ -186,6 +190,7 @@ export const nodeColorsName: { [char: string]: string } = {
   BaseChatMessageHistory: "orange",
   Memory: "orange",
   DataFrame: "pink",
+  Table: "pink",
 };
 
 export const FILE_ICONS = {
@@ -204,6 +209,74 @@ export const FILE_ICONS = {
   pdf: {
     icon: "File",
     color: "text-datatype-red dark:text-datatype-red-foreground",
+  },
+  md: {
+    icon: "FileText",
+    color: "text-datatype-fuchsia dark:text-datatype-fuchsia-foreground",
+  },
+  mdx: {
+    icon: "FileText",
+    color: "text-datatype-fuchsia dark:text-datatype-fuchsia-foreground",
+  },
+  html: {
+    icon: "FileCode",
+    color: "text-datatype-yellow dark:text-datatype-yellow-foreground",
+  },
+  htm: {
+    icon: "FileCode",
+    color: "text-datatype-yellow dark:text-datatype-yellow-foreground",
+  },
+  xhtml: {
+    icon: "FileCode",
+    color: "text-datatype-yellow dark:text-datatype-yellow-foreground",
+  },
+  xml: {
+    icon: "FileCode",
+    color: "text-datatype-yellow dark:text-datatype-yellow-foreground",
+  },
+  adoc: {
+    icon: "FileText",
+    color: "text-datatype-cyan dark:text-datatype-cyan-foreground",
+  },
+  asciidoc: {
+    icon: "FileText",
+    color: "text-datatype-cyan dark:text-datatype-cyan-foreground",
+  },
+  asc: {
+    icon: "FileText",
+    color: "text-datatype-cyan dark:text-datatype-cyan-foreground",
+  },
+  py: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  js: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  ts: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  tsx: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  sh: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  sql: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  yaml: {
+    icon: "FileJson",
+    color: "text-datatype-violet dark:text-datatype-violet-foreground",
+  },
+  yml: {
+    icon: "FileJson",
+    color: "text-datatype-violet dark:text-datatype-violet-foreground",
   },
 };
 
@@ -251,6 +324,7 @@ export const SIDEBAR_CATEGORIES = [
 
 export const SIDEBAR_BUNDLES = [
   { display_name: "AI/ML API", name: "aiml", icon: "AIML" },
+  { display_name: "Agentics", name: "agentics", icon: "Agentics" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
   { display_name: "ALTK", name: "altk", icon: "Zap" },
   {
@@ -304,6 +378,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "JigsawStack", name: "jigsawstack", icon: "JigsawStack" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
   { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
+  { display_name: "LiteLLM", name: "litellm", icon: "LiteLLM" },
   { display_name: "LMStudio", name: "lmstudio", icon: "LMStudio" },
   { display_name: "MariTalk", name: "maritalk", icon: "Maritalk" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
@@ -491,6 +566,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   WolframAlphaAPI: "Wolfram",
   WolframAlphaAPIWrapper: "Wolfram",
   WolframAlphaQueryRun: "Wolfram",
+  Agentics: "Agentics",
 
   //Node Icons
   model_specs: "FileSliders",

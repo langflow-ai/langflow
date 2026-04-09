@@ -11,7 +11,7 @@ export const SearchInput = memo(function SearchInput({
   handleInputBlur,
   handleInputChange,
 }: {
-  searchInputRef: React.RefObject<HTMLInputElement>;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
   isInputFocused: boolean;
   search: string;
   handleInputFocus: (event: React.FocusEvent<HTMLInputElement>) => void;

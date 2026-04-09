@@ -43,6 +43,7 @@ To customize log storage locations and behaviors, set the following [Langflow en
 | `LANGFLOW_LOG_ROTATION` | String | `1 day` | Controls when the log file is rotated, either based on time or file size. For time-based rotation, set to `1 day`, `12 hours`, or `1 week`. For size-based rotation, set to `10 MB` or `1 GB`. To disable rotation, set to `None`. If disabled, log files grow without limit. |
 | `LANGFLOW_ENABLE_LOG_RETRIEVAL` | Boolean | `False` | Enables retrieval of logs from your Langflow instance with [Logs endpoints](/api-logs). |
 | `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | Integer | `10000` | Set the buffer size for log retrieval if `LANGFLOW_ENABLE_LOG_RETRIEVAL=True`. Must be greater than `0` for log retrieval to function. |
+| `LANGFLOW_NATIVE_TRACING` | Boolean | `true` | Enables the tracer to record execution traces directly in the Langflow database for use in Trace View. Set to `false` to disable tracing. |
 
 ## View logs in real-time
 

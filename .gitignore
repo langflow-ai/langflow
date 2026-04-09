@@ -280,9 +280,7 @@ src/frontend/temp
 *.mcp.json
 
 news-aggregated.json
-CLAUDE.md
 .claude
-
 member_servers.json
 # Component index cache (user-specific)
 **/.cache/lfx/
@@ -291,3 +289,4 @@ member_servers.json
 data/user
 
 sso-config.yaml
+AGENTS.md

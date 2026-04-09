@@ -73,7 +73,7 @@ test(
       ),
     ).toBeVisible();
 
-    await page.getByTestId("playground-btn-flow-io").last().click();
+    await page.getByTestId("playground-close-button").click();
 
     await enableInspectPanel(page);
   },

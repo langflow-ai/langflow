@@ -181,17 +181,17 @@ export default function IntComponent({
             />
           </NumberIncrementStepper>
           <NumberDecrementStepper
-            className={decrementStepperClassName}
-            _disabled={{ cursor: "default" }}
-            isDisabled={isAtOrBelowMin}
-            onClickCapture={
-              isAtOrBelowMin
-                ? (e: React.MouseEvent) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                : undefined
-            }
+            className={cn(
+              decrementStepperClassName,
+              isAtOrBelowMin && "pointer-events-none opacity-50",
+            )}
+            aria-disabled={isAtOrBelowMin || undefined}
+            data-disabled={isAtOrBelowMin ? "" : undefined}
+            onClickCapture={(e: React.MouseEvent) => {
+              if (!isAtOrBelowMin) return;
+              e.preventDefault();
+              e.stopPropagation();
+            }}
           >
             <MinusIcon
               className={iconClassName}

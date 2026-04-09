@@ -1,18 +1,19 @@
 import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
+import {
+  isCodeField,
+  isInternalField,
+  isToolModeEnabled,
+  shouldRenderInspectionPanelField,
+} from "@/CustomNodes/helpers/parameter-filtering";
 import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
-import type { NodeDataType } from "@/types/flow";
-import InspectionPanelField from "./InspectionPanelField";
-import InspectionPanelEditField from "./InspectionPanelEditField";
-import {
-  shouldRenderInspectionPanelField,
-  isInternalField,
-  isCodeField,
-  isHandleInput,
-  isToolModeEnabled,
-} from "@/CustomNodes/helpers/parameter-filtering";
-import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import useFlowStore from "@/stores/flowStore";
+import type { NodeDataType, targetHandleType } from "@/types/flow";
+import { scapeJSONParse } from "@/utils/reactflowUtils";
+import InspectionPanelEditField from "./InspectionPanelEditField";
+import InspectionPanelField from "./InspectionPanelField";
 
 interface InspectionPanelFieldsProps {
   data: NodeDataType;
@@ -25,6 +26,24 @@ export default function InspectionPanelFields({
 }: InspectionPanelFieldsProps) {
   const isToolMode = data.node?.tool_mode;
 
+  const connectedFieldNames = useFlowStore(
+    useShallow(
+      (state) =>
+        state.edges
+          .filter((e) => e.target === data.id && e.targetHandle)
+          .map(
+            (e) =>
+              (scapeJSONParse(e.targetHandle!) as targetHandleType).fieldName,
+          )
+          .filter(Boolean) as string[],
+    ),
+  );
+
+  const connectedFields = useMemo(
+    () => new Set(connectedFieldNames),
+    [connectedFieldNames],
+  );
+
   // Get all editable fields (for edit mode)
   const allEditableFields = useMemo(() => {
     return Object.keys(data.node?.template || {})
@@ -34,6 +53,7 @@ export default function InspectionPanelFields({
         if (!template?.show) return false;
         if (isCodeField(templateField, template)) return false;
         if (isToolModeEnabled(template) && isToolMode) return false;
+        if (connectedFields.has(templateField)) return false;
         return true;
       })
       .sort((a, b) =>
@@ -45,7 +65,12 @@ export default function InspectionPanelFields({
           false,
         ),
       );
-  }, [data.node?.template, data.node?.field_order, isToolMode]);
+  }, [
+    data.node?.template,
+    data.node?.field_order,
+    isToolMode,
+    connectedFields,
+  ]);
 
   // Get only advanced fields (for normal mode)
   const advancedFields = useMemo(() => {

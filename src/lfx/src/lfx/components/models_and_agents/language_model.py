@@ -1,7 +1,9 @@
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.unified_models import (
+    apply_provider_variable_config_to_build_config,
     get_language_model_options,
     get_llm,
+    get_provider_for_model_name,
     update_model_options_in_build_config,
 )
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
@@ -53,14 +55,13 @@ class LanguageModelComponent(LCModelComponent):
             show=False,
             required=False,
         ),
-        MessageInput(
+        StrInput(
             name="ollama_base_url",
             display_name="Ollama API URL",
             info=f"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}",
             value=DEFAULT_OLLAMA_URL,
             show=False,
             real_time_refresh=True,
-            load_from_db=True,
         ),
         MessageInput(
             name="input_value",
@@ -122,22 +123,15 @@ class LanguageModelComponent(LCModelComponent):
             field_value=field_value,
         )
 
-        # Show/hide provider-specific fields based on selected model
-        # Get current model value - from field_value if model is being changed, otherwise from build_config
         current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
-        if isinstance(current_model_value, list) and len(current_model_value) > 0:
+        provider = ""
+        if isinstance(current_model_value, list) and current_model_value:
             selected_model = current_model_value[0]
-            provider = selected_model.get("provider", "")
+            provider = (selected_model.get("provider") or "").strip()
+            if not provider and selected_model.get("name"):
+                provider = get_provider_for_model_name(str(selected_model["name"]))
 
-            # Show/hide watsonx fields
-            is_watsonx = provider == "IBM WatsonX"
-            build_config["base_url_ibm_watsonx"]["show"] = is_watsonx
-            build_config["project_id"]["show"] = is_watsonx
-            build_config["base_url_ibm_watsonx"]["required"] = is_watsonx
-            build_config["project_id"]["required"] = is_watsonx
-
-            # Show/hide Ollama fields
-            is_ollama = provider == "Ollama"
-            build_config["ollama_base_url"]["show"] = is_ollama
+        if provider:
+            build_config = apply_provider_variable_config_to_build_config(build_config, provider)
 
         return build_config

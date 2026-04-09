@@ -138,7 +138,7 @@ async def files_client_fixture(
         app, db_path = await asyncio.to_thread(init_app)
 
         async with (
-            LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+            LifespanManager(app, startup_timeout=None, shutdown_timeout=60) as manager,
             AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client,
         ):
             yield client

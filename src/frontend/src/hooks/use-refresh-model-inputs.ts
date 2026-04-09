@@ -16,8 +16,12 @@ export interface RefreshOptions {
   silent?: boolean;
 }
 
-// Prevents concurrent refresh operations
+// Prevents concurrent refresh operations; queues the latest request if busy
 let isRefreshInProgress = false;
+let pendingRefresh: {
+  queryClient?: QueryClient;
+  options?: RefreshOptions;
+} | null = null;
 
 /** Checks if a node has a model-type input field */
 export function isModelNode(node: AllNodeType): boolean {
@@ -73,7 +77,11 @@ export async function refreshAllModelInputs(
   queryClient?: QueryClient,
   options?: RefreshOptions,
 ): Promise<void> {
-  if (isRefreshInProgress) return;
+  if (isRefreshInProgress) {
+    // Queue the latest request so it runs after the current one finishes
+    pendingRefresh = { queryClient, options };
+    return;
+  }
   isRefreshInProgress = true;
 
   const { setSuccessData, setErrorData } = useAlertStore.getState();
@@ -86,10 +94,12 @@ export async function refreshAllModelInputs(
     const folderId = useFlowsManagerStore.getState().currentFlow?.folder_id;
 
     if (queryClient) {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] }),
-        queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] }),
-      ]);
+      await queryClient.invalidateQueries({
+        queryKey: ["useGetModelProviders"],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["useGetEnabledModels"],
+      });
     }
 
     const nodesWithModelFields = allNodes.filter(isModelNode);
@@ -121,6 +131,12 @@ export async function refreshAllModelInputs(
     }
   } finally {
     isRefreshInProgress = false;
+    // If another refresh was requested while this one was running, run it now
+    if (pendingRefresh) {
+      const { queryClient: qc, options: opts } = pendingRefresh;
+      pendingRefresh = null;
+      await refreshAllModelInputs(qc, opts);
+    }
   }
 }
 

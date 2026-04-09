@@ -1,5 +1,6 @@
 import enum
 from unittest.mock import Mock, patch
+from uuid import uuid4
 
 import pytest
 from langflow.utils.schemas import ChatOutputResponse, ContainsEnumMeta, DataOutputResponse, File
@@ -78,6 +79,17 @@ class TestChatOutputResponse:
         assert response.component_id == "comp-456"
         assert response.files == files
         assert response.type == "text"
+
+    def test_chat_response_with_uuid_session_id_converts_to_string(self):
+        """Test UUID session_id conversion to string."""
+        session_id = uuid4()
+        response = ChatOutputResponse(message="Test message", session_id=session_id, type="text")
+        assert response.session_id == str(session_id)
+
+    def test_chat_response_with_non_string_non_uuid_session_id_raises_error(self):
+        """Test that non-string, non-UUID session_id raises validation error."""
+        with pytest.raises(ValidationError, match="must be a UUID, string, or None"):
+            ChatOutputResponse(message="Test message", session_id=123, type="text")
 
     def test_chat_response_with_list_message(self):
         """Test chat response with list message."""

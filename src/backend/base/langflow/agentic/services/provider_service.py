@@ -3,7 +3,10 @@
 import os
 from uuid import UUID
 
-from lfx.base.models.unified_models import get_model_provider_variable_mapping
+from lfx.base.models.unified_models import (
+    get_model_provider_variable_mapping,
+    get_provider_required_variable_keys,
+)
 from lfx.log.logger import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,8 +50,11 @@ async def get_enabled_providers_for_user(
     enabled_providers = []
     provider_status = {}
 
-    for provider, var_name in provider_variable_map.items():
-        is_enabled = var_name in credential_names
+    for provider in provider_variable_map:
+        # Check if ALL required variables for this provider are present
+        required_keys = get_provider_required_variable_keys(provider)
+        is_enabled = all(key in credential_names for key in required_keys)
+
         provider_status[provider] = is_enabled
         if is_enabled:
             enabled_providers.append(provider)

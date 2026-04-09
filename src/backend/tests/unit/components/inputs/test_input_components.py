@@ -53,6 +53,7 @@ class TestChatInput(ComponentTestBaseWithClient):
             "allow_markdown": False,
             "state": "complete",
             "targets": [],
+            "usage": None,
             "build_duration": None,
         }
 

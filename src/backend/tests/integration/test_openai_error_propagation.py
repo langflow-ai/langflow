@@ -79,9 +79,12 @@ async def test_openai_streaming_runtime_error_format(client: AsyncClient, create
             except json.JSONDecodeError:
                 pass
 
-    # Verify all chunks have proper OpenAI format
-    assert len(chunks) > 0, "Should have received at least one chunk"
-    for chunk in chunks:
+    # Verify all response.chunk events have proper OpenAI format.
+    # The stream also sends a response.completed event (type + response with id inside);
+    # per OpenAI spec, only response.chunk events have top-level id/object/delta.
+    response_chunks = [c for c in chunks if c.get("object") == "response.chunk" or ("delta" in c and "id" in c)]
+    assert len(response_chunks) > 0, "Should have received at least one response.chunk"
+    for chunk in response_chunks:
         assert "id" in chunk, "Chunk should have 'id' field"
         assert "object" in chunk, "Chunk should have 'object' field"
         assert chunk.get("object") == "response.chunk", "Object should be 'response.chunk'"

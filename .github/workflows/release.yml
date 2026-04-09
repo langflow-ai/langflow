@@ -188,7 +188,7 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | grep -v 'langflow-sdk' | awk '{print $2}' | sed 's/^v//')
           echo "Main version from pyproject.toml: $version"
 
           if [ ${{inputs.pre_release}} == "true" ]; then
@@ -522,8 +522,8 @@ jobs:
           MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/.*[~>=<]+([0-9]+\.[0-9]+).*/\1/')
           NEXT_MAJOR=$((${MAJOR_MINOR%.*} + 1))
 
-          # Create new constraint: >=BASE_VERSION,<NEXT_MAJOR.dev0
-          NEW_CONSTRAINT="\"langflow-base>=$BASE_VERSION,<$NEXT_MAJOR.dev0\""
+          # Create new constraint: >=BASE_VERSION,<NEXT_MAJOR.dev0 (preserve [complete] extra)
+          NEW_CONSTRAINT="\"langflow-base[complete]>=$BASE_VERSION,<$NEXT_MAJOR.dev0\""
 
           echo "New constraint: $NEW_CONSTRAINT"
 
@@ -594,11 +594,12 @@ jobs:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
       lfx-artifact-name: "dist-lfx"
+      pre_release: ${{ inputs.pre_release }}
 
   publish-base:
     name: Publish Langflow Base to PyPI
     if: ${{ inputs.release_package_base }}
-    needs: [build-base, test-cross-platform]
+    needs: [build-base, test-cross-platform, ci]
     runs-on: ubuntu-latest
     steps:
       - name: Download base artifact
@@ -621,7 +622,7 @@ jobs:
   publish-main:
     name: Publish Langflow Main to PyPI
     if: ${{ inputs.release_package_main }}
-    needs: [build-main, test-cross-platform, publish-base]
+    needs: [build-main, test-cross-platform, publish-base, ci]
     runs-on: ubuntu-latest
     steps:
       - name: Download main artifact
@@ -644,7 +645,7 @@ jobs:
   publish-lfx:
     name: Publish LFX to PyPI
     if: ${{ inputs.release_lfx }}
-    needs: [build-lfx, test-cross-platform]
+    needs: [build-lfx, test-cross-platform, ci]
     runs-on: ubuntu-latest
     steps:
       - name: Download LFX artifact

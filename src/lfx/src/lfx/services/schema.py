@@ -1,5 +1,7 @@
 """Service schema definitions for lfx package."""
 
+from __future__ import annotations
+
 from enum import Enum
 
 

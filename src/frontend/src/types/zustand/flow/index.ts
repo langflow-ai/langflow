@@ -109,10 +109,13 @@ export type FlowStoreType = {
   isBuilding: boolean;
   buildStartTime: number | null;
   buildDuration: number | null;
+  buildingFlowId: string | null;
+  buildingSessionId: string | null;
   isPending: boolean;
   setIsBuilding: (isBuilding: boolean) => void;
   setBuildStartTime: (time: number) => void;
   setBuildDuration: (duration: number) => void;
+  setBuildingSession: (flowId: string | null, sessionId: string | null) => void;
   setPending: (isPending: boolean) => void;
   resetFlow: (flow: FlowType | undefined) => void;
   resetFlowState: () => void;
@@ -294,6 +297,7 @@ export type FlowStoreType = {
   currentBuildingNodeId: string[] | undefined;
   setCurrentBuildingNodeId: (nodeIds: string[] | undefined) => void;
   clearEdgesRunningByNodes: () => Promise<void>;
+  clearAndSetEdgesRunning: (nextIds?: string[]) => void;
   updateToolMode: (nodeId: string, toolMode: boolean) => void;
   helperLineEnabled: boolean;
   setHelperLineEnabled: (helperLineEnabled: boolean) => void;

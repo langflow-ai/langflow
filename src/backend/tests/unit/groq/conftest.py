@@ -262,6 +262,34 @@ def mock_groq_client_rate_limit():
 
 
 @pytest.fixture
+def mock_groq_client_chat_not_supported():
+    """Mock Groq client that raises 'does not support chat completions' error."""
+
+    def _create_mock_client(*_args, **_kwargs):
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.side_effect = ValueError(
+            "Error: model 'some-model' does not support chat completions"
+        )
+        return mock_client
+
+    return _create_mock_client
+
+
+@pytest.fixture
+def mock_groq_client_chat_terms_required():
+    """Mock Groq client that raises a terms_required error."""
+
+    def _create_mock_client(*_args, **_kwargs):
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.side_effect = ValueError(
+            "Error: model_terms_required - please accept the terms"
+        )
+        return mock_client
+
+    return _create_mock_client
+
+
+@pytest.fixture
 def sample_models_metadata():
     """Sample model metadata dictionary for testing."""
     return {

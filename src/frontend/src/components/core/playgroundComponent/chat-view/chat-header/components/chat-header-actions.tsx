@@ -25,20 +25,22 @@ export function ChatHeaderActions({
   return (
     <div className="relative flex items-center gap-2 w-20 justify-end">
       {renderPrefix && <div className="shrink-0">{renderPrefix()}</div>}
-      <Button
-        onClick={onToggleFullscreen}
-        variant="ghost"
-        size="icon"
-        className={actionButtonClasses}
-        title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-        aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-      >
-        <ForwardedIconComponent
-          name={isFullscreen ? "Shrink" : "Expand"}
-          className="h-4 w-4"
-          aria-hidden="true"
-        />
-      </Button>
+      {!isFullscreen && (
+        <Button
+          onClick={onToggleFullscreen}
+          variant="ghost"
+          size="icon"
+          className={actionButtonClasses}
+          title="Enter fullscreen"
+          aria-label="Enter fullscreen"
+        >
+          <ForwardedIconComponent
+            name="Expand"
+            className="h-4 w-4"
+            aria-hidden="true"
+          />
+        </Button>
+      )}
       {isFullscreen && onClose && (
         <Button
           variant="ghost"
@@ -47,6 +49,7 @@ export function ChatHeaderActions({
           className={actionButtonClasses}
           title="Close and go back to flow"
           aria-label="Close and go back to flow"
+          data-testid="playground-close-button"
         >
           <ForwardedIconComponent
             name="X"

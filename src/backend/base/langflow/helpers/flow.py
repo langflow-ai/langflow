@@ -454,7 +454,7 @@ def json_schema_from_flow(flow: Flow) -> dict:
         template = node_data["template"]
 
         for field_name, field_data in template.items():
-            if field_data != "Component" and field_data.get("show", False) and not field_data.get("advanced", False):
+            if isinstance(field_data, dict) and field_data.get("show", False) and not field_data.get("advanced", False):
                 field_type = field_data.get("type", "string")
                 properties[field_name] = {
                     "type": field_type,

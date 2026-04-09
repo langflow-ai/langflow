@@ -29,6 +29,7 @@ export default function FileCard({
 
   const fileWrapperClasses = getClasses(isHovered);
 
+  // Use direct URL like in v1.7.2 - the server handles authentication via cookies
   const imgSrc = `${getBaseUrl()}files/images/${path}`;
 
   if (showFile) {
@@ -45,6 +46,7 @@ export default function FileCard({
               src={imgSrc}
               alt="generated image"
               className="m-0 h-auto w-auto rounded-lg border border-border p-0 transition-all"
+              crossOrigin="use-credentials"
             />
             <DownloadButton
               isHovered={isHovered}

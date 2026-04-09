@@ -4,15 +4,14 @@ import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
 import CanvasControls from "@/components/core/canvasControlsComponent/CanvasControls";
-import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
+import { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../flowSidebarComponent";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
-import { AllNodeType } from "@/types/flow";
 
 export const MemoizedBackground = memo(() => (
   <Background size={2} gap={20} className="" />
@@ -24,8 +23,6 @@ interface MemoizedCanvasControlsProps {
   shadowBoxHeight: number;
   selectedNode: AllNodeType | null;
 }
-
-export const MemoizedLogCanvasControls = memo(() => <LogCanvasControls />);
 
 export const MemoizedCanvasControls = memo(
   ({

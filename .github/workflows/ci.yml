@@ -236,7 +236,12 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      needs.set-ci-condition.outputs.should-run-tests == 'true'
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
@@ -253,7 +258,12 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      needs.set-ci-condition.outputs.should-run-tests == 'true'
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
     uses: ./.github/workflows/jest_test.yml
     with:
       ref: ${{ inputs.ref || github.ref }}
@@ -266,7 +276,12 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      needs.set-ci-condition.outputs.should-run-tests == 'true'
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
@@ -365,7 +380,7 @@ jobs:
       DOCS_ONLY: ${{ needs.path-filter.outputs.docs-only }}
       EXIT_CODE: ${{ (contains(needs.*.result, 'failure') ||
         contains(needs.*.result, 'cancelled') ||
-        (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && needs.path-filter.outputs.docs-only != 'true'))
+        (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && github.event_name != 'merge_group' && needs.path-filter.outputs.docs-only != 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-nightly-check')))
         && '1' || '0' }}
     steps:
       - name: "CI Success"

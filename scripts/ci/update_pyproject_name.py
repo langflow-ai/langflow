@@ -13,13 +13,15 @@ def update_pyproject_name(pyproject_path: str, new_project_name: str) -> None:
     filepath = BASE_DIR / pyproject_path
     content = filepath.read_text(encoding="utf-8")
 
-    # Regex to match the version line under [tool.poetry]
-    pattern = re.compile(r'(?<=^name = ")[^"]+(?=")', re.MULTILINE)
+    # Regex to match the name field only within the [project] section.
+    # This avoids replacing 'name' in other sections like [[tool.uv.index]].
+    # Pattern matches: [project] + any content (non-greedy) + name = "value"
+    pattern = re.compile(r'(\[project\]\s*\n(?:[^\[]*?))(name = ")[^"]+(")', re.DOTALL)
 
     if not pattern.search(content):
         msg = f'Project name not found in "{filepath}"'
         raise ValueError(msg)
-    content = pattern.sub(new_project_name, content)
+    content = pattern.sub(rf"\1\g<2>{new_project_name}\3", content)
 
     # Update extra references in [complete] and [all] extras for nightly builds
     if new_project_name == "langflow-base-nightly":
@@ -43,6 +45,9 @@ def update_uv_dep(pyproject_path: str, new_project_name: str) -> None:
     elif new_project_name == "langflow-base-nightly":
         pattern = re.compile(r"langflow-base = \{ workspace = true \}")
         replacement = "langflow-base-nightly = { workspace = true }"
+    elif new_project_name == "langflow-sdk-nightly":
+        pattern = re.compile(r"langflow-sdk = \{ workspace = true \}")
+        replacement = "langflow-sdk-nightly = { workspace = true }"
     else:
         msg = f"Invalid project name: {new_project_name}"
         raise ValueError(msg)

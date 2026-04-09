@@ -28,6 +28,7 @@ const ExportModal = forwardRef(
   ): JSX.Element => {
     const version = useDarkStore((state) => state.version);
     const setSuccessData = useAlertStore((state) => state.setSuccessData);
+    const setErrorData = useAlertStore((state) => state.setErrorData);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
     const [checked, setChecked] = useState(false);
     const currentFlowOnPage = useFlowStore((state) => state.currentFlow);
@@ -57,7 +58,7 @@ const ExportModal = forwardRef(
         setOpen={setOpen}
         onSubmit={async () => {
           try {
-            const flowToExport: FlowType = {
+            let flowToExport: FlowType = {
               id: currentFlow!.id,
               data: currentFlow!.data!,
               description,
@@ -90,8 +91,12 @@ const ExportModal = forwardRef(
               setOpen(false);
               track("Flow Exported", { flowId: currentFlow!.id });
             }
-          } catch (error) {
-            console.error("Error exporting flow:", error);
+          } catch (error: any) {
+            const detail = error?.response?.data?.detail;
+            setErrorData({
+              title: "Failed to export flow",
+              ...(detail ? { list: [detail] } : {}),
+            });
           }
         }}
       >

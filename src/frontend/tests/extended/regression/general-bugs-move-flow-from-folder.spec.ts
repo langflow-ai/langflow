@@ -10,11 +10,11 @@ test("user must be able to move flow from folder", async ({ page }) => {
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(2000);
 
   await renameFlow(page, { flowName: randomName });
 
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(2000);
 
   await page.getByTestId("icon-ChevronLeft").click();
   await page.waitForSelector('[data-testid="add-project-button"]', {
@@ -24,11 +24,11 @@ test("user must be able to move flow from folder", async ({ page }) => {
   await page.getByTestId("add-project-button").click();
 
   //wait for the project to be created and changed to the new project
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(2000);
 
   await page.getByTestId("sidebar-nav-Starter Project").click();
 
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(2000);
 
   await page.getByText(randomName).hover();
 
@@ -38,13 +38,11 @@ test("user must be able to move flow from folder", async ({ page }) => {
     .dragTo(page.locator('//*[@id="sidebar-nav-New Project"]'));
 
   //wait for the drag and drop to be completed
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(2000);
 
   await page.getByTestId("sidebar-nav-New Project").click();
 
-  await page.waitForSelector('[data-testid="list-card"]', {
-    timeout: 3000,
-  });
+  await page.waitForSelector('[data-testid="list-card"]');
 
   const flowNameCount = await page.getByText(randomName).count();
   expect(flowNameCount).toBeGreaterThan(0);

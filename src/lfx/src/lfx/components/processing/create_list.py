@@ -22,8 +22,8 @@ class CreateListComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data List", name="list", method="create_list"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="JSON List", name="list", method="create_list"),
+        Output(display_name="Table", name="dataframe", method="as_dataframe"),
     ]
 
     def create_list(self) -> list[Data]:

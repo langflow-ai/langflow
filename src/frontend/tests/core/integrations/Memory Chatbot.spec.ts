@@ -69,8 +69,11 @@ withEventDeliveryModes(
     const concatAllText = textContents.join(" ");
     expect(concatAllText.length).toBeGreaterThan(20);
 
-    // Open message logs from chat header menu (on default session with messages)
-    await page.getByTestId("chat-header-more-menu").click();
+    // Open message logs from session sidebar menu (chat-header-more-menu is hidden in fullscreen)
+    await page
+      .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
+      .first()
+      .click();
     await page.getByTestId("message-logs-option").click();
 
     await expect(page.getByText("timestamp", { exact: true })).toBeVisible();

@@ -15,7 +15,6 @@ import Loading from "@/components/ui/loading";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { useDeleteFilesV2 } from "@/controllers/API/queries/file-management/use-delete-files";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
-import { useCustomHandleBulkFilesDownload } from "@/customization/hooks/use-custom-handle-bulk-files-download";
 import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
 import useUploadFile from "@/hooks/files/use-upload-file";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
@@ -50,12 +49,9 @@ const FilesTab = ({
   const { data: files } = useGetFilesV2();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const [isDownloading, setIsDownloading] = useState(false);
 
   const { mutate: rename } = usePostRenameFileV2();
   const { mutate: deleteFiles, isPending: isDeleting } = useDeleteFilesV2();
-  const { handleBulkDownload } = useCustomHandleBulkFilesDownload();
-
   const handleRename = (params: NewValueParams<any, any>) => {
     rename({
       id: params.data.id,
@@ -247,15 +243,6 @@ const FilesTab = ({
     }
   };
 
-  const handleDownload = () => {
-    handleBulkDownload(
-      selectedFiles,
-      setSuccessData,
-      setErrorData,
-      setIsDownloading,
-    );
-  };
-
   const handleDelete = () => {
     deleteFiles(
       {
@@ -320,7 +307,28 @@ const FilesTab = ({
               }}
             />
           </div>
-          <div className="flex items-center gap-2">{UploadButtonComponent}</div>
+          <div className="flex items-center gap-2">
+            {quantitySelected > 0 ? (
+              <DeleteConfirmationModal
+                onConfirm={handleDelete}
+                description={"file" + (quantitySelected > 1 ? "s" : "")}
+              >
+                <Button
+                  variant="destructive"
+                  className="flex items-center gap-2 !px-3 font-semibold md:!px-4 md:!pl-3.5"
+                  loading={isDeleting}
+                  data-testid="bulk-delete-btn"
+                >
+                  <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
+                  <span className="hidden whitespace-nowrap md:inline">
+                    Delete ({quantitySelected})
+                  </span>
+                </Button>
+              </DeleteConfirmationModal>
+            ) : (
+              UploadButtonComponent
+            )}
+          </div>
         </div>
       ) : (
         <></>
@@ -371,53 +379,6 @@ const FilesTab = ({
                   colResizeDefault: "shift",
                 }}
               />
-
-              <div
-                className={cn(
-                  "pointer-events-none absolute top-1.5 z-50 flex h-8 w-full transition-opacity",
-                  selectedFiles.length > 0 ? "opacity-100" : "opacity-0",
-                )}
-              >
-                <div
-                  className={cn(
-                    "ml-12 flex h-full flex-1 items-center justify-between bg-background",
-                    selectedFiles.length > 0
-                      ? "pointer-events-auto"
-                      : "pointer-events-none",
-                  )}
-                >
-                  <span className="text-xs text-muted-foreground">
-                    {quantitySelected} selected
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="iconMd"
-                      onClick={handleDownload}
-                      loading={isDownloading}
-                      data-testid="bulk-download-btn"
-                    >
-                      <ForwardedIconComponent name="Download" />
-                    </Button>
-
-                    <DeleteConfirmationModal
-                      onConfirm={handleDelete}
-                      description={"file" + (quantitySelected > 1 ? "s" : "")}
-                    >
-                      <Button
-                        variant="destructive"
-                        size="iconMd"
-                        className="px-2.5 !text-mmd"
-                        loading={isDeleting}
-                        data-testid="bulk-delete-btn"
-                      >
-                        <ForwardedIconComponent name="Trash2" />
-                        Delete
-                      </Button>
-                    </DeleteConfirmationModal>
-                  </div>
-                </div>
-              </div>
             </div>
           </DragWrapComponent>
         ) : (

@@ -3,6 +3,9 @@ title: Monitor endpoints
 slug: /api-monitor
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 The `/monitor` endpoints are for internal Langflow functionality, primarily related to running flows in the **Playground**, storing chat history, and generating flow logs.
 
 This information is primarily for those who are building custom components or contributing to the Langflow codebase in a way that requires calling or understanding these endpoints.
@@ -629,6 +632,122 @@ HTTP/1.1 204 No Content
 ```
 
 </details>
+
+## Get traces
+
+ Retrieve trace metadata and span trees for a specific flow.
+
+### Example request
+
+Use `GET /monitor/traces` and filter by `flow_id`:
+
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+import os
+
+import requests
+
+base_url = os.getenv("LANGFLOW_SERVER_URL", "http://localhost:7860")
+api_key = os.getenv("LANGFLOW_API_KEY")
+flow_id = "YOUR_FLOW_ID"
+
+response = requests.get(
+    f"{base_url}/api/v1/monitor/traces",
+    params={"flow_id": flow_id, "page": 1, "size": 50},
+    headers={"x-api-key": api_key, "accept": "application/json"},
+    timeout=10,
+)
+response.raise_for_status()
+traces = response.json()
+print(traces)
+```
+
+</TabItem>
+<TabItem value="typescript" label="TypeScript">
+
+```ts
+const baseUrl = process.env.LANGFLOW_SERVER_URL ?? "http://localhost:7860";
+const apiKey = process.env.LANGFLOW_API_KEY!;
+const flowId = "YOUR_FLOW_ID";
+
+async function listTraces() {
+  const url = new URL("/api/v1/monitor/traces", baseUrl);
+  url.searchParams.set("flow_id", flowId);
+  url.searchParams.set("page", "1");
+  url.searchParams.set("size", "50");
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      accept: "application/json",
+      "x-api-key": apiKey,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Request failed with status ${res.status}`);
+  }
+
+  const data = await res.json();
+  console.log(data);
+}
+
+listTraces().catch(console.error);
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+export LANGFLOW_SERVER_URL="http://localhost:7860"
+export LANGFLOW_API_KEY="YOUR_LANGFLOW_API_KEY"
+export FLOW_ID="YOUR_FLOW_ID"
+
+curl -s "$LANGFLOW_SERVER_URL/api/v1/monitor/traces?flow_id=$FLOW_ID&page=1&size=50" \
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  | jq .
+```
+
+</TabItem>
+</Tabs>
+
+### Example response
+
+```json
+{
+  "traces": [
+    {
+      "id": "426656db-fc3c-4a3a-acf8-c60acf099543",
+      "name": "Simple Agent - 9e774f60-857b-44b4-bbcd-87bd23848ee8",
+      "status": "ok",
+      "startTime": "2026-03-03T19:13:30.692628Z",
+      "totalLatencyMs": 18693,
+      "totalTokens": 2050,
+      "flowId": "9e774f60-857b-44b4-bbcd-87bd23848ee8",
+      "sessionId": "9e774f60-857b-44b4-bbcd-87bd23848ee8",
+      "input": {
+        "input_value": "Use tools to teach me about vertex graphs"
+      },
+      "output": {
+        "message": {
+          "text_key": "text",
+          "data": {
+            "timestamp": "2026-03-03 19:13:30 UTC",
+            "sender": "Machine",
+            "sender_name": "AI",
+            "session_id": "9e774f60-857b-44b4-bbcd-87bd23848ee8",
+            "text": "I can teach you the concept, but I couldn’t pull the Wikipedia pages with the tool ... (truncated)"
+          }
+        }
+      }
+    }
+  ],
+  "total": 1,
+  "pages": 1
+}
+```
 
 ## Get transactions
 

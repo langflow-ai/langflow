@@ -1482,13 +1482,13 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": [
-                  "https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/agents/agent.py",
-                  "https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/helpers/structured_output.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/tools/calculator.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/tools/tavily_search.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/models/ollama.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/logic/conditional_router.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/data/file.py"
+                  "https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/base/agents/agent.py",
+                  "https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/components/llm_operations/structured_output.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/lfx/src/lfx/components/tools/calculator.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/lfx/src/lfx/components/tavily/tavily_search.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/lfx/src/lfx/components/ollama/ollama.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/lfx/src/lfx/components/flow_controls/conditional_router.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/lfx/src/lfx/components/files_and_knowledge/file.py"
                 ]
               },
               "use_async": {
