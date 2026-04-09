@@ -4,7 +4,6 @@ import json
 from unittest.mock import patch
 
 import download_backend_translations as dl_mod
-import pytest
 
 
 def _run_main(output_dir: str):

@@ -1,8 +1,6 @@
 """Tests for extract_backend_strings.py."""
 
 import json
-import sys
-from pathlib import Path
 from unittest.mock import patch
 
 import extract_backend_strings as extract_mod
@@ -128,8 +126,6 @@ class TestExtractBackendStrings:
             outputs = []
 
         active_module.FakeComponent = FakeComponent
-
-        import lfx.components as components_pkg_placeholder
 
         with (
             patch("pkgutil.walk_packages", return_value=fake_modules),
