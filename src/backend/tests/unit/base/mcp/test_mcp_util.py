@@ -1731,13 +1731,15 @@ class TestMCPStructuredTool:
 
         # Import the MCPStructuredTool class from the actual code
         # We need to recreate it here since it's defined inline in the update_tools function
+        from langchain_core.runnables import RunnableConfig
         from langchain_core.tools import StructuredTool
         from lfx.base.mcp.util import create_tool_coroutine, create_tool_func
 
         class MCPStructuredTool(StructuredTool):
-            def run(self, tool_input: str | dict, config=None, **kwargs):
-                """Override the main run method to handle parameter conversion before validation."""
-                # Parse tool_input if it's a string
+            _tool_call_id_key = "_lf_tool_call_id"
+
+            def _to_args_and_kwargs(self, tool_input: str | dict, tool_call_id: str | None):
+                """Normalize MCP tool input before LangChain validates it."""
                 if isinstance(tool_input, str):
                     try:
                         parsed_input = json.loads(tool_input)
@@ -1746,28 +1748,27 @@ class TestMCPStructuredTool:
                 else:
                     parsed_input = tool_input or {}
 
-                # Convert camelCase parameters to snake_case
                 converted_input = self._convert_parameters(parsed_input)
+                tool_args, tool_kwargs = super()._to_args_and_kwargs(converted_input, tool_call_id)
+                if tool_call_id is not None:
+                    tool_kwargs[self._tool_call_id_key] = tool_call_id
+                return tool_args, tool_kwargs
 
-                # Call the parent run method with converted parameters
-                return super().run(converted_input, config=config, **kwargs)
+            def _run(self, *args, config: RunnableConfig, run_manager=None, **kwargs):
+                from lfx.base.mcp.util import _convert_mcp_result
 
-            async def arun(self, tool_input: str | dict, config=None, **kwargs):
-                """Override the main arun method to handle parameter conversion before validation."""
-                # Parse tool_input if it's a string
-                if isinstance(tool_input, str):
-                    try:
-                        parsed_input = json.loads(tool_input)
-                    except json.JSONDecodeError:
-                        parsed_input = {"input": tool_input}
-                else:
-                    parsed_input = tool_input or {}
+                tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                raw = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
+                converted = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                return converted, raw
 
-                # Convert camelCase parameters to snake_case
-                converted_input = self._convert_parameters(parsed_input)
+            async def _arun(self, *args, config: RunnableConfig, run_manager=None, **kwargs):
+                from lfx.base.mcp.util import _convert_mcp_result
 
-                # Call the parent arun method with converted parameters
-                return await super().arun(converted_input, config=config, **kwargs)
+                tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                raw = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+                converted = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                return converted, raw
 
             def _convert_parameters(self, input_dict):
                 if not input_dict or not isinstance(input_dict, dict):
@@ -1800,6 +1801,7 @@ class TestMCPStructuredTool:
             args_schema=test_schema,
             func=create_tool_func("test_tool", test_schema, mock_client),
             coroutine=create_tool_coroutine("test_tool", test_schema, mock_client),
+            response_format="content_and_artifact",
         )
 
     def test_convert_parameters_exact_match(self, mcp_tool):
@@ -2682,3 +2684,358 @@ class TestStripNoneRecursive:
 
         # Assert — None items in list preserved (stripping applies to dict keys only)
         assert result == [1, None, "hello", None]
+
+
+class TestConvertMcpResult:
+    """Tests for _convert_mcp_result.
+
+    Ensures MCP CallToolResult objects are properly converted into formats
+    that LangChain agents can consume, including multimodal image support.
+
+    Bug: MCP tools returning image content were passing the raw
+    CallToolResult Python object as a string to the LLM instead of
+    converting it to the image_url format required for vision models.
+    Fixes issue #11812.
+    """
+
+    def _make_text_block(self, text: str):
+        block = MagicMock()
+        block.type = "text"
+        block.text = text
+        return block
+
+    def _make_image_block(self, data: str = "abc123", mime: str = "image/png"):
+        block = MagicMock()
+        block.type = "image"
+        block.data = data
+        block.mimeType = mime
+        return block
+
+    def _make_result(self, content):
+        result = MagicMock()
+        result.content = content
+        return result
+
+    def test_should_return_empty_string_for_none_result(self):
+        """None result must return empty string without raising."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        assert _convert_mcp_result(None) == ""
+
+    def test_should_return_empty_string_for_empty_content(self):
+        """Result with empty content list must return empty string."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result([])
+        assert _convert_mcp_result(result) == ""
+
+    def test_should_return_empty_string_for_missing_content_attr(self):
+        """Result without a content attribute must return empty string."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = MagicMock(spec=[])  # no attributes
+        assert _convert_mcp_result(result) == ""
+
+    def test_should_return_plain_string_for_single_text_block(self):
+        """Single text block must return a plain string (backward compatible)."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result([self._make_text_block("hello world")])
+        assert _convert_mcp_result(result) == "hello world"
+
+    def test_should_join_multiple_text_blocks_with_newline(self):
+        """Multiple text blocks must be joined with newline."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result(
+            [
+                self._make_text_block("first"),
+                self._make_text_block("second"),
+            ]
+        )
+        assert _convert_mcp_result(result) == "first\nsecond"
+
+    def test_should_convert_image_block_to_image_url_format(self):
+        """Image content must be converted to LangChain image_url format."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        # Arrange — reproduces the exact scenario from issue #11812
+        b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg=="
+        result = self._make_result([self._make_image_block(data=b64, mime="image/png")])
+
+        # Act
+        converted = _convert_mcp_result(result)
+
+        # Assert — must be a list with a single image_url block
+        assert isinstance(converted, list)
+        assert len(converted) == 1
+        assert converted[0]["type"] == "image_url"
+        assert converted[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+    def test_should_handle_mixed_text_and_image_blocks(self):
+        """Mixed text + image content must return a list preserving order."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        b64 = "abc123=="
+        result = self._make_result(
+            [
+                self._make_text_block("Here is the screenshot:"),
+                self._make_image_block(data=b64, mime="image/jpeg"),
+            ]
+        )
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 2
+        assert converted[0] == {"type": "text", "text": "Here is the screenshot:"}
+        assert converted[1] == {
+            "type": "image_url",
+            "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+        }
+
+    def test_should_default_mime_type_to_image_png_when_missing(self):
+        """Image block with no mimeType must default to image/png."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        block = MagicMock()
+        block.type = "image"
+        block.data = "xyz=="
+        block.mimeType = None  # missing MIME
+
+        result = self._make_result([block])
+        converted = _convert_mcp_result(result)
+
+        assert converted[0]["image_url"]["url"].startswith("data:image/png;base64,")
+
+    def test_should_handle_multiple_image_blocks(self):
+        """Multiple image blocks must all be converted."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result(
+            [
+                self._make_image_block(data="img1==", mime="image/png"),
+                self._make_image_block(data="img2==", mime="image/jpeg"),
+            ]
+        )
+
+        converted = _convert_mcp_result(result)
+
+        assert len(converted) == 2
+        assert converted[0]["image_url"]["url"] == "data:image/png;base64,img1=="
+        assert converted[1]["image_url"]["url"] == "data:image/jpeg;base64,img2=="
+
+    def _make_resource_block(self, uri: str = "file:///data.csv", mime: str = "text/csv"):
+        block = MagicMock()
+        block.type = "resource"
+        block.model_dump.return_value = {"type": "resource", "uri": uri, "mimeType": mime}
+        return block
+
+    def test_should_serialise_resource_only_result_as_text_block(self):
+        """A resource-only result must not be dropped — serialised as JSON text block."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        resource = self._make_resource_block()
+        result = self._make_result([resource])
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 1
+        assert converted[0]["type"] == "text"
+        parsed = json.loads(converted[0]["text"])
+        assert parsed["type"] == "resource"
+        assert "uri" in parsed
+
+    def test_should_preserve_all_blocks_in_mixed_image_and_resource_result(self):
+        """Mixed image + resource must produce a list with both blocks, nothing dropped."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        b64 = "abc123=="
+        image = self._make_image_block(data=b64, mime="image/png")
+        resource = self._make_resource_block(uri="file:///chart.csv")
+        result = self._make_result([image, resource])
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 2
+
+        # First block: image
+        assert converted[0]["type"] == "image_url"
+        assert converted[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+        # Second block: resource serialised as text
+        assert converted[1]["type"] == "text"
+        parsed = json.loads(converted[1]["text"])
+        assert parsed["type"] == "resource"
+        assert parsed["uri"] == "file:///chart.csv"
+
+    def test_should_handle_unknown_block_type_without_model_dump(self):
+        """Block without model_dump must still produce a text fallback, not raise."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        block = MagicMock(spec=[])  # no model_dump attribute
+        block.type = "audio"
+
+        result = self._make_result([block])
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert converted[0]["type"] == "text"
+        # Must be valid JSON
+        json.loads(converted[0]["text"])
+
+
+class TestMCPStructuredToolToolCallId:
+    """Tests for the tool_call_id branching inside MCPStructuredTool.
+
+    Uses update_tools() with a mocked stdio client so the real MCPStructuredTool
+    class (defined inline in update_tools) is exercised instead of a local copy.
+
+    When tool_call_id is absent the tool must return the raw CallToolResult
+    (preserving backward compatibility for mcp_component and ToolInvoker).
+    When tool_call_id is present it must return a ToolMessage whose content
+    is multimodal-ready and whose artifact holds the original CallToolResult.
+    """
+
+    def _make_raw_result(self, text: str = "ok", image_data: str | None = None):
+        """Build a minimal CallToolResult-like mock."""
+        text_block = MagicMock()
+        text_block.type = "text"
+        text_block.text = text
+
+        content = [text_block]
+        if image_data:
+            img_block = MagicMock()
+            img_block.type = "image"
+            img_block.data = image_data
+            img_block.mimeType = "image/png"
+            content.append(img_block)
+
+        result = MagicMock()
+        result.content = content
+        result.structuredContent = None
+        return result
+
+    async def _build_tool_via_update_tools(self, raw_result):
+        """Get a real MCPStructuredTool from update_tools() with a mocked client."""
+        mock_tool = MagicMock()
+        mock_tool.name = "get_image"
+        mock_tool.description = "Returns content"
+        mock_tool.inputSchema = {"type": "object", "properties": {}, "required": []}
+        mock_tool.outputSchema = None
+
+        mock_client = AsyncMock(spec=MCPStdioClient)
+        mock_client.connect_to_server = AsyncMock(return_value=[mock_tool])
+        mock_client.run_tool = AsyncMock(return_value=raw_result)
+        mock_client._connected = True
+
+        server_config = {"command": "fake-server"}
+        _, tools, _ = await update_tools("test-server", server_config, mcp_stdio_client=mock_client)
+        assert tools, "update_tools() must return at least one tool"
+        return tools[0]
+
+    @pytest.mark.asyncio
+    async def test_no_tool_call_id_returns_raw_result(self):
+        """Without tool_call_id the raw CallToolResult must be returned (mcp_component compat)."""
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({})
+
+        assert result is raw
+
+    @pytest.mark.asyncio
+    async def test_with_tool_call_id_returns_tool_message(self):
+        """With tool_call_id the result must be a ToolMessage."""
+        from langchain_core.messages import ToolMessage
+
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-abc-123")
+
+        assert isinstance(result, ToolMessage)
+        assert result.name == "get_image"
+        assert result.tool_call_id == "call-abc-123"
+
+    @pytest.mark.asyncio
+    async def test_tool_message_artifact_holds_raw_call_tool_result(self):
+        """The artifact on the returned ToolMessage must be the original raw result."""
+        from langchain_core.messages import ToolMessage
+
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-abc-123")
+
+        assert isinstance(result, ToolMessage)
+        assert result.artifact is raw
+
+    @pytest.mark.asyncio
+    async def test_image_content_converted_in_tool_message(self):
+        """Image blocks must appear as image_url inside the ToolMessage content."""
+        from langchain_core.messages import ToolMessage
+
+        b64 = "abc123=="
+        raw = self._make_raw_result(image_data=b64)
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-img-001")
+
+        assert isinstance(result, ToolMessage)
+        content = result.content
+        assert isinstance(content, list)
+        image_blocks = [b for b in content if b.get("type") == "image_url"]
+        assert len(image_blocks) == 1
+        assert image_blocks[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+    @pytest.mark.asyncio
+    async def test_tool_call_id_is_preserved_for_callbacks(self):
+        """Callbacks must still see tool_call_id and the formatted ToolMessage output."""
+        from langchain_core.callbacks.base import AsyncCallbackHandler
+        from langchain_core.messages import ToolMessage
+
+        class RecordingHandler(AsyncCallbackHandler):
+            def __init__(self):
+                self.tool_call_ids = []
+                self.outputs = []
+
+            async def on_tool_start(
+                self,
+                serialized,
+                input_str,
+                *,
+                run_id,
+                parent_run_id=None,
+                tags=None,
+                metadata=None,
+                inputs=None,
+                **kwargs,
+            ):
+                _ = (serialized, input_str, run_id, parent_run_id, tags, metadata, inputs)
+                self.tool_call_ids.append(kwargs.get("tool_call_id"))
+
+            async def on_tool_end(self, output, *, run_id, parent_run_id=None, **kwargs):
+                _ = (run_id, parent_run_id, kwargs)
+                self.outputs.append(output)
+
+        raw = self._make_raw_result(image_data="abc123==")
+        tool = await self._build_tool_via_update_tools(raw)
+        handler = RecordingHandler()
+
+        result = await tool.arun({}, tool_call_id="call-img-001", callbacks=[handler])
+
+        assert handler.tool_call_ids == ["call-img-001"]
+        assert len(handler.outputs) == 1
+        assert isinstance(handler.outputs[0], ToolMessage)
+        assert handler.outputs[0].name == "get_image"
+        assert handler.outputs[0].artifact is raw
+        assert result.name == "get_image"
