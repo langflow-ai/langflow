@@ -169,6 +169,17 @@ def get_lifespan(*, fix_migration=False, version=None):
         try:
             start_time = asyncio.get_event_loop().time()
 
+            if get_settings_service().settings.sentry_dsn:
+                import sentry_sdk
+
+                sentry_settings = get_settings_service().settings
+                sentry_sdk.init(
+                    dsn=sentry_settings.sentry_dsn,
+                    traces_sample_rate=sentry_settings.sentry_traces_sample_rate,
+                    profiles_sample_rate=sentry_settings.sentry_profiles_sample_rate,
+                )
+                await logger.adebug("Sentry SDK initialized in worker")
+
             await logger.adebug("Initializing services")
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
@@ -194,6 +205,17 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug("Initializing super user")
             await initialize_auto_login_default_superuser()
             await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            if get_settings_service().settings.prometheus_enabled:
+                try:
+                    from prometheus_client import start_http_server
+
+                    start_http_server(get_settings_service().settings.prometheus_port)
+                    await logger.adebug(
+                        f"Started Prometheus server on port {get_settings_service().settings.prometheus_port}"
+                    )
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to start Prometheus server (may be running in another worker): {e}")
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading bundles")
@@ -536,17 +558,12 @@ def create_app():
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
         if prome_port > 0 or prome_port < MAX_PORT:
-            logger.debug(f"Starting Prometheus server on port {prome_port}...")
+            logger.debug(f"Prometheus server port configured as {prome_port}...")
             settings.prometheus_enabled = True
             settings.prometheus_port = prome_port
         else:
             msg = f"Invalid port number {prome_port_str}"
             raise ValueError(msg)
-
-    if settings.prometheus_enabled:
-        from prometheus_client import start_http_server
-
-        start_http_server(settings.prometheus_port)
 
     if settings.mcp_server_enabled:
         from langflow.api.v1 import mcp_router
@@ -587,14 +604,9 @@ def create_app():
 def setup_sentry(app: FastAPI) -> None:
     settings = get_settings_service().settings
     if settings.sentry_dsn:
-        import sentry_sdk
         from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
-        sentry_sdk.init(
-            dsn=settings.sentry_dsn,
-            traces_sample_rate=settings.sentry_traces_sample_rate,
-            profiles_sample_rate=settings.sentry_profiles_sample_rate,
-        )
+        # Defer sentry_sdk.init to the worker lifespan to avoid ghosts across forks
         app.add_middleware(SentryAsgiMiddleware)
 
 

@@ -67,8 +67,38 @@ class LangflowApplication(BaseApplication):
 
         self.options["worker_class"] = "langflow.server.LangflowUvicornWorker"
         self.options["logger_class"] = Logger
+        self.options["pre_fork"] = self.pre_fork
         self.application = app
         super().__init__()
+
+    @staticmethod
+    def pre_fork(server, _worker):
+        import gc
+        import threading
+
+        non_main_threads = [t for t in threading.enumerate() if t.is_alive() and t is not threading.main_thread()]
+        if non_main_threads:
+            names = [t.name for t in non_main_threads]
+            server.log.warning("Ghost threads found before fork (these will be dead in workers): %s", names)
+
+        try:
+            import psutil
+
+            conns = psutil.Process().net_connections(kind="tcp")
+            ghost_conns = [c for c in conns if c.status != "LISTEN"]
+            if ghost_conns:
+                details = [(c.laddr, c.raddr, c.status) for c in ghost_conns]
+                server.log.warning(
+                    "Ghost TCP connections found before fork (will be dead in workers): %s",
+                    details,
+                )
+        except ImportError:
+            pass
+        except Exception as e:  # noqa: BLE001
+            server.log.warning("Failed to inspect TCP connections before fork: %s", e)
+
+        gc.collect()
+        gc.freeze()
 
     def load_config(self) -> None:
         config = {key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None}
