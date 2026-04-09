@@ -42,27 +42,13 @@ const ModelRow = ({
       </span>
     </div>
     {isEnabledModel && (
-      <div
-        onClick={(event) => {
-          event.stopPropagation();
-        }}
-        onPointerDown={(event) => {
-          event.stopPropagation();
-        }}
-      >
-        <Switch
-          checked={enabled}
-          onCheckedChange={(checked) => onToggle(model.model_name, checked)}
-          onClick={(event) => {
-            event.stopPropagation();
-          }}
-          onPointerDown={(event) => {
-            event.stopPropagation();
-          }}
-          data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
-          aria-label={`${enabled ? "Disable" : "Enable"} ${model.model_name}`}
-        />
-      </div>
+      <Switch
+        checked={enabled}
+        onCheckedChange={(checked) => onToggle(model.model_name, checked)}
+        data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
+        aria-label={`${enabled ? "Disable" : "Enable"} ${model.model_name}`}
+        stopPropagation
+      />
     )}
   </div>
 );
