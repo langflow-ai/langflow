@@ -506,9 +506,7 @@ def _convert_mcp_result(result: Any) -> Any:
 
     if not has_image:
         # Text-only: join all text blocks into a single string
-        return "\n".join(
-            getattr(block, "text", "") for block in content if getattr(block, "type", None) == "text"
-        )
+        return "\n".join(getattr(block, "text", "") for block in content if getattr(block, "type", None) == "text")
 
     # Mixed or image-only: build a list of LangChain content blocks
     blocks: list[dict] = []
@@ -519,10 +517,12 @@ def _convert_mcp_result(result: Any) -> Any:
         elif block_type == "image":
             mime = getattr(block, "mimeType", None) or "image/png"
             data = getattr(block, "data", "")
-            blocks.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:{mime};base64,{data}"},
-            })
+            blocks.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime};base64,{data}"},
+                }
+            )
     return blocks
 
 
