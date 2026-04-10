@@ -9,7 +9,11 @@
     "tar": "^7.5.7",
     "tar-fs": ">=2.1.4",
     "glob": "^11.1.0",
-    "test-exclude": "^7.0.0"
+    "test-exclude": "^7.0.0",
+    "picomatch": ">=4.0.4",
+    "playwright": "^1.59.1",
+    "brace-expansion": ">=5.0.5",
+    "handlebars": ">=4.7.9"
   },
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
@@ -60,6 +64,7 @@
     "file-saver": "^2.0.5",
     "framer-motion": "^11.2.10",
     "fuse.js": "^7.0.0",
+    "i18next": "^25.8.18",
     "lodash": "^4.17.23",
     "lucide-react": "^0.575.0",
     "moment": "^2.30.1",
@@ -69,7 +74,7 @@
     "openseadragon": "^4.1.1",
     "p-debounce": "^4.0.0",
     "pako": "^2.1.0",
-    "playwright": "^1.57.0",
+    "playwright": "^1.59.1",
     "pretty-ms": "^9.1.0",
     "react": "^19.2.1",
     "react-ace": "^14.0.1",
@@ -78,6 +83,7 @@
     "react-error-boundary": "^4.0.13",
     "react-hook-form": "^7.52.0",
     "react-hotkeys-hook": "^4.5.0",
+    "react-i18next": "^16.5.8",
     "react-icons": "^5.2.1",
     "react-markdown": "^9.1.0",
     "react-pdf": "^9.0.0",

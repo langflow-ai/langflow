@@ -7,9 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDeleteDeployment } from "@/controllers/API/queries/deployments/use-delete-deployment";
-import { useGetDeploymentsByProviders } from "@/controllers/API/queries/deployments/use-get-deployments-by-providers";
 import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation";
-import { useProviderFilter } from "../hooks/use-provider-filter";
 import { useTestDeploymentModal } from "../hooks/use-test-deployment-modal";
 import type { Deployment, ProviderAccount } from "../types";
 import DeploymentDetailsModal from "./deployment-details-modal/deployment-details-modal";
@@ -23,30 +21,26 @@ import TypeToConfirmDeleteDialog from "./type-to-confirm-delete-dialog";
 const buildDeploymentDeleteParams = (id: string) => ({ deployment_id: id });
 
 interface DeploymentsContentProps {
-  isLoadingProviders: boolean;
   providers: ProviderAccount[];
+  deployments: Deployment[];
+  isLoading: boolean;
+  selectedProviderId: string;
+  setSelectedProviderId: (id: string) => void;
+  providerMap: Record<string, string>;
   stepperOpen: boolean;
   setStepperOpen: (open: boolean) => void;
-  onGoToProviders: () => void;
 }
 
 export default function DeploymentsContent({
-  isLoadingProviders,
   providers,
+  deployments,
+  isLoading,
+  selectedProviderId,
+  setSelectedProviderId,
+  providerMap,
   stepperOpen,
   setStepperOpen,
-  onGoToProviders,
 }: DeploymentsContentProps) {
-  const {
-    selectedProviderId,
-    setSelectedProviderId,
-    providerIdsToQuery,
-    providerMap,
-  } = useProviderFilter(providers);
-
-  const { deployments, isLoading: isLoadingDeployments } =
-    useGetDeploymentsByProviders(providerIdsToQuery);
-
   const testModal = useTestDeploymentModal();
 
   const { mutate: deleteDeployment } = useDeleteDeployment();
@@ -64,25 +58,10 @@ export default function DeploymentsContent({
     null,
   );
 
-  const isLoading = isLoadingProviders || isLoadingDeployments;
-  const hasProviders = providers.length > 0;
-
   const content = (() => {
     if (isLoading) return <DeploymentsLoadingSkeleton />;
-    if (!hasProviders)
-      return (
-        <DeploymentsEmptyState
-          variant="no-providers"
-          onAction={onGoToProviders}
-        />
-      );
     if (deployments.length === 0)
-      return (
-        <DeploymentsEmptyState
-          variant="no-deployments"
-          onAction={() => setStepperOpen(true)}
-        />
-      );
+      return <DeploymentsEmptyState onAction={() => setStepperOpen(true)} />;
     return (
       <DeploymentsTable
         deployments={deployments}
@@ -101,7 +80,7 @@ export default function DeploymentsContent({
 
   return (
     <>
-      {providers.length >= 1 && (
+      {providers.length >= 1 && deployments.length > 0 && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Environment:</span>
           <Select

@@ -177,6 +177,11 @@ export function DeploymentStepperProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+  const initialConnectionsByFlow = useMemo(
+    () => initialState?.initialConnectionsByFlow ?? new Map<string, string[]>(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const handleRemoveAttachedFlow = useCallback((flowId: string) => {
     setRemovedFlowIds((prev) => new Set([...Array.from(prev), flowId]));
@@ -207,8 +212,16 @@ export function DeploymentStepperProvider({
           return next;
         });
       }
+      const originalConnections = initialConnectionsByFlow.get(flowId);
+      if (originalConnections) {
+        setAttachedConnectionByFlow((prev) => {
+          const next = new Map(prev);
+          next.set(flowId, originalConnections);
+          return next;
+        });
+      }
     },
-    [initialVersionByFlow],
+    [initialVersionByFlow, initialConnectionsByFlow],
   );
 
   const hasValidCredentials =
@@ -406,17 +419,32 @@ export function DeploymentStepperProvider({
         });
       }
 
-      // Renamed tools on pre-existing flows.
+      // Changes on pre-existing flows (tool name and/or connections).
       for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
         if (!initialVersionByFlow.has(flowId)) continue;
         const currentName = toolNameByFlow.get(flowId)?.trim() ?? "";
         const originalName = initialToolNameByFlow.get(flowId)?.trim() ?? "";
-        if (currentName && currentName !== originalName) {
+        const nameChanged = currentName && currentName !== originalName;
+
+        const currentConnections = attachedConnectionByFlow.get(flowId) ?? [];
+        const originalConnections = initialConnectionsByFlow.get(flowId) ?? [];
+        const originalSet = new Set(originalConnections);
+        const currentSet = new Set(currentConnections);
+        const addAppIds = currentConnections.filter(
+          (id) => !originalSet.has(id),
+        );
+        const removeAppIds = originalConnections.filter(
+          (id) => !currentSet.has(id),
+        );
+        const connectionsChanged =
+          addAppIds.length > 0 || removeAppIds.length > 0;
+
+        if (nameChanged || connectionsChanged) {
           upsertFlows.push({
             flow_version_id: versionEntry.versionId,
-            add_app_ids: [],
-            remove_app_ids: [],
-            tool_name: currentName,
+            add_app_ids: addAppIds,
+            remove_app_ids: removeAppIds,
+            ...(nameChanged && { tool_name: currentName }),
           });
         }
       }
@@ -466,6 +494,7 @@ export function DeploymentStepperProvider({
       selectedLlm,
       initialVersionByFlow,
       initialToolNameByFlow,
+      initialConnectionsByFlow,
       removedFlowIds,
       selectedVersionByFlow,
       toolNameByFlow,

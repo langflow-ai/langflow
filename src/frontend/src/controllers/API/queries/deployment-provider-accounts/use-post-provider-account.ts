@@ -32,6 +32,7 @@ export const usePostProviderAccount: useMutationFunctionType<
 
   return mutate(["usePostProviderAccount"], fn, {
     ...options,
+    retry: 0,
     onSuccess: () => {
       return queryClient.refetchQueries({
         queryKey: ["useGetProviderAccounts"],

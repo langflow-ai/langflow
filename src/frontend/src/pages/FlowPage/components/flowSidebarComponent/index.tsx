@@ -1,5 +1,6 @@
 import Fuse from "fuse.js";
 import { cloneDeep, debounce } from "lodash";
+import { useTranslation } from "react-i18next";
 import {
   createContext,
   memo,
@@ -152,6 +153,7 @@ interface FlowSidebarComponentProps {
 }
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
+  const { t } = useTranslation();
   const rawData = useTypesStore((state) => state.data);
 
   // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF
@@ -815,7 +817,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                                 className="h-4 w-4"
                               />
                             </span>
-                            Discover more components
+                            {t("sidebar.discoverMore")}
                           </Button>
                         )}
                       </>

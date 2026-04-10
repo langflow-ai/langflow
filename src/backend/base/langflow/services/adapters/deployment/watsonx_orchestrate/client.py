@@ -128,12 +128,17 @@ def set_request_context_provider_clients(*, provider_id: UUID, user_id: UUID | s
 def get_authenticator(instance_url: str, api_key: str) -> IAMAuthenticator | MCSPAuthenticator:
     """Return the appropriate authenticator for the Watsonx Orchestrate API."""
     if ".cloud.ibm.com" in instance_url:
-        return IAMAuthenticator(apikey=api_key, url=WxOAuthURL.IBM_IAM.value)
-    elif ".ibm.com" in instance_url:  # noqa: RET505 - explicitness
-        return MCSPAuthenticator(apikey=api_key, url=WxOAuthURL.MCSP.value)
+        authenticator = IAMAuthenticator(apikey=api_key, url=WxOAuthURL.IBM_IAM.value)
+    elif ".ibm.com" in instance_url:
+        authenticator = MCSPAuthenticator(apikey=api_key, url=WxOAuthURL.MCSP.value)
+    else:
+        msg = f"Could not determine authentication scheme for instance URL: {instance_url}"
+        raise AuthSchemeError(message=msg)
 
-    msg = f"Could not determine authentication scheme for instance URL: {instance_url}"
-    raise AuthSchemeError(message=msg)
+    # Use a split (connect, read) timeout so that cold-start TCP/TLS handshakes
+    # fail fast instead of blocking for the SDK's default 60 s.
+    authenticator.token_manager.http_config = {"timeout": (10, 30)}
+    return authenticator
 
 
 async def resolve_wxo_client_credentials(

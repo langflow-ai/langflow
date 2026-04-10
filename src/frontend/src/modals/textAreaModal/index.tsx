@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
-import {
-  EDIT_TEXT_PLACEHOLDER,
-  TEXT_DIALOG_TITLE,
-} from "../../constants/constants";
 import type { textModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
@@ -21,6 +18,7 @@ export default function ComponentTextModal({
   changeVisibility,
   onCloseModal,
 }: textModalPropsType): JSX.Element {
+  const { t } = useTranslation();
   const [modalOpen, setModalOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
 
@@ -54,7 +52,7 @@ export default function ComponentTextModal({
               aria-hidden="true"
             />
             <span className="pl-2" data-testid="modal-title">
-              {TEXT_DIALOG_TITLE}
+              {t("dialog.editText")}
             </span>
           </div>
           {password !== undefined && (
@@ -83,7 +81,7 @@ export default function ComponentTextModal({
             onChange={(event) => {
               setInputValue(event.target.value);
             }}
-            placeholder={EDIT_TEXT_PLACEHOLDER}
+            placeholder={t("input.editTextPlaceholder")}
             onKeyDown={(e) => {
               handleKeyDown(e, value, "");
             }}

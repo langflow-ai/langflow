@@ -1,5 +1,6 @@
 import { debounce } from "lodash";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -7,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
 import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
-import { ENABLE_DEPLOYMENTS, ENABLE_MCP } from "@/customization/feature-flags";
+import { ENABLE_MCP } from "@/customization/feature-flags";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 
 import type { FlowTabType } from "../../types";
@@ -38,6 +40,7 @@ const HeaderComponent = ({
   isEmptyFolder,
   selectedFlows,
 }: HeaderComponentProps) => {
+  const { t } = useTranslation();
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const isMCPEnabled = ENABLE_MCP;
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -75,7 +78,9 @@ const HeaderComponent = ({
     setDebouncedSearch(e.target.value);
   };
 
-  const isDeploymentsEnabled = ENABLE_DEPLOYMENTS;
+  const isDeploymentsEnabled = useUtilityStore(
+    (s) => s.featureFlags.wxo_deployments === true,
+  );
 
   // Determine which tabs to show based on feature flags
   const tabTypes = [
@@ -86,7 +91,7 @@ const HeaderComponent = ({
 
   const handleDownload = () => {
     downloadFlows({ ids: selectedFlows });
-    setSuccessData({ title: "Flows downloaded successfully" });
+    setSuccessData({ title: t("mainPage.flowsDownloadedSuccess") });
   };
 
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -97,7 +102,7 @@ const HeaderComponent = ({
       { flow_ids: selectedFlows },
       {
         onSuccess: () => {
-          setSuccessData({ title: "Flows deleted successfully" });
+          setSuccessData({ title: t("mainPage.flowsDeletedSuccess") });
           if (flows) {
             setFlows(flows.filter((flow) => !selectedFlows.includes(flow.id)));
           }
@@ -148,7 +153,7 @@ const HeaderComponent = ({
               >
                 <div className={flowType === type ? "-mb-px" : ""}>
                   {type === "mcp"
-                    ? "MCP Server"
+                    ? t("mainPage.mcpServer")
                     : type.charAt(0).toUpperCase() + type.slice(1)}
                 </div>
               </Button>
@@ -162,7 +167,7 @@ const HeaderComponent = ({
                   icon="Search"
                   data-testid="search-store-input"
                   type="text"
-                  placeholder={`Search ${flowType}...`}
+                  placeholder={t("mainPage.searchPlaceholder", { flowType })}
                   className="mr-2 !text-mmd"
                   inputClassName="!text-mmd"
                   value={debouncedSearch}
@@ -237,11 +242,11 @@ const HeaderComponent = ({
                       tabIndex={hasSelection ? 0 : -1}
                     >
                       <ForwardedIconComponent name="Trash2" />
-                      Delete
+                      {t("mainPage.delete")}
                     </Button>
                   </DeleteConfirmationModal>
                 </div>
-                <ShadTooltip content="New Flow" side="bottom">
+                <ShadTooltip content={t("mainPage.newFlow")} side="bottom">
                   <Button
                     variant="default"
                     size="iconMd"
@@ -256,7 +261,7 @@ const HeaderComponent = ({
                       className="h-4 w-4"
                     />
                     <span className="hidden whitespace-nowrap font-semibold md:inline">
-                      New Flow
+                      {t("mainPage.newFlow")}
                     </span>
                   </Button>
                 </ShadTooltip>
