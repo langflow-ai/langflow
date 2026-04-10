@@ -80,7 +80,7 @@ export default function AddProviderModal({
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">
               <ForwardedIconComponent
-                name="Bot"
+                name="WatsonxOrchestrate"
                 className="h-8 w-8 text-foreground"
               />
               <span className="text-sm font-medium">watsonx Orchestrate</span>

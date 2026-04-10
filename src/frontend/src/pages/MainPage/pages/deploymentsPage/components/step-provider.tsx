@@ -13,7 +13,7 @@ const PROVIDERS: DeploymentProvider[] = [
     id: "watsonx",
     type: "watsonx",
     name: "watsonx Orchestrate",
-    icon: "Bot",
+    icon: "WatsonxOrchestrate",
   },
 ];
 
