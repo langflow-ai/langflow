@@ -882,7 +882,6 @@ class TestListDeploymentFlowVersionsRoute:
 
 class TestProviderAccountRoutes:
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.to_provider_account_response", return_value={"ok": True})
     @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -893,7 +892,6 @@ class TestProviderAccountRoutes:
         mock_get_mapper,
         mock_resolve_adapter,
         mock_update_provider_account,
-        mock_to_provider_response,  # noqa: ARG002
     ):
         """PATCH skips credential verification when only name changes."""
         from langflow.api.v1.deployments import update_provider_account
@@ -971,9 +969,8 @@ class TestProviderAccountRoutes:
         from langflow.api.v1.deployments import create_provider_account
 
         mapper = MagicMock()
-        mapper.resolve_verify_credentials.return_value = MagicMock()
-        mapper.resolve_credential_fields.return_value = {"api_key": "api-key"}  # pragma: allowlist secret
-        mapper.resolve_provider_tenant_id.return_value = "tenant-1"
+        mapper.resolve_verify_credentials_for_create.return_value = MagicMock()
+        mapper.resolve_provider_account_create.return_value = MagicMock()
         mock_get_mapper.return_value = mapper
 
         adapter = AsyncMock()
@@ -983,8 +980,10 @@ class TestProviderAccountRoutes:
         payload = DeploymentProviderAccountCreateRequest(
             name="prod",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
-            provider_data={"api_key": "api-key"},  # pragma: allowlist secret
+            provider_data={
+                "url": "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+                "api_key": "api-key",  # pragma: allowlist secret
+            },
         )
 
         with pytest.raises(HTTPException) as exc_info:

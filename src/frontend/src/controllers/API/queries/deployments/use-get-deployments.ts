@@ -13,7 +13,7 @@ export interface DeploymentListResponse {
 
 interface GetDeploymentsParams {
   provider_id: string;
-  flow_ids?: string;
+  flow_ids?: string[];
   page?: number;
   size?: number;
 }
@@ -25,9 +25,18 @@ export const useGetDeployments: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getDeploymentsFn = async (): Promise<DeploymentListResponse> => {
+    const params = {
+      provider_id,
+      ...(flow_ids && flow_ids.length > 0 ? { flow_ids } : {}),
+      page,
+      size,
+    };
     const { data } = await api.get<DeploymentListResponse>(
       `${getURL("DEPLOYMENTS")}`,
-      { params: { provider_id, flow_ids, page, size } },
+      {
+        params,
+        paramsSerializer: { indexes: null },
+      },
     );
     return data;
   };

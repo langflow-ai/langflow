@@ -9,10 +9,11 @@ Two identifier domains coexist in these schemas:
   ``provider_id`` maps to ``deployment_provider_account.id``.
 
 * **Provider-owned (str)** -- ``reference_id``, ``config_id``,
-  ``execution_id``, and provider-account fields ``provider_key`` and ``url``.
+  ``execution_id``.
   Opaque values assigned or consumed by the external deployment provider.
-  Provider-specific metadata (for example tenant/account identifiers) belongs
-  inside ``provider_data``.
+  ``provider_key`` is Langflow-owned adapter vocabulary.
+  Provider-specific metadata (for example URL and tenant/account identifiers)
+  belongs inside ``provider_data``.
 
 * **Provider-originated but Langflow-owned once persisted** -- ``resource_key``.
   Langflow stores and indexes this as part of its own deployment record.
@@ -39,28 +40,12 @@ from langflow.services.database.models.deployment_provider_account.schemas impor
     DeploymentProviderKey,
 )
 from langflow.services.database.models.deployment_provider_account.utils import (
-    check_provider_url_allowed,
     validate_provider_url,
 )
 
 # ---------------------------------------------------------------------------
 # Shared validation helpers
 # ---------------------------------------------------------------------------
-
-
-def _validate_str_id_list(values: list[str], *, field_name: str) -> list[str]:
-    """Strip, reject empty/whitespace values, reject empty lists, and deduplicate preserving order."""
-    if not values:
-        msg = f"{field_name} must not be empty."
-        raise ValueError(msg)
-    stripped = []
-    for raw in values:
-        value = raw.strip()
-        if not value:
-            msg = f"{field_name} must not contain empty values."
-            raise ValueError(msg)
-        stripped.append(value)
-    return list(dict.fromkeys(stripped))
 
 
 def _validate_uuid_list(values: list[UUID], *, field_name: str) -> list[UUID]:
@@ -101,15 +86,18 @@ ValidatedUrl = Annotated[str, AfterValidator(validate_provider_url)]
 """URL type that enforces HTTPS and normalizes."""
 
 
-def _validate_flow_version_ids(values: list[str] | None) -> list[str] | None:
+def _validate_flow_version_ids(values: list[UUID] | None) -> list[UUID] | None:
     """AfterValidator for optional flow_version_ids query parameter."""
     if values is None:
         return None
-    return _validate_str_id_list(values, field_name="flow_version_ids")
+    return _validate_uuid_list(values, field_name="flow_version_ids")
 
 
-FlowVersionIdsQuery = Annotated[list[str] | None, AfterValidator(_validate_flow_version_ids)]
-"""Query parameter type that validates and cleans an optional list of flow version id strings."""
+FlowVersionIdsQuery = Annotated[list[UUID] | None, AfterValidator(_validate_flow_version_ids)]
+"""Optional flow-version filter query parameter.
+
+``None`` means no filter. Empty lists are rejected by validation.
+"""
 
 
 def _validate_flow_ids(values: list[UUID] | None) -> list[UUID] | None:
@@ -128,7 +116,11 @@ def _validate_flow_ids(values: list[UUID] | None) -> list[UUID] | None:
 
 
 FlowIdsQuery = Annotated[list[UUID] | None, AfterValidator(_validate_flow_ids)]
-"""Query parameter type that validates and cleans an optional list of flow id UUIDs (max 1 today)."""
+"""Optional flow-id filter query parameter.
+
+``None`` means no filter. Empty lists are rejected by validation.
+Max supported length is 1 today.
+"""
 
 # ---------------------------------------------------------------------------
 # Provider sub-resource schemas
@@ -144,23 +136,15 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
         ),
     )
     provider_key: DeploymentProviderKey = Field(description="Deployment provider key.")
-    url: ValidatedUrl = Field(
-        description="Provider service URL persisted in Langflow DB for provider-account resolution.",
-    )
     provider_data: dict[str, Any] = Field(
         min_length=1,
         description=(
             "Provider-specific credential/metadata payload. "
             "Contents are opaque to the API schema; the deployment mapper "
             "for the target provider_key validates and extracts credentials "
-            "and provider metadata (for example tenant/account identifiers)."
+            "and provider metadata (for example URL/region and tenant/account identifiers)."
         ),
     )
-
-    @model_validator(mode="after")
-    def validate_provider_url_allowed(self) -> DeploymentProviderAccountCreateRequest:
-        check_provider_url_allowed(self.url, self.provider_key)
-        return self
 
 
 class DeploymentProviderAccountUpdateRequest(BaseModel):
@@ -195,12 +179,11 @@ class DeploymentProviderAccountGetResponse(BaseModel):
     id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
     name: str = Field(description="User-chosen display name for this provider account.")
     provider_key: DeploymentProviderKey = Field(description="Official provider name used by Langflow.")
-    url: str = Field(description="Provider service URL persisted in Langflow DB.")
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description=(
             "Provider-owned non-sensitive metadata for this provider account "
-            "(for example tenant/account identifiers). Credentials are excluded."
+            "(for example URL, tenant/account identifiers). Credentials are excluded."
         ),
     )
     created_at: datetime | None = Field(default=None, description="Langflow DB row creation timestamp.")

@@ -9,7 +9,7 @@ import {
 import { useDeleteDeployment } from "@/controllers/API/queries/deployments/use-delete-deployment";
 import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation";
 import { useTestDeploymentModal } from "../hooks/use-test-deployment-modal";
-import type { Deployment, ProviderAccount } from "../types";
+import { type Deployment, type ProviderAccount } from "../types";
 import DeploymentDetailsModal from "./deployment-details-modal/deployment-details-modal";
 import DeploymentStepperModal from "./deployment-stepper-modal";
 import DeploymentsEmptyState from "./deployments-empty-state";
@@ -112,10 +112,8 @@ export default function DeploymentsContent({
         onTestDeployment={testModal.handleTestFromStepper}
         editingDeployment={editingDeployment}
         initialInstance={
-          editingDeployment?.provider_account_id
-            ? providers.find(
-                (p) => p.id === editingDeployment.provider_account_id,
-              )
+          editingDeployment?.provider_id
+            ? providers.find((p) => p.id === editingDeployment.provider_id)
             : undefined
         }
       />
@@ -135,7 +133,7 @@ export default function DeploymentsContent({
         deployment={detailsDeployment}
         providerName={
           detailsDeployment
-            ? (providerMap[detailsDeployment.provider_account_id ?? ""] ?? "—")
+            ? (providerMap[detailsDeployment.provider_id ?? ""] ?? "—")
             : ""
         }
       />

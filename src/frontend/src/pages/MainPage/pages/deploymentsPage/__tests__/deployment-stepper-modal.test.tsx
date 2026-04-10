@@ -172,6 +172,7 @@ import DeploymentStepperModal from "../components/deployment-stepper-modal";
 
 const makeDeployment = (overrides: Partial<Deployment> = {}): Deployment => ({
   id: "dep-1",
+  provider_id: "prov-1",
   name: "My Agent",
   description: "A sales agent",
   type: "agent",
@@ -181,7 +182,6 @@ const makeDeployment = (overrides: Partial<Deployment> = {}): Deployment => ({
   resource_key: "rk-1",
   attached_count: 2,
   matched_attachments: null,
-  provider_account_id: "prov-1",
   ...overrides,
 });
 
@@ -190,9 +190,11 @@ const makeInstance = (
 ): ProviderAccount => ({
   id: "inst-1",
   name: "Prod Instance",
-  provider_tenant_id: "tenant-1",
   provider_key: "watsonx-orchestrate",
-  provider_url: "https://api.example.com",
+  provider_data: {
+    tenant_id: "tenant-1",
+    url: "https://api.example.com",
+  },
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z",
   ...overrides,
