@@ -225,9 +225,7 @@ class TestSkillsDirectoryStructure:
         """All expected reference/asset files must exist for each skill."""
         for rel_path in SKILL_REFERENCE_FILES.get(skill_name, []):
             full_path = SKILLS_DIR / skill_name / rel_path
-            assert full_path.is_file(), (
-                f"Missing file '{rel_path}' in skill '{skill_name}'"
-            )
+            assert full_path.is_file(), f"Missing file '{rel_path}' in skill '{skill_name}'"
 
 
 # ---------------------------------------------------------------------------
@@ -247,16 +245,12 @@ class TestSkillFrontmatter:
     def test_frontmatter_exists(self, skill_name: str):
         """SKILL.md files that use frontmatter must start with '---'."""
         content = (SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
-        assert content.startswith("---"), (
-            f"SKILL.md in '{skill_name}' does not start with '---' frontmatter block"
-        )
+        assert content.startswith("---"), f"SKILL.md in '{skill_name}' does not start with '---' frontmatter block"
 
     def test_frontend_testing_has_no_frontmatter_but_has_h1(self):
         """frontend-testing SKILL.md uses plain markdown (no frontmatter) and must start with H1."""
         content = (SKILLS_DIR / "frontend-testing" / "SKILL.md").read_text(encoding="utf-8")
-        assert not content.startswith("---"), (
-            "frontend-testing SKILL.md unexpectedly has frontmatter"
-        )
+        assert not content.startswith("---"), "frontend-testing SKILL.md unexpectedly has frontmatter"
         first_heading_match = re.search(r"^# .+", content, re.MULTILINE)
         assert first_heading_match is not None, (
             "frontend-testing SKILL.md (no frontmatter) must start with an H1 heading"
@@ -266,9 +260,7 @@ class TestSkillFrontmatter:
     def test_frontmatter_closed(self, skill_name: str):
         """SKILL.md frontmatter block must be properly closed with '---'."""
         content = (SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
-        assert content.count("---") >= 2, (
-            f"SKILL.md in '{skill_name}' has an unclosed frontmatter block"
-        )
+        assert content.count("---") >= 2, f"SKILL.md in '{skill_name}' has an unclosed frontmatter block"
 
     @pytest.mark.parametrize("skill_name", SKILLS_WITH_FRONTMATTER)
     @pytest.mark.parametrize("key", SKILL_REQUIRED_FRONTMATTER_KEYS)
@@ -276,27 +268,21 @@ class TestSkillFrontmatter:
         """SKILL.md frontmatter must contain required key."""
         content = (SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
         fm = parse_frontmatter(content)
-        assert key in fm, (
-            f"SKILL.md in '{skill_name}' is missing frontmatter key '{key}'"
-        )
+        assert key in fm, f"SKILL.md in '{skill_name}' is missing frontmatter key '{key}'"
 
     @pytest.mark.parametrize("skill_name", SKILLS_WITH_FRONTMATTER)
     def test_frontmatter_name_not_empty(self, skill_name: str):
         """The 'name' field in SKILL.md frontmatter must not be empty."""
         content = (SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
         fm = parse_frontmatter(content)
-        assert fm.get("name", "").strip() != "", (
-            f"SKILL.md in '{skill_name}' has an empty 'name' field"
-        )
+        assert fm.get("name", "").strip() != "", f"SKILL.md in '{skill_name}' has an empty 'name' field"
 
     @pytest.mark.parametrize("skill_name", SKILLS_WITH_FRONTMATTER)
     def test_frontmatter_description_not_empty(self, skill_name: str):
         """The 'description' field in SKILL.md frontmatter must not be empty."""
         content = (SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
         fm = parse_frontmatter(content)
-        assert fm.get("description", "").strip() != "", (
-            f"SKILL.md in '{skill_name}' has an empty 'description' field"
-        )
+        assert fm.get("description", "").strip() != "", f"SKILL.md in '{skill_name}' has an empty 'description' field"
 
     @pytest.mark.parametrize("skill_name", SKILLS_WITH_FRONTMATTER)
     def test_frontmatter_name_matches_directory(self, skill_name: str):
@@ -304,8 +290,7 @@ class TestSkillFrontmatter:
         content = (SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
         fm = parse_frontmatter(content)
         assert fm.get("name", "") == skill_name, (
-            f"SKILL.md in '{skill_name}': frontmatter 'name' is '{fm.get('name')}', "
-            f"expected '{skill_name}'"
+            f"SKILL.md in '{skill_name}': frontmatter 'name' is '{fm.get('name')}', expected '{skill_name}'"
         )
 
     @pytest.mark.parametrize("skill_name", SKILLS_WITH_FRONTMATTER)
@@ -314,9 +299,7 @@ class TestSkillFrontmatter:
         content = (SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
         fm = parse_frontmatter(content)
         desc = fm.get("description", "")
-        assert len(desc) >= 20, (
-            f"SKILL.md in '{skill_name}' has a very short description ({len(desc)} chars)"
-        )
+        assert len(desc) >= 20, f"SKILL.md in '{skill_name}' has a very short description ({len(desc)} chars)"
 
 
 # ---------------------------------------------------------------------------
@@ -332,9 +315,7 @@ class TestSkillSections:
         """Every SKILL.md must contain its skill-specific 'when to use/apply' heading."""
         heading = SKILL_WHEN_TO_USE_HEADINGS[skill_name]
         content = (SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
-        assert heading in content, (
-            f"SKILL.md in '{skill_name}' is missing expected entry-point section '{heading}'"
-        )
+        assert heading in content, f"SKILL.md in '{skill_name}' is missing expected entry-point section '{heading}'"
 
     @pytest.mark.parametrize("skill_name", EXPECTED_SKILLS)
     def test_skill_specific_sections_exist(self, skill_name: str):
@@ -344,18 +325,14 @@ class TestSkillSections:
             pytest.skip(f"No specific sections defined for '{skill_name}'")
         content = (SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
         for section in specific_sections:
-            assert section in content, (
-                f"SKILL.md in '{skill_name}' is missing skill-specific section '{section}'"
-            )
+            assert section in content, f"SKILL.md in '{skill_name}' is missing skill-specific section '{section}'"
 
     @pytest.mark.parametrize("skill_name", EXPECTED_SKILLS)
     def test_skill_md_has_h1_title(self, skill_name: str):
         """Every SKILL.md must have at least one H1 heading as a title."""
         content = (SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
         h1_headings = get_h1_sections(content)
-        assert len(h1_headings) >= 1, (
-            f"SKILL.md in '{skill_name}' has no H1-level heading"
-        )
+        assert len(h1_headings) >= 1, f"SKILL.md in '{skill_name}' has no H1-level heading"
 
     @pytest.mark.parametrize("skill_name", EXPECTED_SKILLS)
     def test_skill_md_has_multiple_sections(self, skill_name: str):
@@ -372,17 +349,13 @@ class TestSkillSections:
         heading = SKILL_WHEN_TO_USE_HEADINGS[skill_name]
         content = (SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
         section_idx = content.find(heading)
-        assert section_idx != -1, (
-            f"SKILL.md in '{skill_name}' missing expected entry-point section '{heading}'"
-        )
+        assert section_idx != -1, f"SKILL.md in '{skill_name}' missing expected entry-point section '{heading}'"
         # Content between this heading and the next H2 heading (## ) should have actual text.
         # Use "\n## " (with trailing space) to distinguish H2 from H3 (###).
-        after_section = content[section_idx + len(heading):]
+        after_section = content[section_idx + len(heading) :]
         next_h2_idx = after_section.find("\n## ")
         section_body = after_section[:next_h2_idx] if next_h2_idx != -1 else after_section
-        assert len(section_body.strip()) > 0, (
-            f"SKILL.md in '{skill_name}': '{heading}' section has no content"
-        )
+        assert len(section_body.strip()) > 0, f"SKILL.md in '{skill_name}': '{heading}' section has no content"
 
 
 # ---------------------------------------------------------------------------
@@ -401,9 +374,7 @@ class TestReferenceFilesStructure:
             if not full_path.is_file():
                 pytest.skip(f"File does not exist: {full_path}")
             content = full_path.read_text(encoding="utf-8")
-            assert len(content.strip()) > 0, (
-                f"Reference file '{rel_path}' in skill '{skill_name}' is empty"
-            )
+            assert len(content.strip()) > 0, f"Reference file '{rel_path}' in skill '{skill_name}' is empty"
 
     @pytest.mark.parametrize("skill_name", list(RULE_CATALOG_FILES.keys()))
     def test_rule_catalog_files_have_h1_heading(self, skill_name: str):
@@ -414,9 +385,7 @@ class TestReferenceFilesStructure:
                 pytest.skip(f"File does not exist: {full_path}")
             content = full_path.read_text(encoding="utf-8")
             h1s = get_h1_sections(content)
-            assert len(h1s) >= 1, (
-                f"Rule catalog file '{rel_path}' in '{skill_name}' has no H1 heading"
-            )
+            assert len(h1s) >= 1, f"Rule catalog file '{rel_path}' in '{skill_name}' has no H1 heading"
 
     @pytest.mark.parametrize("skill_name", list(RULE_CATALOG_FILES.keys()))
     def test_rule_catalog_files_have_rules_section(self, skill_name: str):
@@ -461,9 +430,7 @@ class TestReferenceFilesStructure:
             pytest.skip(f"File does not exist: {full_path}")
         content = full_path.read_text(encoding="utf-8")
         h1s = get_h1_sections(content)
-        assert len(h1s) >= 1, (
-            f"E2E testing reference file '{rel_path}' has no H1 heading"
-        )
+        assert len(h1s) >= 1, f"E2E testing reference file '{rel_path}' has no H1 heading"
 
     @pytest.mark.parametrize(
         "rel_path",
@@ -476,9 +443,7 @@ class TestReferenceFilesStructure:
             pytest.skip(f"File does not exist: {full_path}")
         content = full_path.read_text(encoding="utf-8")
         h1s = get_h1_sections(content)
-        assert len(h1s) >= 1, (
-            f"Frontend query reference file '{rel_path}' has no H1 heading"
-        )
+        assert len(h1s) >= 1, f"Frontend query reference file '{rel_path}' has no H1 heading"
 
     @pytest.mark.parametrize(
         "rel_path",
@@ -494,9 +459,7 @@ class TestReferenceFilesStructure:
         h1s = get_h1_sections(content)
         assert len(h1s) >= 1, f"Component refactoring file '{rel_path}' has no H1 heading"
         # Must have code blocks showing patterns
-        assert has_code_blocks(content), (
-            f"Component refactoring file '{rel_path}' has no code examples"
-        )
+        assert has_code_blocks(content), f"Component refactoring file '{rel_path}' has no code examples"
 
     def test_frontend_testing_async_reference_has_h1(self):
         """Frontend testing async reference file must have an H1 heading."""
@@ -526,23 +489,16 @@ class TestTemplateFilesContent:
 
     @pytest.mark.parametrize(
         "rel_path,expected_patterns",
-        [
-            (rel_path, patterns)
-            for rel_path, patterns in TEMPLATE_CONTENT_PATTERNS.items()
-        ],
+        [(rel_path, patterns) for rel_path, patterns in TEMPLATE_CONTENT_PATTERNS.items()],
     )
-    def test_template_file_contains_expected_patterns(
-        self, rel_path: str, expected_patterns: list[str]
-    ):
+    def test_template_file_contains_expected_patterns(self, rel_path: str, expected_patterns: list[str]):
         """Each template file must contain all its expected content patterns."""
         full_path = SKILLS_DIR / "frontend-testing" / rel_path
         if not full_path.is_file():
             pytest.skip(f"File does not exist: {full_path}")
         content = full_path.read_text(encoding="utf-8")
         for pattern in expected_patterns:
-            assert pattern in content, (
-                f"Template '{rel_path}' is missing expected pattern: '{pattern}'"
-            )
+            assert pattern in content, f"Template '{rel_path}' is missing expected pattern: '{pattern}'"
 
     def test_component_template_has_usage_comment(self):
         """Component test template must have usage instructions at the top."""
@@ -597,9 +553,7 @@ class TestTemplateFilesContent:
         full_path = SKILLS_DIR / "frontend-testing" / "assets" / "hook-test.template.ts"
         content = full_path.read_text(encoding="utf-8")
         for symbol in ["renderHook", "act", "waitFor"]:
-            assert symbol in content, (
-                f"hook-test.template.ts does not import '{symbol}'"
-            )
+            assert symbol in content, f"hook-test.template.ts does not import '{symbol}'"
 
     def test_component_template_clears_mocks_in_before_each(self):
         """Component template must clear mocks in beforeEach to prevent test pollution."""
@@ -613,9 +567,7 @@ class TestTemplateFilesContent:
         """Hook template must clear mocks in beforeEach to prevent test pollution."""
         full_path = SKILLS_DIR / "frontend-testing" / "assets" / "hook-test.template.ts"
         content = full_path.read_text(encoding="utf-8")
-        assert "jest.clearAllMocks" in content, (
-            "hook-test.template.ts does not call jest.clearAllMocks in beforeEach"
-        )
+        assert "jest.clearAllMocks" in content, "hook-test.template.ts does not call jest.clearAllMocks in beforeEach"
 
     def test_component_template_does_not_use_vitest_apis(self):
         """Component template must not use Vitest APIs (project uses Jest)."""
@@ -639,17 +591,13 @@ class TestTemplateFilesContent:
         """Component template must have an edge cases section for adversarial testing."""
         full_path = SKILLS_DIR / "frontend-testing" / "assets" / "component-test.template.tsx"
         content = full_path.read_text(encoding="utf-8")
-        assert "edge cases" in content.lower(), (
-            "component-test.template.tsx lacks an 'edge cases' section"
-        )
+        assert "edge cases" in content.lower(), "component-test.template.tsx lacks an 'edge cases' section"
 
     def test_utility_template_has_error_cases_section(self):
         """Utility template must have an error cases section."""
         full_path = SKILLS_DIR / "frontend-testing" / "assets" / "utility-test.template.ts"
         content = full_path.read_text(encoding="utf-8")
-        assert "error cases" in content.lower(), (
-            "utility-test.template.ts lacks an 'error cases' section"
-        )
+        assert "error cases" in content.lower(), "utility-test.template.ts lacks an 'error cases' section"
 
 
 # ---------------------------------------------------------------------------
@@ -721,30 +669,26 @@ class TestBackendCodeReviewSkill:
 
     def test_architecture_rule_has_scope_section(self):
         """architecture-rule.md must have a ## Scope section."""
-        content = (
-            SKILLS_DIR / "backend-code-review" / "references" / "architecture-rule.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "backend-code-review" / "references" / "architecture-rule.md").read_text(
+            encoding="utf-8"
+        )
         assert "## Scope" in content, "architecture-rule.md is missing '## Scope' section"
 
     def test_db_schema_rule_has_scope_section(self):
         """db-schema-rule.md must have a ## Scope section."""
-        content = (
-            SKILLS_DIR / "backend-code-review" / "references" / "db-schema-rule.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "backend-code-review" / "references" / "db-schema-rule.md").read_text(encoding="utf-8")
         assert "## Scope" in content, "db-schema-rule.md is missing '## Scope' section"
 
     def test_sqlalchemy_rule_has_scope_section(self):
         """sqlalchemy-rule.md must have a ## Scope section."""
-        content = (
-            SKILLS_DIR / "backend-code-review" / "references" / "sqlalchemy-rule.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "backend-code-review" / "references" / "sqlalchemy-rule.md").read_text(encoding="utf-8")
         assert "## Scope" in content, "sqlalchemy-rule.md is missing '## Scope' section"
 
     def test_repositories_rule_has_scope_section(self):
         """repositories-rule.md must have a ## Scope section."""
-        content = (
-            SKILLS_DIR / "backend-code-review" / "references" / "repositories-rule.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "backend-code-review" / "references" / "repositories-rule.md").read_text(
+            encoding="utf-8"
+        )
         assert "## Scope" in content, "repositories-rule.md is missing '## Scope' section"
 
     def test_skill_md_references_all_rule_files(self):
@@ -753,18 +697,12 @@ class TestBackendCodeReviewSkill:
         for ref_file in RULE_CATALOG_FILES["backend-code-review"]:
             # Extract the filename to check it appears in the SKILL.md
             filename = Path(ref_file).name
-            assert filename in content, (
-                f"backend-code-review SKILL.md does not reference rule file '{filename}'"
-            )
+            assert filename in content, f"backend-code-review SKILL.md does not reference rule file '{filename}'"
 
     def test_sqlalchemy_rule_has_user_id_scoping_rule(self):
         """sqlalchemy-rule.md must document the user_id scoping requirement for security."""
-        content = (
-            SKILLS_DIR / "backend-code-review" / "references" / "sqlalchemy-rule.md"
-        ).read_text(encoding="utf-8")
-        assert "user_id" in content, (
-            "sqlalchemy-rule.md does not document user_id scoping (security requirement)"
-        )
+        content = (SKILLS_DIR / "backend-code-review" / "references" / "sqlalchemy-rule.md").read_text(encoding="utf-8")
+        assert "user_id" in content, "sqlalchemy-rule.md does not document user_id scoping (security requirement)"
 
 
 class TestComponentRefactoringSkill:
@@ -785,30 +723,24 @@ class TestComponentRefactoringSkill:
 
     def test_complexity_patterns_has_before_after_examples(self):
         """complexity-patterns.md must contain Before/After code examples."""
-        content = (
-            SKILLS_DIR / "component-refactoring" / "references" / "complexity-patterns.md"
-        ).read_text(encoding="utf-8")
-        assert "Before" in content or "before" in content.lower(), (
-            "complexity-patterns.md has no 'Before' examples"
+        content = (SKILLS_DIR / "component-refactoring" / "references" / "complexity-patterns.md").read_text(
+            encoding="utf-8"
         )
-        assert "After" in content or "after" in content.lower(), (
-            "complexity-patterns.md has no 'After' examples"
-        )
+        assert "Before" in content or "before" in content.lower(), "complexity-patterns.md has no 'Before' examples"
+        assert "After" in content or "after" in content.lower(), "complexity-patterns.md has no 'After' examples"
 
     def test_component_splitting_mentions_kebab_case(self):
         """component-splitting.md must document the kebab-case naming convention."""
-        content = (
-            SKILLS_DIR / "component-refactoring" / "references" / "component-splitting.md"
-        ).read_text(encoding="utf-8")
-        assert "kebab-case" in content, (
-            "component-splitting.md does not mention kebab-case naming convention"
+        content = (SKILLS_DIR / "component-refactoring" / "references" / "component-splitting.md").read_text(
+            encoding="utf-8"
         )
+        assert "kebab-case" in content, "component-splitting.md does not mention kebab-case naming convention"
 
     def test_hook_extraction_has_naming_conventions(self):
         """hook-extraction.md must have a naming conventions section."""
-        content = (
-            SKILLS_DIR / "component-refactoring" / "references" / "hook-extraction.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "component-refactoring" / "references" / "hook-extraction.md").read_text(
+            encoding="utf-8"
+        )
         assert "Naming" in content or "naming" in content.lower(), (
             "hook-extraction.md does not document naming conventions"
         )
@@ -820,36 +752,26 @@ class TestE2ETestingSkill:
     def test_skill_md_mentions_playwright(self):
         """e2e-testing SKILL.md must mention Playwright."""
         content = (SKILLS_DIR / "e2e-testing" / "SKILL.md").read_text(encoding="utf-8")
-        assert "Playwright" in content or "playwright" in content, (
-            "e2e-testing SKILL.md does not mention Playwright"
-        )
+        assert "Playwright" in content or "playwright" in content, "e2e-testing SKILL.md does not mention Playwright"
 
     def test_fixtures_md_documents_import_rule(self):
         """fixtures.md must document the import rule (always use ../../fixtures)."""
-        content = (
-            SKILLS_DIR / "e2e-testing" / "references" / "fixtures.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "e2e-testing" / "references" / "fixtures.md").read_text(encoding="utf-8")
         assert "../../fixtures" in content or "fixtures" in content, (
             "e2e-testing fixtures.md does not document the import rule"
         )
 
     def test_selectors_md_documents_data_testid(self):
         """selectors.md must document the data-testid selector pattern."""
-        content = (
-            SKILLS_DIR / "e2e-testing" / "references" / "selectors.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "e2e-testing" / "references" / "selectors.md").read_text(encoding="utf-8")
         assert "data-testid" in content or "testid" in content.lower(), (
             "e2e-testing selectors.md does not document data-testid selectors"
         )
 
     def test_helpers_md_documents_await_bootstrap_test(self):
         """helpers.md must document the awaitBootstrapTest helper function."""
-        content = (
-            SKILLS_DIR / "e2e-testing" / "references" / "helpers.md"
-        ).read_text(encoding="utf-8")
-        assert "awaitBootstrapTest" in content, (
-            "e2e-testing helpers.md does not document awaitBootstrapTest"
-        )
+        content = (SKILLS_DIR / "e2e-testing" / "references" / "helpers.md").read_text(encoding="utf-8")
+        assert "awaitBootstrapTest" in content, "e2e-testing helpers.md does not document awaitBootstrapTest"
 
 
 class TestFrontendCodeReviewSkill:
@@ -861,39 +783,25 @@ class TestFrontendCodeReviewSkill:
         # The skill should mention the key frontend technologies
         tech_terms = ["React", "TypeScript", "Tailwind", "Zustand"]
         mentioned = [t for t in tech_terms if t in content]
-        assert len(mentioned) >= 2, (
-            f"frontend-code-review SKILL.md mentions only {mentioned} of {tech_terms}"
-        )
+        assert len(mentioned) >= 2, f"frontend-code-review SKILL.md mentions only {mentioned} of {tech_terms}"
 
     def test_code_quality_md_has_rules(self):
         """code-quality.md must have multiple H3 rule entries."""
-        content = (
-            SKILLS_DIR / "frontend-code-review" / "references" / "code-quality.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "frontend-code-review" / "references" / "code-quality.md").read_text(encoding="utf-8")
         h3_rules = re.findall(r"^### .+", content, re.MULTILINE)
-        assert len(h3_rules) >= 3, (
-            f"code-quality.md has only {len(h3_rules)} H3 rule entries, expected >= 3"
-        )
+        assert len(h3_rules) >= 3, f"code-quality.md has only {len(h3_rules)} H3 rule entries, expected >= 3"
 
     def test_performance_md_has_rules(self):
         """performance.md must have multiple H3 rule entries."""
-        content = (
-            SKILLS_DIR / "frontend-code-review" / "references" / "performance.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "frontend-code-review" / "references" / "performance.md").read_text(encoding="utf-8")
         h3_rules = re.findall(r"^### .+", content, re.MULTILINE)
-        assert len(h3_rules) >= 2, (
-            f"performance.md has only {len(h3_rules)} H3 rule entries, expected >= 2"
-        )
+        assert len(h3_rules) >= 2, f"performance.md has only {len(h3_rules)} H3 rule entries, expected >= 2"
 
     def test_business_logic_md_has_rules(self):
         """business-logic.md must have multiple rule entries."""
-        content = (
-            SKILLS_DIR / "frontend-code-review" / "references" / "business-logic.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "frontend-code-review" / "references" / "business-logic.md").read_text(encoding="utf-8")
         h3_rules = re.findall(r"^### .+", content, re.MULTILINE)
-        assert len(h3_rules) >= 2, (
-            f"business-logic.md has only {len(h3_rules)} H3 rule entries, expected >= 2"
-        )
+        assert len(h3_rules) >= 2, f"business-logic.md has only {len(h3_rules)} H3 rule entries, expected >= 2"
 
     def test_skill_md_has_template_a_and_b(self):
         """frontend-code-review SKILL.md must define Template A and B output formats."""
@@ -908,29 +816,27 @@ class TestFrontendQueryMutationSkill:
     def test_skill_md_mentions_use_request_processor(self):
         """frontend-query-mutation SKILL.md must mention UseRequestProcessor."""
         content = (SKILLS_DIR / "frontend-query-mutation" / "SKILL.md").read_text(encoding="utf-8")
-        assert "UseRequestProcessor" in content, (
-            "frontend-query-mutation SKILL.md does not mention UseRequestProcessor"
-        )
+        assert "UseRequestProcessor" in content, "frontend-query-mutation SKILL.md does not mention UseRequestProcessor"
 
     def test_query_patterns_md_has_code_examples(self):
         """query-patterns.md must contain code examples for hooks."""
-        content = (
-            SKILLS_DIR / "frontend-query-mutation" / "references" / "query-patterns.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "frontend-query-mutation" / "references" / "query-patterns.md").read_text(
+            encoding="utf-8"
+        )
         assert has_code_blocks(content), "query-patterns.md has no code examples"
 
     def test_runtime_rules_md_has_code_examples(self):
         """runtime-rules.md must contain code examples."""
-        content = (
-            SKILLS_DIR / "frontend-query-mutation" / "references" / "runtime-rules.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "frontend-query-mutation" / "references" / "runtime-rules.md").read_text(
+            encoding="utf-8"
+        )
         assert has_code_blocks(content), "runtime-rules.md has no code examples"
 
     def test_query_patterns_md_mentions_anti_patterns(self):
         """query-patterns.md must document anti-patterns to avoid."""
-        content = (
-            SKILLS_DIR / "frontend-query-mutation" / "references" / "query-patterns.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "frontend-query-mutation" / "references" / "query-patterns.md").read_text(
+            encoding="utf-8"
+        )
         assert "Anti-Pattern" in content or "anti-pattern" in content.lower(), (
             "query-patterns.md does not document anti-patterns"
         )
@@ -942,9 +848,7 @@ class TestFrontendTestingSkill:
     def test_skill_md_mentions_jest(self):
         """frontend-testing SKILL.md must mention Jest."""
         content = (SKILLS_DIR / "frontend-testing" / "SKILL.md").read_text(encoding="utf-8")
-        assert "Jest" in content or "jest" in content, (
-            "frontend-testing SKILL.md does not mention Jest"
-        )
+        assert "Jest" in content or "jest" in content, "frontend-testing SKILL.md does not mention Jest"
 
     def test_skill_md_mentions_react_testing_library(self):
         """frontend-testing SKILL.md must mention React Testing Library."""
@@ -970,16 +874,12 @@ class TestFrontendTestingSkill:
 
     def test_async_testing_md_covers_wait_for(self):
         """async-testing.md must cover the waitFor pattern."""
-        content = (
-            SKILLS_DIR / "frontend-testing" / "references" / "async-testing.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "frontend-testing" / "references" / "async-testing.md").read_text(encoding="utf-8")
         assert "waitFor" in content, "async-testing.md does not document waitFor"
 
     def test_async_testing_md_covers_fake_timers(self):
         """async-testing.md must cover fake timer patterns."""
-        content = (
-            SKILLS_DIR / "frontend-testing" / "references" / "async-testing.md"
-        ).read_text(encoding="utf-8")
+        content = (SKILLS_DIR / "frontend-testing" / "references" / "async-testing.md").read_text(encoding="utf-8")
         assert "Fake Timer" in content or "useFakeTimers" in content, (
             "async-testing.md does not document fake timer usage"
         )
@@ -1007,9 +907,7 @@ class TestBoundaryAndRegressionCases:
             if not skill_dir.is_dir():
                 continue
             skill_md = skill_dir / "SKILL.md"
-            assert skill_md.is_file(), (
-                f"Skill directory '{skill_dir.name}' has no SKILL.md"
-            )
+            assert skill_md.is_file(), f"Skill directory '{skill_dir.name}' has no SKILL.md"
 
     def test_skill_md_does_not_contain_placeholder_text(self):
         """SKILL.md files must not contain obvious placeholder text (TODO, FIXME, PLACEHOLDER)."""
@@ -1049,9 +947,7 @@ class TestBoundaryAndRegressionCases:
                 try:
                     file_path.read_text(encoding="utf-8")
                 except UnicodeDecodeError as exc:
-                    pytest.fail(
-                        f"File '{file_path.relative_to(SKILLS_DIR)}' is not valid UTF-8: {exc}"
-                    )
+                    pytest.fail(f"File '{file_path.relative_to(SKILLS_DIR)}' is not valid UTF-8: {exc}")
 
     def test_skill_frontmatter_name_uses_kebab_case(self):
         """SKILL.md 'name' field must use kebab-case (lowercase with hyphens)."""
@@ -1060,9 +956,7 @@ class TestBoundaryAndRegressionCases:
             content = (SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
             fm = parse_frontmatter(content)
             name = fm.get("name", "")
-            assert kebab_pattern.match(name), (
-                f"SKILL.md in '{skill_name}': name '{name}' is not valid kebab-case"
-            )
+            assert kebab_pattern.match(name), f"SKILL.md in '{skill_name}': name '{name}' is not valid kebab-case"
 
     def test_reference_files_have_h2_sections(self):
         """All reference .md files (not templates) must have at least one H2 section."""
@@ -1076,9 +970,7 @@ class TestBoundaryAndRegressionCases:
                     continue
                 content = full_path.read_text(encoding="utf-8")
                 h2s = get_h2_sections(content)
-                assert len(h2s) >= 1, (
-                    f"Reference file '{rel_path}' in '{skill_name}' has no H2 section headings"
-                )
+                assert len(h2s) >= 1, f"Reference file '{rel_path}' in '{skill_name}' has no H2 section headings"
 
     def test_skill_total_file_count_per_skill(self):
         """Each skill directory must have at least 2 files (SKILL.md + at least 1 reference)."""
@@ -1094,6 +986,4 @@ class TestBoundaryAndRegressionCases:
         """SKILL.md files must be at least 50 lines (not stubs)."""
         content = (SKILLS_DIR / skill_name / "SKILL.md").read_text(encoding="utf-8")
         line_count = len(content.splitlines())
-        assert line_count >= 50, (
-            f"SKILL.md in '{skill_name}' has only {line_count} lines — likely a stub"
-        )
+        assert line_count >= 50, f"SKILL.md in '{skill_name}' has only {line_count} lines — likely a stub"
