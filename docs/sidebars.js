@@ -78,6 +78,11 @@ module.exports = {
           id: "Flows/concepts-flows-import",
           label: "Import and export flows"
         },
+        {
+          type: "doc",
+          id: "Flows/langflow-assistant",
+          label: "Build components with Langflow Assistant"
+        },
       ],
     },
     {
@@ -464,6 +469,26 @@ module.exports = {
       label: "API reference",
       className: "sidebar-category-with-icon sidebar-icon-fileCode",
       items: [
+        {
+          type: "doc",
+          id: "API-Reference/api-reference-api-examples",
+          label: "Get started with the Langflow API",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/typescript-client",
+          label: "Use the TypeScript client"
+        },
+        {
+          type: "doc",
+          id: "API-Reference/flow-devops-sdk",
+          label: "Flow DevOps Toolkit SDK",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-flows-run",
+          label: "Flow trigger endpoints",
+        },
         "API-Reference/api-reference-api-examples",
         "API-Reference/typescript-client",
         "API-Reference/flow-devops-sdk",
