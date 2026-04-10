@@ -10,7 +10,6 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
-import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { Command } from "../../../../ui/command";
@@ -22,6 +21,7 @@ import {
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
+import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import type {
   ModelInputComponentType,
   ModelOption,
@@ -43,7 +43,8 @@ export default function ModelInputComponent({
   editNode,
   inspectionPanel,
   showEmptyState = false,
-}: BaseInputProps<any> & ModelInputComponentType): JSX.Element | null {
+}: BaseInputProps<SelectedModel[]> &
+  ModelInputComponentType): JSX.Element | null {
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -56,7 +57,8 @@ export default function ModelInputComponent({
   const [isConnectionMode, setIsConnectionMode] = useState(() => {
     if (!nodeId) return false;
     const node = useFlowStore.getState().nodes.find((n) => n.id === nodeId);
-    return (node?.data as any)?._connectionMode === true;
+    const data = node?.data as { _connectionMode?: boolean } | undefined;
+    return data?._connectionMode === true;
   });
 
   const setConnectionMode = useCallback(
@@ -123,26 +125,71 @@ export default function ModelInputComponent({
   }, [providersData]);
 
   // Groups models by their provider name for sectioned display in dropdown.
-  // Filters out models from disabled providers AND disabled models.
+  // Filters out models from disabled providers AND disabled models, then
+  // augments with any enabled models from `providersData` that weren't in the
+  // component's saved `options` (e.g. after importing a flow whose exporter
+  // only had a subset of the current user's enabled providers).
   const groupedOptions = useMemo(() => {
     const grouped: Record<string, ModelOption[]> = {};
+    const seen = new Set<string>();
+
     for (const option of options) {
       if (option.metadata?.is_disabled_provider) continue;
       const provider = option.provider || "Unknown";
 
-      // Filter out disabled models using client-side enabled models data
-      // This provides a reliable fallback when backend filtering fails
+      // Filter against client-side enabled models data. This is the source of
+      // truth for what the current user has enabled — stale `options` saved in
+      // an imported flow may include models from providers the current user
+      // hasn't enabled (e.g. WatsonX). When the provider is tracked in
+      // enabled_models, the model must be explicitly enabled (=== true); a
+      // `false` or missing entry means the model should be hidden.
       if (enabledModelsData?.enabled_models) {
         const providerModels = enabledModelsData.enabled_models[provider];
-        if (providerModels && providerModels[option.name] === false) {
-          continue; // Skip disabled models
+        if (providerModels && providerModels[option.name] !== true) {
+          continue;
         }
       }
 
-      (grouped[provider] ??= []).push(option);
+      if (!grouped[provider]) {
+        grouped[provider] = [];
+      }
+      grouped[provider].push(option);
+      seen.add(`${provider}::${option.name}`);
     }
+
+    // Augment with models the user has enabled that were not in the saved
+    // `options` (the saved list reflects only what the exporter had available).
+    // This ensures importing a flow shows the importing user's full enabled
+    // list rather than the intersection of the two sets.
+    if (enabledModelsData?.enabled_models && providersData) {
+      for (const providerInfo of providersData) {
+        const providerName = providerInfo.provider;
+        const providerModels = enabledModelsData.enabled_models[providerName];
+        if (!providerModels) continue;
+
+        for (const model of providerInfo.models ?? []) {
+          const modelName = model.model_name;
+          if (providerModels[modelName] !== true) continue;
+
+          const key = `${providerName}::${modelName}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          if (!grouped[providerName]) {
+            grouped[providerName] = [];
+          }
+          grouped[providerName].push({
+            name: modelName,
+            icon: providerInfo.icon || "Bot",
+            provider: providerName,
+            metadata: (model.metadata ?? {}) as Record<string, unknown>,
+          });
+        }
+      }
+    }
+
     return grouped;
-  }, [options, enabledModelsData]);
+  }, [options, enabledModelsData, providersData]);
 
   // Flattened array of all enabled options for efficient lookups by name
   const flatOptions = useMemo(
@@ -183,30 +230,36 @@ export default function ModelInputComponent({
   }, [value, flatOptions, isConnectionMode, externalOptions]);
 
   useEffect(() => {
-    // Only proceed if we have options, haven't selected a value, and NOT in connection mode
-    if (
-      flatOptions.length > 0 &&
-      (!value || value.length === 0) &&
-      !isConnectionMode
-    ) {
-      // Check ref to avoid infinite loops
-      if (!hasProcessedEmptyRef.current) {
-        const firstOption = flatOptions[0];
-        // Construct the new value object
-        const newValue = [
-          {
-            ...(firstOption.id && { id: firstOption.id }),
-            name: firstOption.name,
-            icon: firstOption.icon || "Bot",
-            provider: firstOption.provider || "Unknown",
-            metadata: firstOption.metadata ?? {},
-          },
-        ];
-        handleOnNewValue({ value: newValue });
-        hasProcessedEmptyRef.current = true;
-      }
-    }
-  }, [flatOptions, value, handleOnNewValue]);
+    if (flatOptions.length === 0 || isConnectionMode) return;
+    if (hasProcessedEmptyRef.current) return;
+
+    const currentName = value?.[0]?.name;
+    const isEmpty = !value || value.length === 0;
+    // When importing a flow, the saved value may reference a model from a
+    // provider the current user hasn't enabled (e.g. WatsonX). In that case the
+    // model will have been filtered out of flatOptions, so we also reset here
+    // to avoid persisting the stale selection on next save.
+    const isStaleValue =
+      !isEmpty &&
+      !!currentName &&
+      !flatOptions.some((option) => option.name === currentName);
+
+    if (!isEmpty && !isStaleValue) return;
+
+    const firstOption = flatOptions[0];
+    // Construct the new value object
+    const newValue = [
+      {
+        ...(firstOption.id && { id: firstOption.id }),
+        name: firstOption.name,
+        icon: firstOption.icon || "Bot",
+        provider: firstOption.provider || "Unknown",
+        metadata: firstOption.metadata ?? {},
+      },
+    ];
+    handleOnNewValue({ value: newValue });
+    hasProcessedEmptyRef.current = true;
+  }, [flatOptions, value, handleOnNewValue, isConnectionMode]);
 
   /**
    * Handles model selection from the dropdown.
@@ -410,7 +463,7 @@ export default function ModelInputComponent({
           <ModelTrigger
             open={open}
             disabled={disabled}
-            options={options}
+            options={flatOptions}
             selectedModel={selectedModel}
             placeholder={placeholder}
             hasEnabledProviders={hasEnabledProviders ?? false}
