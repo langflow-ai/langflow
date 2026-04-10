@@ -33,7 +33,6 @@ from sqlmodel import col, func, select
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
-    DeploymentProviderAccountGetResponse,
     DeploymentUpdateRequest,
 )
 from langflow.initial_setup.setup import get_or_create_default_folder
@@ -296,15 +295,6 @@ def page_offset(page: int, size: int) -> int:
     return (page - 1) * size
 
 
-def as_uuid(value: UUID | str) -> UUID | None:
-    if isinstance(value, UUID):
-        return value
-    try:
-        return UUID(str(value))
-    except (TypeError, ValueError):
-        return None
-
-
 def raise_http_for_value_error(exc: ValueError) -> None:
     status_code = status.HTTP_404_NOT_FOUND if "not found" in str(exc).lower() else status.HTTP_400_BAD_REQUEST
     raise HTTPException(status_code=status_code, detail=str(exc)) from exc
@@ -349,53 +339,6 @@ def handle_adapter_errors(*, mapper: BaseDeploymentMapper | None = None):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while communicating with the deployment provider.",
         ) from exc
-
-
-def resolve_provider_tenant_id(
-    *,
-    deployment_mapper: BaseDeploymentMapper,
-    provider_url: str,
-    provider_data: dict[str, Any],
-) -> str | None:
-    return deployment_mapper.resolve_provider_tenant_id(
-        provider_url=provider_url,
-        provider_data=provider_data,
-    )
-
-
-def to_provider_account_response(provider_account: DeploymentProviderAccount) -> DeploymentProviderAccountGetResponse:
-    from langflow.api.v1.mappers.deployments.registry import get_deployment_mapper
-
-    deployment_mapper = get_deployment_mapper(provider_account.provider_key or "")
-    return deployment_mapper.shape_provider_account_response(provider_account)
-
-
-def normalize_flow_version_query_ids(flow_version_ids: list[str] | None) -> list[UUID]:
-    if not flow_version_ids:
-        return []
-    normalized: list[UUID] = []
-    seen: set[UUID] = set()
-    for raw in flow_version_ids:
-        flow_version_uuid = as_uuid(raw.strip())
-        if flow_version_uuid is None:
-            msg = f"Invalid UUID in flow_version_ids query parameter: '{raw}'"
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
-        if flow_version_uuid in seen:
-            continue
-        seen.add(flow_version_uuid)
-        normalized.append(flow_version_uuid)
-    return normalized
-
-
-def normalize_flow_ids_query(flow_ids: list[UUID] | None) -> list[UUID]:
-    """Return a deduplicated list from an already-validated ``flow_ids`` query param.
-
-    ``FlowIdsQuery`` (Pydantic) handles UUID parsing and max-length
-    validation, so this is intentionally thin.
-    """
-    if not flow_ids:
-        return []
-    return list(dict.fromkeys(flow_ids))
 
 
 async def flow_version_ids_for_flows(db, *, flow_ids: list[UUID], user_id: UUID) -> list[UUID]:

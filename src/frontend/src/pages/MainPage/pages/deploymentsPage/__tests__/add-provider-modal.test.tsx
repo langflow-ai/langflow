@@ -163,8 +163,10 @@ describe("Submit behavior", () => {
       expect(mockMutateAsync).toHaveBeenCalledWith({
         name: "My Env",
         provider_key: "watsonx-orchestrate",
-        url: "https://prod.example.com",
-        provider_data: { api_key: "sk-test-123" }, // pragma: allowlist secret
+        provider_data: {
+          url: "https://prod.example.com",
+          api_key: "sk-test-123", // pragma: allowlist secret
+        },
       });
     });
     expect(setOpen).toHaveBeenCalledWith(false);
