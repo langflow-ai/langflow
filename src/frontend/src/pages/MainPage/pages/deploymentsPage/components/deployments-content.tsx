@@ -80,7 +80,7 @@ export default function DeploymentsContent({
 
   return (
     <>
-      {providers.length >= 1 && deployments.length > 0 && (
+      {providers.length >= 1 && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Environment:</span>
           <Select
