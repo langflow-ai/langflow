@@ -78,6 +78,11 @@ module.exports = {
           id: "Flows/concepts-flows-import",
           label: "Import and export flows"
         },
+        {
+          type: "doc",
+          id: "Flows/langflow-assistant",
+          label: "Build components with Langflow Assistant"
+        },
       ],
     },
     {
