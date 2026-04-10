@@ -1066,7 +1066,9 @@ def api_key_banner(unmasked_api_key) -> None:
         import pyperclip
 
         pyperclip.copy(unmasked_api_key.api_key)
-        clipboard_msg = f"\nThe API key has been copied to your clipboard. [bold]{['Ctrl', 'Cmd'][is_mac]} + V[/bold] to paste it."
+        clipboard_msg = (
+            f"\nThe API key has been copied to your clipboard. [bold]{['Ctrl', 'Cmd'][is_mac]} + V[/bold] to paste it."
+        )
     except Exception:  # noqa: BLE001
         pass
     panel = Panel(
