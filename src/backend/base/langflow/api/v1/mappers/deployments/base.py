@@ -426,9 +426,9 @@ class BaseDeploymentMapper:
         """Format provider conflict errors for API responses.
 
         Provider-specific mappers may override this to map provider-native
-        conflict wording to clearer end-user guidance.
+        conflict wording to clearer end-user guidance.  Subclasses use
+        *resource* and *resource_name* to produce targeted messages.
         """
-        _ = (resource, resource_name)
         return raw_message
 
     def resolve_credential_fields(

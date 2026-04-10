@@ -6047,6 +6047,12 @@ async def test_create_maps_409_conflict_to_deployment_conflict_error():
 
 @pytest.mark.anyio
 async def test_create_tool_conflict_detail_is_not_misclassified_as_agent(monkeypatch):
+    """Service-layer catch does not carry resource hints — resource stays None.
+
+    This proves the conflict is not misclassified as 'agent'.  The inner-layer test
+    ``test_upload_wxo_flow_tool_maps_tool_conflict_with_structured_resource``
+    covers the path where ``resource='tool'`` is correctly attached.
+    """
     from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
@@ -6080,8 +6086,8 @@ async def test_create_tool_conflict_detail_is_not_misclassified_as_agent(monkeyp
             ),
         )
 
-    assert exc_info.value.resource == "tool"
-    assert exc_info.value.resource_name == "Simple_Agent"
+    assert exc_info.value.resource is None
+    assert exc_info.value.resource_name is None
 
 
 @pytest.mark.anyio
@@ -6397,7 +6403,9 @@ async def test_create_preserves_exception_chain_on_unexpected_error():
             ),
         )
 
-    assert exc_info.value.__cause__ is original_error
+    inner = exc_info.value.__cause__
+    assert isinstance(inner, DeploymentError)
+    assert inner.__cause__ is original_error
 
 
 @pytest.mark.anyio

@@ -270,17 +270,6 @@ def http_status_for_deployment_error(exc: DeploymentServiceError) -> int:
     return status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-def _resolve_conflict_hints(
-    _detail_text: str,
-    *,
-    resource: str | None = None,
-    resource_name: str | None = None,
-) -> tuple[str | None, str | None]:
-    normalized_resource = str(resource).strip().lower() if resource is not None else None
-    normalized_resource_name = str(resource_name).strip() or None if resource_name is not None else None
-    return normalized_resource, normalized_resource_name
-
-
 # lru+ttl cache?
 def raise_as_deployment_error(
     *,
@@ -327,15 +316,10 @@ def raise_as_deployment_error(
     if status_code == status.HTTP_410_GONE:
         raise ResourceNotFoundError(message, cause=cause) from cause
     if status_code == status.HTTP_409_CONFLICT:
-        conflict_resource, conflict_resource_name = _resolve_conflict_hints(
-            detail_text,
-            resource=resource,
-            resource_name=resource_name,
-        )
         raise ResourceConflictError(
             message=message,
-            resource=conflict_resource,
-            resource_name=conflict_resource_name,
+            resource=resource,
+            resource_name=resource_name,
             cause=cause,
         ) from cause
     if status_code == status.HTTP_429_TOO_MANY_REQUESTS:
@@ -347,15 +331,10 @@ def raise_as_deployment_error(
     if "not found" in detail_lower:
         raise ResourceNotFoundError(message, cause=cause) from cause
     if "already exists" in detail_lower or "conflict" in detail_lower:
-        conflict_resource, conflict_resource_name = _resolve_conflict_hints(
-            detail_text,
-            resource=resource,
-            resource_name=resource_name,
-        )
         raise ResourceConflictError(
             message=message,
-            resource=conflict_resource,
-            resource_name=conflict_resource_name,
+            resource=resource,
+            resource_name=resource_name,
             cause=cause,
         ) from cause
     if "unprocessable" in detail_lower:

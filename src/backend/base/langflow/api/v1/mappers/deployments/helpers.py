@@ -152,7 +152,10 @@ async def build_flow_artifacts_from_flow_versions(
     )
     rows = list((await db.exec(statement)).all())
     if len(rows) < len(flow_version_ids):
-        msg = "One or more flow version ids are invalid."
+        msg = (
+            "One or more flow versions are invalid. "
+            "Please ensure the flows belong to the project containing the deployment."
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
 
     artifacts: list[tuple[UUID, int, UUID, BaseFlowArtifact]] = []
