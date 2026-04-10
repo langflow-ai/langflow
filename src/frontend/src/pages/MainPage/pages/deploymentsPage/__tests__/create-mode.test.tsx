@@ -567,6 +567,34 @@ describe("Create mode — buildProviderAccountPayload", () => {
 // ---------------------------------------------------------------------------
 
 describe("Create mode — buildDeploymentPayload", () => {
+  it("includes project_id when provided in initial state", () => {
+    const { result } = renderCreateHook({
+      projectId: "folder-123",
+    });
+
+    act(() => {
+      result.current.setDeploymentName("Test Agent");
+      result.current.setSelectedLlm("gpt-4");
+      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+    });
+
+    const payload = result.current.buildDeploymentPayload("provider-1");
+    expect(payload.project_id).toBe("folder-123");
+  });
+
+  it("omits project_id when no project is resolved", () => {
+    const { result } = renderCreateHook();
+
+    act(() => {
+      result.current.setDeploymentName("Test Agent");
+      result.current.setSelectedLlm("gpt-4");
+      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+    });
+
+    const payload = result.current.buildDeploymentPayload("provider-1");
+    expect(payload).not.toHaveProperty("project_id");
+  });
+
   it("builds correct spec with name, description, and type", () => {
     const { result } = renderCreateHook();
 

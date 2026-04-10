@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +13,8 @@ import { useGetDeployment } from "@/controllers/API/queries/deployments/use-get-
 import { useGetDeploymentAttachments } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 import { usePatchDeployment } from "@/controllers/API/queries/deployments/use-patch-deployment";
 import { usePostDeployment } from "@/controllers/API/queries/deployments/use-post-deployment";
+import useFlowStore from "@/stores/flowStore";
+import { useFolderStore } from "@/stores/foldersStore";
 import {
   DeploymentStepperProvider,
   useDeploymentStepper,
@@ -52,6 +55,13 @@ export default function DeploymentStepperModal({
 }: DeploymentStepperModalProps) {
   const [isDeploying, setIsDeploying] = useState(false);
   const isEditMode = !!editingDeployment;
+  const { folderId } = useParams();
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const currentFlowProjectId = useFlowStore(
+    (state) => state.currentFlow?.folder_id,
+  );
+  const resolvedProjectId =
+    currentFlowProjectId ?? folderId ?? myCollectionId ?? undefined;
 
   // Edit mode: fetch existing attachments and deployment detail for LLM.
   const { data: attachmentsData, isLoading: isLoadingAttachments } =
@@ -137,6 +147,7 @@ export default function DeploymentStepperModal({
           <DeploymentStepperProvider
             key={`${open}-${editingDeployment?.id ?? ""}-${initialProvider?.id ?? ""}-${initialInstance?.id ?? ""}`}
             initialState={{
+              projectId: resolvedProjectId,
               initialFlowId,
               selectedVersionByFlow:
                 initialVersionByFlow ?? editInitialState?.versionMap,
