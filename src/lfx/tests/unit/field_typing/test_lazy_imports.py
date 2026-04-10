@@ -161,18 +161,20 @@ class TestFieldTypingNativeDependencyFailure:
     """
 
     def test_should_use_stub_classes_when_langchain_import_raises_oserror(self, monkeypatch):
-        """Bug: `langflow --version` crashes on fresh Windows because lfx fails to
-        import. Cause: `c10.dll` raises `OSError: [WinError 126]` and the existing
-        fallback only catches `ImportError`.
+        """Bug: `langflow --version` crashes on fresh Windows because lfx fails to import.
 
-        After fix: stub classes are used and lfx loads cleanly, allowing the
-        Desktop install verification to succeed even when torch's native deps are
-        unavailable.
+        Cause: `c10.dll` raises `OSError: [WinError 126]` and the existing fallback
+        only catches `ImportError`. After fix: stub classes are used and lfx loads
+        cleanly, allowing the Desktop install verification to succeed even when
+        torch's native deps are unavailable.
         """
 
         class _RaisingLangchainAgents(types.ModuleType):
-            """Stand-in for langchain_classic.agents that mimics the c10.dll
-            OSError surfacing through `from langchain_classic.agents import X`."""
+            """Stand-in for langchain_classic.agents.
+
+            Mimics the c10.dll OSError surfacing through
+            `from langchain_classic.agents import X`.
+            """
 
             def __getattr__(self, name: str):
                 if name.startswith("__"):
