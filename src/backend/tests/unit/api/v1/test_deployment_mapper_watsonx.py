@@ -489,7 +489,7 @@ def test_watsonx_mapper_config_list_fails_fast_when_type_missing() -> None:
         mapper.shape_config_list_result(result, page=1, size=10)
     assert exc_info.value.status_code == 500
     detail = str(exc_info.value.detail)
-    assert "Invalid config item provider_data payload:" in detail
+    assert "Unexpected result while reading the configuration" in detail
     assert "'type'" in detail
 
 
@@ -536,7 +536,7 @@ def test_watsonx_mapper_config_list_fails_fast_when_environment_missing() -> Non
         mapper.shape_config_list_result(result, page=1, size=10)
     assert exc_info.value.status_code == 500
     detail = str(exc_info.value.detail)
-    assert "Invalid config item provider_data payload:" in detail
+    assert "Unexpected result while reading the configuration" in detail
     assert "'environment'" in detail
 
 
@@ -557,7 +557,7 @@ def test_watsonx_mapper_config_list_rejects_missing_type_even_with_other_provide
         mapper.shape_config_list_result(result, page=1, size=10)
     assert exc_info.value.status_code == 500
     detail = str(exc_info.value.detail)
-    assert "Invalid config item provider_data payload:" in detail
+    assert "Unexpected result while reading the configuration" in detail
     assert "'type'" in detail
 
 
@@ -1166,7 +1166,7 @@ async def test_watsonx_mapper_create_reports_missing_llm_field_name() -> None:
         )
 
     assert exc.value.status_code == 422
-    assert exc.value.detail == "Invalid provider_data payload: Missing required field 'llm'."
+    assert exc.value.detail == "Invalid provider_data for watsonx Orchestrate: Missing required field 'llm'."
 
 
 @pytest.mark.asyncio
@@ -1198,7 +1198,10 @@ async def test_watsonx_mapper_create_reports_unknown_field_name() -> None:
         )
 
     assert exc.value.status_code == 422
-    assert exc.value.detail == "Invalid provider_data payload: Invalid field 'resource_name_prefix'. Please remove it."
+    assert (
+        exc.value.detail
+        == "Invalid provider_data for watsonx Orchestrate: Invalid field 'resource_name_prefix'. Please remove it."
+    )
 
 
 @pytest.mark.asyncio
@@ -1577,7 +1580,7 @@ def test_watsonx_mapper_llm_list_result_raises_for_missing_provider_payload() ->
     with pytest.raises(HTTPException) as exc:
         mapper.shape_llm_list_result(result)
     assert exc.value.status_code == 500
-    assert "missing provider_result payload" in exc.value.detail
+    assert "Empty result while listing available models" in exc.value.detail
 
 
 def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
