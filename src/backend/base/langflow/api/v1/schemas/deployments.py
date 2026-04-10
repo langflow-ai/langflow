@@ -47,21 +47,6 @@ from langflow.services.database.models.deployment_provider_account.utils import 
 # ---------------------------------------------------------------------------
 
 
-def _validate_str_id_list(values: list[str], *, field_name: str) -> list[str]:
-    """Strip, reject empty/whitespace values, reject empty lists, and deduplicate preserving order."""
-    if not values:
-        msg = f"{field_name} must not be empty."
-        raise ValueError(msg)
-    stripped = []
-    for raw in values:
-        value = raw.strip()
-        if not value:
-            msg = f"{field_name} must not contain empty values."
-            raise ValueError(msg)
-        stripped.append(value)
-    return list(dict.fromkeys(stripped))
-
-
 def _validate_uuid_list(values: list[UUID], *, field_name: str) -> list[UUID]:
     """Deduplicate (preserving order) and reject empty lists."""
     deduped = list(dict.fromkeys(values))

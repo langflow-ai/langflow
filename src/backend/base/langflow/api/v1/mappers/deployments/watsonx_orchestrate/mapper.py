@@ -223,25 +223,30 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             return tenant_id
         return extract_tenant_from_url(provider_url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
 
-    def _resolve_required_provider_tenant_id(
+    def _validate_create_provider_data(
         self,
-        *,
-        parsed_provider_data: WatsonxApiProviderAccountCreate,
-    ) -> str:
-        tenant_id = parsed_provider_data.tenant_id
-        if tenant_id:
-            return tenant_id
-        url_tenant_id = extract_tenant_from_url(
-            parsed_provider_data.url,
-            WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-        )
-        if url_tenant_id:
-            return url_tenant_id
-        msg = (
-            "provider_data.tenant_id is required for watsonx-orchestrate provider accounts. "
-            "Provide tenant_id explicitly or use a provider_data.url containing /instances/{tenant_id}."
-        )
-        raise ValueError(msg)
+        provider_data: dict[str, Any],
+    ) -> tuple[WatsonxApiProviderAccountCreate, str]:
+        """Parse, validate, and resolve tenant for create provider_data.
+
+        Returns the parsed payload and the resolved tenant_id.
+        Used by ``resolve_provider_account_create`` which needs the
+        tenant_id for the DB model.
+        """
+        parsed = self._parse_create_provider_data(provider_data)
+        tenant_id = parsed.tenant_id
+        if not tenant_id:
+            tenant_id = extract_tenant_from_url(
+                parsed.url,
+                WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+            )
+        if not tenant_id:
+            msg = (
+                "provider_data.tenant_id is required for watsonx-orchestrate provider accounts. "
+                "Provide tenant_id explicitly or use a provider_data.url containing /instances/{tenant_id}."
+            )
+            raise ValueError(msg)
+        return parsed, tenant_id
 
     def validate_create_provider_url(
         self,
@@ -300,10 +305,13 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         payload: DeploymentProviderAccountCreateRequest,
         user_id: UUID | str,
     ) -> DeploymentProviderAccount:
-        parsed = self._parse_create_provider_data(payload.provider_data)
-        tenant_id = self._resolve_required_provider_tenant_id(
-            parsed_provider_data=parsed,
-        )
+        """Assemble provider-account DB model for create.
+
+        The returned model carries a **plaintext** ``api_key``.  The CRUD
+        layer (``create_provider_account_from_model``) encrypts it before
+        persistence.
+        """
+        parsed, tenant_id = self._validate_create_provider_data(payload.provider_data)
         return DeploymentProviderAccount(
             user_id=user_id,
             name=payload.name,
@@ -335,10 +343,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         payload: DeploymentProviderAccountCreateRequest,
     ) -> VerifyCredentials:
         parsed = self._parse_create_provider_data(payload.provider_data)
-        # Fail fast on create when tenant is not resolvable from provider_data.
-        self._resolve_required_provider_tenant_id(
-            parsed_provider_data=parsed,
-        )
         return VerifyCredentials(
             base_url=parsed.url,
             provider_data={"api_key": parsed.api_key},
@@ -352,8 +356,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     ) -> VerifyCredentials | None:
         if "provider_data" not in payload.model_fields_set:
             return None
+        if payload.provider_data is None:
+            msg = "'provider_data' cannot be null when provided."
+            raise ValueError(msg)
 
-        self._guard_provider_data_for_update(payload.provider_data)
         parsed: WatsonxApiProviderAccountUpdate = self._parse_api_payload_slot(
             slot=self.api_payloads.provider_account_update,
             slot_name="provider_account_update",

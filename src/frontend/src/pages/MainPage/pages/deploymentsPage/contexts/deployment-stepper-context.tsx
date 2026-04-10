@@ -42,7 +42,7 @@ interface DeploymentStepperInitialState {
   initialLlm?: string;
   /** Pre-populated tool names from provider (edit mode). Key = flowId. */
   initialToolNameByFlow?: Map<string, string>;
-  /** Pre-populated connection bindings from provider (edit mode). Key = flowId. */
+  /** Pre-populated connection assignments from provider (edit mode). Key = flowId. */
   initialConnectionsByFlow?: Map<string, string[]>;
 }
 

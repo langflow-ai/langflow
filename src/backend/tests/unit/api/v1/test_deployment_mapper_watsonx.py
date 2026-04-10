@@ -829,6 +829,7 @@ def test_watsonx_mapper_resolve_verify_credentials_for_update_prefers_new_provid
 
 
 def test_watsonx_mapper_resolve_verify_credentials_for_update_rejects_url_update() -> None:
+    """WatsonxApiProviderAccountUpdate (extra='forbid') rejects url in provider_data."""
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 
     mapper = WatsonxOrchestrateDeploymentMapper()
@@ -848,11 +849,14 @@ def test_watsonx_mapper_resolve_verify_credentials_for_update_rejects_url_update
         }
     )
 
-    with pytest.raises(ValueError, match=r"provider_data\.url cannot be updated\."):
+    with pytest.raises(HTTPException) as exc_info:
         mapper.resolve_verify_credentials_for_update(payload=payload, existing_account=existing_account)
+    assert exc_info.value.status_code == 422
+    assert "url" in str(exc_info.value.detail).lower()
 
 
 def test_watsonx_mapper_resolve_verify_credentials_for_update_rejects_tenant_id_update() -> None:
+    """WatsonxApiProviderAccountUpdate (extra='forbid') rejects tenant_id in provider_data."""
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 
     mapper = WatsonxOrchestrateDeploymentMapper()
@@ -872,8 +876,10 @@ def test_watsonx_mapper_resolve_verify_credentials_for_update_rejects_tenant_id_
         }
     )
 
-    with pytest.raises(ValueError, match=r"provider_data\.tenant_id cannot be updated\."):
+    with pytest.raises(HTTPException) as exc_info:
         mapper.resolve_verify_credentials_for_update(payload=payload, existing_account=existing_account)
+    assert exc_info.value.status_code == 422
+    assert "tenant_id" in str(exc_info.value.detail).lower()
 
 
 @pytest.mark.asyncio
@@ -1720,8 +1726,28 @@ def test_wxo_mapper_verify_credentials_create_filters_non_credential_fields() ->
     assert "tenant_id" not in result.provider_data
 
 
-def test_wxo_mapper_verify_credentials_create_requires_tenant() -> None:
-    """Create verify path should reject payloads with no explicit/URL tenant."""
+def test_wxo_mapper_verify_credentials_create_accepts_missing_tenant() -> None:
+    """Verify-credentials path only parses; tenant validation is deferred to resolve_provider_account_create."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentProviderAccountCreateRequest(
+        name="test-account",
+        provider_key="watsonx-orchestrate",
+        provider_data={
+            "url": "https://api.us-south.wxo.cloud.ibm.com",
+            "api_key": "my-secret-key",  # pragma: allowlist secret
+        },
+    )
+
+    result = mapper.resolve_verify_credentials_for_create(payload=payload)
+    assert isinstance(result, VerifyCredentials)
+    assert "cloud.ibm.com" in result.base_url
+
+
+def test_wxo_mapper_provider_account_create_requires_tenant() -> None:
+    """Create path rejects payloads with no explicit or URL-derived tenant."""
     from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
 
     mapper = WatsonxOrchestrateDeploymentMapper()
@@ -1735,7 +1761,7 @@ def test_wxo_mapper_verify_credentials_create_requires_tenant() -> None:
     )
 
     with pytest.raises(ValueError, match=r"provider_data\.tenant_id is required"):
-        mapper.resolve_verify_credentials_for_create(payload=payload)
+        mapper.resolve_provider_account_create(payload=payload, user_id="user-1")
 
 
 def test_wxo_mapper_resolve_credentials_returns_api_key() -> None:

@@ -598,7 +598,7 @@ describe("Create mode — buildDeploymentPayload", () => {
     expect(payload.provider_data.llm).toBe("granite-3b");
   });
 
-  it("builds bind operations for each attached flow", () => {
+  it("builds add_flows entries for each attached flow", () => {
     const { result } = renderCreateHook();
 
     act(() => {
@@ -750,7 +750,7 @@ describe("Create mode — buildDeploymentPayload", () => {
     expect(payload.provider_data.connections).toEqual([]);
   });
 
-  it("returns empty operations when no flows attached", () => {
+  it("returns empty add_flows when no flows attached", () => {
     const { result } = renderCreateHook();
 
     act(() => {

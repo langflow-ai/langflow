@@ -472,27 +472,6 @@ class BaseDeploymentMapper:
         _ = (payload, user_id)
         raise NotImplementedError
 
-    def _guard_provider_data_for_update(
-        self,
-        provider_data: dict[str, Any] | None,
-    ) -> dict[str, Any]:
-        """Validate provider_data for update: null guard + immutability checks.
-
-        Raises ``ValueError`` if *provider_data* is ``None`` or contains
-        immutable keys (``url``, ``tenant_id``).  Returns the validated dict
-        for chaining convenience.
-        """
-        if provider_data is None:
-            msg = "'provider_data' cannot be null when provided."
-            raise ValueError(msg)
-        if "url" in provider_data:
-            msg = "provider_data.url cannot be updated."
-            raise ValueError(msg)
-        if "tenant_id" in provider_data:
-            msg = "provider_data.tenant_id cannot be updated."
-            raise ValueError(msg)
-        return provider_data
-
     def resolve_provider_account_update(
         self,
         *,
@@ -511,7 +490,9 @@ class BaseDeploymentMapper:
         if "name" in payload.model_fields_set:
             update_kwargs["name"] = payload.name
         if "provider_data" in payload.model_fields_set:
-            self._guard_provider_data_for_update(payload.provider_data)
+            if payload.provider_data is None:
+                msg = "'provider_data' cannot be null when provided."
+                raise ValueError(msg)
             update_kwargs.update(self.resolve_credentials(provider_data=payload.provider_data))
         return update_kwargs
 
