@@ -185,10 +185,7 @@ class TestToolWrapperInputHandlerMatches:
         assert self.handler.matches(template_field={}, value={"key": "value"}) is False
 
     def test_no_match_dict_with_false_marker(self):
-        assert (
-            self.handler.matches(template_field={}, value={"__tool_wrapper__": False})
-            is False
-        )
+        assert self.handler.matches(template_field={}, value={"__tool_wrapper__": False}) is False
 
     def test_no_match_string(self):
         assert self.handler.matches(template_field={}, value="hello") is False
@@ -266,9 +263,7 @@ class TestToolWrapperInputHandlerPrepare:
     @pytest.mark.asyncio
     async def test_prepare_failed_wrapper_in_list(self):
         good_wrapper = _make_tool_wrapper(name="good_tool")
-        bad_wrapper = _make_tool_wrapper(
-            name="bad_tool", component_code=None, code_blob_id=None
-        )
+        bad_wrapper = _make_tool_wrapper(name="bad_tool", component_code=None, code_blob_id=None)
         fields = {"tools": ([good_wrapper, bad_wrapper], {})}
         result = await self.handler.prepare(fields, None)
 

@@ -26,14 +26,7 @@ def _find_poc_flow() -> Path:
     here = Path(__file__).resolve()
     # here.parents[4] = langflow repo root (e.g. /Users/.../langflow)
     langflow_repo = here.parents[4]
-    candidate = (
-        langflow_repo.parent
-        / "stepflow"
-        / "docs"
-        / "static"
-        / "files"
-        / "2025-09-langflow-poc-flow.json"
-    )
+    candidate = langflow_repo.parent / "stepflow" / "docs" / "static" / "files" / "2025-09-langflow-poc-flow.json"
     if candidate.exists():
         return candidate
 
@@ -43,10 +36,7 @@ def _find_poc_flow() -> Path:
         if p.exists():
             return p
 
-    pytest.skip(
-        "POC flow not found. "
-        "Set STEPFLOW_POC_FLOW or ensure sibling stepflow repo exists."
-    )
+    pytest.skip("POC flow not found. Set STEPFLOW_POC_FLOW or ensure sibling stepflow repo exists.")
 
 
 def requires_openai() -> pytest.MarkDecorator:
@@ -85,23 +75,14 @@ def test_poc_flow_translation(converter, poc_flow_data):
     assert flow.steps, "translated flow has no steps"
 
     for step in flow.steps:
-        assert step.component.startswith(("/langflow/", "/builtin/")), (
-            f"unexpected component prefix: {step.component}"
-        )
+        assert step.component.startswith(("/langflow/", "/builtin/")), f"unexpected component prefix: {step.component}"
 
     # Verify the variable schema includes OPENAI_API_KEY with env_var annotation
     import msgspec
 
     flow_dict = msgspec.to_builtins(flow)
-    var_props = (
-        flow_dict.get("schemas", {})
-        .get("properties", {})
-        .get("variables", {})
-        .get("properties", {})
-    )
-    assert "OPENAI_API_KEY" in var_props, (
-        f"Expected OPENAI_API_KEY in variable schema, got: {list(var_props.keys())}"
-    )
+    var_props = flow_dict.get("schemas", {}).get("properties", {}).get("variables", {}).get("properties", {})
+    assert "OPENAI_API_KEY" in var_props, f"Expected OPENAI_API_KEY in variable schema, got: {list(var_props.keys())}"
     assert var_props["OPENAI_API_KEY"].get("env_var") == "OPENAI_API_KEY", (
         f"Expected env_var annotation, got: {var_props['OPENAI_API_KEY']}"
     )
@@ -142,6 +123,4 @@ async def test_poc_flow_execution(runner, poc_flow_data):
 
     if result.messages:
         text = result.messages[0].message
-        assert text and len(text) > 100, (
-            f"Expected substantial text output, got: {text!r:.200}"
-        )
+        assert text and len(text) > 100, f"Expected substantial text output, got: {text!r:.200}"

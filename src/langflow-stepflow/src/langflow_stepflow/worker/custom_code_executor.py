@@ -76,15 +76,11 @@ class CustomCodeExecutor(BaseExecutor):
             try:
                 component_instance = component_class()
             except Exception as e:
-                raise ExecutionError(
-                    f"Failed to instantiate {component_type}: {e}"
-                ) from e
+                raise ExecutionError(f"Failed to instantiate {component_type}: {e}") from e
 
             return component_instance, component_type
 
-    async def execute(
-        self, input_data: dict[str, Any], context: StepflowContext
-    ) -> dict[str, Any]:
+    async def execute(self, input_data: dict[str, Any], context: StepflowContext) -> dict[str, Any]:
         """Execute using the new pre-compilation approach.
 
         This method first pre-compiles all components, then executes without context.
@@ -103,9 +99,7 @@ class CustomCodeExecutor(BaseExecutor):
         # Step 2: Execute using pre-compiled components (no context needed)
         return await self._execute_with_precompiled_components(input_data)
 
-    async def _prepare_components(
-        self, input_data: dict[str, Any], context: StepflowContext
-    ) -> None:
+    async def _prepare_components(self, input_data: dict[str, Any], context: StepflowContext) -> None:
         """Pre-compile all components from blob data to eliminate runtime context calls.
 
         This method fetches all blob data containing component source code and
@@ -123,14 +117,11 @@ class CustomCodeExecutor(BaseExecutor):
             if blob_id not in self.compiled_components:
                 try:
                     # Trace blob retrieval
-                    with tracer.start_as_current_span(
-                        "blob_get", attributes={"blob_id": blob_id}
-                    ):
+                    with tracer.start_as_current_span("blob_get", attributes={"blob_id": blob_id}):
                         blob_data = await context.get_blob(blob_id)
                 except Exception as e:
                     raise ExecutionError(
-                        f"No component code found for blob {blob_id}. "
-                        f"All components must have real Langflow code."
+                        f"No component code found for blob {blob_id}. All components must have real Langflow code."
                     ) from e
 
                 # Pass blob_id to compilation for better tracing
@@ -149,9 +140,7 @@ class CustomCodeExecutor(BaseExecutor):
 
         return blob_ids
 
-    async def _compile_component(
-        self, blob_data: dict[str, Any], blob_id: str | None = None
-    ) -> dict[str, Any]:
+    async def _compile_component(self, blob_data: dict[str, Any], blob_id: str | None = None) -> dict[str, Any]:
         """Compile a component from enhanced blob data into an executable definition."""
         component_type = blob_data.get("component_type", "Unknown")
         code = blob_data.get("code", "")
@@ -183,8 +172,7 @@ class CustomCodeExecutor(BaseExecutor):
 
             if not code or not code.strip():
                 raise ExecutionError(
-                    f"No code found for component {component_type}. "
-                    f"All executable components should have custom code."
+                    f"No code found for component {component_type}. All executable components should have custom code."
                 )
 
             try:
@@ -200,19 +188,13 @@ class CustomCodeExecutor(BaseExecutor):
                 ):
                     component_class = eval_custom_component_code(code)
             except Exception as e:
-                raise ExecutionError(
-                    f"Failed to evaluate component code for {component_type}: {e}"
-                ) from e
+                raise ExecutionError(f"Failed to evaluate component code for {component_type}: {e}") from e
 
             if not component_class:
-                raise ExecutionError(
-                    f"eval_custom_component_code returned None for {component_type}"
-                )
+                raise ExecutionError(f"eval_custom_component_code returned None for {component_type}")
 
             # Determine execution method with enhanced logic
-            execution_method = self._determine_execution_method(
-                outputs, selected_output
-            )
+            execution_method = self._determine_execution_method(outputs, selected_output)
             if not execution_method:
                 raise ExecutionError(f"No execution method found for {component_type}")
 
@@ -231,15 +213,11 @@ class CustomCodeExecutor(BaseExecutor):
                 "icon": icon,
             }
 
-    async def _execute_with_precompiled_components(
-        self, input_data: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _execute_with_precompiled_components(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """Execute using pre-compiled components - no context needed."""
         return await self._execute_single_component_precompiled(input_data)
 
-    async def _execute_single_component_precompiled(
-        self, input_data: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _execute_single_component_precompiled(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """Execute a single component using pre-compiled data."""
         blob_id = input_data.get("blob_id")
         if not blob_id:
@@ -252,9 +230,7 @@ class CustomCodeExecutor(BaseExecutor):
         runtime_inputs = input_data.get("input", {})
 
         # Execute the component (returns serialized output)
-        result = await self._execute_compiled_component(
-            compiled_component, runtime_inputs
-        )
+        result = await self._execute_compiled_component(compiled_component, runtime_inputs)
 
         return {"result": result}
 
@@ -284,9 +260,7 @@ class CustomCodeExecutor(BaseExecutor):
             try:
                 component_instance = component_class()
             except Exception as e:
-                raise ExecutionError(
-                    f"Failed to instantiate {component_type}: {e}"
-                ) from e
+                raise ExecutionError(f"Failed to instantiate {component_type}: {e}") from e
 
         # Prepare raw parameters
         raw_params = await self._prepare_component_parameters(template, runtime_inputs)
@@ -297,9 +271,7 @@ class CustomCodeExecutor(BaseExecutor):
             output_handlers,
         ):
             # Apply component input defaults before configuring
-            component_parameters = self._apply_component_input_defaults(
-                component_instance, component_parameters
-            )
+            component_parameters = self._apply_component_input_defaults(component_instance, component_parameters)
             session_id = component_parameters.get("session_id", "default_session")
             component_instance._session_id = session_id
             self._setup_graph_context(component_instance, session_id)
@@ -313,13 +285,8 @@ class CustomCodeExecutor(BaseExecutor):
 
             # Execute component method with tracing
             if not hasattr(component_instance, execution_method):
-                available = [
-                    m for m in dir(component_instance) if not m.startswith("_")
-                ]
-                raise ExecutionError(
-                    f"Method {execution_method} not found in "
-                    f"{component_type}. Available: {available}"
-                )
+                available = [m for m in dir(component_instance) if not m.startswith("_")]
+                raise ExecutionError(f"Method {execution_method} not found in {component_type}. Available: {available}")
 
             method = getattr(component_instance, execution_method)
 
@@ -335,9 +302,7 @@ class CustomCodeExecutor(BaseExecutor):
                     if inspect.iscoroutinefunction(method):
                         result = await method()
                     else:
-                        result = await self._execute_sync_method_safely(
-                            method, component_type
-                        )
+                        result = await self._execute_sync_method_safely(method, component_type)
 
                     # Handle OpenSearch client objects
                     try:
@@ -354,9 +319,7 @@ class CustomCodeExecutor(BaseExecutor):
                     # Serialize output through handlers
                     return await self._apply_output_handlers(result, output_handlers)
                 except Exception as e:
-                    raise ExecutionError(
-                        f"Failed to execute {execution_method}: {e}"
-                    ) from e
+                    raise ExecutionError(f"Failed to execute {execution_method}: {e}") from e
 
     def _patch_placeholder_graph(self) -> None:
         """Patch PlaceholderGraph to add vertices attribute for lfx compatibility.
@@ -403,18 +366,12 @@ class CustomCodeExecutor(BaseExecutor):
                     param_name = input_field.name
                     default_value = input_field.value
 
-                    if (
-                        param_name not in component_parameters
-                        and default_value is not None
-                        and default_value != ""
-                    ):
+                    if param_name not in component_parameters and default_value is not None and default_value != "":
                         component_parameters[param_name] = default_value
 
         return component_parameters
 
-    def _determine_execution_method(
-        self, outputs: list, selected_output: str | None
-    ) -> str | None:
+    def _determine_execution_method(self, outputs: list, selected_output: str | None) -> str | None:
         """Determine execution method from outputs metadata."""
         if selected_output:
             for output in outputs:

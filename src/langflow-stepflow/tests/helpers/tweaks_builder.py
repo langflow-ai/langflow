@@ -46,9 +46,7 @@ class TweaksBuilder:
         self.tweaks: dict[str, dict[str, Any]] = {}
         self.missing_env_vars: list[str] = []
 
-    def add_tweak(
-        self, component_id: str, field_name: str, value: Any
-    ) -> "TweaksBuilder":
+    def add_tweak(self, component_id: str, field_name: str, value: Any) -> "TweaksBuilder":
         """Add a direct value tweak for a component field.
 
         Args:
@@ -65,9 +63,7 @@ class TweaksBuilder:
         self.tweaks[component_id][field_name] = value
         return self
 
-    def add_env_tweak(
-        self, component_id: str, field_name: str, env_var: str
-    ) -> "TweaksBuilder":
+    def add_env_tweak(self, component_id: str, field_name: str, env_var: str) -> "TweaksBuilder":
         """Add a tweak from an environment variable.
 
         Args:
@@ -174,9 +170,7 @@ def create_openai_test_tweaks(*component_ids: str) -> dict[str, dict[str, Any]]:
     return builder.build_or_skip()
 
 
-def create_astradb_test_tweaks(
-    *component_ids: str, **overrides: Any
-) -> dict[str, dict[str, Any]]:
+def create_astradb_test_tweaks(*component_ids: str, **overrides: Any) -> dict[str, dict[str, Any]]:
     """Create tweaks for multiple AstraDB components.
 
     Args:

@@ -47,13 +47,9 @@ class CoreExecutor(BaseExecutor):
                 module = importlib.import_module(module_name)
                 component_class = getattr(module, class_name)
             except ImportError as e:
-                raise ExecutionError(
-                    f"Failed to import module {module_name}: {e}"
-                ) from e
+                raise ExecutionError(f"Failed to import module {module_name}: {e}") from e
             except AttributeError as e:
-                raise ExecutionError(
-                    f"Class {class_name} not found in module {module_name}: {e}"
-                ) from e
+                raise ExecutionError(f"Class {class_name} not found in module {module_name}: {e}") from e
 
             # Instantiate the component
             try:
@@ -107,9 +103,7 @@ class CoreExecutor(BaseExecutor):
             runtime_inputs = input_data.get("input", {})
 
             # Determine execution method
-            execution_method = self._determine_execution_method(
-                outputs, selected_output
-            )
+            execution_method = self._determine_execution_method(outputs, selected_output)
             if not execution_method:
                 raise ExecutionError(f"No execution method found for {class_name}")
 

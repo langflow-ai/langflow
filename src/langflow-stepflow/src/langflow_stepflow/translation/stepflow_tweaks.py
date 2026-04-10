@@ -54,10 +54,7 @@ def apply_stepflow_tweaks_to_dict(
         is_langflow_step = (
             step_id.startswith("langflow_")
             and not step_id.endswith("_blob")
-            and (
-                component == "/langflow/custom_code"
-                or component.startswith("/langflow/core/")
-            )
+            and (component == "/langflow/custom_code" or component.startswith("/langflow/core/"))
         )
 
         if is_langflow_step:

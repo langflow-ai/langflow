@@ -16,10 +16,7 @@ def _is_data_list(value: list[Any]) -> bool:
     if not non_null:
         return False
     return all(
-        (
-            isinstance(item, dict)
-            and ("text" in item or item.get("__class_name__") == "Data")
-        )
+        (isinstance(item, dict) and ("text" in item or item.get("__class_name__") == "Data"))
         or (hasattr(item, "__class__") and item.__class__.__name__ in ("Data", "JSON"))
         for item in non_null
     )
@@ -37,9 +34,7 @@ class DataFrameConversionInputHandler(InputHandler):
             return False
         return isinstance(value, list) and len(value) > 0
 
-    async def prepare(
-        self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any
-    ) -> dict[str, Any]:
+    async def prepare(self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any) -> dict[str, Any]:
         result: dict[str, Any] = {}
 
         for key, (value, _template_field) in fields.items():

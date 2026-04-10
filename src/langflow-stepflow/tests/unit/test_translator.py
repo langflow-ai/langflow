@@ -30,9 +30,7 @@ class TestLangflowConverter:
         converter = LangflowConverter()
         assert converter is not None
 
-    def test_convert_simple_workflow(
-        self, converter: LangflowConverter, simple_langflow_workflow: dict[str, Any]
-    ):
+    def test_convert_simple_workflow(self, converter: LangflowConverter, simple_langflow_workflow: dict[str, Any]):
         """Test conversion of simple workflow."""
         workflow = converter.convert(simple_langflow_workflow)
 
@@ -62,9 +60,7 @@ class TestLangflowConverter:
         with pytest.raises(ConversionError, match="missing 'data' key"):
             converter.convert(workflow_data)
 
-    def test_to_yaml(
-        self, converter: LangflowConverter, simple_langflow_workflow: dict[str, Any]
-    ):
+    def test_to_yaml(self, converter: LangflowConverter, simple_langflow_workflow: dict[str, Any]):
         """Test YAML generation."""
         workflow = converter.convert(simple_langflow_workflow)
         yaml_output = converter.to_yaml(workflow)
@@ -74,9 +70,7 @@ class TestLangflowConverter:
         # Should have output section since ChatInput/ChatOutput create passthrough
         assert "output:" in yaml_output
 
-    def test_analyze_workflow(
-        self, converter: LangflowConverter, simple_langflow_workflow: dict[str, Any]
-    ):
+    def test_analyze_workflow(self, converter: LangflowConverter, simple_langflow_workflow: dict[str, Any]):
         """Test workflow analysis."""
         analysis = converter.analyze(simple_langflow_workflow)
 
@@ -184,10 +178,7 @@ class TrivialComponent(Component):
                                     "(forward reference)"
                                 )
                             except ValueError:
-                                pytest.fail(
-                                    f"Step {step.id} references "
-                                    f"undefined step {from_step}"
-                                )
+                                pytest.fail(f"Step {step.id} references undefined step {from_step}")
 
     def test_complex_dependency_ordering(self, converter: LangflowConverter):
         """Test topological sorting with complex dependencies like memory_chatbot."""
@@ -304,12 +295,8 @@ class TrivialComponent(Component):
 
         # Find the main processing steps (not blob steps)
         # Step count may vary with routing improvements, focus on dependency ordering
-        memory_steps = [
-            sid for sid in step_ids if "Memory-3" in sid and "_blob" not in sid
-        ]
-        prompt_steps = [
-            sid for sid in step_ids if "Prompt-4" in sid and "_blob" not in sid
-        ]
+        memory_steps = [sid for sid in step_ids if "Memory-3" in sid and "_blob" not in sid]
+        prompt_steps = [sid for sid in step_ids if "Prompt-4" in sid and "_blob" not in sid]
         llm_steps = [sid for sid in step_ids if "LLM-5" in sid and "_blob" not in sid]
 
         # Verify the main processing steps exist
@@ -354,9 +341,7 @@ class CustomComponent(Component):
                                     },
                                     "param1": {"type": "str", "value": "test"},
                                 },
-                                "outputs": [
-                                    {"name": "output", "method": "custom_method"}
-                                ],
+                                "outputs": [{"name": "output", "method": "custom_method"}],
                                 "base_classes": ["Component"],
                                 "display_name": "Custom Component",
                                 "metadata": {"module": "custom.module"},
@@ -373,17 +358,11 @@ class CustomComponent(Component):
 
         # Should create blob + custom_code steps for component with custom code
         step_components = [step.component for step in workflow.steps]
-        assert "/builtin/put_blob" in step_components, (
-            "Should create blob step for custom code"
-        )
-        assert "/langflow/custom_code" in step_components, (
-            "Should route custom code to custom code executor"
-        )
+        assert "/builtin/put_blob" in step_components, "Should create blob step for custom code"
+        assert "/langflow/custom_code" in step_components, "Should route custom code to custom code executor"
 
         # Find the blob step and verify it contains the custom code
-        blob_steps = [
-            step for step in workflow.steps if step.component == "/builtin/put_blob"
-        ]
+        blob_steps = [step for step in workflow.steps if step.component == "/builtin/put_blob"]
         assert len(blob_steps) > 0, "Should have at least one blob step"
 
         blob_step = blob_steps[0]
@@ -393,13 +372,9 @@ class CustomComponent(Component):
         code_value = blob_data["code"]
         # Code may be a plain string or a $literal wrapper depending on SDK version
         if isinstance(code_value, dict):
-            assert "CustomComponent" in str(code_value), (
-                "Should contain custom component class"
-            )
+            assert "CustomComponent" in str(code_value), "Should contain custom component class"
         else:
-            assert "CustomComponent" in code_value, (
-                "Should contain custom component class"
-            )
+            assert "CustomComponent" in code_value, "Should contain custom component class"
 
     def test_component_routing_strategy_rejects_incomplete_components(self):
         """Test that components without custom code are rejected (unified approach)."""

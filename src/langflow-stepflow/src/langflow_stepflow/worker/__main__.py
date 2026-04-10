@@ -20,9 +20,7 @@ core_executor = CoreExecutor()
 
 
 @server.component(name="custom_code")
-async def custom_code_component(
-    input_data: dict[str, Any], context: StepflowContext
-) -> dict[str, Any]:
+async def custom_code_component(input_data: dict[str, Any], context: StepflowContext) -> dict[str, Any]:
     """Execute a Langflow custom code component."""
     return await custom_code_executor.execute(input_data, context)
 
@@ -38,9 +36,7 @@ async def core_component(
 
 
 @server.component(name="component_tool")
-async def component_tool_component(
-    input_data: dict[str, Any], context: StepflowContext
-) -> dict[str, Any]:
+async def component_tool_component(input_data: dict[str, Any], context: StepflowContext) -> dict[str, Any]:
     """Create tool wrappers from Langflow components."""
     return await component_tool_executor(input_data, context)
 

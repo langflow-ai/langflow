@@ -37,9 +37,7 @@ class InputHandler(ABC):
         yield None
 
     @abstractmethod
-    async def prepare(
-        self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any
-    ) -> dict[str, Any]:
+    async def prepare(self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any) -> dict[str, Any]:
         """Batch-process all matched fields.
 
         Args:

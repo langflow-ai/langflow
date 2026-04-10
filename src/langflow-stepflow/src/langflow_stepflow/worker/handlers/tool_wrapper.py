@@ -73,9 +73,7 @@ def _create_tool_from_wrapper(tool_wrapper: dict[str, Any]) -> Any:
         code_blob_id = tool_wrapper.get("code_blob_id")
 
         if component_code is None and code_blob_id is None:
-            raise ValueError(
-                "Tool wrapper missing both component_code and code_blob_id"
-            )
+            raise ValueError("Tool wrapper missing both component_code and code_blob_id")
 
         properties = tool_input_schema.get("properties", {})
 
@@ -98,10 +96,7 @@ def _create_tool_from_wrapper(tool_wrapper: dict[str, Any]) -> Any:
         def tool_func(**kwargs) -> dict[str, Any]:
             """Execute the tool by running the component."""
             try:
-                if (
-                    tool_metadata.get("name") == "evaluate_expression"
-                    and "expression" in kwargs
-                ):
+                if tool_metadata.get("name") == "evaluate_expression" and "expression" in kwargs:
                     result = _execute_calculator_tool(kwargs["expression"])
                     return {"result": result}
 
@@ -112,10 +107,7 @@ def _create_tool_from_wrapper(tool_wrapper: dict[str, Any]) -> Any:
                 }
 
                 result_data = {
-                    "result": (
-                        f"Tool {tool_metadata.get('name', 'unknown')} "
-                        f"executed with inputs: {merged_inputs}"
-                    ),
+                    "result": (f"Tool {tool_metadata.get('name', 'unknown')} executed with inputs: {merged_inputs}"),
                     "component_type": component_type,
                     "inputs": merged_inputs,
                     "status": "tool_wrapper_execution",
@@ -147,9 +139,7 @@ def _create_tool_from_wrapper(tool_wrapper: dict[str, Any]) -> Any:
             def __init__(self, tool_wrapper, error):
                 self.tool_wrapper = tool_wrapper
                 self.error = error
-                self.name = tool_wrapper.get("tool_metadata", {}).get(
-                    "name", "failed_tool"
-                )
+                self.name = tool_wrapper.get("tool_metadata", {}).get("name", "failed_tool")
 
             def invoke(self, inputs):
                 return {"error": f"Tool creation failed: {self.error}"}
@@ -168,15 +158,10 @@ class ToolWrapperInputHandler(InputHandler):
         if isinstance(value, dict) and value.get("__tool_wrapper__"):
             return True
         if isinstance(value, list):
-            return any(
-                isinstance(item, dict) and item.get("__tool_wrapper__")
-                for item in value
-            )
+            return any(isinstance(item, dict) and item.get("__tool_wrapper__") for item in value)
         return False
 
-    async def prepare(
-        self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any
-    ) -> dict[str, Any]:
+    async def prepare(self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any) -> dict[str, Any]:
         result: dict[str, Any] = {}
 
         for key, (value, _template_field) in fields.items():
@@ -184,9 +169,7 @@ class ToolWrapperInputHandler(InputHandler):
                 result[key] = _create_tool_from_wrapper(value)
             elif isinstance(value, list):
                 result[key] = [
-                    _create_tool_from_wrapper(item)
-                    if isinstance(item, dict) and item.get("__tool_wrapper__")
-                    else item
+                    _create_tool_from_wrapper(item) if isinstance(item, dict) and item.get("__tool_wrapper__") else item
                     for item in value
                 ]
 

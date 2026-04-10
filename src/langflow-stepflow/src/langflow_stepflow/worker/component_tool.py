@@ -5,9 +5,7 @@ from typing import Any
 from stepflow_py.worker import StepflowContext
 
 
-async def component_tool_executor(
-    input_data: dict[str, Any], context: StepflowContext
-) -> dict[str, Any]:
+async def component_tool_executor(input_data: dict[str, Any], context: StepflowContext) -> dict[str, Any]:
     """Create a tool wrapper from Langflow component code and inputs.
 
     This component takes a Langflow component's code/JSON and static inputs,
@@ -116,10 +114,7 @@ def _extract_tool_input_schema(component_code: dict[str, Any]) -> dict[str, Any]
                 field_type = field_data.get("type", "str")
                 field_info = field_data.get("info", "")
                 field_required = field_data.get("required", False)
-                is_secret = (
-                    field_type == "password"
-                    or field_data.get("input_types", []) == ["secret"]
-                )
+                is_secret = field_type == "password" or field_data.get("input_types", []) == ["secret"]
 
                 prop: dict[str, Any] = {
                     "type": _map_langflow_type_to_json_schema(field_type),
