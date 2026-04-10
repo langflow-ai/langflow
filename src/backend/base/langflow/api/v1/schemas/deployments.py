@@ -94,7 +94,10 @@ def _validate_flow_version_ids(values: list[UUID] | None) -> list[UUID] | None:
 
 
 FlowVersionIdsQuery = Annotated[list[UUID] | None, AfterValidator(_validate_flow_version_ids)]
-"""Query parameter type that validates and cleans an optional list of flow version id UUIDs."""
+"""Optional flow-version filter query parameter.
+
+``None`` means no filter. Empty lists are rejected by validation.
+"""
 
 
 def _validate_flow_ids(values: list[UUID] | None) -> list[UUID] | None:
@@ -113,7 +116,11 @@ def _validate_flow_ids(values: list[UUID] | None) -> list[UUID] | None:
 
 
 FlowIdsQuery = Annotated[list[UUID] | None, AfterValidator(_validate_flow_ids)]
-"""Query parameter type that validates and cleans an optional list of flow id UUIDs (max 1 today)."""
+"""Optional flow-id filter query parameter.
+
+``None`` means no filter. Empty lists are rejected by validation.
+Max supported length is 1 today.
+"""
 
 # ---------------------------------------------------------------------------
 # Provider sub-resource schemas

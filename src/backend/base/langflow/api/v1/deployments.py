@@ -607,12 +607,12 @@ async def list_deployments(
     if load_from_provider and flow_version_ids:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="flow_version_ids filtering is not supported when load_from_provider=true.",
+            detail="flow_version_ids filtering is not supported when loading deployments directly from the provider.",
         )
     if load_from_provider and flow_ids:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="flow_ids filtering is not supported when load_from_provider=true.",
+            detail="flow_ids filtering is not supported when loading deployments directly from the provider.",
         )
     effective_flow_version_ids = flow_version_ids
     if flow_ids:
@@ -650,7 +650,10 @@ async def list_deployments(
         )
     deployments = deployment_mapper.shape_deployment_list_items(
         rows_with_counts=rows_with_counts,
-        has_flow_filter=bool(effective_flow_version_ids),
+        # include flow_version_ids in list items only when
+        # flow_version_ids or flow_ids filtering is active.
+        # (empty lists are rejected by validation)
+        has_flow_filter=bool(flow_version_ids or flow_ids),
         provider_key=provider_account.provider_key,
     )
     return DeploymentListResponse(
