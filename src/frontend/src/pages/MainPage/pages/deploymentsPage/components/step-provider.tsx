@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Badge } from "@/components/ui/badge";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
@@ -133,6 +134,9 @@ export default function StepProvider() {
             className="h-8 w-8 text-foreground"
           />
           <span className="text-sm font-medium">{provider.name}</span>
+          <Badge variant="purpleStatic" size="xq" className="shrink-0">
+            Beta
+          </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
           Configure your watsonx Orchestrate credentials below. Sign in or sign

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -83,6 +84,9 @@ export default function AddProviderModal({
                 className="h-8 w-8 text-foreground"
               />
               <span className="text-sm font-medium">watsonx Orchestrate</span>
+              <Badge variant="purpleStatic" size="xq" className="shrink-0">
+                Beta
+              </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
               Configure your watsonx Orchestrate credentials below. Sign in or
