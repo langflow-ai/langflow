@@ -462,7 +462,7 @@ class BaseDeploymentMapper:
         self,
         *,
         payload: DeploymentProviderAccountCreateRequest,
-        user_id: UUID | str,
+        user_id: UUID,
     ) -> DeploymentProviderAccount:
         """Assemble provider-account DB model for create.
 

@@ -303,7 +303,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         self,
         *,
         payload: DeploymentProviderAccountCreateRequest,
-        user_id: UUID | str,
+        user_id: UUID,
     ) -> DeploymentProviderAccount:
         """Assemble provider-account DB model for create.
 
@@ -1023,10 +1023,11 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             cancelled_at=adapter_provider_result.cancelled_at,
             last_error=adapter_provider_result.last_error,
         )
-        provider_result = api_provider_result.model_dump() or None
         return ExecutionCreateResponse(
             deployment_id=deployment_id,
-            provider_data=provider_result,
+            provider_data=api_provider_result.model_dump(),
+            # includes None intentionally, simply passes through
+            # wxo api response, which can contain null values
         )
 
     def shape_execution_status_result(
@@ -1054,10 +1055,9 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             cancelled_at=adapter_provider_result.cancelled_at,
             last_error=adapter_provider_result.last_error,
         )
-        provider_result = api_provider_result.model_dump() or None
         return ExecutionStatusResponse(
             deployment_id=deployment_id,
-            provider_data=provider_result,
+            provider_data=api_provider_result.model_dump(),
         )
 
     def shape_deployment_list_result(
