@@ -31,8 +31,8 @@ class KnownComponent:
 # These hashes are version-specific and may need updating when Langflow versions change
 KNOWN_COMPONENTS: dict[str, KnownComponent] = {
     # ChatInput component (lfx)
-    "f701f686b325": KnownComponent(
-        code_hash="f701f686b325",
+    "f701f686b325": KnownComponent(  # pragma: allowlist secret
+        code_hash="f701f686b325",  # pragma: allowlist secret
         module="lfx.components.input_output.chat.ChatInput",
         description="Chat Input component",
     ),
@@ -56,8 +56,8 @@ KNOWN_COMPONENTS: dict[str, KnownComponent] = {
     # Note: Some workflows use custom_components.docling_serve which requires
     # custom_code compilation. The lfx.components.docling.docling_remote module
     # provides the standard DoclingRemoteComponent for connecting to docling-serve.
-    "d76b3853ceb4": KnownComponent(
-        code_hash="d76b3853ceb4",
+    "d76b3853ceb4": KnownComponent(  # pragma: allowlist secret
+        code_hash="d76b3853ceb4",  # pragma: allowlist secret
         module="lfx.components.docling.docling_inline.DoclingInlineComponent",
         description="Docling inline document processing (local/sidecar)",
     ),

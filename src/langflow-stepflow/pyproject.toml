@@ -63,7 +63,7 @@ packages = ["src/langflow_stepflow"]
 
 [tool.ruff]
 target-version = "py310"
-line-length = 88
+line-length = 120
 src = ["src", "tests"]
 
 [tool.ruff.lint]

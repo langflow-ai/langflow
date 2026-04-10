@@ -34,7 +34,7 @@ def apply_stepflow_tweaks_to_dict(
     Examples:
         >>> tweaks = {
         ...     "LanguageModelComponent-kBOja": {
-        ...         "api_key": "new_test_key",
+        ...         "api_key": "new_test_key",  # pragma: allowlist secret
         ...         "temperature": 0.8,
         ...     }
         ... }
@@ -94,7 +94,7 @@ def convert_tweaks_to_overrides(
     Examples:
         >>> tweaks = {
         ...     "LanguageModelComponent-kBOja": {
-        ...         "api_key": "new_test_key",
+        ...         "api_key": "new_test_key",  # pragma: allowlist secret
         ...         "temperature": 0.8,
         ...     }
         ... }
@@ -105,7 +105,7 @@ def convert_tweaks_to_overrides(
                 "$type": "merge_patch",
                 "value": {
                     "input": {
-                        "api_key": "new_test_key",
+                        "api_key": "new_test_key",  # pragma: allowlist secret
                         "temperature": 0.8,
                     }
                 }

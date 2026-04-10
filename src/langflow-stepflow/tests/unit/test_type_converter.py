@@ -86,7 +86,7 @@ class TestBaseModelOutputHandler:
     @pytest.mark.asyncio
     async def test_secret_str_serialization_with_actual_secret(self):
         """Test that SecretStr fields are properly serialized with actual values."""
-        secret_value = "test-api-key-12345"
+        secret_value = "test-api-key-12345"  # pragma: allowlist secret
         model = SecretTestModel(
             name="test",
             api_key=SecretStr(secret_value),
@@ -97,8 +97,8 @@ class TestBaseModelOutputHandler:
 
         # Check that secret values are properly extracted
         assert serialized["name"] == "test"
-        assert serialized["api_key"] == secret_value
-        assert serialized["optional_secret"] == "optional-secret-value"
+        assert serialized["api_key"] == secret_value  # pragma: allowlist secret
+        assert serialized["optional_secret"] == "optional-secret-value"  # pragma: allowlist secret
 
         # Check class metadata
         assert serialized["__class_name__"] == "SecretTestModel"
@@ -108,7 +108,7 @@ class TestBaseModelOutputHandler:
     async def test_secret_str_serialization_with_env_var_resolution(self):
         """Test that SecretStr fields with environment variable names are resolved."""
         # Set up environment variable
-        test_api_key = "actual-api-key-from-env"
+        test_api_key = "actual-api-key-from-env"  # pragma: allowlist secret
 
         with patch.dict(os.environ, {"TEST_API_KEY": test_api_key}):
             # Create model with environment variable name as secret
@@ -132,13 +132,13 @@ class TestBaseModelOutputHandler:
         serialized = await self.handler.process(model)
 
         # Should keep the original value if env var doesn't exist
-        assert serialized["api_key"] == "NON_EXISTENT_ENV_VAR"
+        assert serialized["api_key"] == "NON_EXISTENT_ENV_VAR"  # pragma: allowlist secret
         assert serialized["name"] == "test"
 
     @pytest.mark.asyncio
     async def test_openai_embeddings_like_serialization(self):
         """Test serialization of OpenAI-like embeddings model."""
-        api_key = "real-openai-key-12345"
+        api_key = "real-openai-key-12345"  # pragma: allowlist secret
         model = MockOpenAIEmbeddings(
             model="text-embedding-3-small",
             openai_api_key=SecretStr(api_key),
@@ -162,7 +162,7 @@ class TestBaseModelOutputHandler:
     @pytest.mark.asyncio
     async def test_openai_api_key_env_var_resolution(self):
         """Test that OPENAI_API_KEY environment variable is properly resolved."""
-        real_api_key = "proj-real-openai-key-from-environment"
+        real_api_key = "proj-real-openai-key-from-environment"  # pragma: allowlist secret
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": real_api_key}):
             model = MockOpenAIEmbeddings(openai_api_key=SecretStr("OPENAI_API_KEY"))
@@ -175,7 +175,7 @@ class TestBaseModelOutputHandler:
     @pytest.mark.asyncio
     async def test_mixed_secret_and_regular_fields(self):
         """Test model with both secret and regular fields."""
-        api_key = "secret-key-value"
+        api_key = "secret-key-value"  # pragma: allowlist secret
         model = SecretTestModel(
             name="production-model",
             api_key=SecretStr(api_key),
@@ -200,12 +200,12 @@ class TestBaseModelOutputHandler:
         serialized = await self.handler.process(model)
 
         # Should keep original value if env var resolution fails
-        assert serialized["api_key"] == "MISSING_API_KEY"
+        assert serialized["api_key"] == "MISSING_API_KEY"  # pragma: allowlist secret
 
     @pytest.mark.asyncio
     async def test_serialized_data_structure_debugging(self):
         """Test to show what serialized data looks like for debugging."""
-        api_key = "debug-key-12345"
+        api_key = "debug-key-12345"  # pragma: allowlist secret
         model = MockOpenAIEmbeddings(model="test-model", openai_api_key=SecretStr(api_key), chunk_size=123)
 
         serialized = await self.handler.process(model)
@@ -243,7 +243,7 @@ class TestBaseModelInputHandler:
     @pytest.mark.asyncio
     async def test_openai_embeddings_like_deserialization(self):
         """Test deserialization of OpenAI-like embeddings model."""
-        api_key = "real-openai-key-12345"
+        api_key = "real-openai-key-12345"  # pragma: allowlist secret
         model = MockOpenAIEmbeddings(
             model="text-embedding-ada-002",
             openai_api_key=SecretStr(api_key),
@@ -268,7 +268,7 @@ class TestBaseModelInputHandler:
     @pytest.mark.asyncio
     async def test_openai_api_key_env_var_round_trip(self):
         """Test that OPENAI_API_KEY environment variable is properly resolved."""
-        real_api_key = "proj-real-openai-key-from-environment"
+        real_api_key = "proj-real-openai-key-from-environment"  # pragma: allowlist secret
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": real_api_key}):
             model = MockOpenAIEmbeddings(openai_api_key=SecretStr("OPENAI_API_KEY"))
@@ -384,7 +384,7 @@ class TestOutputTreeWalker:
             from pydantic import SecretStr
 
             # Test with a real OpenAIEmbeddings instance
-            api_key = "test-real-openai-key"
+            api_key = "test-real-openai-key"  # pragma: allowlist secret
             embeddings = OpenAIEmbeddings(
                 model="text-embedding-3-small",
                 openai_api_key=api_key,  # Becomes SecretStr automatically

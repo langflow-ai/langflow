@@ -17,7 +17,7 @@ class TestStepflowTweaks:
         """Test basic tweaks to overrides conversion."""
         tweaks = {
             "LanguageModelComponent-kBOja": {
-                "api_key": "test-api-key",
+                "api_key": "test-api-key",  # pragma: allowlist secret
                 "temperature": 0.7,
             }
         }
@@ -32,7 +32,7 @@ class TestStepflowTweaks:
         assert "input" in step_override["value"]
 
         input_overrides = step_override["value"]["input"]["input"]
-        assert input_overrides["api_key"] == "test-api-key"
+        assert input_overrides["api_key"] == "test-api-key"  # pragma: allowlist secret
         assert input_overrides["temperature"] == 0.7
 
     def test_convert_tweaks_to_overrides_empty(self):
@@ -92,7 +92,7 @@ class TestStepflowTweaksIntegration:
         """Test tweaks application on a real converted workflow."""
         tweaks = {
             "LanguageModelComponent-kBOja": {  # Must match actual component ID
-                "api_key": "integration_test_key",
+                "api_key": "integration_test_key",  # pragma: allowlist secret
                 "temperature": 0.7,
                 "model_name": "gpt-4",
             }
@@ -113,7 +113,7 @@ class TestStepflowTweaksIntegration:
 
         # Verify tweaks were applied
         input_section = langflow_step.get("input", {}).get("input", {})
-        assert input_section.get("api_key") == "integration_test_key"
+        assert input_section.get("api_key") == "integration_test_key"  # pragma: allowlist secret
         assert input_section.get("temperature") == 0.7
         assert input_section.get("model_name") == "gpt-4"
 
@@ -121,7 +121,7 @@ class TestStepflowTweaksIntegration:
         """Test that tweaks preserve existing input values that aren't overwritten."""
         tweaks = {
             "LanguageModelComponent-kBOja": {
-                "api_key": "new_key",
+                "api_key": "new_key",  # pragma: allowlist secret
             }
         }
 
@@ -158,14 +158,14 @@ class TestTweaksBuilder:
     def test_basic_tweak_building(self):
         """Test basic tweak creation with direct values."""
         builder = TweaksBuilder()
-        builder.add_tweak("Component-123", "api_key", "test_key")
+        builder.add_tweak("Component-123", "api_key", "test_key")  # pragma: allowlist secret
         builder.add_tweak("Component-123", "temperature", 0.8)
         builder.add_tweak("AnotherComponent-456", "model", "gpt-4")
 
         tweaks = builder.build()
 
         expected = {
-            "Component-123": {"api_key": "test_key", "temperature": 0.8},
+            "Component-123": {"api_key": "test_key", "temperature": 0.8},  # pragma: allowlist secret
             "AnotherComponent-456": {"model": "gpt-4"},
         }
 
@@ -180,7 +180,7 @@ class TestTweaksBuilder:
             .build()
         )
 
-        expected = {"Component-123": {"api_key": "test_key", "temperature": 0.8}}
+        expected = {"Component-123": {"api_key": "test_key", "temperature": 0.8}}  # pragma: allowlist secret
 
         assert tweaks == expected
 
@@ -191,14 +191,14 @@ class TestTweaksBuilder:
 
         tweaks = (
             TweaksBuilder()
-            .add_env_tweak("Component-123", "api_key", "TEST_API_KEY")
+            .add_env_tweak("Component-123", "api_key", "TEST_API_KEY")  # pragma: allowlist secret
             .add_env_tweak("Component-123", "temperature", "TEST_TEMPERATURE")
             .build()
         )
 
         expected = {
             "Component-123": {
-                "api_key": "env_test_key",
+                "api_key": "env_test_key",  # pragma: allowlist secret
                 "temperature": "0.9",  # Environment variables are strings
             }
         }
@@ -299,7 +299,7 @@ class TestTweaksBuilder:
         )
 
         expected = {
-            "Component-123": {"api_key": "env_api_key", "temperature": 0.5},
+            "Component-123": {"api_key": "env_api_key", "temperature": 0.5},  # pragma: allowlist secret
             "Component-456": {"model": "claude-3"},
         }
 

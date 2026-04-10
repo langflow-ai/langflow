@@ -1,5 +1,6 @@
 """Process individual Langflow nodes into Stepflow steps."""
 
+import datetime
 import logging
 from typing import Any
 
@@ -10,6 +11,25 @@ from .known_components import lookup_known_component, module_to_path
 from .schema_mapper import SchemaMapper
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_for_stepflow(obj: Any) -> Any:
+    """Recursively convert non-JSON-serializable types to JSON-safe equivalents.
+
+    The Stepflow FlowBuilder only handles str, int, float, bool, None, list, dict,
+    and Value references. This converts datetime and other types to strings.
+    """
+    if obj is None or isinstance(obj, (str, int, float, bool)):
+        return obj
+    if isinstance(obj, datetime.datetime):
+        return obj.isoformat()
+    if isinstance(obj, datetime.date):
+        return obj.isoformat()
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_stepflow(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_for_stepflow(v) for v in obj]
+    return str(obj)
 
 
 class NodeProcessor:
@@ -127,7 +147,8 @@ class NodeProcessor:
                     selected_output = outputs[0].get("name")
 
                 # Prepare template without code field
-                template_without_code = {k: v for k, v in template.items() if k != "code"}
+                raw_template = {k: v for k, v in template.items() if k != "code"}
+                template_without_code = _sanitize_for_stepflow(raw_template)
 
                 step_input = {
                     "template": template_without_code,
@@ -152,7 +173,10 @@ class NodeProcessor:
                 blob_step_handle = builder.add_step(
                     id=blob_step_id,
                     component="/builtin/put_blob",
-                    input_data={"data": blob_data, "blob_type": "data"},
+                    input_data={
+                        "data": _sanitize_for_stepflow(blob_data),
+                        "blob_type": "data",
+                    },
                     must_execute=True,
                 )
 

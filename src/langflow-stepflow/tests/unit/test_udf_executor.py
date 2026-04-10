@@ -585,7 +585,7 @@ class TestCustomCodeExecutorIntegration:
         assert params["text_field"] == "runtime_override"
 
         # Should have preprocessed API key (not runtime resolved)
-        assert params["api_key"] == "test-api-key-123"
+        assert params["api_key"] == "test-api-key-123"  # pragma: allowlist secret
 
         # Should have template default
         assert params["number_field"] == 42
@@ -856,7 +856,7 @@ class EnhancedTestComponent(Component):
             "input": {
                 "input_value": "What is 2+2?",
                 "session_id": "test_session",
-                "api_key": "sk-test-fake-key",  # Fake key - will fail but tests setup
+                "api_key": "sk-test-fake-key",  # Fake key - will fail but tests setup  # pragma: allowlist secret
                 "model_name": "gpt-4",
                 "tools": [],  # No tools to simplify test
             },
@@ -969,7 +969,7 @@ class EnhancedTestComponent(Component):
             "input": {
                 "input_value": "Hello, world!",
                 "system_message": message_obj,  # Message object for string field
-                "api_key": "fake-key-for-testing",
+                "api_key": "fake-key-for-testing",  # pragma: allowlist secret
             },
         }
 

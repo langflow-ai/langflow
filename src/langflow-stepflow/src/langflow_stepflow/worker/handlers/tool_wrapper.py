@@ -106,8 +106,9 @@ def _create_tool_from_wrapper(tool_wrapper: dict[str, Any]) -> Any:
                     "session_id": session_id,
                 }
 
+                tool_name = tool_metadata.get("name", "unknown")
                 result_data = {
-                    "result": (f"Tool {tool_metadata.get('name', 'unknown')} executed with inputs: {merged_inputs}"),
+                    "result": (f"Tool {tool_name} executed with inputs: {merged_inputs}"),
                     "component_type": component_type,
                     "inputs": merged_inputs,
                     "status": "tool_wrapper_execution",

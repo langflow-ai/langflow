@@ -45,7 +45,7 @@ class DataFrameConversionInputHandler(InputHandler):
                 continue
 
             try:
-                from langflow.schema.dataframe import DataFrame
+                from lfx.schema.dataframe import DataFrame
 
                 result[key] = DataFrame(data=value)
             except Exception:

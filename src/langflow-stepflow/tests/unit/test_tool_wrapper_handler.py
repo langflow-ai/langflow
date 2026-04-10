@@ -115,7 +115,7 @@ class TestCreateToolFromWrapper:
         wrapper = _make_tool_wrapper(
             name="search_tool",
             properties={"query": {"type": "string", "default": ""}},
-            static_inputs={"api_key": "test_key"},
+            static_inputs={"api_key": "test_key"},  # pragma: allowlist secret
             component_type="SearchComponent",
             session_id="sess_1",
         )
@@ -124,7 +124,7 @@ class TestCreateToolFromWrapper:
 
         assert result["component_type"] == "SearchComponent"
         assert result["inputs"]["query"] == "hello"
-        assert result["inputs"]["api_key"] == "test_key"
+        assert result["inputs"]["api_key"] == "test_key"  # pragma: allowlist secret
         assert result["inputs"]["session_id"] == "sess_1"
         assert result["status"] == "tool_wrapper_execution"
 
