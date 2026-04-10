@@ -10,7 +10,7 @@ interface SubTabToggleProps {
 
 const tabs: { value: DeploymentSubTab; label: string }[] = [
   { value: "deployments", label: "Deployments" },
-  { value: "providers", label: "Deployment Providers" },
+  { value: "providers", label: "Deployment Environments" },
 ];
 
 export default function SubTabToggle({
