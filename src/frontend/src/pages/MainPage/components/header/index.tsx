@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
 import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
-import { ENABLE_DEPLOYMENTS, ENABLE_MCP } from "@/customization/feature-flags";
+import { ENABLE_MCP } from "@/customization/feature-flags";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 
 import type { FlowTabType } from "../../types";
@@ -77,7 +78,9 @@ const HeaderComponent = ({
     setDebouncedSearch(e.target.value);
   };
 
-  const isDeploymentsEnabled = ENABLE_DEPLOYMENTS;
+  const isDeploymentsEnabled = useUtilityStore(
+    (s) => s.featureFlags.wxo_deployments === true,
+  );
 
   // Determine which tabs to show based on feature flags
   const tabTypes = [

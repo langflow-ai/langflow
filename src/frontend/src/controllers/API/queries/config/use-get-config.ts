@@ -114,7 +114,7 @@ export const useGetConfig: useQueryFunctionType<
         setAutoSaving(data.auto_saving);
         setAutoSavingInterval(data.auto_saving_interval);
         setHealthCheckMaxRetries(data.health_check_max_retries);
-        setFeatureFlags(data.feature_flags);
+        setFeatureFlags(data.feature_flags ?? {});
         setSerializationMaxItemsLength(data.serialization_max_items_length);
         setWebhookPollingInterval(
           data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
