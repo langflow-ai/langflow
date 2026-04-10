@@ -11,6 +11,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from lfx.base.mcp.util import MCPSessionManager, MCPStdioClient, MCPStreamableHttpClient
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
+from lfx.inputs.inputs import BoolInput, MessageTextInput, NestedDictInput
+from lfx.schema.json_schema import create_input_schema_from_json_schema
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -52,6 +54,82 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         # Check that the component has a session manager
         session_manager = component.stdio_client._get_session_manager()
         assert isinstance(session_manager, MCPSessionManager)
+
+
+class TestMCPToolsComponentSchemaHandling:
+    @pytest.fixture
+    def component(self):
+        return MCPToolsComponent()
+
+    @staticmethod
+    def _browser_use_schema():
+        return {
+            "type": "object",
+            "properties": {
+                "task": {"type": "string"},
+                "model": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "default": "claude-sonnet-4.6",
+                },
+                "profile_id": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "default": None,
+                },
+                "keep_alive": {
+                    "anyOf": [{"type": "boolean"}, {"type": "null"}],
+                    "default": False,
+                },
+                "output_schema": {
+                    "anyOf": [{"type": "object"}, {"type": "null"}],
+                    "default": None,
+                },
+                "proxy_country": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "default": "us",
+                },
+            },
+            "required": ["task"],
+        }
+
+    @pytest.mark.asyncio
+    async def test_validate_schema_inputs_preserves_mcp_defaults(self, component):
+        mock_tool = MagicMock()
+        mock_tool.name = "run_session"
+        mock_tool.args_schema = create_input_schema_from_json_schema(self._browser_use_schema())
+
+        inputs = await component._validate_schema_inputs(mock_tool)
+        input_map = {input_.name: input_ for input_ in inputs}
+
+        assert isinstance(input_map["task"], MessageTextInput)
+        assert input_map["task"].required is True
+
+        assert isinstance(input_map["model"], MessageTextInput)
+        assert input_map["model"].value == "claude-sonnet-4.6"
+
+        assert isinstance(input_map["keep_alive"], BoolInput)
+        assert input_map["keep_alive"].value is False
+
+        assert isinstance(input_map["output_schema"], NestedDictInput)
+        assert input_map["output_schema"].value is None
+
+        assert isinstance(input_map["proxy_country"], MessageTextInput)
+        assert input_map["proxy_country"].value == "us"
+
+    def test_build_tool_kwargs_omits_blank_optional_values(self, component):
+        args_schema = create_input_schema_from_json_schema(self._browser_use_schema())
+        component.task = "Open docs homepage"
+        component.model = ""
+        component.profile_id = ""
+        component.keep_alive = False
+        component.output_schema = {}
+        component.proxy_country = ""
+
+        kwargs = component._build_tool_kwargs(args_schema)
+
+        assert kwargs == {
+            "task": "Open docs homepage",
+            "keep_alive": False,
+        }
 
 
 class TestMCPToolsComponentIntegration:
