@@ -9,8 +9,9 @@ Two identifier domains coexist in these schemas:
   ``provider_id`` maps to ``deployment_provider_account.id``.
 
 * **Provider-owned (str)** -- ``reference_id``, ``config_id``,
-  ``execution_id``, and provider-account field ``provider_key``.
+  ``execution_id``.
   Opaque values assigned or consumed by the external deployment provider.
+  ``provider_key`` is Langflow-owned adapter vocabulary.
   Provider-specific metadata (for example URL and tenant/account identifiers)
   belongs inside ``provider_data``.
 
