@@ -18,6 +18,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     {
       className,
       inputClassName,
+      placeholderClassName,
       icon = "",
       endIcon,
       endIconClassName = "",
@@ -72,6 +73,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             "pointer-events-none absolute top-1/2 -translate-y-1/2 pl-px text-placeholder-foreground",
             icon ? "left-9" : "left-3",
             props.value && "hidden",
+            placeholderClassName,
           )}
         >
           {placeholder}

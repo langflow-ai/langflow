@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -14,6 +15,15 @@ from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_auth_service, get_settings_service, get_variable_service
 
 router = APIRouter(tags=["Login"])
+
+PARTIAL_TOKEN_EXPIRE_SECONDS = 5 * 60  # 5 minutes
+
+
+class TOTPRequiredResponse(BaseModel):
+    """Returned when a user has TOTP enabled and must complete the second factor."""
+
+    totp_required: bool = True
+    partial_token: str
 
 
 class SessionResponse(BaseModel):
@@ -47,50 +57,68 @@ async def login_to_get_access_token(
         ) from exc
 
     if user:
-        tokens = await auth.create_user_tokens(user_id=user.id, db=db, update_last_login=True)
-        response.set_cookie(
-            "refresh_token_lf",
-            tokens["refresh_token"],
-            httponly=auth_settings.REFRESH_HTTPONLY,
-            samesite=auth_settings.REFRESH_SAME_SITE,
-            secure=auth_settings.REFRESH_SECURE,
-            expires=auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS,
-            domain=auth_settings.COOKIE_DOMAIN,
-        )
-        response.set_cookie(
-            "access_token_lf",
-            tokens["access_token"],
-            httponly=auth_settings.ACCESS_HTTPONLY,
-            samesite=auth_settings.ACCESS_SAME_SITE,
-            secure=auth_settings.ACCESS_SECURE,
-            expires=auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
-            domain=auth_settings.COOKIE_DOMAIN,
-        )
-        response.set_cookie(
-            "apikey_tkn_lflw",
-            str(user.store_api_key),
-            httponly=auth_settings.ACCESS_HTTPONLY,
-            samesite=auth_settings.ACCESS_SAME_SITE,
-            secure=auth_settings.ACCESS_SECURE,
-            expires=None,  # Set to None to make it a session cookie
-            domain=auth_settings.COOKIE_DOMAIN,
-        )
-        await get_variable_service().initialize_user_variables(user.id, db)
-        # Initialize agentic variables if agentic experience is enabled
-        from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
+        # If TOTP is enabled for this user, require a second factor before issuing tokens.
+        if user.totp_enabled:
+            partial_token = auth.create_token(
+                data={"sub": str(user.id), "type": "partial"},
+                expires_delta=timedelta(seconds=PARTIAL_TOKEN_EXPIRE_SECONDS),
+            )
+            # Return 202 so the frontend knows to show the TOTP input screen.
+            return Response(
+                content=TOTPRequiredResponse(partial_token=partial_token).model_dump_json(),
+                status_code=status.HTTP_202_ACCEPTED,
+                media_type="application/json",
+            )
 
-        # Create default project for user if it doesn't exist
-        _ = await get_or_create_default_folder(db, user.id)
+        return await _issue_full_tokens(response, auth, auth_settings, user, db)
 
-        if get_settings_service().settings.agentic_experience:
-            await initialize_agentic_user_variables(user.id, db)
-
-        return tokens
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Incorrect username or password",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+async def _issue_full_tokens(response: Response, auth, auth_settings, user, db):
+    """Create and set all auth cookies, then return the token payload."""
+    tokens = await auth.create_user_tokens(user_id=user.id, db=db, update_last_login=True)
+    response.set_cookie(
+        "refresh_token_lf",
+        tokens["refresh_token"],
+        httponly=auth_settings.REFRESH_HTTPONLY,
+        samesite=auth_settings.REFRESH_SAME_SITE,
+        secure=auth_settings.REFRESH_SECURE,
+        expires=auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS,
+        domain=auth_settings.COOKIE_DOMAIN,
+    )
+    response.set_cookie(
+        "access_token_lf",
+        tokens["access_token"],
+        httponly=auth_settings.ACCESS_HTTPONLY,
+        samesite=auth_settings.ACCESS_SAME_SITE,
+        secure=auth_settings.ACCESS_SECURE,
+        expires=auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
+        domain=auth_settings.COOKIE_DOMAIN,
+    )
+    response.set_cookie(
+        "apikey_tkn_lflw",
+        str(user.store_api_key),
+        httponly=auth_settings.ACCESS_HTTPONLY,
+        samesite=auth_settings.ACCESS_SAME_SITE,
+        secure=auth_settings.ACCESS_SECURE,
+        expires=None,  # Set to None to make it a session cookie
+        domain=auth_settings.COOKIE_DOMAIN,
+    )
+    await get_variable_service().initialize_user_variables(user.id, db)
+
+    from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
+
+    _ = await get_or_create_default_folder(db, user.id)
+
+    if get_settings_service().settings.agentic_experience:
+        await initialize_agentic_user_variables(user.id, db)
+
+    return tokens
 
 
 @router.get("/auto_login", include_in_schema=False)

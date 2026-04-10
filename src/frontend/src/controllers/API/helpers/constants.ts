@@ -43,6 +43,11 @@ export const URLs = {
   AGENTIC_ASSIST: `agentic/assist`,
   AGENTIC_ASSIST_STREAM: `agentic/assist/stream`,
   AGENTIC_CHECK_CONFIG: `agentic/check-config`,
+  TOTP_STATUS: `totp/status`,
+  TOTP_SETUP: `totp/setup`,
+  TOTP_ENABLE: `totp/enable`,
+  TOTP_DISABLE: `totp/disable`,
+  TOTP_VERIFY_LOGIN: `totp/verify-login`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility

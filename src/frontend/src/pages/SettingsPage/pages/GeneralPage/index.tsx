@@ -1,7 +1,7 @@
 import { cloneDeep } from "lodash";
 import { useContext, useState } from "react";
-import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useParams } from "react-router-dom";
 import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
 import {
   useResetPassword,
@@ -24,6 +24,7 @@ import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
 import LanguageFormComponent from "./components/LanguageForm";
 import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
+import TotpFormComponent from "./components/TotpForm";
 
 export const GeneralPage = () => {
   const { scrollId } = useParams();
@@ -68,7 +69,10 @@ export const GeneralPage = () => {
           onError: (error) => {
             setErrorData({
               title: t("errors.saveChanges"),
-              list: [(error as any)?.response?.data?.detail],
+              list: [
+                (error as { response?: { data?: { detail?: string } } })
+                  ?.response?.data?.detail,
+              ],
             });
           },
         },
@@ -92,7 +96,10 @@ export const GeneralPage = () => {
           onError: (error) => {
             setErrorData({
               title: t("errors.saveChanges"),
-              list: [(error as any)?.response?.data?.detail],
+              list: [
+                (error as { response?: { data?: { detail?: string } } })
+                  ?.response?.data?.detail,
+              ],
             });
           },
         },
@@ -113,7 +120,10 @@ export const GeneralPage = () => {
     onError: (error) => {
       setErrorData({
         title: t("errors.saveApiKey"),
-        list: [(error as any)?.response?.data?.detail],
+        list: [
+          (error as { response?: { data?: { detail?: string } } })?.response
+            ?.data?.detail,
+        ],
       });
       setHasApiKey(false);
       setValidApiKey(false);
@@ -159,6 +169,8 @@ export const GeneralPage = () => {
             handlePatchPassword={handlePatchPassword}
           />
         )}
+
+        {!autoLogin && <TotpFormComponent />}
       </div>
 
       <CustomTermsLinks />

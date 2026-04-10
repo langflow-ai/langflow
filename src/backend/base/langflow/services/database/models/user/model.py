@@ -67,6 +67,8 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     optins: dict[str, Any] | None = Field(
         sa_column=Column(JSON, default=lambda: UserOptin().model_dump(), nullable=True)
     )
+    totp_secret: str | None = Field(default=None, nullable=True)
+    totp_enabled: bool = Field(default=False)
 
 
 class UserCreate(SQLModel):
@@ -88,6 +90,7 @@ class UserRead(SQLModel):
     updated_at: datetime = Field()
     last_login_at: datetime | None = Field(nullable=True)
     optins: dict[str, Any] | None = Field(default=None)
+    totp_enabled: bool = Field(default=False)
 
 
 class UserUpdate(SQLModel):

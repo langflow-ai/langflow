@@ -74,6 +74,7 @@
     "pako": "^2.1.0",
     "playwright": "^1.59.1",
     "pretty-ms": "^9.1.0",
+    "qrcode.react": "^4.2.0",
     "react": "^19.2.1",
     "react-ace": "^14.0.1",
     "react-cookie": "^7.1.4",
