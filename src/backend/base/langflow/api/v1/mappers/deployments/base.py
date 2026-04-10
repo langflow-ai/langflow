@@ -76,9 +76,6 @@ from langflow.api.v1.schemas.deployments import (
     ExecutionCreateResponse,
     ExecutionStatusResponse,
 )
-from langflow.services.database.models.deployment_provider_account.utils import (
-    validate_provider_url,
-)
 
 from .contracts import (
     CreatedSnapshotIds,
@@ -403,38 +400,17 @@ class BaseDeploymentMapper:
             provider_data=provider_data,
         )
 
-    def resolve_provider_tenant_id(
-        self,
-        *,
-        provider_url: str,
-        provider_data: dict[str, Any],
-    ) -> str | None:
-        """Resolve provider tenant id for provider-account create/update."""
-        _ = provider_url
-        return self.resolve_provider_tenant_id_from_data(provider_data=provider_data)
-
     def validate_create_provider_url(
         self,
         *,
         provider_data: dict[str, Any],
     ) -> str:
-        """Resolve and validate provider URL from create provider_data."""
-        raw_url = provider_data.get("url")
-        if not isinstance(raw_url, str):
-            msg = "provider_data.url must be a string."
-            raise ValueError(msg)  # noqa: TRY004 - route layer maps ValueError to HTTP 4xx
-        return validate_provider_url(raw_url, field_name="provider_data.url")
+        """Resolve and validate provider URL from create provider_data.
 
-    def resolve_provider_tenant_id_from_data(self, *, provider_data: dict[str, Any]) -> str | None:
-        """Extract optional tenant/account identifier from provider_data."""
-        raw_tenant_id = provider_data.get("tenant_id")
-        if raw_tenant_id is None:
-            return None
-        if not isinstance(raw_tenant_id, str):
-            msg = "provider_data.tenant_id must be a string when provided."
-            raise ValueError(msg)  # noqa: TRY004 - route layer maps ValueError to HTTP 4xx
-        tenant_id = raw_tenant_id.strip()
-        return tenant_id or None
+        Provider mappers must override this for provider-account create.
+        """
+        _ = provider_data
+        raise NotImplementedError
 
     def format_conflict_detail(self, raw_message: str) -> str:
         """Format provider conflict errors for API responses.
@@ -507,12 +483,8 @@ class BaseDeploymentMapper:
         ``provider_data.url``. Credentials are provider-specific and must be
         packed into ``provider_data`` by provider mapper overrides.
         """
-        provider_url = self.validate_create_provider_url(
-            provider_data=payload.provider_data,
-        )
-        return VerifyCredentials(
-            base_url=provider_url,
-        )
+        _ = payload
+        raise NotImplementedError
 
     def resolve_verify_credentials_for_update(
         self,
@@ -576,7 +548,7 @@ class BaseDeploymentMapper:
     ) -> str | None:
         """Return provider deployment id to reuse on create, if requested."""
         _ = payload
-        return None
+        raise NotImplementedError
 
     def util_should_mutate_provider_for_existing_deployment_create(
         self,
@@ -584,7 +556,7 @@ class BaseDeploymentMapper:
     ) -> bool:
         """Return whether existing-resource create should call provider update."""
         _ = payload
-        return True
+        raise NotImplementedError
 
     def util_create_result_from_existing_update(
         self,
@@ -597,11 +569,8 @@ class BaseDeploymentMapper:
         Routes use this when create-time onboarding reuses an existing provider
         resource and mutates it through ``adapter.update``.
         """
-        provider_result = result.provider_result if isinstance(result.provider_result, dict) else None
-        return DeploymentCreateResult(
-            id=existing_resource_key,
-            provider_result=provider_result,
-        )
+        _ = (existing_resource_key, result)
+        raise NotImplementedError
 
     def util_create_result_from_existing_resource(
         self,

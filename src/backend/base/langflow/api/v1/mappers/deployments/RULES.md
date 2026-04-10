@@ -308,10 +308,10 @@ The mapper is the **single** component that understands a provider's credential 
 - Provider mappers override this method to add provider-specific update logic. Provider-account updates currently allow changing display name and credentials only; URL/tenant identifiers must remain immutable after create.
 - The base mapper provides a concrete default that handles common mutable fields (display name + credentials). Provider overrides call `super()` for the common fields and only add their own cross-field rules.
 
-**Defense-in-depth (DB model validator):**
+**DB model validator:**
 
 - The `DeploymentProviderAccount` model has a `model_validator` that calls `validate_tenant_url_consistency()`. This catches inconsistent tenant/URL pairs regardless of entry point — even if a future code path bypasses the mapper.
-- The validation logic lives in `deployment_provider_account/utils.py` as the single source of truth. Both the model validator and the WXO mapper's `resolve_provider_tenant_id` delegate to the same `extract_tenant_from_url()` function.
+- The validation logic lives in `deployment_provider_account/utils.py` as the single source of truth. Both the model validator and the WXO create-path mapper logic delegate to the same `extract_tenant_from_url()` function.
 - Provider metadata such as tenant/account identifiers should arrive via `provider_data`; mappers extract and normalize them before persistence.
 
 ---

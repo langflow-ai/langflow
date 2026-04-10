@@ -696,24 +696,6 @@ def test_base_mapper_exposes_reconciliation_resolvers() -> None:
     assert mapper.util_resource_key_from_execution(exec_result) == "dep-1"
 
 
-def test_base_mapper_resolve_provider_tenant_id_passthrough() -> None:
-    mapper = BaseDeploymentMapper()
-    assert (
-        mapper.resolve_provider_tenant_id(
-            provider_url="https://example.com/instances/abc",
-            provider_data={"tenant_id": "tenant-1"},
-        )
-        == "tenant-1"
-    )
-    assert (
-        mapper.resolve_provider_tenant_id(
-            provider_url="https://example.com/instances/abc",
-            provider_data={},
-        )
-        is None
-    )
-
-
 def test_base_mapper_shapes_provider_account_response() -> None:
     mapper = BaseDeploymentMapper()
     timestamp = datetime.now(tz=timezone.utc)
@@ -780,10 +762,9 @@ def test_mapper_registry_get_returns_cached_instance_for_key() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_base_mapper_resolve_verify_credentials_extracts_url() -> None:
-    """Base mapper builds VerifyCredentials with url only."""
+def test_base_mapper_resolve_verify_credentials_raises_not_implemented() -> None:
+    """Base mapper does not implement create credential verification."""
     from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
-    from lfx.services.adapters.deployment.schema import VerifyCredentials
 
     mapper = BaseDeploymentMapper()
     payload = DeploymentProviderAccountCreateRequest(
@@ -794,10 +775,8 @@ def test_base_mapper_resolve_verify_credentials_extracts_url() -> None:
             "api_key": "secret-key",  # pragma: allowlist secret
         },
     )
-    result = mapper.resolve_verify_credentials_for_create(payload=payload)
-    assert isinstance(result, VerifyCredentials)
-    assert "cloud.ibm.com" in result.base_url
-    assert result.provider_data is None
+    with pytest.raises(NotImplementedError):
+        mapper.resolve_verify_credentials_for_create(payload=payload)
 
 
 def test_base_mapper_resolve_credentials_raises_not_implemented() -> None:
@@ -820,6 +799,42 @@ def test_base_mapper_resolve_provider_account_create_raises_not_implemented() ->
     )
     with pytest.raises(NotImplementedError):
         mapper.resolve_provider_account_create(payload=payload, user_id=uuid4())
+
+
+def test_base_mapper_util_existing_deployment_resource_key_for_create_raises_not_implemented() -> None:
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        name="deploy",
+        description="",
+        type="agent",
+        provider_data={},
+    )
+    with pytest.raises(NotImplementedError):
+        mapper.util_existing_deployment_resource_key_for_create(payload)
+
+
+def test_base_mapper_util_should_mutate_provider_for_existing_deployment_create_raises_not_implemented() -> None:
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        name="deploy",
+        description="",
+        type="agent",
+        provider_data={},
+    )
+    with pytest.raises(NotImplementedError):
+        mapper.util_should_mutate_provider_for_existing_deployment_create(payload)
+
+
+def test_base_mapper_util_create_result_from_existing_update_raises_not_implemented() -> None:
+    mapper = BaseDeploymentMapper()
+    result = DeploymentUpdateResult(id="provider-deploy-id")
+    with pytest.raises(NotImplementedError):
+        mapper.util_create_result_from_existing_update(
+            existing_resource_key="provider-deploy-id",
+            result=result,
+        )
 
 
 # ---------------------------------------------------------------------------

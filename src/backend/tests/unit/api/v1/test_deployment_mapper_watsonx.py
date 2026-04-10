@@ -1646,24 +1646,6 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
     assert update_bindings.to_source_ref_map() == {str(add_id): "snap-1"}
 
 
-def test_watsonx_mapper_resolve_provider_tenant_id_from_url() -> None:
-    mapper = WatsonxOrchestrateDeploymentMapper()
-    assert (
-        mapper.resolve_provider_tenant_id(
-            provider_url="https://api.example.com/orchestrate/instances/20000000-0000-0000-0000-000000000456",
-            provider_data={},
-        )
-        == "20000000-0000-0000-0000-000000000456"
-    )
-    assert (
-        mapper.resolve_provider_tenant_id(
-            provider_url="https://api.example.com/orchestrate/instances/20000000-0000-0000-0000-000000000456",
-            provider_data={"tenant_id": "tenant-explicit"},
-        )
-        == "tenant-explicit"
-    )
-
-
 def test_wxo_mapper_provider_account_response_includes_tenant_id() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     timestamp = datetime.now(tz=timezone.utc)

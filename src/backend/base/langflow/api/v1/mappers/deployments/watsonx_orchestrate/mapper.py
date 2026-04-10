@@ -215,17 +215,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         ),
     )
 
-    def resolve_provider_tenant_id(
-        self,
-        *,
-        provider_url: str,
-        provider_data: dict[str, Any],
-    ) -> str | None:
-        tenant_id = self.resolve_provider_tenant_id_from_data(provider_data=provider_data)
-        if tenant_id:
-            return tenant_id
-        return extract_tenant_from_url(provider_url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
-
     def _validate_create_provider_data(
         self,
         provider_data: dict[str, Any],
