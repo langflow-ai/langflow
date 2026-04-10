@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
@@ -1311,26 +1312,30 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         slot: PayloadSlot | None,
         slot_name: str,
         raw: Any,
-        operation: str,
+        operation: str = "this operation",
     ) -> Any:
         """Parse an adapter result payload, raising 500 on failure.
 
         Use for data returned **from** the adapter/provider (outbound).
         Failures are internal errors — the user cannot fix them.
+        ``slot_name`` is logged for debugging but not exposed to the user.
         See ``_parse_api_payload_slot`` for user-supplied input.
         """
         if slot is None:
-            msg = f"The {self._PROVIDER_LABEL} integration is not configured for {operation} ({slot_name})."
+            logger.error("Payload slot '%s' is not configured for %s", slot_name, self._PROVIDER_LABEL)
+            msg = f"The {self._PROVIDER_LABEL} integration is not configured for {operation}."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
         try:
             return slot.parse(raw)
         except AdapterPayloadMissingError as exc:
+            logger.error("Empty adapter result for slot '%s' (%s)", slot_name, self._PROVIDER_LABEL)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Empty result while {operation} ({self._PROVIDER_LABEL}).",
             ) from exc
         except AdapterPayloadValidationError as exc:
             detail = exc.format_first_error()
+            logger.error("Invalid adapter result for slot '%s' (%s): %s", slot_name, self._PROVIDER_LABEL, detail)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Unexpected result while {operation} ({self._PROVIDER_LABEL}): {detail}",
@@ -1342,29 +1347,30 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         slot: PayloadSlot | None,
         slot_name: str,
         raw: Any,
-        field: str = "provider_data",
     ) -> Any:
         """Parse a user-supplied API payload, raising 422 on failure.
 
         Use for data sent **by** the user in the API request (inbound).
         Failures are input errors — the user can fix them.
+        ``slot_name`` is logged for debugging but not exposed to the user.
         See ``_parse_required_payload_slot`` for adapter results.
         """
         if slot is None:
-            msg = f"The {self._PROVIDER_LABEL} integration is not configured for validating {field} ({slot_name})."
+            logger.error("Payload slot '%s' is not configured for %s", slot_name, self._PROVIDER_LABEL)
+            msg = f"The {self._PROVIDER_LABEL} integration is not configured for this operation."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
         try:
             return slot.parse(raw)
         except AdapterPayloadMissingError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Missing {field} for {self._PROVIDER_LABEL}.",
+                detail=f"Missing provider_data for {self._PROVIDER_LABEL}.",
             ) from exc
         except AdapterPayloadValidationError as exc:
             detail = exc.format_first_error()
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid {field} for {self._PROVIDER_LABEL}: {detail}",
+                detail=f"Invalid provider_data for {self._PROVIDER_LABEL}: {detail}",
             ) from exc
 
     def _to_bind_provider_operation(self, *, raw_name: str, app_ids: list[str]) -> AdapterPayload:
