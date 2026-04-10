@@ -27,7 +27,7 @@ import {
   getLeftHandleId,
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
-import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
+import i18n from "../i18n";
 import { customDownloadNodeJson } from "@/customization/utils/custom-download-json";
 import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
 import useFlowStore from "@/stores/flowStore";
@@ -37,7 +37,6 @@ import {
   IS_MAC,
   LANGFLOW_SUPPORTED_TYPES,
   OUTPUT_TYPES,
-  SUCCESS_BUILD,
   specialCharsRegex,
 } from "../constants/constants";
 import { DESCRIPTIONS } from "../flow_constants";
@@ -788,7 +787,7 @@ export function validateEdge(
 
   const loop = hasLoop(e, nodes, edges);
   if (targetHandleObject.output_types && !loop) {
-    return [INCOMPLETE_LOOP_ERROR_ALERT];
+    return [i18n.t("errors.incompleteLoop")];
   }
   return [];
 }
@@ -2032,7 +2031,7 @@ export function getGroupStatus(
   flow: FlowType,
   ssData: { [key: string]: { valid: boolean; params: string } },
 ) {
-  let status = { valid: true, params: SUCCESS_BUILD };
+  let status = { valid: true, params: i18n.t("flow.buildSuccess") };
   const { nodes } = flow.data!;
   const ids = nodes.map((n: AllNodeType) => n.data.id);
   ids.forEach((id) => {
@@ -2128,14 +2127,52 @@ export function typesGenerator(data: APIObjectType) {
     }, {});
 }
 
+const getTemplateAliases = (
+  componentKey: string,
+  component: Record<string, any>,
+): string[] => {
+  const aliases = [componentKey, component?.name, component?.display_name];
+  const legacyAliases: Record<string, string[]> = {
+    ParserComponent: ["parser"],
+    "Prompt Template": ["Prompt"],
+  };
+  const componentType = component?.template?._type;
+
+  aliases.push(...(legacyAliases[componentKey] ?? []));
+
+  if (
+    typeof componentType === "string" &&
+    componentType.endsWith("Component")
+  ) {
+    aliases.push(componentType.replace(/Component$/, ""));
+  }
+
+  return Array.from(new Set(aliases.filter(Boolean)));
+};
+
 export function templatesGenerator(data: APIObjectType) {
-  return Object.keys(data).reduce((acc, curr) => {
-    Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
-      //prevent wrong overwriting of the component template by a group of the same type
-      if (!data[curr][c].flow) acc[c] = cloneDeep(data[curr][c]);
-    });
-    return acc;
-  }, {});
+  const templates = Object.entries(data).reduce<Record<string, APIClassType>>(
+    (acc, [, kind]) => {
+      Object.entries(kind).forEach(([componentKey, component]) => {
+        //prevent wrong overwriting of the component template by a group of the same type
+        if (!(component as APIClassType).flow) {
+          acc[componentKey] = cloneDeep(component as APIClassType);
+        }
+      });
+      return acc;
+    },
+    {},
+  );
+
+  for (const [componentKey, component] of Object.entries(templates)) {
+    for (const alias of getTemplateAliases(componentKey, component)) {
+      if (!(alias in templates)) {
+        templates[alias] = component;
+      }
+    }
+  }
+
+  return templates;
 }
 
 /**

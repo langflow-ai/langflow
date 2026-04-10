@@ -4,6 +4,9 @@ These tests verify that the __getattr__ lazy import pattern in field_typing/__in
 works correctly and returns the expected types.
 """
 
+import sys
+import types
+
 import pytest
 
 
@@ -135,6 +138,70 @@ class TestFieldTypingLazyImports:
         assert Data is DirectData
         assert Document is DirectDocument
         assert Object is DirectObject
+
+
+class TestFieldTypingNativeDependencyFailure:
+    """Test that constants module survives native-dependency failures during import.
+
+    Reproduces the production crash where PyTorch's `c10.dll` fails to load on a
+    fresh Windows install missing the Microsoft Visual C++ Redistributable. The
+    OSError raised by `torch._load_dll_libraries()` propagates upward through:
+
+        transformers (imports torch) →
+        langchain_core.language_models.base (imports `from transformers import GPT2TokenizerFast`) →
+        langchain_core.language_models →
+        langchain_classic.agents.agent →
+        langchain_classic.agents →
+        lfx.field_typing.constants line 9 (`from langchain_classic.agents import AgentExecutor`)
+
+    `lfx.field_typing.constants` already wraps its langchain imports in a
+    `try/except ImportError` with stub-class fallbacks for the "langchain not
+    installed" case. This test asserts the same fallback path also activates when
+    a native-dependency failure surfaces as `OSError` instead of `ImportError`.
+    """
+
+    def test_should_use_stub_classes_when_langchain_import_raises_oserror(self, monkeypatch):
+        """Bug: `langflow --version` crashes on fresh Windows because lfx fails to import.
+
+        Cause: `c10.dll` raises `OSError: [WinError 126]` and the existing fallback
+        only catches `ImportError`. After fix: stub classes are used and lfx loads
+        cleanly, allowing the Desktop install verification to succeed even when
+        torch's native deps are unavailable.
+        """
+
+        class _RaisingLangchainAgents(types.ModuleType):
+            """Stand-in for langchain_classic.agents.
+
+            Mimics the c10.dll OSError surfacing through
+            `from langchain_classic.agents import X`.
+            """
+
+            def __getattr__(self, name: str):
+                if name.startswith("__"):
+                    raise AttributeError(name)
+                msg = (
+                    "[WinError 126] The specified module could not be found. "
+                    r'Error loading "torch\lib\c10.dll" or one of its dependencies.'
+                )
+                raise OSError(msg)
+
+        # Arrange — install the raising mock and force a clean reload of the target module
+        monkeypatch.setitem(
+            sys.modules,
+            "langchain_classic.agents",
+            _RaisingLangchainAgents("langchain_classic.agents"),
+        )
+        monkeypatch.delitem(sys.modules, "lfx.field_typing.constants", raising=False)
+        monkeypatch.delitem(sys.modules, "lfx.field_typing", raising=False)
+
+        # Act — must not raise (this is the regression guard)
+        from lfx.field_typing import constants
+
+        # Assert — the in-module stub class is what's exposed, not the real one
+        assert constants.AgentExecutor is not None
+        assert constants.AgentExecutor.__module__ == "lfx.field_typing.constants"
+        assert "AgentExecutor" in constants.LANGCHAIN_BASE_TYPES
+        assert constants.LANGCHAIN_BASE_TYPES["AgentExecutor"] is constants.AgentExecutor
 
 
 class TestFieldTypingModuleStructure:

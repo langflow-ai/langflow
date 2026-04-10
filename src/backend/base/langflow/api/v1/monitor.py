@@ -7,6 +7,7 @@ from fastapi_pagination.ext.sqlmodel import apaginate
 from sqlmodel import col, delete, select
 
 from langflow.api.utils import DbSession, custom_params
+from langflow.api.utils.flow_utils import compute_virtual_flow_id
 from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow.model import Flow
@@ -302,6 +303,164 @@ async def delete_messages_sessions(
         "message": f"Messages deleted successfully for {affected_count} session{'s' if affected_count != 1 else ''}",
         "deleted_count": affected_count,
     }
+
+
+@router.get("/messages/shared/sessions")
+async def get_shared_message_sessions(
+    session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
+) -> list[str]:
+    """Get session IDs for a shared/public flow, scoped to the authenticated user.
+
+    Uses a deterministic virtual flow_id derived from the user's ID and the
+    original flow ID. Only messages stored under this virtual flow_id are returned.
+    """
+    try:
+        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        stmt = select(MessageTable.session_id).distinct()
+        stmt = stmt.where(MessageTable.flow_id == virtual_flow_id)
+        stmt = stmt.where(col(MessageTable.session_id).isnot(None))
+
+        session_ids = await session.exec(stmt)
+        return list(session_ids)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/messages/shared")
+async def get_shared_messages(
+    session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
+    session_id: Annotated[str | None, Query()] = None,
+    order_by: Annotated[str | None, Query()] = "timestamp",
+) -> list[MessageResponse]:
+    """Get messages for a shared/public flow, scoped to the authenticated user.
+
+    Uses a deterministic virtual flow_id derived from the user's ID and the
+    original flow ID. Only messages stored under this virtual flow_id are returned.
+    """
+    try:
+        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        stmt = select(MessageTable)
+        stmt = stmt.where(MessageTable.flow_id == virtual_flow_id)
+
+        if session_id:
+            from urllib.parse import unquote
+
+            decoded_session_id = unquote(session_id)
+            stmt = stmt.where(MessageTable.session_id == decoded_session_id)
+        allowed_order_fields = {"timestamp", "sender", "sender_name", "session_id", "text"}
+        if order_by:
+            if order_by not in allowed_order_fields:
+                raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
+            order_col = getattr(MessageTable, order_by).asc()
+            stmt = stmt.order_by(order_col)
+
+        messages = await session.exec(stmt)
+        return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.delete("/messages/shared/session/{session_id}", status_code=204)
+async def delete_shared_messages_session(
+    session_id: str,
+    session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
+):
+    """Delete messages for a session on a shared/public flow, scoped to the authenticated user."""
+    try:
+        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        stmt = (
+            delete(MessageTable)
+            .where(MessageTable.flow_id == virtual_flow_id)
+            .where(MessageTable.session_id == session_id)
+        )
+        await session.exec(stmt)
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.put("/messages/shared/{message_id}", response_model=MessageRead)
+async def update_shared_message(
+    message_id: UUID,
+    message: MessageUpdate,
+    session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
+):
+    """Update a message on a shared/public flow, scoped to the authenticated user."""
+    try:
+        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        db_message = (
+            await session.exec(
+                select(MessageTable).where(
+                    MessageTable.id == message_id,
+                    MessageTable.flow_id == virtual_flow_id,
+                )
+            )
+        ).first()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    if not db_message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    try:
+        message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
+        if "text" in message_dict and message_dict["text"] != db_message.text:
+            message_dict["edit"] = True
+        db_message.sqlmodel_update(message_dict)
+        session.add(db_message)
+        await session.flush()
+        await session.refresh(db_message)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return db_message
+
+
+@router.patch("/messages/shared/session/{old_session_id}")
+async def rename_shared_session(
+    old_session_id: str,
+    new_session_id: Annotated[str, Query(description="The new session ID")],
+    session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
+) -> list[MessageResponse]:
+    """Rename a session on a shared/public flow, scoped to the authenticated user."""
+    try:
+        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        stmt = select(MessageTable).where(
+            MessageTable.flow_id == virtual_flow_id,
+            MessageTable.session_id == old_session_id,
+        )
+        messages = list(await session.exec(stmt))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    if not messages:
+        raise HTTPException(status_code=404, detail="No messages found with the given session ID")
+
+    try:
+        for message in messages:
+            message.session_id = new_session_id
+        session.add_all(messages)
+        await session.flush()
+
+        result = []
+        for message in messages:
+            await session.refresh(message)
+            result.append(MessageResponse.model_validate(message, from_attributes=True))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return result
 
 
 @router.get("/transactions", dependencies=[Depends(get_current_active_user)])

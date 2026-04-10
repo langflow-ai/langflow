@@ -7,7 +7,8 @@ const startedStars = Number(window.localStorage.getItem("githubStars")) ?? 0;
 export const useDarkStore = create<DarkStoreType>((set, get) => ({
   dark: (() => {
     const stored = window.localStorage.getItem("isDark");
-    return stored !== null ? JSON.parse(stored) : false;
+    if (stored !== null) return JSON.parse(stored);
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
   })(),
   stars: startedStars,
   version: "",

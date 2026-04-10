@@ -14,6 +14,11 @@ from lfx.memory import aget_messages
 from tests.unit.build_utils import build_flow, consume_and_assert_stream, create_flow, get_build_events
 
 
+@pytest.fixture(autouse=True)
+def allow_custom_components_by_default(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "true")
+
+
 @pytest.mark.benchmark
 async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test the build flow endpoint with the new two-step process."""
@@ -51,6 +56,36 @@ async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, 
     # Consume and verify the events
     await consume_and_assert_stream(events_response, job_id)
     await check_messages(flow_id)
+
+
+async def test_build_flow_validates_request_data_instead_of_stale_db_flow(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """When request data is provided, preflight validation should use it instead of the saved flow."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    flow_data = response.json()
+    request_data = json.loads(json.dumps(flow_data["data"]))
+    request_data["nodes"][0]["data"]["node"]["display_name"] = "Updated Request Flow"
+    saved_flow_validation_message = "saved flow should not be validated when request data is provided"
+
+    def fail_if_saved_flow_is_validated(target):
+        if target == flow_data["data"]:
+            raise ValueError(saved_flow_validation_message)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.chat.validate_flow_for_current_settings",
+        fail_if_saved_flow_is_validated,
+    )
+
+    response = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={"data": request_data},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == codes.OK
+    assert "job_id" in response.json()
 
 
 async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
@@ -525,6 +560,33 @@ async def test_build_public_tmp_ignores_data_parameter(client, json_memory_chatb
     assert response.status_code == codes.OK
     response_data = response.json()
     assert "job_id" in response_data
+
+
+@pytest.mark.benchmark
+async def test_build_public_tmp_checks_public_access_before_validation(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Private flows should fail at the public-access gate before any policy validation runs."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    client.cookies.set("client_id", "test-private-flow-client")
+    public_access_validation_message = "validation should not run before public access checks"
+
+    def fail_if_validation_runs(_target):
+        raise ValueError(public_access_validation_message)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.chat.validate_flow_for_current_settings",
+        fail_if_validation_runs,
+    )
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.FORBIDDEN
+    assert response.json()["detail"] == "Flow is not public"
 
 
 @pytest.mark.benchmark

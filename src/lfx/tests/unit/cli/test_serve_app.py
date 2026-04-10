@@ -1,9 +1,11 @@
 """Unit tests for LFX CLI FastAPI serve app."""
 
+import hashlib
 import json
 import os
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -15,7 +17,45 @@ from lfx.cli.serve_app import (
 )
 from lfx.graph import Graph
 from lfx.graph.schema import ResultData
+from lfx.interface.components import component_cache
 from lfx.schema.message import Message
+
+
+def _make_settings_service(*, allow_custom_components: bool = False):
+    return SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=allow_custom_components,
+        )
+    )
+
+
+def _blocked_raw_graph() -> dict:
+    return {
+        "nodes": [
+            {
+                "id": "node-1",
+                "data": {
+                    "id": "node-1",
+                    "type": "TotallyCustom",
+                    "node": {
+                        "display_name": "Blocked Node",
+                        "template": {
+                            "code": {"value": "print('blocked')"},
+                        },
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+
+
+@pytest.fixture(autouse=True)
+def allow_custom_components_by_default(monkeypatch):
+    """Keep constructor-level validation aligned with the serve_app test default path."""
+    from lfx.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
 
 
 class TestSecurityFunctions:
@@ -206,8 +246,10 @@ class TestServeAppEndpoints:
         return graph
 
     @pytest.fixture
-    def app_client(self, real_graph_with_async):
+    def app_client(self, real_graph_with_async, monkeypatch):
         """Create test client with single flow app."""
+        from lfx.services.deps import get_settings_service
+
         meta = FlowMeta(
             id="test-flow-id",
             relative_path="test.json",
@@ -226,13 +268,17 @@ class TestServeAppEndpoints:
             verbose_print=verbose_print,
         )
 
+        monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+
         # Set up test API key
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):  # pragma: allowlist secret
             return TestClient(app)
 
     @pytest.fixture
-    def multi_flow_client(self, real_graph_with_async, simple_chat_json):
+    def multi_flow_client(self, real_graph_with_async, simple_chat_json, monkeypatch):
         """Create test client with multiple flows."""
+        from lfx.services.deps import get_settings_service
+
         # Create second real graph using the same JSON structure
         graph2 = Graph.from_payload(simple_chat_json, flow_id="flow-2")
 
@@ -265,6 +311,8 @@ class TestServeAppEndpoints:
             metas=metas,
             verbose_print=verbose_print,
         )
+
+        monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
 
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):  # pragma: allowlist secret
             return TestClient(app)
@@ -320,6 +368,58 @@ class TestServeAppEndpoints:
 
         assert response.status_code == 401
         assert response.json()["detail"] == "Invalid API key"
+
+    def test_run_endpoint_blocks_custom_components_when_disabled(
+        self,
+        real_graph_with_async,
+    ):
+        """Test that /run fails closed before execution when custom components are blocked."""
+        real_graph_with_async.raw_graph_data = _blocked_raw_graph()
+        meta = FlowMeta(
+            id="test-flow-id",
+            relative_path="test.json",
+            title="Test Flow",
+            description="A test flow",
+        )
+        app = create_multi_serve_app(
+            root_dir=Path("/test"),
+            graphs={"test-flow-id": real_graph_with_async},
+            metas={"test-flow-id": meta},
+            verbose_print=Mock(),
+        )
+        headers = {"x-api-key": "test-api-key"}
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
+            patch(
+                "lfx.services.deps.get_settings_service",
+                return_value=_make_settings_service(allow_custom_components=False),
+            ),
+            patch(
+                "lfx.utils.flow_validation.ensure_component_hash_lookups_loaded",
+                new=AsyncMock(return_value={"ChatInput": {hashlib.sha256(b"known").hexdigest()[:12]}}),
+            ),
+            patch.object(
+                component_cache,
+                "type_to_current_hash",
+                {"ChatInput": {hashlib.sha256(b"known").hexdigest()[:12]}},
+            ),
+            patch(
+                "lfx.cli.serve_app.execute_graph_with_capture",
+                new=AsyncMock(return_value=([], "")),
+            ) as mock_execute,
+        ):
+            client = TestClient(app)
+            response = client.post(
+                "/flows/test-flow-id/run",
+                json={"input_value": "Test input"},
+                headers=headers,
+            )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is False
+        assert "custom components are not allowed" in response.json()["result"]
+        mock_execute.assert_not_called()
 
     def test_run_endpoint_query_auth(self, app_client):
         """Test flow execution with query parameter authentication."""
