@@ -165,7 +165,7 @@ const HeaderComponent = ({
                     <Badge
                       variant="purpleStatic"
                       size="xq"
-                      className="shrink-0"
+                      className="h-auto shrink-0 rounded px-1 py-px text-[11px] leading-none text-accent-purple-foreground"
                     >
                       Beta
                     </Badge>
