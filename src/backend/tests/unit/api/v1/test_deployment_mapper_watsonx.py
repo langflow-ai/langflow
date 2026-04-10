@@ -1650,14 +1650,14 @@ def test_watsonx_mapper_resolve_provider_tenant_id_from_url() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     assert (
         mapper.resolve_provider_tenant_id(
-            provider_url="https://api.example.com/orchestrate/instances/account-123/agents",
+            provider_url="https://api.example.com/orchestrate/instances/20000000-0000-0000-0000-000000000456",
             provider_data={},
         )
-        == "account-123"
+        == "20000000-0000-0000-0000-000000000456"
     )
     assert (
         mapper.resolve_provider_tenant_id(
-            provider_url="https://api.example.com/orchestrate/instances/account-123/agents",
+            provider_url="https://api.example.com/orchestrate/instances/20000000-0000-0000-0000-000000000456",
             provider_data={"tenant_id": "tenant-explicit"},
         )
         == "tenant-explicit"
@@ -1880,8 +1880,8 @@ def test_wxo_mapper_provider_account_create_uses_url_tenant_fallback() -> None:
 def _make_wxo_existing_account():
     """Build a minimal fake existing WXO DeploymentProviderAccount."""
     return SimpleNamespace(
-        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/old-tenant/agents",
-        provider_tenant_id="old-tenant",
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/30000000-0000-0000-0000-000000000001",
+        provider_tenant_id="30000000-0000-0000-0000-000000000001",
         provider_key="watsonx-orchestrate",
     )
 

@@ -128,8 +128,12 @@ def check_provider_url_allowed(url: str, provider_key: str | DeploymentProviderK
 def _extract_wxo_tenant_from_url(url: str) -> str | None:
     """Extract the tenant/instance id from a WXO URL path.
 
-    WXO URLs embed the tenant in the path as ``/instances/{tenant_id}/...``.
-    Returns ``None`` if the path does not contain an ``instances`` segment.
+    WXO URLs end with ``/instances/{tenant_id}`` — the tenant must be the
+    **last** path segment.  Returns ``None`` if the URL does not match this
+    pattern (no ``instances`` segment, nothing after it, or extra trailing
+    segments).
+
+    See https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-endpoint
     """
     parsed = urlparse(url)
     path_segments = [segment for segment in parsed.path.split("/") if segment]
@@ -137,10 +141,13 @@ def _extract_wxo_tenant_from_url(url: str) -> str | None:
         instances_index = path_segments.index("instances")
     except ValueError:
         return None
-    account_index = instances_index + 1
-    if account_index >= len(path_segments):
+    tenant_index = instances_index + 1
+    if tenant_index >= len(path_segments):
         return None
-    return path_segments[account_index].strip() or None
+    # Tenant must be the terminal segment — reject URLs like /instances/not-an-id/random-path
+    if tenant_index != len(path_segments) - 1:
+        return None
+    return path_segments[tenant_index].strip() or None
 
 
 _PROVIDER_TENANT_EXTRACTORS: dict[DeploymentProviderKey, Callable[[str], str | None]] = {

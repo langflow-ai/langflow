@@ -830,8 +830,8 @@ def test_base_mapper_resolve_provider_account_create_raises_not_implemented() ->
 def _make_existing_account():
     """Build a minimal fake existing DeploymentProviderAccount."""
     return SimpleNamespace(
-        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/old-tenant/agents",
-        provider_tenant_id="old-tenant",
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/30000000-0000-0000-0000-000000000001",
+        provider_tenant_id="30000000-0000-0000-0000-000000000001",
         provider_key="watsonx-orchestrate",
     )
 
