@@ -1040,3 +1040,21 @@ def test_handle_model_input_update_resolves_watsonx_dropdown():
     # Non-dropdown fields should use load_from_db as usual
     assert result["api_key"]["value"] == "WATSONX_APIKEY"
     assert result["api_key"]["load_from_db"] is True
+
+
+def test_get_provider_for_model_name_backwards_compat():
+    """Ensure ``get_provider_for_model_name`` stays importable from the package root.
+
+    Flows exported from 1.8.x import this helper directly from
+    ``lfx.base.models.unified_models``. The post-refactor package split broke
+    that import; this test guards against reintroducing the regression.
+    """
+    from lfx.base.models.unified_models import get_provider_for_model_name
+
+    # Known model round-trips to its provider.
+    assert get_provider_for_model_name("gpt-4o") == "OpenAI"
+
+    # Defensive inputs must not raise.
+    assert get_provider_for_model_name("") == ""
+    assert get_provider_for_model_name("__definitely_not_a_real_model__") == ""
+    assert get_provider_for_model_name(None) == ""  # type: ignore[arg-type]

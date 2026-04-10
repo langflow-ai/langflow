@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { BaseInputProps } from "@/components/core/parameterRenderComponent/types";
+import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
+import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import ModelInputComponent from "../index";
 import type { ModelInputComponentType, ModelOption } from "../types";
 
@@ -40,7 +42,7 @@ jest.mock("@/stores/flowStore", () => {
     nodes: [],
     edges: [],
   };
-  const hook = (selector?: (s: any) => any) =>
+  const hook = (selector?: (s: typeof state) => unknown) =>
     selector ? selector(state) : state;
   hook.getState = () => state;
   return { __esModule: true, default: hook };
@@ -466,6 +468,179 @@ describe("ModelInputComponent", () => {
 
       // Should have called handleOnNewValue with first option
       expect(handleOnNewValue).toHaveBeenCalled();
+    });
+  });
+
+  describe("Enabled Models Filtering (imported flows)", () => {
+    // Helpers to override the default top-level mocks on a per-test basis.
+    const mockedUseGetEnabledModels = useGetEnabledModels as jest.Mock;
+    const mockedUseGetModelProviders = useGetModelProviders as jest.Mock;
+
+    afterEach(() => {
+      // Restore the default mock implementations for downstream tests.
+      mockedUseGetEnabledModels.mockReturnValue({
+        data: { enabled_models: {} },
+        isLoading: false,
+      });
+      mockedUseGetModelProviders.mockReturnValue({
+        data: mockProvidersData,
+        isLoading: false,
+      });
+    });
+
+    it("hides models not explicitly enabled when enabled_models tracks the provider", async () => {
+      // gpt-4 is enabled, gpt-3.5-turbo is explicitly disabled. The strict
+      // filter in groupedOptions must hide gpt-3.5-turbo.
+      mockedUseGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: {
+            OpenAI: { "gpt-4": true, "gpt-3.5-turbo": false },
+          },
+        },
+        isLoading: false,
+      });
+
+      const user = userEvent.setup();
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("gpt-4-option")).toBeInTheDocument();
+      });
+      expect(
+        screen.queryByTestId("gpt-3.5-turbo-option"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("augments dropdown with enabled models that are missing from the saved options", async () => {
+      // Simulates an imported flow whose exporter only knew about gpt-4, but
+      // the importing user also has gpt-4o and gpt-4.1 enabled. Those extra
+      // models should appear in the dropdown via the augment pass.
+      mockedUseGetModelProviders.mockReturnValue({
+        data: [
+          {
+            provider: "OpenAI",
+            is_enabled: true,
+            icon: "OpenAI",
+            models: [
+              { model_name: "gpt-4", metadata: {} },
+              { model_name: "gpt-4o", metadata: {} },
+              { model_name: "gpt-4.1", metadata: {} },
+            ],
+          },
+        ],
+        isLoading: false,
+      });
+      mockedUseGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: {
+            OpenAI: {
+              "gpt-4": true,
+              "gpt-4o": true,
+              "gpt-4.1": true,
+            },
+          },
+        },
+        isLoading: false,
+      });
+
+      const savedOptions: ModelOption[] = [
+        {
+          id: "gpt-4",
+          name: "gpt-4",
+          icon: "Bot",
+          provider: "OpenAI",
+          metadata: {},
+        },
+      ];
+
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} options={savedOptions} />,
+      );
+
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("gpt-4-option")).toBeInTheDocument();
+      });
+      // Augmented entries from providersData × enabled_models must be visible.
+      expect(screen.getByTestId("gpt-4o-option")).toBeInTheDocument();
+      expect(screen.getByTestId("gpt-4.1-option")).toBeInTheDocument();
+    });
+
+    it("keeps the trigger enabled when saved options=[] but providersData has enabled models", () => {
+      // Reproduces the "outdated component update" scenario: the backend
+      // response strips saved options, but the user still has enabled models.
+      // The trigger's disabled check reads flatOptions, which is the augmented
+      // list — so the combobox must remain clickable.
+      mockedUseGetModelProviders.mockReturnValue({
+        data: [
+          {
+            provider: "OpenAI",
+            is_enabled: true,
+            icon: "OpenAI",
+            models: [{ model_name: "gpt-4o", metadata: {} }],
+          },
+        ],
+        isLoading: false,
+      });
+      mockedUseGetEnabledModels.mockReturnValue({
+        data: { enabled_models: { OpenAI: { "gpt-4o": true } } },
+        isLoading: false,
+      });
+
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} options={[]} />,
+      );
+
+      // With augmented options, the combobox is NOT disabled (regression
+      // check for the grayed-out-after-update bug).
+      expect(screen.getByRole("combobox")).not.toBeDisabled();
+    });
+
+    it("auto-resets a stale value whose model is no longer enabled", () => {
+      // Importing a flow that selected a WatsonX model, but the current user
+      // has no WatsonX models enabled — only OpenAI. The stale value must be
+      // replaced with the first available model so it isn't persisted on save.
+      mockedUseGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: {
+            OpenAI: { "gpt-4": true, "gpt-3.5-turbo": true },
+          },
+        },
+        isLoading: false,
+      });
+
+      const handleOnNewValue = jest.fn();
+      const staleValue = [
+        {
+          id: "ibm/granite-3",
+          name: "ibm/granite-3",
+          icon: "IBMWatsonx",
+          provider: "IBM watsonx.ai",
+          metadata: {},
+        },
+      ];
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          value={staleValue}
+          handleOnNewValue={handleOnNewValue}
+        />,
+      );
+
+      // Reset must have been fired with a still-enabled model, not the stale
+      // WatsonX reference.
+      expect(handleOnNewValue).toHaveBeenCalled();
+      const lastCall =
+        handleOnNewValue.mock.calls[handleOnNewValue.mock.calls.length - 1][0];
+      expect(lastCall.value[0].provider).toBe("OpenAI");
+      expect(lastCall.value[0].name).not.toBe("ibm/granite-3");
     });
   });
 });
