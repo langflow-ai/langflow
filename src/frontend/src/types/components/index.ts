@@ -563,6 +563,7 @@ export type ChatInputType = {
     repeat: number;
     files?: string[];
   }) => Promise<void>;
+  playgroundPage: boolean;
 };
 
 export type editNodeToggleType = {
@@ -641,6 +642,7 @@ export type codeAreaModalPropsType = {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   componentId?: string;
+  size?: string;
 };
 
 export type chatMessagePropsType = {

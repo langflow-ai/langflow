@@ -367,6 +367,8 @@ class Graph:
         if reset_output_values:
             self._reset_all_output_values()
 
+        await self.initialize_run()
+
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
         if config is not None:
@@ -1163,8 +1165,17 @@ class Graph:
         Returns:
             Graph: The created graph.
         """
+        from lfx.utils.flow_validation import validate_flow_for_current_settings
+
         if "data" in payload:
             payload = payload["data"]
+        # Defense-in-depth: validate here so that no code path can construct
+        # a graph with blocked/custom components, even if an API endpoint
+        # forgets its own pre-check. Ideally this would live only at the API
+        # boundary (middleware or endpoint dependency) so from_payload stays
+        # pure deserialization, but a missed endpoint means arbitrary code
+        # execution, so we keep this as a safety net.
+        validate_flow_for_current_settings(payload)
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
@@ -1446,7 +1457,7 @@ class Graph:
         else:
             # Fallback no-op cache functions for tests or when service unavailable
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
-                return None
+                return CacheMiss()
 
             async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
                 return True
@@ -1671,10 +1682,10 @@ class Graph:
         else:
             # Fallback no-op cache functions for tests or when service unavailable
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
-                return None
+                return CacheMiss()
 
-            async def set_cache_func(*args, **kwargs):
-                pass
+            async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
+                return True
 
         await self.initialize_run()
         lock = asyncio.Lock()

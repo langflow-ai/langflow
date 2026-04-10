@@ -24,9 +24,11 @@ ENV UV_LINK_MODE=copy
 # Workspace root metadata + lockfile
 COPY pyproject.toml uv.lock ./
 
-# Member's pyproject so uv knows about 'lfx' (no source yet, better cache)
+# Member pyproject files so uv knows about workspace packages (no source yet, better cache)
 COPY src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY src/lfx/README.md /app/src/lfx/README.md
+COPY src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+COPY src/sdk/README.md /app/src/sdk/README.md
 
 # Create the venv and install *only* what lfx needs (no dev)
 # We expect some packages to be built from source, so we mount the cache
@@ -35,6 +37,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # --- Now copy the source (doesn't bust the deps layer) ---
 COPY src/lfx/src /app/src/lfx/src
+COPY src/sdk/src /app/src/sdk/src
 
 # Install the LFX package into the virtual environment (non-editable)
 RUN --mount=type=cache,target=/root/.cache/uv \

@@ -1,10 +1,10 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
-import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -62,6 +62,7 @@ export default function Dropdown({
   inspectionPanel,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
+  const { t } = useTranslation();
   const validOptions = useMemo(
     () => filterNullOptions(options),
     [options, value],
@@ -86,14 +87,17 @@ export default function Dropdown({
   const [pendingSelect, setPendingSelect] = useState<string | null>(null);
   const refButton = useRef<HTMLButtonElement>(null);
 
-  value = useMemo(() => {
-    // We should only reset the value if it's not in options and not in filteredOptions
-    // and not a recently added custom value
-    if (!options.includes(value) && !filteredOptions.includes(value)) {
+  // Reset the value when options are loaded and the current value is not among them.
+  // This is in a useEffect (not useMemo) to avoid calling setState during render.
+  // When options is empty, it means options are still loading, so we preserve the saved value.
+  useEffect(() => {
+    if (
+      options.length > 0 &&
+      !options.includes(value) &&
+      !filteredOptions.includes(value)
+    ) {
       if (value) onSelect("", undefined, true);
-      return null;
     }
-    return value;
   }, [value, options, filteredOptions]);
 
   // Initialize utilities and constants
@@ -301,7 +305,12 @@ export default function Dropdown({
         setFilteredMetadata(optionsMetaData);
       }
     }
-    if (!combobox && value && !validOptions.includes(value)) {
+    if (
+      !combobox &&
+      value &&
+      validOptions.length > 0 &&
+      !validOptions.includes(value)
+    ) {
       onSelect("", undefined, true);
     }
   }, [open, validOptions]);
@@ -380,7 +389,7 @@ export default function Dropdown({
             {value && <>{renderSelectedIcon()}</>}
             <span className="truncate">
               {disabled ? (
-                RECEIVING_INPUT_VALUE
+                t("component.receivingInput")
               ) : (
                 <>
                   {
@@ -391,16 +400,16 @@ export default function Dropdown({
                       "connect_other_models" ? (
                       <span className="text-muted-foreground">
                         <LoadingTextComponent
-                          text={placeholder || SELECT_AN_OPTION}
+                          text={placeholder || t("component.selectOption")}
                         />
                       </span>
                     ) : (
-                      placeholder || SELECT_AN_OPTION
+                      placeholder || t("component.selectOption")
                     )
                     // ) : (
                     //   <span className="text-muted-foreground">
                     //     <LoadingTextComponent
-                    //       text={placeholder || SELECT_AN_OPTION}
+                    //       text={placeholder || t("component.selectOption")}
                     //     />
                     //   </span>
                     // )}

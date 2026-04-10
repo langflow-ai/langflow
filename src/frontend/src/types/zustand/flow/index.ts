@@ -57,6 +57,7 @@ export type ComponentsToUpdateType = {
   icon?: string;
   display_name: string;
   outdated: boolean;
+  blocked: boolean;
   breakingChange: boolean;
   userEdited: boolean;
 };

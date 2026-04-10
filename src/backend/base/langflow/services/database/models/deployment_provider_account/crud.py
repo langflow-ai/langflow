@@ -10,6 +10,7 @@ from sqlmodel import col, select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from langflow.services.database.utils import normalize_string_or_none, parse_uuid
 
 if TYPE_CHECKING:
@@ -42,6 +43,17 @@ def _encrypt_api_key(raw: str) -> str:
         raise RuntimeError(msg) from e
 
 
+def _coerce_provider_key(value: str | DeploymentProviderKey) -> DeploymentProviderKey:
+    if isinstance(value, DeploymentProviderKey):
+        return value
+    normalized = _strip_or_raise(value, "provider_key")
+    try:
+        return DeploymentProviderKey(normalized)
+    except ValueError as exc:
+        msg = f"Unsupported provider_key: {normalized}"
+        raise ValueError(msg) from exc
+
+
 async def get_provider_account_by_id(
     db: AsyncSession,
     *,
@@ -62,22 +74,42 @@ async def list_provider_accounts(
     db: AsyncSession,
     *,
     user_id: UUID | str,
+    offset: int = 0,
+    limit: int | None = None,
 ) -> list[DeploymentProviderAccount]:
     user_uuid = parse_uuid(user_id, field_name="user_id")
     stmt = (
         select(DeploymentProviderAccount)
         .where(DeploymentProviderAccount.user_id == user_uuid)
         .order_by(col(DeploymentProviderAccount.created_at).desc())
+        .offset(offset)
     )
+    if limit is not None:
+        stmt = stmt.limit(limit)
     return list((await db.exec(stmt)).all())
+
+
+async def count_provider_accounts(
+    db: AsyncSession,
+    *,
+    user_id: UUID | str,
+) -> int:
+    from sqlmodel import func
+
+    user_uuid = parse_uuid(user_id, field_name="user_id")
+    stmt = select(func.count(DeploymentProviderAccount.id)).where(
+        DeploymentProviderAccount.user_id == user_uuid,
+    )
+    return int((await db.exec(stmt)).one() or 0)
 
 
 async def create_provider_account(
     db: AsyncSession,
     *,
     user_id: UUID | str,
+    name: str,
     provider_tenant_id: str | None,
-    provider_key: str,
+    provider_key: str | DeploymentProviderKey,
     provider_url: str,
     api_key: str,
 ) -> DeploymentProviderAccount:
@@ -85,7 +117,8 @@ async def create_provider_account(
 
     # The model has its own field validators, but pre-checking here gives
     # clearer errors and avoids constructing the object.
-    provider_key_s = _strip_or_raise(provider_key, "provider_key")
+    name_s = _strip_or_raise(name, "name")
+    provider_key_enum = _coerce_provider_key(provider_key)
     provider_url_s = _strip_or_raise(provider_url, "provider_url")
 
     now = datetime.now(timezone.utc)
@@ -100,8 +133,9 @@ async def create_provider_account(
         raise
     provider_account = DeploymentProviderAccount(
         user_id=user_uuid,
+        name=name_s,
         provider_tenant_id=normalize_string_or_none(provider_tenant_id),
-        provider_key=provider_key_s,
+        provider_key=provider_key_enum,
         provider_url=provider_url_s,
         api_key=encrypted_key,
         created_at=now,
@@ -113,14 +147,15 @@ async def create_provider_account(
     except IntegrityError as exc:
         await db.rollback()
         await logger.aerror(
-            "IntegrityError creating provider account (user_id=%s, provider_url=%s, provider_tenant_id=%s)",
+            "IntegrityError creating provider account (user_id=%s, name=%s, provider_url=%s, provider_tenant_id=%s)",
             user_uuid,
+            name_s,
             provider_url_s,
             provider_tenant_id,
         )
         msg = (
             f"Provider account already exists "
-            f"(provider_url={provider_url!r}, provider_tenant_id={provider_tenant_id!r})"
+            f"(name={name!r}, provider_url={provider_url!r}, provider_tenant_id={provider_tenant_id!r})"
         )
         raise ValueError(msg) from exc
     await db.refresh(provider_account)
@@ -131,15 +166,18 @@ async def update_provider_account(
     db: AsyncSession,
     *,
     provider_account: DeploymentProviderAccount,
+    name: str | None = None,
     provider_tenant_id: str | None = _UNSET,  # type: ignore[assignment]
-    provider_key: str | None = None,
+    provider_key: str | DeploymentProviderKey | None = None,
     provider_url: str | None = None,
     api_key: str | None = None,
 ) -> DeploymentProviderAccount:
+    if name is not None:
+        provider_account.name = _strip_or_raise(name, "name")
     if provider_tenant_id is not _UNSET:
         provider_account.provider_tenant_id = normalize_string_or_none(provider_tenant_id)  # type: ignore[arg-type]
     if provider_key is not None:
-        provider_account.provider_key = _strip_or_raise(provider_key, "provider_key")
+        provider_account.provider_key = _coerce_provider_key(provider_key)
     if provider_url is not None:
         provider_account.provider_url = _strip_or_raise(provider_url, "provider_url")
     if api_key is not None:

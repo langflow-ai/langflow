@@ -8,24 +8,34 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 from lfx.services.adapters.deployment.payloads import (
+    T_ConfigItemData,
     T_ConfigListParams,
     T_ConfigListResult,
     T_DeploymentConfig,
+    T_DeploymentCreate,
     T_DeploymentCreateResult,
     T_DeploymentItemData,
     T_DeploymentListParams,
     T_DeploymentListResult,
+    T_DeploymentLlmListResult,
     T_DeploymentOperationResult,
-    T_DeploymentSpec,
     T_DeploymentStatusData,
     T_DeploymentUpdate,
+    T_DeploymentUpdateResult,
+    T_ExecutionCreateResult,
     T_ExecutionInput,
     T_ExecutionResult,
+    T_ExecutionStatusResult,
+    T_FlowProviderData,
     T_ListParamsPayload,
     T_ProviderData,
     T_ProviderResult,
+    T_SnapshotItemData,
     T_SnapshotListParams,
     T_SnapshotListResult,
+    T_SnapshotUpdateResult,
+    T_VerifyCredentials,
+    T_VerifyCredentialsResult,
 )
 from lfx.services.adapters.payload import AdapterPayload
 
@@ -36,17 +46,27 @@ DeploymentProviderName = Annotated[
 
 NormalizedId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 IdLike = UUID | NormalizedId
+DEPLOYMENT_DESCRIPTION_MAX_LENGTH = 500
 
 
 class DeploymentType(str, Enum):
-    """Core deployment types recognized by LFX contracts."""
+    """Core deployment types recognized by LFX contracts.
 
-    # First-class deployment types recognized by the core schema.
+    **Cross-package coupling** — langflow's ``Deployment`` database model
+    (``langflow.services.database.models.deployment.model``) persists this
+    enum's ``.value`` as a ``NOT NULL`` string column and deserialises it
+    back via ``DeploymentType(value)``.  Because of this:
+
+    * **Never remove or rename** an existing member value — doing so will
+      cause ``ValueError`` on every read of rows that stored that value.
+    * Adding new members is safe and requires no migration.
+    """
+
     # Adapters may carry additional provider-specific classification in `provider_data`.
     AGENT = "agent"
 
 
-class BaseFlowArtifact(BaseModel):
+class BaseFlowArtifact(BaseModel, Generic[T_FlowProviderData]):
     """Model representing a payload for a flow."""
 
     model_config = ConfigDict(extra="allow")  # e.g., viewport - good for viewing the flow in the UI
@@ -58,7 +78,7 @@ class BaseFlowArtifact(BaseModel):
     description: str | None = Field(None, description="The description of the flow")
     data: dict = Field(description="The data of the flow")
     tags: list[str] | None = Field(None, description="The tags of the flow")
-    provider_data: dict | None = Field(
+    provider_data: T_FlowProviderData | None = Field(
         None,
         description="Provider-specific flow metadata consumed only by the active deployment adapter.",
     )
@@ -85,18 +105,21 @@ class BaseFlowArtifact(BaseModel):
         return value
 
 
-SnapshotList = Annotated[list[BaseFlowArtifact], Field(min_length=1)]
+SnapshotList = Annotated[list[BaseFlowArtifact[AdapterPayload]], Field(min_length=1)]
 
 
-class SnapshotItem(BaseModel):
+class SnapshotItem(BaseModel, Generic[T_SnapshotItemData]):
     """Model representing a result for a snapshot item."""
 
     id: IdLike = Field(description="The id of the snapshot item")
     name: str = Field(description="The name of the snapshot item")
-    provider_data: dict | None = Field(None, description="The data of the snapshot item from the provider")
+    provider_data: T_SnapshotItemData | None = Field(
+        None,
+        description="The data of the snapshot item from the provider",
+    )
 
 
-class SnapshotItems(BaseModel):
+class SnapshotItems(BaseModel, Generic[T_FlowProviderData]):
     """Snapshot input for deployment create.
 
     Accept raw snapshot artifact payloads for deployment create.
@@ -104,7 +127,7 @@ class SnapshotItems(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    raw_payloads: SnapshotList | None = Field(
+    raw_payloads: Annotated[list[BaseFlowArtifact[T_FlowProviderData]], Field(min_length=1)] | None = Field(
         None,
         description="List of raw snapshot payloads to create and bind for this deployment. Omit to leave unchanged.",
     )
@@ -128,7 +151,7 @@ class SnapshotItems(BaseModel):
         return self
 
 
-class SnapshotDeploymentBindingUpdate(BaseModel):
+class SnapshotDeploymentBindingUpdate(BaseModel, Generic[T_FlowProviderData]):
     """Snapshot deployment binding patch payload.
 
     Supports three operations: bind existing snapshots by ID, create new
@@ -140,7 +163,7 @@ class SnapshotDeploymentBindingUpdate(BaseModel):
         None,
         description="Existing snapshot ids to attach to the deployment. Omit to leave unchanged.",
     )
-    add_raw_payloads: SnapshotList | None = Field(
+    add_raw_payloads: Annotated[list[BaseFlowArtifact[T_FlowProviderData]], Field(min_length=1)] | None = Field(
         None,
         description="Raw snapshot payloads to create and attach to the deployment. Omit to leave unchanged.",
     )
@@ -292,14 +315,14 @@ class ConfigDeploymentBindingUpdate(BaseModel):
         return self
 
 
-class ConfigListItem(BaseModel):
+class ConfigListItem(BaseModel, Generic[T_ConfigItemData]):
     """Model representing a result for a config list item."""
 
     id: IdLike = Field(description="The id of the config item")
     name: str = Field(description="The name of the config item")
     created_at: datetime.datetime | None = Field(None, description="The created timestamp of the config item")
     updated_at: datetime.datetime | None = Field(None, description="The last updated timestamp of the config item")
-    provider_data: dict | None = Field(None, description="The data of the config item from the provider")
+    provider_data: T_ConfigItemData | None = Field(None, description="Provider-specific data for the config item")
 
 
 class ProviderDataModel(BaseModel, Generic[T_ProviderData]):
@@ -314,17 +337,15 @@ class ProviderResultModel(BaseModel, Generic[T_ProviderResult]):
     provider_result: T_ProviderResult | None = Field(None, description="The result from the provider")
 
 
-class ProviderSpecModel(BaseModel, Generic[T_DeploymentSpec]):
-    """Base model for provider-specific input payloads."""
-
-    provider_spec: T_DeploymentSpec | None = Field(None, description="The data of the deployment from the provider")
-
-
-class BaseDeploymentData(ProviderSpecModel[T_DeploymentSpec]):
+class BaseDeploymentData(BaseModel):
     """Model representing a data for a deployment."""
 
     name: str = Field(description="The name of the deployment")
-    description: str = Field(default="", description="The description of the deployment")
+    description: str = Field(
+        default="",
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        description="The description of the deployment",
+    )
     type: DeploymentType = Field(description="The type of the deployment")
 
 
@@ -378,16 +399,32 @@ class DeploymentListResult(ProviderResultModel[T_DeploymentListResult]):
     deployments: list[ItemResult] = Field(description="The list of deployments")
 
 
-class ConfigListResult(ProviderResultModel[T_ConfigListResult]):
+class DeploymentListLlmsResult(ProviderResultModel[T_DeploymentLlmListResult]):
+    """Provider payload container for listing available deployment LLM metadata."""
+
+
+class ConfigListResult(
+    ProviderResultModel[T_ConfigListResult],
+    Generic[T_ConfigListResult, T_ConfigItemData],
+):
     """Model representing a result for a config list operation."""
 
-    configs: list[ConfigListItem] = Field(description="The list of configs")
+    configs: list[ConfigListItem[T_ConfigItemData]] = Field(description="The list of configs")
 
 
-class SnapshotListResult(ProviderResultModel[T_SnapshotListResult]):
+class SnapshotListResult(
+    ProviderResultModel[T_SnapshotListResult],
+    Generic[T_SnapshotListResult, T_SnapshotItemData],
+):
     """Model representing a result for a snapshot list operation."""
 
-    snapshots: list[SnapshotItem] = Field(description="The list of snapshots")
+    snapshots: list[SnapshotItem[T_SnapshotItemData]] = Field(description="The list of snapshots")
+
+
+class SnapshotUpdateResult(ProviderResultModel[T_SnapshotUpdateResult]):
+    """Model representing a result for a snapshot update operation."""
+
+    snapshot_id: str = Field(description="The provider-owned snapshot identifier")
 
 
 class _BaseListParams(BaseModel, Generic[T_ListParamsPayload]):
@@ -483,6 +520,10 @@ class DeploymentCreate(BaseModel):
     spec: BaseDeploymentData = Field(description="The base metadata of the deployment")
     snapshot: SnapshotItems | None = Field(None, description="The snapshots of the deployment")
     config: ConfigItem | None = Field(None, description="The config of the deployment")
+    provider_data: T_DeploymentCreate | None = Field(
+        None,
+        description="Provider-specific opaque payload for deployment create operations.",
+    )
 
 
 @lru_cache(maxsize=1)
@@ -495,7 +536,11 @@ class BaseDeploymentDataUpdate(BaseModel):
     """Deployment base update payload."""
 
     name: str | None = Field(None, description="The name of the deployment")
-    description: str | None = Field(None, description="The description of the deployment")
+    description: str | None = Field(
+        None,
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        description="The description of the deployment",
+    )
 
     @model_validator(mode="after")
     def validate_has_changes(self) -> "BaseDeploymentDataUpdate":
@@ -527,13 +572,8 @@ class DeploymentUpdate(BaseModel):
         return self
 
 
-class DeploymentUpdateResult(DeploymentOperationResult):
+class DeploymentUpdateResult(DeploymentOperationResult[T_DeploymentUpdateResult]):
     """Model representing a result for a deployment update operation."""
-
-    snapshot_ids: list[IdLike] = Field(
-        default_factory=list,
-        description="Snapshot ids produced or bound during the update.",
-    )
 
 
 class RedeployResult(DeploymentOperationResult):
@@ -582,7 +622,7 @@ class ExecutionResultBase(ProviderResultModel[T_ExecutionResult]):
     deployment_id: IdLike = Field(description="The id of the deployment that was executed.")
 
 
-class ExecutionCreateResult(ExecutionResultBase):
+class ExecutionCreateResult(ExecutionResultBase[T_ExecutionCreateResult]):
     """Result returned when an execution is created.
 
     This model intentionally remains distinct from ``ExecutionStatusResult`` even
@@ -592,7 +632,7 @@ class ExecutionCreateResult(ExecutionResultBase):
     """
 
 
-class ExecutionStatusResult(ExecutionResultBase):
+class ExecutionStatusResult(ExecutionResultBase[T_ExecutionStatusResult]):
     """Result returned when querying an execution status.
 
     This model intentionally remains distinct from ``ExecutionCreateResult`` even
@@ -600,6 +640,33 @@ class ExecutionStatusResult(ExecutionResultBase):
     response types: create responses and status responses represent different API
     stages and may diverge as the contract evolves.
     """
+
+
+class VerifyCredentials(BaseModel, Generic[T_VerifyCredentials]):
+    """Provider-agnostic input for credential verification.
+
+    ``base_url`` is the only provider-agnostic field; actual credentials
+    (API keys, access-key pairs, client secrets, etc.) are carried in
+    ``provider_data`` because different providers use fundamentally different
+    credential shapes.  Each adapter defines its own credential model via the
+    ``T_VerifyCredentials`` type parameter, and the mapper is responsible for
+    packing the appropriate credentials into ``provider_data``.
+    """
+
+    base_url: str = Field(description="Provider service URL to verify against.")
+    provider_data: T_VerifyCredentials | None = Field(
+        None,
+        description="Provider-specific credential payload.",
+    )
+
+
+class VerifyCredentialsResult(BaseModel, Generic[T_VerifyCredentialsResult]):
+    """Provider-agnostic result from credential verification."""
+
+    provider_result: T_VerifyCredentialsResult | None = Field(
+        None,
+        description="Provider-specific result payload.",
+    )
 
 
 class DeploymentListTypesResult(ProviderResultModel[AdapterPayload]):

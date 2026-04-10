@@ -187,9 +187,13 @@ def update_model_options_in_build_config(
     cached = component.cache.get(cache_key, {"options": []})
     build_config[model_field_name]["options"] = cached["options"]
 
-    # Set default value on initial load when field is empty
-    # Fetch from user's default model setting in the database
-    if not field_value or field_value == "":
+    # Set default value on initial load when the model field has no value.
+    # We check the model field's own value (not field_value, which is the value
+    # of whatever field triggered the update — e.g. api_key text).  Using
+    # field_value here would incorrectly reset the model selection whenever a
+    # non-model field (like api_key) is cleared or set to a global variable.
+    current_model_value = build_config.get(model_field_name, {}).get("value")
+    if not current_model_value:
         options = cached.get("options", [])
         if options:
             # Determine model type based on cache_key_prefix
@@ -311,6 +315,11 @@ def handle_model_input_update(
     # skip the provider reset/re-population so their value is preserved.
     provider_mapped_fields = _get_all_provider_mapped_fields()
     if field_name in provider_mapped_fields:
+        return build_config
+
+    # If the model field is in connection mode (user chose "Connect other models"),
+    # skip auto-selection and provider re-population so credentials stay cleared.
+    if build_config.get(model_field_name, {}).get("_connection_mode"):
         return build_config
 
     # When the user changes the model selection, we need to reset/hide fields that may no longer apply
