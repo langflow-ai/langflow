@@ -137,13 +137,20 @@ export default function ModelInputComponent({
       if (option.metadata?.is_disabled_provider) continue;
       const provider = option.provider || "Unknown";
 
+      // Backend sticky-default: options tagged with `not_enabled_locally` are
+      // the user's saved selection injected into the options list by the
+      // unified-models build_config helper even though they aren't in the
+      // enabled list. They must always pass the client-side filter so the
+      // selection stays visible and selectable in the dropdown.
+      const isStickyNotEnabled = option.metadata?.not_enabled_locally === true;
+
       // Filter against client-side enabled models data. This is the source of
       // truth for what the current user has enabled — stale `options` saved in
       // an imported flow may include models from providers the current user
       // hasn't enabled (e.g. WatsonX). When the provider is tracked in
       // enabled_models, the model must be explicitly enabled (=== true); a
       // `false` or missing entry means the model should be hidden.
-      if (enabledModelsData?.enabled_models) {
+      if (!isStickyNotEnabled && enabledModelsData?.enabled_models) {
         const providerModels = enabledModelsData.enabled_models[provider];
         if (providerModels && providerModels[option.name] !== true) {
           continue;
@@ -233,18 +240,13 @@ export default function ModelInputComponent({
     if (flatOptions.length === 0 || isConnectionMode) return;
     if (hasProcessedEmptyRef.current) return;
 
-    const currentName = value?.[0]?.name;
     const isEmpty = !value || value.length === 0;
-    // When importing a flow, the saved value may reference a model from a
-    // provider the current user hasn't enabled (e.g. WatsonX). In that case the
-    // model will have been filtered out of flatOptions, so we also reset here
-    // to avoid persisting the stale selection on next save.
-    const isStaleValue =
-      !isEmpty &&
-      !!currentName &&
-      !flatOptions.some((option) => option.name === currentName);
-
-    if (!isEmpty && !isStaleValue) return;
+    // Sticky-default: if the component has a saved value, keep it as-is. The
+    // backend injects any selection that isn't in the user's enabled list
+    // back into `options` tagged with `not_enabled_locally`, so the saved
+    // value remains visible and runnable. Only auto-select the first option
+    // when there's no saved value at all.
+    if (!isEmpty) return;
 
     const firstOption = flatOptions[0];
     // Construct the new value object
@@ -455,23 +457,48 @@ export default function ModelInputComponent({
     return <div className="w-full">{renderLoadingButton()}</div>;
   }
 
+  // Show a small "Configure" wrench next to the trigger when the currently
+  // selected model was injected by the backend as a sticky default — i.e.
+  // the user's saved selection isn't in their current enabled_models list.
+  // Clicking it jumps straight to the provider manager so the user can
+  // enable the provider without losing their selection.
+  const showConfigureAffordance =
+    selectedModel?.metadata?.not_enabled_locally === true;
+
   // Main render
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
-        <div className="w-full truncate">
-          <ModelTrigger
-            open={open}
-            disabled={disabled}
-            options={flatOptions}
-            selectedModel={selectedModel}
-            placeholder={placeholder}
-            hasEnabledProviders={hasEnabledProviders ?? false}
-            onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
-            id={id}
-            refButton={refButton}
-            showEmptyState={showEmptyState}
-          />
+        <div className="flex w-full items-center gap-2">
+          <div className="min-w-0 flex-1 truncate">
+            <ModelTrigger
+              open={open}
+              disabled={disabled}
+              options={flatOptions}
+              selectedModel={selectedModel}
+              placeholder={placeholder}
+              hasEnabledProviders={hasEnabledProviders ?? false}
+              onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
+              id={id}
+              refButton={refButton}
+              showEmptyState={showEmptyState}
+            />
+          </div>
+          {showConfigureAffordance && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setOpenManageProvidersDialog(true);
+              }}
+              data-testid={`${id}-configure`}
+              aria-label="Configure this model's provider"
+              title="This model isn't enabled for your user. Click to configure its provider."
+              className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-primary"
+            >
+              <ForwardedIconComponent name="Wrench" className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
         {renderPopoverContent()}
       </Popover>

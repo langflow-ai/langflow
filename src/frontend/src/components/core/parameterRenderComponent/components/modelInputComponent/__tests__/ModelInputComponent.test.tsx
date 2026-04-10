@@ -602,10 +602,13 @@ describe("ModelInputComponent", () => {
       expect(screen.getByRole("combobox")).not.toBeDisabled();
     });
 
-    it("auto-resets a stale value whose model is no longer enabled", () => {
-      // Importing a flow that selected a WatsonX model, but the current user
-      // has no WatsonX models enabled — only OpenAI. The stale value must be
-      // replaced with the first available model so it isn't persisted on save.
+    it("keeps a saved value whose model isn't enabled locally and renders the Configure wrench", async () => {
+      // The backend's update_model_options_in_build_config injects the saved
+      // value into options tagged with `not_enabled_locally: true` whenever
+      // it isn't in the user's enabled list. The frontend must:
+      //   1. NOT auto-reset the saved value.
+      //   2. Keep the option visible/selectable in the dropdown.
+      //   3. Render the Configure wrench next to the trigger.
       mockedUseGetEnabledModels.mockReturnValue({
         data: {
           enabled_models: {
@@ -616,31 +619,123 @@ describe("ModelInputComponent", () => {
       });
 
       const handleOnNewValue = jest.fn();
-      const staleValue = [
+      const savedValue = [
         {
           id: "ibm/granite-3",
           name: "ibm/granite-3",
           icon: "IBMWatsonx",
           provider: "IBM watsonx.ai",
-          metadata: {},
+          metadata: { not_enabled_locally: true },
+        },
+      ];
+      // Backend-style options: the saved value is injected into options with
+      // the sticky flag so the client can render it.
+      const optionsWithSticky = [
+        ...mockOptions,
+        {
+          id: "ibm/granite-3",
+          name: "ibm/granite-3",
+          icon: "IBMWatsonx",
+          provider: "IBM watsonx.ai",
+          metadata: { not_enabled_locally: true },
         },
       ];
 
       renderWithQueryClient(
         <ModelInputComponent
           {...defaultProps}
-          value={staleValue}
+          options={optionsWithSticky}
+          value={savedValue}
           handleOnNewValue={handleOnNewValue}
         />,
       );
 
-      // Reset must have been fired with a still-enabled model, not the stale
-      // WatsonX reference.
-      expect(handleOnNewValue).toHaveBeenCalled();
-      const lastCall =
-        handleOnNewValue.mock.calls[handleOnNewValue.mock.calls.length - 1][0];
-      expect(lastCall.value[0].provider).toBe("OpenAI");
-      expect(lastCall.value[0].name).not.toBe("ibm/granite-3");
+      // Value must not be reset by the auto-select effect.
+      expect(handleOnNewValue).not.toHaveBeenCalled();
+
+      // Saved model remains visible in the trigger label.
+      await waitFor(() => {
+        expect(screen.getByText("ibm/granite-3")).toBeInTheDocument();
+      });
+
+      // Configure wrench is rendered next to the trigger.
+      expect(
+        screen.getByTestId(`${defaultProps.id}-configure`),
+      ).toBeInTheDocument();
+    });
+
+    it("opens the provider manager when the Configure wrench is clicked", async () => {
+      mockedUseGetEnabledModels.mockReturnValue({
+        data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+        isLoading: false,
+      });
+
+      const savedValue = [
+        {
+          id: "ibm/granite-3",
+          name: "ibm/granite-3",
+          icon: "IBMWatsonx",
+          provider: "IBM watsonx.ai",
+          metadata: { not_enabled_locally: true },
+        },
+      ];
+      const optionsWithSticky = [
+        ...mockOptions,
+        {
+          id: "ibm/granite-3",
+          name: "ibm/granite-3",
+          icon: "IBMWatsonx",
+          provider: "IBM watsonx.ai",
+          metadata: { not_enabled_locally: true },
+        },
+      ];
+
+      const handleOnNewValue = jest.fn();
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={optionsWithSticky}
+          value={savedValue}
+          handleOnNewValue={handleOnNewValue}
+        />,
+      );
+
+      const wrench = await screen.findByTestId(`${defaultProps.id}-configure`);
+      await user.click(wrench);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
+      });
+      // Clicking the wrench must not mutate the saved value.
+      expect(handleOnNewValue).not.toHaveBeenCalled();
+    });
+
+    it("does not render Configure when the selected model isn't flagged", () => {
+      // Baseline: a normal enabled model must not surface the wrench.
+      mockedUseGetEnabledModels.mockReturnValue({
+        data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+        isLoading: false,
+      });
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          value={[
+            {
+              id: "gpt-4",
+              name: "gpt-4",
+              icon: "Bot",
+              provider: "OpenAI",
+              metadata: {},
+            },
+          ]}
+        />,
+      );
+
+      expect(
+        screen.queryByTestId(`${defaultProps.id}-configure`),
+      ).not.toBeInTheDocument();
     });
   });
 });
