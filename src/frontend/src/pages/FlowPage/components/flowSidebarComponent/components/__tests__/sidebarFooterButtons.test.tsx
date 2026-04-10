@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useUtilityStore } from "@/stores/utilityStore";
 import SidebarMenuButtons from "../sidebarFooterButtons";
 
 // Mock the UI components
@@ -112,6 +113,7 @@ describe("SidebarMenuButtons", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNavigate.mockClear();
+    useUtilityStore.setState({ allowCustomComponents: true });
     // Reset to default sidebar state
     mockUseSidebar.mockReturnValue({
       activeSection: "components",
@@ -147,6 +149,16 @@ describe("SidebarMenuButtons", () => {
       render(<SidebarMenuButtons {...defaultProps} />);
 
       expect(screen.getByTestId("icon-Plus")).toBeInTheDocument();
+    });
+
+    it("should hide the custom component button while custom components are disabled", () => {
+      useUtilityStore.setState({ allowCustomComponents: false });
+
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId("sidebar-custom-component-button"),
+      ).not.toBeInTheDocument();
     });
   });
 

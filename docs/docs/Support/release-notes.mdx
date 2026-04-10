@@ -56,6 +56,11 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
+- Flow DevOps Toolkit SDK
+
+    Use the Flow DevOps Toolkit SDK to manage local and remote flows with Git-style terminal commands.
+    For more information, see the [Langflow Flow DevOps Toolkit SDK](../API-Reference/flow-devops-sdk.mdx).
+
 - Renamed `Data` and `DataFrame` types
 
     The `Data` object is now named `JSON`, and the `DataFrame` object is now named `Table`.
@@ -163,6 +168,16 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     Tool calling is temporarily disabled for the following Google Gemini 3 preview models:
     `gemini-3.1-pro-preview`, `gemini-3-pro-preview`, `gemini-3-flash-preview`, and `gemini-3-pro-image-preview`.
+
+- Docling installation behavior differs between Desktop and OSS
+
+    In Langflow 1.8.0, Docling behavior depends on how Langflow is installed.
+
+    For Langflow Desktop installations, you need to set `LANGFLOW_DOCLING=True` in your `.env` file to enable Docling dependency installation. For more information, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
+
+    For Langflow OSS installations with `uv pip install langflow`, Docling is included with the Langflow package.
+
+    For Langflow OSS installations with `uv pip install langflow-base`, install Docling explicitly as an extra with `uv pip install "langflow-base[docling]"`.
 
 ### New features and enhancements
 

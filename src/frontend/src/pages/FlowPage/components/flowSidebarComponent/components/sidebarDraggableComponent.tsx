@@ -1,4 +1,5 @@
 import { type DragEventHandler, forwardRef, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent, {
   ForwardedIconComponent,
 } from "@/components/common/genericIconComponent";
@@ -59,6 +60,7 @@ export const SidebarDraggableComponent = forwardRef(
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const { deleteFlow } = useDeleteFlow();
     const flows = useFlowsManagerStore((state) => state.flows);
@@ -236,7 +238,7 @@ export const SidebarDraggableComponent = forwardRef(
                           name="Download"
                           className="relative top-0.5 mr-2 h-4 w-4"
                         />{" "}
-                        Download{" "}
+                        {t("sidebar.download")}{" "}
                       </div>{" "}
                     </SelectItem>
                     {(!official || onDelete) && (
@@ -249,7 +251,7 @@ export const SidebarDraggableComponent = forwardRef(
                             name="Trash2"
                             className="relative top-0.5 mr-2 h-4 w-4"
                           />{" "}
-                          Delete{" "}
+                          {t("sidebar.delete")}{" "}
                         </div>{" "}
                       </SelectItem>
                     )}

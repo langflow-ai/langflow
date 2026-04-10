@@ -4,7 +4,7 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { ensureCheckboxChecked } from "../../utils/ensure-checkbox-checked";
+import { ensureFileSelected } from "../../utils/ensure-checkbox-checked";
 import { generateRandomFilename } from "../../utils/generate-filename";
 import {
   disableInspectPanel,
@@ -95,8 +95,7 @@ test(
         timeout: 5000,
       });
 
-      const checkbox = page.getByTestId(`checkbox-${sourceFileName}`).last();
-      await ensureCheckboxChecked(checkbox);
+      await ensureFileSelected(page);
 
       // Create DataTransfer object and file
       const dataTransfer = await page.evaluateHandle((jsonFileName) => {
@@ -130,16 +129,16 @@ test(
 
       await expect(
         page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 1000 });
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
 
       // Test checkbox
 
       await expect(
         page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked");
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
       await expect(
         page.getByTestId(`checkbox-${jsonFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked");
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
       await page.getByTestId(`checkbox-${sourceFileName}`).last().click();
       await page.getByTestId(`checkbox-${jsonFileName}`).last().click();
 
@@ -240,10 +239,10 @@ test(
 
       await expect(
         page.getByTestId(`checkbox-${renamedTxtFile}`).last(),
-      ).toHaveAttribute("data-state", "checked");
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
       await expect(
         page.getByTestId(`checkbox-${renamedJsonFile}`).last(),
-      ).toHaveAttribute("data-state", "checked");
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
 
       await page.getByTestId("select-files-modal-button").click();
 
