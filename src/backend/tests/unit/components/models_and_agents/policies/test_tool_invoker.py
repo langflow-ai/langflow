@@ -268,4 +268,32 @@ async def test_tool_invoker_invoke_primitive_type_conversion():
     assert isinstance(result, int)
 
 
+@pytest.mark.asyncio
+async def test_tool_invoker_invoke_with_tool_message_artifact():
+    """Defensive: if ainvoke returns a ToolMessage whose artifact is a CallToolResult.
+
+    ToolInvoker must extract structuredContent from the artifact.
+    """
+    from langchain_core.messages import ToolMessage
+
+    tool = MagicMock()
+    tool.name = "test_tool"
+
+    mock_result = MagicMock(spec=CallToolResult)
+    mock_result.structuredContent = {"status": "ok", "count": 5}
+
+    tool_message = ToolMessage(
+        content="ignored",
+        tool_call_id="call-xyz",
+        artifact=mock_result,
+    )
+    tool.ainvoke = AsyncMock(return_value=tool_message)
+
+    invoker = ToolInvoker([tool])
+    result = await invoker.invoke("test_tool", {"action": "count"}, dict)
+
+    assert result == {"status": "ok", "count": 5}
+    tool.ainvoke.assert_called_once_with(input={"action": "count"})
+
+
 # Made with Bob

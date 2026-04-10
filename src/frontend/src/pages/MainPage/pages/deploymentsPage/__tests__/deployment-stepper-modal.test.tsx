@@ -251,7 +251,7 @@ describe("Create mode — step navigation", () => {
         id: "watsonx",
         type: "watsonx",
         name: "watsonx Orchestrate",
-        icon: "Bot",
+        icon: "WatsonxOrchestrate",
       },
       initialInstance: makeInstance(),
     });

@@ -5,6 +5,7 @@ on:
       - "**/*.py"
       - "src/lfx/src/lfx/components/**"
       - "scripts/build_component_index.py"
+    types: [opened, synchronize, reopened, labeled]
 env:
   PYTHON_VERSION: "3.13"
 
@@ -12,7 +13,7 @@ env:
 jobs:
   lint:
     name: Run Ruff Check and Format
-    if: ${{ github.actor != 'github-actions[bot]' }}
+    if: github.event.action != 'labeled' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -30,7 +31,7 @@ jobs:
 
   update-starter-projects:
     name: Update Starter Projects
-    if: ${{ github.actor != 'github-actions[bot]' }}
+    if: github.event.action != 'labeled' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -55,10 +56,35 @@ jobs:
 
   update-component-index:
     name: Update Component Index
-    if: ${{ github.actor != 'github-actions[bot]' }}
+    if: >-
+      github.actor != 'github-actions[bot]'
+      && (github.event.action != 'labeled' || github.event.label.name == 'fix-index')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Merge base branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git merge origin/${{ github.base_ref }} --no-edit || {
+            # Check which files have conflicts
+            CONFLICTED=$(git diff --name-only --diff-filter=U)
+
+            # If any non-generated files conflict, bail out — needs manual resolution
+            if echo "$CONFLICTED" | grep -v component_index.json | grep -q .; then
+              echo "::error::Merge conflicts in non-generated files require manual resolution"
+              git merge --abort
+              exit 1
+            fi
+
+            # Only component_index.json conflicts — resolve and finish merge
+            git checkout --theirs src/lfx/src/lfx/_assets/component_index.json
+            git add src/lfx/src/lfx/_assets/component_index.json
+            GIT_EDITOR=true git merge --continue
+          }
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -76,6 +102,3 @@ jobs:
         run: make build_component_index
 
       - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
-
-
-
