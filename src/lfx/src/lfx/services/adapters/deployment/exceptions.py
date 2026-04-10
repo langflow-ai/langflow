@@ -6,7 +6,6 @@ regardless of adapter.
 
 from __future__ import annotations
 
-import re
 from typing import NoReturn
 
 from fastapi import status
@@ -271,63 +270,14 @@ def http_status_for_deployment_error(exc: DeploymentServiceError) -> int:
     return status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-# Word-boundary regexes avoid false matches in identifiers like "Simple_Agent".
-_TOOL_WORD_RE = re.compile(r"\btool\b", re.IGNORECASE)
-_CONNECTION_WORD_RE = re.compile(r"\bconnection\b", re.IGNORECASE)
-_APP_ID_WORD_RE = re.compile(r"\bapp[_\s-]?id\b", re.IGNORECASE)
-_AGENT_WORD_RE = re.compile(r"\bagent\b", re.IGNORECASE)
-_TOOL_NAME_RE = re.compile(r"""tool(?:\s+with\s+name|\s+name)?\s*['"](?P<name>[^'"]+)['"]""", re.IGNORECASE)
-_AGENT_NAME_RE = re.compile(r"""agent(?:\s+with\s+name|\s+name)?\s*['"](?P<name>[^'"]+)['"]""", re.IGNORECASE)
-_APP_ID_QUOTED_RE = re.compile(r"""app[_\s-]?id\s*(?:=|:)?\s*['"](?P<name>[^'"]+)['"]""", re.IGNORECASE)
-_APP_ID_UNQUOTED_RE = re.compile(r"""\bapp[_\s-]?id\b\s*(?:=|:)?\s*(?P<name>[A-Za-z0-9_.:-]+)""", re.IGNORECASE)
-
-
-def _infer_conflict_resource(detail_text: str) -> str | None:
-    """Infer conflict resource from provider detail text, when possible."""
-    if _TOOL_WORD_RE.search(detail_text):
-        return "tool"
-    if _CONNECTION_WORD_RE.search(detail_text) or _APP_ID_WORD_RE.search(detail_text):
-        return "connection"
-    if _AGENT_WORD_RE.search(detail_text):
-        return "agent"
-    return None
-
-
-def _infer_conflict_name(detail_text: str, *, resource: str | None) -> str | None:
-    """Infer conflict name/identifier from provider detail text."""
-    if resource == "tool":
-        match = _TOOL_NAME_RE.search(detail_text)
-        if match:
-            return (match.group("name") or "").strip() or None
-        return None
-    if resource == "agent":
-        match = _AGENT_NAME_RE.search(detail_text)
-        if match:
-            return (match.group("name") or "").strip() or None
-        return None
-    if resource == "connection":
-        match = _APP_ID_QUOTED_RE.search(detail_text) or _APP_ID_UNQUOTED_RE.search(detail_text)
-        if match:
-            candidate = (match.group("name") or "").strip()
-            return candidate or None
-        return None
-    return None
-
-
 def _resolve_conflict_hints(
-    detail_text: str,
+    _detail_text: str,
     *,
     resource: str | None = None,
     resource_name: str | None = None,
 ) -> tuple[str | None, str | None]:
     normalized_resource = str(resource).strip().lower() if resource is not None else None
     normalized_resource_name = str(resource_name).strip() or None if resource_name is not None else None
-
-    if normalized_resource is None:
-        normalized_resource = _infer_conflict_resource(detail_text)
-    if normalized_resource_name is None:
-        normalized_resource_name = _infer_conflict_name(detail_text, resource=normalized_resource)
-
     return normalized_resource, normalized_resource_name
 
 
@@ -350,7 +300,8 @@ def raise_as_deployment_error(
     set it to None to avoid leaking provider responses through the exception chain.
 
     For conflict errors, callers should pass ``resource`` and ``resource_name``
-    whenever known. Inference from provider detail text is used only as fallback.
+    whenever known. This helper does not infer conflict hints from free-form
+    provider detail text.
     """
     detail_text = str(detail)
     detail_lower = detail_text.lower()

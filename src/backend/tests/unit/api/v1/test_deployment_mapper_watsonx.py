@@ -195,14 +195,8 @@ def test_watsonx_mapper_deployment_list_result_rejects_unknown_flattened_entry_f
 @pytest.mark.parametrize(
     ("raw_message", "expected"),
     [
-        (
-            "app_id is required",
-            "A resource with this name already exists in the provider. app_id is required",
-        ),
-        (
-            "unexpected conflict",
-            "A resource with this name already exists in the provider. unexpected conflict",
-        ),
+        ("app_id is required", "app_id is required"),
+        ("unexpected conflict", "unexpected conflict"),
     ],
 )
 def test_watsonx_mapper_formats_conflict_detail_fallback_without_structured_entity(

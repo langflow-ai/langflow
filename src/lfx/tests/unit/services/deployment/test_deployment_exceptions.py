@@ -245,14 +245,28 @@ def test_raise_as_deployment_error_maps_known_http_statuses() -> None:
         raise_as_deployment_error(status_code=503, detail="service unavailable", message_prefix="x")
 
 
-def test_raise_as_deployment_error_infers_conflict_resource_from_detail() -> None:
+def test_raise_as_deployment_error_does_not_infer_conflict_hints_from_detail() -> None:
     with pytest.raises(ResourceConflictError) as exc_info:
         raise_as_deployment_error(
             status_code=409,
             detail="Tool with name 'Simple_Agent' already exists for this tenant.",
             message_prefix="x",
         )
+    assert exc_info.value.resource is None
+    assert exc_info.value.resource_name is None
+
+
+def test_raise_as_deployment_error_uses_explicit_conflict_hints() -> None:
+    with pytest.raises(ResourceConflictError) as exc_info:
+        raise_as_deployment_error(
+            status_code=409,
+            detail="already exists",
+            message_prefix="x",
+            resource="TOOL",
+            resource_name=" Simple_Agent ",
+        )
     assert exc_info.value.resource == "tool"
+    assert exc_info.value.resource_name == "Simple_Agent"
 
 
 def test_raise_as_deployment_error_uses_detail_heuristics_without_status() -> None:

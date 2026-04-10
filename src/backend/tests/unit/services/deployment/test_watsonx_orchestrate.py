@@ -4831,6 +4831,40 @@ async def test_list_deployments_without_params(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_list_conflict_does_not_force_agent_resource_hint(monkeypatch):
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+
+    class FailingListAgentClient(FakeAgentClient):
+        def _get(self, path: str, params: dict | None = None):  # noqa: ARG002
+            if path == "/agents":
+                raise ClientAPIException(
+                    response=SimpleNamespace(status_code=409, text='{"detail":"resource already exists"}')
+                )
+            return {}
+
+    fake_agent = FailingListAgentClient({"id": "dep-1", "tools": []})
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_agent,
+            agent=fake_agent,
+        )
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(ResourceConflictError) as exc_info:
+        await service.list(user_id="user-1", db=object(), params=None)
+
+    assert exc_info.value.resource is None
+    assert exc_info.value.resource_name is None
+
+
+@pytest.mark.anyio
 async def test_list_types_returns_supported_types():
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     result = await service.list_types(user_id="user-1", db=object())

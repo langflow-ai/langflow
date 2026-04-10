@@ -328,8 +328,8 @@ def handle_adapter_errors(*, mapper: BaseDeploymentMapper | None = None):
         if isinstance(exc, ResourceConflictError) and mapper is not None:
             detail = mapper.format_conflict_detail(
                 exc.message,
-                resource=getattr(exc, "resource", None),
-                resource_name=getattr(exc, "resource_name", None),
+                resource=exc.resource,
+                resource_name=exc.resource_name,
             )
         logger.exception("Adapter error (status=%s): %s", http_status, detail)
         raise HTTPException(

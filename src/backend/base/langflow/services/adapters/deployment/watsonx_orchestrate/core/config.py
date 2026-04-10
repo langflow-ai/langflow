@@ -302,7 +302,6 @@ async def _fetch_deployment_agent_for_configs(
             exc,
             error_prefix=ErrorPrefix.LIST_CONFIGS,
             log_msg="Unexpected error while listing wxO deployment configs",
-            resource="agent",
         )
 
     if not agent:
@@ -329,7 +328,6 @@ async def _resolve_deployment_scope_configs(
             exc,
             error_prefix=ErrorPrefix.LIST_CONFIGS,
             log_msg="Unexpected error while listing wxO tools for config extraction",
-            resource="tool",
         )
 
     all_tool_connection_ids, resolved_tool_ids = _collect_tool_connection_ids(tools=tools)
@@ -353,7 +351,6 @@ async def _resolve_deployment_scope_configs(
                 exc,
                 error_prefix=ErrorPrefix.LIST_CONFIGS,
                 log_msg="Unexpected error while enriching wxO deployment configs with connection types",
-                resource="connection",
             )
         else:
             configs, resolved_connection_ids = _build_deployment_scope_config_items(
@@ -421,7 +418,6 @@ async def list_configs(
                 exc,
                 error_prefix=ErrorPrefix.LIST_CONFIGS,
                 log_msg="Unexpected error while listing wxO tenant configs",
-                resource="connection",
             )
 
         return ConfigListResult(

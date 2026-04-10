@@ -128,9 +128,9 @@ def _resolve_exc_detail(exc: ClientAPIException | HTTPException) -> str:
     return str(extract_error_detail(str(exc.detail)))
 
 
-def _resolve_exc_status_code(exc: ClientAPIException | HTTPException) -> int | None:
+def _resolve_exc_status_code(exc: ClientAPIException | HTTPException) -> int:
     if isinstance(exc, ClientAPIException):
-        return int(getattr(exc.response, "status_code", 0) or 0) or None
+        return int(exc.response.status_code)
     return int(exc.status_code)
 
 

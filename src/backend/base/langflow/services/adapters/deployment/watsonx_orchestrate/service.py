@@ -238,7 +238,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.CREATE,
                 log_msg="Unexpected provider error during wxO deployment create",
-                resource=None,
             )
         except Exception as exc:
             logger.exception("Unexpected error during wxO deployment creation")
@@ -312,7 +311,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.LIST_LLMS,
                 log_msg="Unexpected error while listing wxO deployment LLMs",
-                resource="llm",
                 pass_through=(InvalidContentError),
             )
 
@@ -375,7 +373,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.LIST,
                 log_msg="Unexpected error while listing wxO deployments",
-                resource="agent",
                 pass_through=(AuthenticationError, AuthorizationError, InvalidDeploymentTypeError),
             )
 
@@ -400,7 +397,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.GET,
                 log_msg="Unexpected error fetching wxO deployment",
-                resource="agent",
                 pass_through=(AuthenticationError, AuthorizationError, DeploymentNotFoundError),
             )
         if not agent:
@@ -499,7 +495,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.UPDATE,
                 log_msg="Unexpected provider error during wxO deployment update",
-                resource=None,
             )
         except (
             AuthenticationError,
@@ -601,7 +596,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.HEALTH,
                 log_msg="Unexpected error fetching wxO deployment status",
-                resource="agent",
             )
 
         if not agent or isinstance(agent, str):  # the adk returns a string if not found
@@ -641,7 +635,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.CREATE_EXECUTION,
                 log_msg="Unexpected error creating wxO deployment execution",
-                resource="agent",
                 pass_through=(AuthenticationError, AuthorizationError, ResourceNotFoundError, InvalidContentError),
             )
 
@@ -675,7 +668,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.GET_EXECUTION,
                 log_msg="Unexpected error fetching wxO deployment execution",
-                resource="execution",
                 pass_through=(AuthenticationError, AuthorizationError, ResourceNotFoundError, InvalidContentError),
             )
 
@@ -743,7 +735,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     exc,
                     error_prefix=ErrorPrefix.LIST,
                     log_msg="Unexpected error while listing wxO tenant snapshots",
-                    resource="snapshot",
                 )
             snapshots = [
                 SnapshotItem(
@@ -770,7 +761,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.LIST,
                 log_msg="Unexpected error while listing wxO deployment snapshots",
-                resource="agent",
             )
 
         if not agent or not isinstance(agent, dict):
@@ -787,7 +777,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     exc,
                     error_prefix=ErrorPrefix.LIST,
                     log_msg="Unexpected error while listing wxO tools for snapshot extraction",
-                    resource="agent",
                 )
 
         snapshots = [
@@ -836,7 +825,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.LIST,
                 log_msg="Unexpected error while verifying wxO tool snapshots by ID",
-                resource="snapshot",
             )
         return snapshots
 
