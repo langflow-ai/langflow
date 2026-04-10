@@ -424,7 +424,7 @@ async def upload_wxo_flow_tool(
     artifact_bytes: bytes,
     created_tool_ids_journal: list[str] | None = None,
 ) -> str:
-    tool_name = str(tool_payload.get("name") or "").strip() or None
+    tool_name = tool_payload.get("name")
     try:
         tool_response = await retry_create(asyncio.to_thread, clients.tool.create, tool_payload)
     except (ClientAPIException, HTTPException) as exc:
@@ -456,7 +456,7 @@ async def upload_wxo_flow_tool(
             error_prefix=ErrorPrefix.CREATE,
             log_msg="Unexpected provider error during wxO tool artifact upload",
             resource="tool",
-            resource_name=tool_name or tool_id,
+            resource_name=tool_name,
         )
     return tool_id
 
