@@ -139,12 +139,12 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
             "ix_message_session_metadata_tenant",
             text("(session_metadata->>'tenant_id')"),
             postgresql_using="btree",
-        ).ddl_if(dialect="postgresql"),
+        ),
         Index(
             "ix_message_session_metadata_user",
             text("(session_metadata->>'user_id')"),
             postgresql_using="btree",
-        ).ddl_if(dialect="postgresql"),
+        ),
     )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
