@@ -235,7 +235,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         Used by ``resolve_provider_account_create`` which needs the
         tenant_id for the DB model.
         """
-        parsed = self._parse_create_provider_data(provider_data)
+        parsed = self._parse_and_check_url(provider_data)
         tenant_id = parsed.tenant_id
         if not tenant_id:
             tenant_id = extract_tenant_from_url(
@@ -255,7 +255,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         *,
         provider_data: dict[str, Any],
     ) -> str:
-        return self._parse_create_provider_data(provider_data).url
+        return self._parse_and_check_url(provider_data).url
 
     def format_conflict_detail(self, raw_message: str) -> str:
         lower = raw_message.lower()
@@ -273,7 +273,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             return "A tool with this name already exists in the provider. Please choose a different name."
         return super().format_conflict_detail(raw_message)
 
-    def _parse_create_provider_data(
+    def _parse_and_check_url(
         self,
         provider_data: dict[str, Any],
     ) -> WatsonxApiProviderAccountCreate:
@@ -299,7 +299,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot_name="provider_account_update",
             raw=provider_data,
         )
-        return {"api_key": parsed.api_key}
+        return parsed.model_dump()
 
     def resolve_provider_account_create(
         self,
@@ -343,7 +343,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         *,
         payload: DeploymentProviderAccountCreateRequest,
     ) -> VerifyCredentials:
-        parsed = self._parse_create_provider_data(payload.provider_data)
+        parsed = self._parse_and_check_url(payload.provider_data)
         return VerifyCredentials(
             base_url=parsed.url,
             provider_data={"api_key": parsed.api_key},
