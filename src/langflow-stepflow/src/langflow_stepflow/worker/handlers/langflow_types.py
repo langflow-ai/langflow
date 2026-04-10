@@ -72,7 +72,7 @@ def _deserialize_dataframe(obj_data: dict[str, Any], raw: dict[str, Any]) -> Any
         import json
 
         import pandas as pd
-        from langflow.schema.dataframe import DataFrame
+        from lfx.schema.dataframe import DataFrame
 
         text_key = obj_data.get("text_key", "text")
         default_value = obj_data.get("default_value", "")
@@ -113,7 +113,7 @@ def _recover_dataframe(raw_value: dict[str, Any]) -> Any:
         import io
 
         import pandas as pd
-        from langflow.schema.dataframe import DataFrame as LfDataFrame
+        from lfx.schema.dataframe import DataFrame as LfDataFrame
 
         json_str = raw_value.get("json_data")
         if not json_str or not isinstance(json_str, str):
