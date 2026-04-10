@@ -126,12 +126,27 @@ export default function StepProvider() {
     <div className="flex h-full w-full flex-col gap-6 overflow-y-auto py-3">
       <h2 className="text-lg font-semibold">Provider</h2>
 
-      <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">
-        <ForwardedIconComponent
-          name={provider.icon}
-          className="h-8 w-8 text-foreground"
-        />
-        <span className="text-sm font-medium">{provider.name}</span>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">
+          <ForwardedIconComponent
+            name={provider.icon}
+            className="h-8 w-8 text-foreground"
+          />
+          <span className="text-sm font-medium">{provider.name}</span>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Configure your watsonx Orchestrate credentials below. Sign in or sign
+          up to{" "}
+          <a
+            href="https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary hover:underline"
+          >
+            find your credentials
+          </a>
+          .
+        </p>
       </div>
 
       {hasEnvironments ? (
