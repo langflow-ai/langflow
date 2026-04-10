@@ -28,6 +28,7 @@ import type {
 } from "../types";
 
 interface DeploymentStepperInitialState {
+  projectId?: string;
   selectedVersionByFlow?: Map<
     string,
     { versionId: string; versionTag: string }
@@ -363,6 +364,9 @@ export function DeploymentStepperProvider({
 
       return {
         provider_id: providerId,
+        ...(initialState?.projectId
+          ? { project_id: initialState.projectId }
+          : {}),
         name: deploymentName,
         description: deploymentDescription,
         type: deploymentType,
@@ -376,6 +380,7 @@ export function DeploymentStepperProvider({
     [
       attachedConnectionByFlow,
       buildConnectionPayloads,
+      initialState?.projectId,
       deploymentDescription,
       deploymentName,
       deploymentType,
