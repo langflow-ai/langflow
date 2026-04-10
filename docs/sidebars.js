@@ -101,6 +101,7 @@ module.exports = {
       items: [
         "Agents/mcp-client",
         "Agents/mcp-server",
+        "Agents/langflow-mcp-client",
         "Agents/mcp-component-astra",
       ],
     },
