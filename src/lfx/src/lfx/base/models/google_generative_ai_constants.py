@@ -99,18 +99,31 @@ GOOGLE_GENERATIVE_AI_MODELS_DETAILED = [
 GOOGLE_GENERATIVE_AI_MODELS = [metadata["name"] for metadata in GOOGLE_GENERATIVE_AI_MODELS_DETAILED]
 
 # Google Generative AI Embedding Models
-GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS = [
-    "models/text-embedding-004",
-    "models/embedding-001",
-]
-
 # Embedding models as detailed metadata
 GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED = [
+    # Current supported embedding models
     create_model_metadata(
         provider="Google Generative AI",
-        name=name,
+        name="models/gemini-embedding-001",
         icon="GoogleGenerativeAI",
         model_type="embeddings",
-    )
-    for name in GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS
+        default=True,
+    ),
+    # Legacy/deprecated embedding models
+    create_model_metadata(
+        provider="Google Generative AI",
+        name="models/text-embedding-004",
+        icon="GoogleGenerativeAI",
+        model_type="embeddings",
+        deprecated=True,
+    ),
+    create_model_metadata(
+        provider="Google Generative AI",
+        name="models/embedding-001",
+        icon="GoogleGenerativeAI",
+        model_type="embeddings",
+        deprecated=True,
+    ),
 ]
+
+GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS = [metadata["name"] for metadata in GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED]
