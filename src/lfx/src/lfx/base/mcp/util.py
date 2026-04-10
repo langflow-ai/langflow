@@ -18,6 +18,7 @@ from uuid import UUID
 import httpx
 from anyio import ClosedResourceError
 from httpx import codes as httpx_codes
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import StructuredTool
 from mcp import ClientSession
 from mcp.shared.exceptions import McpError
@@ -484,6 +485,57 @@ def _strip_none_recursive(obj: Any) -> Any:
     if isinstance(obj, list):
         return [_strip_none_recursive(item) for item in obj]
     return obj
+
+
+def _convert_mcp_result(result: Any) -> Any:
+    """Convert a CallToolResult into a format LangChain agents can consume.
+
+    - Text-only results → plain string (backward compatible).
+    - Results containing images or unsupported blocks → list of LangChain
+      content blocks so that vision-capable LLMs receive proper multimodal
+      input instead of a raw base64 string (fixes issue #11812).
+    - Unsupported block types (resource, resource_link, audio, etc.) are
+      serialised as ``{"type": "text", "text": json.dumps(block)}`` so no
+      content is silently dropped on the agent path.
+    - Only collapses back to a plain string when every block is plain text.
+    """
+    if result is None:
+        return ""
+
+    content = getattr(result, "content", None)
+    if not content:
+        return ""
+
+    needs_list = any(getattr(block, "type", None) != "text" for block in content)
+
+    if not needs_list:
+        # Text-only: join all text blocks into a single string (backward compat)
+        return "\n".join(getattr(block, "text", "") for block in content if getattr(block, "type", None) == "text")
+
+    # Mixed or non-text: build a list of LangChain content blocks
+    blocks: list[dict] = []
+    for block in content:
+        block_type = getattr(block, "type", None)
+        if block_type == "text":
+            blocks.append({"type": "text", "text": getattr(block, "text", "")})
+        elif block_type == "image":
+            mime = getattr(block, "mimeType", None) or "image/png"
+            data = getattr(block, "data", "")
+            blocks.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime};base64,{data}"},
+                }
+            )
+        else:
+            # Unsupported block type (resource, resource_link, audio, …):
+            # serialise to JSON text so no content is lost on the agent path.
+            try:
+                raw_text = json.dumps(block.model_dump(), ensure_ascii=False)
+            except AttributeError:
+                raw_text = json.dumps({"type": block_type, "raw": str(block)}, ensure_ascii=False)
+            blocks.append({"type": "text", "text": raw_text})
+    return blocks
 
 
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
@@ -1864,9 +1916,12 @@ async def update_tools(
 
             # Create a custom StructuredTool that bypasses schema validation
             class MCPStructuredTool(StructuredTool):
-                def run(self, tool_input: str | dict, config=None, **kwargs):
-                    """Override the main run method to handle parameter conversion before validation."""
-                    # Parse tool_input if it's a string
+                _tool_call_id_key = "_lf_tool_call_id"
+
+                def _to_args_and_kwargs(
+                    self, tool_input: str | dict, tool_call_id: str | None
+                ) -> tuple[tuple, dict[str, Any]]:
+                    """Normalize MCP tool input before LangChain validates it."""
                     if isinstance(tool_input, str):
                         try:
                             parsed_input = json.loads(tool_input)
@@ -1875,28 +1930,27 @@ async def update_tools(
                     else:
                         parsed_input = tool_input or {}
 
-                    # Convert camelCase parameters to snake_case
                     converted_input = self._convert_parameters(parsed_input)
+                    tool_args, tool_kwargs = super()._to_args_and_kwargs(converted_input, tool_call_id)
+                    if tool_call_id is not None:
+                        tool_kwargs[self._tool_call_id_key] = tool_call_id
+                    return tool_args, tool_kwargs
 
-                    # Call the parent run method with converted parameters
-                    return super().run(converted_input, config=config, **kwargs)
+                def _run(self, *args: Any, config: RunnableConfig, run_manager=None, **kwargs: Any) -> tuple[Any, Any]:
+                    """Return converted content plus the raw MCP result as artifact."""
+                    tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                    raw = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
+                    content = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                    return content, raw
 
-                async def arun(self, tool_input: str | dict, config=None, **kwargs):
-                    """Override the main arun method to handle parameter conversion before validation."""
-                    # Parse tool_input if it's a string
-                    if isinstance(tool_input, str):
-                        try:
-                            parsed_input = json.loads(tool_input)
-                        except json.JSONDecodeError:
-                            parsed_input = {"input": tool_input}
-                    else:
-                        parsed_input = tool_input or {}
-
-                    # Convert camelCase parameters to snake_case
-                    converted_input = self._convert_parameters(parsed_input)
-
-                    # Call the parent arun method with converted parameters
-                    return await super().arun(converted_input, config=config, **kwargs)
+                async def _arun(
+                    self, *args: Any, config: RunnableConfig, run_manager=None, **kwargs: Any
+                ) -> tuple[Any, Any]:
+                    """Return converted content plus the raw MCP result as artifact."""
+                    tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                    raw = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+                    content = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                    return content, raw
 
                 def _convert_parameters(self, input_dict):
                     if not input_dict or not isinstance(input_dict, dict):
@@ -1936,6 +1990,7 @@ async def update_tools(
                 coroutine=create_tool_coroutine(tool.name, args_schema, client),
                 tags=[tool.name],
                 metadata={"server_name": server_name, "output_schema": getattr(tool, "outputSchema", None)},
+                response_format="content_and_artifact",
             )
 
             tool_list.append(tool_obj)
