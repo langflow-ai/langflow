@@ -1313,6 +1313,12 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         raw: Any,
         operation: str,
     ) -> Any:
+        """Parse an adapter result payload, raising 500 on failure.
+
+        Use for data returned **from** the adapter/provider (outbound).
+        Failures are internal errors — the user cannot fix them.
+        See ``_parse_api_payload_slot`` for user-supplied input.
+        """
         if slot is None:
             msg = f"The {self._PROVIDER_LABEL} integration is not configured for {operation} ({slot_name})."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
@@ -1338,6 +1344,12 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         raw: Any,
         field: str = "provider_data",
     ) -> Any:
+        """Parse a user-supplied API payload, raising 422 on failure.
+
+        Use for data sent **by** the user in the API request (inbound).
+        Failures are input errors — the user can fix them.
+        See ``_parse_required_payload_slot`` for adapter results.
+        """
         if slot is None:
             msg = f"The {self._PROVIDER_LABEL} integration is not configured for validating {field} ({slot_name})."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
