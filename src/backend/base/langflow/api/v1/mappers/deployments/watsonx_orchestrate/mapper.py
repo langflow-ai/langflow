@@ -159,7 +159,7 @@ def _validate_tool_name(name: str) -> str:
 class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     """Deployment mapper for Watsonx Orchestrate provider."""
 
-    _PROVIDER_LABEL = "watsonx Orchestrate"
+    _PROVIDER_LABEL = "watsonx Orchestrate"  # used when surfacing errors
 
     api_payloads = DeploymentApiPayloads(
         deployment_create=PayloadSlot(
