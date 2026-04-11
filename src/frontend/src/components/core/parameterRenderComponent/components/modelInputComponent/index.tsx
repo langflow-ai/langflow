@@ -228,12 +228,30 @@ export default function ModelInputComponent({
       return null;
     }
 
-    return (
-      flatOptions.find((option) => option.name === currentName) ||
-      // Fallback: If the saved name isn't in the list (e.g. disabled), select first available?
-      // Or keep displaying the stale one? Original logic selected first available.
-      (flatOptions.length > 0 ? flatOptions[0] : null)
-    );
+    const match = flatOptions.find((option) => option.name === currentName);
+    if (match) return match;
+
+    // Saved name isn't in the filtered options list — typically because the
+    // flow was imported via drag-drop (no backend sticky-default round-trip)
+    // or because an outdated component was upgraded and the fresh template
+    // lacks the sticky-default metadata. Preserve the saved selection in the
+    // trigger so it doesn't visually "snap" to the user's first enabled
+    // model. The wrench affordance in the dropdown handles configuration.
+    const saved = value?.[0];
+    if (saved) {
+      return {
+        ...(saved.id && { id: saved.id }),
+        name: saved.name,
+        icon: saved.icon || "Bot",
+        provider: saved.provider || "Unknown",
+        metadata: {
+          ...(saved.metadata ?? {}),
+          not_enabled_locally: true,
+        },
+      } as SelectedModel;
+    }
+
+    return flatOptions.length > 0 ? flatOptions[0] : null;
   }, [value, flatOptions, isConnectionMode, externalOptions]);
 
   useEffect(() => {
