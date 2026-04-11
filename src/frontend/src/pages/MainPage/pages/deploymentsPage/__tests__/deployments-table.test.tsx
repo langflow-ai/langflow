@@ -25,6 +25,7 @@ import DeploymentsTable from "../components/deployments-table";
 
 const makeDeployment = (overrides: Partial<Deployment> = {}): Deployment => ({
   id: "dep-1",
+  provider_id: "prov-1",
   name: "My Agent",
   description: null,
   type: "agent",
@@ -34,7 +35,6 @@ const makeDeployment = (overrides: Partial<Deployment> = {}): Deployment => ({
   resource_key: "rk-1",
   attached_count: 2,
   matched_attachments: null,
-  provider_account_id: "prov-1",
   ...overrides,
 });
 
@@ -94,7 +94,7 @@ describe("Row rendering", () => {
   });
 
   it("shows dash when provider is unknown", () => {
-    renderTable([makeDeployment({ provider_account_id: "unknown" })]);
+    renderTable([makeDeployment({ provider_id: "unknown" })]);
     expect(screen.getByText("—")).toBeInTheDocument();
   });
 

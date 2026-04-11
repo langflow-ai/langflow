@@ -510,6 +510,33 @@ class TestListDeploymentsSynced:
         assert mock_count.call_args.kwargs["flow_version_ids"] == fv_ids
         mock_fetch.assert_not_awaited()
 
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
+    @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
+    async def test_passes_project_id_through(self, mock_list, mock_fetch, mock_count):
+        """project_id is forwarded to list_deployments_page and count."""
+        mock_list.return_value = []
+        project_id = uuid4()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
+
+        await list_deployments_synced(
+            deployment_adapter=AsyncMock(),
+            deployment_mapper=BaseDeploymentMapper(),
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            db=AsyncMock(),
+            page=1,
+            size=10,
+            deployment_type=None,
+            project_id=project_id,
+        )
+
+        assert mock_list.call_args.kwargs["project_id"] == project_id
+        assert mock_count.call_args.kwargs["project_id"] == project_id
+        mock_fetch.assert_not_awaited()
+
 
 class _FakeMapper(BaseDeploymentMapper):
     def util_create_snapshot_bindings(self, *, result) -> CreateSnapshotBindings:  # type: ignore[override]

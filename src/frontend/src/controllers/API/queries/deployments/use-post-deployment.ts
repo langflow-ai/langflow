@@ -35,6 +35,7 @@ export interface DeploymentCreateProviderData {
 
 export interface DeploymentCreateRequest {
   provider_id: string;
+  project_id?: string;
   name: string;
   description: string;
   type: string;

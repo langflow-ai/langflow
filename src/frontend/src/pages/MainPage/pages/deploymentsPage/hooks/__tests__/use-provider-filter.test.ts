@@ -11,9 +11,11 @@ const makeProvider = (
 ): ProviderAccount => ({
   id: "p1",
   name: "Prod Environment",
-  provider_tenant_id: "tenant-1",
   provider_key: "watsonx-orchestrate",
-  provider_url: "https://api.example.com",
+  provider_data: {
+    tenant_id: "tenant-1",
+    url: "https://api.example.com",
+  },
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z",
   ...overrides,
