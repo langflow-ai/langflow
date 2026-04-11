@@ -530,10 +530,7 @@ class APIRequestComponent(Component):
             if cert_path and key_path:
                 resolved_cert = self.resolve_path(cert_path)
                 resolved_key = self.resolve_path(key_path)
-                if key_password:
-                    cert = (resolved_cert, resolved_key, key_password)
-                else:
-                    cert = (resolved_cert, resolved_key)
+                cert = (resolved_cert, resolved_key, key_password) if key_password else (resolved_cert, resolved_key)
             elif cert_path or key_path:
                 self.log("mTLS requires both a client certificate and a client key file.")
 

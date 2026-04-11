@@ -445,7 +445,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         component.enable_mtls = True
         component.client_cert_file = str(cert_file)
         component.client_key_file = str(key_file)
-        component.client_key_password = "s3cret"
+        component.client_key_password = "s3cret"  # noqa: S105
 
         url = "https://example.com/api/test"
         respx.get(url).mock(return_value=Response(200, json={"ok": True}))
