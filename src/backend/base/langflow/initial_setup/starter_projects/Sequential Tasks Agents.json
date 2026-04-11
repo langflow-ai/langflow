@@ -699,7 +699,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": []
+                "value": ""
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -1287,7 +1287,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": []
+                "value": ""
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -2732,7 +2732,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": []
+                "value": ""
               },
               "n_messages": {
                 "_input_type": "IntInput",

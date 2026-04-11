@@ -216,8 +216,33 @@ export default function ModelInputComponent({
       }
     }
 
+    // Zero-provider import fallback: if the user has no providers configured
+    // locally but an imported flow carries a saved model, inject that saved
+    // selection as the only dropdown entry so the trigger renders the model
+    // (with the Configure wrench) instead of the "Setup Provider" button.
+    // Without this, ``flatOptions`` would be empty and ``ModelTrigger`` would
+    // swap the dropdown for the setup CTA, visually losing the imported
+    // selection.
+    const hasAnyGrouped = Object.keys(grouped).length > 0;
+    const savedValue = value?.[0];
+    if (!hasAnyGrouped && savedValue?.name) {
+      const providerName = savedValue.provider || "Unknown";
+      grouped[providerName] = [
+        {
+          ...(savedValue.id && { id: savedValue.id }),
+          name: savedValue.name,
+          icon: savedValue.icon || "Bot",
+          provider: providerName,
+          metadata: {
+            ...(savedValue.metadata ?? {}),
+            not_enabled_locally: true,
+          },
+        } as ModelOption,
+      ];
+    }
+
     return grouped;
-  }, [options, enabledModelsData, providersData, modelType]);
+  }, [options, enabledModelsData, providersData, modelType, value]);
 
   // Flattened array of all enabled options for efficient lookups by name
   const flatOptions = useMemo(
