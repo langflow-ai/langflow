@@ -118,8 +118,7 @@ class Settings(BaseSettings):
         if not value.startswith("/"):
             value = f"/{value}"
 
-        value = value.rstrip("/")
-        return value
+        return value.rstrip("/")
 
     mcp_base_url: str = ""
     """External base URL used to build MCP server URLs in the UI configuration JSON
