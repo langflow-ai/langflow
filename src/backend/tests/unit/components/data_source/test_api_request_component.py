@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import aiofiles
 import aiofiles.os
@@ -36,6 +36,11 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             "mode": "URL",
             "curl_input": "",
             "query_params": {},
+            "enable_mtls": False,
+            "client_cert_file": "",
+            "client_key_file": "",
+            "client_key_password": "",
+            "use_form_urlencoded": False,
         }
 
     @pytest.fixture
@@ -361,6 +366,194 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         assert file_path is not None
         assert file_path.suffix == ".bin"
 
+    async def test_update_build_config_mtls_toggle(self, component):
+        """Test that enabling mTLS toggle shows cert/key/password fields."""
+        build_config = dotdict(
+            {
+                "enable_mtls": {"value": False, "advanced": True, "show": True},
+                "client_cert_file": {"value": "", "advanced": True, "show": False},
+                "client_key_file": {"value": "", "advanced": True, "show": False},
+                "client_key_password": {"value": "", "advanced": True, "show": False},
+                "method": {"value": "GET", "advanced": False},
+                "url_input": {"value": "", "advanced": False},
+                "headers": {"value": [], "advanced": True},
+                "body": {"value": [], "advanced": True},
+                "mode": {"value": "URL", "advanced": False},
+                "curl_input": {"value": "", "advanced": True},
+                "timeout": {"value": 30, "advanced": True},
+                "follow_redirects": {"value": False, "advanced": True},
+                "save_to_file": {"value": False, "advanced": True},
+                "include_httpx_metadata": {"value": False, "advanced": True},
+                "query_params": {"value": {}, "advanced": True},
+            }
+        )
+
+        # Enable mTLS - fields should become visible
+        updated = component.update_build_config(build_config.copy(), field_value=True, field_name="enable_mtls")
+        assert updated["client_cert_file"]["show"] is True
+        assert updated["client_key_file"]["show"] is True
+        assert updated["client_key_password"]["show"] is True
+
+        # Disable mTLS - fields should be hidden
+        updated = component.update_build_config(build_config.copy(), field_value=False, field_name="enable_mtls")
+        assert updated["client_cert_file"]["show"] is False
+        assert updated["client_key_file"]["show"] is False
+        assert updated["client_key_password"]["show"] is False
+
+    @respx.mock
+    async def test_mtls_cert_passed_to_client(self, component, tmp_path):
+        """Test that mTLS cert/key are passed to httpx.AsyncClient when enabled."""
+        cert_file = tmp_path / "client.pem"
+        key_file = tmp_path / "client.key"
+        cert_file.write_text("FAKE CERT")
+        key_file.write_text("FAKE KEY")
+
+        component.enable_mtls = True
+        component.client_cert_file = str(cert_file)
+        component.client_key_file = str(key_file)
+        component.client_key_password = ""
+
+        url = "https://example.com/api/test"
+        respx.get(url).mock(return_value=Response(200, json={"ok": True}))
+
+        original_init = httpx.AsyncClient.__init__
+        captured_kwargs = {}
+
+        def patched_init(self_client, *args, **kwargs):
+            captured_kwargs.update(kwargs)
+            # Remove cert before calling original to avoid SSL errors with fake files
+            kwargs.pop("cert", None)
+            original_init(self_client, *args, **kwargs)
+
+        with (
+            patch.object(httpx.AsyncClient, "__init__", patched_init),
+            patch.object(type(component), "resolve_path", staticmethod(lambda p: p)),
+        ):
+            result = await component.make_api_request()
+
+        assert captured_kwargs.get("cert") == (str(cert_file), str(key_file))
+        assert isinstance(result, Data)
+
+    @respx.mock
+    async def test_mtls_cert_with_password(self, component, tmp_path):
+        """Test that key password is included in cert tuple when provided."""
+        cert_file = tmp_path / "client.pem"
+        key_file = tmp_path / "client.key"
+        cert_file.write_text("FAKE CERT")
+        key_file.write_text("FAKE KEY")
+
+        component.enable_mtls = True
+        component.client_cert_file = str(cert_file)
+        component.client_key_file = str(key_file)
+        component.client_key_password = "s3cret"
+
+        url = "https://example.com/api/test"
+        respx.get(url).mock(return_value=Response(200, json={"ok": True}))
+
+        original_init = httpx.AsyncClient.__init__
+        captured_kwargs = {}
+
+        def patched_init(self_client, *args, **kwargs):
+            captured_kwargs.update(kwargs)
+            kwargs.pop("cert", None)
+            original_init(self_client, *args, **kwargs)
+
+        with (
+            patch.object(httpx.AsyncClient, "__init__", patched_init),
+            patch.object(type(component), "resolve_path", staticmethod(lambda p: p)),
+        ):
+            result = await component.make_api_request()
+
+        assert captured_kwargs.get("cert") == (str(cert_file), str(key_file), "s3cret")
+        assert isinstance(result, Data)
+
+    @respx.mock
+    async def test_mtls_disabled_no_cert(self, component):
+        """Test that cert is None when mTLS is disabled."""
+        url = "https://example.com/api/test"
+        respx.get(url).mock(return_value=Response(200, json={"ok": True}))
+
+        original_init = httpx.AsyncClient.__init__
+        captured_kwargs = {}
+
+        def patched_init(self_client, *args, **kwargs):
+            captured_kwargs.update(kwargs)
+            kwargs.pop("cert", None)
+            original_init(self_client, *args, **kwargs)
+
+        with patch.object(httpx.AsyncClient, "__init__", patched_init):
+            await component.make_api_request()
+
+        assert captured_kwargs.get("cert") is None
+
+    @respx.mock
+    async def test_mtls_missing_key_logs_warning(self, component, tmp_path):
+        """Test that enabling mTLS with only cert (no key) logs a warning and passes no cert."""
+        cert_file = tmp_path / "client.pem"
+        cert_file.write_text("FAKE CERT")
+
+        component.enable_mtls = True
+        component.client_cert_file = str(cert_file)
+        component.client_key_file = ""
+        component.client_key_password = ""
+        component.log = MagicMock()
+
+        url = "https://example.com/api/test"
+        respx.get(url).mock(return_value=Response(200, json={"ok": True}))
+
+        original_init = httpx.AsyncClient.__init__
+        captured_kwargs = {}
+
+        def patched_init(self_client, *args, **kwargs):
+            captured_kwargs.update(kwargs)
+            kwargs.pop("cert", None)
+            original_init(self_client, *args, **kwargs)
+
+        with (
+            patch.object(httpx.AsyncClient, "__init__", patched_init),
+            patch.object(type(component), "resolve_path", staticmethod(lambda p: p)),
+        ):
+            await component.make_api_request()
+
+        assert captured_kwargs.get("cert") is None
+        component.log.assert_any_call("mTLS requires both a client certificate and a client key file.")
+
+    @respx.mock
+    async def test_form_urlencoded_body(self, component):
+        """Test that use_form_urlencoded sends body as form data."""
+        url = "https://example.com/api/test"
+        respx.post(url).mock(return_value=Response(200, json={"ok": True}))
+
+        component.method = "POST"
+        component.body = [{"key": "username", "value": "alice"}, {"key": "password", "value": "secret"}]
+        component.use_form_urlencoded = True
+
+        result = await component.make_api_request()
+
+        assert isinstance(result, Data)
+        assert len(respx.calls) == 1
+        request = respx.calls[0].request
+        assert "application/x-www-form-urlencoded" in request.headers.get("content-type", "")
+        assert b"username=alice" in request.content
+        assert b"password=secret" in request.content
+
+    @respx.mock
+    async def test_json_body_is_default(self, component):
+        """Test that body is sent as JSON by default (use_form_urlencoded=False)."""
+        url = "https://example.com/api/test"
+        respx.post(url).mock(return_value=Response(200, json={"ok": True}))
+
+        component.method = "POST"
+        component.body = [{"key": "name", "value": "alice"}]
+        component.use_form_urlencoded = False
+
+        result = await component.make_api_request()
+
+        assert isinstance(result, Data)
+        assert len(respx.calls) == 1
+        request = respx.calls[0].request
+        assert "application/json" in request.headers.get("content-type", "")
+
 
 class TestAPIRequestSSRFProtection:
     """Test SSRF protection in API Request component."""
@@ -385,6 +578,11 @@ class TestAPIRequestSSRFProtection:
             "mode": "URL",
             "curl_input": "",
             "query_params": {},
+            "enable_mtls": False,
+            "client_cert_file": "",
+            "client_key_file": "",
+            "client_key_password": "",
+            "use_form_urlencoded": False,
         }
 
     @pytest.fixture
