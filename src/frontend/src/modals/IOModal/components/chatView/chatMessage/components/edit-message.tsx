@@ -1,8 +1,9 @@
+import DOMPurify from "dompurify";
+import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
-import { useTranslation } from "react-i18next";
 import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import { preprocessChatMessage } from "@/utils/markdownUtils";
 import { cn } from "@/utils/utils";
@@ -26,6 +27,9 @@ export const MarkdownField = ({
   const { t } = useTranslation();
   // Process the chat message to handle <think> tags and clean up tables
   const processedChatMessage = preprocessChatMessage(chatMessage);
+
+  // Sanitize the message to prevent XSS attacks
+  const sanitizedChatMessage = DOMPurify.sanitize(processedChatMessage);
 
   return (
     <div className="w-full items-baseline gap-2">
@@ -109,7 +113,7 @@ export const MarkdownField = ({
       >
         {isEmpty && !chat.stream_url
           ? t("chat.emptyOutputSendMessage")
-          : processedChatMessage}
+          : sanitizedChatMessage}
       </Markdown>
       {editedFlag}
     </div>
