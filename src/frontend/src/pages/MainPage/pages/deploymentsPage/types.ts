@@ -27,8 +27,7 @@ export interface ProviderAccount {
   id: string;
   name: string;
   provider_key: string;
-  url: string;
-  provider_data?: Record<string, unknown>;
+  provider_data?: Record<string, unknown> | null;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -44,6 +43,7 @@ export type DeploymentType = "agent" | "mcp";
 
 export interface Deployment {
   id: string;
+  provider_id?: string;
   name: string;
   description?: string;
   type: DeploymentType;
@@ -53,8 +53,6 @@ export interface Deployment {
   resource_key: string;
   attached_count: number;
   flow_version_ids?: string[];
-  /** Populated client-side when merging deployments from multiple providers. */
-  provider_account_id?: string;
 }
 
 export interface SnapshotUpdateResponse {

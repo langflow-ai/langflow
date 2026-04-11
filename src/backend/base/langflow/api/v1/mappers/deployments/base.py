@@ -6,14 +6,15 @@ Provider-account credential contract
 Provider credentials arrive in the API request as an opaque
 ``provider_data: dict`` and leave via two mapper methods:
 
-* **API -> Adapter** (``resolve_verify_credentials``): packs the request's
-  ``provider_data`` into the adapter-layer ``VerifyCredentials`` model so the
-  deployment adapter can validate the credentials against the provider.
+* **API -> Adapter** (``resolve_verify_credentials_for_create``): packs the
+  request's ``provider_data`` into the adapter-layer ``VerifyCredentials``
+  model so the deployment adapter can validate the credentials against the
+  provider.
 
-* **API -> DB** (``resolve_credential_fields``): extracts credentials from
-  ``provider_data`` and returns a ``dict[str, Any]`` of DB column-value
-  pairs (e.g. ``{"api_key": "..."}``).  The route spreads these into the
-  CRUD layer's keyword arguments.
+* **API -> DB** (``resolve_credentials``): extracts credentials from
+  ``provider_data`` and returns DB column-value pairs
+  (e.g. ``{"api_key": "..."}``) used by mapper-owned create/update
+  assembly methods.
 
 The mapper is the **single** component that understands a provider's
 credential shape.  The API schema treats ``provider_data`` as opaque and
@@ -106,6 +107,10 @@ class DeploymentApiPayloads(DeploymentPayloadFields):
     Langflow-specific references and reshaping requirements. Adapter-side
     slot population is defined separately via ``DeploymentPayloadSchemas``.
     """
+
+    provider_account_create: PayloadSlot | None = None
+    provider_account_update: PayloadSlot | None = None
+    provider_account_response: PayloadSlot | None = None
 
 
 class BaseDeploymentMapper:
@@ -395,26 +400,17 @@ class BaseDeploymentMapper:
             provider_data=provider_data,
         )
 
-    def resolve_provider_tenant_id(
+    def validate_create_provider_url(
         self,
         *,
-        provider_url: str,
         provider_data: dict[str, Any],
-    ) -> str | None:
-        """Resolve provider tenant id for provider-account create/update."""
-        _ = provider_url
-        return self.resolve_provider_tenant_id_from_data(provider_data=provider_data)
+    ) -> str:
+        """Resolve and validate provider URL from create provider_data.
 
-    def resolve_provider_tenant_id_from_data(self, *, provider_data: dict[str, Any]) -> str | None:
-        """Extract optional tenant/account identifier from provider_data."""
-        raw_tenant_id = provider_data.get("tenant_id")
-        if raw_tenant_id is None:
-            return None
-        if not isinstance(raw_tenant_id, str):
-            msg = "provider_data.tenant_id must be a string when provided."
-            raise ValueError(msg)  # noqa: TRY004 - route layer maps ValueError to HTTP 4xx
-        tenant_id = raw_tenant_id.strip()
-        return tenant_id or None
+        Provider mappers must override this for provider-account create.
+        """
+        _ = provider_data
+        raise NotImplementedError
 
     def format_conflict_detail(self, raw_message: str) -> str:
         """Format provider conflict errors for API responses.
@@ -424,7 +420,7 @@ class BaseDeploymentMapper:
         """
         return f"A resource with this name already exists in the provider. {raw_message}"
 
-    def resolve_credential_fields(
+    def resolve_credentials(
         self,
         *,
         provider_data: dict[str, Any],
@@ -436,6 +432,20 @@ class BaseDeploymentMapper:
         a future provider could return multiple columns or a serialized JSON
         blob).
         """
+        raise NotImplementedError
+
+    def resolve_provider_account_create(
+        self,
+        *,
+        payload: DeploymentProviderAccountCreateRequest,
+        user_id: UUID,
+    ) -> DeploymentProviderAccount:
+        """Assemble provider-account DB model for create.
+
+        Provider mappers must override this so provider-specific create
+        semantics stay out of the base mapper.
+        """
+        _ = (payload, user_id)
         raise NotImplementedError
 
     def resolve_provider_account_update(
@@ -459,23 +469,22 @@ class BaseDeploymentMapper:
             if payload.provider_data is None:
                 msg = "'provider_data' cannot be null when provided."
                 raise ValueError(msg)
-            update_kwargs.update(self.resolve_credential_fields(provider_data=payload.provider_data))
+            update_kwargs.update(self.resolve_credentials(provider_data=payload.provider_data))
         return update_kwargs
 
-    def resolve_verify_credentials(
+    def resolve_verify_credentials_for_create(
         self,
         *,
         payload: DeploymentProviderAccountCreateRequest,
     ) -> VerifyCredentials:
-        """Build adapter verify-credentials input from the API create request.
+        """Build adapter verify-credentials input from create payload.
 
-        The base implementation extracts only ``base_url``.  Credentials
-        are provider-specific and must be packed into ``provider_data`` by
-        provider mapper overrides.
+        The base implementation extracts ``base_url`` from
+        ``provider_data.url``. Credentials are provider-specific and must be
+        packed into ``provider_data`` by provider mapper overrides.
         """
-        return VerifyCredentials(
-            base_url=payload.url,
-        )
+        _ = payload
+        raise NotImplementedError
 
     def resolve_verify_credentials_for_update(
         self,
@@ -495,7 +504,7 @@ class BaseDeploymentMapper:
         msg = "Credential verification for provider account updates is not implemented for this provider."
         raise NotImplementedError(msg)
 
-    def shape_provider_account_response(
+    def resolve_provider_account_response(
         self,
         provider_account: DeploymentProviderAccount,
     ) -> DeploymentProviderAccountGetResponse:
@@ -503,24 +512,17 @@ class BaseDeploymentMapper:
             id=provider_account.id,
             name=provider_account.name,
             provider_key=provider_account.provider_key,
-            url=provider_account.provider_url,
-            provider_data=self.shape_provider_account_provider_data(provider_account),
+            provider_data=self.resolve_provider_account_provider_data(provider_account),
             created_at=provider_account.created_at,
             updated_at=provider_account.updated_at,
         )
 
-    def shape_provider_account_provider_data(
+    def resolve_provider_account_provider_data(
         self,
         provider_account: DeploymentProviderAccount,
     ) -> dict[str, Any] | None:
         """Return non-sensitive provider metadata for provider-account responses."""
-        raw_tenant_id = provider_account.provider_tenant_id
-        if raw_tenant_id is None:
-            return None
-        tenant_id = str(raw_tenant_id).strip()
-        if not tenant_id:
-            return None
-        return {"tenant_id": tenant_id}
+        return {"url": provider_account.provider_url}
 
     def util_create_flow_artifact_provider_data(
         self,
@@ -546,7 +548,7 @@ class BaseDeploymentMapper:
     ) -> str | None:
         """Return provider deployment id to reuse on create, if requested."""
         _ = payload
-        return None
+        raise NotImplementedError
 
     def util_should_mutate_provider_for_existing_deployment_create(
         self,
@@ -554,7 +556,7 @@ class BaseDeploymentMapper:
     ) -> bool:
         """Return whether existing-resource create should call provider update."""
         _ = payload
-        return True
+        raise NotImplementedError
 
     def util_create_result_from_existing_update(
         self,
@@ -567,11 +569,8 @@ class BaseDeploymentMapper:
         Routes use this when create-time onboarding reuses an existing provider
         resource and mutates it through ``adapter.update``.
         """
-        provider_result = result.provider_result if isinstance(result.provider_result, dict) else None
-        return DeploymentCreateResult(
-            id=existing_resource_key,
-            provider_result=provider_result,
-        )
+        _ = (existing_resource_key, result)
+        raise NotImplementedError
 
     def util_create_result_from_existing_resource(
         self,

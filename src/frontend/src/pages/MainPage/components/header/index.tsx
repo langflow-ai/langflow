@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -151,10 +152,24 @@ const HeaderComponent = ({
                     : "border-border text-muted-foreground hover:text-foreground"
                 } text-nowrap px-2 pb-2 pt-1 text-mmd`}
               >
-                <div className={flowType === type ? "-mb-px" : ""}>
+                <div
+                  className={cn(
+                    "flex items-center gap-1.5",
+                    flowType === type && "-mb-px",
+                  )}
+                >
                   {type === "mcp"
                     ? t("mainPage.mcpServer")
                     : type.charAt(0).toUpperCase() + type.slice(1)}
+                  {type === "deployments" && (
+                    <Badge
+                      variant="purpleStatic"
+                      size="xq"
+                      className="h-auto shrink-0 rounded px-1 py-px text-[11px] leading-none text-accent-purple-foreground"
+                    >
+                      Beta
+                    </Badge>
+                  )}
                 </div>
               </Button>
             ))}

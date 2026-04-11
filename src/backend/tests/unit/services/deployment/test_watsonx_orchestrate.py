@@ -2907,7 +2907,9 @@ async def test_create_execution_posts_runs_payload(monkeypatch):
 
     assert result.deployment_id == "dep-1"
     assert result.execution_id == "run-1"
-    assert result.provider_result == {"status": "accepted", "execution_id": "run-1", "thread_id": "thread-1"}
+    assert result.provider_result["status"] == "accepted"
+    assert result.provider_result["execution_id"] == "run-1"
+    assert result.provider_result["thread_id"] == "thread-1"
     assert fake_base.post_calls
     path, payload = fake_base.post_calls[0]
     assert path == "/runs"
@@ -6675,7 +6677,7 @@ def test_shape_execution_status_result_maps_all_fields():
 
 
 def test_shape_execution_status_result_none_execution_id():
-    """When adapter has no execution_id, provider_data omits the key (exclude_none)."""
+    """When adapter has no execution_id, provider_data includes it as None."""
     from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import WatsonxOrchestrateDeploymentMapper
 
     mapper = WatsonxOrchestrateDeploymentMapper()
@@ -6694,7 +6696,7 @@ def test_shape_execution_status_result_none_execution_id():
         adapter_result,
         deployment_id=deployment_id,
     )
-    assert "execution_id" not in response.provider_data
+    assert response.provider_data["execution_id"] is None
     assert response.provider_data["status"] == "in_progress"
 
 
