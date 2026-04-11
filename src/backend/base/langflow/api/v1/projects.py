@@ -29,7 +29,11 @@ from langflow.api.v1.projects_mcp_helpers import (
 )
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
-from langflow.services.database.models.deployment.exceptions import DeploymentGuardError, parse_deployment_guard_error
+from langflow.services.database.models.deployment.exceptions import (
+    DeploymentGuardError,
+    get_friendly_guard_detail,
+    parse_deployment_guard_error,
+)
 from langflow.services.database.models.deployment.guards import check_project_has_deployments
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
@@ -473,7 +477,13 @@ async def delete_project(
             operation=_delete_project_operation,
         )
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    except DeploymentGuardError:
+    except DeploymentGuardError as exc:
+        if exc.code == "FLOW_VERSION_DEPLOYED":
+            raise DeploymentGuardError(
+                code="PROJECT_HAS_DEPLOYMENTS",
+                technical_detail=(f"DELETE folder blocked while deleting project flows: {exc.technical_detail}"),
+                detail=get_friendly_guard_detail("PROJECT_HAS_DEPLOYMENTS"),
+            ) from exc
         raise
     except Exception as e:
         guard_error = parse_deployment_guard_error(e)

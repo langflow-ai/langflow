@@ -74,6 +74,60 @@ async def test_delete_project_raises_guard_error_from_app_level_check(monkeypatc
 
 
 @pytest.mark.asyncio
+async def test_delete_project_remaps_flow_guard_to_project_guard(monkeypatch):
+    project_id = uuid4()
+    user_id = uuid4()
+    flow_id = uuid4()
+
+    monkeypatch.setattr(
+        "langflow.api.v1.projects.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(add_projects_to_mcp_servers=False)),
+    )
+    monkeypatch.setattr("langflow.api.v1.projects.cleanup_mcp_on_delete", AsyncMock())
+    monkeypatch.setattr("langflow.api.v1.projects.sync_project_deployments", AsyncMock())
+    monkeypatch.setattr(
+        "langflow.api.v1.projects.cascade_delete_flow",
+        AsyncMock(
+            side_effect=DeploymentGuardError(
+                code="FLOW_VERSION_DEPLOYED",
+                technical_detail=(
+                    "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment "
+                    "for the target flow."
+                ),
+                detail=(
+                    "This flow version is currently attached to one or more deployments. "
+                    "Remove those attachments first."
+                ),
+            )
+        ),
+    )
+
+    session = AsyncMock()
+    project = SimpleNamespace(id=project_id, name="Test Project", auth_settings=None)
+    session.exec = AsyncMock(
+        side_effect=[
+            _ExecResult(project),  # initial project lookup
+            _ExecResult([SimpleNamespace(id=flow_id)]),  # first attempt: flows query
+            _ExecResult([SimpleNamespace(id=flow_id)]),  # second attempt: flows query
+        ]
+    )
+    session.delete = AsyncMock()
+    session.flush = AsyncMock()
+    session.begin_nested = lambda: _AsyncNullContext()
+
+    with pytest.raises(DeploymentGuardError, match="project currently contains one or more deployments") as exc_info:
+        await delete_project(
+            session=session,
+            project_id=project_id,
+            current_user=SimpleNamespace(id=user_id),
+        )
+
+    assert exc_info.value.code == "PROJECT_HAS_DEPLOYMENTS"
+    assert "DELETE folder blocked while deleting project flows" in exc_info.value.technical_detail
+    session.flush.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_cascade_delete_flow_raises_guard_error_from_app_level_check():
     """cascade_delete_flow should run app-level guard checks before issuing deletes."""
     flow_id = uuid4()
