@@ -43,7 +43,7 @@ dependencies = [
     "alembic>=1.13.0,<2.0.0",
     "passlib>=1.7.4,<2.0.0",
     "bcrypt==4.0.1",
-    "pillow>=12.0.0,<13.0.0",
+    "pillow>=12.1.1,<13.0.0",
     "docstring-parser>=0.16,<1.0.0",
     "PyJWT>=2.12.1",
     "pandas==2.2.3",
@@ -291,7 +291,7 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 
 # Toolguard Integration
-toolguard = ["toolguard>=0.2.14,<1.0.0"]
+toolguard = ["toolguard>=0.2.15,<1.0.0"]
 
 # Additional LangChain integrations
 # Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels (see LE-172)
