@@ -16,11 +16,11 @@ const makeFolder = (id: string, name = "default"): FolderType => ({
 
 describe("shouldShowMainContent", () => {
   it("should_show_welcome_page_when_new_user_has_no_flows_and_examples_are_global_with_auto_login_off", () => {
-    // Arrange — reproduz exatamente o cenário do bug:
-    // AUTO_LOGIN=false, usuário novo no primeiro login.
-    // O endpoint /flows/ retorna [] (user_id == current_user.id não bate com os starters).
-    // O endpoint /basic_examples/ retorna os flows do STARTER_FOLDER global (user_id=None).
-    // O usuário tem apenas o default folder criado em get_or_create_default_folder.
+    // Arrange — reproduces the exact bug scenario:
+    // AUTO_LOGIN=false, new user on first login.
+    // /flows/ returns [] (user_id == current_user.id doesn't match starters).
+    // /basic_examples/ returns global STARTER_FOLDER flows (user_id=None).
+    // User only has the default folder from get_or_create_default_folder.
     const flows: FlowType[] = [];
     const examples: FlowType[] = [
       makeFlow("starter-1"),
@@ -32,13 +32,13 @@ describe("shouldShowMainContent", () => {
     // Act
     const result = shouldShowMainContent(flows, examples, folders);
 
-    // Assert — tem que ser false para a Welcome page aparecer
+    // Assert — must be false so the Welcome page is shown
     expect(result).toBe(false);
   });
 
   it("should_show_welcome_page_when_user_flows_are_all_starter_examples_with_auto_login_on", () => {
-    // AUTO_LOGIN=true: o endpoint /flows/ retorna os starters via OR (user_id is None).
-    // Logo, flows e examples têm os mesmos ids.
+    // AUTO_LOGIN=true: /flows/ returns starters via OR (user_id is None).
+    // So flows and examples share the same ids.
     const sharedFlows = [
       makeFlow("starter-1"),
       makeFlow("starter-2"),
@@ -81,7 +81,7 @@ describe("shouldShowMainContent", () => {
   });
 
   it("should_show_main_content_when_auto_login_off_user_creates_only_a_single_custom_flow", () => {
-    // AUTO_LOGIN=false user criando seu primeiro flow customizado.
+    // AUTO_LOGIN=false user creating their first custom flow.
     const flows = [makeFlow("my-first-flow")];
     const examples = [
       makeFlow("starter-1"),
