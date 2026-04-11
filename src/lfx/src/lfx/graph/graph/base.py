@@ -2378,6 +2378,9 @@ class Graph:
         subgraph_edges = [e for e in self._edges if e["source"] in vertex_ids and e["target"] in vertex_ids]
 
         # Create new graph instance with copied context
+        # Shallow copy is intentional: mutable values (e.g., lists from SharedContext.append)
+        # are shared between parent and subgraph so that loop iterations can accumulate
+        # shared state across iterations.
         subgraph = Graph(
             flow_id=self.flow_id,
             flow_name=f"{self.flow_name}_subgraph" if self.flow_name else "subgraph",

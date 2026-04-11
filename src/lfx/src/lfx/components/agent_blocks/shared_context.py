@@ -283,7 +283,7 @@ class SharedContextComponent(Component):
         full_key = self._get_full_key(self.key)
         return full_key in self.ctx
 
-    def _record_event(self, operation: str, key: str | None = None) -> None:
+    def _record_event(self, operation: str, key: str | None = None, namespace: str | None = None) -> None:
         """Record an operation event for tracking, verification, and real-time UI updates.
 
         Events are stored in the context under EVENTS_KEY and can be retrieved
@@ -293,11 +293,12 @@ class SharedContextComponent(Component):
         Args:
             operation: The operation performed (get, set, append, delete, keys, has_key)
             key: The key involved in the operation (if applicable)
+            namespace: Optional explicit namespace (used by tool closures to avoid race conditions)
         """
         event = {
             "operation": operation,
             "key": key or "",
-            "namespace": self.namespace or "",
+            "namespace": namespace if namespace is not None else (self.namespace or ""),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "component_id": self._id,
         }
@@ -389,10 +390,11 @@ class SharedContextComponent(Component):
             Returns:
                 The stored value, or None if not found
             """
-            self.key = key
-            self.namespace = namespace
-            self.operation = "get"
-            return await self.execute()
+            full_key = f"shared_ctx:{namespace}:{key}" if namespace else f"shared_ctx:{key}"
+            self._record_event("get", key, namespace=namespace)
+            if full_key not in self.ctx:
+                return None
+            return self._deserialize_value(self.ctx[full_key])
 
         tools.append(
             StructuredTool.from_function(
@@ -419,11 +421,10 @@ class SharedContextComponent(Component):
             Returns:
                 Confirmation of what was stored
             """
-            self.key = key
-            self.value = value
-            self.namespace = namespace
-            self.operation = "set"
-            await self.execute()
+            full_key = f"shared_ctx:{namespace}:{key}" if namespace else f"shared_ctx:{key}"
+            self._record_event("set", key, namespace=namespace)
+            serialized = self._serialize_value(value)
+            self.update_ctx({full_key: serialized})
             return f"Stored '{key}' in shared context"
 
         tools.append(
@@ -448,11 +449,19 @@ class SharedContextComponent(Component):
             Returns:
                 Confirmation with current count of items
             """
-            self.key = key
-            self.value = value
-            self.namespace = namespace
-            self.operation = "append"
-            result = await self.execute()
+            full_key = f"shared_ctx:{namespace}:{key}" if namespace else f"shared_ctx:{key}"
+            self._record_event("append", key, namespace=namespace)
+            serialized = self._serialize_value(value)
+            if full_key in self.ctx:
+                existing = self.ctx[full_key]
+                if isinstance(existing, list):
+                    existing.append(serialized)
+                    self.update_ctx({full_key: existing})
+                else:
+                    self.update_ctx({full_key: [existing, serialized]})
+            else:
+                self.update_ctx({full_key: [serialized]})
+            result = self.ctx[full_key]
             return f"Appended to '{key}'. Collection now has {len(result)} items."
 
         tools.append(
@@ -478,9 +487,13 @@ class SharedContextComponent(Component):
             Returns:
                 List of available keys
             """
-            self.namespace = namespace
-            self.operation = "keys"
-            return await self.execute()
+            prefix = f"shared_ctx:{namespace}:" if namespace else "shared_ctx:"
+            self._record_event("keys", namespace=namespace)
+            return [
+                k[len(prefix) :]
+                for k in self.ctx
+                if isinstance(k, str) and k.startswith(prefix) and k != self.EVENTS_KEY
+            ]
 
         tools.append(
             StructuredTool.from_function(

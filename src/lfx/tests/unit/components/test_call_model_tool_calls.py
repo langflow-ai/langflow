@@ -1,4 +1,4 @@
-"""Tests for CallModel tool_calls handling.
+"""Tests for AgentStep tool_calls handling.
 
 These tests verify that tool_calls are correctly captured during streaming
 and correctly reconstructed when converting from DataFrame to LangChain messages.
@@ -6,7 +6,7 @@ and correctly reconstructed when converting from DataFrame to LangChain messages
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from lfx.components.agent_blocks import CallModelComponent
+from lfx.components.agent_blocks.agent_step import AgentStepComponent
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 
@@ -16,7 +16,7 @@ class TestToolCallsConversion:
 
     def test_convert_dataframe_with_valid_tool_calls(self):
         """Test that tool_calls with valid IDs are preserved."""
-        comp = CallModelComponent(_id="test")
+        comp = AgentStepComponent(_id="test")
 
         # Create a DataFrame with AI message containing tool_calls
         df = DataFrame(
@@ -61,7 +61,7 @@ class TestToolCallsConversion:
 
     def test_convert_dataframe_with_null_tool_call_id(self):
         """Test that tool_calls with null IDs get sanitized."""
-        comp = CallModelComponent(_id="test")
+        comp = AgentStepComponent(_id="test")
 
         # Create a DataFrame with AI message containing tool_calls with null ID
         df = DataFrame(
@@ -89,7 +89,7 @@ class TestToolCallsConversion:
 
     def test_convert_dataframe_with_empty_tool_call_id(self):
         """Test that tool_calls with empty string IDs get sanitized."""
-        comp = CallModelComponent(_id="test")
+        comp = AgentStepComponent(_id="test")
 
         df = DataFrame(
             [
@@ -112,7 +112,7 @@ class TestToolCallsConversion:
 
     def test_convert_dataframe_with_multiple_tool_calls(self):
         """Test that multiple tool_calls are all sanitized correctly."""
-        comp = CallModelComponent(_id="test")
+        comp = AgentStepComponent(_id="test")
 
         df = DataFrame(
             [
@@ -146,7 +146,7 @@ class TestToolCallsConversion:
 
     def test_convert_dataframe_preserves_tool_call_name_and_args(self):
         """Test that tool_call name and args are preserved during sanitization."""
-        comp = CallModelComponent(_id="test")
+        comp = AgentStepComponent(_id="test")
 
         df = DataFrame(
             [
@@ -175,7 +175,7 @@ class TestToolCallsConversion:
 
     def test_convert_message_list_with_null_tool_call_id(self):
         """Test Message list handling with null tool_call IDs."""
-        comp = CallModelComponent(_id="test")
+        comp = AgentStepComponent(_id="test")
 
         messages = [
             Message(
@@ -193,7 +193,7 @@ class TestToolCallsConversion:
 
     def test_convert_dataframe_with_nan_tool_calls(self):
         """Test that NaN tool_calls (from DataFrame) are handled correctly."""
-        comp = CallModelComponent(_id="test")
+        comp = AgentStepComponent(_id="test")
 
         df = DataFrame(
             [
@@ -215,7 +215,7 @@ class TestToolCallsConversion:
 
     def test_convert_preserves_tool_message_with_tool_call_id(self):
         """Test that ToolMessage gets correct tool_call_id."""
-        comp = CallModelComponent(_id="test")
+        comp = AgentStepComponent(_id="test")
 
         df = DataFrame(
             [
@@ -277,9 +277,9 @@ class TestFullAgentLoopToolCalls:
             return msg
 
         execute_tool.send_message = mock_send_message
-        execute_tool.set(ai_message=ai_message, tools=[MockTool()])
+        execute_tool.set(tool_calls_message=ai_message, tools=[MockTool()])
 
         # We can't easily run execute_tools() without more setup,
         # but we can verify the input is correct
-        assert execute_tool.ai_message == ai_message
-        assert execute_tool.ai_message.data["tool_calls"][0]["id"] == "call_123"
+        assert execute_tool.tool_calls_message == ai_message
+        assert execute_tool.tool_calls_message.data["tool_calls"][0]["id"] == "call_123"

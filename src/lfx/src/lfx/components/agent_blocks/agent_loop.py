@@ -320,10 +320,36 @@ class AgentLoopComponent(Component):
 
         self.log(f"Graph completed after {iteration_count} iterations")
 
-    def _extract_result(self, agent_step, agent_message: Message | None) -> Message:
-        """Extract final result from agent_step output."""
-        output = agent_step.get_output_by_method(agent_step.get_ai_message)
+    def _extract_result(self, graph, agent_step, agent_message: Message | None) -> Message:
+        """Extract final result from the graph execution.
 
+        The WhileLoop's done_output returns the accumulated DataFrame including
+        the final AI response. We extract the last AI message from it.
+        Falls back to checking agent_step directly.
+        """
+        # Get the while_loop vertex's done output (accumulated DataFrame)
+        wl_vertex = graph.get_vertex(f"{self._id}_internal_while_loop")
+        if wl_vertex and hasattr(wl_vertex, "results") and wl_vertex.results:
+            done_value = wl_vertex.results.get("done")
+            if isinstance(done_value, DataFrame) and not done_value.empty:
+                # Find the last AI message (sender="Machine") without tool_calls
+                for i in range(len(done_value) - 1, -1, -1):
+                    row = done_value.iloc[i]
+                    sender = row.get("sender", "")
+                    has_tc = row.get("has_tool_calls")
+                    # has_tool_calls can be True, False, None, or NaN
+                    # Only skip if it's explicitly True
+                    if sender == "Machine" and has_tc is not True:
+                        text = str(row.get("text", ""))
+                        if text:
+                            if agent_message:
+                                agent_message.text = text
+                                agent_message.properties.state = "complete"
+                                return agent_message
+                            return Message(text=text)
+
+        # Fallback: check agent_step component directly
+        output = agent_step.get_output_by_method(agent_step.get_ai_message)
         has_valid_output = (
             output is not None
             and hasattr(output, "value")
@@ -350,7 +376,7 @@ class AgentLoopComponent(Component):
             msg = f"Unexpected result type from agent_step: {type(result)}"
             raise TypeError(msg)
 
-        # No valid output - return error message
+        # No valid output
         if agent_message:
             agent_message.text = "Agent completed without producing a response."
             agent_message.properties.state = "complete"
@@ -380,4 +406,4 @@ class AgentLoopComponent(Component):
         await self._execute_graph(graph, execution_context)
 
         # 6. Extract and return result
-        return self._extract_result(agent_step, agent_message)
+        return self._extract_result(graph, agent_step, agent_message)

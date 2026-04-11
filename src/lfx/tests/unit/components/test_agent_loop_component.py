@@ -166,7 +166,11 @@ class TestAgentLoopComponentDirectExecution:
         fake_llm = FakeStreamingLLM(responses=[AIMessage(content="Hello! I'm here to help.")])
 
         # Patch get_llm to return our fake
-        with patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm):
+        with (
+            patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm),
+            patch("lfx.components.agent_blocks.agent_loop.get_llm", return_value=fake_llm),
+            patch("lfx.base.models.unified_models.get_llm", return_value=fake_llm),
+        ):
             # Create and configure AgentLoopComponent
             agent_loop = AgentLoopComponent(_id="test_agent_loop")
             agent_loop.model = [{"name": "fake-model", "provider": "fake"}]
@@ -205,7 +209,11 @@ class TestAgentLoopComponentDirectExecution:
 
         tools = [MockTool()]
 
-        with patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm):
+        with (
+            patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm),
+            patch("lfx.components.agent_blocks.agent_loop.get_llm", return_value=fake_llm),
+            patch("lfx.base.models.unified_models.get_llm", return_value=fake_llm),
+        ):
             agent_loop = AgentLoopComponent(_id="test_agent_loop")
             agent_loop.model = [{"name": "fake-model", "provider": "fake"}]
             agent_loop.system_message = "You are helpful."
@@ -250,7 +258,11 @@ class TestAgentLoopComponentGraphExecution:
         """Test that the internal graph has the expected structure."""
         fake_llm = FakeStreamingLLM(responses=[AIMessage(content="Done")])
 
-        with patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm):
+        with (
+            patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm),
+            patch("lfx.components.agent_blocks.agent_loop.get_llm", return_value=fake_llm),
+            patch("lfx.base.models.unified_models.get_llm", return_value=fake_llm),
+        ):
             agent_loop = AgentLoopComponent(_id="test_agent_loop")
             agent_loop.model = [{"name": "fake-model", "provider": "fake"}]
             agent_loop.system_message = "You are helpful."
@@ -274,7 +286,11 @@ class TestAgentLoopComponentGraphExecution:
         """Test that the LLM is actually invoked during run_agent()."""
         fake_llm = FakeStreamingLLM(responses=[AIMessage(content="I was called!")])
 
-        with patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm):
+        with (
+            patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm),
+            patch("lfx.components.agent_blocks.agent_loop.get_llm", return_value=fake_llm),
+            patch("lfx.base.models.unified_models.get_llm", return_value=fake_llm),
+        ):
             agent_loop = AgentLoopComponent(_id="test_agent_loop")
             agent_loop.model = [{"name": "fake-model", "provider": "fake"}]
             agent_loop.system_message = "You are helpful."
@@ -320,7 +336,11 @@ class TestMessageEvents:
         mock_event_manager.on_error = MagicMock()
         mock_event_manager.on_remove_message = MagicMock()
 
-        with patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm):
+        with (
+            patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm),
+            patch("lfx.components.agent_blocks.agent_loop.get_llm", return_value=fake_llm),
+            patch("lfx.base.models.unified_models.get_llm", return_value=fake_llm),
+        ):
             # Build the graph
             chat_input = ChatInput(_id="chat_input")
 
@@ -418,7 +438,11 @@ class TestAgentStepToolNotificationStreaming:
             send_message_calls.append(message)
             return message
 
-        with patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm):
+        with (
+            patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm),
+            patch("lfx.components.agent_blocks.agent_loop.get_llm", return_value=fake_llm),
+            patch("lfx.base.models.unified_models.get_llm", return_value=fake_llm),
+        ):
             # Create AgentStepComponent
             agent_step = AgentStepComponent(_id="test_agent_step")
             agent_step.model = [{"name": "fake-model", "provider": "fake"}]
@@ -491,7 +515,11 @@ class TestAgentStepToolNotificationStreaming:
             send_message_calls.append(message)
             return message
 
-        with patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm):
+        with (
+            patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm),
+            patch("lfx.components.agent_blocks.agent_loop.get_llm", return_value=fake_llm),
+            patch("lfx.base.models.unified_models.get_llm", return_value=fake_llm),
+        ):
             agent_step = AgentStepComponent(_id="test_agent_step")
             agent_step.model = [{"name": "fake-model", "provider": "fake"}]
             agent_step.system_message = "You are helpful."
@@ -757,10 +785,21 @@ class TestAgentFlowEventContract:
 
         fake_llm = FakeLLMForEventTest()
 
-        # Patch get_llm to return our fake
-        with patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm):
+        async def mock_aupdate(messages):
+            if isinstance(messages, list):
+                return messages
+            return [messages]
+
+        # Patch get_llm and message storage (ChatOutput persists messages to DB)
+        with (
+            patch("lfx.components.agent_blocks.agent_step.get_llm", return_value=fake_llm),
+            patch("lfx.components.agent_blocks.agent_loop.get_llm", return_value=fake_llm),
+            patch("lfx.base.models.unified_models.get_llm", return_value=fake_llm),
+            patch("lfx.custom.custom_component.component.aupdate_messages", side_effect=mock_aupdate),
+            patch("lfx.memory.aget_messages", return_value=[]),
+        ):
             # Build the full graph:
-            # ChatInput → AgentLoop → ChatOutput
+            # ChatInput -> AgentLoop -> ChatOutput
             # CurrentDate.to_toolkit → AgentLoop.tools
             # NOTE: IDs must contain "ChatInput"/"ChatOutput" for is_connected_to_chat_output() to work
             chat_input = ChatInput(_id="ChatInput-test")
