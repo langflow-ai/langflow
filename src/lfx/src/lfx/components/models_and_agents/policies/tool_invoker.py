@@ -1,5 +1,6 @@
 from typing import Any, TypeVar
 
+from langchain_core.messages import ToolMessage
 from mcp.types import CallToolResult
 from pydantic import BaseModel
 from toolguard.runtime import IToolInvoker
@@ -22,8 +23,16 @@ class ToolInvoker(IToolInvoker):
             logger.info(f"invoking {toolname} internally")
             res = await tool.ainvoke(input=arguments)
 
-            if isinstance(res, CallToolResult):
+            # ToolInvoker calls ainvoke without tool_call_id, so MCPStructuredTool
+            # returns the raw CallToolResult. The ToolMessage branch below is a
+            # defensive fallback in case that ever changes.
+            if isinstance(res, ToolMessage) and isinstance(res.artifact, CallToolResult):
+                res_dict = res.artifact.structuredContent
+            elif isinstance(res, CallToolResult):
                 res_dict = res.structuredContent
+            elif isinstance(res, list):
+                # Multimodal content (e.g. images) — no structured extraction applies.
+                return res  # type: ignore[return-value]
             elif isinstance(res, dict) and "value" in res:
                 res_dict = res["value"]
             else:
