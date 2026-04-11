@@ -168,6 +168,14 @@ export default function ModelInputComponent({
     // `options` (the saved list reflects only what the exporter had available).
     // This ensures importing a flow shows the importing user's full enabled
     // list rather than the intersection of the two sets.
+    //
+    // Cross-type guard: `providersData` from ``GET /api/v1/models`` is NOT
+    // filtered by ``model_type`` (the hook doesn't pass one), and the merged
+    // ``enabled_models`` map treats llm + embeddings as a single flat
+    // provider→name→bool record.  Without this check, text-embedding models
+    // leak into the language-model dropdown (and vice versa) whenever their
+    // provider has both kinds enabled.  Filter by each model's own
+    // ``model_type`` metadata so the component only shows its own type.
     if (enabledModelsData?.enabled_models && providersData) {
       for (const providerInfo of providersData) {
         const providerName = providerInfo.provider;
@@ -177,6 +185,19 @@ export default function ModelInputComponent({
         for (const model of providerInfo.models ?? []) {
           const modelName = model.model_name;
           if (providerModels[modelName] !== true) continue;
+
+          // Only include models whose declared type matches this component.
+          // Older metadata without ``model_type`` is allowed through so we
+          // don't regress providers that haven't adopted the tag yet.
+          const modelMetadataType = (
+            model.metadata as Record<string, unknown> | undefined
+          )?.model_type;
+          if (
+            typeof modelMetadataType === "string" &&
+            modelMetadataType !== modelType
+          ) {
+            continue;
+          }
 
           const key = `${providerName}::${modelName}`;
           if (seen.has(key)) continue;
@@ -196,7 +217,7 @@ export default function ModelInputComponent({
     }
 
     return grouped;
-  }, [options, enabledModelsData, providersData]);
+  }, [options, enabledModelsData, providersData, modelType]);
 
   // Flattened array of all enabled options for efficient lookups by name
   const flatOptions = useMemo(
