@@ -1215,7 +1215,7 @@
               }
             ],
             "pinned": false,
-            "score": 2.220446049250313E-16,
+            "score": 2.220446049250313e-16,
             "template": {
               "_type": "Component",
               "code": {
@@ -2169,7 +2169,7 @@
                 "title_case": false,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "***REDACTED***"
+                "value": ""
               },
               "base_url_ibm_watsonx": {
                 "_input_type": "DropdownInput",
@@ -2271,163 +2271,7 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [
-                  {
-                    "name": "gpt-5.4",
-                    "icon": "OpenAI",
-                    "category": "OpenAI",
-                    "provider": "OpenAI",
-                    "metadata": {
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "api_key_param": "api_key",
-                      "max_tokens_field_name": "max_tokens",
-                      "reasoning_models": [
-                        "gpt-5.4"
-                      ]
-                    }
-                  },
-                  {
-                    "name": "gpt-5.4-mini",
-                    "icon": "OpenAI",
-                    "category": "OpenAI",
-                    "provider": "OpenAI",
-                    "metadata": {
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "api_key_param": "api_key",
-                      "max_tokens_field_name": "max_tokens",
-                      "reasoning_models": [
-                        "gpt-5.4-mini"
-                      ]
-                    }
-                  },
-                  {
-                    "name": "gpt-5.4-pro",
-                    "icon": "OpenAI",
-                    "category": "OpenAI",
-                    "provider": "OpenAI",
-                    "metadata": {
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "api_key_param": "api_key",
-                      "max_tokens_field_name": "max_tokens",
-                      "reasoning_models": [
-                        "gpt-5.4-pro"
-                      ]
-                    }
-                  },
-                  {
-                    "name": "gpt-5.3",
-                    "icon": "OpenAI",
-                    "category": "OpenAI",
-                    "provider": "OpenAI",
-                    "metadata": {
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "api_key_param": "api_key",
-                      "max_tokens_field_name": "max_tokens",
-                      "reasoning_models": [
-                        "gpt-5.3"
-                      ]
-                    }
-                  },
-                  {
-                    "name": "gpt-5.3-instant",
-                    "icon": "OpenAI",
-                    "category": "OpenAI",
-                    "provider": "OpenAI",
-                    "metadata": {
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "api_key_param": "api_key",
-                      "max_tokens_field_name": "max_tokens",
-                      "reasoning_models": [
-                        "gpt-5.3-instant"
-                      ]
-                    }
-                  },
-                  {
-                    "name": "ibm/granite-4-h-small",
-                    "icon": "WatsonxAI",
-                    "category": "IBM WatsonX",
-                    "provider": "IBM WatsonX",
-                    "metadata": {
-                      "context_length": 128000,
-                      "model_class": "ChatWatsonx",
-                      "model_name_param": "model_id",
-                      "api_key_param": "apikey",
-                      "max_tokens_field_name": "max_tokens",
-                      "url_param": "url",
-                      "project_id_param": "project_id"
-                    }
-                  },
-                  {
-                    "name": "ibm/granite-8b-code-instruct",
-                    "icon": "WatsonxAI",
-                    "category": "IBM WatsonX",
-                    "provider": "IBM WatsonX",
-                    "metadata": {
-                      "context_length": 128000,
-                      "model_class": "ChatWatsonx",
-                      "model_name_param": "model_id",
-                      "api_key_param": "apikey",
-                      "max_tokens_field_name": "max_tokens",
-                      "url_param": "url",
-                      "project_id_param": "project_id"
-                    }
-                  },
-                  {
-                    "name": "ibm/granite-guardian-3-8b",
-                    "icon": "WatsonxAI",
-                    "category": "IBM WatsonX",
-                    "provider": "IBM WatsonX",
-                    "metadata": {
-                      "context_length": 128000,
-                      "model_class": "ChatWatsonx",
-                      "model_name_param": "model_id",
-                      "api_key_param": "apikey",
-                      "max_tokens_field_name": "max_tokens",
-                      "url_param": "url",
-                      "project_id_param": "project_id"
-                    }
-                  },
-                  {
-                    "name": "meta-llama/llama-3-2-11b-vision-instruct",
-                    "icon": "WatsonxAI",
-                    "category": "IBM WatsonX",
-                    "provider": "IBM WatsonX",
-                    "metadata": {
-                      "context_length": 128000,
-                      "model_class": "ChatWatsonx",
-                      "model_name_param": "model_id",
-                      "api_key_param": "apikey",
-                      "max_tokens_field_name": "max_tokens",
-                      "url_param": "url",
-                      "project_id_param": "project_id"
-                    }
-                  },
-                  {
-                    "name": "meta-llama/llama-3-3-70b-instruct",
-                    "icon": "WatsonxAI",
-                    "category": "IBM WatsonX",
-                    "provider": "IBM WatsonX",
-                    "metadata": {
-                      "context_length": 128000,
-                      "model_class": "ChatWatsonx",
-                      "model_name_param": "model_id",
-                      "api_key_param": "apikey",
-                      "max_tokens_field_name": "max_tokens",
-                      "url_param": "url",
-                      "project_id_param": "project_id"
-                    }
-                  }
-                ],
+                "options": [],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -2439,24 +2283,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": [
-                  {
-                    "name": "gpt-5.4",
-                    "icon": "OpenAI",
-                    "category": "OpenAI",
-                    "provider": "OpenAI",
-                    "metadata": {
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "api_key_param": "api_key",
-                      "max_tokens_field_name": "max_tokens",
-                      "reasoning_models": [
-                        "gpt-5.4"
-                      ]
-                    }
-                  }
-                ]
+                "value": []
               },
               "ollama_base_url": {
                 "_input_type": "MessageInput",
@@ -3117,9 +2944,7 @@
                 "external_options": {},
                 "info": "Select the knowledge to load data from.",
                 "name": "knowledge_base",
-                "options": [
-                  "release"
-                ],
+                "options": [],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -3133,7 +2958,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "str",
-                "value": "release"
+                "value": null
               },
               "_frontend_node_flow_id": {
                 "value": "b0f42845-1376-48a1-9671-d7f2700ad455"
@@ -3356,9 +3181,7 @@
                 "external_options": {},
                 "info": "Select the knowledge to load data from.",
                 "name": "knowledge_base",
-                "options": [
-                  "release"
-                ],
+                "options": [],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -3372,7 +3195,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "str",
-                "value": "release"
+                "value": null
               },
               "search_query": {
                 "_input_type": "MessageTextInput",
