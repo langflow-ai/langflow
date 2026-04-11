@@ -120,6 +120,7 @@ class Settings(BaseSettings):
 
         value = value.rstrip("/")
         return value
+
     mcp_base_url: str = ""
     """External base URL used to build MCP server URLs in the UI configuration JSON
     (e.g. 'https://langflow.example.com'). When empty, the frontend falls back to

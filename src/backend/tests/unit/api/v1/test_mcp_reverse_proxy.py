@@ -51,11 +51,10 @@ class TestForwardedPrefixMiddleware:
     """Test that the middleware propagates X-Forwarded-Prefix to scope root_path."""
 
     async def _captured_downstream_root_path(self, *, configured_root_path, headers=None):
-        from starlette.requests import Request
-        from starlette.responses import PlainTextResponse
-
         # Import the middleware logic inline to test it in isolation
         from langflow.main import get_settings_service
+        from starlette.requests import Request
+        from starlette.responses import PlainTextResponse
 
         captured_root_path = {}
 
@@ -113,6 +112,7 @@ class TestForwardedPrefixMiddleware:
         )
 
         assert root_path == "/langflow"
+
     async def test_middleware_ignores_header_when_root_path_not_configured(self):
         """When root_path is not set, X-Forwarded-Prefix is ignored."""
         from langflow.main import get_settings_service
