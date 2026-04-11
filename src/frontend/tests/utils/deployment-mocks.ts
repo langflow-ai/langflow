@@ -29,8 +29,16 @@ export const NEW_PROVIDER = {
 
 export const DEPLOYMENT = {
   id: "dep-1",
+  provider_id: "prov-1",
   name: "Test Deployment",
+  description: "Mock deployment for E2E tests",
   type: "agent",
+  created_at: "2026-04-06T00:00:00Z",
+  updated_at: "2026-04-06T00:00:00Z",
+  resource_key: "dep-1-resource",
+  attached_count: 1,
+  flow_version_ids: ["fv1"],
+  // Keep legacy keys to avoid breaking any tests still reading them.
   provider_account_id: "prov-1",
   provider_account_name: "My Env",
   status: "deployed",
@@ -102,6 +110,7 @@ export const FLOW_VERSIONS_MOCK = {
 
 export const DEPLOY_RESPONSE = {
   id: "dep-new",
+  provider_id: "prov-1",
   name: "My Deployment",
   type: "agent",
   provider_account_id: "prov-1",

@@ -40,9 +40,11 @@ describe("usePostProviderAccount", () => {
 
   const validPayload: ProviderAccountCreateRequest = {
     name: "My WxO Environment",
-    provider_key: "watsonx_orchestrate",
-    provider_url: "https://api.wxo.ibm.com",
-    provider_data: { api_key: "secret-key" }, // pragma: allowlist secret
+    provider_key: "watsonx-orchestrate",
+    provider_data: {
+      url: "https://api.wxo.ibm.com",
+      api_key: "secret-key", // pragma: allowlist secret
+    },
   };
 
   it("posts to providers endpoint with full payload", async () => {
@@ -91,9 +93,8 @@ describe("usePostProviderAccount", () => {
     const created = {
       id: "prov-1",
       name: "My WxO Environment",
-      provider_key: "watsonx_orchestrate",
-      provider_url: "https://api.wxo.ibm.com",
-      provider_tenant_id: "tenant-1",
+      provider_key: "watsonx-orchestrate",
+      provider_data: { url: "https://api.wxo.ibm.com", tenant_id: "tenant-1" },
       created_at: "2026-01-01T00:00:00Z",
       updated_at: null,
     };
