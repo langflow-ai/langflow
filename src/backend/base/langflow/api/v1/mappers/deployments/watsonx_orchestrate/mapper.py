@@ -1008,9 +1008,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         return ExecutionCreateResponse(
             deployment_id=deployment_id,
-            provider_data=api_provider_result.model_dump(),
-            # includes None intentionally, simply passes through
-            # wxo api response, which can contain null values
+            provider_data=api_provider_result.model_dump(exclude_none=True),
         )
 
     def shape_execution_status_result(
@@ -1039,9 +1037,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         return ExecutionStatusResponse(
             deployment_id=deployment_id,
-            provider_data=api_provider_result.model_dump(),
-            # includes None intentionally, simply passes through
-            # wxo api response, which can contain null values
+            provider_data=api_provider_result.model_dump(exclude_none=True),
         )
 
     def shape_deployment_list_result(
