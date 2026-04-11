@@ -50,23 +50,12 @@ class TestSseTransportRootPath:
 class TestForwardedPrefixMiddleware:
     """Test that the middleware propagates X-Forwarded-Prefix to scope root_path."""
 
-    async def test_no_header_preserves_root_path(self, client):
-        """Without X-Forwarded-Prefix the root_path stays unchanged."""
-        response = await client.head("api/v1/mcp/sse")
-        assert response.status_code == 200
-
-    async def test_forwarded_prefix_header_is_accepted(self, client):
-        """X-Forwarded-Prefix header does not break the request."""
-        response = await client.head(
-            "api/v1/mcp/sse",
-            headers={"X-Forwarded-Prefix": "/my-prefix"},
-        )
-        assert response.status_code == 200
-
-    async def test_middleware_sets_root_path_when_enabled(self):
-        """Verify the middleware actually sets root_path in the ASGI scope."""
+    async def _captured_downstream_root_path(self, *, configured_root_path, headers=None):
         from starlette.requests import Request
         from starlette.responses import PlainTextResponse
+
+        # Import the middleware logic inline to test it in isolation
+        from langflow.main import get_settings_service
 
         captured_root_path = {}
 
@@ -74,14 +63,15 @@ class TestForwardedPrefixMiddleware:
             captured_root_path["value"] = request.scope.get("root_path", "")
             return PlainTextResponse("ok")
 
-        # Import the middleware logic inline to test it in isolation
-        from langflow.main import get_settings_service
-
         settings = get_settings_service().settings
         original_root_path = settings.root_path
 
         try:
-            settings.root_path = "/enabled"
+            settings.root_path = configured_root_path
+
+            raw_headers = []
+            for key, value in (headers or {}).items():
+                raw_headers.append((key.lower().encode(), value.encode()))
 
             scope = {
                 "type": "http",
@@ -89,19 +79,40 @@ class TestForwardedPrefixMiddleware:
                 "path": "/api/v1/mcp/sse",
                 "root_path": "",
                 "query_string": b"",
-                "headers": [(b"x-forwarded-prefix", b"/langflow")],
+                "headers": raw_headers,
             }
             request = Request(scope)
 
-            # Simulate the middleware logic
             prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
-            if prefix and prefix.startswith("/") and "://" not in prefix:
+            if settings.root_path and prefix and prefix.startswith("/") and "://" not in prefix:
                 request.scope["root_path"] = prefix
 
-            assert request.scope["root_path"] == "/langflow"
+            await next_app(request)
+            return captured_root_path["value"]
         finally:
             settings.root_path = original_root_path
 
+    async def test_no_header_preserves_root_path(self):
+        """Without X-Forwarded-Prefix, downstream code sees the original root_path."""
+        root_path = await self._captured_downstream_root_path(configured_root_path="/enabled")
+        assert root_path == ""
+
+    async def test_forwarded_prefix_header_sets_downstream_root_path(self):
+        """With X-Forwarded-Prefix and root_path enabled, downstream code sees the prefix."""
+        root_path = await self._captured_downstream_root_path(
+            configured_root_path="/enabled",
+            headers={"X-Forwarded-Prefix": "/my-prefix"},
+        )
+        assert root_path == "/my-prefix"
+
+    async def test_middleware_sets_root_path_when_enabled(self):
+        """Verify the middleware sets root_path visible to downstream code."""
+        root_path = await self._captured_downstream_root_path(
+            configured_root_path="/enabled",
+            headers={"X-Forwarded-Prefix": "/langflow"},
+        )
+
+        assert root_path == "/langflow"
     async def test_middleware_ignores_header_when_root_path_not_configured(self):
         """When root_path is not set, X-Forwarded-Prefix is ignored."""
         from langflow.main import get_settings_service
