@@ -269,7 +269,7 @@ async def delete_flow_version_entry(
     if await has_deployment_attachments(session, version_id, user_id=user_id):
         msg = (
             f"Version entry {version_id} is attached to one or more deployments "
-            f"and cannot be deleted. Detach it from all deployments first."
+            f"and cannot be deleted. Remove its deployment attachment rows first."
         )
         raise FlowVersionDeployedError(msg)
 

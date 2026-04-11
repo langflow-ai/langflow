@@ -30,6 +30,7 @@ from langflow.api.v1.projects_mcp_helpers import (
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError, parse_deployment_guard_error
+from langflow.services.database.models.deployment.guards import check_project_has_deployments
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -457,6 +458,7 @@ async def delete_project(
         if not project_row:
             raise HTTPException(status_code=404, detail="Project not found")
 
+        await check_project_has_deployments(session, project_id=project_id)
         await session.delete(project_row)
         # Flush eagerly so DB triggers/constraints run before returning 204.
         # Without this, trigger errors may surface only during teardown commit,

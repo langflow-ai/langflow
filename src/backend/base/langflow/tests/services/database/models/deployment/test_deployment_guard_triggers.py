@@ -284,6 +284,7 @@ def _assert_guard(exc: DBAPIError, expected_code: str, expected_detail: str) -> 
     assert f"DEPLOYMENT_GUARD:{expected_code}:" in str(exc)
     parsed = parse_deployment_guard_error(exc)
     assert isinstance(parsed, DeploymentGuardError)
+    assert parsed.code == expected_code
     assert parsed.detail == expected_detail
 
 
@@ -362,49 +363,6 @@ async def test_same_project_attachment_succeeds(
 
 
 @pytest.mark.asyncio
-async def test_trigger_blocks_flow_version_delete_when_deployed(
-    db: AsyncSession,
-    user: User,
-    flow_version: FlowVersion,
-    deployment: Deployment,
-) -> None:
-    await _create_attachment(
-        db,
-        user_id=user.id,
-        flow_version_id=flow_version.id,
-        deployment_id=deployment.id,
-    )
-
-    with pytest.raises(DBAPIError) as exc_info:
-        await _execute_and_commit(db, delete(FlowVersion).where(FlowVersion.id == flow_version.id))
-    await db.rollback()
-
-    _assert_guard(
-        exc_info.value,
-        "FLOW_VERSION_DEPLOYED",
-        "Cannot delete flow version because it is attached to one or more deployments. "
-        "Detach it from all deployments first.",
-    )
-
-
-@pytest.mark.asyncio
-async def test_trigger_blocks_project_delete_when_deployments_exist(
-    db: AsyncSession,
-    source_project: Folder,
-    deployment: Deployment,  # noqa: ARG001
-) -> None:
-    with pytest.raises(DBAPIError) as exc_info:
-        await _execute_and_commit(db, delete(Folder).where(Folder.id == source_project.id))
-    await db.rollback()
-
-    _assert_guard(
-        exc_info.value,
-        "PROJECT_HAS_DEPLOYMENTS",
-        "Cannot delete project because it contains one or more deployments. Remove all deployments first.",
-    )
-
-
-@pytest.mark.asyncio
 async def test_trigger_blocks_flow_move_when_deployed_in_source_project(
     db: AsyncSession,
     user: User,
@@ -427,8 +385,8 @@ async def test_trigger_blocks_flow_move_when_deployed_in_source_project(
     _assert_guard(
         exc_info.value,
         "FLOW_DEPLOYED_IN_PROJECT",
-        "Cannot move flow to a different project because it has versions deployed in the current project. "
-        "Detach deployed versions first.",
+        "This flow has deployed versions in its current project and cannot be moved until those attachments "
+        "are removed.",
     )
 
 
@@ -447,7 +405,25 @@ async def test_trigger_blocks_deployment_project_move(
     _assert_guard(
         exc_info.value,
         "DEPLOYMENT_PROJECT_MOVE",
-        "Cannot move deployment to a different project. Re-create it in the target project instead.",
+        "This deployment cannot be moved to a different project. Re-create it in the target project instead.",
+    )
+
+
+@pytest.mark.asyncio
+async def test_trigger_blocks_deployment_resource_key_update(
+    db: AsyncSession,
+    deployment: Deployment,
+) -> None:
+    with pytest.raises(DBAPIError) as exc_info:
+        await _execute_and_commit(
+            db, update(Deployment).where(Deployment.id == deployment.id).values(resource_key="rk-2")
+        )
+    await db.rollback()
+
+    _assert_guard(
+        exc_info.value,
+        "DEPLOYMENT_RESOURCE_KEY_UPDATE",
+        "This deployment resource key cannot be modified on an existing deployment. Re-create it instead.",
     )
 
 
@@ -469,8 +445,8 @@ async def test_trigger_blocks_deployment_provider_account_move(
     _assert_guard(
         exc_info.value,
         "DEPLOYMENT_PROVIDER_ACCOUNT_MOVE",
-        "Cannot move deployment to a different deployment provider account. "
-        "Re-create it under the target provider account instead.",
+        "This deployment cannot be moved to a different provider account. "
+        "Re-create it under the target provider account.",
     )
 
 
@@ -491,9 +467,7 @@ async def test_trigger_blocks_deployment_provider_account_identity_update(
     _assert_guard(
         exc_info.value,
         "DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE",
-        "Cannot modify provider key, provider tenant id, or provider URL "
-        "on an existing deployment provider account. "
-        "Re-create the account instead.",
+        "This deployment provider account identity cannot be modified. Re-create the account instead.",
     )
 
 
@@ -515,9 +489,7 @@ async def test_trigger_blocks_deployment_provider_account_provider_key_update(
     _assert_guard(
         exc_info.value,
         "DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE",
-        "Cannot modify provider key, provider tenant id, or provider URL "
-        "on an existing deployment provider account. "
-        "Re-create the account instead.",
+        "This deployment provider account identity cannot be modified. Re-create the account instead.",
     )
 
 
@@ -551,7 +523,7 @@ async def test_trigger_blocks_cross_project_attachment(
     _assert_guard(
         exc_info.value,
         "CROSS_PROJECT_ATTACHMENT",
-        "Cannot attach a flow version to a deployment in a different project.",
+        "Flow versions can only be attached to deployments in the same project.",
     )
 
 
@@ -571,6 +543,21 @@ async def test_deployment_project_update_with_same_value_succeeds(
     row = (await db.exec(select(Deployment).where(Deployment.id == deployment.id))).first()
     assert row is not None
     assert row.project_id == deployment.project_id
+
+
+@pytest.mark.asyncio
+async def test_deployment_resource_key_update_with_same_value_succeeds(
+    db: AsyncSession,
+    deployment: Deployment,
+) -> None:
+    """Updating resource_key to its current value must not trigger the guard."""
+    await _execute_and_commit(
+        db,
+        update(Deployment).where(Deployment.id == deployment.id).values(resource_key=deployment.resource_key),
+    )
+    row = (await db.exec(select(Deployment).where(Deployment.id == deployment.id))).first()
+    assert row is not None
+    assert row.resource_key == deployment.resource_key
 
 
 @pytest.mark.asyncio
@@ -657,8 +644,8 @@ async def test_trigger_blocks_flow_move_to_null_folder_when_deployed(
     _assert_guard(
         exc_info.value,
         "FLOW_DEPLOYED_IN_PROJECT",
-        "Cannot move flow to a different project because it has versions deployed in the current project. "
-        "Detach deployed versions first.",
+        "This flow has deployed versions in its current project and cannot be moved until those attachments "
+        "are removed.",
     )
 
 
@@ -700,64 +687,6 @@ async def test_project_delete_succeeds_after_removing_deployments(
     await _execute_and_commit(db, delete(Folder).where(Folder.id == source_project.id))
     result = (await db.exec(select(Folder).where(Folder.id == source_project.id))).first()
     assert result is None
-
-
-# ── Multiple attachments / multiple deployments ──────────────────────
-
-
-@pytest.mark.asyncio
-async def test_trigger_blocks_flow_version_delete_with_multiple_attachments(
-    db: AsyncSession,
-    user: User,
-    source_project: Folder,
-    flow_version: FlowVersion,
-    deployment: Deployment,
-    provider_account: DeploymentProviderAccount,
-) -> None:
-    """A flow version attached to multiple deployments must still be blocked."""
-    second_deployment = Deployment(
-        user_id=user.id,
-        project_id=source_project.id,
-        deployment_provider_account_id=provider_account.id,
-        resource_key="rk-2",
-        name="deployment-2",
-        deployment_type=DeploymentType.AGENT,
-    )
-    db.add(second_deployment)
-    await db.commit()
-    await db.refresh(second_deployment)
-
-    await _create_attachment(db, user_id=user.id, flow_version_id=flow_version.id, deployment_id=deployment.id)
-    await _create_attachment(db, user_id=user.id, flow_version_id=flow_version.id, deployment_id=second_deployment.id)
-
-    with pytest.raises(DBAPIError):
-        await _execute_and_commit(db, delete(FlowVersion).where(FlowVersion.id == flow_version.id))
-    await db.rollback()
-
-
-@pytest.mark.asyncio
-async def test_trigger_blocks_project_delete_with_multiple_deployments(
-    db: AsyncSession,
-    user: User,
-    source_project: Folder,
-    deployment: Deployment,  # noqa: ARG001
-    provider_account: DeploymentProviderAccount,
-) -> None:
-    """A project with multiple deployments must still be blocked."""
-    second_deployment = Deployment(
-        user_id=user.id,
-        project_id=source_project.id,
-        deployment_provider_account_id=provider_account.id,
-        resource_key="rk-3",
-        name="deployment-3",
-        deployment_type=DeploymentType.AGENT,
-    )
-    db.add(second_deployment)
-    await db.commit()
-
-    with pytest.raises(DBAPIError):
-        await _execute_and_commit(db, delete(Folder).where(Folder.id == source_project.id))
-    await db.rollback()
 
 
 # ── Downgrade removes triggers ───────────────────────────────────────
@@ -806,11 +735,15 @@ async def test_downgrade_removes_triggers(
         )
         session.add(dep)
         await session.commit()
+        await session.refresh(dep)
 
     # Verify the guard IS active before downgrade
     async with AsyncSession(db_engine, expire_on_commit=False) as session:
         with pytest.raises(DBAPIError):
-            await _execute_and_commit(session, delete(Folder).where(Folder.id == project.id))
+            await _execute_and_commit(
+                session,
+                update(Deployment).where(Deployment.id == dep.id).values(resource_key="rk-dg-updated"),
+            )
         await session.rollback()
 
     async with db_engine.begin() as conn:
@@ -818,11 +751,13 @@ async def test_downgrade_removes_triggers(
 
     # After downgrade, the same operation must succeed
     async with AsyncSession(db_engine, expire_on_commit=False) as session:
-        await session.exec(delete(Deployment).where(Deployment.project_id == project.id))
-        await session.exec(update(Flow).where(Flow.folder_id == project.id).values(folder_id=None))
-        await _execute_and_commit(session, delete(Folder).where(Folder.id == project.id))
-        result = (await session.exec(select(Folder).where(Folder.id == project.id))).first()
-        assert result is None
+        await _execute_and_commit(
+            session,
+            update(Deployment).where(Deployment.id == dep.id).values(resource_key="rk-dg-updated"),
+        )
+        result = (await session.exec(select(Deployment).where(Deployment.id == dep.id))).first()
+        assert result is not None
+        assert result.resource_key == "rk-dg-updated"
 
     async with db_engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.drop_all)

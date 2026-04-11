@@ -9,9 +9,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from httpx import ASGITransport, AsyncClient
-from langflow.api.utils.core import cascade_delete_flow
+from langflow.api.utils import cascade_delete_flow
 from langflow.api.v1.projects import delete_project
-from langflow.api.v1.users import delete_user
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 
 
@@ -26,8 +25,16 @@ class _ExecResult:
         return self._value
 
 
+class _AsyncNullContext:
+    async def __aenter__(self):
+        return None
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+
 @pytest.mark.asyncio
-async def test_delete_project_translates_guard_error_from_flush(monkeypatch):
+async def test_delete_project_raises_guard_error_from_app_level_check(monkeypatch):
     project_id = uuid4()
     user_id = uuid4()
 
@@ -35,81 +42,48 @@ async def test_delete_project_translates_guard_error_from_flush(monkeypatch):
         "langflow.api.v1.projects.get_settings_service",
         lambda: SimpleNamespace(settings=SimpleNamespace(add_projects_to_mcp_servers=False)),
     )
+    monkeypatch.setattr("langflow.api.v1.projects.cleanup_mcp_on_delete", AsyncMock())
+    monkeypatch.setattr("langflow.api.v1.projects.sync_project_deployments", AsyncMock())
 
     session = AsyncMock()
     project = SimpleNamespace(id=project_id, name="Test Project", auth_settings=None)
+    guarded_project_row = SimpleNamespace(id=project_id, name="Test Project")
     session.exec = AsyncMock(
         side_effect=[
-            _ExecResult([]),  # sync_project_deployments query
-            _ExecResult([]),  # flows query
-            _ExecResult(project),  # project query
+            _ExecResult(project),  # initial project lookup
+            _ExecResult([]),  # first attempt: flows query
+            _ExecResult(guarded_project_row),  # first attempt: project query
+            _ExecResult(uuid4()),  # first attempt: check_project_has_deployments
+            _ExecResult([]),  # second attempt: flows query
+            _ExecResult(guarded_project_row),  # second attempt: project query
+            _ExecResult(uuid4()),  # second attempt: check_project_has_deployments
         ]
     )
     session.delete = AsyncMock()
-    session.flush = AsyncMock(
-        side_effect=Exception(
-            "DEPLOYMENT_GUARD:PROJECT_HAS_DEPLOYMENTS:Cannot delete project because it contains deployments."
-        )
-    )
+    session.flush = AsyncMock()
+    session.begin_nested = lambda: _AsyncNullContext()
 
-    with pytest.raises(DeploymentGuardError, match="Cannot delete project"):
+    with pytest.raises(DeploymentGuardError, match="project currently contains one or more deployments"):
         await delete_project(
             session=session,
             project_id=project_id,
             current_user=SimpleNamespace(id=user_id),
         )
 
-    session.flush.assert_awaited_once()
+    session.flush.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_delete_user_translates_guard_error_from_flush():
-    current_user_id = uuid4()
-    target_user_id = uuid4()
-
-    session = AsyncMock()
-    session.exec = AsyncMock(return_value=_ExecResult(SimpleNamespace(id=target_user_id)))
-    session.delete = AsyncMock()
-    session.flush = AsyncMock(
-        side_effect=Exception(
-            "DEPLOYMENT_GUARD:PROJECT_HAS_DEPLOYMENTS:Cannot delete project because it contains deployments."
-        )
-    )
-
-    with pytest.raises(DeploymentGuardError, match="Cannot delete project"):
-        await delete_user(
-            user_id=target_user_id,
-            current_user=SimpleNamespace(id=current_user_id, is_superuser=True),
-            session=session,
-        )
-
-    session.flush.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_cascade_delete_flow_translates_guard_error():
-    """cascade_delete_flow must translate a raw DB guard exception into DeploymentGuardError."""
-    from langflow.services.database.models.flow_version.model import FlowVersion
-
+async def test_cascade_delete_flow_raises_guard_error_from_app_level_check():
+    """cascade_delete_flow should run app-level guard checks before issuing deletes."""
     flow_id = uuid4()
 
-    _guard_msg = (
-        "DEPLOYMENT_GUARD:FLOW_VERSION_DEPLOYED:"
-        "Cannot delete flow version because it is attached to one or more deployments. "
-        "Detach it from all deployments first."
-    )
-
-    async def _exec_side_effect(stmt):
-        stmt_str = str(stmt)
-        if FlowVersion.__tablename__ in stmt_str and "DELETE" in stmt_str.upper():
-            raise RuntimeError(_guard_msg)
-        return _ExecResult(None)
-
     session = AsyncMock()
-    session.exec = AsyncMock(side_effect=_exec_side_effect)
+    session.exec = AsyncMock(return_value=_ExecResult(uuid4()))
 
-    with pytest.raises(DeploymentGuardError, match="Cannot delete flow version"):
+    with pytest.raises(DeploymentGuardError, match="flow version is currently attached"):
         await cascade_delete_flow(session, flow_id)
+    assert session.exec.await_count == 1
 
 
 @pytest.mark.asyncio
@@ -134,8 +108,17 @@ async def test_update_flow_translates_guard_error_from_flush(monkeypatch):
     )
 
     monkeypatch.setattr("langflow.api.v1.flows._read_flow", AsyncMock(return_value=fake_flow))
-    monkeypatch.setattr("langflow.api.v1.flows._try_flow_deployment_sync", AsyncMock())
-    monkeypatch.setattr("langflow.api.v1.flows.get_webhook_component_in_flow", lambda _data: None)
+    monkeypatch.setattr(
+        "langflow.api.v1.flows._patch_flow",
+        AsyncMock(
+            side_effect=Exception(
+                "DEPLOYMENT_GUARD:FLOW_DEPLOYED_IN_PROJECT:"
+                "Cannot move flow to a different project because it has versions deployed "
+                "in the current project. Detach deployed versions first."
+            )
+        ),
+    )
+    monkeypatch.setattr("langflow.api.v1.flows.sync_flow_deployment_state", AsyncMock())
     monkeypatch.setattr(
         "langflow.api.v1.flows.get_settings_service",
         lambda: SimpleNamespace(settings=SimpleNamespace(remove_api_keys=False)),
@@ -144,17 +127,11 @@ async def test_update_flow_translates_guard_error_from_flush(monkeypatch):
     session = AsyncMock()
     session.exec = AsyncMock(return_value=_ExecResult(SimpleNamespace(id=new_folder_id)))
     session.add = AsyncMock()
-    session.flush = AsyncMock(
-        side_effect=Exception(
-            "DEPLOYMENT_GUARD:FLOW_DEPLOYED_IN_PROJECT:"
-            "Cannot move flow to a different project because it has versions deployed "
-            "in the current project. Detach deployed versions first."
-        )
-    )
+    session.begin_nested = lambda: _AsyncNullContext()
 
     flow_update = FlowUpdate(folder_id=new_folder_id)
 
-    with pytest.raises(DeploymentGuardError, match="Cannot move flow"):
+    with pytest.raises(DeploymentGuardError, match="cannot be moved until those attachments are removed"):
         await update_flow(
             session=session,
             flow_id=flow_id,
@@ -174,21 +151,29 @@ async def test_delete_multiple_flows_propagates_guard_error(monkeypatch):
 
     fake_flow = SimpleNamespace(id=flow_id)
 
-    monkeypatch.setattr("langflow.api.v1.flows._try_flow_deployment_sync", AsyncMock())
     monkeypatch.setattr(
         "langflow.api.v1.flows.cascade_delete_flow",
         AsyncMock(
             side_effect=DeploymentGuardError(
-                "Cannot delete flow version because it is attached to one or more deployments. "
-                "Detach it from all deployments first."
+                code="FLOW_VERSION_DEPLOYED",
+                technical_detail=(
+                    "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment "
+                    "for the target flow."
+                ),
+                detail=(
+                    "This flow version is currently attached to one or more deployments. "
+                    "Remove those attachments first."
+                ),
             )
         ),
     )
+    monkeypatch.setattr("langflow.api.v1.flows.sync_flow_deployment_state", AsyncMock())
 
     session = AsyncMock()
     session.exec = AsyncMock(return_value=_ExecResult([fake_flow]))
+    session.begin_nested = lambda: _AsyncNullContext()
 
-    with pytest.raises(DeploymentGuardError, match="Cannot delete flow version"):
+    with pytest.raises(DeploymentGuardError, match="flow version is currently attached"):
         await delete_multiple_flows(
             flow_ids=[flow_id],
             user=SimpleNamespace(id=user_id),
@@ -218,7 +203,11 @@ async def test_global_exception_handler_returns_409_for_deployment_guard_error()
 
     @app.get("/boom")
     async def _boom():
-        raise DeploymentGuardError(_detail)
+        raise DeploymentGuardError(
+            code="PROJECT_HAS_DEPLOYMENTS",
+            technical_detail="DELETE folder blocked: dependent rows exist in deployment for the target project.",
+            detail=_detail,
+        )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/boom")

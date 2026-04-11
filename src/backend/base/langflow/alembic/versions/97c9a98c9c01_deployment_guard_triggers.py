@@ -21,66 +21,6 @@ depends_on: str | Sequence[str] | None = None
 def _upgrade_postgresql() -> None:
     op.execute(
         """
-        CREATE FUNCTION prevent_flow_version_delete_if_deployed()
-        RETURNS TRIGGER
-        AS $$
-        BEGIN
-            IF EXISTS (
-                SELECT 1
-                FROM flow_version_deployment_attachment
-                WHERE flow_version_id = OLD.id
-            ) THEN
-                RAISE EXCEPTION '%',
-                    'DEPLOYMENT_GUARD:FLOW_VERSION_DEPLOYED:'
-                    || 'Cannot delete flow version because it is attached to one or more deployments. '
-                    || 'Detach it from all deployments first.';
-            END IF;
-            RETURN OLD;
-        END;
-        $$ LANGUAGE plpgsql;
-        """
-    )
-    op.execute(
-        """
-        CREATE TRIGGER trg_prevent_flow_version_delete_if_deployed
-        BEFORE DELETE ON flow_version
-        FOR EACH ROW
-        EXECUTE FUNCTION prevent_flow_version_delete_if_deployed();
-        """
-    )
-
-    op.execute(
-        """
-        CREATE FUNCTION prevent_folder_delete_if_has_deployments()
-        RETURNS TRIGGER
-        AS $$
-        BEGIN
-            IF EXISTS (
-                SELECT 1
-                FROM deployment
-                WHERE project_id = OLD.id
-            ) THEN
-                RAISE EXCEPTION '%',
-                    'DEPLOYMENT_GUARD:PROJECT_HAS_DEPLOYMENTS:'
-                    || 'Cannot delete project because it contains one or more deployments. '
-                    || 'Remove all deployments first.';
-            END IF;
-            RETURN OLD;
-        END;
-        $$ LANGUAGE plpgsql;
-        """
-    )
-    op.execute(
-        """
-        CREATE TRIGGER trg_prevent_folder_delete_if_has_deployments
-        BEFORE DELETE ON folder
-        FOR EACH ROW
-        EXECUTE FUNCTION prevent_folder_delete_if_has_deployments();
-        """
-    )
-
-    op.execute(
-        """
         CREATE FUNCTION prevent_flow_move_if_deployed()
         RETURNS TRIGGER
         AS $$
@@ -96,8 +36,10 @@ def _upgrade_postgresql() -> None:
                 ) THEN
                     RAISE EXCEPTION '%',
                         'DEPLOYMENT_GUARD:FLOW_DEPLOYED_IN_PROJECT:'
-                        || 'Cannot move flow to a different project because it has versions deployed '
-                        || 'in the current project. Detach deployed versions first.';
+                        || 'UPDATE flow.folder_id blocked: versions of this flow remain attached to deployments '
+                        || 'in the current project scope (OLD.folder_id). '
+                        || 'Remove rows from flow_version_deployment_attachment for this flow in the current '
+                        || 'project before changing flow.folder_id.';
                 END IF;
             END IF;
             RETURN NEW;
@@ -123,8 +65,8 @@ def _upgrade_postgresql() -> None:
             IF OLD.project_id IS DISTINCT FROM NEW.project_id THEN
                 RAISE EXCEPTION '%',
                     'DEPLOYMENT_GUARD:DEPLOYMENT_PROJECT_MOVE:'
-                    || 'Cannot move deployment to a different project. '
-                    || 'Re-create it in the target project instead.';
+                    || 'UPDATE deployment.project_id blocked: project scope is immutable for existing deployments. '
+                    || 'Re-create the deployment in the target project.';
             END IF;
             RETURN NEW;
         END;
@@ -142,6 +84,31 @@ def _upgrade_postgresql() -> None:
 
     op.execute(
         """
+        CREATE FUNCTION prevent_deployment_resource_key_update()
+        RETURNS TRIGGER
+        AS $$
+        BEGIN
+            IF OLD.resource_key IS DISTINCT FROM NEW.resource_key THEN
+                RAISE EXCEPTION '%',
+                    'DEPLOYMENT_GUARD:DEPLOYMENT_RESOURCE_KEY_UPDATE:'
+                    || 'Cannot modify deployment resource key on an existing deployment. Re-create it instead.';
+            END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+        """
+    )
+    op.execute(
+        """
+        CREATE TRIGGER trg_prevent_deployment_resource_key_update
+        BEFORE UPDATE ON deployment
+        FOR EACH ROW
+        EXECUTE FUNCTION prevent_deployment_resource_key_update();
+        """
+    )
+
+    op.execute(
+        """
         CREATE FUNCTION prevent_deployment_provider_account_move()
         RETURNS TRIGGER
         AS $$
@@ -149,8 +116,8 @@ def _upgrade_postgresql() -> None:
             IF OLD.deployment_provider_account_id IS DISTINCT FROM NEW.deployment_provider_account_id THEN
                 RAISE EXCEPTION '%',
                     'DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_MOVE:'
-                    || 'Cannot move deployment to a different deployment provider account. '
-                    || 'Re-create it under the target provider account instead.';
+                    || 'UPDATE deployment.deployment_provider_account_id blocked: provider account scope is immutable '
+                    || 'for existing deployments. Re-create the deployment under the target provider account.';
             END IF;
             RETURN NEW;
         END;
@@ -166,6 +133,13 @@ def _upgrade_postgresql() -> None:
         """
     )
 
+    # NOTE:
+    # This identity immutability guard is intentionally GLOBAL for the current
+    # schema shape (provider_key + provider_url + provider_tenant_id). If a
+    # future provider uses a different identity tuple (for example
+    # account_id/region without URL/tenant), handle that via an additive schema
+    # migration and replace this global trigger with provider-specific identity
+    # guards in that migration.
     op.execute(
         """
         CREATE FUNCTION prevent_deployment_provider_account_identity_update()
@@ -177,9 +151,8 @@ def _upgrade_postgresql() -> None:
                OR OLD.provider_key IS DISTINCT FROM NEW.provider_key THEN
                 RAISE EXCEPTION '%',
                     'DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE:'
-                    || 'Cannot modify provider key, provider tenant id, or provider URL '
-                    || 'on an existing deployment provider account. '
-                    || 'Re-create the account instead.';
+                    || 'UPDATE deployment_provider_account blocked: provider_key, provider_tenant_id, and '
+                    || 'provider_url are immutable on existing accounts. Re-create the account instead.';
             END IF;
             RETURN NEW;
         END;
@@ -216,7 +189,8 @@ def _upgrade_postgresql() -> None:
             IF flow_project_id IS DISTINCT FROM deployment_project_id THEN
                 RAISE EXCEPTION '%',
                     'DEPLOYMENT_GUARD:CROSS_PROJECT_ATTACHMENT:'
-                    || 'Cannot attach a flow version to a deployment in a different project.';
+                    || 'INSERT flow_version_deployment_attachment blocked: flow project scope (flow.folder_id) '
+                    || 'does not match deployment project scope (deployment.project_id).';
             END IF;
             RETURN NEW;
         END;
@@ -235,42 +209,6 @@ def _upgrade_postgresql() -> None:
 
 def _upgrade_sqlite() -> None:
     op.execute(
-        "CREATE TRIGGER trg_prevent_flow_version_delete_if_deployed\n"
-        "BEFORE DELETE ON flow_version\n"
-        "FOR EACH ROW\n"
-        "WHEN EXISTS (\n"
-        "    SELECT 1\n"
-        "    FROM flow_version_deployment_attachment\n"
-        "    WHERE flow_version_id = OLD.id\n"
-        ")\n"
-        "BEGIN\n"
-        "    SELECT RAISE(\n"
-        "        ABORT,\n"
-        "        'DEPLOYMENT_GUARD:FLOW_VERSION_DEPLOYED:Cannot delete flow version because it is attached "
-        "to one or more deployments. Detach it from all deployments first.'\n"
-        "    );\n"
-        "END;\n"
-    )
-
-    op.execute(
-        "CREATE TRIGGER trg_prevent_folder_delete_if_has_deployments\n"
-        "BEFORE DELETE ON folder\n"
-        "FOR EACH ROW\n"
-        "WHEN EXISTS (\n"
-        "    SELECT 1\n"
-        "    FROM deployment\n"
-        "    WHERE project_id = OLD.id\n"
-        ")\n"
-        "BEGIN\n"
-        "    SELECT RAISE(\n"
-        "        ABORT,\n"
-        "        'DEPLOYMENT_GUARD:PROJECT_HAS_DEPLOYMENTS:Cannot delete project because it contains one "
-        "or more deployments. Remove all deployments first.'\n"
-        "    );\n"
-        "END;\n"
-    )
-
-    op.execute(
         "CREATE TRIGGER trg_prevent_flow_move_if_deployed\n"
         "BEFORE UPDATE OF folder_id ON flow\n"
         "FOR EACH ROW\n"
@@ -286,8 +224,10 @@ def _upgrade_sqlite() -> None:
         "BEGIN\n"
         "    SELECT RAISE(\n"
         "        ABORT,\n"
-        "        'DEPLOYMENT_GUARD:FLOW_DEPLOYED_IN_PROJECT:Cannot move flow to a different project because "
-        "it has versions deployed in the current project. Detach deployed versions first.'\n"
+        "        'DEPLOYMENT_GUARD:FLOW_DEPLOYED_IN_PROJECT:UPDATE flow.folder_id blocked: versions of this "
+        "flow remain attached to deployments in the current project scope (OLD.folder_id). Remove rows from "
+        "flow_version_deployment_attachment for this flow in the current project before changing "
+        "flow.folder_id.'\n"
         "    );\n"
         "END;\n"
     )
@@ -300,8 +240,22 @@ def _upgrade_sqlite() -> None:
         "BEGIN\n"
         "    SELECT RAISE(\n"
         "        ABORT,\n"
-        "        'DEPLOYMENT_GUARD:DEPLOYMENT_PROJECT_MOVE:Cannot move deployment to a different project. "
-        "Re-create it in the target project instead.'\n"
+        "        'DEPLOYMENT_GUARD:DEPLOYMENT_PROJECT_MOVE:UPDATE deployment.project_id blocked: project "
+        "scope is immutable for existing deployments. Re-create the deployment in the target project.'\n"
+        "    );\n"
+        "END;\n"
+    )
+
+    op.execute(
+        "CREATE TRIGGER trg_prevent_deployment_resource_key_update\n"
+        "BEFORE UPDATE OF resource_key ON deployment\n"
+        "FOR EACH ROW\n"
+        "WHEN OLD.resource_key IS NOT NEW.resource_key\n"
+        "BEGIN\n"
+        "    SELECT RAISE(\n"
+        "        ABORT,\n"
+        "        'DEPLOYMENT_GUARD:DEPLOYMENT_RESOURCE_KEY_UPDATE:Cannot modify deployment resource key on an "
+        "existing deployment. Re-create it instead.'\n"
         "    );\n"
         "END;\n"
     )
@@ -314,12 +268,17 @@ def _upgrade_sqlite() -> None:
         "BEGIN\n"
         "    SELECT RAISE(\n"
         "        ABORT,\n"
-        "        'DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_MOVE:Cannot move deployment to a different "
-        "deployment provider account. Re-create it under the target provider account instead.'\n"
+        "        'DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_MOVE:UPDATE "
+        "deployment.deployment_provider_account_id blocked: provider account scope is immutable for existing "
+        "deployments. Re-create the deployment under the target provider account.'\n"
         "    );\n"
         "END;\n"
     )
 
+    # Keep parity with the PostgreSQL note above: the current SQLite trigger is
+    # global because the current schema has one identity tuple. Future provider-
+    # specific identity fields should be introduced in a new migration that
+    # replaces this trigger with provider-specific guards.
     op.execute(
         "CREATE TRIGGER trg_prevent_deployment_provider_account_identity_update\n"
         "BEFORE UPDATE OF provider_key, provider_tenant_id, provider_url ON deployment_provider_account\n"
@@ -331,9 +290,8 @@ def _upgrade_sqlite() -> None:
         "    SELECT RAISE(\n"
         "        ABORT,\n"
         "        'DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE:"
-        "Cannot modify provider key, provider tenant id, or provider URL "
-        "on an existing deployment provider account. "
-        "Re-create the account instead.'\n"
+        "UPDATE deployment_provider_account blocked: provider_key, provider_tenant_id, and "
+        "provider_url are immutable on existing accounts. Re-create the account instead.'\n"
         "    );\n"
         "END;\n"
     )
@@ -356,7 +314,8 @@ def _upgrade_sqlite() -> None:
         "    SELECT RAISE(\n"
         "        ABORT,\n"
         "        'DEPLOYMENT_GUARD:CROSS_PROJECT_ATTACHMENT:"
-        "Cannot attach a flow version to a deployment in a different project.'\n"
+        "INSERT flow_version_deployment_attachment blocked: flow project scope (flow.folder_id) does not "
+        "match deployment project scope (deployment.project_id).'\n"
         "    );\n"
         "END;\n"
     )
@@ -368,29 +327,26 @@ def _downgrade_postgresql() -> None:
         "DROP TRIGGER IF EXISTS trg_prevent_deployment_provider_account_identity_update ON deployment_provider_account;"
     )
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_provider_account_move ON deployment;")
+    op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_resource_key_update ON deployment;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_project_move ON deployment;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_flow_move_if_deployed ON flow;")
-    op.execute("DROP TRIGGER IF EXISTS trg_prevent_folder_delete_if_has_deployments ON folder;")
-    op.execute("DROP TRIGGER IF EXISTS trg_prevent_flow_version_delete_if_deployed ON flow_version;")
 
     # LIFO order: last function created in upgrade is dropped first
     op.execute("DROP FUNCTION IF EXISTS prevent_cross_project_attachment();")
     op.execute("DROP FUNCTION IF EXISTS prevent_deployment_provider_account_identity_update();")
     op.execute("DROP FUNCTION IF EXISTS prevent_deployment_provider_account_move();")
+    op.execute("DROP FUNCTION IF EXISTS prevent_deployment_resource_key_update();")
     op.execute("DROP FUNCTION IF EXISTS prevent_deployment_project_move();")
     op.execute("DROP FUNCTION IF EXISTS prevent_flow_move_if_deployed();")
-    op.execute("DROP FUNCTION IF EXISTS prevent_folder_delete_if_has_deployments();")
-    op.execute("DROP FUNCTION IF EXISTS prevent_flow_version_delete_if_deployed();")
 
 
 def _downgrade_sqlite() -> None:
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_cross_project_attachment;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_provider_account_identity_update;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_provider_account_move;")
+    op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_resource_key_update;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_project_move;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_flow_move_if_deployed;")
-    op.execute("DROP TRIGGER IF EXISTS trg_prevent_folder_delete_if_has_deployments;")
-    op.execute("DROP TRIGGER IF EXISTS trg_prevent_flow_version_delete_if_deployed;")
 
 
 def upgrade() -> None:
