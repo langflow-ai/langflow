@@ -70,6 +70,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             info="The base URL of the API (IBM watsonx.ai only)",
             options=IBM_WATSONX_URLS,
             value=IBM_WATSONX_URLS[0],
+            combobox=True,
             show=False,
             real_time_refresh=True,
         ),
