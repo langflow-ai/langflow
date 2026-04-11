@@ -54,3 +54,90 @@ For more information about using embedding model components in flows, see [Embed
 | Deployment Name | String | Input parameter. The name of the deployment. |
 | API Version | String | Input parameter. The API version to use, with options including various dates. |
 | API Key | String | Input parameter. The API key required to access the Azure OpenAI service. |
+
+## Azure Blob Upload
+
+The **Azure Blob Upload** component uploads files and data to Azure Blob Storage containers with support for multiple file formats and PDF generation.
+
+This component supports two upload strategies:
+- **Store Data**: Uploads parsed text content from Data objects with optional format conversion (including text-to-PDF)
+- **Store Original File**: Uploads original binary files preserving their format
+
+### Features
+
+- **PDF Generation**: Automatically converts text content into properly formatted PDF documents
+- **Format Conversion**: Convert content to `.txt`, `.csv`, or `.pdf` formats
+- **Auto-naming**: Generates filenames automatically when none is provided
+- **Flexible Input**: Works with Data objects from AI models, File components, or Directory components
+- **Batch Upload**: Upload multiple files or data items at once
+- **Path Management**: Optional blob prefix and path stripping for organized storage
+
+### Azure Blob Upload parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Connection String** | SecretString | Input parameter. Azure Storage connection string from your Azure Portal. Required. |
+| **Container Name** | Dropdown | Input parameter. Select a container from your Azure Storage account. Auto-populated when connection string is provided. Required. |
+| **Blob Prefix (Optional)** | String | Input parameter. Optional prefix to add to uploaded blobs (e.g., 'uploads/2024/'). Leave empty for no prefix. |
+| **File Format** | Dropdown | Input parameter. Choose the file format: `.txt`, `.csv`, `.pdf`, or `Keep Original`. Only applies to 'Store Data' strategy. PDF format converts text content into a proper PDF document. Default: `Keep Original`. |
+| **Strategy** | Dropdown | Input parameter. Choose upload strategy: `Store Data` (uploads parsed text content) or `Store Original File` (uploads original files as-is). Default: `Store Data`. |
+| **Data Inputs** | Data (List) | Input parameter. The data to upload to Azure Blob Storage. Accepts Data objects from File, Directory, or AI model components. Required. |
+| **Strip Path** | Boolean | Input parameter. Removes directory path from file path, keeping only the filename. Default: `false`. |
+
+### Usage Examples
+
+**Example 1: Convert AI Response to PDF**
+```
+OpenAI Model → Azure Blob Upload
+  Settings: Strategy = Store Data, Format = .pdf
+  Result: AI response saved as a formatted PDF document
+```
+
+**Example 2: Upload Multiple Text Files**
+```
+Directory → Azure Blob Upload
+  Settings: Strategy = Store Data, Format = .txt
+  Result: All text files uploaded with normalized encoding
+```
+
+**Example 3: Upload Original Files**
+```
+File → Azure Blob Upload
+  Settings: Strategy = Store Original File
+  Result: Binary files uploaded preserving original format
+```
+
+### PDF Generation Details
+
+When **File Format** is set to `.pdf` and **Strategy** is `Store Data`:
+- Creates properly formatted PDF documents using reportlab
+- Letter-sized pages (8.5" × 11") with 1-inch margins
+- Text content is split into paragraphs with proper spacing
+- Special characters are handled correctly
+- Generates valid, openable PDF files
+- Sets correct MIME type (`application/pdf`) in Azure
+
+If reportlab is not installed, the component falls back to plain text encoding.
+
+## Azure Blob Retrieve
+
+The **Azure Blob Retrieve** component retrieves files from Azure Blob Storage containers.
+
+This component works like the Read File component - enter your connection details, and available blobs will load in a dropdown for selection. Supports prefix filtering to narrow down the blob list. Output is in Message format for easy integration with other Langflow components.
+
+### Azure Blob Retrieve parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Connection String** | SecretString | Input parameter. Azure Storage connection string from your Azure Portal. Required. |
+| **Container Name** | String | Input parameter. Name of the blob container to retrieve files from. Required. |
+| **Blob Prefix Filter (Optional)** | String | Input parameter. Optional prefix to filter blobs (e.g., 'uploads/2024/'). Leave empty to list all blobs. |
+| **Select Blobs** | Multiselect | Input parameter. Select one or more blobs to retrieve. Options populate automatically after entering connection details above. |
+
+### Output
+
+Returns a **Message** containing the combined content of all selected blobs. Each blob's content is separated with headers showing the blob name. If multiple blobs are selected, their contents are concatenated with clear delimiters.
