@@ -67,6 +67,7 @@ import DeploymentDetailsModal from "../components/deployment-details-modal/deplo
 
 const makeDeployment = (overrides: Partial<Deployment> = {}): Deployment => ({
   id: "dep-1",
+  provider_id: "prov-1",
   name: "My Agent",
   description: "A sales agent",
   type: "agent",
@@ -75,7 +76,6 @@ const makeDeployment = (overrides: Partial<Deployment> = {}): Deployment => ({
   provider_data: { llm: "granite-13b-chat" },
   resource_key: "rk-1",
   attached_count: 2,
-  provider_account_id: "prov-1",
   ...overrides,
 });
 

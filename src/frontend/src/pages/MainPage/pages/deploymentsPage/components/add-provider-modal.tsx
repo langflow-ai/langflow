@@ -54,8 +54,10 @@ export default function AddProviderModal({
       await createProviderAccount({
         name: credentials.name.trim(),
         provider_key: credentials.provider_key,
-        url: credentials.url.trim(),
-        provider_data: { api_key: credentials.api_key.trim() },
+        provider_data: {
+          url: credentials.url.trim(),
+          api_key: credentials.api_key.trim(),
+        },
       });
       setCredentials(EMPTY_CREDENTIALS);
       setOpen(false);
