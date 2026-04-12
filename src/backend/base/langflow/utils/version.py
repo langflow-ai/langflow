@@ -12,13 +12,13 @@ def _compute_non_prerelease_version(prerelease_version: str) -> str:
     return prerelease_version
 
 
-def _get_version_info():
+def _get_version_info() -> dict[str, str]:
     """Retrieves the version of the package from a possible list of package names.
 
     This accounts for after package names are updated for -nightly builds.
 
     Returns:
-        str: The version of the package
+        A dict containing the version and display name of the package.
 
     Raises:
         ValueError: If the package is not found from the list of package names.
@@ -44,10 +44,8 @@ def _get_version_info():
                 "package": display_name,
             }
 
-    if __version__ is None:
-        msg = f"Package not found from options {package_options}"
-        raise ValueError(msg)
-    return None
+    msg = f"Package not found from options {package_options}"
+    raise ValueError(msg)
 
 
 VERSION_INFO = _get_version_info()
@@ -87,5 +85,5 @@ def fetch_latest_version(package_name: str, *, include_prerelease: bool) -> str 
         return None
 
 
-def get_version_info():
+def get_version_info() -> dict[str, str]:
     return VERSION_INFO
