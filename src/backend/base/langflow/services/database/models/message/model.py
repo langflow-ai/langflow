@@ -73,7 +73,7 @@ class MessageBase(SQLModel):
             for file in message.files:
                 if hasattr(file, "path") and hasattr(file, "url") and file.path:
                     if fid and fid in file.path:
-                        parts = file.path.split(fid)
+                        parts = file.path.split(fid, 1)
                         if len(parts) > 1:
                             image_paths.append(f"{fid}{parts[1]}")
                         else:

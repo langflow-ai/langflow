@@ -465,7 +465,8 @@ class TestMessageBaseFromMessageFilePaths:
     def test_from_message_with_multiple_flow_id_occurrences(self):
         """Test file path with multiple occurrences of flow_id.
 
-        Note: str.split() splits on ALL occurrences.
+        Note: str.split(fid, 1) splits only on the first occurrence,
+        preserving the full suffix including any repeated flow_id.
         """
         from langflow.services.database.models.message.model import MessageTable
         from lfx.schema.image import Image
@@ -487,9 +488,8 @@ class TestMessageBaseFromMessageFilePaths:
         result = MessageTable.from_message(message, flow_id=flow_id)
 
         assert len(result.files) == 1
-        # split() on all occurrences: parts = ["/uploads/", "/folder/", "/image.png"]
-        # parts[1] = "/folder/", so result is "fid/folder/"
-        assert result.files[0] == f"{fid}/folder/"
+        # split(fid, 1) splits only on first occurrence, keeping full suffix
+        assert result.files[0] == f"{fid}/folder/{fid}/image.png"
 
     def test_from_message_with_multiple_files_mixed_paths(self):
         """Test multiple files with different path scenarios."""
