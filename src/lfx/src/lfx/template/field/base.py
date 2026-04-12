@@ -217,6 +217,13 @@ class Output(BaseModel):
     options: OutputOptions | None = Field(default=None)
     """Options for the output."""
 
+    info: str | None = Field(default=None, exclude=True)
+    """Description/info text for this output, used as tool description when available.
+
+    Excluded from serialization to avoid polluting stored templates.
+    Only used at runtime by build_description() for tool descriptions.
+    """
+
     tool_mode: bool = Field(default=True)
     """Specifies if the output should be used as a tool"""
 

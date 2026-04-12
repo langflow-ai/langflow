@@ -7,15 +7,18 @@ from lfx.components._importing import import_mod
 if TYPE_CHECKING:
     from .file_content_retriever import FileContentRetrieverComponent
     from .file_description_generator import FileDescriptionGeneratorComponent
+    from .merge_flows import MergeFlowsComponent
 
 _dynamic_imports = {
     "FileContentRetrieverComponent": "file_content_retriever",
     "FileDescriptionGeneratorComponent": "file_description_generator",
+    "MergeFlowsComponent": "merge_flows",
 }
 
 __all__ = [
     "FileContentRetrieverComponent",
     "FileDescriptionGeneratorComponent",
+    "MergeFlowsComponent",
 ]
 
 

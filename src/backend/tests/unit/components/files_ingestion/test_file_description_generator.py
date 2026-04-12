@@ -8,7 +8,7 @@ Tests focus on critical logic and edge cases using mocks to avoid LLM and Doclin
 """
 
 import json
-import subprocess
+from io import StringIO
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -19,6 +19,23 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
+
+
+def _mock_popen(stdout: str = "", stderr: str = "", returncode: int = 0):
+    """Create a mock Popen context that replaces subprocess.Popen.
+
+    Returns a (patcher, mock_proc) where patcher is used as a context manager.
+    """
+    mock_proc = Mock()
+    mock_proc.stdin = Mock()
+    mock_proc.stdout = StringIO(stdout)
+    mock_proc.stderr = StringIO(stderr)
+    mock_proc.returncode = returncode
+    mock_proc.poll = Mock(return_value=returncode)  # process already finished
+    mock_proc.wait = Mock(return_value=returncode)
+    mock_proc.kill = Mock()
+    patcher = patch("subprocess.Popen", return_value=mock_proc)
+    return patcher, mock_proc
 
 
 class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
@@ -69,13 +86,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = json.dumps(mock_output)
-                mock_proc.stderr = ""
-                mock_run.return_value = mock_proc
-
+            with _mock_popen(stdout=json.dumps(mock_output))[0]:
                 result = component.generate_descriptions()
 
                 assert len(result) == 2
@@ -112,13 +123,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = json.dumps(mock_output)
-                mock_proc.stderr = ""
-                mock_run.return_value = mock_proc
-
+            with _mock_popen(stdout=json.dumps(mock_output))[0]:
                 result = component.generate_descriptions()
 
                 assert len(result) == 2
@@ -151,13 +156,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = json.dumps(mock_output)
-                mock_proc.stderr = ""
-                mock_run.return_value = mock_proc
-
+            with _mock_popen(stdout=json.dumps(mock_output))[0]:
                 result = component.generate_descriptions()
 
                 assert len(result) == 2
@@ -197,13 +196,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = json.dumps(mock_output)
-                mock_proc.stderr = ""
-                mock_run.return_value = mock_proc
-
+            with _mock_popen(stdout=json.dumps(mock_output))[0]:
                 result = component.generate_descriptions()
 
                 assert len(result) == 1
@@ -235,13 +228,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = json.dumps(mock_output)
-                mock_proc.stderr = ""
-                mock_run.return_value = mock_proc
-
+            with _mock_popen(stdout=json.dumps(mock_output))[0]:
                 result = component.generate_descriptions()
 
                 assert len(result) == 1
@@ -293,13 +280,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = json.dumps(mock_output)
-                mock_proc.stderr = ""
-                mock_run.return_value = mock_proc
-
+            with _mock_popen(stdout=json.dumps(mock_output))[0]:
                 result = component.generate_descriptions()
 
                 # Should skip unsupported type and process valid Data
@@ -313,15 +294,11 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 1
-                mock_proc.stdout = ""
-                mock_proc.stderr = "ERROR: Something went wrong in subprocess"
-                mock_run.return_value = mock_proc
-
-                with pytest.raises(RuntimeError, match="Ingestion subprocess failed"):
-                    component.generate_descriptions()
+            with (
+                _mock_popen(stderr="ERROR: Something went wrong in subprocess", returncode=1)[0],
+                pytest.raises(RuntimeError, match="Ingestion subprocess failed"),
+            ):
+                component.generate_descriptions()
 
     def test_generate_descriptions_invalid_json_response(self, component_class, default_kwargs):
         """Test handling of invalid JSON from subprocess."""
@@ -331,15 +308,11 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = "Not valid JSON {{"
-                mock_proc.stderr = ""
-                mock_run.return_value = mock_proc
-
-                with pytest.raises(RuntimeError, match="Invalid JSON from subprocess"):
-                    component.generate_descriptions()
+            with (
+                _mock_popen(stdout="Not valid JSON {{")[0],
+                pytest.raises(RuntimeError, match="Invalid JSON from subprocess"),
+            ):
+                component.generate_descriptions()
 
     def test_generate_descriptions_empty_json_array(self, component_class, default_kwargs):
         """Test handling of empty JSON array response (all files failed processing)."""
@@ -349,13 +322,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = "[]"
-                mock_proc.stderr = ""
-                mock_run.return_value = mock_proc
-
+            with _mock_popen(stdout="[]")[0]:
                 result = component.generate_descriptions()
 
                 assert result == []
@@ -373,31 +340,32 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = json.dumps(mock_output)
-                mock_proc.stderr = "WARNING: file2.txt failed"
-                mock_run.return_value = mock_proc
-
+            with _mock_popen(stdout=json.dumps(mock_output), stderr="WARNING: file2.txt failed")[0]:
                 result = component.generate_descriptions()
 
                 assert len(result) == 1
                 assert result[0].data["file_path"] == "/path/to/file1.txt"
 
     def test_generate_descriptions_subprocess_timeout(self, component_class, default_kwargs):
-        """Test handling of subprocess timeout (600s limit)."""
+        """Test handling of subprocess timeout."""
+        default_kwargs["timeout"] = 1  # 1 second timeout
         component = component_class()
         component.set_attributes(default_kwargs)
 
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_run.side_effect = subprocess.TimeoutExpired(cmd="python", timeout=600)
+            # Create a Popen mock that never finishes (poll always returns None)
+            mock_proc = Mock()
+            mock_proc.stdin = Mock()
+            mock_proc.stdout = StringIO("")
+            mock_proc.stderr = StringIO("")
+            mock_proc.poll = Mock(return_value=None)  # never finishes
+            mock_proc.kill = Mock()
+            mock_proc.wait = Mock()
 
-                with pytest.raises(subprocess.TimeoutExpired):
-                    component.generate_descriptions()
+            with patch("subprocess.Popen", return_value=mock_proc), pytest.raises(TimeoutError, match="timed out"):
+                component.generate_descriptions()
 
     def test_generate_descriptions_path_normalization(self, component_class, mock_llm):
         """Test that file paths are normalized using Path (important for cross-platform compatibility)."""
@@ -421,19 +389,13 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = json.dumps(mock_output)
-                mock_proc.stderr = ""
-                mock_run.return_value = mock_proc
-
+            patcher, mock_proc = _mock_popen(stdout=json.dumps(mock_output))
+            with patcher:
                 component.generate_descriptions()
 
-                # Verify path was normalized
-                call_args = mock_run.call_args
-                config_json = call_args[1]["input"]
-                config = json.loads(config_json)
+                # Verify path was normalized — config is written to stdin
+                stdin_write_call = mock_proc.stdin.write.call_args[0][0]
+                config = json.loads(stdin_write_call)
                 assert config["file_paths"][0] == str(Path("relative/path/file.txt"))
 
     def test_generate_descriptions_result_data_structure(self, component_class, default_kwargs):
@@ -448,13 +410,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = json.dumps(mock_output)
-                mock_proc.stderr = ""
-                mock_run.return_value = mock_proc
-
+            with _mock_popen(stdout=json.dumps(mock_output))[0]:
                 result = component.generate_descriptions()
 
                 assert len(result) == 1
@@ -491,19 +447,13 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = json.dumps(mock_output)
-                mock_proc.stderr = ""
-                mock_run.return_value = mock_proc
-
+            patcher, mock_proc = _mock_popen(stdout=json.dumps(mock_output))
+            with patcher:
                 result = component.generate_descriptions()
 
-                # Verify subprocess received all paths
-                call_args = mock_run.call_args
-                config_json = call_args[1]["input"]
-                config = json.loads(config_json)
+                # Verify subprocess received all paths via stdin
+                stdin_write_call = mock_proc.stdin.write.call_args[0][0]
+                config = json.loads(stdin_write_call)
                 assert len(config["file_paths"]) == 3
                 assert result[0].data["file_path"] == "/path/to/file.txt"
                 assert result[1].data["file_path"] == "/path/to/file.txt"
@@ -533,15 +483,8 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = json.dumps(mock_output)
-                mock_proc.stderr = ""
-                mock_run.return_value = mock_proc
-
-                with pytest.raises(KeyError, match="text"):
-                    component.generate_descriptions()
+            with _mock_popen(stdout=json.dumps(mock_output))[0], pytest.raises(KeyError, match="text"):
+                component.generate_descriptions()
 
     def test_generate_descriptions_missing_file_path_key_in_output(self, component_class, default_kwargs):
         """Test handling of subprocess output missing 'file_path' key - should raise KeyError."""
@@ -556,15 +499,8 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with patch("subprocess.run") as mock_run:
-                mock_proc = Mock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = json.dumps(mock_output)
-                mock_proc.stderr = ""
-                mock_run.return_value = mock_proc
-
-                with pytest.raises(KeyError, match="file_path"):
-                    component.generate_descriptions()
+            with _mock_popen(stdout=json.dumps(mock_output))[0], pytest.raises(KeyError, match="file_path"):
+                component.generate_descriptions()
 
     def test_generate_descriptions_exception_propagation(self, component_class, default_kwargs):
         """Test that exceptions are properly propagated with debug logging."""

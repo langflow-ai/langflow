@@ -65,6 +65,13 @@ class FileDescriptionGeneratorComponent(Component):
             advanced=True,
         ),
         IntInput(
+            name="timeout",
+            display_name="Timeout (seconds)",
+            value=1800,
+            info="Maximum time in seconds for the ingestion subprocess. Increase for large file sets.",
+            advanced=True,
+        ),
+        IntInput(
             name="batch_size",
             display_name="Batch Size",
             value=8,
@@ -193,9 +200,12 @@ class FileDescriptionGeneratorComponent(Component):
                 )
 
                 file_paths = [Path(p) for p in config["file_paths"]]
-                logger.info("Calling describe_files with %d file(s)...", len(file_paths))
+                total = len(file_paths)
+                logger.info("Calling describe_files with %d file(s)...", total)
+                sys.stderr.flush()
                 analysis_results, _ = builder.describe_files(file_paths)
                 logger.info("describe_files returned %d result(s)", len(analysis_results))
+                sys.stderr.flush()
 
                 output = []
                 for doc_id, result in analysis_results.items():
@@ -211,39 +221,93 @@ class FileDescriptionGeneratorComponent(Component):
                 json.dump(output, sys.stdout)
             """)
 
-            proc = subprocess.run(  # noqa: S603
-                [sys.executable, "-c", script],
-                check=False,
-                input=json.dumps(config),
-                capture_output=True,
+            timeout_seconds = getattr(self, "timeout", 1800) or 1800
+
+            proc = subprocess.Popen(  # noqa: S603
+                [sys.executable, "-u", "-c", script],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=600,
             )
 
-            _dbg(f"Subprocess finished, returncode={proc.returncode}")
-            _dbg(f"Subprocess stdout length: {len(proc.stdout)}")
-            _dbg(f"Subprocess stderr length: {len(proc.stderr)}")
+            # Send config to stdin and close it so the subprocess can proceed
+            proc.stdin.write(json.dumps(config))
+            proc.stdin.close()
 
-            # Log subprocess stderr
-            if proc.stderr:
-                for line in proc.stderr.strip().split("\n"):
-                    _dbg(f"[subprocess] {line}")
+            # Stream stderr in real-time while waiting for the process
+            import select
+            import time
+
+            stderr_lines: list[str] = []
+            start_time = time.monotonic()
+            stderr_buf = ""
+
+            # Check if select() is usable (not available with StringIO in tests)
+            try:
+                proc.stderr.fileno()
+                use_select = True
+            except Exception:  # noqa: BLE001
+                use_select = False
+
+            while proc.poll() is None:
+                elapsed = time.monotonic() - start_time
+                if elapsed > timeout_seconds:
+                    proc.kill()
+                    proc.wait()
+                    msg = (
+                        f"Ingestion subprocess timed out after {timeout_seconds}s. "
+                        f"Increase the Timeout setting for large file sets."
+                    )
+                    raise TimeoutError(msg)
+
+                if use_select:
+                    ready, _, _ = select.select([proc.stderr], [], [], 1.0)
+                    if ready:
+                        chunk = proc.stderr.read(4096)
+                        if chunk:
+                            stderr_buf += chunk
+                            while "\n" in stderr_buf:
+                                line, stderr_buf = stderr_buf.split("\n", 1)
+                                line = line.strip()
+                                if line:
+                                    _dbg(f"[subprocess] {line}")
+                                    self.log(line)
+                                    stderr_lines.append(line)
+                else:
+                    time.sleep(0.5)
+
+            # Read any remaining stderr/stdout after process exits
+            remaining_stderr = proc.stderr.read()
+            if remaining_stderr:
+                stderr_buf += remaining_stderr
+            for remaining_line in stderr_buf.strip().split("\n"):
+                stripped = remaining_line.strip()
+                if stripped:
+                    _dbg(f"[subprocess] {stripped}")
+                    self.log(stripped)
+                    stderr_lines.append(stripped)
+
+            stdout_data = proc.stdout.read()
+
+            _dbg(f"Subprocess finished, returncode={proc.returncode}")
+            _dbg(f"Subprocess stdout length: {len(stdout_data)}")
 
             if proc.returncode != 0:
                 _dbg(f"SUBPROCESS FAILED with exit code {proc.returncode}")
-                _dbg(f"stderr tail: {proc.stderr[-2000:] if proc.stderr else 'empty'}")
-                err = proc.stderr[-2000:] if proc.stderr else "Unknown error"
-                msg = f"Ingestion subprocess failed (exit code {proc.returncode}): {err}"
+                stderr_tail = "\n".join(stderr_lines[-20:])
+                msg = f"Ingestion subprocess failed (exit code {proc.returncode}): {stderr_tail}"
                 raise RuntimeError(msg)
 
-            _dbg(f"Subprocess stdout preview: {proc.stdout[:500]!r}")
+            _dbg(f"Subprocess stdout preview: {stdout_data[:500]!r}")
 
             try:
-                output = json.loads(proc.stdout)
+                output = json.loads(stdout_data)
             except json.JSONDecodeError as e:
                 _dbg(f"JSON DECODE ERROR: {e}")
-                _dbg(f"stdout was: {proc.stdout[:1000]!r}")
-                msg = f"Invalid JSON from subprocess: {e}. stderr={proc.stderr[-500:]}"
+                _dbg(f"stdout was: {stdout_data[:1000]!r}")
+                stderr_tail = "\n".join(stderr_lines[-10:])
+                msg = f"Invalid JSON from subprocess: {e}. stderr={stderr_tail}"
                 raise RuntimeError(msg) from e
 
             _dbg(f"Parsed {len(output)} results from subprocess")

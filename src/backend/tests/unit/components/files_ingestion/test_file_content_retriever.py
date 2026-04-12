@@ -9,6 +9,8 @@ Tests focus on critical logic and edge cases:
 - Serialization of results
 """
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 from lfx.components.files_ingestion.file_content_retriever import FileContentRetrieverComponent
@@ -674,6 +676,139 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
 
         assert isinstance(result, Message)
         assert result.text == "content"
+
+
+class TestFileContentRetrieverPersistence:
+    """Tests for persistent directory support."""
+
+    @pytest.fixture
+    def component_class(self):
+        from lfx.components.files_ingestion.file_content_retriever import FileContentRetrieverComponent
+
+        return FileContentRetrieverComponent
+
+    def test_persistent_save_and_load_roundtrip(self, component_class, tmp_path):
+        """Test that maps saved to disk can be reloaded by a new component instance."""
+        persist_dir = str(tmp_path / "persist")
+
+        # First run: build maps from data and persist
+        c1 = component_class()
+        c1.set_attributes(
+            {
+                "file_data": [
+                    Data(text="hello world", data={"file_path": "/data/hello.txt"}),
+                    Data(text="a,b\n1,2\n3,4", data={"file_path": "/data/nums.csv"}),
+                ],
+                "persistent_dir": persist_dir,
+            }
+        )
+        result = c1.retrieve_content(file_path="/data/hello.txt")
+        assert result.text == "hello world"
+
+        # Verify files were written
+        assert (tmp_path / "persist" / "text_index.json").exists()
+        assert (tmp_path / "persist" / "texts").is_dir()
+        assert (tmp_path / "persist" / "dataframe_index.json").exists()
+        assert (tmp_path / "persist" / "dataframes").is_dir()
+
+        # Second run: new component loads from disk (no file_data input)
+        c2 = component_class()
+        c2.set_attributes(
+            {
+                "file_data": [],
+                "persistent_dir": persist_dir,
+            }
+        )
+        result2 = c2.retrieve_content(file_path="/data/hello.txt")
+        assert result2.text == "hello world"
+
+        df_result = c2.retrieve_content_as_dataframe(file_path="/data/nums.csv")
+        assert len(df_result) == 2
+        assert "a" in df_result.columns
+
+    def test_persistent_skips_existing_paths(self, component_class, tmp_path):
+        """Test that new data doesn't overwrite existing persisted entries."""
+        persist_dir = str(tmp_path / "persist")
+
+        # First run: persist original content
+        c1 = component_class()
+        c1.set_attributes(
+            {
+                "file_data": [Data(text="original", data={"file_path": "/file.txt"})],
+                "persistent_dir": persist_dir,
+            }
+        )
+        c1.retrieve_content(file_path="/file.txt")
+
+        # Second run: provide different content for the same path
+        c2 = component_class()
+        c2.set_attributes(
+            {
+                "file_data": [Data(text="updated", data={"file_path": "/file.txt"})],
+                "persistent_dir": persist_dir,
+            }
+        )
+        result = c2.retrieve_content(file_path="/file.txt")
+        assert result.text == "original"  # Should keep the persisted version
+
+    def test_persistent_adds_new_files(self, component_class, tmp_path):
+        """Test that new files are merged into the persisted maps."""
+        persist_dir = str(tmp_path / "persist")
+
+        # First run
+        c1 = component_class()
+        c1.set_attributes(
+            {
+                "file_data": [Data(text="file1", data={"file_path": "/a.txt"})],
+                "persistent_dir": persist_dir,
+            }
+        )
+        c1.retrieve_content(file_path="/a.txt")
+
+        # Second run: add a new file
+        c2 = component_class()
+        c2.set_attributes(
+            {
+                "file_data": [Data(text="file2", data={"file_path": "/b.txt"})],
+                "persistent_dir": persist_dir,
+            }
+        )
+        # Both files should be available
+        assert c2.retrieve_content(file_path="/a.txt").text == "file1"
+        c2._cached_text_map = None
+        c2._cached_dataframe_map = None
+        assert c2.retrieve_content(file_path="/b.txt").text == "file2"
+
+    def test_persistent_handles_corrupted_json(self, component_class, tmp_path):
+        """Test graceful handling of corrupted persistent files."""
+        persist_dir = str(tmp_path / "persist")
+        Path(persist_dir).mkdir(parents=True)
+        (Path(persist_dir) / "texts").mkdir()
+        (Path(persist_dir) / "text_index.json").write_text("NOT VALID JSON")
+        (Path(persist_dir) / "dataframe_index.json").write_text("{}")
+
+        c = component_class()
+        c.set_attributes(
+            {
+                "file_data": [Data(text="content", data={"file_path": "/ok.txt"})],
+                "persistent_dir": persist_dir,
+            }
+        )
+        # Should still work, falling back to building from input
+        result = c.retrieve_content(file_path="/ok.txt")
+        assert result.text == "content"
+
+    def test_no_persistent_dir_works_as_before(self, component_class):
+        """Test that empty persistent_dir means pure in-memory mode (regression)."""
+        c = component_class()
+        c.set_attributes(
+            {
+                "file_data": [Data(text="mem only", data={"file_path": "/mem.txt"})],
+                "persistent_dir": "",
+            }
+        )
+        result = c.retrieve_content(file_path="/mem.txt")
+        assert result.text == "mem only"
 
 
 # Made with Bob

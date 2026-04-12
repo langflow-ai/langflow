@@ -1497,11 +1497,20 @@ class Component(CustomComponent):
                         item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
                 self.tools_metadata = tool_data
             else:
-                # Preserve existing status values
-                existing_status = {item["name"]: item.get("status", True) for item in self.tools_metadata}
+                # Merge: preserve user-editable fields (status, name) from old metadata,
+                # but always update code-derived fields (description, display_description, args)
+                old_by_tag = {}
+                for item in self.tools_metadata:
+                    tags = item.get("tags", [])
+                    if tags:
+                        old_by_tag[tags[0]] = item
                 for item in tool_data:
-                    item["status"] = existing_status.get(item["name"], True)
-                tool_data = self.tools_metadata
+                    tags = item.get("tags", [])
+                    old = old_by_tag.get(tags[0]) if tags else None
+                    if old:
+                        item["status"] = old.get("status", True)
+                        item["name"] = old.get("name", item["name"])
+                self.tools_metadata = tool_data
         else:
             # If enabled tools are set, update status based on them
             enabled = self.enabled_tools

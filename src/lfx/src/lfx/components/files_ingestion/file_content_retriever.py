@@ -6,11 +6,15 @@ a specific file's content by providing its path.
 
 from __future__ import annotations
 
+import hashlib
+import json
+import tempfile
 from pathlib import Path
 
 import pandas as pd
 
 from lfx.custom.custom_component.component import Component
+from lfx.inputs.inputs import StrInput
 from lfx.io import HandleInput, Output, QueryInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
@@ -55,6 +59,12 @@ class FileContentRetrieverComponent(Component):
             is_list=True,
             info="Output from a Read File component.",
         ),
+        StrInput(
+            name="persistent_dir",
+            display_name="Persistent Directory",
+            value="",
+            info="Optional directory for persisting file maps across runs. If empty, maps are kept in memory only.",
+        ),
         QueryInput(
             name="file_path",
             display_name="File Path",
@@ -94,6 +104,180 @@ class FileContentRetrieverComponent(Component):
         ),
     ]
 
+    # ---- Persistence helpers ----
+
+    @staticmethod
+    def _path_hash(file_path: str) -> str:
+        """Return a short hash for use as a safe filename."""
+        return hashlib.sha256(file_path.encode()).hexdigest()[:16]
+
+    def _load_persistent_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:
+        """Load maps from the persistent directory. Returns ({}, {}) if nothing on disk."""
+        base = Path(self.persistent_dir)
+        text_map: dict[str, str] = {}
+        dataframe_map: dict[str, DataFrame] = {}
+
+        # Load text files: index maps file_path -> text filename on disk
+        text_index_file = base / "text_index.json"
+        text_dir = base / "texts"
+        if text_index_file.exists() and text_dir.exists():
+            try:
+                index = json.loads(text_index_file.read_text(encoding="utf-8"))
+                for fp, txt_name in index.items():
+                    txt_path = text_dir / txt_name
+                    if txt_path.exists():
+                        try:
+                            text_map[fp] = txt_path.read_text(encoding="utf-8")
+                        except OSError as e:
+                            logger.warning(f"FileContentRetriever: Failed to load text for '{fp}': {e}")
+                logger.debug(f"FileContentRetriever: Loaded {len(text_map)} text entries from disk")
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning(f"FileContentRetriever: Failed to load text_index.json: {e}")
+
+        # Load DataFrames: index maps file_path -> parquet filename on disk
+        df_index_file = base / "dataframe_index.json"
+        df_dir = base / "dataframes"
+        if df_index_file.exists() and df_dir.exists():
+            try:
+                index = json.loads(df_index_file.read_text(encoding="utf-8"))
+                for fp, parquet_name in index.items():
+                    pq_path = df_dir / parquet_name
+                    if pq_path.exists():
+                        try:
+                            dataframe_map[fp] = DataFrame(pd.read_parquet(pq_path))
+                            dataframe_map[fp].attrs["source_file_path"] = fp
+                        except Exception as e:  # noqa: BLE001
+                            logger.warning(f"FileContentRetriever: Failed to load parquet for '{fp}': {e}")
+                logger.debug(f"FileContentRetriever: Loaded {len(dataframe_map)} dataframes from disk")
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning(f"FileContentRetriever: Failed to load dataframe_index.json: {e}")
+
+        return text_map, dataframe_map
+
+    def _save_persistent_maps(self, text_map: dict[str, str], dataframe_map: dict[str, DataFrame]) -> None:
+        """Save maps to the persistent directory (atomic writes)."""
+        base = Path(self.persistent_dir)
+        base.mkdir(parents=True, exist_ok=True)
+        text_dir = base / "texts"
+        text_dir.mkdir(exist_ok=True)
+        df_dir = base / "dataframes"
+        df_dir.mkdir(exist_ok=True)
+
+        # Save each text entry as a separate file
+        text_index: dict[str, str] = {}
+        for fp, text in text_map.items():
+            txt_name = f"{self._path_hash(fp)}.txt"
+            txt_path = text_dir / txt_name
+            txt_path.write_text(text, encoding="utf-8")
+            text_index[fp] = txt_name
+
+        # Atomic write for text_index.json
+        self._atomic_json_write(base / "text_index.json", text_index, base)
+
+        # Save each DataFrame as parquet
+        df_index: dict[str, str] = {}
+        for fp, df in dataframe_map.items():
+            parquet_name = f"{self._path_hash(fp)}.parquet"
+            df.to_parquet(df_dir / parquet_name, index=False)
+            df_index[fp] = parquet_name
+
+        # Atomic write for dataframe_index.json
+        self._atomic_json_write(base / "dataframe_index.json", df_index, base)
+
+        logger.debug(f"FileContentRetriever: Saved {len(text_map)} text + {len(dataframe_map)} dataframes to '{base}'")
+
+    @staticmethod
+    def _atomic_json_write(target: Path, data: dict, tmp_dir: Path) -> None:
+        """Write JSON atomically via temp file + rename."""
+        import os
+
+        fd, tmp = tempfile.mkstemp(dir=str(tmp_dir), suffix=".tmp")
+        try:
+            os.close(fd)
+            with Path(tmp).open("w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False)
+            Path(tmp).replace(target)
+        except Exception:
+            Path(tmp).unlink(missing_ok=True)
+            raise
+
+    # ---- Map building helpers ----
+
+    def _build_maps_from_input(
+        self,
+        skip_paths: set[str] | None = None,
+    ) -> tuple[dict[str, str], dict[str, DataFrame]]:
+        """Build text and dataframe maps from self.file_data, skipping paths in *skip_paths*."""
+        skip = skip_paths or set()
+        text_map: dict[str, str] = {}
+        dataframe_map: dict[str, DataFrame] = {}
+
+        if not self.file_data:
+            return text_map, dataframe_map
+
+        for item in self.file_data:
+            if isinstance(item, DataFrame):
+                fp = item.attrs.get("source_file_path", "")
+                if fp and fp not in skip:
+                    dataframe_map[fp] = item
+                elif not item.empty and "file_path" in item.columns:
+                    has_text_col = "text" in item.columns
+                    for _, row in item.iterrows():
+                        path_str = str(row.get("file_path", ""))
+                        if not path_str or path_str in skip:
+                            continue
+                        if has_text_col and path_str not in text_map:
+                            text = str(row["text"]) if pd.notna(row["text"]) else ""
+                            if text:
+                                text_map[path_str] = text
+            elif isinstance(item, Message):
+                fp = getattr(item, "file_path", "") or ""
+                text = item.get_text() or ""
+                if not fp or fp in skip:
+                    continue
+                if text:
+                    text_map[fp] = text
+            elif isinstance(item, Data):
+                fp = item.data.get("file_path", "")
+                text = item.get_text() or ""
+                if not fp or fp in skip:
+                    continue
+                if text:
+                    text_map[fp] = text
+            else:
+                logger.warning(
+                    "FileContentRetriever: Unsupported input type %s, skipping",
+                    type(item).__name__,
+                )
+
+        return text_map, dataframe_map
+
+    @staticmethod
+    def _parse_text_to_dataframes(text_map: dict[str, str], dataframe_map: dict[str, DataFrame]) -> None:
+        """Eagerly parse CSV/TSV/JSON text entries into DataFrames."""
+        from io import StringIO
+
+        for fp, text in text_map.items():
+            if fp in dataframe_map:
+                continue
+            ext = Path(fp).suffix.lower()
+            try:
+                if ext == ".csv":
+                    df = DataFrame(pd.read_csv(StringIO(text)))
+                elif ext == ".tsv":
+                    df = DataFrame(pd.read_csv(StringIO(text), sep="\t"))
+                elif ext == ".json":
+                    df = DataFrame(pd.read_json(StringIO(text)))
+                else:
+                    continue
+                df.attrs["source_file_path"] = fp
+                dataframe_map[fp] = df
+                logger.debug(f"FileContentRetriever: Parsed text into DataFrame for '{fp}'")
+            except (ValueError, pd.errors.ParserError) as e:
+                logger.debug(f"FileContentRetriever: Could not parse text as DataFrame for '{fp}': {e}")
+
+    # ---- Main entry point ----
+
     def _get_file_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:
         """Get cached file maps or build them if not cached.
 
@@ -109,86 +293,44 @@ class FileContentRetrieverComponent(Component):
             )
             return self._cached_text_map, self._cached_dataframe_map
 
-        logger.debug(f"FileContentRetriever: Building file maps from {len(self.file_data)} input items")
         text_map: dict[str, str] = {}
         dataframe_map: dict[str, DataFrame] = {}
 
-        for item in self.file_data:
-            if isinstance(item, DataFrame):
-                fp = item.attrs.get("source_file_path", "")
-                if fp:
-                    dataframe_map[fp] = item
-                elif not item.empty and "file_path" in item.columns:
-                    # Multi-file DataFrame: one row per file with file_path and text columns.
-                    # Extract each file's text content into text_map instead of mapping
-                    # each path to the summary DataFrame (which is just the file index,
-                    # not the actual file data).
-                    has_text_col = "text" in item.columns
-                    for _, row in item.iterrows():
-                        path_str = str(row.get("file_path", ""))
-                        if not path_str:
-                            continue
-                        if has_text_col and path_str not in text_map:
-                            text = str(row["text"]) if pd.notna(row["text"]) else ""
-                            if text:
-                                text_map[path_str] = text
-            elif isinstance(item, Message):
-                fp = getattr(item, "file_path", "") or ""
-                text = item.get_text() or ""
-                if not fp:
-                    continue
-                if text:
-                    text_map[fp] = text
-            elif isinstance(item, Data):
-                fp = item.data.get("file_path", "")
-                text = item.get_text() or ""
-                if not fp:
-                    continue
+        # Load persisted maps if a persistent directory is configured
+        has_persistent = bool(getattr(self, "persistent_dir", ""))
+        if has_persistent:
+            text_map, dataframe_map = self._load_persistent_maps()
 
-                if text:
-                    text_map[fp] = text
-            else:
-                logger.warning(
-                    "FileContentRetriever: Unsupported input type %s, skipping",
-                    type(item).__name__,
-                )
+        # Merge new input data (skip paths already loaded from disk)
+        existing_paths = {*text_map, *dataframe_map}
+        new_text, new_df = self._build_maps_from_input(skip_paths=existing_paths)
+        text_map.update(new_text)
+        dataframe_map.update(new_df)
 
-        # For text entries that don't have a pre-built DataFrame, try to parse
-        # CSV/TSV/JSON content into a DataFrame eagerly so it's ready for tool calls.
-        from io import StringIO
+        # Eager CSV/TSV/JSON parsing
+        self._parse_text_to_dataframes(text_map, dataframe_map)
 
-        for fp, text in text_map.items():
-            if fp in dataframe_map:
-                continue
-            ext = Path(fp).suffix.lower()
-
-            try:
-                if ext == ".csv":
-                    df = DataFrame(pd.read_csv(StringIO(text)))
-                elif ext == ".tsv":
-                    df = DataFrame(pd.read_csv(StringIO(text), sep="\t"))
-                elif ext == ".json":
-                    df = DataFrame(pd.read_json(StringIO(text)))
-                else:
-                    continue
-
-                df.attrs["source_file_path"] = fp
-                dataframe_map[fp] = df
-                logger.debug(f"FileContentRetriever: Parsed text into DataFrame for '{fp}'")
-            except (ValueError, pd.errors.ParserError) as e:
-                logger.debug(f"FileContentRetriever: Could not parse text as DataFrame for '{fp}': {e}")
+        # Persist updated maps if directory is configured and there were new entries
+        if has_persistent and (new_text or new_df):
+            self._save_persistent_maps(text_map, dataframe_map)
 
         self._cached_text_map = text_map
         self._cached_dataframe_map = dataframe_map
 
         _max_display = 5
         all_keys = {*text_map.keys(), *dataframe_map.keys()}
-        logger.info(
-            f"FileContentRetriever: Built and cached maps - "
-            f"{len(text_map)} text files, {len(dataframe_map)} dataframes. "
-            f"Available files: {list(all_keys)[:_max_display]}"
-            f"{'...' if len(all_keys) > _max_display else ''}"
-        )
+        if not all_keys:
+            logger.warning(
+                "FileContentRetriever: Maps are empty — no files were loaded. "
+                "Check that file_data is connected and contains valid files with file_path metadata."
+            )
+        else:
+            logger.info(
+                f"FileContentRetriever: Built and cached maps - "
+                f"{len(text_map)} text files, {len(dataframe_map)} dataframes. "
+                f"Available files: {list(all_keys)[:_max_display]}"
+                f"{'...' if len(all_keys) > _max_display else ''}"
+            )
 
         return text_map, dataframe_map
 
