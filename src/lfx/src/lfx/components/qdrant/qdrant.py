@@ -1,3 +1,5 @@
+import uuid
+
 from langchain_community.vectorstores import Qdrant
 from langchain_core.embeddings import Embeddings
 
@@ -85,7 +87,13 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             raise TypeError(msg)
 
         if documents:
-            qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs, **server_kwargs)
+            ids = [
+                str(uuid.uuid5(uuid.NAMESPACE_X500, f"{doc.page_content}{sorted(doc.metadata.items())}"))
+                for doc in documents
+            ]
+            qdrant = Qdrant.from_documents(
+                documents, embedding=self.embedding, ids=ids, **qdrant_kwargs, **server_kwargs
+            )
         else:
             from qdrant_client import QdrantClient
 
