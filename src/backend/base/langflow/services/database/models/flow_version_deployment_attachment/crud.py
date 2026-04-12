@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import sqlalchemy as sa
 from lfx.log.logger import logger
-from sqlalchemy import and_, literal, union_all
+from sqlalchemy import and_, column, literal, union_all, values
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select
 
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
+from langflow.services.database.utils import require_non_empty
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -18,6 +20,11 @@ if TYPE_CHECKING:
 
     from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
     from langflow.services.database.models.flow_version.model import FlowVersion
+    from langflow.services.database.models.flow_version_deployment_attachment.schema import (
+        DeploymentAttachmentKeyBatch,
+    )
+
+_SNAPSHOT_ID_ERROR = "provider_snapshot_id must not be empty"
 
 
 async def create_deployment_attachment(
@@ -26,13 +33,13 @@ async def create_deployment_attachment(
     user_id: UUID,
     flow_version_id: UUID,
     deployment_id: UUID,
-    provider_snapshot_id: str | None = None,
+    provider_snapshot_id: str,
 ) -> FlowVersionDeploymentAttachment:
     row = FlowVersionDeploymentAttachment(
         user_id=user_id,
         flow_version_id=flow_version_id,
         deployment_id=deployment_id,
-        provider_snapshot_id=provider_snapshot_id,
+        provider_snapshot_id=require_non_empty(provider_snapshot_id, _SNAPSHOT_ID_ERROR),
     )
     db.add(row)
     try:
@@ -164,9 +171,9 @@ async def update_deployment_attachment_provider_snapshot_id(
     db: AsyncSession,
     *,
     attachment: FlowVersionDeploymentAttachment,
-    provider_snapshot_id: str | None,
+    provider_snapshot_id: str,
 ) -> FlowVersionDeploymentAttachment:
-    attachment.provider_snapshot_id = provider_snapshot_id
+    attachment.provider_snapshot_id = require_non_empty(provider_snapshot_id, _SNAPSHOT_ID_ERROR)
     db.add(attachment)
     await db.flush()
     await db.refresh(attachment)
@@ -182,6 +189,44 @@ async def delete_deployment_attachments_by_deployment_id(
     stmt = delete(FlowVersionDeploymentAttachment).where(
         FlowVersionDeploymentAttachment.user_id == user_id,
         FlowVersionDeploymentAttachment.deployment_id == deployment_id,
+    )
+    result = await db.exec(stmt)
+    return int(result.rowcount or 0)
+
+
+async def delete_deployment_attachments_by_keys(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    attachment_key_batch: DeploymentAttachmentKeyBatch,
+) -> int:
+    key_tuples = attachment_key_batch.as_tuples()
+    if not key_tuples:
+        return 0
+
+    stale_keys_cte = (
+        values(
+            column("deployment_id", sa.Uuid()),
+            column("flow_version_id", sa.Uuid()),
+        )
+        .data(key_tuples)
+        .cte("stale_keys")
+    )
+
+    stale_attachment_ids = (
+        select(FlowVersionDeploymentAttachment.id)
+        .join(
+            stale_keys_cte,
+            and_(
+                FlowVersionDeploymentAttachment.deployment_id == stale_keys_cte.c.deployment_id,
+                FlowVersionDeploymentAttachment.flow_version_id == stale_keys_cte.c.flow_version_id,
+            ),
+        )
+        .where(FlowVersionDeploymentAttachment.user_id == user_id)
+    )
+
+    stmt = delete(FlowVersionDeploymentAttachment).where(
+        col(FlowVersionDeploymentAttachment.id).in_(stale_attachment_ids)
     )
     result = await db.exec(stmt)
     return int(result.rowcount or 0)
@@ -291,8 +336,6 @@ async def delete_unbound_attachments(
         .where(
             FlowVersionDeploymentAttachment.user_id == user_id,
             col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
-            FlowVersionDeploymentAttachment.provider_snapshot_id.is_not(None),
-            FlowVersionDeploymentAttachment.provider_snapshot_id != "",
             provider_bindings_cte.c.resource_key.is_(None),  # No provider binding match => stale local attachment
         )
     )
@@ -318,8 +361,6 @@ async def list_attachments_for_flow_with_deployment_info(
       - the deployment's ``deployment_type`` value
       - the provider account's ``provider_key``
 
-    Only attachments with a non-null ``provider_snapshot_id`` are returned
-    (i.e. those that have actually been materialized on the provider).
     Results are ordered by ``updated_at`` descending so the most recent
     attachment per deployment comes first.
     """
@@ -338,7 +379,6 @@ async def list_attachments_for_flow_with_deployment_info(
         .join(DeploymentProviderAccount, DeploymentProviderAccount.id == Deployment.deployment_provider_account_id)
         .where(
             FlowVersionDeploymentAttachment.user_id == user_id,
-            FlowVersionDeploymentAttachment.provider_snapshot_id.is_not(None),  # type: ignore[union-attr]
             col(FlowVersionDeploymentAttachment.flow_version_id).in_(
                 select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
             ),

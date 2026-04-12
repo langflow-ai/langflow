@@ -629,25 +629,6 @@ class BaseDeploymentMapper:
         _ = payload
         return FlowVersionPatch()
 
-    def util_snapshot_ids_to_verify(
-        self,
-        attachments: list[Any],
-    ) -> list[str]:
-        """Extract provider snapshot IDs that should be verified against the provider.
-
-        Called by read-path snapshot-level sync to determine which attachments
-        carry a provider-trackable snapshot identity.  The route passes the
-        returned IDs to the adapter's ``list_snapshots`` by-IDs mode and
-        deletes DB rows whose IDs are no longer present on the provider.
-
-        The base implementation returns an empty list, meaning snapshot-level
-        sync is a no-op for providers that do not track snapshots separately.
-        Provider mappers that assign ``provider_snapshot_id`` on attachments
-        must override this to extract those IDs.
-        """
-        _ = attachments
-        return []
-
     def extract_snapshot_bindings(
         self,
         provider_view: DeploymentListResult,

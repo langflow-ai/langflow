@@ -43,7 +43,11 @@ from langflow.api.v1.mappers.deployments.helpers import (
     rollback_provider_update,
     validate_project_scoped_flow_version_ids,
 )
-from langflow.api.v1.mappers.deployments.sync import fetch_provider_snapshot_keys, sync_attachment_snapshot_ids
+from langflow.api.v1.mappers.deployments.sync import (
+    extract_verified_snapshot_ids,
+    fetch_provider_snapshot_keys,
+    sync_attachment_snapshot_ids,
+)
 from langflow.api.v1.schemas.deployments import (
     DeploymentConfigListResponse,
     DeploymentCreateRequest,
@@ -673,6 +677,9 @@ async def list_deployments(
         page=params.page,
         size=params.size,
         total=total,
+        # if we reach here, then load_from_provider is False,
+        # therefore, top-level provider_data must be excluded from the response.
+        # for this, we set it to None, and set response_model_exclude_none to True.
         provider_data=None,
     )
 
@@ -1059,7 +1066,7 @@ async def get_deployment(
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
-    deployment_row, deployment_adapter, deployment_mapper, provider_key = await resolve_adapter_mapper_from_deployment(
+    deployment_row, deployment_adapter, _deployment_mapper, provider_key = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
@@ -1102,7 +1109,8 @@ async def get_deployment(
             attachments = await list_deployment_attachments(
                 session, user_id=current_user.id, deployment_id=deployment_row.id
             )
-            snapshot_ids_to_verify = deployment_mapper.util_snapshot_ids_to_verify(attachments)
+            verified_snapshot_ids = extract_verified_snapshot_ids(attachments)
+            snapshot_ids_to_verify = list(dict.fromkeys(verified_snapshot_ids))
             if snapshot_ids_to_verify:
                 known_snapshots = await fetch_provider_snapshot_keys(
                     deployment_adapter=deployment_adapter,
@@ -1113,12 +1121,12 @@ async def get_deployment(
                 )
                 corrected_counts = await sync_attachment_snapshot_ids(
                     user_id=current_user.id,
-                    deployment_ids=[deployment_row.id],
                     attachments=attachments,
                     known_snapshot_ids=known_snapshots,
                     db=session,
+                    verified_snapshot_ids=verified_snapshot_ids,
                 )
-                attached_count = corrected_counts[deployment_row.id]
+                attached_count = corrected_counts.get(deployment_row.id, 0)
             else:
                 # No attachments carry a provider-verifiable snapshot ID, so
                 # there is nothing to check against the provider.  The raw
@@ -1371,7 +1379,6 @@ async def list_deployment_flow_versions(
     ):
         rows, total, snapshot_result = await list_deployment_flow_versions_synced(
             deployment_adapter=deployment_adapter,
-            deployment_mapper=deployment_mapper,
             user_id=current_user.id,
             provider_id=deployment_row.deployment_provider_account_id,
             deployment_id=deployment_row.id,

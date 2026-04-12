@@ -30,7 +30,13 @@ from sqlalchemy import and_, literal, union_all
 from sqlmodel import col, func, select
 
 from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
-from langflow.api.v1.mappers.deployments.sync import fetch_provider_resource_keys, sync_attachment_snapshot_ids
+from langflow.api.v1.mappers.deployments.sync import (
+    extract_verified_provider_snapshot_ids,
+    extract_verified_snapshot_ids,
+    fetch_provider_resource_keys,
+    sync_attachment_snapshot_ids,
+)
+from langflow.api.v1.mappers.deployments.util import require_non_empty
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
     DeploymentUpdateRequest,
@@ -383,12 +389,16 @@ async def resolve_adapter_mapper_from_provider_id(
 def resolve_deployment_adapter(
     provider_key: str,
 ) -> DeploymentServiceProtocol:
-    adapter_key = (provider_key or "").strip()
-    if not adapter_key:
+    try:
+        adapter_key = require_non_empty(
+            provider_key,
+            "Deployment provider account has no provider_key configured.",
+        )
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Deployment provider account has no provider_key configured.",
-        )
+            detail=str(exc),
+        ) from exc
 
     try:
         deployment_adapter = get_deployment_adapter(adapter_key)
@@ -774,7 +784,6 @@ async def list_deployments_synced(
 async def list_deployment_flow_versions_synced(
     *,
     deployment_adapter: DeploymentServiceProtocol,
-    deployment_mapper: BaseDeploymentMapper,
     user_id: UUID,
     provider_id: UUID,
     deployment_id: UUID,
@@ -796,7 +805,8 @@ async def list_deployment_flow_versions_synced(
         flow_ids=flow_ids,
     )
     snapshot_result: SnapshotListResult | None = None
-    snapshot_ids = list(dict.fromkeys(deployment_mapper.util_snapshot_ids_to_verify(attachments)))
+    verified_snapshot_ids = extract_verified_snapshot_ids(attachments)
+    snapshot_ids = list(dict.fromkeys(verified_snapshot_ids))
     if snapshot_ids:
         try:
             snapshot_result = await deployment_adapter.list_snapshots(
@@ -804,24 +814,25 @@ async def list_deployment_flow_versions_synced(
                 db=db,
                 params=SnapshotListParams(snapshot_ids=snapshot_ids),
             )
-            known_snapshot_ids = {str(item.id) for item in snapshot_result.snapshots if item.id}
+            known_snapshot_ids = extract_verified_provider_snapshot_ids(snapshot_result)
 
             async with db.begin_nested():
                 await sync_attachment_snapshot_ids(
                     user_id=user_id,
-                    deployment_ids=[deployment_id],
                     attachments=attachments,
                     known_snapshot_ids=known_snapshot_ids,
                     db=db,
+                    verified_snapshot_ids=verified_snapshot_ids,
                 )
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
             snapshot_result = None
             logger.warning(
                 "Snapshot-level sync failed while listing deployment flow versions for deployment %s "
-                "(provider %s); "
+                "(provider %s): %s; "
                 "returning DB rows without provider enrichment",
                 deployment_id,
                 provider_id,
+                exc,
                 exc_info=True,
             )
 
@@ -854,12 +865,17 @@ async def attach_flow_versions(
         return
 
     for flow_version_id in flow_version_ids:
+        snapshot_id = require_non_empty(
+            (snapshot_id_by_flow_version_id or {}).get(flow_version_id),
+            "Missing provider snapshot binding for flow version "
+            f"{flow_version_id} during deployment attachment creation.",
+        )
         await create_deployment_attachment(
             db,
             user_id=user_id,
             flow_version_id=flow_version_id,
             deployment_id=deployment_row_id,
-            provider_snapshot_id=(snapshot_id_by_flow_version_id or {}).get(flow_version_id),
+            provider_snapshot_id=snapshot_id,
         )
 
 

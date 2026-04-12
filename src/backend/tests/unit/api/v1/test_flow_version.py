@@ -867,7 +867,7 @@ async def _attach_version_to_deployment(session, *, user_id, flow_version_id, de
         user_id=user_id,
         flow_version_id=flow_version_id,
         deployment_id=deployment_id,
-        provider_snapshot_id=provider_snapshot_id,
+        provider_snapshot_id=provider_snapshot_id or f"snap-{flow_version_id}",
     )
 
 

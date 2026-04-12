@@ -19,6 +19,7 @@ from .registry import (
     get_mapper_registry,
     register_mapper,
 )
+from .util import require_non_empty
 
 __all__ = [
     "BaseDeploymentMapper",
@@ -35,4 +36,5 @@ __all__ = [
     "get_mapper",
     "get_mapper_registry",
     "register_mapper",
+    "require_non_empty",
 ]

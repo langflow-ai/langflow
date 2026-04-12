@@ -705,16 +705,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             provider_data=provider_payload,
         )
 
-    def util_snapshot_ids_to_verify(
-        self,
-        attachments: list[Any],
-    ) -> list[str]:
-        return [
-            att.provider_snapshot_id
-            for att in attachments
-            if getattr(att, "provider_snapshot_id", None) and att.provider_snapshot_id.strip()
-        ]
-
     def extract_snapshot_bindings(self, provider_view) -> list[ProviderSnapshotBinding]:
         bindings: list[ProviderSnapshotBinding] = []
         for item in provider_view.deployments:

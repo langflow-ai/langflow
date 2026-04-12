@@ -25,6 +25,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentListResult,
     DeploymentType,
     SnapshotListParams,
+    SnapshotListResult,
 )
 from lfx.services.deps import get_deployment_adapter
 from lfx.services.interfaces import DeploymentServiceProtocol
@@ -37,18 +38,42 @@ from langflow.services.database.models.deployment.crud import (
 )
 from langflow.services.database.models.deployment.exceptions import parse_deployment_guard_error
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
-    delete_deployment_attachment,
+    delete_deployment_attachments_by_keys,
     delete_unbound_attachments,
 )
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
+from langflow.services.database.models.flow_version_deployment_attachment.schema import (
+    DeploymentAttachmentKey,
+    DeploymentAttachmentKeyBatch,
+)
+
+from .util import require_non_empty
 
 if TYPE_CHECKING:
     from langflow.api.utils import DbSession
     from langflow.services.database.models.deployment.model import Deployment
 
 TGuardOperationResult = TypeVar("TGuardOperationResult")
+
+
+def extract_verified_snapshot_ids(attachments: list[FlowVersionDeploymentAttachment]) -> list[str]:
+    """Return normalized snapshot IDs for attachments, raising on blank values."""
+    return [
+        require_non_empty(
+            att.provider_snapshot_id,
+            "FlowVersionDeploymentAttachment.provider_snapshot_id must be non-empty "
+            f"(deployment={att.deployment_id}, flow_version={att.flow_version_id})",
+        )
+        for att in attachments
+    ]
+
+
+def extract_verified_provider_snapshot_ids(snapshot_view: SnapshotListResult) -> set[str]:
+    """Return provider snapshot IDs, raising on blank values."""
+    error_msg = "Provider returned a snapshot with an empty id."
+    return {require_non_empty(str(snapshot.id), error_msg) for snapshot in snapshot_view.snapshots}
 
 
 async def fetch_provider_resource_keys(
@@ -95,7 +120,8 @@ async def fetch_provider_resource_keys(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while communicating with the deployment provider.",
         ) from exc
-    known_keys = {str(item.id) for item in provider_view.deployments if item.id}
+    error_msg = "Provider returned a deployment with an empty id."
+    known_keys = {require_non_empty(str(item.id), error_msg) for item in provider_view.deployments}
     return known_keys, provider_view
 
 
@@ -131,40 +157,49 @@ async def fetch_provider_snapshot_keys(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while communicating with the deployment provider.",
         ) from exc
-    return {str(item.id) for item in snapshot_view.snapshots if item.id}
+    return extract_verified_provider_snapshot_ids(snapshot_view)
 
 
 async def sync_attachment_snapshot_ids(
     *,
     user_id: UUID,
-    deployment_ids: list[UUID],
     attachments: list[FlowVersionDeploymentAttachment],
     known_snapshot_ids: set[str],
     db: DbSession,
+    verified_snapshot_ids: list[str] | None = None,
 ) -> dict[UUID, int]:
     """Delete stale attachment rows and return corrected attached counts."""
-    corrected_counts: dict[UUID, int] = dict.fromkeys(deployment_ids, 0)
-    for attachment in attachments:
-        # Provider-agnostic fallback: some adapters may not persist snapshot ids per attachment.
-        # Today, wxo does persist these ids (as tool ids), and we generally
-        # expect them to be present and truthy.
-        # TODO: move provider-specific snapshot verification/counting semantics into mapper hooks.
-        snapshot_id = (attachment.provider_snapshot_id or "").strip()
-        if snapshot_id and snapshot_id not in known_snapshot_ids:
-            logger.warning(
-                "Snapshot %s for deployment %s not found on provider — deleting stale attachment",
+    verified_snapshot_ids = verified_snapshot_ids or extract_verified_snapshot_ids(attachments)
+    if len(verified_snapshot_ids) != len(attachments):
+        msg = (
+            "verified_snapshot_ids length must match attachments length "
+            f"({len(verified_snapshot_ids)} != {len(attachments)})"
+        )
+        raise ValueError(msg)
+
+    corrected_counts: dict[UUID, int] = {}
+    stale_attachment_keys: list[DeploymentAttachmentKey] = []
+    for attachment, snapshot_id in zip(attachments, verified_snapshot_ids, strict=True):
+        if snapshot_id not in known_snapshot_ids:
+            await logger.adebug(
+                "Snapshot %s for deployment %s not found on provider — marking stale attachment for batch delete",
                 snapshot_id,
                 attachment.deployment_id,
             )
-            await delete_deployment_attachment(
-                db,
-                user_id=user_id,
-                flow_version_id=attachment.flow_version_id,
-                deployment_id=attachment.deployment_id,
+            stale_attachment_keys.append(
+                DeploymentAttachmentKey(
+                    deployment_id=attachment.deployment_id,
+                    flow_version_id=attachment.flow_version_id,
+                )
             )
-        else:
-            # Count verified snapshot bindings and attachments with no provider-trackable snapshot id.
-            corrected_counts[attachment.deployment_id] = corrected_counts.get(attachment.deployment_id, 0) + 1
+            continue
+        corrected_counts[attachment.deployment_id] = corrected_counts.get(attachment.deployment_id, 0) + 1
+    if stale_attachment_keys:
+        await delete_deployment_attachments_by_keys(
+            db,
+            user_id=user_id,
+            attachment_key_batch=DeploymentAttachmentKeyBatch(keys=stale_attachment_keys),
+        )
     return corrected_counts
 
 

@@ -12,9 +12,9 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     count_attachments_by_deployment_ids,
-    create_deployment_attachment,
     delete_deployment_attachment,
     delete_deployment_attachments_by_deployment_id,
+    delete_deployment_attachments_by_keys,
     get_deployment_attachment,
     list_attachments_by_deployment_ids,
     list_attachments_for_flow_with_provider_info,
@@ -22,8 +22,14 @@ from langflow.services.database.models.flow_version_deployment_attachment.crud i
     list_deployment_attachments_for_flow_version_ids,
     update_deployment_attachment_provider_snapshot_id,
 )
+from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+    create_deployment_attachment as _create_deployment_attachment,
+)
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
+)
+from langflow.services.database.models.flow_version_deployment_attachment.schema import (
+    DeploymentAttachmentKeyBatch,
 )
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
@@ -35,6 +41,32 @@ from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 _TEST_PASSWORD = "hashed"  # noqa: S105  # pragma: allowlist secret
+
+
+def _default_snapshot_id(*, flow_version_id, deployment_id) -> str:
+    return f"snap-{deployment_id}-{flow_version_id}"
+
+
+async def create_deployment_attachment(
+    db: AsyncSession,
+    *,
+    user_id,
+    flow_version_id,
+    deployment_id,
+    provider_snapshot_id: str | None = None,
+):
+    """Test-only wrapper that auto-generates provider_snapshot_id when omitted."""
+    return await _create_deployment_attachment(
+        db,
+        user_id=user_id,
+        flow_version_id=flow_version_id,
+        deployment_id=deployment_id,
+        provider_snapshot_id=provider_snapshot_id
+        or _default_snapshot_id(
+            flow_version_id=flow_version_id,
+            deployment_id=deployment_id,
+        ),
+    )
 
 
 @pytest.fixture(name="db_engine")
@@ -170,18 +202,17 @@ class TestCreateDeploymentAttachment:
         assert att.provider_snapshot_id == "snap-1"
         assert att.created_at is not None
 
-    async def test_create_without_snapshot_id(
+    async def test_create_without_snapshot_id_raises(
         self, db: AsyncSession, user: User, flow_version: FlowVersion, deployment: Deployment
     ):
-        att = await create_deployment_attachment(
-            db,
-            user_id=user.id,
-            flow_version_id=flow_version.id,
-            deployment_id=deployment.id,
-        )
-        await db.commit()
-
-        assert att.provider_snapshot_id is None
+        with pytest.raises(ValueError, match="provider_snapshot_id must not be empty"):
+            await _create_deployment_attachment(
+                db,
+                user_id=user.id,
+                flow_version_id=flow_version.id,
+                deployment_id=deployment.id,
+                provider_snapshot_id=None,
+            )
 
     async def test_create_duplicate_raises_value_error(
         self, db: AsyncSession, user: User, flow_version: FlowVersion, deployment: Deployment
@@ -360,7 +391,7 @@ class TestUpdateDeploymentAttachmentProviderSnapshotId:
         )
         await db.commit()
 
-        assert att.provider_snapshot_id is None
+        assert att.provider_snapshot_id is not None
 
         updated = await update_deployment_attachment_provider_snapshot_id(
             db, attachment=att, provider_snapshot_id="snap-new"
@@ -369,7 +400,7 @@ class TestUpdateDeploymentAttachmentProviderSnapshotId:
 
         assert updated.provider_snapshot_id == "snap-new"
 
-    async def test_clear_snapshot_id(
+    async def test_blank_snapshot_id_raises(
         self, db: AsyncSession, user: User, flow_version: FlowVersion, deployment: Deployment
     ):
         att = await create_deployment_attachment(
@@ -381,10 +412,12 @@ class TestUpdateDeploymentAttachmentProviderSnapshotId:
         )
         await db.commit()
 
-        updated = await update_deployment_attachment_provider_snapshot_id(db, attachment=att, provider_snapshot_id=None)
-        await db.commit()
-
-        assert updated.provider_snapshot_id is None
+        with pytest.raises(ValueError, match="provider_snapshot_id must not be empty"):
+            await update_deployment_attachment_provider_snapshot_id(
+                db,
+                attachment=att,
+                provider_snapshot_id="   ",
+            )
 
 
 @pytest.mark.asyncio
@@ -410,6 +443,87 @@ class TestDeleteDeploymentAttachmentsByDeploymentId:
     async def test_delete_none_returns_zero(self, db: AsyncSession, user: User, deployment: Deployment):
         count = await delete_deployment_attachments_by_deployment_id(db, user_id=user.id, deployment_id=deployment.id)
         assert count == 0
+
+
+@pytest.mark.asyncio
+class TestDeleteDeploymentAttachmentsByKeys:
+    async def test_delete_exact_pairs_avoids_cartesian_cross_delete(
+        self,
+        db: AsyncSession,
+        user: User,
+        flow: Flow,
+        deployment: Deployment,
+        folder: Folder,
+        provider_account: DeploymentProviderAccount,
+    ):
+        """Regression: deleting two pairs must not delete cross-combination rows."""
+        d2 = Deployment(
+            user_id=user.id,
+            project_id=folder.id,
+            deployment_provider_account_id=provider_account.id,
+            resource_key="rk-keys-2",
+            name="deploy-keys-2",
+            deployment_type=DeploymentType.AGENT,
+        )
+        db.add(d2)
+
+        fv2 = FlowVersion(flow_id=flow.id, user_id=user.id, version_number=2, data={})
+        fv3 = FlowVersion(flow_id=flow.id, user_id=user.id, version_number=3, data={})
+        db.add_all([fv2, fv3])
+        await db.commit()
+        await db.refresh(d2)
+        await db.refresh(fv2)
+        await db.refresh(fv3)
+
+        dep1_target = await create_deployment_attachment(
+            db,
+            user_id=user.id,
+            flow_version_id=fv2.id,
+            deployment_id=deployment.id,
+            provider_snapshot_id="snap-target-1",
+        )
+        dep2_target = await create_deployment_attachment(
+            db,
+            user_id=user.id,
+            flow_version_id=fv3.id,
+            deployment_id=d2.id,
+            provider_snapshot_id="snap-target-2",
+        )
+        dep1_cross = await create_deployment_attachment(
+            db,
+            user_id=user.id,
+            flow_version_id=fv3.id,
+            deployment_id=deployment.id,
+            provider_snapshot_id="snap-cross-1",
+        )
+        dep2_cross = await create_deployment_attachment(
+            db,
+            user_id=user.id,
+            flow_version_id=fv2.id,
+            deployment_id=d2.id,
+            provider_snapshot_id="snap-cross-2",
+        )
+        await db.commit()
+
+        deleted_count = await delete_deployment_attachments_by_keys(
+            db,
+            user_id=user.id,
+            attachment_key_batch=DeploymentAttachmentKeyBatch(
+                keys=[
+                    {"deployment_id": deployment.id, "flow_version_id": fv2.id},
+                    {"deployment_id": d2.id, "flow_version_id": fv3.id},
+                ]
+            ),
+        )
+        await db.commit()
+
+        remaining = await list_attachments_by_deployment_ids(db, user_id=user.id, deployment_ids=[deployment.id, d2.id])
+        remaining_ids = {row.id for row in remaining}
+        assert deleted_count == 2
+        assert dep1_target.id not in remaining_ids
+        assert dep2_target.id not in remaining_ids
+        assert dep1_cross.id in remaining_ids
+        assert dep2_cross.id in remaining_ids
 
 
 @pytest.mark.asyncio

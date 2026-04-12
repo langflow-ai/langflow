@@ -1737,15 +1737,9 @@ class TestGetDeploymentSync:
         """Snapshot-level sync corrects the attached_count in the response."""
         from langflow.api.v1.deployments import get_deployment
 
-        class _SnapshotMapper:
-            @staticmethod
-            def util_snapshot_ids_to_verify(attachments):
-                return [
-                    attachment.provider_snapshot_id for attachment in attachments if attachment.provider_snapshot_id
-                ]
-
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
+        mapper = MagicMock()
         provider_deployment = MagicMock()
         provider_deployment.name = "deployed-agent"
         provider_deployment.description = "desc"
@@ -1754,7 +1748,7 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper(), "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
 
         att_good = _fake_attachment(provider_snapshot_id="snap-1")
         att_stale = _fake_attachment(provider_snapshot_id="snap-stale")
@@ -1774,25 +1768,19 @@ class TestGetDeploymentSync:
     @patch(f"{ROUTES_MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
-    async def test_no_snapshot_sync_when_no_snapshot_ids(
+    async def test_snapshot_sync_invalid_attachment_snapshot_id_falls_back_to_unverified_count(
         self,
         mock_resolve,
         mock_list_att,
         mock_fetch_snap,
         mock_sync_snap,
     ):
-        """When no attachments have provider_snapshot_id, snapshot sync is skipped."""
+        """Missing attachment snapshot ids trigger rollback and fallback counting."""
         from langflow.api.v1.deployments import get_deployment
-
-        class _SnapshotMapper:
-            @staticmethod
-            def util_snapshot_ids_to_verify(attachments):
-                return [
-                    attachment.provider_snapshot_id for attachment in attachments if attachment.provider_snapshot_id
-                ]
 
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
+        mapper = MagicMock()
         provider_deployment = MagicMock()
         provider_deployment.name = "deployed-agent"
         provider_deployment.description = "desc"
@@ -1801,13 +1789,14 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper(), "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
         mock_list_att.return_value = [_fake_attachment(provider_snapshot_id=None)]
 
         session = AsyncMock()
         result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
         assert result.attached_count == 1
+        session.rollback.assert_awaited_once()
         mock_fetch_snap.assert_not_awaited()
         mock_sync_snap.assert_not_awaited()
 
@@ -1826,15 +1815,9 @@ class TestGetDeploymentSync:
         """When snapshot-level sync raises, the response uses unverified attachment count."""
         from langflow.api.v1.deployments import get_deployment
 
-        class _SnapshotMapper:
-            @staticmethod
-            def util_snapshot_ids_to_verify(attachments):
-                return [
-                    attachment.provider_snapshot_id for attachment in attachments if attachment.provider_snapshot_id
-                ]
-
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
+        mapper = MagicMock()
         provider_deployment = MagicMock()
         provider_deployment.name = "deployed-agent"
         provider_deployment.description = "desc"
@@ -1843,7 +1826,7 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper(), "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
 
         att1 = _fake_attachment(provider_snapshot_id="snap-1")
         att2 = _fake_attachment(provider_snapshot_id="snap-2")
