@@ -1109,6 +1109,7 @@ async def get_deployment(
             attachments = await list_deployment_attachments(
                 session, user_id=current_user.id, deployment_id=deployment_row.id
             )
+            attached_count = len(attachments)
             verified_snapshot_ids = extract_verified_snapshot_ids(attachments)
             snapshot_ids_to_verify = list(dict.fromkeys(verified_snapshot_ids))
             if snapshot_ids_to_verify:
@@ -1127,11 +1128,6 @@ async def get_deployment(
                     verified_snapshot_ids=verified_snapshot_ids,
                 )
                 attached_count = corrected_counts.get(deployment_row.id, 0)
-            else:
-                # No attachments carry a provider-verifiable snapshot ID, so
-                # there is nothing to check against the provider.  The raw
-                # DB attachment count is used as-is.
-                attached_count = len(attachments)
         except Exception:  # noqa: BLE001
             logger.warning(
                 "Snapshot-level sync failed for deployment %s; returning unverified attachment count",
