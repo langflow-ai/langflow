@@ -182,13 +182,15 @@ class TestCheckProviderUrlAllowed:
 class TestExtractTenantFromUrl:
     """Tests for extract_tenant_from_url dispatch."""
 
+    _TENANT_UUID = "10000000-0000-0000-0000-000000000123"
+
     def test_wxo_extracts_tenant_from_instances_path(self):
-        url = "https://api.us-south.wxo.cloud.ibm.com/orchestrate/instances/acct-123/agents"
-        assert extract_tenant_from_url(url, DeploymentProviderKey.WATSONX_ORCHESTRATE) == "acct-123"
+        url = f"https://api.us-south.wxo.cloud.ibm.com/orchestrate/instances/{self._TENANT_UUID}"
+        assert extract_tenant_from_url(url, DeploymentProviderKey.WATSONX_ORCHESTRATE) == self._TENANT_UUID
 
     def test_wxo_extracts_tenant_with_string_key(self):
-        url = "https://api.us-south.wxo.cloud.ibm.com/orchestrate/instances/acct-123/agents"
-        assert extract_tenant_from_url(url, "watsonx-orchestrate") == "acct-123"
+        url = f"https://api.us-south.wxo.cloud.ibm.com/orchestrate/instances/{self._TENANT_UUID}"
+        assert extract_tenant_from_url(url, "watsonx-orchestrate") == self._TENANT_UUID
 
     def test_wxo_returns_none_when_no_instances_segment(self):
         url = "https://api.us-south.wxo.cloud.ibm.com/orchestrate/api/v1"
@@ -203,10 +205,13 @@ class TestExtractTenantFromUrl:
         assert extract_tenant_from_url(url, DeploymentProviderKey.WATSONX_ORCHESTRATE) is None
 
     def test_wxo_strips_whitespace_from_tenant(self):
-        url = "https://api.us-south.wxo.cloud.ibm.com/instances/%20acct-123%20/agents"
+        url = f"https://api.us-south.wxo.cloud.ibm.com/instances/ {self._TENANT_UUID} "
         result = extract_tenant_from_url(url, DeploymentProviderKey.WATSONX_ORCHESTRATE)
-        assert result is not None
-        assert result == result.strip()
+        assert result == self._TENANT_UUID
+
+    def test_wxo_returns_none_when_segments_follow_tenant(self):
+        url = f"https://api.us-south.wxo.cloud.ibm.com/instances/{self._TENANT_UUID}/agents"
+        assert extract_tenant_from_url(url, DeploymentProviderKey.WATSONX_ORCHESTRATE) is None
 
     def test_unknown_provider_raises(self):
         with pytest.raises(ValueError, match="is not a valid DeploymentProviderKey"):
@@ -218,12 +223,14 @@ class TestValidateTenantUrlConsistency:
 
     WXO = DeploymentProviderKey.WATSONX_ORCHESTRATE
 
+    _TENANT_UUID = "10000000-0000-0000-0000-000000000123"
+
     def test_passes_when_tenant_matches_url(self):
-        url = "https://api.ibm.com/orchestrate/instances/acct-123/agents"
-        validate_tenant_url_consistency(url, "acct-123", self.WXO)
+        url = f"https://api.ibm.com/orchestrate/instances/{self._TENANT_UUID}"
+        validate_tenant_url_consistency(url, self._TENANT_UUID, self.WXO)
 
     def test_passes_when_tenant_is_none(self):
-        url = "https://api.ibm.com/orchestrate/instances/acct-123/agents"
+        url = f"https://api.ibm.com/orchestrate/instances/{self._TENANT_UUID}"
         validate_tenant_url_consistency(url, None, self.WXO)
 
     def test_passes_when_url_has_no_tenant(self):
@@ -235,6 +242,6 @@ class TestValidateTenantUrlConsistency:
         validate_tenant_url_consistency(url, None, self.WXO)
 
     def test_raises_when_tenant_contradicts_url(self):
-        url = "https://api.ibm.com/orchestrate/instances/acct-123/agents"
+        url = f"https://api.ibm.com/orchestrate/instances/{self._TENANT_UUID}"
         with pytest.raises(ValueError, match="does not match"):
-            validate_tenant_url_consistency(url, "wrong-tenant", self.WXO)
+            validate_tenant_url_consistency(url, "99000000-0000-0000-0000-000000000999", self.WXO)

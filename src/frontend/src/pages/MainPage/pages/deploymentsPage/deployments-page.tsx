@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
 import { useGetDeploymentsByProviders } from "@/controllers/API/queries/deployments/use-get-deployments-by-providers";
+import { useFolderStore } from "@/stores/foldersStore";
 import DeploymentsContent from "./components/deployments-content";
 import ProvidersContent from "./components/providers-content";
 import SubTabToggle, {
@@ -11,6 +13,10 @@ import SubTabToggle, {
 import { useProviderFilter } from "./hooks/use-provider-filter";
 
 export default function DeploymentsPage() {
+  const { folderId } = useParams();
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const currentFolderId = folderId ?? myCollectionId ?? undefined;
+
   const [activeSubTab, setActiveSubTab] =
     useState<DeploymentSubTab>("deployments");
   const [stepperOpen, setStepperOpen] = useState(false);
@@ -28,7 +34,7 @@ export default function DeploymentsPage() {
   } = useProviderFilter(providers);
 
   const { deployments, isLoading: isLoadingDeployments } =
-    useGetDeploymentsByProviders(providerIdsToQuery);
+    useGetDeploymentsByProviders(providerIdsToQuery, currentFolderId);
 
   const showHeaderButton =
     activeSubTab === "providers"
