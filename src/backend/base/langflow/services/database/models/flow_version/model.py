@@ -49,7 +49,7 @@ class FlowVersionRead(BaseModel):
         default=None,
         description=(
             "True when this version is attached to at least one deployment. "
-            "Omitted when deployment sync is not requested."
+            "Omitted unless deployment_provider_id is provided as a query parameter."
         ),
     )
 

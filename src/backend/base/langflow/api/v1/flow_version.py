@@ -23,7 +23,6 @@ from langflow.services.database.models.flow_version.crud import (
     get_flow_version_entry_or_raise,
     get_flow_version_list,
     get_flow_version_list_simple,
-    is_flow_version_deployed,
 )
 from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionConflictError,
@@ -122,14 +121,9 @@ async def list_flow_versions(
             ),
         ),
     ] = None,
-    deployment_provider_account_id: Annotated[
+    deployment_provider_id: Annotated[
         UUID | None,
-        Query(
-            description=(
-                "Optional provider account ID for provider-scoped deployment sync/status. "
-                "When omitted, deployment sync is skipped and deployment status fields are omitted."
-            )
-        ),
+        Query(description=("Optional provider account ID for provider account-scoped deployment status.")),
     ] = None,
 ) -> FlowVersionListResponse:
     await _get_user_flow(session, flow_id, current_user.id)
@@ -139,7 +133,7 @@ async def list_flow_versions(
         FEATURE_FLAGS.wxo_deployments and await count_provider_accounts(session, user_id=current_user.id) > 0
     )
 
-    include_deployment_status = deployment_provider_account_id is not None
+    include_deployment_status = deployment_provider_id is not None
     if has_providers and include_deployment_status:
         # Best-effort provider-scoped sync before read to keep status fresh.
         try:
@@ -147,7 +141,7 @@ async def list_flow_versions(
                 db=session,
                 flow_id=flow_id,
                 user_id=current_user.id,
-                deployment_provider_account_id=deployment_provider_account_id,
+                deployment_provider_account_id=deployment_provider_id,
             )
         except Exception:  # noqa: BLE001
             logger.warning(
@@ -191,57 +185,26 @@ async def list_flow_versions(
 # version as a standalone flow) is available via the GET /{version_id} endpoint.
 
 
-@router.get("/{version_id}", response_model_exclude_none=True)
+@router.get("/{version_id}")
 async def get_single_flow_version(
     flow_id: UUID,
     version_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
-    deployment_provider_account_id: Annotated[
-        UUID | None,
-        Query(
-            description=(
-                "Optional provider account ID for provider-scoped deployment sync/status. "
-                "When omitted, deployment sync is skipped and deployment status fields are omitted."
-            )
-        ),
-    ] = None,
 ) -> FlowVersionReadWithData:
     await _get_user_flow(session, flow_id, current_user.id)
-
-    has_providers = (
-        FEATURE_FLAGS.wxo_deployments and await count_provider_accounts(session, user_id=current_user.id) > 0
-    )
-
-    include_deployment_status = deployment_provider_account_id is not None
-    if has_providers and include_deployment_status:
-        # Best-effort provider-scoped sync (same as list endpoint).
-        try:
-            await sync_flow_version_attachments(
-                db=session,
-                flow_id=flow_id,
-                user_id=current_user.id,
-                deployment_provider_account_id=deployment_provider_account_id,
-            )
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Snapshot-level sync failed for flow %s; returning unverified deployment status",
-                flow_id,
-                exc_info=True,
-            )
 
     try:
         entry = await get_flow_version_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
     except FlowVersionNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Version entry not found") from exc
 
-    deployed = (
-        await is_flow_version_deployed(session, version_id) if has_providers and include_deployment_status else None
-    )
-    return _version_to_read_full(entry, strip_keys=True, is_deployed=deployed)
+    return _version_to_read_full(entry, strip_keys=True)
 
 
-@router.post("/", status_code=201)
+# shares FlowVersionRead model with list endpoint (inside FlowVersionListResponse),
+# but omits is_deployed field because its not relevant to this endpoint
+@router.post("/", status_code=201, response_model_exclude={"is_deployed"})
 async def create_snapshot(
     flow_id: UUID,
     current_user: CurrentActiveUser,
@@ -269,7 +232,7 @@ async def create_snapshot(
         )
     except FlowVersionError as exc:
         raise _translate_version_error(exc) from exc
-    return _version_to_read(entry, is_deployed=False)
+    return _version_to_read(entry)
 
 
 @router.post("/{version_id}/activate")
