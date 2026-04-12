@@ -104,7 +104,7 @@ class TestExistingMigrations:
     """Validate existing migration files against the guidelines."""
 
     def test_legacy_migrations_flagged(self):
-        """Ensure legacy migrations are flagged for missing phase markers."""
+        """Ensure legacy migrations without phase markers are flagged."""
         workspace_root = Path(__file__).resolve().parents[5]
         migrations_dir = workspace_root / "src/backend/base/langflow/alembic/versions"
 
@@ -113,11 +113,20 @@ class TestExistingMigrations:
         if not migrations_dir.exists():
             pytest.fail(f"Migrations directory not found at {migrations_dir}")
 
-        legacy_migration = next(
-            (f for f in migrations_dir.glob("*.py") if not f.name.startswith("00") and f.name != "__init__.py"), None
-        )
+        migration_files = [
+            f for f in migrations_dir.glob("*.py") if not f.name.startswith("00") and f.name != "__init__.py"
+        ]
 
-        assert legacy_migration is not None, f"No legacy migration files found in {migrations_dir}"
+        assert len(migration_files) > 0, f"No migration files found in {migrations_dir}"
+
+        legacy_migration = None
+        for f in migration_files:
+            result = validator.validate_migration_file(f)
+            if any(v["type"] == "NO_PHASE_MARKER" for v in result["violations"]):
+                legacy_migration = f
+                break
+
+        assert legacy_migration is not None, "Expected at least one legacy migration without a phase marker"
 
         result = validator.validate_migration_file(legacy_migration)
         assert result["valid"] is False
