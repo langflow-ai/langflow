@@ -6,10 +6,10 @@ Create Date: 2026-03-25 00:00:00.000000
 
 Phase: EXPAND
 
-This migration intentionally uses DB triggers (not only service-layer checks)
-to enforce constraints for every write path (API, scripts, direct SQL, and
-concurrent workers). Each guard protects against rows remaining syntactically
-valid while becoming semantically wrong relative to related tables.
+This migration adds DB triggers to enforce constraints for every write path
+(API, scripts, direct SQL, and concurrent workers). Each guard prevents rows
+from staying syntactically valid while becoming semantically wrong relative to
+related tables.
 
 Trigger contract and rationale:
 
