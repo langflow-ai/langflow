@@ -42,12 +42,14 @@ def test_parse_deployment_guard_error_from_cause_chain() -> None:
         "[SQL: DELETE FROM folder WHERE id = ?] "
         "(Background on this error at: https://sqlalche.me/e/20/gkpj)"
     )
-    assert parsed.detail == "This project currently contains one or more deployments. Remove those deployments first."
+    assert parsed.detail == (
+        "This project cannot be deleted because it has deployments. Please delete its deployments first."
+    )
 
 
 def test_parse_deployment_guard_error_preserves_raw_technical_detail() -> None:
     message = (
-        "sqlite3.IntegrityError: DEPLOYMENT_GUARD:FLOW_VERSION_DEPLOYED:"
+        "sqlite3.IntegrityError: DEPLOYMENT_GUARD:FLOW_HAS_DEPLOYED_VERSIONS:"
         "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment for the target flow.\n"
         "[SQL: DELETE FROM flow_version WHERE id = ?]"
     )
@@ -56,7 +58,7 @@ def test_parse_deployment_guard_error_preserves_raw_technical_detail() -> None:
     parsed = parse_deployment_guard_error(exc)
 
     assert isinstance(parsed, DeploymentGuardError)
-    assert parsed.code == "FLOW_VERSION_DEPLOYED"
+    assert parsed.code == "FLOW_HAS_DEPLOYED_VERSIONS"
     assert (
         parsed.technical_detail
         == "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment "
@@ -64,8 +66,8 @@ def test_parse_deployment_guard_error_preserves_raw_technical_detail() -> None:
         "[SQL: DELETE FROM flow_version WHERE id = ?]"
     )
     assert (
-        parsed.detail
-        == "This flow version is currently attached to one or more deployments. Remove those attachments first."
+        parsed.detail == "This flow cannot be deleted because it has deployed versions. "
+        "Please remove its versions from deployments first."
     )
 
 
@@ -77,8 +79,8 @@ def test_parse_deployment_guard_error_preserves_raw_technical_detail() -> None:
             "UPDATE flow.folder_id blocked: versions of this flow remain attached to deployments in the current "
             "project scope (OLD.folder_id). Remove rows from flow_version_deployment_attachment for this flow in the "
             "current project before changing flow.folder_id.",
-            "This flow has deployed versions in its current project and cannot be moved until those attachments "
-            "are removed.",
+            "This flow cannot be moved from its current project until its versions are removed from deployments "
+            "in its current project.",
         ),
         (
             "DEPLOYMENT_PROJECT_MOVE",
@@ -97,7 +99,7 @@ def test_parse_deployment_guard_error_preserves_raw_technical_detail() -> None:
             "CROSS_PROJECT_ATTACHMENT",
             "INSERT flow_version_deployment_attachment blocked: flow project scope (flow.folder_id) does not match "
             "deployment project scope (deployment.project_id).",
-            "Flow versions can only be attached to deployments in the same project.",
+            "Flow versions can only be in deployments in the same project.",
         ),
         (
             "DEPLOYMENT_RESOURCE_KEY_UPDATE",
@@ -142,7 +144,7 @@ def test_parse_deployment_guard_error_returns_none_when_absent() -> None:
 def test_parse_deployment_guard_error_from_implicit_context_chain() -> None:
     """Parser should walk __context__ (implicit chaining), not just __cause__."""
     guard_message = (
-        "DEPLOYMENT_GUARD:FLOW_VERSION_DEPLOYED:"
+        "DEPLOYMENT_GUARD:FLOW_HAS_DEPLOYED_VERSIONS:"
         "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment for the target flow."
     )
     try:
@@ -155,10 +157,10 @@ def test_parse_deployment_guard_error_from_implicit_context_chain() -> None:
         parsed = parse_deployment_guard_error(exc)
 
     assert isinstance(parsed, DeploymentGuardError)
-    assert parsed.code == "FLOW_VERSION_DEPLOYED"
+    assert parsed.code == "FLOW_HAS_DEPLOYED_VERSIONS"
     assert (
-        parsed.detail
-        == "This flow version is currently attached to one or more deployments. Remove those attachments first."
+        parsed.detail == "This flow cannot be deleted because it has deployed versions. "
+        "Please remove its versions from deployments first."
     )
 
 
@@ -175,13 +177,16 @@ def test_parse_deployment_guard_error_handles_cyclic_chain() -> None:
 
 def test_deployment_guard_error_supports_manual_technical_and_code() -> None:
     err = DeploymentGuardError(
-        code="FLOW_VERSION_DEPLOYED",
+        code="FLOW_HAS_DEPLOYED_VERSIONS",
         technical_detail="DELETE flow_version blocked due to dependent rows.",
-        detail="This flow version is currently attached to one or more deployments. Remove those attachments first.",
+        detail=(
+            "This flow cannot be deleted because it has deployed versions. "
+            "Please remove its versions from deployments first."
+        ),
     )
-    assert err.code == "FLOW_VERSION_DEPLOYED"
+    assert err.code == "FLOW_HAS_DEPLOYED_VERSIONS"
     assert err.technical_detail == "DELETE flow_version blocked due to dependent rows."
     assert (
-        err.detail
-        == "This flow version is currently attached to one or more deployments. Remove those attachments first."
+        err.detail == "This flow cannot be deleted because it has deployed versions. "
+        "Please remove its versions from deployments first."
     )

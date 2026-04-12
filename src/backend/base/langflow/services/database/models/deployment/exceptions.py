@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 _GUARD_FRIENDLY_DETAILS: dict[str, str] = {
-    "FLOW_VERSION_DEPLOYED": (
-        "This flow version is currently attached to one or more deployments. Remove those attachments first."
+    "FLOW_HAS_DEPLOYED_VERSIONS": (
+        "This flow cannot be deleted because it has deployed versions. "
+        "Please remove its versions from deployments first."
     ),
     "PROJECT_HAS_DEPLOYMENTS": (
-        "This project currently contains one or more deployments. Remove those deployments first."
+        "This project cannot be deleted because it has deployments. Please delete its deployments first."
     ),
     "FLOW_DEPLOYED_IN_PROJECT": (
-        "This flow has deployed versions in its current project and cannot be moved until those "
-        "attachments are removed."
+        "This flow cannot be moved from its current project until its versions "
+        "are removed from deployments in its current project."
     ),
     "DEPLOYMENT_PROJECT_MOVE": (
         "This deployment cannot be moved to a different project. Re-create it in the target project instead."
@@ -24,7 +25,7 @@ _GUARD_FRIENDLY_DETAILS: dict[str, str] = {
     "DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE": (
         "This deployment provider account identity cannot be modified. Re-create the account instead."
     ),
-    "CROSS_PROJECT_ATTACHMENT": "Flow versions can only be attached to deployments in the same project.",
+    "CROSS_PROJECT_ATTACHMENT": "Flow versions can only be in deployments in the same project.",
 }
 
 

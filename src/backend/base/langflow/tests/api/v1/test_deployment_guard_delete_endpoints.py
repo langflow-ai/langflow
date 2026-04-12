@@ -63,7 +63,13 @@ async def test_delete_project_raises_guard_error_from_app_level_check(monkeypatc
     session.flush = AsyncMock()
     session.begin_nested = lambda: _AsyncNullContext()
 
-    with pytest.raises(DeploymentGuardError, match="project currently contains one or more deployments"):
+    with pytest.raises(
+        DeploymentGuardError,
+        match=(
+            r"project cannot be deleted because it has deployments\. "
+            r"Please delete its deployments first\."
+        ),
+    ):
         await delete_project(
             session=session,
             project_id=project_id,
@@ -89,14 +95,14 @@ async def test_delete_project_remaps_flow_guard_to_project_guard(monkeypatch):
         "langflow.api.v1.projects.cascade_delete_flow",
         AsyncMock(
             side_effect=DeploymentGuardError(
-                code="FLOW_VERSION_DEPLOYED",
+                code="FLOW_HAS_DEPLOYED_VERSIONS",
                 technical_detail=(
                     "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment "
                     "for the target flow."
                 ),
                 detail=(
-                    "This flow version is currently attached to one or more deployments. "
-                    "Remove those attachments first."
+                    "This flow cannot be deleted because it has deployed versions. "
+                    "Please remove its versions from deployments first."
                 ),
             )
         ),
@@ -115,7 +121,13 @@ async def test_delete_project_remaps_flow_guard_to_project_guard(monkeypatch):
     session.flush = AsyncMock()
     session.begin_nested = lambda: _AsyncNullContext()
 
-    with pytest.raises(DeploymentGuardError, match="project currently contains one or more deployments") as exc_info:
+    with pytest.raises(
+        DeploymentGuardError,
+        match=(
+            r"project cannot be deleted because it has deployments\. "
+            r"Please delete its deployments first\."
+        ),
+    ) as exc_info:
         await delete_project(
             session=session,
             project_id=project_id,
@@ -135,9 +147,58 @@ async def test_cascade_delete_flow_raises_guard_error_from_app_level_check():
     session = AsyncMock()
     session.exec = AsyncMock(return_value=_ExecResult(uuid4()))
 
-    with pytest.raises(DeploymentGuardError, match="flow version is currently attached"):
+    with pytest.raises(
+        DeploymentGuardError,
+        match=(
+            r"flow cannot be deleted because it has deployed versions\. "
+            r"Please remove its versions from deployments first\."
+        ),
+    ):
         await cascade_delete_flow(session, flow_id)
     assert session.exec.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_delete_flow_remaps_guard_error_to_flow_delete_message(monkeypatch):
+    from langflow.api.v1.flows import delete_flow
+
+    flow_id = uuid4()
+    user_id = uuid4()
+
+    fake_flow = SimpleNamespace(id=flow_id, user_id=user_id)
+    monkeypatch.setattr("langflow.api.v1.flows._read_flow", AsyncMock(return_value=fake_flow))
+    monkeypatch.setattr(
+        "langflow.api.v1.flows._retry_on_deployment_guard",
+        AsyncMock(
+            side_effect=DeploymentGuardError(
+                code="FLOW_HAS_DEPLOYED_VERSIONS",
+                technical_detail=(
+                    "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment "
+                    "for the target flow."
+                ),
+                detail=(
+                    "This flow cannot be deleted because it has deployed versions. "
+                    "Please remove its versions from deployments first."
+                ),
+            )
+        ),
+    )
+
+    with pytest.raises(
+        DeploymentGuardError,
+        match=(
+            r"cannot be deleted because it has deployed versions\. "
+            r"Please remove its versions from deployments first\."
+        ),
+    ) as exc_info:
+        await delete_flow(
+            session=AsyncMock(),
+            flow_id=flow_id,
+            current_user=SimpleNamespace(id=user_id),
+        )
+
+    assert exc_info.value.code == "FLOW_HAS_DEPLOYED_VERSIONS"
+    assert "DELETE flow_version blocked" in exc_info.value.technical_detail
 
 
 @pytest.mark.asyncio
@@ -185,7 +246,13 @@ async def test_update_flow_translates_guard_error_from_flush(monkeypatch):
 
     flow_update = FlowUpdate(folder_id=new_folder_id)
 
-    with pytest.raises(DeploymentGuardError, match="cannot be moved until those attachments are removed"):
+    with pytest.raises(
+        DeploymentGuardError,
+        match=(
+            r"cannot be moved from its current project until its versions are "
+            r"removed from deployments in its current project"
+        ),
+    ):
         await update_flow(
             session=session,
             flow_id=flow_id,
@@ -209,14 +276,14 @@ async def test_delete_multiple_flows_propagates_guard_error(monkeypatch):
         "langflow.api.v1.flows.cascade_delete_flow",
         AsyncMock(
             side_effect=DeploymentGuardError(
-                code="FLOW_VERSION_DEPLOYED",
+                code="FLOW_HAS_DEPLOYED_VERSIONS",
                 technical_detail=(
                     "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment "
                     "for the target flow."
                 ),
                 detail=(
-                    "This flow version is currently attached to one or more deployments. "
-                    "Remove those attachments first."
+                    "This flow cannot be deleted because it has deployed versions. "
+                    "Please remove its versions from deployments first."
                 ),
             )
         ),
@@ -227,7 +294,13 @@ async def test_delete_multiple_flows_propagates_guard_error(monkeypatch):
     session.exec = AsyncMock(return_value=_ExecResult([fake_flow]))
     session.begin_nested = lambda: _AsyncNullContext()
 
-    with pytest.raises(DeploymentGuardError, match="flow version is currently attached"):
+    with pytest.raises(
+        DeploymentGuardError,
+        match=(
+            r"cannot be deleted because it has deployed versions\. "
+            r"Please remove its versions from deployments first\."
+        ),
+    ):
         await delete_multiple_flows(
             flow_ids=[flow_id],
             user=SimpleNamespace(id=user_id),

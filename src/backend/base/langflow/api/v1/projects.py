@@ -478,7 +478,7 @@ async def delete_project(
         )
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except DeploymentGuardError as exc:
-        if exc.code == "FLOW_VERSION_DEPLOYED":
+        if exc.code == "FLOW_HAS_DEPLOYED_VERSIONS":
             raise DeploymentGuardError(
                 code="PROJECT_HAS_DEPLOYMENTS",
                 technical_detail=(f"DELETE folder blocked while deleting project flows: {exc.technical_detail}"),

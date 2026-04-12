@@ -35,10 +35,10 @@ async def test_check_flow_has_deployed_versions_raises_guard_when_attached() -> 
     with pytest.raises(DeploymentGuardError) as exc_info:
         await check_flow_has_deployed_versions(db, flow_id=uuid4())
 
-    assert exc_info.value.code == "FLOW_VERSION_DEPLOYED"
+    assert exc_info.value.code == "FLOW_HAS_DEPLOYED_VERSIONS"
     assert (
-        exc_info.value.detail
-        == "This flow version is currently attached to one or more deployments. Remove those attachments first."
+        exc_info.value.detail == "This flow cannot be deleted because it has deployed versions. "
+        "Please remove its versions from deployments first."
     )
 
 
@@ -61,5 +61,5 @@ async def test_check_project_has_deployments_raises_guard_when_present() -> None
     assert exc_info.value.code == "PROJECT_HAS_DEPLOYMENTS"
     assert (
         exc_info.value.detail
-        == "This project currently contains one or more deployments. Remove those deployments first."
+        == "This project cannot be deleted because it has deployments. Please delete its deployments first."
     )

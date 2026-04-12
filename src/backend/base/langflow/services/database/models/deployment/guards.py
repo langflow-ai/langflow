@@ -34,12 +34,12 @@ async def check_flow_has_deployed_versions(db: AsyncSession, *, flow_id: UUID) -
         return
 
     raise DeploymentGuardError(
-        code="FLOW_VERSION_DEPLOYED",
+        code="FLOW_HAS_DEPLOYED_VERSIONS",
         technical_detail=(
             "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment "
             "for the target flow."
         ),
-        detail=get_friendly_guard_detail("FLOW_VERSION_DEPLOYED"),
+        detail=get_friendly_guard_detail("FLOW_HAS_DEPLOYED_VERSIONS"),
     )
 
 
