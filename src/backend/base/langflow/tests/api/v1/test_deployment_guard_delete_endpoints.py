@@ -43,19 +43,16 @@ async def test_delete_project_raises_guard_error_from_app_level_check(monkeypatc
         lambda: SimpleNamespace(settings=SimpleNamespace(add_projects_to_mcp_servers=False)),
     )
     monkeypatch.setattr("langflow.api.v1.projects.cleanup_mcp_on_delete", AsyncMock())
-    monkeypatch.setattr("langflow.api.v1.projects.sync_project_deployments", AsyncMock())
+    monkeypatch.setattr("langflow.api.v1.mappers.deployments.sync.sync_project_deployments", AsyncMock())
 
     session = AsyncMock()
     project = SimpleNamespace(id=project_id, name="Test Project", auth_settings=None)
-    guarded_project_row = SimpleNamespace(id=project_id, name="Test Project")
     session.exec = AsyncMock(
         side_effect=[
             _ExecResult(project),  # initial project lookup
             _ExecResult([]),  # first attempt: flows query
-            _ExecResult(guarded_project_row),  # first attempt: project query
             _ExecResult(uuid4()),  # first attempt: check_project_has_deployments
             _ExecResult([]),  # second attempt: flows query
-            _ExecResult(guarded_project_row),  # second attempt: project query
             _ExecResult(uuid4()),  # second attempt: check_project_has_deployments
         ]
     )
@@ -90,7 +87,7 @@ async def test_delete_project_remaps_flow_guard_to_project_guard(monkeypatch):
         lambda: SimpleNamespace(settings=SimpleNamespace(add_projects_to_mcp_servers=False)),
     )
     monkeypatch.setattr("langflow.api.v1.projects.cleanup_mcp_on_delete", AsyncMock())
-    monkeypatch.setattr("langflow.api.v1.projects.sync_project_deployments", AsyncMock())
+    monkeypatch.setattr("langflow.api.v1.mappers.deployments.sync.sync_project_deployments", AsyncMock())
     monkeypatch.setattr(
         "langflow.api.v1.projects.cascade_delete_flow",
         AsyncMock(
@@ -168,7 +165,7 @@ async def test_delete_flow_remaps_guard_error_to_flow_delete_message(monkeypatch
     fake_flow = SimpleNamespace(id=flow_id, user_id=user_id)
     monkeypatch.setattr("langflow.api.v1.flows._read_flow", AsyncMock(return_value=fake_flow))
     monkeypatch.setattr(
-        "langflow.api.v1.flows._retry_on_deployment_guard",
+        "langflow.api.v1.flows.retry_flow_operation_on_deployment_guard",
         AsyncMock(
             side_effect=DeploymentGuardError(
                 code="FLOW_HAS_DEPLOYED_VERSIONS",
@@ -233,7 +230,7 @@ async def test_update_flow_translates_guard_error_from_flush(monkeypatch):
             )
         ),
     )
-    monkeypatch.setattr("langflow.api.v1.flows.sync_flow_deployment_state", AsyncMock())
+    monkeypatch.setattr("langflow.api.v1.mappers.deployments.sync.sync_flow_deployment_state", AsyncMock())
     monkeypatch.setattr(
         "langflow.api.v1.flows.get_settings_service",
         lambda: SimpleNamespace(settings=SimpleNamespace(remove_api_keys=False)),
@@ -249,7 +246,7 @@ async def test_update_flow_translates_guard_error_from_flush(monkeypatch):
     with pytest.raises(
         DeploymentGuardError,
         match=(
-            r"cannot be moved from its current project until its versions are "
+            r"cannot be moved to another project until its versions are "
             r"removed from deployments in its current project"
         ),
     ):
@@ -288,7 +285,7 @@ async def test_delete_multiple_flows_propagates_guard_error(monkeypatch):
             )
         ),
     )
-    monkeypatch.setattr("langflow.api.v1.flows.sync_flow_deployment_state", AsyncMock())
+    monkeypatch.setattr("langflow.api.v1.mappers.deployments.sync.sync_flow_deployment_state", AsyncMock())
 
     session = AsyncMock()
     session.exec = AsyncMock(return_value=_ExecResult([fake_flow]))

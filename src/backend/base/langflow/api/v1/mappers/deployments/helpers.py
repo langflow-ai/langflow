@@ -720,6 +720,7 @@ async def list_deployments_synced(
 
         for row, attached_count, matched_flow_versions in batch:
             if row.resource_key not in known:
+                # Provider `known` is type-filtered; skip other local types instead of deleting as stale.
                 if deployment_type is not None and row.deployment_type != deployment_type:
                     cursor += 1
                     continue

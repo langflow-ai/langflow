@@ -79,7 +79,7 @@ def test_parse_deployment_guard_error_preserves_raw_technical_detail() -> None:
             "UPDATE flow.folder_id blocked: versions of this flow remain attached to deployments in the current "
             "project scope (OLD.folder_id). Remove rows from flow_version_deployment_attachment for this flow in the "
             "current project before changing flow.folder_id.",
-            "This flow cannot be moved from its current project until its versions are removed from deployments "
+            "This flow cannot be moved to another project until its versions are removed from deployments "
             "in its current project.",
         ),
         (

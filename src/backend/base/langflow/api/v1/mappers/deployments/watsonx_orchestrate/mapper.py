@@ -719,7 +719,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         bindings: list[ProviderSnapshotBinding] = []
         for item in provider_view.deployments:
             if not item.id:
-                continue
+                msg = "deployment id is required from wxO adapter."
+                raise ValueError(msg)
             resource_key = str(item.id)
 
             tool_ids = item.provider_data.get("tool_ids", None)

@@ -4,8 +4,7 @@ import asyncio
 import io
 import threading
 import zipfile
-from collections.abc import Awaitable, Callable
-from typing import Annotated, TypeVar
+from typing import Annotated
 from uuid import UUID
 
 import orjson
@@ -35,7 +34,7 @@ from langflow.api.v1.flows_helpers import (
     _upsert_flow_list,
     _verify_fs_path,
 )
-from langflow.api.v1.mappers.deployments.sync import sync_flow_deployment_state
+from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -83,30 +82,6 @@ def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
-T = TypeVar("T")
-
-
-async def _retry_on_deployment_guard(
-    *,
-    db: DbSession,
-    user_id: UUID,
-    flow_ids: list[UUID] | None = None,
-    operation: Callable[[], Awaitable[T]],
-) -> T:
-    """Try an operation; if a deployment guard trigger fires, sync and retry once."""
-    try:
-        async with db.begin_nested():
-            return await operation()
-    except Exception as exc:
-        guard_error = parse_deployment_guard_error(exc)
-        if not guard_error:
-            raise
-
-    if flow_ids:
-        await sync_flow_deployment_state(db=db, flow_ids=flow_ids, user_id=user_id)
-
-    async with db.begin_nested():
-        return await operation()
 
 
 @router.post("/", response_model=FlowRead, status_code=201)
@@ -246,8 +221,11 @@ async def update_flow(
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
 
-        update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
-        folder_id_will_change = "folder_id" in update_data and update_data.get("folder_id") != db_flow.folder_id
+        # Explicit folder_id=None is ignored here because _patch_flow builds
+        # update_data with exclude_none=True, so null folder_id is a no-op.
+        folder_id_will_change = (
+            "folder_id" in flow.model_fields_set and flow.folder_id is not None and flow.folder_id != db_flow.folder_id
+        )
 
         async def operation() -> FlowRead:
             # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
@@ -263,7 +241,7 @@ async def update_flow(
             )
 
         if folder_id_will_change:
-            return await _retry_on_deployment_guard(
+            return await retry_flow_operation_on_deployment_guard(
                 db=session,
                 user_id=current_user.id,
                 flow_ids=[flow_id],
@@ -306,9 +284,12 @@ async def upsert_flow(
                 raise HTTPException(status_code=404, detail="Flow not found")
 
             # Sync deployment state before folder changes
-            update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
+            # Explicit folder_id=None is ignored here because _update_existing_flow
+            # also uses exclude_none=True for update_data.
             folder_id_will_change = (
-                "folder_id" in update_data and update_data.get("folder_id") != existing_flow.folder_id
+                "folder_id" in flow.model_fields_set
+                and flow.folder_id is not None
+                and flow.folder_id != existing_flow.folder_id
             )
 
             async def update_operation() -> FlowRead:
@@ -325,7 +306,7 @@ async def upsert_flow(
                 )
 
             if folder_id_will_change:
-                flow_read = await _retry_on_deployment_guard(
+                flow_read = await retry_flow_operation_on_deployment_guard(
                     db=session,
                     user_id=current_user.id,
                     flow_ids=[existing_flow.id],
@@ -375,7 +356,7 @@ async def delete_flow(
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
-    await _retry_on_deployment_guard(
+    await retry_flow_operation_on_deployment_guard(
         db=session,
         user_id=current_user.id,
         flow_ids=[flow.id],
@@ -500,7 +481,7 @@ async def delete_multiple_flows(
             await db.flush()
             return len(flows_to_delete)
 
-        deleted_count = await _retry_on_deployment_guard(
+        deleted_count = await retry_flow_operation_on_deployment_guard(
             db=db,
             user_id=user.id,
             flow_ids=flow_ids,
@@ -513,8 +494,8 @@ async def delete_multiple_flows(
 
         _logging.getLogger(__name__).exception("Error deleting multiple flows")
         raise HTTPException(status_code=500, detail="An internal error occurred while deleting flows.") from exc
-    else:
-        return {"deleted": deleted_count}
+
+    return {"deleted": deleted_count}
 
 
 @router.post("/download/", status_code=200)

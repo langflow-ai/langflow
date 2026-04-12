@@ -404,7 +404,7 @@ async def _update_existing_flow(
         if endpoint_conflict:
             raise HTTPException(status_code=409, detail="Endpoint name must be unique")
 
-    # Build update data
+    # None-valued inputs are treated as omitted by default for updates.
     update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
     # Preserve the existing endpoint unless the request explicitly clears it.
@@ -447,6 +447,8 @@ async def _patch_flow(
     """Apply a partial update (PATCH) to an existing flow and return a FlowRead."""
     settings_service = get_settings_service()
 
+    # PATCH follows the same rule: None-valued fields are omitted unless
+    # explicitly reintroduced below (for example endpoint_name clear).
     update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
     # Preserve the existing endpoint unless the request explicitly clears it.

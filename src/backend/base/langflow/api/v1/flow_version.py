@@ -104,6 +104,10 @@ def _ensure_deployments_enabled_for_filters(deployment_ids: list[UUID] | None) -
         raise HTTPException(status_code=400, detail=msg)
 
 
+# NOTE: `response_model_exclude_none=True` is intentionally narrow here: we use
+# it to omit `is_deployed` unless deployment status is explicitly requested.
+# If future nullable fields must be returned as explicit null, prefer splitting
+# response schemas/routes and disabling this global exclude-none behavior.
 @router.get("/", response_model_exclude_none=True)
 async def list_flow_versions(
     flow_id: UUID,
@@ -159,6 +163,7 @@ async def list_flow_versions(
             offset,
             deployment_ids=deployment_ids,
         )
+        # `is_deployed` is included only for provider-scoped status requests.
         entries = [
             _version_to_read(entry, is_deployed=(is_deployed if include_deployment_status else None))
             for entry, is_deployed in rows

@@ -1,13 +1,25 @@
-"""Deployment sync utilities for provider-backed deployment resources."""
+"""Deployment sync utilities for provider-backed deployment resources.
+
+Performance note:
+These helpers combine expensive DB queries, provider list calls, and
+reconciliation deletes. Use them sparingly for best-effort consistency repair
+(for example, deployment-guard retries or explicit status refresh), not in
+request hot paths.
+"""
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from itertools import groupby
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 from uuid import UUID
 
 from fastapi import HTTPException, status
 from lfx.log.logger import logger
+from lfx.services.adapters.deployment.exceptions import (
+    DeploymentServiceError,
+    http_status_for_deployment_error,
+)
 from lfx.services.adapters.deployment.schema import (
     DeploymentListParams,
     DeploymentListResult,
@@ -23,6 +35,7 @@ from langflow.services.database.models.deployment.crud import (
     list_deployments_for_flows_with_provider_info,
     list_project_deployments_with_provider_info,
 )
+from langflow.services.database.models.deployment.exceptions import parse_deployment_guard_error
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     delete_deployment_attachment,
     delete_unbound_attachments,
@@ -34,6 +47,8 @@ from langflow.services.database.models.flow_version_deployment_attachment.model 
 if TYPE_CHECKING:
     from langflow.api.utils import DbSession
     from langflow.services.database.models.deployment.model import Deployment
+
+TGuardOperationResult = TypeVar("TGuardOperationResult")
 
 
 async def fetch_provider_resource_keys(
@@ -65,14 +80,20 @@ async def fetch_provider_resource_keys(
                 deployment_ids=resource_keys,
             ),
         )
-    except Exception as exc:
-        logger.exception(
-            "Provider list call failed for provider %s",
-            provider_id,
-        )
+    except DeploymentServiceError as exc:
+        http_status = http_status_for_deployment_error(exc)
+        logger.exception("Adapter error (status=%s): %s", http_status, exc.message)
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to list deployments from provider: {exc}",
+            status_code=http_status,
+            detail=exc.message,
+        ) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Provider list call failed for provider %s", provider_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while communicating with the deployment provider.",
         ) from exc
     known_keys = {str(item.id) for item in provider_view.deployments if item.id}
     return known_keys, provider_view
@@ -95,14 +116,20 @@ async def fetch_provider_snapshot_keys(
             db=db,
             params=SnapshotListParams(snapshot_ids=snapshot_ids),
         )
-    except Exception as exc:
-        logger.exception(
-            "Provider list_snapshots call failed for provider %s",
-            provider_id,
-        )
+    except DeploymentServiceError as exc:
+        http_status = http_status_for_deployment_error(exc)
+        logger.exception("Adapter error (status=%s): %s", http_status, exc.message)
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to list snapshots from provider: {exc}",
+            status_code=http_status,
+            detail=exc.message,
+        ) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Provider list_snapshots call failed for provider %s", provider_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while communicating with the deployment provider.",
         ) from exc
     return {str(item.id) for item in snapshot_view.snapshots if item.id}
 
@@ -118,6 +145,10 @@ async def sync_attachment_snapshot_ids(
     """Delete stale attachment rows and return corrected attached counts."""
     corrected_counts: dict[UUID, int] = dict.fromkeys(deployment_ids, 0)
     for attachment in attachments:
+        # Provider-agnostic fallback: some adapters may not persist snapshot ids per attachment.
+        # Today, wxo does persist these ids (as tool ids), and we generally
+        # expect them to be present and truthy.
+        # TODO: move provider-specific snapshot verification/counting semantics into mapper hooks.
         snapshot_id = (attachment.provider_snapshot_id or "").strip()
         if snapshot_id and snapshot_id not in known_snapshot_ids:
             logger.warning(
@@ -132,6 +163,7 @@ async def sync_attachment_snapshot_ids(
                 deployment_id=attachment.deployment_id,
             )
         else:
+            # Count verified snapshot bindings and attachments with no provider-trackable snapshot id.
             corrected_counts[attachment.deployment_id] = corrected_counts.get(attachment.deployment_id, 0) + 1
     return corrected_counts
 
@@ -215,7 +247,11 @@ async def sync_flow_deployment_state(
     user_id: UUID,
     deployment_provider_account_id: UUID | None = None,
 ) -> None:
-    """Best-effort deployment and attachment binding sync for one or more flows."""
+    """Best-effort sync for one or more flows.
+
+    This path is expensive (cross-table queries + provider round-trips) and
+    should remain a narrow repair operation, not a general-purpose read path.
+    """
     if not flow_ids:
         return
 
@@ -246,7 +282,10 @@ async def sync_flow_version_attachments(
     user_id: UUID,
     deployment_provider_account_id: UUID | None = None,
 ) -> None:
-    """Best-effort deployment and attachment binding sync for one flow."""
+    """Best-effort deployment/attachment sync for one flow.
+
+    Intended for targeted status refreshes only; avoid invoking in hot paths.
+    """
     deployments_with_provider = await list_deployments_for_flows_with_provider_info(
         db,
         user_id=user_id,
@@ -273,7 +312,10 @@ async def sync_project_deployments(
     user_id: UUID,
     deployment_provider_account_id: UUID | None = None,
 ) -> None:
-    """Best-effort deployment and attachment binding sync for a single project."""
+    """Best-effort deployment/attachment sync for a single project.
+
+    Intended for guard-triggered repair or explicit refresh, not hot paths.
+    """
     rows = await list_project_deployments_with_provider_info(
         db,
         user_id=user_id,
@@ -291,3 +333,48 @@ async def sync_project_deployments(
         failure_log_message="Project deployment sync failed for provider %s (project=%s); continuing without sync",
         failure_scope_value=project_id,
     )
+
+
+async def retry_flow_operation_on_deployment_guard(
+    *,
+    db: DbSession,
+    user_id: UUID,
+    flow_ids: list[UUID] | None = None,
+    operation: Callable[[], Awaitable[TGuardOperationResult]],
+) -> TGuardOperationResult:
+    """Run *operation* and retry once after flow-scoped deployment sync on guard errors."""
+    try:
+        async with db.begin_nested():
+            return await operation()
+    except Exception as exc:
+        guard_error = parse_deployment_guard_error(exc)
+        if not guard_error:
+            raise
+
+    if flow_ids:
+        await sync_flow_deployment_state(db=db, flow_ids=flow_ids, user_id=user_id)
+
+    async with db.begin_nested():
+        return await operation()
+
+
+async def retry_project_operation_on_deployment_guard(
+    *,
+    db: DbSession,
+    user_id: UUID,
+    project_id: UUID,
+    operation: Callable[[], Awaitable[TGuardOperationResult]],
+) -> TGuardOperationResult:
+    """Run *operation* and retry once after project-scoped deployment sync on guard errors."""
+    try:
+        async with db.begin_nested():
+            return await operation()
+    except Exception as exc:
+        guard_error = parse_deployment_guard_error(exc)
+        if not guard_error:
+            raise
+
+    await sync_project_deployments(db=db, project_id=project_id, user_id=user_id)
+
+    async with db.begin_nested():
+        return await operation()

@@ -16,9 +16,9 @@ class _AsyncNoopSavepoint:
 
 
 @pytest.mark.asyncio
-@patch("langflow.api.v1.flows.sync_flow_deployment_state", new_callable=AsyncMock)
+@patch("langflow.api.v1.mappers.deployments.sync.sync_flow_deployment_state", new_callable=AsyncMock)
 async def test_flows_retry_on_deployment_guard_succeeds_after_sync(mock_sync_flow_deployment_state):
-    from langflow.api.v1.flows import _retry_on_deployment_guard
+    from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 
     db = MagicMock()
     db.begin_nested.return_value = _AsyncNoopSavepoint()
@@ -30,7 +30,7 @@ async def test_flows_retry_on_deployment_guard_succeeds_after_sync(mock_sync_flo
         ]
     )
 
-    result = await _retry_on_deployment_guard(
+    result = await retry_flow_operation_on_deployment_guard(
         db=db,
         user_id=uuid4(),
         flow_ids=[flow_id],
@@ -44,9 +44,9 @@ async def test_flows_retry_on_deployment_guard_succeeds_after_sync(mock_sync_flo
 
 
 @pytest.mark.asyncio
-@patch("langflow.api.v1.flows.sync_flow_deployment_state", new_callable=AsyncMock)
+@patch("langflow.api.v1.mappers.deployments.sync.sync_flow_deployment_state", new_callable=AsyncMock)
 async def test_flows_retry_on_deployment_guard_propagates_second_guard(mock_sync_flow_deployment_state):
-    from langflow.api.v1.flows import _retry_on_deployment_guard
+    from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 
     db = MagicMock()
     db.begin_nested.return_value = _AsyncNoopSavepoint()
@@ -58,7 +58,7 @@ async def test_flows_retry_on_deployment_guard_propagates_second_guard(mock_sync
     )
 
     with pytest.raises(RuntimeError) as exc_info:
-        await _retry_on_deployment_guard(
+        await retry_flow_operation_on_deployment_guard(
             db=db,
             user_id=uuid4(),
             flow_ids=[uuid4()],
@@ -71,9 +71,9 @@ async def test_flows_retry_on_deployment_guard_propagates_second_guard(mock_sync
 
 
 @pytest.mark.asyncio
-@patch("langflow.api.v1.projects.sync_project_deployments", new_callable=AsyncMock)
+@patch("langflow.api.v1.mappers.deployments.sync.sync_project_deployments", new_callable=AsyncMock)
 async def test_projects_retry_on_deployment_guard_uses_project_sync(mock_sync_project_deployments):
-    from langflow.api.v1.projects import _retry_on_deployment_guard
+    from langflow.api.v1.mappers.deployments.sync import retry_project_operation_on_deployment_guard
 
     db = MagicMock()
     db.begin_nested.return_value = _AsyncNoopSavepoint()
@@ -85,7 +85,7 @@ async def test_projects_retry_on_deployment_guard_uses_project_sync(mock_sync_pr
         ]
     )
 
-    await _retry_on_deployment_guard(
+    await retry_project_operation_on_deployment_guard(
         db=db,
         user_id=uuid4(),
         project_id=project_id,

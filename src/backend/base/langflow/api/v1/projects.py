@@ -1,6 +1,5 @@
 import warnings
-from collections.abc import Awaitable, Callable
-from typing import Annotated, TypeVar, cast
+from typing import Annotated, cast
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Response, UploadFile, status
@@ -19,7 +18,10 @@ from langflow.api.utils import (
     custom_params,
 )
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
-from langflow.api.v1.mappers.deployments.sync import sync_flow_deployment_state, sync_project_deployments
+from langflow.api.v1.mappers.deployments.sync import (
+    retry_flow_operation_on_deployment_guard,
+    retry_project_operation_on_deployment_guard,
+)
 from langflow.api.v1.mcp_projects import register_project_with_composer
 from langflow.api.v1.projects_files import download_project_flows, upload_project_flows
 from langflow.api.v1.projects_mcp_helpers import (
@@ -49,38 +51,11 @@ from langflow.services.deps import get_service, get_settings_service
 from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
-T = TypeVar("T")
 
 
 def _escape_like(value: str) -> str:
     """Escape LIKE wildcards and the escape character itself."""
     return value.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-
-
-async def _retry_on_deployment_guard(
-    *,
-    db: DbSession,
-    user_id: UUID,
-    flow_ids: list[UUID] | None = None,
-    project_id: UUID | None = None,
-    operation: Callable[[], Awaitable[T]],
-) -> T:
-    """Try an operation; if a deployment guard trigger fires, sync and retry once."""
-    try:
-        async with db.begin_nested():
-            return await operation()
-    except Exception as exc:
-        guard_error = parse_deployment_guard_error(exc)
-        if not guard_error:
-            raise
-
-    if flow_ids:
-        await sync_flow_deployment_state(db=db, flow_ids=flow_ids, user_id=user_id)
-    elif project_id:
-        await sync_project_deployments(db=db, project_id=project_id, user_id=user_id)
-
-    async with db.begin_nested():
-        return await operation()
 
 
 @router.post("/", response_model=FolderRead, status_code=201)
@@ -169,7 +144,7 @@ async def create_project(
                 await session.exec(update_statement_flows)
 
         if flow_ids_for_sync:
-            await _retry_on_deployment_guard(
+            await retry_flow_operation_on_deployment_guard(
                 db=session,
                 user_id=current_user.id,
                 flow_ids=flow_ids_for_sync,
@@ -372,30 +347,20 @@ async def update_project(
         flow_ids_for_sync = list(dict.fromkeys(excluded_flows + concat_project_components))
 
         async def _move_flows_for_project_update() -> None:
-            if my_collection_project and excluded_flows:
+            if my_collection_project:
                 update_statement_my_collection = (
-                    update(Flow)
-                    .where(
-                        Flow.id.in_(excluded_flows),  # type: ignore[attr-defined]
-                        Flow.user_id == current_user.id,
-                    )
-                    .values(folder_id=my_collection_project.id)
+                    update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_project.id)  # type: ignore[attr-defined]
                 )
                 await session.exec(update_statement_my_collection)
 
             if concat_project_components:
                 update_statement_components = (
-                    update(Flow)
-                    .where(
-                        Flow.id.in_(concat_project_components),  # type: ignore[attr-defined]
-                        Flow.user_id == current_user.id,
-                    )
-                    .values(folder_id=existing_project.id)
+                    update(Flow).where(Flow.id.in_(concat_project_components)).values(folder_id=existing_project.id)  # type: ignore[attr-defined]
                 )
                 await session.exec(update_statement_components)
 
         if flow_ids_for_sync:
-            await _retry_on_deployment_guard(
+            await retry_flow_operation_on_deployment_guard(
                 db=session,
                 user_id=current_user.id,
                 flow_ids=flow_ids_for_sync,
@@ -453,24 +418,19 @@ async def delete_project(
         flows = (
             await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id))
         ).all()
-        for flow in flows:
-            await cascade_delete_flow(session, flow.id)
-
-        project_row = (
-            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
-        ).first()
-        if not project_row:
-            raise HTTPException(status_code=404, detail="Project not found")
+        if len(flows) > 0:
+            for flow in flows:
+                await cascade_delete_flow(session, flow.id)
 
         await check_project_has_deployments(session, project_id=project_id)
-        await session.delete(project_row)
+        await session.delete(project)
         # Flush eagerly so DB triggers/constraints run before returning 204.
         # Without this, trigger errors may surface only during teardown commit,
         # bypassing our endpoint-level DeploymentGuardError translation path.
         await session.flush()
 
     try:
-        await _retry_on_deployment_guard(
+        await retry_project_operation_on_deployment_guard(
             db=session,
             user_id=current_user.id,
             project_id=project_id,

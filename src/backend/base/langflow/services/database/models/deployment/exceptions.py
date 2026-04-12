@@ -9,7 +9,7 @@ _GUARD_FRIENDLY_DETAILS: dict[str, str] = {
         "This project cannot be deleted because it has deployments. Please delete its deployments first."
     ),
     "FLOW_DEPLOYED_IN_PROJECT": (
-        "This flow cannot be moved from its current project until its versions "
+        "This flow cannot be moved to another project until its versions "
         "are removed from deployments in its current project."
     ),
     "DEPLOYMENT_PROJECT_MOVE": (

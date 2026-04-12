@@ -21,6 +21,7 @@ from langflow.api.v1.mappers.deployments.contracts import (
     UpdateSnapshotBindings,
 )
 from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
+from lfx.services.adapters.deployment.exceptions import ServiceUnavailableError
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
     DeploymentUpdateResult,
@@ -168,7 +169,7 @@ class TestFetchProviderResourceKeys:
         assert provider_view is adapter.list.return_value
 
     @pytest.mark.asyncio
-    async def test_provider_error_raises_502(self):
+    async def test_provider_error_raises_500_for_unhandled_exception(self):
         adapter = AsyncMock()
         adapter.list.side_effect = RuntimeError("provider down")
 
@@ -183,7 +184,26 @@ class TestFetchProviderResourceKeys:
                 resource_keys=["rk-1"],
             )
 
-        assert exc_info.value.status_code == 502
+        assert exc_info.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_provider_deployment_service_error_uses_mapped_http_status(self):
+        adapter = AsyncMock()
+        adapter.list.side_effect = ServiceUnavailableError("provider down")
+
+        from langflow.api.v1.mappers.deployments.helpers import fetch_provider_resource_keys
+
+        with pytest.raises(HTTPException) as exc_info:
+            await fetch_provider_resource_keys(
+                deployment_adapter=adapter,
+                user_id=uuid4(),
+                provider_id=uuid4(),
+                db=AsyncMock(),
+                resource_keys=["rk-1"],
+            )
+
+        assert exc_info.value.status_code == 503
+        assert exc_info.value.detail == "provider down"
 
     @pytest.mark.asyncio
     async def test_passes_resource_keys_as_deployment_ids(self):
@@ -792,12 +812,23 @@ def test_watsonx_mapper_extract_snapshot_bindings_allows_empty_tool_ids():
     provider_view = _mock_provider_view(
         [
             SimpleNamespace(id="agent-1", provider_data={"tool_ids": []}),
-            SimpleNamespace(id=None, provider_data={"tool_ids": ["tool-ignored"]}),
         ]
     )
 
     bindings = mapper.extract_snapshot_bindings(provider_view)
     assert bindings == []
+
+
+def test_watsonx_mapper_extract_snapshot_bindings_requires_deployment_id():
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    provider_view = _mock_provider_view(
+        [
+            SimpleNamespace(id=None, provider_data={"tool_ids": ["tool-ignored"]}),
+        ]
+    )
+
+    with pytest.raises(ValueError, match=r"^deployment id is required from wxO adapter\.$"):
+        mapper.extract_snapshot_bindings(provider_view)
 
 
 def test_resolve_flow_version_patch_for_update_watsonx_operations():
