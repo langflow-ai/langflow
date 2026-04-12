@@ -64,15 +64,18 @@ class MessageBase(SQLModel):
             msg = "The message does not have the required fields (text, sender, sender_name)."
             raise ValueError(msg)
 
+        if not flow_id and message.flow_id:
+            flow_id = message.flow_id
+
         if message.files:
             image_paths = []
+            fid = str(flow_id) if flow_id else ""
             for file in message.files:
                 if hasattr(file, "path") and hasattr(file, "url") and file.path:
-                    session_id = message.session_id
-                    if session_id and str(session_id) in file.path:
-                        parts = file.path.split(str(session_id))
+                    if fid and fid in file.path:
+                        parts = file.path.split(fid, 1)
                         if len(parts) > 1:
-                            image_paths.append(f"{session_id}{parts[1]}")
+                            image_paths.append(f"{fid}{parts[1]}")
                         else:
                             image_paths.append(file.path)
                     else:
@@ -90,9 +93,6 @@ class MessageBase(SQLModel):
                 timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
         else:
             timestamp = message.timestamp
-
-        if not flow_id and message.flow_id:
-            flow_id = message.flow_id
 
         message_text = "" if not isinstance(message.text, str) else message.text
 
