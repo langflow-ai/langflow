@@ -757,11 +757,16 @@
               "mode",
               "query_params",
               "body",
+              "use_form_urlencoded",
               "headers",
               "timeout",
               "follow_redirects",
               "save_to_file",
-              "include_httpx_metadata"
+              "include_httpx_metadata",
+              "enable_mtls",
+              "client_cert_file",
+              "client_key_file",
+              "client_key_password"
             ],
             "frozen": false,
             "icon": "Globe",
