@@ -14,55 +14,49 @@ valid while becoming semantically wrong relative to related tables.
 Trigger contract and rationale:
 
 1) trg_prevent_flow_move_if_deployed (flow UPDATE folder_id)
-   - Failure mode: flow is moved to project B while its versions are still
-     attached to deployments in project A.
-   - Enforced rule: if attachments exist via
-     flow_version_deployment_attachment(deployment_id, flow_version_id),
-     flow.folder_id cannot be changed until those attachments are removed.
+   Block flow.folder_id updates when the same flow still has attachment rows
+   through flow_version -> flow_version_deployment_attachment -> deployment
+   in the old project (deployment.project_id = OLD.folder_id).
 
 2) trg_prevent_deployment_project_move (deployment UPDATE project_id)
-   - Failure mode: updating deployment.project_id changes project scope for a
-     fixed deployment.id, while existing flow_version_deployment_attachment rows
-     still connect that deployment.id to flow_version rows whose parent
-     flow.folder_id remains in the old project.
-   - Enforced rule: deployment.project_id cannot be updated in place; move by
-     creating a new deployment row in the target project.
+   Block deployment.project_id updates because attachment rows keep
+   deployment_id fixed; changing project_id would make that deployment.id
+   point across project boundaries relative to attached flow_version -> flow.
 
 3) trg_prevent_deployment_resource_key_update (deployment UPDATE resource_key)
-   - Failure mode: deployment.resource_key (provider deployment id) is changed
-     on an existing deployment row, while
-     flow_version_deployment_attachment(deployment_id, flow_version_id) rows
-     still reference that same deployment.id.
-     Those attachments now point to a *different* provider deployment than the
-     one they were created against.
-   - Enforced rule: deployment.resource_key cannot be updated in place;
-     rebinding requires creating a new deployment row.
+   Block changes to deployment.resource_key because it is the provider
+   owned id for that deployment.
+   The consequence of changing the resource_key is
+   that any rows in the flow_version_deployment_attachment table
+   referencing the langflow owned deployment id would now
+   silently point to a different deployment resource in the provider,
+   corrupting the flow_version_deployment_attachment F.K reference.
 
 4) trg_prevent_deployment_provider_account_move
    (deployment UPDATE deployment_provider_account_id)
-   - Failure mode: the foreign-key reference on the deployment row
-     (deployment.deployment_provider_account_id) is changed to a different
-     deployment_provider_account.id for the same deployment.id/resource_key.
-     That repoints the deployment to a different
-     provider_key/provider_tenant_id/provider_url context.
-   - Enforced rule: deployment.deployment_provider_account_id cannot be updated
-     in place.
+   Block changing the FK reference
+   deployment.deployment_provider_account_id -> deployment_provider_account.id.
+   For a fixed deployment.id/resource_key, repointing that FK
+   changes ownership of the deployment to an invalid provider account.
 
 5) trg_prevent_deployment_provider_account_identity_update
    (deployment_provider_account UPDATE provider_key/provider_tenant_id/provider_url)
-   - Failure mode: provider account identity fields are edited in place, so all
-     linked deployments suddenly point to a different provider identity.
-   - Enforced rule: identity tuple
-     (provider_key, provider_tenant_id, provider_url) cannot be updated in
-     place; identity changes require a new account row.
+   Block edits to provider account identity fields so linked deployments do
+   not silently point ownership to an invalid provider account.
+
+Note:
+   This identity immutability guard is intentionally GLOBAL for the current
+   schema shape (provider_key + provider_url + provider_tenant_id). If a
+   future provider uses a different identity tuple (for example
+   AWS account_id/region without URL/tenant), handle that via an additive schema
+   migration and replace this global trigger with provider-specific identity
+   guards in that migration.
 
 6) trg_prevent_cross_project_attachment
    (flow_version_deployment_attachment INSERT)
-   - Failure mode: inserting
-     flow_version_deployment_attachment(flow_version_id, deployment_id) where
-     flow_version_id resolves to flow.folder_id != deployment_id.project_id.
-   - Enforced rule: every flow_version_deployment_attachment row must connect
-     records from the same project scope.
+   Block attaching a flow version to a deployment in a different project.
+   flow_version -> flow.folder_id and deployment.project_id do not match.
+   Protecting project-scoped deployment boundaries.
 """
 
 from collections.abc import Sequence
@@ -253,6 +247,7 @@ def _upgrade_postgresql() -> None:
     # Guard 6:
     # Block attaching a flow version to a deployment in a different project.
     # flow_version -> flow.folder_id and deployment.project_id do not match.
+    # Protecting project-scoped deployment boundaries.
     op.execute(
         """
         CREATE FUNCTION prevent_cross_project_attachment()
