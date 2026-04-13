@@ -69,7 +69,9 @@ export default function ProvidersTable({
               </TableCell>
               <TableCell>
                 <span className="text-sm text-muted-foreground">
-                  {truncateMiddle(provider.url)}
+                  {typeof provider.provider_data?.url === "string"
+                    ? truncateMiddle(provider.provider_data.url)
+                    : "—"}
                 </span>
               </TableCell>
               <TableCell>
