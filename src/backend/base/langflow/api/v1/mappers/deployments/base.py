@@ -429,7 +429,10 @@ class BaseDeploymentMapper:
         conflict wording to clearer end-user guidance.  Subclasses use
         *resource* and *resource_name* to produce targeted messages.
         """
-        return raw_message
+        _ = raw_message, resource, resource_name
+        return (
+            "A resource conflict occurred in the deployment provider. The requested operation could not be completed."
+        )
 
     def resolve_credential_fields(
         self,

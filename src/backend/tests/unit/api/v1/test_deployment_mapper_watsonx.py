@@ -195,8 +195,14 @@ def test_watsonx_mapper_deployment_list_result_rejects_unknown_flattened_entry_f
 @pytest.mark.parametrize(
     ("raw_message", "expected"),
     [
-        ("app_id is required", "app_id is required"),
-        ("unexpected conflict", "unexpected conflict"),
+        (
+            "app_id is required",
+            "A resource conflict occurred in the deployment provider. The requested operation could not be completed.",
+        ),
+        (
+            "unexpected conflict",
+            "A resource conflict occurred in the deployment provider. The requested operation could not be completed.",
+        ),
     ],
 )
 def test_watsonx_mapper_formats_conflict_detail_fallback_without_structured_entity(
