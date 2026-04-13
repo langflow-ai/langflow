@@ -1,24 +1,27 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 const useDescriptionModal = (
   selectedFlowsComponentsCards: string[] | undefined,
   type: string | undefined,
 ) => {
+  const { t } = useTranslation();
+
   const getDescriptionModal = useMemo(() => {
     const getTypeLabel = (type) => {
       const labels = {
-        all: "item",
-        component: "component",
-        flow: "flow",
+        all: t("deleteModal.item"),
+        component: t("deleteModal.component"),
+        flow: t("deleteModal.flow"),
       };
       return labels[type] || "";
     };
 
     const getPluralizedLabel = (type) => {
       const labels = {
-        all: "items",
-        component: "components",
-        flow: "flows",
+        all: t("deleteModal.items"),
+        component: t("deleteModal.components"),
+        flow: t("deleteModal.flows"),
       };
       return labels[type] || "";
     };
@@ -27,7 +30,7 @@ const useDescriptionModal = (
       return getTypeLabel(type);
     }
     return getPluralizedLabel(type);
-  }, [selectedFlowsComponentsCards, type]);
+  }, [selectedFlowsComponentsCards, type, t]);
 
   return getDescriptionModal;
 };

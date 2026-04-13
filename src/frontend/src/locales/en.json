@@ -469,5 +469,20 @@
   "files.columnName": "Name",
   "files.columnType": "Type",
   "files.columnSize": "Size",
-  "files.columnModified": "Modified"
+  "files.columnModified": "Modified",
+  "deleteModal.title": "Delete",
+  "deleteModal.body": "This will permanently delete the {{description}}.",
+  "deleteModal.bodyWithNote": "This will permanently delete the {{description}} {{note}}.",
+  "deleteModal.cannotBeUndone": "This can't be undone.",
+  "deleteModal.cancel": "Cancel",
+  "deleteModal.delete": "Delete",
+  "deleteModal.flow": "flow",
+  "deleteModal.flows": "flows",
+  "deleteModal.component": "component",
+  "deleteModal.components": "components",
+  "deleteModal.item": "item",
+  "deleteModal.items": "items",
+  "deleteModal.folder": "folder",
+  "deleteModal.noteMessageHistory": "and its message history",
+  "deleteModal.noteFolderContents": "and all associated flows and components"
 }

@@ -154,7 +154,7 @@ export const EmptyPageCommunity = ({
 
               <Button
                 variant="default"
-                className="z-10 m-auto mt-3 h-auto min-h-10 w-full max-w-xs rounded-lg font-bold transition-all duration-300"
+                className="z-10 m-auto mt-3 h-auto min-h-10 w-auto whitespace-normal rounded-lg font-bold transition-all duration-300"
                 onClick={() => setOpenModal(true)}
                 id="new-project-btn"
                 data-testid="new_project_btn_empty_page"
