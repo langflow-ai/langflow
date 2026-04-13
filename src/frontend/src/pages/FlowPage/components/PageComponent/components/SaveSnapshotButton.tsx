@@ -64,7 +64,13 @@ export default function SaveSnapshotButton({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !isSavingDisplay && !isCreating && !savedSuccess) {
+              if (
+                e.key === "Enter" &&
+                !e.nativeEvent.isComposing &&
+                !isSavingDisplay &&
+                !isCreating &&
+                !savedSuccess
+              ) {
                 handleSave();
               }
             }}
