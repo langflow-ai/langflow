@@ -759,6 +759,7 @@
               "body",
               "use_form_urlencoded",
               "headers",
+              "bearer_token",
               "timeout",
               "follow_redirects",
               "save_to_file",

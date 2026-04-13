@@ -561,7 +561,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         url = "https://example.com/api/test"
         respx.get(url).mock(return_value=Response(200, json={"ok": True}))
 
-        component.bearer_token = "my-secret-token"
+        component.bearer_token = "my-secret-token"  # noqa: S105
 
         result = await component.make_api_request()
 
@@ -591,7 +591,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         url = "https://example.com/api/test"
         respx.get(url).mock(return_value=Response(200, json={"ok": True}))
 
-        component.bearer_token = "   "
+        component.bearer_token = "   "  # noqa: S105
 
         result = await component.make_api_request()
 
