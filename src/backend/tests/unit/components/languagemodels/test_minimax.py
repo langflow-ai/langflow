@@ -1,5 +1,6 @@
 """Unit tests for MiniMax model component."""
-from unittest.mock import MagicMock, patch
+
+from unittest.mock import MagicMock
 
 import pytest
 from lfx.components.minimax.minimax import MINIMAX_MODELS, MiniMaxModelComponent
