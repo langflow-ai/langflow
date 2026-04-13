@@ -46,7 +46,11 @@ class LoopComponent(Component):
     ]
 
     def initialize_data(self) -> None:
-        """Initialize the data list, context index, and aggregated list."""
+        """Initialize the data list and context index.
+
+        Seeds the input list and index counter in ctx. The aggregated results
+        are owned by `_iterate`, which writes them once the subgraph finishes.
+        """
         if self.ctx.get(f"{self._id}_initialized", False):
             return
 
@@ -58,7 +62,6 @@ class LoopComponent(Component):
             {
                 f"{self._id}_data": data_list,
                 f"{self._id}_index": 0,
-                f"{self._id}_aggregated": [],
                 f"{self._id}_initialized": True,
             }
         )
@@ -145,41 +148,70 @@ class LoopComponent(Component):
             event_manager=event_manager,
         )
 
-    def item_output(self) -> Data:
-        """Output is no longer used - loop executes internally now.
+    async def _iterate(self) -> list[Data]:
+        """Run the loop body subgraph once and cache the aggregated results.
 
-        This method is kept for backward compatibility but does nothing.
-        The actual loop execution happens in done_output().
+        Both `item_output` and `done_output` may be called during the same
+        vertex build (if both outputs have downstream consumers), so this
+        helper is idempotent: it caches the aggregated results in ctx under
+        `{self._id}_aggregated` and guards re-entry with `{self._id}_iterated`.
+        If a prior call raised, the exception is cached in
+        `{self._id}_iteration_error` and re-raised on subsequent calls so
+        repeat invocations surface the same failure instead of silently
+        returning empty data or re-running the subgraph.
+
+        ctx is per-run, so a fresh execution of the flow starts with a clean
+        slate.
         """
-        self.stop("item")
-        return Data(text="")
+        if self.ctx.get(f"{self._id}_iterated", False):
+            cached_error = self.ctx.get(f"{self._id}_iteration_error")
+            if cached_error is not None:
+                raise cached_error
+            return self.ctx.get(f"{self._id}_aggregated", [])
 
-    async def done_output(self) -> DataFrame:
-        """Execute the loop body for all items and return aggregated results.
-
-        This is now the main execution point for the loop. It:
-        1. Gets the data list to iterate over
-        2. Executes the loop body as an isolated subgraph for each item
-        3. Returns the aggregated results
-
-        Args:
-            event_manager: Optional event manager for UI event emission
-        """
-        self.initialize_data()
-
-        # Get data list
-        data_list = self.ctx.get(f"{self._id}_data", [])
-
-        if not data_list:
-            return DataFrame([])
-
-        # Execute loop body for all items
         try:
+            self.initialize_data()
+            data_list = self.ctx.get(f"{self._id}_data", [])
+
+            if not data_list:
+                self.update_ctx({f"{self._id}_aggregated": [], f"{self._id}_iterated": True})
+                return []
+
             aggregated_results = await self.execute_loop_body(data_list, event_manager=self._event_manager)
-            return DataFrame(aggregated_results)
-        except Exception as e:
-            # Log error and return empty DataFrame
+        except Exception as exc:
             from lfx.log.logger import logger
 
-            await logger.aerror(f"Error executing loop body: {e}")
+            await logger.aexception(f"Loop {self._id} failed while executing loop body")
+            self.update_ctx({f"{self._id}_iteration_error": exc, f"{self._id}_iterated": True})
             raise
+
+        self.update_ctx({f"{self._id}_aggregated": aggregated_results, f"{self._id}_iterated": True})
+        return aggregated_results
+
+    async def item_output(self) -> Data:
+        """Display the inputs dispatched to the loop body.
+
+        Also triggers the iteration (idempotent) so the loop runs when only
+        the Item output has a downstream consumer and `done` is not
+        connected. Under normal graph execution `item_output` runs whenever
+        the Item output has a downstream consumer, which makes it a reliable
+        entry point for driving the subgraph. The `item` branch is then
+        stopped so downstream vertices aren't executed by the outer graph
+        (the loop body runs internally via the subgraph in `_iterate`).
+        """
+        self.stop("item")
+        await self._iterate()
+        data_list = self.ctx.get(f"{self._id}_data", [])
+        return Data(data={"count": len(data_list), "items": [d.data for d in data_list]})
+
+    async def done_output(self) -> DataFrame:
+        """Return the aggregated results from the loop iteration.
+
+        Triggers the iteration if it hasn't run yet (for example when only
+        `done` is connected and `item_output` never executed). In the common
+        case where `item` is also connected, `_iterate` has already cached
+        the aggregated results in ctx and this call is a cheap read, so the
+        order in which the two outputs are evaluated does not matter.
+        """
+        aggregated_results = await self._iterate()
+        return DataFrame(aggregated_results)
