@@ -1036,4 +1036,69 @@ describe("useFlowStore", () => {
       expect(poolAfterSecond).not.toBe(poolAfterFirst);
     });
   });
+
+  describe("appendLogToFlowPool", () => {
+    const mockLog = { name: "Test Log", message: "hello", type: "info" } as any;
+    const mockLog2 = {
+      name: "Second Log",
+      message: "world",
+      type: "info",
+    } as any;
+
+    it("creates a new pool entry with the log when no entry exists for nodeId", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.appendLogToFlowPool(
+          "node-99",
+          "component_as_tool",
+          mockLog,
+        );
+      });
+
+      const entry = result.current.flowPool["node-99"];
+      expect(entry).toHaveLength(1);
+      expect(entry[0].data.logs["component_as_tool"]).toEqual([mockLog]);
+    });
+
+    it("appends a log to the latest existing entry for nodeId", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.appendLogToFlowPool(
+          "node-99",
+          "component_as_tool",
+          mockLog,
+        );
+      });
+      act(() => {
+        result.current.appendLogToFlowPool(
+          "node-99",
+          "component_as_tool",
+          mockLog2,
+        );
+      });
+
+      const logs =
+        result.current.flowPool["node-99"].at(-1)!.data.logs[
+          "component_as_tool"
+        ];
+      expect(logs).toEqual([mockLog, mockLog2]);
+    });
+
+    it("does not overwrite logs for a different output key on the same node", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.appendLogToFlowPool("node-99", "output_a", mockLog);
+      });
+      act(() => {
+        result.current.appendLogToFlowPool("node-99", "output_b", mockLog2);
+      });
+
+      const latest = result.current.flowPool["node-99"].at(-1)!.data.logs;
+      expect(latest["output_a"]).toEqual([mockLog]);
+      expect(latest["output_b"]).toEqual([mockLog2]);
+    });
+  });
 });

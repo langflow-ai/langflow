@@ -14,7 +14,6 @@ from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
     AuthorizationError,
     AuthSchemeError,
-    DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
     DeploymentSupportError,
@@ -22,8 +21,11 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidDeploymentOperationError,
     InvalidDeploymentTypeError,
     OperationNotSupportedError,
+    ResourceConflictError,
     ResourceNotFoundError,
-    raise_for_status_and_detail,
+)
+from lfx.services.adapters.deployment.exceptions import (
+    raise_as_deployment_error as raise_deployment_error_from_status,
 )
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
@@ -224,7 +226,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             )
         except (
             AuthenticationError,
-            DeploymentConflictError,
+            ResourceConflictError,
             InvalidContentError,
             InvalidDeploymentOperationError,
             InvalidDeploymentTypeError,
@@ -500,7 +502,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             DeploymentNotFoundError,
             InvalidContentError,
             InvalidDeploymentOperationError,
-            DeploymentConflictError,
+            ResourceConflictError,
         ):
             raise
         except Exception as exc:
@@ -868,7 +870,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 "Credential verification failed (status=%s)",
                 exc.status_code,
             )
-            raise_for_status_and_detail(
+            raise_deployment_error_from_status(
                 status_code=exc.status_code,
                 detail="Credential verification failed.",
                 message_prefix="Credential verification",

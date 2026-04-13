@@ -122,6 +122,12 @@ FlowIdsQuery = Annotated[list[UUID] | None, AfterValidator(_validate_flow_ids)]
 Max supported length is 1 today.
 """
 
+
+def _validate_detect_vars_request_ids(values: list[UUID]) -> list[UUID]:
+    """AfterValidator for DetectVarsRequest.flow_version_ids."""
+    return _validate_uuid_list(values, field_name="flow_version_ids")
+
+
 # ---------------------------------------------------------------------------
 # Provider sub-resource schemas
 # ---------------------------------------------------------------------------
@@ -499,27 +505,17 @@ class SnapshotUpdateResponse(BaseModel):
 class DetectVarsRequest(BaseModel):
     """Request body for detecting environment variables from flow version IDs."""
 
-    flow_version_ids: list[UUID] = Field(
+    flow_version_ids: Annotated[
+        list[UUID],
+        AfterValidator(_validate_detect_vars_request_ids),
+    ] = Field(
+        min_length=1,
         max_length=50,
         description="Flow version UUIDs to scan for global variable references.",
     )
 
 
-class DetectedEnvVar(BaseModel):
-    """A single detected environment variable reference."""
-
-    key: str = Field(description="The global variable name used as the env var key.")
-    global_variable_name: str | None = Field(
-        default=None,
-        description="The Langflow global variable name, if the field is linked to one.",
-    )
-
-
 class DetectVarsResponse(BaseModel):
-    """Response containing detected environment variable references."""
+    """Response containing detected global variable names."""
 
-    variables: list[DetectedEnvVar] = Field(default_factory=list)
-    unresolved_ids: list[UUID] = Field(
-        default_factory=list,
-        description="Flow version IDs that could not be found or accessed.",
-    )
+    variables: list[str] = Field(default_factory=list, description="Detected global variable names.")
