@@ -154,7 +154,7 @@ class TestDeploymentProviderAccountTenantConsistency:
             DeploymentProviderAccount.model_validate(
                 {
                     **self._BASE,
-                    "provider_url": "https://api.us-south.wxo.cloud.ibm.com/instances/acct-123/agents",
+                    "provider_url": "https://api.us-south.wxo.cloud.ibm.com/instances/10000000-0000-0000-0000-000000000123",
                     "provider_tenant_id": "wrong-tenant",
                 }
             )
@@ -163,17 +163,17 @@ class TestDeploymentProviderAccountTenantConsistency:
         account = DeploymentProviderAccount.model_validate(
             {
                 **self._BASE,
-                "provider_url": "https://api.us-south.wxo.cloud.ibm.com/instances/acct-123/agents",
-                "provider_tenant_id": "acct-123",
+                "provider_url": "https://api.us-south.wxo.cloud.ibm.com/instances/10000000-0000-0000-0000-000000000123",
+                "provider_tenant_id": "10000000-0000-0000-0000-000000000123",
             }
         )
-        assert account.provider_tenant_id == "acct-123"
+        assert account.provider_tenant_id == "10000000-0000-0000-0000-000000000123"
 
     def test_accepts_none_tenant(self):
         account = DeploymentProviderAccount.model_validate(
             {
                 **self._BASE,
-                "provider_url": "https://api.us-south.wxo.cloud.ibm.com/instances/acct-123/agents",
+                "provider_url": "https://api.us-south.wxo.cloud.ibm.com/instances/10000000-0000-0000-0000-000000000123",
                 "provider_tenant_id": None,
             }
         )
