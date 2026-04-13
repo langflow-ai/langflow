@@ -14,6 +14,7 @@ from collections.abc import Callable
 from functools import wraps
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from lfx.log.logger import logger
 from lfx.services.base import Service
@@ -1311,7 +1312,15 @@ class MCPComposerService(Service):
                     "oauth_callback_path" not in normalized_auth_config
                     or not normalized_auth_config.get("oauth_callback_path")
                 ) and normalized_auth_config.get("oauth_callback_url"):
-                    normalized_auth_config["oauth_callback_path"] = normalized_auth_config["oauth_callback_url"]
+                    callback_url = str(normalized_auth_config["oauth_callback_url"]).strip()
+                    parsed_callback_url = urlsplit(callback_url)
+                    if parsed_callback_url.scheme or parsed_callback_url.netloc:
+                        callback_path = parsed_callback_url.path or "/"
+                        if parsed_callback_url.query:
+                            callback_path = f"{callback_path}?{parsed_callback_url.query}"
+                        normalized_auth_config["oauth_callback_path"] = callback_path
+                    else:
+                        normalized_auth_config["oauth_callback_path"] = callback_url
 
                 # Add environment variables as command line arguments
                 # Only set non-empty values to avoid Pydantic validation errors
