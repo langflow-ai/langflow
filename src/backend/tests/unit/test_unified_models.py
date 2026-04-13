@@ -196,6 +196,113 @@ def test_update_model_options_default_field_name():
     assert result["model"]["options"][0]["name"] == "gpt-4"
 
 
+def test_update_model_options_injects_saved_value_when_missing_from_options():
+    """Saved model selections missing from refreshed options should be re-injected with a marker."""
+    component = _make_mock_component()
+    component.user_id = "user-123"
+    saved_model = {
+        "name": "claude-3-5-sonnet",
+        "provider": "Anthropic",
+        "metadata": {"model_class": "ChatAnthropic", "existing_flag": True},
+    }
+    fetched_options = [{"name": "gpt-4o-mini", "provider": "OpenAI", "metadata": {"model_class": "ChatOpenAI"}}]
+    build_config = {
+        "model": {
+            "options": [],
+            "value": [saved_model],
+            "input_types": ["LanguageModel"],
+        }
+    }
+
+    result = update_model_options_in_build_config(
+        component=component,
+        build_config=build_config,
+        cache_key_prefix="test_sticky_default_injection",
+        get_options_func=lambda user_id=None: fetched_options,  # noqa: ARG005
+        field_name=None,
+    )
+
+    assert result["model"]["value"] == [saved_model]
+    assert len(result["model"]["options"]) == 2
+    assert result["model"]["options"][0] == fetched_options[0]
+    assert result["model"]["options"][1] == {
+        "name": "claude-3-5-sonnet",
+        "provider": "Anthropic",
+        "metadata": {
+            "model_class": "ChatAnthropic",
+            "existing_flag": True,
+            "not_enabled_locally": True,
+        },
+    }
+
+
+def test_update_model_options_does_not_duplicate_saved_value_already_in_options():
+    """Saved model selections already present in options should not be duplicated or marked."""
+    component = _make_mock_component()
+    component.user_id = "user-123"
+    saved_model = {
+        "name": "gpt-4o-mini",
+        "provider": "OpenAI",
+        "metadata": {"model_class": "ChatOpenAI"},
+    }
+    build_config = {
+        "model": {
+            "options": [],
+            "value": [saved_model],
+            "input_types": ["LanguageModel"],
+        }
+    }
+
+    result = update_model_options_in_build_config(
+        component=component,
+        build_config=build_config,
+        cache_key_prefix="test_sticky_default_no_duplicate",
+        get_options_func=lambda user_id=None: [saved_model],  # noqa: ARG005
+        field_name=None,
+    )
+
+    assert result["model"]["options"] == [saved_model]
+    assert result["model"]["options"].count(saved_model) == 1
+    assert "not_enabled_locally" not in result["model"]["options"][0]["metadata"]
+
+
+@pytest.mark.parametrize(
+    ("current_value", "expected_value"),
+    [
+        ([], [{"name": "gpt-4o-mini", "provider": "OpenAI", "metadata": {"model_class": "ChatOpenAI"}}]),
+        ("gpt-4o-mini", "gpt-4o-mini"),
+        (
+            [{"provider": "OpenAI", "metadata": {"model_class": "ChatOpenAI"}}],
+            [{"provider": "OpenAI", "metadata": {"model_class": "ChatOpenAI"}}],
+        ),
+    ],
+)
+def test_update_model_options_sticky_default_ignores_invalid_saved_value_shapes(current_value, expected_value):
+    """Sticky-default injection should ignore empty or malformed saved values."""
+    component = _make_mock_component()
+    component.user_id = "user-123"
+    fetched_options = [{"name": "gpt-4o-mini", "provider": "OpenAI", "metadata": {"model_class": "ChatOpenAI"}}]
+    build_config = {
+        "model": {
+            "options": [],
+            "value": current_value,
+            "input_types": ["LanguageModel"],
+        }
+    }
+
+    result = update_model_options_in_build_config(
+        component=component,
+        build_config=build_config,
+        cache_key_prefix="test_sticky_default_edge_cases",
+        get_options_func=lambda user_id=None: fetched_options,  # noqa: ARG005
+        field_name=None,
+    )
+
+    assert result["model"]["options"] == fetched_options
+    assert all("not_enabled_locally" not in option.get("metadata", {}) for option in result["model"]["options"])
+    assert result["model"]["value"] == expected_value
+
+
 # ---------------------------------------------------------------------------
 # Helpers shared by new tests
 # ---------------------------------------------------------------------------
@@ -903,6 +1010,71 @@ def test_apply_provider_config_skips_load_from_db_for_dropdown_input():
     assert result["base_url_ibm_watsonx"]["show"] is True
 
 
+def test_apply_provider_config_replaces_stale_cross_provider_variable():
+    """Switching providers should replace stale load_from_db variable names."""
+    build_config = {
+        "api_key": {
+            "_input_type": "SecretStrInput",
+            "value": "ANTHROPIC_API_KEY",
+            "show": False,
+            "required": False,
+            "advanced": False,
+            "load_from_db": True,
+        },
+    }
+
+    result = apply_provider_variable_config_to_build_config(build_config, "OpenAI")
+
+    assert result["api_key"]["value"] == "OPENAI_API_KEY"
+    assert result["api_key"]["load_from_db"] is True
+    assert result["api_key"]["show"] is True
+
+
+def test_apply_provider_config_preserves_user_typed_credential():
+    """User-typed credentials should survive provider config refreshes."""
+    build_config = {
+        "api_key": {
+            "_input_type": "SecretStrInput",
+            "value": "sk-raw-key-123",
+            "show": False,
+            "required": False,
+            "advanced": False,
+            "load_from_db": False,
+        },
+    }
+
+    result = apply_provider_variable_config_to_build_config(build_config, "OpenAI")
+
+    assert result["api_key"]["value"] == "sk-raw-key-123"
+    assert result["api_key"]["load_from_db"] is False
+    assert result["api_key"]["show"] is True
+
+
+@patch("lfx.base.models.unified_models.build_config.logger.debug")
+def test_apply_provider_config_keeps_current_provider_variable_on_refresh(mock_debug):
+    """Refreshing the same provider should not rewrite an already-correct variable key."""
+    build_config = {
+        "api_key": {
+            "_input_type": "SecretStrInput",
+            "value": "OPENAI_API_KEY",
+            "show": False,
+            "required": False,
+            "advanced": False,
+            "load_from_db": True,
+        },
+    }
+
+    result = apply_provider_variable_config_to_build_config(build_config, "OpenAI")
+
+    assert result["api_key"]["value"] == "OPENAI_API_KEY"
+    assert result["api_key"]["load_from_db"] is True
+    assert result["api_key"]["show"] is True
+    mock_debug.assert_called_once_with(
+        "Skipping auto-set for field %s - user has already supplied a value",
+        "api_key",
+    )
+
+
 @patch("lfx.base.models.unified_models.get_all_variables_for_provider")
 def test_resolve_dropdown_provider_values_sets_resolved_url(mock_get_vars):
     """_resolve_dropdown_provider_values should set the resolved URL on dropdown fields."""
@@ -1040,3 +1212,21 @@ def test_handle_model_input_update_resolves_watsonx_dropdown():
     # Non-dropdown fields should use load_from_db as usual
     assert result["api_key"]["value"] == "WATSONX_APIKEY"
     assert result["api_key"]["load_from_db"] is True
+
+
+def test_get_provider_for_model_name_backwards_compat():
+    """Ensure ``get_provider_for_model_name`` stays importable from the package root.
+
+    Flows exported from 1.8.x import this helper directly from
+    ``lfx.base.models.unified_models``. The post-refactor package split broke
+    that import; this test guards against reintroducing the regression.
+    """
+    from lfx.base.models.unified_models import get_provider_for_model_name
+
+    # Known model round-trips to its provider.
+    assert get_provider_for_model_name("gpt-4o") == "OpenAI"
+
+    # Defensive inputs must not raise.
+    assert get_provider_for_model_name("") == ""
+    assert get_provider_for_model_name("__definitely_not_a_real_model__") == ""
+    assert get_provider_for_model_name(None) == ""  # type: ignore[arg-type]

@@ -28,6 +28,7 @@ import type {
 } from "../types";
 
 interface DeploymentStepperInitialState {
+  projectId?: string;
   selectedVersionByFlow?: Map<
     string,
     { versionId: string; versionTag: string }
@@ -42,7 +43,7 @@ interface DeploymentStepperInitialState {
   initialLlm?: string;
   /** Pre-populated tool names from provider (edit mode). Key = flowId. */
   initialToolNameByFlow?: Map<string, string>;
-  /** Pre-populated connection bindings from provider (edit mode). Key = flowId. */
+  /** Pre-populated connection assignments from provider (edit mode). Key = flowId. */
   initialConnectionsByFlow?: Map<string, string[]>;
 }
 
@@ -302,8 +303,10 @@ export function DeploymentStepperProvider({
       return {
         name: credentials.name.trim(),
         provider_key: "watsonx-orchestrate",
-        url: credentials.url.trim(),
-        provider_data: { api_key: credentials.api_key.trim() },
+        provider_data: {
+          url: credentials.url.trim(),
+          api_key: credentials.api_key.trim(),
+        },
       };
     }, [credentials, hasValidCredentials]);
 
@@ -363,6 +366,9 @@ export function DeploymentStepperProvider({
 
       return {
         provider_id: providerId,
+        ...(initialState?.projectId
+          ? { project_id: initialState.projectId }
+          : {}),
         name: deploymentName,
         description: deploymentDescription,
         type: deploymentType,
@@ -376,6 +382,7 @@ export function DeploymentStepperProvider({
     [
       attachedConnectionByFlow,
       buildConnectionPayloads,
+      initialState?.projectId,
       deploymentDescription,
       deploymentName,
       deploymentType,

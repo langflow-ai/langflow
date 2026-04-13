@@ -82,7 +82,7 @@ export default function DeployChoiceDialog({
     useGetDeployments(
       {
         provider_id: selectedProvider?.id ?? "",
-        flow_ids: flowId,
+        flow_ids: [flowId],
         page: 1,
         size: 50,
       },
@@ -114,7 +114,7 @@ export default function DeployChoiceDialog({
   } = useGetDeploymentAttachments(
     {
       deploymentId: selectedDeploymentEntry?.id ?? "",
-      flow_ids: flowId,
+      flow_ids: [flowId],
     },
     { enabled: shouldFetchSelectedDeploymentAttachments },
   );

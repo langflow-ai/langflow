@@ -92,6 +92,7 @@ If it detects a supported environment variable, then it automatically adopts the
     LANGFLOW_BUNDLE_URLS=["https://github.com/user/repo/commit/hash"]
     LANGFLOW_CACHE_TYPE=async
     LANGFLOW_COMPONENTS_PATH=/path/to/components/
+    LANGFLOW_COMPONENTS_INDEX_PATH=/path/to/component_index.json
     LANGFLOW_CONFIG_DIR=/path/to/config/
     LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
     LANGFLOW_DEV=False
@@ -170,6 +171,7 @@ LANGFLOW_BACKEND_ONLY=False
 LANGFLOW_BUNDLE_URLS=["https://github.com/user/repo/commit/hash"]
 LANGFLOW_CACHE_TYPE=async
 LANGFLOW_COMPONENTS_PATH=/path/to/components/
+LANGFLOW_COMPONENTS_INDEX_PATH=/path/to/component_index.json
 LANGFLOW_CONFIG_DIR=/path/to/config/
 LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
 LANGFLOW_DEV=False
@@ -215,6 +217,7 @@ Environment="LANGFLOW_BACKEND_ONLY=false"
 Environment="LANGFLOW_BUNDLE_URLS=[\"https://github.com/user/repo/commit/hash\"]"
 Environment="LANGFLOW_CACHE_TYPE=async"
 Environment="LANGFLOW_COMPONENTS_PATH=/path/to/components/"
+Environment="LANGFLOW_COMPONENTS_INDEX_PATH=/path/to/component_index.json"
 Environment="LANGFLOW_CONFIG_DIR=/path/to/config"
 Environment="LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow"
 Environment="LANGFLOW_DEV=false"
@@ -267,6 +270,7 @@ Create or edit the `.vscode/tasks.json` file in your project root.
             "LANGFLOW_BUNDLE_URLS": "[\"https://github.com/user/repo/commit/hash\"]",
             "LANGFLOW_CACHE_TYPE": "async",
             "LANGFLOW_COMPONENTS_PATH": "D:/path/to/components/",
+            "LANGFLOW_COMPONENTS_INDEX_PATH": "D:/path/to/component_index.json",
             "LANGFLOW_CONFIG_DIR": "D:/path/to/config/",
             "LANGFLOW_DATABASE_URL": "postgresql://postgres:password@localhost:5432/langflow",
             "LANGFLOW_DEV": "false",
@@ -433,6 +437,7 @@ See [Telemetry](/contributing-telemetry).
 | `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the auto-save interval in milliseconds if `LANGFLOW_AUTO_SAVING=True`. |
 | `LANGFLOW_BUNDLE_URLS` | List[String] | `[]` | A list of URLs from which to load custom bundles. Supports GitHub URLs. If `LANGFLOW_AUTO_LOGIN=True`, flows from these bundles are loaded into the database. |
 | `LANGFLOW_COMPONENTS_PATH` | String | Not set | Path to a directory containing custom components. Typically used if you have local custom components or you are building a Docker image with custom components. |
+| `LANGFLOW_COMPONENTS_INDEX_PATH` | String | Not set | File path or URL (`http://` or `https://`) to a prebuilt component index JSON file used to populate built-in components in the visual editor. When not set, Langflow uses the included index. Useful for supplying a curated component index, for example in airgapped deployments. For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx). |
 | `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | Boolean | `True` | If `false`, disables custom components and in-editor editing of component code. This feature is in beta. For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx). |
 | `LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Typically used when creating a Docker image with prepackaged flows. Requires `LANGFLOW_AUTO_LOGIN=True`. |
 | `LANGFLOW_CREATE_STARTER_PROJECTS` | Boolean | `True` | Whether to create templates during initialization. If `false`, Langflow doesn't create templates, and `LANGFLOW_UPDATE_STARTER_PROJECTS` is treated as `false`. |

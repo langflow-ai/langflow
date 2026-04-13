@@ -86,11 +86,27 @@ def apply_provider_variable_config_to_build_config(
                     field_name,
                 )
             else:
-                # Only set the value if the field is currently empty or not already set to load from db
-                # This prevents overwriting user-selected global variables
+                # Decide whether to install this provider's variable key on
+                # the field.  Cases:
+                #
+                # 1. Empty field — auto-populate.
+                # 2. ``load_from_db=True`` with a value that doesn't match
+                #    this provider's ``var_key`` — stale cross-provider
+                #    credential (e.g. ``ANTHROPIC_API_KEY`` left over after
+                #    switching to OpenAI).  Replace with the current
+                #    provider's var_key.
+                # 3. ``load_from_db=True`` with a value that matches
+                #    ``var_key`` — already correct, preserve.
+                # 4. ``load_from_db=False`` with a value — user-typed raw
+                #    credential.  Preserve so it survives refresh cycles.
+                #    We cannot tell from the backend whether a raw value is
+                #    stale after a provider switch, so we err on the side
+                #    of preservation; the user can overwrite it manually.
                 current_value = field_config.get("value")
                 current_load_from_db = field_config.get("load_from_db", False)
-                if not current_value or (not current_load_from_db):
+                is_empty = not current_value
+                is_stale_cross_provider_var = current_load_from_db and current_value != var_key
+                if is_empty or is_stale_cross_provider_var:
                     field_config["value"] = var_key
                     field_config["load_from_db"] = True
                     logger.debug(
@@ -100,7 +116,7 @@ def apply_provider_variable_config_to_build_config(
                     )
                 else:
                     logger.debug(
-                        "Skipping auto-set for field %s - user has already selected a value (load_from_db=True)",
+                        "Skipping auto-set for field %s - user has already supplied a value",
                         field_name,
                     )
 
@@ -186,6 +202,32 @@ def update_model_options_in_build_config(
     # Use cached results
     cached = component.cache.get(cache_key, {"options": []})
     build_config[model_field_name]["options"] = cached["options"]
+
+    # Sticky-default: if the currently saved value references a model that
+    # isn't in the freshly-fetched options list (e.g. an imported flow whose
+    # exporter had providers the importing user hasn't enabled, or a model
+    # whose provider was toggled off after saving), inject the saved value
+    # into the options list with a ``not_enabled_locally`` metadata flag.
+    # The frontend surfaces a "configure" wrench next to the trigger when it
+    # sees this flag so the user can enable the provider without silently
+    # losing their selection.
+    current_value = build_config.get(model_field_name, {}).get("value")
+    if (
+        isinstance(current_value, list)
+        and current_value
+        and isinstance(current_value[0], dict)
+        and current_value[0].get("name")
+    ):
+        saved = current_value[0]
+        saved_name = saved["name"]
+        saved_provider = saved.get("provider", "")
+        options_list = build_config[model_field_name]["options"]
+        already_present = any(
+            opt.get("name") == saved_name and opt.get("provider", "") == saved_provider for opt in options_list
+        )
+        if not already_present:
+            injected = {**saved, "metadata": {**(saved.get("metadata") or {}), "not_enabled_locally": True}}
+            build_config[model_field_name]["options"] = [*options_list, injected]
 
     # Set default value on initial load when the model field has no value.
     # We check the model field's own value (not field_value, which is the value
@@ -338,15 +380,20 @@ def handle_model_input_update(
             build_config[model_field_name]["value"] = field_value if value_is_valid else [options[0]] if options else ""
             field_value = build_config[model_field_name]["value"]
 
-    # Step 2: Hide all provider-specific fields and clear their values by default.
-    # Clearing values ensures that when Step 3 re-configures for the newly selected
-    # provider, the auto-population logic can set the correct credential (e.g.
-    # switching OpenAI → Anthropic replaces OPENAI_API_KEY with ANTHROPIC_API_KEY).
+    # Step 2: Hide all provider-specific fields.  We do NOT clear values
+    # here — the frontend has already mutated ``template[model]["value"]``
+    # to the new selection before POSTing, so the backend can't distinguish
+    # a real provider switch from a same-provider refresh based on the
+    # incoming build_config alone.  Instead,
+    # ``apply_provider_variable_config_to_build_config`` (Step 3) handles
+    # the credential swap by detecting stale cross-provider variable keys
+    # in provider-mapped fields and replacing them with the current
+    # provider's var key.  Raw user-typed values are preserved in all cases.
     for field in provider_mapped_fields:
         if field in build_config:
-            build_config[field]["show"] = False
-            build_config[field]["required"] = False
-            build_config[field]["value"] = ""
+            field_config = build_config[field]
+            field_config["show"] = False
+            field_config["required"] = False
 
     # Step 3: Show/configure the right fields for the selected provider
     # Use field_value when the user actively changed the model selection;
