@@ -50,7 +50,7 @@ export default function DeploymentsPage() {
 
   return (
     <div className="flex flex-col gap-4 pt-4">
-      <div className="flex items-center justify-between">
+      <div className="flex min-h-10 items-center justify-between">
         <SubTabToggle activeTab={activeSubTab} onTabChange={setActiveSubTab} />
         {showHeaderButton && (
           <Button
