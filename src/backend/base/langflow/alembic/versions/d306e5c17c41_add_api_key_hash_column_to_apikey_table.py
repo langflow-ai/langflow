@@ -35,33 +35,26 @@ def _hash_key(plaintext: str) -> str:
     return hashlib.sha256(plaintext.encode()).hexdigest()
 
 
-def upgrade() -> None:
-    conn = op.get_bind()
-    if not migration.table_exists(TABLE_NAME, conn):
-        return
+def _backfill_hashes(conn, decrypt_api_key) -> tuple[int, int, int, int]:
+    """Backfill api_key_hash for rows where it is NULL.
 
-    if not migration.column_exists(TABLE_NAME, COLUMN_NAME, conn):
-        with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
-            batch_op.add_column(sa.Column(COLUMN_NAME, sa.String(), nullable=True))
-            batch_op.create_index(INDEX_NAME, [COLUMN_NAME])
+    Decrypts each row, groups by plaintext, and only hashes unique-plaintext
+    rows. Duplicate-plaintext groups are left with NULL hash so that the
+    runtime fast-path lookup can never return multiple matches and fail
+    closed. The runtime slow-path will match and backfill exactly one row
+    per group on first use, leaving the remaining NULL rows as harmless
+    orphans.
 
-    # Backfill hashes for existing keys
+    Returns ``(backfilled, skipped, duplicate_groups, duplicate_rows)``.
+    """
     rows = conn.execute(
         sa.text(f"SELECT id, api_key FROM {TABLE_NAME} WHERE api_key_hash IS NULL")  # noqa: S608
     ).fetchall()
     if not rows:
-        return
+        return 0, 0, 0, 0
 
-    try:
-        from langflow.services.auth.utils import decrypt_api_key
-    except ImportError:
-        print(  # noqa: T201
-            "WARNING: Could not import auth utilities. "
-            "API key hash backfill skipped. Hashes will be computed at runtime on first use."
-        )
-        return
-
-    backfilled = 0
+    # First pass: decrypt every row and group by plaintext.
+    plaintext_to_ids: dict[str, list] = {}
     skipped = 0
     for row in rows:
         stored_key = row[1]
@@ -72,8 +65,7 @@ def upgrade() -> None:
         if not stored_key.startswith("gAAAAA"):
             plaintext = stored_key
         else:
-            # Try to decrypt; skip orphaned keys that fail
-            # decrypt_api_key returns "" on failure
+            # decrypt_api_key returns "" on failure (never raises for decryption errors)
             try:
                 plaintext = decrypt_api_key(stored_key)
             except Exception:  # noqa: BLE001
@@ -83,11 +75,46 @@ def upgrade() -> None:
                 skipped += 1
                 continue
 
+        plaintext_to_ids.setdefault(plaintext, []).append(row[0])
+
+    # Second pass: backfill only unique-plaintext rows.
+    backfilled = 0
+    duplicate_groups = 0
+    duplicate_rows = 0
+    for plaintext, ids in plaintext_to_ids.items():
+        if len(ids) > 1:
+            duplicate_groups += 1
+            duplicate_rows += len(ids)
+            continue
         conn.execute(
             sa.text(f"UPDATE {TABLE_NAME} SET api_key_hash = :hash WHERE id = :id"),  # noqa: S608
-            {"hash": _hash_key(plaintext), "id": row[0]},
+            {"hash": _hash_key(plaintext), "id": ids[0]},
         )
         backfilled += 1
+
+    return backfilled, skipped, duplicate_groups, duplicate_rows
+
+
+def upgrade() -> None:
+    conn = op.get_bind()
+    if not migration.table_exists(TABLE_NAME, conn):
+        return
+
+    if not migration.column_exists(TABLE_NAME, COLUMN_NAME, conn):
+        with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
+            batch_op.add_column(sa.Column(COLUMN_NAME, sa.String(), nullable=True))
+            batch_op.create_index(INDEX_NAME, [COLUMN_NAME])
+
+    try:
+        from langflow.services.auth.utils import decrypt_api_key
+    except ImportError:
+        print(  # noqa: T201
+            "WARNING: Could not import auth utilities. "
+            "API key hash backfill skipped. Hashes will be computed at runtime on first use."
+        )
+        return
+
+    backfilled, skipped, duplicate_groups, duplicate_rows = _backfill_hashes(conn, decrypt_api_key)
 
     if backfilled:
         print(f"Backfilled hashes for {backfilled} API key(s).")  # noqa: T201
@@ -95,6 +122,12 @@ def upgrade() -> None:
         print(  # noqa: T201
             f"WARNING: {skipped} API key(s) could not be decrypted during hash backfill. "
             "These will use the slower decrypt-and-compare fallback at runtime."
+        )
+    if duplicate_groups:
+        print(  # noqa: T201
+            f"WARNING: Skipped hashing {duplicate_groups} duplicate-plaintext key group(s) "
+            f"({duplicate_rows} total rows). Auth continues to work via the slow-path fallback. "
+            "Query the apikey table directly to identify affected rows if cleanup is needed."
         )
 
 
