@@ -255,11 +255,6 @@ module.exports = {
           items: [
             {
               type: "doc",
-              id: "Deployment/deployment-wxo",
-              label: "watsonx Orchestrate"
-            },
-            {
-              type: "doc",
               id: "Deployment/deployment-gcp",
               label: "Google Cloud Platform"
             },
@@ -267,6 +262,11 @@ module.exports = {
               type: "doc",
               id: "Deployment/deployment-hugging-face-spaces",
               label: "Hugging Face Spaces"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-wxo",
+              label: "IBM watsonx Orchestrate"
             },
             {
               type: "doc",
