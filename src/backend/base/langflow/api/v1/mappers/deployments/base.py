@@ -296,12 +296,14 @@ class BaseDeploymentMapper:
         self,
         *,
         deployment_resource_key: str | None,
+        snapshot_names: list[str] | None = None,
         provider_params: dict[str, Any] | None,
         db: AsyncSession,
     ) -> SnapshotListParams:
         resolved_provider_params = await self.resolve_snapshot_list_params(provider_params, db)
         return SnapshotListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
+            snapshot_names=snapshot_names or None,
             provider_params=resolved_provider_params,
         )
 

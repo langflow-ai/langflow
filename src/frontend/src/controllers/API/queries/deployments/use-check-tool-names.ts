@@ -3,6 +3,13 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
+interface SnapshotListResponse {
+  provider_data?: {
+    tools?: Array<{ id: string; name: string }>;
+    total?: number;
+  };
+}
+
 interface CheckToolNamesResponse {
   existing_names: string[];
 }
@@ -19,14 +26,21 @@ export const useCheckToolNames: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const fn = async (): Promise<CheckToolNamesResponse> => {
-    const { data } = await api.get<CheckToolNamesResponse>(
-      `${getURL("DEPLOYMENTS")}/snapshots/check-names`,
+    const { data } = await api.get<SnapshotListResponse>(
+      `${getURL("DEPLOYMENTS")}/snapshots`,
       {
-        params: { provider_id: providerId, names },
+        params: {
+          provider_id: providerId,
+          provider_snapshot_names: names,
+          size: 50,
+        },
         paramsSerializer: { indexes: null },
       },
     );
-    return data;
+    const existingNames = (data.provider_data?.tools ?? [])
+      .map((t) => t.name)
+      .filter(Boolean);
+    return { existing_names: existingNames };
   };
 
   const sortedNames = [...names].sort();

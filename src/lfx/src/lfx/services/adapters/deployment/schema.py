@@ -507,6 +507,10 @@ class SnapshotListParams(_BaseListParams[T_SnapshotListParams]):
         None,
         description="Snapshot ids to filter by.",
     )
+    snapshot_names: list[str] | None = Field(
+        None,
+        description="Snapshot names to filter by.",
+    )
 
     @field_validator("snapshot_ids")
     @classmethod
