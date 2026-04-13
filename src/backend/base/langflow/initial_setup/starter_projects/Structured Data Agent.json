@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "FileDescriptionGeneratorComponent",
-            "id": "FileDescriptionGeneratorComponent-1c1m7",
+            "id": "FileDescriptionGeneratorComponent-ixgXo",
             "name": "descriptions",
             "output_types": [
               "JSON"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "Chroma-Igh4E",
+            "id": "Chroma-ocNJ5",
             "inputTypes": [
               "Data",
               "DataFrame"
@@ -23,12 +23,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-FileDescriptionGeneratorComponent-1c1m7{œdataTypeœ:œFileDescriptionGeneratorComponentœ,œidœ:œFileDescriptionGeneratorComponent-1c1m7œ,œnameœ:œdescriptionsœ,œoutput_typesœ:[œJSONœ]}-Chroma-Igh4E{œfieldNameœ:œingest_dataœ,œidœ:œChroma-Igh4Eœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FileDescriptionGeneratorComponent-ixgXo{œdataTypeœ:œFileDescriptionGeneratorComponentœ,œidœ:œFileDescriptionGeneratorComponent-ixgXoœ,œnameœ:œdescriptionsœ,œoutput_typesœ:[œJSONœ]}-Chroma-ocNJ5{œfieldNameœ:œingest_dataœ,œidœ:œChroma-ocNJ5œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FileDescriptionGeneratorComponent-1c1m7",
-        "sourceHandle": "{œdataTypeœ: œFileDescriptionGeneratorComponentœ, œidœ: œFileDescriptionGeneratorComponent-1c1m7œ, œnameœ: œdescriptionsœ, œoutput_typesœ: [œJSONœ]}",
-        "target": "Chroma-Igh4E",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œChroma-Igh4Eœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "FileDescriptionGeneratorComponent-ixgXo",
+        "sourceHandle": "{œdataTypeœ:œFileDescriptionGeneratorComponentœ,œidœ:œFileDescriptionGeneratorComponent-ixgXoœ,œnameœ:œdescriptionsœ,œoutput_typesœ:[œJSONœ]}",
+        "target": "Chroma-ocNJ5",
+        "targetHandle": "{œfieldNameœ:œingest_dataœ,œidœ:œChroma-ocNJ5œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Chroma",
-            "id": "Chroma-Og2DG",
+            "id": "Chroma-h7fjw",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -44,19 +44,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "OpenDsStarAgent-jHE8h",
+            "id": "OpenDsStarAgent-JZbG8",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Chroma-Og2DG{œdataTypeœ:œChromaœ,œidœ:œChroma-Og2DGœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-jHE8h{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-jHE8hœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Chroma-h7fjw{œdataTypeœ:œChromaœ,œidœ:œChroma-h7fjwœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-JZbG8{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-JZbG8œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Chroma-Og2DG",
-        "sourceHandle": "{œdataTypeœ: œChromaœ, œidœ: œChroma-Og2DGœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "OpenDsStarAgent-jHE8h",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-jHE8hœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "Chroma-h7fjw",
+        "sourceHandle": "{œdataTypeœ:œChromaœ,œidœ:œChroma-h7fjwœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "OpenDsStarAgent-JZbG8",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-JZbG8œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -64,7 +64,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-wJyPj",
+            "id": "ChatInput-Jfllm",
             "name": "message",
             "output_types": [
               "Message"
@@ -72,19 +72,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenDsStarAgent-jHE8h",
+            "id": "OpenDsStarAgent-JZbG8",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-wJyPj{œdataTypeœ:œChatInputœ,œidœ:œChatInput-wJyPjœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenDsStarAgent-jHE8h{œfieldNameœ:œinput_valueœ,œidœ:œOpenDsStarAgent-jHE8hœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-Jfllm{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Jfllmœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenDsStarAgent-JZbG8{œfieldNameœ:œinput_valueœ,œidœ:œOpenDsStarAgent-JZbG8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-wJyPj",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-wJyPjœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenDsStarAgent-jHE8h",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenDsStarAgent-jHE8hœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-Jfllm",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Jfllmœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenDsStarAgent-JZbG8",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenDsStarAgent-JZbG8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -92,7 +92,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenDsStarAgent",
-            "id": "OpenDsStarAgent-jHE8h",
+            "id": "OpenDsStarAgent-JZbG8",
             "name": "response",
             "output_types": [
               "Message"
@@ -100,7 +100,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-DdZCY",
+            "id": "ChatOutput-5oD0Y",
             "inputTypes": [
               "Data",
               "JSON",
@@ -111,12 +111,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenDsStarAgent-jHE8h{œdataTypeœ:œOpenDsStarAgentœ,œidœ:œOpenDsStarAgent-jHE8hœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-DdZCY{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DdZCYœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenDsStarAgent-JZbG8{œdataTypeœ:œOpenDsStarAgentœ,œidœ:œOpenDsStarAgent-JZbG8œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-5oD0Y{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-5oD0Yœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenDsStarAgent-jHE8h",
-        "sourceHandle": "{œdataTypeœ: œOpenDsStarAgentœ, œidœ: œOpenDsStarAgent-jHE8hœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-DdZCY",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-DdZCYœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "OpenDsStarAgent-JZbG8",
+        "sourceHandle": "{œdataTypeœ:œOpenDsStarAgentœ,œidœ:œOpenDsStarAgent-JZbG8œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-5oD0Y",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-5oD0Yœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -124,7 +124,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "FileContentRetriever",
-            "id": "FileContentRetriever-teaCu",
+            "id": "FileContentRetriever-uw0Tj",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -132,19 +132,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "OpenDsStarAgent-jHE8h",
+            "id": "OpenDsStarAgent-JZbG8",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-FileContentRetriever-teaCu{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-teaCuœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-jHE8h{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-jHE8hœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FileContentRetriever-uw0Tj{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-uw0Tjœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-JZbG8{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-JZbG8œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FileContentRetriever-teaCu",
-        "sourceHandle": "{œdataTypeœ: œFileContentRetrieverœ, œidœ: œFileContentRetriever-teaCuœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "OpenDsStarAgent-jHE8h",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-jHE8hœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "FileContentRetriever-uw0Tj",
+        "sourceHandle": "{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-uw0Tjœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "OpenDsStarAgent-JZbG8",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-JZbG8œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -152,7 +152,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Chroma",
-            "id": "Chroma-Igh4E",
+            "id": "Chroma-ocNJ5",
             "name": "search_results",
             "output_types": [
               "JSON"
@@ -160,7 +160,7 @@
           },
           "targetHandle": {
             "fieldName": "inputs",
-            "id": "MergeFlows-b6MoE",
+            "id": "MergeFlows-vh2L1",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -172,12 +172,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Chroma-Igh4E{œdataTypeœ:œChromaœ,œidœ:œChroma-Igh4Eœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œJSONœ]}-MergeFlows-b6MoE{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-b6MoEœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Chroma-ocNJ5{œdataTypeœ:œChromaœ,œidœ:œChroma-ocNJ5œ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œJSONœ]}-MergeFlows-vh2L1{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-vh2L1œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Chroma-Igh4E",
-        "sourceHandle": "{œdataTypeœ: œChromaœ, œidœ: œChroma-Igh4Eœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œJSONœ]}",
-        "target": "MergeFlows-b6MoE",
-        "targetHandle": "{œfieldNameœ: œinputsœ, œidœ: œMergeFlows-b6MoEœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ, œToolœ, œJSONœ, œTableœ], œtypeœ: œotherœ}"
+        "source": "Chroma-ocNJ5",
+        "sourceHandle": "{œdataTypeœ:œChromaœ,œidœ:œChroma-ocNJ5œ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œJSONœ]}",
+        "target": "MergeFlows-vh2L1",
+        "targetHandle": "{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-vh2L1œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -185,7 +185,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "FileContentRetriever",
-            "id": "FileContentRetriever-zEcpr",
+            "id": "FileContentRetriever-4LEk0",
             "name": "content",
             "output_types": [
               "Message"
@@ -193,7 +193,7 @@
           },
           "targetHandle": {
             "fieldName": "inputs",
-            "id": "MergeFlows-b6MoE",
+            "id": "MergeFlows-vh2L1",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -205,12 +205,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-FileContentRetriever-zEcpr{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-zEcprœ,œnameœ:œcontentœ,œoutput_typesœ:[œMessageœ]}-MergeFlows-b6MoE{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-b6MoEœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FileContentRetriever-4LEk0{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-4LEk0œ,œnameœ:œcontentœ,œoutput_typesœ:[œMessageœ]}-MergeFlows-vh2L1{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-vh2L1œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FileContentRetriever-zEcpr",
-        "sourceHandle": "{œdataTypeœ: œFileContentRetrieverœ, œidœ: œFileContentRetriever-zEcprœ, œnameœ: œcontentœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "MergeFlows-b6MoE",
-        "targetHandle": "{œfieldNameœ: œinputsœ, œidœ: œMergeFlows-b6MoEœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ, œToolœ, œJSONœ, œTableœ], œtypeœ: œotherœ}"
+        "source": "FileContentRetriever-4LEk0",
+        "sourceHandle": "{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-4LEk0œ,œnameœ:œcontentœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "MergeFlows-vh2L1",
+        "targetHandle": "{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-vh2L1œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -218,7 +218,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaModel",
-            "id": "OllamaModel-tvsdF",
+            "id": "OllamaModel-kUwg6",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -226,19 +226,19 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "FileDescriptionGeneratorComponent-1c1m7",
+            "id": "FileDescriptionGeneratorComponent-ixgXo",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaModel-tvsdF{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-tvsdFœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-FileDescriptionGeneratorComponent-1c1m7{œfieldNameœ:œllmœ,œidœ:œFileDescriptionGeneratorComponent-1c1m7œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaModel-kUwg6{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-kUwg6œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-FileDescriptionGeneratorComponent-ixgXo{œfieldNameœ:œllmœ,œidœ:œFileDescriptionGeneratorComponent-ixgXoœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaModel-tvsdF",
-        "sourceHandle": "{œdataTypeœ: œOllamaModelœ, œidœ: œOllamaModel-tvsdFœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "FileDescriptionGeneratorComponent-1c1m7",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œFileDescriptionGeneratorComponent-1c1m7œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OllamaModel-kUwg6",
+        "sourceHandle": "{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-kUwg6œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "FileDescriptionGeneratorComponent-ixgXo",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œFileDescriptionGeneratorComponent-ixgXoœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -246,7 +246,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaModel",
-            "id": "OllamaModel-tvsdF",
+            "id": "OllamaModel-kUwg6",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -254,19 +254,19 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "OpenDsStarAgent-jHE8h",
+            "id": "OpenDsStarAgent-JZbG8",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaModel-tvsdF{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-tvsdFœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-OpenDsStarAgent-jHE8h{œfieldNameœ:œllmœ,œidœ:œOpenDsStarAgent-jHE8hœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaModel-kUwg6{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-kUwg6œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-OpenDsStarAgent-JZbG8{œfieldNameœ:œllmœ,œidœ:œOpenDsStarAgent-JZbG8œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaModel-tvsdF",
-        "sourceHandle": "{œdataTypeœ: œOllamaModelœ, œidœ: œOllamaModel-tvsdFœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "OpenDsStarAgent-jHE8h",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œOpenDsStarAgent-jHE8hœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OllamaModel-kUwg6",
+        "sourceHandle": "{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-kUwg6œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "OpenDsStarAgent-JZbG8",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œOpenDsStarAgent-JZbG8œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -274,7 +274,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaEmbeddings",
-            "id": "OllamaEmbeddings-RamYL",
+            "id": "OllamaEmbeddings-h6U3M",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -282,19 +282,19 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "Chroma-Igh4E",
+            "id": "Chroma-ocNJ5",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaEmbeddings-RamYL{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-RamYLœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-Igh4E{œfieldNameœ:œembeddingœ,œidœ:œChroma-Igh4Eœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaEmbeddings-h6U3M{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-h6U3Mœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-ocNJ5{œfieldNameœ:œembeddingœ,œidœ:œChroma-ocNJ5œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaEmbeddings-RamYL",
-        "sourceHandle": "{œdataTypeœ: œOllamaEmbeddingsœ, œidœ: œOllamaEmbeddings-RamYLœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "Chroma-Igh4E",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œChroma-Igh4Eœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OllamaEmbeddings-h6U3M",
+        "sourceHandle": "{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-h6U3Mœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "target": "Chroma-ocNJ5",
+        "targetHandle": "{œfieldNameœ:œembeddingœ,œidœ:œChroma-ocNJ5œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -302,7 +302,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaEmbeddings",
-            "id": "OllamaEmbeddings-RamYL",
+            "id": "OllamaEmbeddings-h6U3M",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -310,25 +310,27 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "Chroma-Og2DG",
+            "id": "Chroma-h7fjw",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaEmbeddings-RamYL{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-RamYLœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-Og2DG{œfieldNameœ:œembeddingœ,œidœ:œChroma-Og2DGœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaEmbeddings-h6U3M{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-h6U3Mœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-h7fjw{œfieldNameœ:œembeddingœ,œidœ:œChroma-h7fjwœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaEmbeddings-RamYL",
-        "sourceHandle": "{œdataTypeœ: œOllamaEmbeddingsœ, œidœ: œOllamaEmbeddings-RamYLœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "Chroma-Og2DG",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œChroma-Og2DGœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OllamaEmbeddings-h6U3M",
+        "sourceHandle": "{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-h6U3Mœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "target": "Chroma-h7fjw",
+        "targetHandle": "{œfieldNameœ:œembeddingœ,œidœ:œChroma-h7fjwœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-ctBqC",
+            "id": "File-neq2m",
             "name": "message",
             "output_types": [
               "Message"
@@ -336,7 +338,7 @@
           },
           "targetHandle": {
             "fieldName": "file_data",
-            "id": "FileDescriptionGeneratorComponent-1c1m7",
+            "id": "FileDescriptionGeneratorComponent-ixgXo",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -345,17 +347,20 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__File-ctBqC{œdataTypeœ:œFileœ,œidœ:œFile-ctBqCœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileDescriptionGeneratorComponent-1c1m7{œfieldNameœ:œfile_dataœ,œidœ:œFileDescriptionGeneratorComponent-1c1m7œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "source": "File-ctBqC",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-ctBqCœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "FileDescriptionGeneratorComponent-1c1m7",
-        "targetHandle": "{œfieldNameœ: œfile_dataœ, œidœ: œFileDescriptionGeneratorComponent-1c1m7œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-File-neq2m{œdataTypeœ:œFileœ,œidœ:œFile-neq2mœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileDescriptionGeneratorComponent-ixgXo{œfieldNameœ:œfile_dataœ,œidœ:œFileDescriptionGeneratorComponent-ixgXoœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "File-neq2m",
+        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-neq2mœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "FileDescriptionGeneratorComponent-ixgXo",
+        "targetHandle": "{œfieldNameœ:œfile_dataœ,œidœ:œFileDescriptionGeneratorComponent-ixgXoœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-ctBqC",
+            "id": "File-neq2m",
             "name": "message",
             "output_types": [
               "Message"
@@ -363,7 +368,7 @@
           },
           "targetHandle": {
             "fieldName": "file_data",
-            "id": "FileContentRetriever-zEcpr",
+            "id": "FileContentRetriever-4LEk0",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -372,17 +377,18 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__File-ctBqC{œdataTypeœ:œFileœ,œidœ:œFile-ctBqCœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileContentRetriever-zEcpr{œfieldNameœ:œfile_dataœ,œidœ:œFileContentRetriever-zEcprœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "source": "File-ctBqC",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-ctBqCœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "FileContentRetriever-zEcpr",
-        "targetHandle": "{œfieldNameœ: œfile_dataœ, œidœ: œFileContentRetriever-zEcprœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-File-neq2m{œdataTypeœ:œFileœ,œidœ:œFile-neq2mœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileContentRetriever-4LEk0{œfieldNameœ:œfile_dataœ,œidœ:œFileContentRetriever-4LEk0œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "File-neq2m",
+        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-neq2mœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "FileContentRetriever-4LEk0",
+        "targetHandle": "{œfieldNameœ:œfile_dataœ,œidœ:œFileContentRetriever-4LEk0œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "OpenDsStarAgent-jHE8h",
+          "id": "OpenDsStarAgent-JZbG8",
           "node": {
             "base_classes": [
               "Message",
@@ -766,7 +772,7 @@
           "type": "OpenDsStarAgent"
         },
         "dragging": false,
-        "id": "OpenDsStarAgent-jHE8h",
+        "id": "OpenDsStarAgent-JZbG8",
         "measured": {
           "height": 311,
           "width": 320
@@ -780,7 +786,7 @@
       },
       {
         "data": {
-          "id": "FileDescriptionGeneratorComponent-1c1m7",
+          "id": "FileDescriptionGeneratorComponent-ixgXo",
           "node": {
             "base_classes": [
               "JSON"
@@ -991,7 +997,7 @@
           "type": "FileDescriptionGeneratorComponent"
         },
         "dragging": false,
-        "id": "FileDescriptionGeneratorComponent-1c1m7",
+        "id": "FileDescriptionGeneratorComponent-ixgXo",
         "measured": {
           "height": 245,
           "width": 320
@@ -1005,7 +1011,7 @@
       },
       {
         "data": {
-          "id": "File-ctBqC",
+          "id": "File-neq2m",
           "node": {
             "base_classes": [
               "Message"
@@ -1046,7 +1052,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2026-04-13T06:44:29.596Z",
+            "last_updated": "2026-04-13T06:59:06.191Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -1082,8 +1088,11 @@
                 "cache": true,
                 "display_name": "Raw Content",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "load_files_message",
                 "name": "message",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1094,6 +1103,12 @@
             ],
             "pinned": false,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "c4c0b6aa-3614-4602-9ec3-fa6e2a4423d3"
+              },
+              "_frontend_node_folder_id": {
+                "value": "4c3849a1-f6ba-4952-83e4-23faceb25a7d"
+              },
               "_type": "Component",
               "advanced_mode": {
                 "_input_type": "BoolInput",
@@ -1385,6 +1400,7 @@
                 "type": "bool",
                 "value": true
               },
+              "is_refresh": false,
               "markdown": {
                 "_input_type": "BoolInput",
                 "advanced": false,
@@ -1722,7 +1738,7 @@
           "type": "File"
         },
         "dragging": false,
-        "id": "File-ctBqC",
+        "id": "File-neq2m",
         "measured": {
           "height": 276,
           "width": 320
@@ -1736,7 +1752,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-wJyPj",
+          "id": "ChatInput-Jfllm",
           "node": {
             "base_classes": [
               "Message"
@@ -2017,7 +2033,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-wJyPj",
+        "id": "ChatInput-Jfllm",
         "measured": {
           "height": 52,
           "width": 192
@@ -2031,7 +2047,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-DdZCY",
+          "id": "ChatOutput-5oD0Y",
           "node": {
             "base_classes": [
               "Message"
@@ -2318,7 +2334,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-DdZCY",
+        "id": "ChatOutput-5oD0Y",
         "measured": {
           "height": 52,
           "width": 192
@@ -2332,7 +2348,7 @@
       },
       {
         "data": {
-          "id": "note-5a85u",
+          "id": "note-3Ieaw",
           "node": {
             "description": "# Ingestion Pipeline",
             "display_name": "",
@@ -2345,7 +2361,7 @@
         },
         "dragging": false,
         "height": 949,
-        "id": "note-5a85u",
+        "id": "note-3Ieaw",
         "measured": {
           "height": 949,
           "width": 1357
@@ -2361,7 +2377,7 @@
       },
       {
         "data": {
-          "id": "note-lxe4c",
+          "id": "note-8tAVq",
           "node": {
             "description": "# Agent Inference",
             "display_name": "",
@@ -2374,7 +2390,7 @@
         },
         "dragging": false,
         "height": 1047,
-        "id": "note-lxe4c",
+        "id": "note-8tAVq",
         "measured": {
           "height": 1047,
           "width": 1362
@@ -2390,9 +2406,9 @@
       },
       {
         "data": {
-          "id": "note-dA9YE",
+          "id": "note-yUH2z",
           "node": {
-            "description": "## OpenDsStar — Structured Data Agent 📚                                                                                                                                                \n \n[OpenDsStar](https://github.com/IBM/OpenDsStar)\n is an open-source implementation of the [DS-STAR](https://arxiv.org/abs/2509.21825)\n agent (Nam et al., 2025), with several deliberate design enhancements that improve its modularity and extensibility. OpenDsStar is an autonomous data science agent for working with tabular data (CSV, Excel, Parquet, JSON, and TSV), enabling analysis, transformation, and reasoning over structured datasets.\n                                                                                                                                                                                       \n  How It Works                                              \n\n  1. Data (Yellow): Upload your data files.                                                                                                                                            \n  2. Ingestion (Green): Processes files by generating file descriptions and storing them in a vector database. Set a Persistent Directory on both the Vector Store and the File Content Retriever.\n  3. Agent (Blue): Ask questions in plain English. The agent retrieves relevant data and provides insights.                                                                            \n                                                                                                                                                                                       \n  Setup                                                                                                                                                                                \n                                                                                                                                                                                       \n  1. Models (Pink): Configure an LLM and an embedding model (Ollama, watsonx.ai, OpenAI, etc.).                                                                                        \n  2. Vector Store: Connect a vector store for indexing and retrieval.\n  3. Ingest: Upload data files and run the ingestion flow.                                                                                                                             \n  4. Chat: Open the playground and start asking questions. ",
+            "description": "## About OpenDsStar and structured data analysis\n\n**OpenDsStar — Structured Data Agent 📚**\n\n[OpenDsStar](https://github.com/IBM/OpenDsStar) is an open-source implementation of the [DS-Star](https://arxiv.org/abs/2509.21825) agent. It keeps the core DS-Star workflow of planning, code generation, execution, debugging, and verification, while using a more practical tool-centric architecture that improves modularity, extensibility, and execution efficiency.\n\nThis Langflow template applies OpenDsStar to **structured data analysis** over tabular datasets such as **CSV, Excel, Parquet, JSON, and TSV**. It enables natural-language exploration, retrieval, and reasoning over uploaded structured data.\n",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2402,24 +2418,24 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 802,
-        "id": "note-dA9YE",
+        "height": 340,
+        "id": "note-yUH2z",
         "measured": {
-          "height": 802,
-          "width": 575
+          "height": 340,
+          "width": 847
         },
         "position": {
-          "x": -2368.1476510371713,
+          "x": -2640.1476510371713,
           "y": -2700.9355487997504
         },
         "resizing": false,
         "selected": false,
         "type": "noteNode",
-        "width": 575
+        "width": 847
       },
       {
         "data": {
-          "id": "note-lDV3O",
+          "id": "note-Q41KA",
           "node": {
             "description": "# Models",
             "display_name": "",
@@ -2432,7 +2448,7 @@
         },
         "dragging": false,
         "height": 1018,
-        "id": "note-lDV3O",
+        "id": "note-Q41KA",
         "measured": {
           "height": 1018,
           "width": 421
@@ -2448,7 +2464,7 @@
       },
       {
         "data": {
-          "id": "note-iu1vJ",
+          "id": "note-A8BD5",
           "node": {
             "description": "# Data",
             "display_name": "",
@@ -2461,7 +2477,7 @@
         },
         "dragging": false,
         "height": 479,
-        "id": "note-iu1vJ",
+        "id": "note-A8BD5",
         "measured": {
           "height": 479,
           "width": 410
@@ -2477,7 +2493,7 @@
       },
       {
         "data": {
-          "id": "Chroma-Igh4E",
+          "id": "Chroma-ocNJ5",
           "node": {
             "base_classes": [
               "JSON",
@@ -2922,7 +2938,7 @@
           "type": "Chroma"
         },
         "dragging": false,
-        "id": "Chroma-Igh4E",
+        "id": "Chroma-ocNJ5",
         "measured": {
           "height": 459,
           "width": 320
@@ -2936,7 +2952,7 @@
       },
       {
         "data": {
-          "id": "Chroma-Og2DG",
+          "id": "Chroma-h7fjw",
           "node": {
             "base_classes": [
               "JSON",
@@ -2968,7 +2984,7 @@
             ],
             "frozen": false,
             "icon": "Chroma",
-            "last_updated": "2026-04-13T06:43:38.472Z",
+            "last_updated": "2026-04-13T06:59:06.106Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -3024,6 +3040,12 @@
             ],
             "pinned": false,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "c4c0b6aa-3614-4602-9ec3-fa6e2a4423d3"
+              },
+              "_frontend_node_folder_id": {
+                "value": "4c3849a1-f6ba-4952-83e4-23faceb25a7d"
+              },
               "_type": "Component",
               "allow_duplicates": {
                 "_input_type": "BoolInput",
@@ -3231,6 +3253,7 @@
                 "type": "other",
                 "value": ""
               },
+              "is_refresh": false,
               "limit": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -3432,7 +3455,7 @@
           "type": "Chroma"
         },
         "dragging": false,
-        "id": "Chroma-Og2DG",
+        "id": "Chroma-h7fjw",
         "measured": {
           "height": 457,
           "width": 320
@@ -3446,7 +3469,7 @@
       },
       {
         "data": {
-          "id": "FileContentRetriever-zEcpr",
+          "id": "FileContentRetriever-4LEk0",
           "node": {
             "base_classes": [
               "Message",
@@ -3616,7 +3639,7 @@
           "type": "FileContentRetriever"
         },
         "dragging": false,
-        "id": "FileContentRetriever-zEcpr",
+        "id": "FileContentRetriever-4LEk0",
         "measured": {
           "height": 365,
           "width": 320
@@ -3630,7 +3653,7 @@
       },
       {
         "data": {
-          "id": "FileContentRetriever-teaCu",
+          "id": "FileContentRetriever-uw0Tj",
           "node": {
             "base_classes": [
               "Message",
@@ -3650,7 +3673,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2026-04-13T06:43:38.473Z",
+            "last_updated": "2026-04-13T06:59:06.108Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -3694,6 +3717,12 @@
             ],
             "pinned": false,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "c4c0b6aa-3614-4602-9ec3-fa6e2a4423d3"
+              },
+              "_frontend_node_folder_id": {
+                "value": "4c3849a1-f6ba-4952-83e4-23faceb25a7d"
+              },
               "_type": "Component",
               "code": {
                 "advanced": true,
@@ -3762,6 +3791,7 @@
                 "type": "query",
                 "value": ""
               },
+              "is_refresh": false,
               "persistent_dir": {
                 "_input_type": "StrInput",
                 "advanced": false,
@@ -3851,7 +3881,7 @@
           "type": "FileContentRetriever"
         },
         "dragging": false,
-        "id": "FileContentRetriever-teaCu",
+        "id": "FileContentRetriever-uw0Tj",
         "measured": {
           "height": 391,
           "width": 320
@@ -3865,7 +3895,7 @@
       },
       {
         "data": {
-          "id": "MergeFlows-b6MoE",
+          "id": "MergeFlows-vh2L1",
           "node": {
             "base_classes": [
               "Message"
@@ -3970,7 +4000,7 @@
           "type": "MergeFlows"
         },
         "dragging": false,
-        "id": "MergeFlows-b6MoE",
+        "id": "MergeFlows-vh2L1",
         "measured": {
           "height": 185,
           "width": 320
@@ -3984,7 +4014,7 @@
       },
       {
         "data": {
-          "id": "OllamaModel-tvsdF",
+          "id": "OllamaModel-kUwg6",
           "node": {
             "base_classes": [
               "JSON",
@@ -4031,7 +4061,7 @@
             ],
             "frozen": false,
             "icon": "Ollama",
-            "last_updated": "2026-04-13T06:43:38.474Z",
+            "last_updated": "2026-04-13T06:59:06.109Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -4069,8 +4099,11 @@
                 "cache": true,
                 "display_name": "Text",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "text_response",
                 "name": "text_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -4083,8 +4116,11 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "build_model",
                 "name": "model_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -4097,8 +4133,11 @@
                 "cache": true,
                 "display_name": "JSON",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "build_data_output",
                 "name": "data_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "JSON",
                 "tool_mode": true,
                 "types": [
@@ -4111,8 +4150,11 @@
                 "cache": true,
                 "display_name": "Table",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "build_dataframe_output",
                 "name": "dataframe_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Table",
                 "tool_mode": true,
                 "types": [
@@ -4123,6 +4165,12 @@
             ],
             "pinned": false,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "c4c0b6aa-3614-4602-9ec3-fa6e2a4423d3"
+              },
+              "_frontend_node_folder_id": {
+                "value": "4c3849a1-f6ba-4952-83e4-23faceb25a7d"
+              },
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
@@ -4329,6 +4377,7 @@
                 "type": "str",
                 "value": ""
               },
+              "is_refresh": false,
               "metadata": {
                 "_input_type": "DictInput",
                 "advanced": true,
@@ -4832,7 +4881,7 @@
           "type": "OllamaModel"
         },
         "dragging": false,
-        "id": "OllamaModel-tvsdF",
+        "id": "OllamaModel-kUwg6",
         "measured": {
           "height": 538,
           "width": 320
@@ -4846,7 +4895,7 @@
       },
       {
         "data": {
-          "id": "OllamaEmbeddings-RamYL",
+          "id": "OllamaEmbeddings-h6U3M",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -4865,7 +4914,7 @@
             ],
             "frozen": false,
             "icon": "Ollama",
-            "last_updated": "2026-04-13T06:43:38.476Z",
+            "last_updated": "2026-04-13T06:59:06.109Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -4903,8 +4952,11 @@
                 "cache": true,
                 "display_name": "Embeddings",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "build_embeddings",
                 "name": "embeddings",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Embeddings",
                 "tool_mode": true,
                 "types": [
@@ -4915,6 +4967,12 @@
             ],
             "pinned": false,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "c4c0b6aa-3614-4602-9ec3-fa6e2a4423d3"
+              },
+              "_frontend_node_folder_id": {
+                "value": "4c3849a1-f6ba-4952-83e4-23faceb25a7d"
+              },
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
@@ -4976,6 +5034,7 @@
                 "type": "code",
                 "value": "import asyncio\nfrom typing import Any\nfrom urllib.parse import urljoin\n\nimport httpx\nfrom langchain_ollama import OllamaEmbeddings\n\nfrom lfx.base.models.model import LCModelComponent\nfrom lfx.field_typing import Embeddings\nfrom lfx.io import DropdownInput, Output, SecretStrInput, StrInput\nfrom lfx.log.logger import logger\nfrom lfx.utils.util import transform_localhost_url\n\nHTTP_STATUS_OK = 200\n\n\nclass OllamaEmbeddingsComponent(LCModelComponent):\n    display_name: str = \"Ollama Embeddings\"\n    description: str = \"Generate embeddings using Ollama models.\"\n    documentation = \"https://python.langchain.com/docs/integrations/text_embedding/ollama\"\n    icon = \"Ollama\"\n    name = \"OllamaEmbeddings\"\n\n    # Define constants for JSON keys\n    JSON_MODELS_KEY = \"models\"\n    JSON_NAME_KEY = \"name\"\n    JSON_CAPABILITIES_KEY = \"capabilities\"\n    EMBEDDING_CAPABILITY = \"embedding\"\n\n    inputs = [\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Ollama Model\",\n            value=\"\",\n            options=[],\n            real_time_refresh=True,\n            refresh_button=True,\n            combobox=True,\n            required=True,\n        ),\n        StrInput(\n            name=\"base_url\",\n            display_name=\"Ollama Base URL\",\n            info=\"Endpoint of the Ollama API. Defaults to http://localhost:11434.\",\n            value=\"http://localhost:11434\",\n            required=True,\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Ollama API Key\",\n            info=\"Your Ollama API key.\",\n            value=None,\n            required=False,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Embeddings\", name=\"embeddings\", method=\"build_embeddings\"),\n    ]\n\n    @property\n    def headers(self) -> dict[str, str] | None:\n        \"\"\"Get the headers for the Ollama API.\"\"\"\n        if self.api_key and self.api_key.strip():\n            return {\"Authorization\": f\"Bearer {self.api_key}\"}\n        return None\n\n    def build_embeddings(self) -> Embeddings:\n        transformed_base_url = transform_localhost_url(self.base_url)\n\n        # Strip /v1 suffix if present\n        if transformed_base_url and transformed_base_url.rstrip(\"/\").endswith(\"/v1\"):\n            transformed_base_url = transformed_base_url.rstrip(\"/\").removesuffix(\"/v1\")\n            logger.warning(\n                \"Detected '/v1' suffix in base URL. The Ollama component uses the native Ollama API, \"\n                \"not the OpenAI-compatible API. The '/v1' suffix has been automatically removed. \"\n                \"If you want to use the OpenAI-compatible API, please use the OpenAI component instead. \"\n                \"Learn more at https://docs.ollama.com/openai#openai-compatibility\"\n            )\n\n        llm_params = {\n            \"model\": self.model_name,\n            \"base_url\": transformed_base_url,\n        }\n\n        if self.headers:\n            llm_params[\"client_kwargs\"] = {\"headers\": self.headers}\n\n        try:\n            output = OllamaEmbeddings(**llm_params)\n        except Exception as e:\n            msg = (\n                \"Unable to connect to the Ollama API. \"\n                \"Please verify the base URL, ensure the relevant Ollama model is pulled, and try again.\"\n            )\n            raise ValueError(msg) from e\n        return output\n\n    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):\n        if field_name in {\"base_url\", \"model_name\"} and not await self.is_valid_ollama_url(self.base_url):\n            msg = \"Ollama is not running on the provided base URL. Please start Ollama and try again.\"\n            raise ValueError(msg)\n        if field_name in {\"model_name\", \"base_url\"}:\n            # Use field_value if base_url is being updated, otherwise use self.base_url\n            base_url_to_check = field_value if field_name == \"base_url\" else self.base_url\n            # Fallback to self.base_url if field_value is None or empty\n            if not base_url_to_check and field_name == \"base_url\":\n                base_url_to_check = self.base_url\n            logger.warning(f\"Fetching Ollama models from updated URL: {base_url_to_check}\")\n\n            if base_url_to_check and await self.is_valid_ollama_url(base_url_to_check):\n                build_config[\"model_name\"][\"options\"] = await self.get_model(base_url_to_check)\n            else:\n                build_config[\"model_name\"][\"options\"] = []\n\n        return build_config\n\n    async def get_model(self, base_url_value: str) -> list[str]:\n        \"\"\"Get the model names from Ollama.\"\"\"\n        try:\n            # Strip /v1 suffix if present, as Ollama API endpoints are at root level\n            base_url = base_url_value.rstrip(\"/\").removesuffix(\"/v1\")\n            if not base_url.endswith(\"/\"):\n                base_url = base_url + \"/\"\n            base_url = transform_localhost_url(base_url)\n\n            # Ollama REST API to return models\n            tags_url = urljoin(base_url, \"api/tags\")\n\n            # Ollama REST API to return model capabilities\n            show_url = urljoin(base_url, \"api/show\")\n\n            async with httpx.AsyncClient() as client:\n                headers = self.headers\n                # Fetch available models\n                tags_response = await client.get(url=tags_url, headers=headers)\n                tags_response.raise_for_status()\n                models = tags_response.json()\n                if asyncio.iscoroutine(models):\n                    models = await models\n                await logger.adebug(f\"Available models: {models}\")\n\n                # Filter models that are embedding models\n                model_ids = []\n                for model in models[self.JSON_MODELS_KEY]:\n                    model_name = model[self.JSON_NAME_KEY]\n                    await logger.adebug(f\"Checking model: {model_name}\")\n\n                    payload = {\"model\": model_name}\n                    show_response = await client.post(url=show_url, json=payload, headers=headers)\n                    show_response.raise_for_status()\n                    json_data = show_response.json()\n                    if asyncio.iscoroutine(json_data):\n                        json_data = await json_data\n\n                    capabilities = json_data.get(self.JSON_CAPABILITIES_KEY, [])\n                    await logger.adebug(f\"Model: {model_name}, Capabilities: {capabilities}\")\n\n                    if self.EMBEDDING_CAPABILITY in capabilities:\n                        model_ids.append(model_name)\n\n        except (httpx.RequestError, ValueError) as e:\n            msg = \"Could not get model names from Ollama.\"\n            raise ValueError(msg) from e\n\n        return model_ids\n\n    async def is_valid_ollama_url(self, url: str) -> bool:\n        try:\n            async with httpx.AsyncClient() as client:\n                url = transform_localhost_url(url)\n                if not url:\n                    return False\n                # Strip /v1 suffix if present, as Ollama API endpoints are at root level\n                url = url.rstrip(\"/\").removesuffix(\"/v1\")\n                if not url.endswith(\"/\"):\n                    url = url + \"/\"\n                return (\n                    await client.get(url=urljoin(url, \"api/tags\"), headers=self.headers)\n                ).status_code == HTTP_STATUS_OK\n        except httpx.RequestError:\n            return False\n"
               },
+              "is_refresh": false,
               "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
@@ -4986,7 +5045,9 @@
                 "external_options": {},
                 "info": "",
                 "name": "model_name",
-                "options": [],
+                "options": [
+                  "granite-embedding:latest"
+                ],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -5009,7 +5070,7 @@
           "type": "OllamaEmbeddings"
         },
         "dragging": false,
-        "id": "OllamaEmbeddings-RamYL",
+        "id": "OllamaEmbeddings-h6U3M",
         "measured": {
           "height": 289,
           "width": 320
@@ -5020,17 +5081,104 @@
         },
         "selected": false,
         "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "note-X8nA6",
+          "node": {
+            "description": "## How the flow works\n\nThis flow is organized into four color-coded sections:\n\n**Data (Yellow)**  \nUpload one or more structured data files that you want the agent to analyze.\n\n**Models (Pink)**  \nConfigure a language model for reasoning and description generation, and an embedding model for indexing and retrieval.\n\n**Ingestion Pipeline (Green)**  \nThe ingestion flow reads uploaded files, generates semantic descriptions for them, stores those descriptions in a vector database, and prepares file retrieval data for later use.\n\n**Agent Inference (Blue)**  \nDuring chat, the OpenDsStar agent reuses the ingested vector data and file retrieval data through tools. It searches for relevant files, retrieves their contents when needed, reasons over the data, and returns an answer.\n\nIn short: **upload files → ingest and index them → reuse the ingested data at query time → analyze and answer**\n",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "neutral"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 652,
+        "id": "note-X8nA6",
+        "measured": {
+          "height": 652,
+          "width": 844
+        },
+        "position": {
+          "x": -2640.83854325085,
+          "y": -2336.696306704245
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 844
+      },
+      {
+        "data": {
+          "id": "note-PxN4e",
+          "node": {
+            "description": "## Setup and how to run it\n\n**Configure the models**  \nSet a language model and an embedding model in the **Models** section.\n\n**Configure persistent storage correctly**  \nThis flow uses both the **Vector Store** and the **File Content Retriever** twice:\n- once in the **Ingestion Pipeline**\n- again in **Agent Inference**, where they are used as tools over the ingested data\n\nSet the directories as follows:\n- both **Vector Store** components should use the **same Persistent Directory**\n- both **File Content Retriever** components should use the **same Persistent Directory**\n- the **Vector Store** directory and the **File Content Retriever** directory should be **different**\n\nThis allows the ingestion and inference stages to share the same stored vector data and file retrieval data, while keeping those two storage layers separate.\n\n**Upload your files**  \nAdd one or more structured data files in the **Data** section.\n\n**Run the ingestion pipeline**  \nExecute the ingestion flow so each file is processed, described, and indexed.\n\n**Open the chat / playground**  \nStart the agent flow and ask questions in plain English.\n\n**Analyze your data**  \nThe agent will use the ingested vector store and file retrieval tools to find relevant files, access their contents, and answer based on the uploaded data.\n",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "neutral"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 727,
+        "id": "note-PxN4e",
+        "measured": {
+          "height": 727,
+          "width": 840
+        },
+        "position": {
+          "x": -2638.599852773451,
+          "y": -1656.9246686875592
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 840
+      },
+      {
+        "data": {
+          "id": "note-dONVf",
+          "node": {
+            "description": "## Tips and notes\n\n- This template is intended for **structured/tabular data**.\n- The **Vector Store** and **File Content Retriever** are each used in two stages: first during ingestion, then again during inference as tools over the ingested data.\n- The two **Vector Store** nodes should point to the same directory.\n- The two **File Content Retriever** nodes should point to the same directory.\n- The **Vector Store** directory and **File Content Retriever** directory should not be the same.\n- If you add new files, rerun the ingestion step so they become available during chat.",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "neutral"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 307,
+        "id": "note-dONVf",
+        "measured": {
+          "height": 307,
+          "width": 840
+        },
+        "position": {
+          "x": -2638.823518629864,
+          "y": -894.8549261210835
+        },
+        "resizing": false,
+        "selected": true,
+        "type": "noteNode",
+        "width": 840
       }
     ],
     "viewport": {
-      "x": 1200.4406508588327,
-      "y": 2049.9119261741125,
-      "zoom": 0.7535524227801252
+      "x": 1983.8309178210397,
+      "y": 1137.5809684302924,
+      "zoom": 0.6668594762698393
     }
   },
   "description": "A complete workflow for structured data analysis using the OpenDsStar agent. OpenDsStar is an open-source implementation of the DS-Star agent, with several deliberate design enhancements, and can be used effectively for structured data analysis tasks",
   "endpoint_name": null,
-  "id": "2c6311c3-21a2-49d1-a469-a93e2bf4df80",
+  "id": "c4c0b6aa-3614-4602-9ec3-fa6e2a4423d3",
   "is_component": false,
   "last_tested_version": "1.8.1",
   "locked": false,
