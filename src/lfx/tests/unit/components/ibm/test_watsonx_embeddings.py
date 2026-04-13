@@ -83,13 +83,15 @@ class TestWatsonxEmbeddingsComponent:
         """Test that URL options are defined."""
         url_input = next(inp for inp in wx_embeddings_component.inputs if inp.name == "url")
 
-        assert "https://us-south.ml.cloud.ibm.com" in url_input.options
-        assert "https://eu-de.ml.cloud.ibm.com" in url_input.options
-        assert "https://eu-gb.ml.cloud.ibm.com" in url_input.options
-        assert "https://au-syd.ml.cloud.ibm.com" in url_input.options
-        assert "https://jp-tok.ml.cloud.ibm.com" in url_input.options
-        assert "https://ca-tor.ml.cloud.ibm.com" in url_input.options
-        assert "https://ap-south-1.aws.wxai.ibm.com" in url_input.options
+        # url_input.options is a list of exact endpoint strings; equality check avoids
+        # ambiguity with substring URL checks flagged by static analysis.
+        assert any(url == "https://us-south.ml.cloud.ibm.com" for url in url_input.options)
+        assert any(url == "https://eu-de.ml.cloud.ibm.com" for url in url_input.options)
+        assert any(url == "https://eu-gb.ml.cloud.ibm.com" for url in url_input.options)
+        assert any(url == "https://au-syd.ml.cloud.ibm.com" for url in url_input.options)
+        assert any(url == "https://jp-tok.ml.cloud.ibm.com" for url in url_input.options)
+        assert any(url == "https://ca-tor.ml.cloud.ibm.com" for url in url_input.options)
+        assert any(url == "https://ap-south-1.aws.wxai.ibm.com" for url in url_input.options)
 
     @patch("lfx.base.models.model_utils.requests.get")
     def test_fetch_models_success(self, mock_get, mock_response):

@@ -475,7 +475,9 @@ async def test_provider_variable_mapping_multi_variable_provider(client: AsyncCl
     assert url_var["is_secret"] is False
     assert url_var["required"] is True
     assert len(url_var["options"]) > 0  # Should have regional endpoint options
-    assert "https://us-south.ml.cloud.ibm.com" in url_var["options"]
+    # options is a list of exact regional endpoint URLs; using equality to avoid
+    # ambiguity with substring URL checks flagged by static analysis.
+    assert any(url == "https://us-south.ml.cloud.ibm.com" for url in url_var["options"])
 
 
 @pytest.mark.usefixtures("active_user")
