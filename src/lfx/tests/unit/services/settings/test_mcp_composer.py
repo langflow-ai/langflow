@@ -463,16 +463,16 @@ class TestOAuthCallbackConfigForwarding:
         assert passed_auth["oauth_callback_url"] == callback
 
     @pytest.mark.asyncio
-    async def test_callback_path_backwards_compat(self, mcp_service):
-        """Verify legacy oauth_callback_path is promoted and sent as OAUTH_CALLBACK_PATH."""
+    async def test_callback_url_backwards_compat(self, mcp_service):
+        """Verify legacy oauth_callback_url is promoted and sent as OAUTH_CALLBACK_PATH."""
         project_id = "compat-test"
-        callback = "http://localhost:9000/auth/callback"
+        callback_url = "http://localhost:9000/auth/callback"
         auth_config = {
             "auth_type": "oauth",
             "oauth_host": "localhost",
             "oauth_port": "9000",
             "oauth_server_url": "http://localhost:9000",
-            "oauth_callback_path": callback,
+            "oauth_callback_url": callback_url,
             "oauth_client_id": "cid",
             "oauth_client_secret": "csecret",  # pragma: allowlist secret
             "oauth_auth_url": "http://auth",
@@ -501,10 +501,10 @@ class TestOAuthCallbackConfigForwarding:
 
         cmd = mock_popen.call_args[0][0]
 
-        # Legacy oauth_callback_path should be promoted and sent as OAUTH_CALLBACK_PATH
+        # Legacy oauth_callback_url should be promoted and sent as OAUTH_CALLBACK_PATH
         assert "OAUTH_CALLBACK_PATH" in cmd, f"Expected OAUTH_CALLBACK_PATH in command but got: {cmd}"
         idx = cmd.index("OAUTH_CALLBACK_PATH")
-        assert cmd[idx + 1] == callback
+        assert cmd[idx + 1] == callback_url
 
     @pytest.mark.asyncio
     async def test_subprocess_receives_callback_path_env_var(self, mcp_service):
