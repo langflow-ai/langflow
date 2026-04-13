@@ -122,6 +122,12 @@ FlowIdsQuery = Annotated[list[UUID] | None, AfterValidator(_validate_flow_ids)]
 Max supported length is 1 today.
 """
 
+
+def _validate_detect_vars_request_ids(values: list[UUID]) -> list[UUID]:
+    """AfterValidator for DetectVarsRequest.flow_version_ids."""
+    return _validate_uuid_list(values, field_name="flow_version_ids")
+
+
 # ---------------------------------------------------------------------------
 # Provider sub-resource schemas
 # ---------------------------------------------------------------------------
@@ -499,7 +505,10 @@ class SnapshotUpdateResponse(BaseModel):
 class DetectVarsRequest(BaseModel):
     """Request body for detecting environment variables from flow version IDs."""
 
-    flow_version_ids: list[UUID] = Field(
+    flow_version_ids: Annotated[
+        list[UUID],
+        AfterValidator(_validate_detect_vars_request_ids),
+    ] = Field(
         min_length=1,
         max_length=50,
         description="Flow version UUIDs to scan for global variable references.",
