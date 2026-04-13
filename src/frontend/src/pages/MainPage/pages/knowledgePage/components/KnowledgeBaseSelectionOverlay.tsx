@@ -1,4 +1,5 @@
 import type { AxiosError } from "axios";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useDeleteKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base";
@@ -20,6 +21,7 @@ const KnowledgeBaseSelectionOverlay = ({
   onDelete,
   onClearSelection,
 }: KnowledgeBaseSelectionOverlayProps) => {
+  const { t } = useTranslation();
   const { setSuccessData, setErrorData } = useAlertStore((state) => ({
     setSuccessData: state.setSuccessData,
     setErrorData: state.setErrorData,
@@ -28,17 +30,17 @@ const KnowledgeBaseSelectionOverlay = ({
   const deleteMutation = useDeleteKnowledgeBase({
     onSuccess: (data) => {
       setSuccessData({
-        title: `${data.deleted_count} knowledge base(s) deleted`,
+        title: t("knowledge.deletedCount", { count: data.deleted_count }),
       });
       onClearSelection();
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       setErrorData({
-        title: "Failed to delete knowledge bases",
+        title: t("knowledge.failedToDelete"),
         list: [
           error?.response?.data?.detail ||
             error?.message ||
-            "An unknown error occurred",
+            t("knowledge.unknownError"),
         ],
       });
       onClearSelection();
@@ -73,7 +75,7 @@ const KnowledgeBaseSelectionOverlay = ({
         )}
       >
         <span className="text-xs text-muted-foreground">
-          {quantitySelected} selected
+          {t("knowledge.selected", { count: quantitySelected })}
         </span>
         <div className="flex items-center gap-2">
           <DeleteConfirmationModal
@@ -87,7 +89,7 @@ const KnowledgeBaseSelectionOverlay = ({
               data-testid="bulk-delete-kb-btn"
             >
               <ForwardedIconComponent name="Trash2" />
-              Delete
+              {t("knowledge.delete")}
             </Button>
           </DeleteConfirmationModal>
         </div>

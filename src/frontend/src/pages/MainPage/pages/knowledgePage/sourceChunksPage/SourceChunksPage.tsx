@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import ChunkCard from "./components/ChunkCard";
 import { CHUNKS_PER_PAGE, PAGE_SIZE_OPTIONS } from "./constants";
 
 export const SourceChunksPage = () => {
+  const { t } = useTranslation();
   const { sourceId } = useParams<{ sourceId: string }>();
   const navigate = useCustomNavigate();
   const [currentPage, setCurrentPage] = useState(1);
@@ -138,7 +140,7 @@ export const SourceChunksPage = () => {
                 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
               />
               <Input
-                placeholder="Search chunks..."
+                placeholder={t("knowledge.searchChunks")}
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 data-testid="chunks-search-input"
@@ -152,16 +154,16 @@ export const SourceChunksPage = () => {
             <div className="flex flex-1 w-full flex-col items-center justify-center gap-3">
               <Loading size={36} />
               <span className="text-sm text-muted-foreground pt-3">
-                Loading Chunks...
+                {t("knowledge.loadingChunks")}
               </span>
             </div>
           ) : error ? (
             <div className="flex flex-1 items-center justify-center text-muted-foreground">
-              Failed to load chunks
+              {t("knowledge.failedToLoadChunks")}
             </div>
           ) : chunks.length === 0 ? (
             <div className="flex flex-1 items-center justify-center text-muted-foreground">
-              No chunks found
+              {t("knowledge.noChunksFound")}
             </div>
           ) : (
             <div className="flex flex-1 flex-col overflow-hidden">
@@ -187,7 +189,7 @@ export const SourceChunksPage = () => {
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground whitespace-nowrap">
-                            Per page:
+                            {t("knowledge.perPage")}
                           </span>
                           <Select
                             value={String(pageSize)}
@@ -211,9 +213,7 @@ export const SourceChunksPage = () => {
                           </Select>
                         </div>
                         <span className="text-sm text-muted-foreground">
-                          Showing {startIndex + 1}-
-                          {Math.min(startIndex + pageSize, total)} of {total}{" "}
-                          chunks
+                          {t("knowledge.showing", { start: startIndex + 1, end: Math.min(startIndex + pageSize, total), total })}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -249,7 +249,7 @@ export const SourceChunksPage = () => {
                           />
                         </Button>
                         <div className="flex items-center gap-1.5 px-2 text-sm">
-                          <span>Page</span>
+                          <span>{t("knowledge.page")}</span>
                           <input
                             type="number"
                             min={1}
@@ -262,7 +262,7 @@ export const SourceChunksPage = () => {
                             onKeyDown={handlePageInputKeyDown}
                             className="h-7 w-16 rounded border border-input bg-background px-2 text-center text-sm focus:outline-none focus:ring-1 focus:ring-ring [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-inner-spin-button]:[filter:invert(1)] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-outer-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:[filter:invert(1)]"
                           />
-                          <span>of {totalPages}</span>
+                          <span>{t("knowledge.ofTotal", { total: totalPages })}</span>
                         </div>
                         <Button
                           variant="outline"

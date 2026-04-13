@@ -1,5 +1,6 @@
 import Fuse from "fuse.js";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -67,6 +68,7 @@ export default function RecentFilesComponent({
       }),
     [filesWithDisabled],
   );
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
@@ -427,7 +429,7 @@ export default function RecentFilesComponent({
                 className="text-accent-pink-foreground underline"
                 to="/files"
               >
-                My Files.
+                {t("files.myFiles")}.
               </CustomLink>
             </span>
           </div>
