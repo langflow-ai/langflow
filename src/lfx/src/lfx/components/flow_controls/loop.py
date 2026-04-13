@@ -160,8 +160,9 @@ class LoopComponent(Component):
         repeat invocations surface the same failure instead of silently
         returning empty data or re-running the subgraph.
 
-        ctx is per-run, so a fresh execution of the flow starts with a clean
-        slate.
+        Production constructs a fresh Graph per request (via
+        `Graph.from_payload`), so `ctx` is effectively per-run and the
+        cached `_iterated` flag does not leak across executions.
         """
         if self.ctx.get(f"{self._id}_iterated", False):
             cached_error = self.ctx.get(f"{self._id}_iteration_error")
