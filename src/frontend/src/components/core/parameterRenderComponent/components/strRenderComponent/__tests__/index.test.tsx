@@ -90,7 +90,10 @@ const buildTemplateData = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const buildProps = (templateDataOverrides = {}, propOverrides: Record<string, unknown> = {}) => ({
+const buildProps = (
+  templateDataOverrides = {},
+  propOverrides: Record<string, unknown> = {},
+) => ({
   templateData: buildTemplateData(templateDataOverrides),
   name: "test_field",
   display_name: "Test Field",
@@ -164,13 +167,19 @@ describe("StrRenderComponent", () => {
     });
 
     it("renders CopyFieldAreaComponent for a multiline copy_field", () => {
-      render(<StrRenderComponent {...buildProps({ multiline: true, copy_field: true })} />);
+      render(
+        <StrRenderComponent
+          {...buildProps({ multiline: true, copy_field: true })}
+        />,
+      );
       expect(mockCopyFieldAreaComponent).toHaveBeenCalled();
       expect(mockTextAreaComponent).not.toHaveBeenCalled();
     });
 
     it("renders DropdownComponent when options are present", () => {
-      render(<StrRenderComponent {...buildProps({ options: ["a", "b", "c"] })} />);
+      render(
+        <StrRenderComponent {...buildProps({ options: ["a", "b", "c"] })} />,
+      );
       expect(mockDropdownComponent).toHaveBeenCalled();
       expect(mockInputComponent).not.toHaveBeenCalled();
     });
@@ -181,14 +190,20 @@ describe("StrRenderComponent", () => {
   describe("hasRefreshButton forwarding", () => {
     it("forwards hasRefreshButton=true to InputGlobalComponent", () => {
       render(
-        <StrRenderComponent {...buildProps({ type: "SecretStr", refresh_button: true })} />,
+        <StrRenderComponent
+          {...buildProps({ type: "SecretStr", refresh_button: true })}
+        />,
       );
       const receivedProps = mockInputGlobalComponent.mock.calls[0][0];
       expect(receivedProps.hasRefreshButton).toBe(true);
     });
 
     it("forwards hasRefreshButton=false to InputGlobalComponent when refresh_button is absent", () => {
-      render(<StrRenderComponent {...buildProps({ type: "SecretStr", refresh_button: false })} />);
+      render(
+        <StrRenderComponent
+          {...buildProps({ type: "SecretStr", refresh_button: false })}
+        />,
+      );
       const receivedProps = mockInputGlobalComponent.mock.calls[0][0];
       expect(receivedProps.hasRefreshButton).toBe(false);
     });
