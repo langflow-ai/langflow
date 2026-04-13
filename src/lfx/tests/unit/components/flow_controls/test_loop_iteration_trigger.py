@@ -103,11 +103,12 @@ async def test_item_only_topology_dispatches_each_row_to_chatoutput():
     # 3 rows -> 3 subgraph iterations -> 3 ChatOutput builds.
     assert len(chat_output_runs) == 3, f"ChatOutput should have been built once per row, got {len(chat_output_runs)}"
 
-    # Item inspector surfaces the dispatched inputs.
+    # Item inspector surfaces the dispatched inputs as a DataFrame so the
+    # UI renders them as a table rather than as JSON.
     loop_result = next(r for r in results if getattr(r, "vertex", None) and r.vertex.id == "loop")
     item = loop_result.result_dict.outputs["item"]
-    assert item["message"]["count"] == 3
-    assert [i["text"] for i in item["message"]["items"]] == ["Row 0", "Row 1", "Row 2"]
+    assert item["type"] == "array"
+    assert [row["text"] for row in item["message"]] == ["Row 0", "Row 1", "Row 2"]
 
 
 @pytest.mark.asyncio

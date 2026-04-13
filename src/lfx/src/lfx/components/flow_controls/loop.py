@@ -188,7 +188,7 @@ class LoopComponent(Component):
         self.update_ctx({f"{self._id}_aggregated": aggregated_results, f"{self._id}_iterated": True})
         return aggregated_results
 
-    async def item_output(self) -> Data:
+    async def item_output(self) -> DataFrame:
         """Display the inputs dispatched to the loop body.
 
         Also triggers the iteration (idempotent) so the loop runs when only
@@ -198,11 +198,14 @@ class LoopComponent(Component):
         entry point for driving the subgraph. The `item` branch is then
         stopped so downstream vertices aren't executed by the outer graph
         (the loop body runs internally via the subgraph in `_iterate`).
+
+        Returns the rows that were iterated over as a DataFrame so the
+        inspector renders them as a table rather than as JSON.
         """
         self.stop("item")
         await self._iterate()
         data_list = self.ctx.get(f"{self._id}_data", [])
-        return Data(data={"count": len(data_list), "items": [d.data for d in data_list]})
+        return DataFrame(data_list)
 
     async def done_output(self) -> DataFrame:
         """Return the aggregated results from the loop iteration.
