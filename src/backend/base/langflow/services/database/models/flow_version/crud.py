@@ -6,11 +6,7 @@ from lfx.log import logger
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import col, delete, func, select
 
-if TYPE_CHECKING:
-    from uuid import UUID
-
-    from sqlmodel.ext.asyncio.session import AsyncSession
-
+from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionConflictError,
     FlowVersionDeployedError,
@@ -23,6 +19,11 @@ from langflow.services.database.models.flow_version_deployment_attachment.model 
     FlowVersionDeploymentAttachment,
 )
 from langflow.services.deps import get_settings_service
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 MAX_VERSION_RETRIES = 3
 
@@ -97,12 +98,18 @@ async def create_flow_version_entry(
     # snapshot.
     try:
         max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
+        # Count a version as "deployed" only when the attachment still points to
+        # a live deployment row. This prevents orphaned attachments from
+        # blocking versions from being deleted.
         deployed_version_ids = (
             select(FlowVersionDeploymentAttachment.flow_version_id)
+            .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
             .where(
+                FlowVersionDeploymentAttachment.user_id == user_id,
+                Deployment.user_id == user_id,
                 col(FlowVersionDeploymentAttachment.flow_version_id).in_(
                     select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
-                )
+                ),
             )
             .distinct()
         )
@@ -173,12 +180,17 @@ async def get_flow_version_list(
     of those deployments are returned.  The boolean second element is True when
     the version is attached to *any* deployment (regardless of the filter).
     """
+    # Deployment status is derived from live parent joins so stale attachment
+    # rows (missing deployment parent) do not leak into API status.
     deployed_subquery = (
         select(FlowVersionDeploymentAttachment.flow_version_id)
+        .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
         .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            Deployment.user_id == user_id,
             col(FlowVersionDeploymentAttachment.flow_version_id).in_(
                 select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
-            )
+            ),
         )
         .distinct()
         .subquery()
@@ -194,9 +206,11 @@ async def get_flow_version_list(
     if deployment_ids:
         filter_subquery = (
             select(FlowVersionDeploymentAttachment.flow_version_id)
+            .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
             .where(
                 col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
                 FlowVersionDeploymentAttachment.user_id == user_id,
+                Deployment.user_id == user_id,
             )
             .distinct()
             .subquery()
@@ -247,13 +261,62 @@ async def has_deployment_attachments(
     flow_version_id: UUID,
     user_id: UUID | None = None,
 ) -> bool:
-    stmt = select(func.count(FlowVersionDeploymentAttachment.id)).where(
-        FlowVersionDeploymentAttachment.flow_version_id == flow_version_id,
+    """Check whether a flow version has live deployment attachments.
+
+    Returns True when at least one attachment row points to an existing
+    deployment.  When no live attachments are found, orphan attachment rows
+    (whose deployment parent was deleted without cascading) are pruned as a
+    side-effect so subsequent calls and delete guards do not keep
+    re-processing stale records.
+
+    Callers that only need a pure read should use a direct ``select`` with
+    an inner join on ``Deployment`` instead.
+    """
+    # First check only "live" attachments (attachment + existing deployment).
+    live_stmt = (
+        select(func.count(FlowVersionDeploymentAttachment.id))
+        .join(
+            Deployment,
+            Deployment.id == FlowVersionDeploymentAttachment.deployment_id,
+        )
+        .where(
+            FlowVersionDeploymentAttachment.flow_version_id == flow_version_id,
+        )
     )
     if user_id is not None:
-        stmt = stmt.where(FlowVersionDeploymentAttachment.user_id == user_id)
-    count = (await session.exec(stmt)).one()
-    return int(count or 0) > 0
+        live_stmt = live_stmt.where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            Deployment.user_id == user_id,
+        )
+    live_count = (await session.exec(live_stmt)).one()
+    if int(live_count or 0) > 0:
+        return True
+
+    # If no live attachments remain, opportunistically clean orphan rows so
+    # repeated delete/version checks don't keep re-processing stale records.
+    stale_attachment_ids_stmt = (
+        select(FlowVersionDeploymentAttachment.id)
+        .outerjoin(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
+        .where(
+            FlowVersionDeploymentAttachment.flow_version_id == flow_version_id,
+            Deployment.id.is_(None),
+        )
+    )
+    if user_id is not None:
+        stale_attachment_ids_stmt = stale_attachment_ids_stmt.where(FlowVersionDeploymentAttachment.user_id == user_id)
+    stale_attachment_ids = (await session.exec(stale_attachment_ids_stmt)).all()
+    if stale_attachment_ids:
+        await session.exec(
+            delete(FlowVersionDeploymentAttachment).where(
+                col(FlowVersionDeploymentAttachment.id).in_(stale_attachment_ids)
+            )
+        )
+        await logger.ainfo(
+            "Pruned %d orphan attachment(s) for flow_version %s",
+            len(stale_attachment_ids),
+            flow_version_id,
+        )
+    return False
 
 
 async def delete_flow_version_entry(

@@ -1157,12 +1157,14 @@ class TestSyncFlowVersionAttachments:
 
 class TestProviderAccountScopedSync:
     @pytest.mark.asyncio
+    @patch(f"{SYNC_MODULE}.delete_orphan_attachments_for_flow_ids", new_callable=AsyncMock)
     @patch(f"{SYNC_MODULE}._sync_deployments_and_attachments_by_provider", new_callable=AsyncMock)
     @patch(f"{SYNC_MODULE}.list_deployments_for_flows_with_provider_info", new_callable=AsyncMock)
     async def test_sync_flow_deployment_state_passes_provider_account_filter(
         self,
         mock_list_deployments,
         mock_sync_by_provider,
+        mock_delete_orphans,
     ):
         from langflow.api.v1.mappers.deployments.sync import sync_flow_deployment_state
 
@@ -1176,15 +1178,18 @@ class TestProviderAccountScopedSync:
         )
 
         assert mock_list_deployments.call_args.kwargs["provider_account_id"] == provider_account_id
+        mock_delete_orphans.assert_awaited_once()
         mock_sync_by_provider.assert_awaited_once()
 
     @pytest.mark.asyncio
+    @patch(f"{SYNC_MODULE}.delete_orphan_attachments_for_flow_ids", new_callable=AsyncMock)
     @patch(f"{SYNC_MODULE}._sync_deployments_and_attachments_by_provider", new_callable=AsyncMock)
     @patch(f"{SYNC_MODULE}.list_deployments_for_flows_with_provider_info", new_callable=AsyncMock)
     async def test_sync_flow_version_attachments_passes_provider_account_filter(
         self,
         mock_list_deployments,
         mock_sync_by_provider,
+        mock_delete_orphans,
     ):
         from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
 
@@ -1198,15 +1203,18 @@ class TestProviderAccountScopedSync:
         )
 
         assert mock_list_deployments.call_args.kwargs["provider_account_id"] == provider_account_id
+        mock_delete_orphans.assert_awaited_once()
         mock_sync_by_provider.assert_awaited_once()
 
     @pytest.mark.asyncio
+    @patch(f"{SYNC_MODULE}.delete_orphan_attachments_for_project", new_callable=AsyncMock)
     @patch(f"{SYNC_MODULE}._sync_deployments_and_attachments_by_provider", new_callable=AsyncMock)
     @patch(f"{SYNC_MODULE}.list_project_deployments_with_provider_info", new_callable=AsyncMock)
     async def test_sync_project_deployments_passes_provider_account_filter(
         self,
         mock_list_deployments,
         mock_sync_by_provider,
+        mock_delete_orphans,
     ):
         from langflow.api.v1.mappers.deployments.sync import sync_project_deployments
 
@@ -1220,6 +1228,73 @@ class TestProviderAccountScopedSync:
         )
 
         assert mock_list_deployments.call_args.kwargs["provider_account_id"] == provider_account_id
+        mock_delete_orphans.assert_awaited_once()
+        mock_sync_by_provider.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{SYNC_MODULE}.delete_orphan_attachments_for_flow_ids", new_callable=AsyncMock, side_effect=Exception("db"))
+    @patch(f"{SYNC_MODULE}._sync_deployments_and_attachments_by_provider", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.list_deployments_for_flows_with_provider_info", new_callable=AsyncMock)
+    async def test_sync_flow_deployment_state_continues_when_orphan_cleanup_fails(
+        self,
+        mock_list_deployments,
+        mock_sync_by_provider,
+        mock_delete_orphans,
+    ):
+        from langflow.api.v1.mappers.deployments.sync import sync_flow_deployment_state
+
+        mock_list_deployments.return_value = [(_mock_deployment_row("rk-1"), "watsonx-orchestrate")]
+        await sync_flow_deployment_state(
+            db=AsyncMock(),
+            flow_ids=[uuid4()],
+            user_id=uuid4(),
+        )
+
+        mock_delete_orphans.assert_awaited_once()
+        mock_sync_by_provider.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{SYNC_MODULE}.delete_orphan_attachments_for_flow_ids", new_callable=AsyncMock, side_effect=Exception("db"))
+    @patch(f"{SYNC_MODULE}._sync_deployments_and_attachments_by_provider", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.list_deployments_for_flows_with_provider_info", new_callable=AsyncMock)
+    async def test_sync_flow_version_attachments_continues_when_orphan_cleanup_fails(
+        self,
+        mock_list_deployments,
+        mock_sync_by_provider,
+        mock_delete_orphans,
+    ):
+        from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
+
+        mock_list_deployments.return_value = [(_mock_deployment_row("rk-1"), "watsonx-orchestrate")]
+        await sync_flow_version_attachments(
+            db=AsyncMock(),
+            flow_id=uuid4(),
+            user_id=uuid4(),
+        )
+
+        mock_delete_orphans.assert_awaited_once()
+        mock_sync_by_provider.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{SYNC_MODULE}.delete_orphan_attachments_for_project", new_callable=AsyncMock, side_effect=Exception("db"))
+    @patch(f"{SYNC_MODULE}._sync_deployments_and_attachments_by_provider", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.list_project_deployments_with_provider_info", new_callable=AsyncMock)
+    async def test_sync_project_deployments_continues_when_orphan_cleanup_fails(
+        self,
+        mock_list_deployments,
+        mock_sync_by_provider,
+        mock_delete_orphans,
+    ):
+        from langflow.api.v1.mappers.deployments.sync import sync_project_deployments
+
+        mock_list_deployments.return_value = [(_mock_deployment_row("rk-1"), "watsonx-orchestrate")]
+        await sync_project_deployments(
+            db=AsyncMock(),
+            project_id=uuid4(),
+            user_id=uuid4(),
+        )
+
+        mock_delete_orphans.assert_awaited_once()
         mock_sync_by_provider.assert_awaited_once()
 
 
@@ -2056,3 +2131,64 @@ class TestFlowVersionDeploymentAttachmentCrud:
 
         assert total == 4
         assert len(db.statements) == 1
+        # String-match on compiled SQL because these tests use captured
+        # statement objects without a real database engine.
+        statement_text = str(db.statements[0]).lower()
+        assert "join flow_version" in statement_text
+
+    @pytest.mark.asyncio
+    async def test_count_attachments_by_deployment_ids_joins_flow_version(self):
+        from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+            count_attachments_by_deployment_ids,
+        )
+
+        db = _CaptureDb(_FakeAllResult([]))
+        counts = await count_attachments_by_deployment_ids(
+            db,
+            user_id=uuid4(),
+            deployment_ids=[uuid4()],
+        )
+
+        assert counts == {}
+        assert len(db.statements) == 1
+        statement_text = str(db.statements[0]).lower()
+        assert "join flow_version" in statement_text
+
+    @pytest.mark.asyncio
+    async def test_delete_orphan_attachments_for_flow_ids_joins_flow_version_and_deployment(self):
+        from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+            delete_orphan_attachments_for_flow_ids,
+        )
+
+        db = _CaptureDb(SimpleNamespace(rowcount=2))
+        deleted = await delete_orphan_attachments_for_flow_ids(
+            db,
+            user_id=uuid4(),
+            flow_ids=[uuid4()],
+        )
+
+        assert deleted == 2
+        statement_text = str(db.statements[0]).lower()
+        assert "delete from flow_version_deployment_attachment" in statement_text
+        assert "join flow_version" in statement_text
+        assert "join deployment" in statement_text
+
+    @pytest.mark.asyncio
+    async def test_delete_orphan_attachments_for_project_joins_flow_scope_and_deployment(self):
+        from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+            delete_orphan_attachments_for_project,
+        )
+
+        db = _CaptureDb(SimpleNamespace(rowcount=1))
+        deleted = await delete_orphan_attachments_for_project(
+            db,
+            user_id=uuid4(),
+            project_id=uuid4(),
+        )
+
+        assert deleted == 1
+        statement_text = str(db.statements[0]).lower()
+        assert "delete from flow_version_deployment_attachment" in statement_text
+        assert "join flow_version" in statement_text
+        assert "join flow" in statement_text
+        assert "join deployment" in statement_text

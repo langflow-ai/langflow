@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select
 
 from langflow.services.database.models.deployment.model import Deployment
+from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
@@ -178,6 +179,12 @@ async def list_deployments_page(
         select(
             col(FlowVersionDeploymentAttachment.deployment_id).label("deployment_id"),
             func.count(func.distinct(FlowVersionDeploymentAttachment.flow_version_id)).label("attached_count"),
+        )
+        # Join FlowVersion so stale attachment rows with missing version parent
+        # do not inflate attached_count in deployment list responses.
+        .join(
+            FlowVersion,
+            FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
         )
         .where(FlowVersionDeploymentAttachment.user_id == user_id)
         .group_by(FlowVersionDeploymentAttachment.deployment_id)

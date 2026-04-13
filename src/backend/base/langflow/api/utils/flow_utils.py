@@ -10,6 +10,7 @@ from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 from lfx.services.deps import session_scope
 from sqlalchemy import delete
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError, parse_deployment_guard_error
@@ -17,6 +18,7 @@ from langflow.services.database.models.deployment.guards import check_flow_has_d
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.message.model import MessageTable
+from langflow.services.database.models.traces.model import SpanTable, TraceTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
@@ -101,6 +103,13 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         # by default (requires PRAGMA foreign_keys = ON), and this function follows
         # the existing pattern of explicitly deleting all child records.
         await session.exec(delete(FlowVersion).where(FlowVersion.flow_id == flow_id))
+        # span.trace_id FK lacks ON DELETE CASCADE in the DDL, so spans must
+        # be removed before traces to avoid an FK violation under
+        # PRAGMA foreign_keys=ON.
+        trace_ids = (await session.exec(select(TraceTable.id).where(TraceTable.flow_id == flow_id))).all()
+        if trace_ids:
+            await session.exec(delete(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)))
+            await session.exec(delete(TraceTable).where(col(TraceTable.id).in_(trace_ids)))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except DeploymentGuardError:
         raise

@@ -40,6 +40,14 @@ def _make_db() -> AsyncMock:
     return db
 
 
+class _ExecResult:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def all(self):
+        return self._rows
+
+
 # ---------------------------------------------------------------------------
 # In-memory SQLite fixtures
 # ---------------------------------------------------------------------------
@@ -185,6 +193,23 @@ async def test_list_deployments_page_negative_limit_raises():
             offset=0,
             limit=-5,
         )
+
+
+@pytest.mark.asyncio
+async def test_list_deployments_page_attachment_count_only_counts_live_flow_versions():
+    db = _make_db()
+    db.exec = AsyncMock(return_value=_ExecResult([]))
+    await list_deployments_page(
+        db,
+        user_id=uuid4(),
+        deployment_provider_account_id=uuid4(),
+        offset=0,
+        limit=20,
+    )
+
+    # String-match on compiled SQL because these tests use mocked sessions.
+    statement_text = str(db.exec.await_args.args[0]).lower()
+    assert "join flow_version" in statement_text
 
 
 @pytest.mark.asyncio

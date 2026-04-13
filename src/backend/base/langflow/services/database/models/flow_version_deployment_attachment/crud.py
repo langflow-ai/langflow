@@ -416,10 +416,17 @@ async def count_attachments_by_deployment_ids(
     if not deployment_ids:
         return {}
 
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
     stmt = (
         select(
             FlowVersionDeploymentAttachment.deployment_id,
             func.count(func.distinct(FlowVersionDeploymentAttachment.flow_version_id)),
+        )
+        # Count only attachments whose flow_version parent still exists.
+        .join(
+            FlowVersion,
+            FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
         )
         .where(
             FlowVersionDeploymentAttachment.user_id == user_id,
@@ -438,19 +445,83 @@ async def count_deployment_attachments(
     deployment_id: UUID,
     flow_ids: list[UUID] | None = None,
 ) -> int:
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
     stmt = (
         select(func.count())
         .select_from(FlowVersionDeploymentAttachment)
+        # Keep count aligned with "live" flow-version links only.
+        .join(
+            FlowVersion,
+            FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
+        )
         .where(
             FlowVersionDeploymentAttachment.user_id == user_id,
             FlowVersionDeploymentAttachment.deployment_id == deployment_id,
         )
     )
     if flow_ids:
-        from langflow.services.database.models.flow_version.model import FlowVersion
-
-        stmt = stmt.join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id).where(
-            col(FlowVersion.flow_id).in_(flow_ids),
-        )
+        stmt = stmt.where(col(FlowVersion.flow_id).in_(flow_ids))
     total = (await db.exec(stmt)).one()
     return int(total or 0)
+
+
+async def delete_orphan_attachments_for_flow_ids(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    flow_ids: list[UUID],
+) -> int:
+    """Delete attachment rows whose deployment parent is missing for the given flows."""
+    from langflow.services.database.models.deployment.model import Deployment
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
+    if not flow_ids:
+        return 0
+
+    # Scope to the requested flows, then select rows whose deployment parent
+    # is missing so we can safely prune stale attachment records.
+    stale_attachment_ids = (
+        select(FlowVersionDeploymentAttachment.id)
+        .join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id)
+        .outerjoin(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            col(FlowVersion.flow_id).in_(flow_ids),
+            Deployment.id.is_(None),
+        )
+    )
+    result = await db.exec(
+        delete(FlowVersionDeploymentAttachment).where(col(FlowVersionDeploymentAttachment.id).in_(stale_attachment_ids))
+    )
+    return int(result.rowcount or 0)
+
+
+async def delete_orphan_attachments_for_project(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    project_id: UUID,
+) -> int:
+    """Delete attachment rows with missing deployment parent for one project scope."""
+    from langflow.services.database.models.deployment.model import Deployment
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
+    # Project-scoped variant used before project guard retries/sync.
+    stale_attachment_ids = (
+        select(FlowVersionDeploymentAttachment.id)
+        .join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id)
+        .join(Flow, Flow.id == FlowVersion.flow_id)
+        .outerjoin(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            Flow.user_id == user_id,
+            Flow.folder_id == project_id,
+            Deployment.id.is_(None),
+        )
+    )
+    result = await db.exec(
+        delete(FlowVersionDeploymentAttachment).where(col(FlowVersionDeploymentAttachment.id).in_(stale_attachment_ids))
+    )
+    return int(result.rowcount or 0)

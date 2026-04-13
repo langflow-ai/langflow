@@ -15,7 +15,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlmodel import select
+from lfx.log.logger import logger
+from sqlmodel import col, delete, select
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -37,26 +38,53 @@ async def check_flow_has_deployed_versions(db: AsyncSession, *, flow_id: UUID) -
     """Raise when the flow still has flow versions attached to deployments.
 
     This is an app-level pre-delete guard. It intentionally checks for the
-    existence of at least one attachment and raises a friendly guard error.
+    existence of at least one *live* deployment attachment and raises a
+    friendly guard error.
+
+    If legacy/orphan attachment rows exist (for example from environments where
+    SQLite foreign key cascades were not enforced), this guard prunes them for
+    the target flow so they don't permanently block deletion.
     """
     attached = (
         await db.exec(
             select(FlowVersionDeploymentAttachment.id)
             .join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id)
+            .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
             .where(FlowVersion.flow_id == flow_id)
             .limit(1)
         )
     ).first()
-    if attached is None:
+    if attached is not None:
+        raise DeploymentGuardError(
+            code="FLOW_HAS_DEPLOYED_VERSIONS",
+            technical_detail=(
+                "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment "
+                "for the target flow."
+            ),
+            detail=get_friendly_guard_detail("FLOW_HAS_DEPLOYED_VERSIONS"),
+        )
+
+    stale_attachment_ids = (
+        await db.exec(
+            select(FlowVersionDeploymentAttachment.id)
+            .join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id)
+            .outerjoin(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
+            .where(
+                FlowVersion.flow_id == flow_id,
+                Deployment.id.is_(None),  # deployment no longer exists
+            )
+        )
+    ).all()
+    if not stale_attachment_ids:
         return
 
-    raise DeploymentGuardError(
-        code="FLOW_HAS_DEPLOYED_VERSIONS",
-        technical_detail=(
-            "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment "
-            "for the target flow."
-        ),
-        detail=get_friendly_guard_detail("FLOW_HAS_DEPLOYED_VERSIONS"),
+    await db.exec(
+        delete(FlowVersionDeploymentAttachment).where(col(FlowVersionDeploymentAttachment.id).in_(stale_attachment_ids))
+    )
+    await logger.ainfo(
+        "Pruned %d orphan deployment attachment(s) for flow %s",
+        len(stale_attachment_ids),
+        flow_id,
     )
 
 

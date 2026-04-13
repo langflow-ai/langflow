@@ -39,6 +39,8 @@ from langflow.services.database.models.deployment.crud import (
 from langflow.services.database.models.deployment.exceptions import parse_deployment_guard_error
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     delete_deployment_attachments_by_keys,
+    delete_orphan_attachments_for_flow_ids,
+    delete_orphan_attachments_for_project,
     delete_unbound_attachments,
 )
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
@@ -291,6 +293,21 @@ async def sync_flow_deployment_state(
         return
 
     deduplicated_flow_ids = list(dict.fromkeys(flow_ids))
+    try:
+        # Pre-clean known stale local rows (missing deployment parent) so
+        # downstream guard retries operate on current, reconcilable state.
+        await delete_orphan_attachments_for_flow_ids(
+            db=db,
+            user_id=user_id,
+            flow_ids=deduplicated_flow_ids,
+        )
+    except Exception:  # noqa: BLE001
+        await logger.awarning(
+            "Failed to delete orphan deployment attachments before flow sync (flows=%s)",
+            deduplicated_flow_ids,
+            exc_info=True,
+        )
+
     deployments_with_provider = await list_deployments_for_flows_with_provider_info(
         db,
         user_id=user_id,
@@ -321,6 +338,20 @@ async def sync_flow_version_attachments(
 
     Intended for targeted status refreshes only; avoid invoking in hot paths.
     """
+    try:
+        # Keep one-flow status sync resilient to stale legacy attachment rows.
+        await delete_orphan_attachments_for_flow_ids(
+            db=db,
+            user_id=user_id,
+            flow_ids=[flow_id],
+        )
+    except Exception:  # noqa: BLE001
+        await logger.awarning(
+            "Failed to delete orphan deployment attachments before flow-version sync (flow=%s)",
+            flow_id,
+            exc_info=True,
+        )
+
     deployments_with_provider = await list_deployments_for_flows_with_provider_info(
         db,
         user_id=user_id,
@@ -351,6 +382,21 @@ async def sync_project_deployments(
 
     Intended for guard-triggered repair or explicit refresh, not hot paths.
     """
+    try:
+        # Project-level guard retries can fail repeatedly on stale attachments;
+        # prune them before provider reconciliation.
+        await delete_orphan_attachments_for_project(
+            db=db,
+            user_id=user_id,
+            project_id=project_id,
+        )
+    except Exception:  # noqa: BLE001
+        await logger.awarning(
+            "Failed to delete orphan deployment attachments before project sync (project=%s)",
+            project_id,
+            exc_info=True,
+        )
+
     rows = await list_project_deployments_with_provider_info(
         db,
         user_id=user_id,

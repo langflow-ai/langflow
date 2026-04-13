@@ -156,6 +156,30 @@ async def test_cascade_delete_flow_raises_guard_error_from_app_level_check():
 
 
 @pytest.mark.asyncio
+async def test_cascade_delete_flow_prunes_orphan_attachments_before_delete_statements():
+    """cascade_delete_flow should remove stale attachment rows before deleting flow rows."""
+    flow_id = uuid4()
+
+    session = AsyncMock()
+    session.exec = AsyncMock(
+        side_effect=[
+            _ExecResult(None),  # live deployment attachment lookup
+            _ExecResult([uuid4()]),  # stale attachment lookup
+            _ExecResult(None),  # stale attachment delete
+            _ExecResult(None),  # message delete
+            _ExecResult(None),  # transaction delete
+            _ExecResult(None),  # vertex_build delete
+            _ExecResult(None),  # flow_version delete
+            _ExecResult(None),  # flow delete
+        ]
+    )
+
+    await cascade_delete_flow(session, flow_id)
+
+    assert session.exec.await_count == 8
+
+
+@pytest.mark.asyncio
 async def test_delete_flow_remaps_guard_error_to_flow_delete_message(monkeypatch):
     from langflow.api.v1.flows import delete_flow
 
