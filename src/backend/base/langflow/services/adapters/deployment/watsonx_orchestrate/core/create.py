@@ -52,6 +52,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_agent_payload_from_values,
     dedupe_list,
+    raise_as_deployment_error,
     validate_wxo_name,
 )
 
@@ -425,7 +426,16 @@ async def create_agent_deployment(
         tool_ids=tool_ids,
         llm=llm,
     )
-    return await asyncio.to_thread(clients.agent.create, payload)
+    try:
+        return await asyncio.to_thread(clients.agent.create, payload)
+    except Exception as exc:  # noqa: BLE001
+        raise_as_deployment_error(
+            exc,
+            error_prefix=ErrorPrefix.CREATE,
+            log_msg="Unexpected provider error during wxO agent create",
+            resource="agent",
+            resource_name=agent_name,
+        )
 
 
 def validate_create_flow_provider_data(
