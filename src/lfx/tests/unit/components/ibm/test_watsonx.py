@@ -67,8 +67,9 @@ class TestWatsonxAIComponent:
         from lfx.components.ibm.watsonx import WatsonxAIComponent
 
         assert len(WatsonxAIComponent._urls) > 0
-        assert "https://us-south.ml.cloud.ibm.com" in WatsonxAIComponent._urls
-        assert "https://eu-de.ml.cloud.ibm.com" in WatsonxAIComponent._urls
+        # _urls is a list of exact endpoint strings; equality check avoids substring ambiguity.
+        assert any(url == "https://us-south.ml.cloud.ibm.com" for url in WatsonxAIComponent._urls)
+        assert any(url == "https://eu-de.ml.cloud.ibm.com" for url in WatsonxAIComponent._urls)
 
     def test_inputs_defined(self, wx_component):
         """Test that all required inputs are defined."""
