@@ -68,10 +68,19 @@ class CredentialResolutionError(AuthenticationError):
         super().__init__(message, error_code="credentials_resolution_error", cause=cause)
 
 
-class DeploymentConflictError(DeploymentError):
+class ResourceConflictError(DeploymentError):
     """Raised when a deployment conflict occurs."""
 
-    def __init__(self, message: str = "Deployment conflict occurred", *, cause: Exception | None = None):
+    def __init__(
+        self,
+        message: str = "Deployment conflict occurred",
+        *,
+        resource: str | None = None,
+        resource_name: str | None = None,
+        cause: Exception | None = None,
+    ):
+        self.resource = str(resource).strip().lower() if resource is not None else None
+        self.resource_name = str(resource_name).strip() or None if resource_name is not None else None
         super().__init__(message, error_code="deployment_conflict", cause=cause)
 
 
@@ -221,14 +230,14 @@ class DeploymentNotConfiguredError(DeploymentError):
 def http_status_for_deployment_error(exc: DeploymentServiceError) -> int:
     """Return the HTTP status code that best represents a domain exception.
 
-    This is the inverse of :func:`raise_for_status_and_detail`: given a
+    This is the inverse of :func:`raise_as_deployment_error`: given a
     domain exception instance, it returns the HTTP status code that an API
     layer should use when surfacing the error to a client.
 
     Order mirrors the except-chain priority in the Langflow route layer:
     more specific exception types are checked before their parents.
     """
-    if isinstance(exc, DeploymentConflictError):
+    if isinstance(exc, ResourceConflictError):
         return status.HTTP_409_CONFLICT
     if isinstance(exc, InvalidDeploymentOperationError):
         return status.HTTP_400_BAD_REQUEST
@@ -262,11 +271,13 @@ def http_status_for_deployment_error(exc: DeploymentServiceError) -> int:
 
 
 # lru+ttl cache?
-def raise_for_status_and_detail(
+def raise_as_deployment_error(
     *,
     status_code: int | None,
     detail: str,
     message_prefix: str | None = None,
+    resource: str | None = None,
+    resource_name: str | None = None,
     cause: Exception | None = None,
 ) -> NoReturn:
     """Raise domain-specific deployment exceptions based on HTTP-like status/detail.
@@ -276,6 +287,10 @@ def raise_for_status_and_detail(
     *cause* to preserve the traceback chain for debugging.  Callers that
     handle security-sensitive errors (e.g. credential verification) should
     set it to None to avoid leaking provider responses through the exception chain.
+
+    For conflict errors, callers should pass ``resource`` and ``resource_name``
+    whenever known. This helper does not infer conflict hints from free-form
+    provider detail text.
     """
     detail_text = str(detail)
     detail_lower = detail_text.lower()
@@ -301,7 +316,12 @@ def raise_for_status_and_detail(
     if status_code == status.HTTP_410_GONE:
         raise ResourceNotFoundError(message, cause=cause) from cause
     if status_code == status.HTTP_409_CONFLICT:
-        raise DeploymentConflictError(message=message, cause=cause) from cause
+        raise ResourceConflictError(
+            message=message,
+            resource=resource,
+            resource_name=resource_name,
+            cause=cause,
+        ) from cause
     if status_code == status.HTTP_429_TOO_MANY_REQUESTS:
         raise RateLimitError(message=message, cause=cause) from cause
     if status_code in {status.HTTP_408_REQUEST_TIMEOUT, status.HTTP_504_GATEWAY_TIMEOUT}:
@@ -311,7 +331,12 @@ def raise_for_status_and_detail(
     if "not found" in detail_lower:
         raise ResourceNotFoundError(message, cause=cause) from cause
     if "already exists" in detail_lower or "conflict" in detail_lower:
-        raise DeploymentConflictError(message=message, cause=cause) from cause
+        raise ResourceConflictError(
+            message=message,
+            resource=resource,
+            resource_name=resource_name,
+            cause=cause,
+        ) from cause
     if "unprocessable" in detail_lower:
         raise InvalidContentError(message=message, cause=cause) from cause
     if "too many requests" in detail_lower or "rate limit" in detail_lower:

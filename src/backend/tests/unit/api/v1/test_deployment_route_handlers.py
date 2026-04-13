@@ -25,8 +25,8 @@ from langflow.api.v1.schemas.deployments import (
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
-    DeploymentConflictError,
     DeploymentNotFoundError,
+    ResourceConflictError,
     ServiceUnavailableError,
 )
 from lfx.services.adapters.deployment.schema import (
@@ -2404,17 +2404,59 @@ class TestHandleAdapterErrors:
         deployment_mapper.format_conflict_detail.return_value = "friendly detail"
 
         with pytest.raises(HTTPException) as exc_info, handle_adapter_errors(mapper=deployment_mapper):
-            raise DeploymentConflictError(message="raw provider conflict")
+            raise ResourceConflictError(message="raw provider conflict")
 
         assert exc_info.value.status_code == 409
         assert exc_info.value.detail == "friendly detail"
-        deployment_mapper.format_conflict_detail.assert_called_once_with("raw provider conflict")
+        deployment_mapper.format_conflict_detail.assert_called_once_with(
+            "raw provider conflict",
+            resource=None,
+            resource_name=None,
+        )
+
+    def test_maps_conflict_passes_structured_resource_to_mapper_formatter(self):
+        from langflow.api.v1.mappers.deployments.helpers import handle_adapter_errors
+
+        deployment_mapper = MagicMock()
+        deployment_mapper.format_conflict_detail.return_value = "friendly detail"
+
+        with pytest.raises(HTTPException) as exc_info, handle_adapter_errors(mapper=deployment_mapper):
+            raise ResourceConflictError(message="raw provider conflict", resource="tool")
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == "friendly detail"
+        deployment_mapper.format_conflict_detail.assert_called_once_with(
+            "raw provider conflict",
+            resource="tool",
+            resource_name=None,
+        )
+
+    def test_maps_conflict_passes_structured_resource_name_to_mapper_formatter(self):
+        from langflow.api.v1.mappers.deployments.helpers import handle_adapter_errors
+
+        deployment_mapper = MagicMock()
+        deployment_mapper.format_conflict_detail.return_value = "friendly detail"
+
+        with pytest.raises(HTTPException) as exc_info, handle_adapter_errors(mapper=deployment_mapper):
+            raise ResourceConflictError(
+                message="raw provider conflict",
+                resource="tool",
+                resource_name="Simple_Agent",
+            )
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == "friendly detail"
+        deployment_mapper.format_conflict_detail.assert_called_once_with(
+            "raw provider conflict",
+            resource="tool",
+            resource_name="Simple_Agent",
+        )
 
     def test_maps_conflict_without_mapper_passthrough(self):
         from langflow.api.v1.mappers.deployments.helpers import handle_adapter_errors
 
         with pytest.raises(HTTPException) as exc_info, handle_adapter_errors():
-            raise DeploymentConflictError(message="raw provider conflict")
+            raise ResourceConflictError(message="raw provider conflict")
 
         assert exc_info.value.status_code == 409
         assert exc_info.value.detail == "raw provider conflict"

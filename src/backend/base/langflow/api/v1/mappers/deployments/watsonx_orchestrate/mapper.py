@@ -247,21 +247,43 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     ) -> str:
         return self._parse_and_check_url(provider_data).url
 
-    def format_conflict_detail(self, raw_message: str) -> str:
-        lower = raw_message.lower()
-        if "agent" in lower and ("already exists" in lower or "conflict" in lower):
+    def format_conflict_detail(
+        self,
+        raw_message: str,
+        *,
+        resource: str | None = None,
+        resource_name: str | None = None,
+    ) -> str:
+        normalized_resource_name = str(resource_name or "").strip() or None
+        if resource == "tool":
             return (
-                "An agent with this name already exists in the provider. "
-                "Please choose a different name or delete the existing agent first."
+                f"A tool with name '{normalized_resource_name}' already exists in the provider. "
+                "Please choose a different name."
+                if normalized_resource_name
+                else "A tool with this name already exists in the provider. Please choose a different name."
             )
-        if ("connection" in lower or "app_id" in lower) and ("already exists" in lower or "conflict" in lower):
+        if resource == "connection":
             return (
-                "A connection referenced in this request already exists in the provider. "
+                f"A connection with app_id '{normalized_resource_name}' already exists in the provider. "
+                "Reference it as an existing connection instead of creating a new one."
+                if normalized_resource_name
+                else "A connection referenced in this request already exists in the provider. "
                 "Reference it as an existing connection instead of creating a new one."
             )
-        if "tool" in lower and ("already exists" in lower or "conflict" in lower):
-            return "A tool with this name already exists in the provider. Please choose a different name."
-        return super().format_conflict_detail(raw_message)
+        if resource == "agent":
+            return (
+                f"An agent with name '{normalized_resource_name}' already exists in the provider. "
+                "Please choose a different name or delete the existing agent first."
+                if normalized_resource_name
+                else "An agent with this name already exists in the provider. "
+                "Please choose a different name or delete the existing agent first."
+            )
+
+        return super().format_conflict_detail(
+            raw_message,
+            resource=resource,
+            resource_name=resource_name,
+        )
 
     def _parse_and_check_url(
         self,
