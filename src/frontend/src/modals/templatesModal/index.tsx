@@ -50,16 +50,36 @@ export default function TemplatesModal({
     {
       title: t("templatesModal.title"),
       items: [
-        { title: t("templatesModal.getStarted"), icon: "SquarePlay", id: "get-started" },
-        { title: t("templatesModal.allTemplates"), icon: "LayoutPanelTop", id: "all-templates" },
+        {
+          title: t("templatesModal.getStarted"),
+          icon: "SquarePlay",
+          id: "get-started",
+        },
+        {
+          title: t("templatesModal.allTemplates"),
+          icon: "LayoutPanelTop",
+          id: "all-templates",
+        },
       ],
     },
     {
       title: t("templatesModal.useCases"),
       items: [
-        { title: t("templatesModal.assistants"), icon: "BotMessageSquare", id: "assistants" },
-        { title: t("templatesModal.classification"), icon: "Tags", id: "classification" },
-        { title: t("templatesModal.coding"), icon: "TerminalIcon", id: "coding" },
+        {
+          title: t("templatesModal.assistants"),
+          icon: "BotMessageSquare",
+          id: "assistants",
+        },
+        {
+          title: t("templatesModal.classification"),
+          icon: "Tags",
+          id: "classification",
+        },
+        {
+          title: t("templatesModal.coding"),
+          icon: "TerminalIcon",
+          id: "coding",
+        },
         {
           title: t("templatesModal.contentGeneration"),
           icon: "Newspaper",
@@ -73,7 +93,11 @@ export default function TemplatesModal({
     {
       title: t("templatesModal.methodology"),
       items: [
-        { title: t("templatesModal.prompting"), icon: "MessagesSquare", id: "chatbots" },
+        {
+          title: t("templatesModal.prompting"),
+          icon: "MessagesSquare",
+          id: "chatbots",
+        },
         { title: t("templatesModal.rag"), icon: "Database", id: "rag" },
         { title: t("templatesModal.agents"), icon: "Bot", id: "agents" },
       ],
@@ -107,7 +131,9 @@ export default function TemplatesModal({
               <BaseModal.Footer>
                 <div className="flex w-full flex-col justify-between gap-4 pb-4 sm:flex-row sm:items-center">
                   <div className="flex flex-col items-start justify-center">
-                    <div className="font-semibold">{t("templatesModal.startFromScratch")}</div>
+                    <div className="font-semibold">
+                      {t("templatesModal.startFromScratch")}
+                    </div>
                     <div className="text-sm text-muted-foreground">
                       {t("templatesModal.startFromScratchDescription")}
                     </div>

@@ -28,7 +28,9 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
               className="pt-5 font-chivo text-2xl font-semibold text-foreground"
               data-testid="mainpage_title"
             >
-              {folders?.length > 1 ? t("emptyPage.emptyProject") : t("emptyPage.startBuilding")}
+              {folders?.length > 1
+                ? t("emptyPage.emptyProject")
+                : t("emptyPage.startBuilding")}
             </h3>
             <p
               data-testid="empty-project-description"

@@ -26,10 +26,14 @@ export const useGetBasicExamplesQuery: useQueryFunctionType<
     return data;
   };
 
-  const queryResult = query(["useGetBasicExamplesQuery", i18n.language], responseFn, {
-    ...options,
-    retry: 3,
-  });
+  const queryResult = query(
+    ["useGetBasicExamplesQuery", i18n.language],
+    responseFn,
+    {
+      ...options,
+      retry: 3,
+    },
+  );
 
   return queryResult;
 };
