@@ -63,6 +63,7 @@ export default function SaveSnapshotButton({
             placeholder="Version name (optional)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            maxLength={500}
             onKeyDown={(e) => {
               if (
                 e.key === "Enter" &&
