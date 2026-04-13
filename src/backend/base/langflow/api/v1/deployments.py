@@ -904,6 +904,46 @@ async def list_deployment_snapshots(
     )
 
 
+@router.get("/snapshots/check-names")
+async def check_snapshot_names(
+    provider_id: DeploymentProviderAccountIdQuery,
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
+    names: Annotated[list[str], Query(description="Tool names to check for existence.")],
+):
+    """Check which tool names already exist in the provider.
+
+    Returns a mapping of each queried name to a boolean indicating existence.
+    Uses the provider SDK's name-based lookup for efficient server-side filtering.
+    """
+    if not names:
+        return {"existing_names": []}
+
+    provider_account = await get_owned_provider_account_or_404(
+        provider_id=provider_id,
+        user_id=current_user.id,
+        db=session,
+    )
+    deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
+    with (
+        handle_adapter_errors(mapper=get_deployment_mapper(provider_account.provider_key)),
+        deployment_provider_scope(
+            provider_account.id,
+        ),
+    ):
+        try:
+            existing = await deployment_adapter.check_tool_names_exist(
+                user_id=current_user.id,
+                names=names,
+                db=session,
+            )
+        except Exception:  # noqa: BLE001
+            # If the adapter doesn't support name-check, return empty.
+            existing = []
+
+    return {"existing_names": existing}
+
+
 @router.patch(
     "/snapshots/{provider_snapshot_id}",
     response_model=SnapshotUpdateResponse,
