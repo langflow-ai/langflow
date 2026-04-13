@@ -24,15 +24,12 @@ import argparse
 import importlib
 import json
 import pkgutil
+import re
 import sys
 from pathlib import Path
 
-import re
-
 OUTPUT_PATH = Path(__file__).parent.parent.parent / "src/backend/base/langflow/locales/en.json"
-STARTER_PROJECTS_DIR = (
-    Path(__file__).parent.parent.parent / "src/backend/base/langflow/initial_setup/starter_projects"
-)
+STARTER_PROJECTS_DIR = Path(__file__).parent.parent.parent / "src/backend/base/langflow/initial_setup/starter_projects"
 
 
 def _safe_key(name: str) -> str:

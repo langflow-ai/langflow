@@ -78,9 +78,9 @@ def translate_starter_flows(flow_reads: list, locale: str) -> list:
         flow_copy = copy.copy(flow)
         flow_copy.name_key = key
         flow_copy.name = translate(f"starter_flows.{key}.name", locale, flow.name or "")
-        flow_copy.description = translate(
-            f"starter_flows.{key}.description", locale, flow.description or ""
-        ) or flow_copy.description
+        flow_copy.description = (
+            translate(f"starter_flows.{key}.description", locale, flow.description or "") or flow_copy.description
+        )
         result.append(flow_copy)
     return result
 
