@@ -58,7 +58,11 @@ export default function SaveSnapshotButton({
       description="Capture the current state as a restore point"
       actionSlot={
         <div className="flex items-center gap-2">
+          <label htmlFor="snapshot-description" className="sr-only">
+            Version name (optional)
+          </label>
           <input
+            id="snapshot-description"
             type="text"
             placeholder="Version name (optional)"
             value={description}
