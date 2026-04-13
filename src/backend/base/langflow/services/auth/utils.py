@@ -362,7 +362,6 @@ def encrypt_api_key(api_key: str, settings_service: SettingsService | None = Non
 def decrypt_api_key(
     encrypted_api_key: str,
     settings_service: SettingsService | None = None,  # noqa: ARG001
-    fernet_obj=None,  # noqa: ARG001
 ) -> str:
     return _auth_service().decrypt_api_key(encrypted_api_key)
 
