@@ -16,6 +16,11 @@ maintainers = [
     { name = "Italo dos Anjos", email = "italojohnnydosanjos@gmail.com" },
 ]
 
+[tool.uv]
+override-dependencies = [
+    "litellm>=1.83.0"
+]
+
 dependencies = [
     "lfx~=0.4.0",
     "fastapi>=0.135.0,<1.0.0",
