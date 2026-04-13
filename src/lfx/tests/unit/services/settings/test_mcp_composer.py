@@ -407,16 +407,17 @@ class TestPortChangeHandling:
         assert kwargs["legacy_sse_url"] == f"{streamable_url}/sse"
 
 
-class TestOAuthCallbackEnvMapping:
-    """Test that OAuth callback URL is mapped to the correct env var for mcp-composer."""
+class TestOAuthCallbackConfigForwarding:
+    """Test that OAuth callback config is forwarded to process startup unchanged."""
 
     @pytest.mark.asyncio
-    async def test_callback_url_mapped_to_oauth_callback_path(self, mcp_service):
-        """Verify oauth_callback_url is sent as OAUTH_CALLBACK_PATH, not OAUTH_CALLBACK_URL.
+    async def test_callback_url_forwarded_to_start_process_auth_config(self, mcp_service):
+        """Verify oauth_callback_url is preserved when passed to process startup.
 
-        mcp-composer's ServerSettings model expects a 'callback_path' field
-        (populated via OAUTH_CALLBACK_PATH env var). Sending OAUTH_CALLBACK_URL
-        produces an 'Extra inputs are not permitted' Pydantic validation error.
+        This test patches _start_project_composer_process, so it does not verify
+        env-var mapping such as OAUTH_CALLBACK_PATH vs OAUTH_CALLBACK_URL. It
+        only verifies that _do_start_project_composer forwards the callback URL
+        in auth_config to the process-start method unchanged.
         """
         project_id = "callback-test"
         callback = "http://localhost:9000/auth/idaas/callback"
@@ -458,7 +459,7 @@ class TestOAuthCallbackEnvMapping:
         # auth_config is the 5th positional arg (index 4)
         passed_auth = mock_start.call_args[0][4]
 
-        # The auth_config should still carry the value under oauth_callback_url
+        # The auth_config should still carry the value under oauth_callback_url.
         assert passed_auth["oauth_callback_url"] == callback
 
     @pytest.mark.asyncio
