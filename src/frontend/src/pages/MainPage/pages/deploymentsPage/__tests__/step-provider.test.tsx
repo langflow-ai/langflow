@@ -54,7 +54,7 @@ const makeEnvironment = (
   id: "env-1",
   name: "Prod Environment",
   provider_key: "watsonx-orchestrate",
-  url: "https://api.prod.example.com",
+  provider_data: { url: "https://api.prod.example.com" },
   created_at: "2025-05-01T00:00:00Z",
   updated_at: "2025-05-01T00:00:00Z",
   ...overrides,
@@ -127,7 +127,7 @@ describe("With existing environments", () => {
         makeEnvironment({
           id: "env-2",
           name: "Staging",
-          url: "https://api.staging.example.com",
+          provider_data: { url: "https://api.staging.example.com" },
         }),
       ],
     };

@@ -49,7 +49,9 @@ export default function ProviderPhaseContent({
             >
               <span className="text-sm font-medium">{provider.name}</span>
               <span className="text-xs text-muted-foreground">
-                {provider.url}
+                {typeof provider.provider_data?.url === "string"
+                  ? provider.provider_data.url
+                  : "—"}
               </span>
             </Label>
           </div>

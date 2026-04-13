@@ -249,7 +249,7 @@ export type LogsLogType = {
 export type VertexDataTypeAPI = {
   results: { [key: string]: string };
   outputs: { [key: string]: OutputLogType };
-  logs: { [key: string]: LogsLogType };
+  logs: { [key: string]: LogsLogType[] };
   messages: ChatOutputType[] | ChatInputType[];
   inactive?: boolean;
   timedelta?: number;

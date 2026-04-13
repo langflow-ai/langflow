@@ -25,8 +25,8 @@ from langflow.api.v1.schemas.deployments import (
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
-    DeploymentConflictError,
     DeploymentNotFoundError,
+    ResourceConflictError,
     ServiceUnavailableError,
 )
 from lfx.services.adapters.deployment.schema import (
@@ -682,6 +682,103 @@ class TestListDeploymentsFlowIdsFilter:
 
 
 # ---------------------------------------------------------------------------
+# list_deployments: project_id filter
+# ---------------------------------------------------------------------------
+
+
+class TestListDeploymentsProjectIdFilter:
+    @pytest.mark.asyncio
+    async def test_load_from_provider_rejects_project_id(self):
+        """project_id filtering is not supported when load_from_provider=true."""
+        from langflow.api.v1.deployments import list_deployments
+
+        with pytest.raises(HTTPException) as exc_info:
+            await list_deployments(
+                provider_id=uuid4(),
+                session=AsyncMock(),
+                current_user=_fake_user(),
+                params=SimpleNamespace(page=1, size=20),
+                deployment_type=None,
+                load_from_provider=True,
+                project_id=uuid4(),
+            )
+        assert exc_info.value.status_code == 422
+        assert "project_id" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_project_id_threaded_to_synced(
+        self,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_list_synced,
+    ):
+        """When project_id is supplied it is forwarded to list_deployments_synced."""
+        from langflow.api.v1.deployments import list_deployments
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        mock_resolve_adapter.return_value = MagicMock()
+        mapper = MagicMock()
+        mapper.shape_deployment_list_items.return_value = []
+        mock_get_mapper.return_value = mapper
+        mock_list_synced.return_value = ([], 0)
+
+        pid = uuid4()
+        await list_deployments(
+            provider_id=pa.id,
+            session=AsyncMock(),
+            current_user=_fake_user(),
+            params=SimpleNamespace(page=1, size=20),
+            deployment_type=None,
+            load_from_provider=False,
+            project_id=pid,
+        )
+
+        mock_list_synced.assert_awaited_once()
+        assert mock_list_synced.call_args.kwargs["project_id"] == pid
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_project_id_none_when_omitted(
+        self,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_list_synced,
+    ):
+        """When project_id is not supplied, None is forwarded (no filter)."""
+        from langflow.api.v1.deployments import list_deployments
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        mock_resolve_adapter.return_value = MagicMock()
+        mapper = MagicMock()
+        mapper.shape_deployment_list_items.return_value = []
+        mock_get_mapper.return_value = mapper
+        mock_list_synced.return_value = ([], 0)
+
+        await list_deployments(
+            provider_id=pa.id,
+            session=AsyncMock(),
+            current_user=_fake_user(),
+            params=SimpleNamespace(page=1, size=20),
+            deployment_type=None,
+            load_from_provider=False,
+        )
+
+        mock_list_synced.assert_awaited_once()
+        assert mock_list_synced.call_args.kwargs["project_id"] is None
+
+
+# ---------------------------------------------------------------------------
 # config/snapshot passthrough listing routes
 # ---------------------------------------------------------------------------
 
@@ -882,7 +979,6 @@ class TestListDeploymentFlowVersionsRoute:
 
 class TestProviderAccountRoutes:
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.to_provider_account_response", return_value={"ok": True})
     @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -893,7 +989,6 @@ class TestProviderAccountRoutes:
         mock_get_mapper,
         mock_resolve_adapter,
         mock_update_provider_account,
-        mock_to_provider_response,  # noqa: ARG002
     ):
         """PATCH skips credential verification when only name changes."""
         from langflow.api.v1.deployments import update_provider_account
@@ -971,9 +1066,8 @@ class TestProviderAccountRoutes:
         from langflow.api.v1.deployments import create_provider_account
 
         mapper = MagicMock()
-        mapper.resolve_verify_credentials.return_value = MagicMock()
-        mapper.resolve_credential_fields.return_value = {"api_key": "api-key"}  # pragma: allowlist secret
-        mapper.resolve_provider_tenant_id.return_value = "tenant-1"
+        mapper.resolve_verify_credentials_for_create.return_value = MagicMock()
+        mapper.resolve_provider_account_create.return_value = MagicMock()
         mock_get_mapper.return_value = mapper
 
         adapter = AsyncMock()
@@ -983,8 +1077,10 @@ class TestProviderAccountRoutes:
         payload = DeploymentProviderAccountCreateRequest(
             name="prod",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
-            provider_data={"api_key": "api-key"},  # pragma: allowlist secret
+            provider_data={
+                "url": "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+                "api_key": "api-key",  # pragma: allowlist secret
+            },
         )
 
         with pytest.raises(HTTPException) as exc_info:
@@ -2308,17 +2404,59 @@ class TestHandleAdapterErrors:
         deployment_mapper.format_conflict_detail.return_value = "friendly detail"
 
         with pytest.raises(HTTPException) as exc_info, handle_adapter_errors(mapper=deployment_mapper):
-            raise DeploymentConflictError(message="raw provider conflict")
+            raise ResourceConflictError(message="raw provider conflict")
 
         assert exc_info.value.status_code == 409
         assert exc_info.value.detail == "friendly detail"
-        deployment_mapper.format_conflict_detail.assert_called_once_with("raw provider conflict")
+        deployment_mapper.format_conflict_detail.assert_called_once_with(
+            "raw provider conflict",
+            resource=None,
+            resource_name=None,
+        )
+
+    def test_maps_conflict_passes_structured_resource_to_mapper_formatter(self):
+        from langflow.api.v1.mappers.deployments.helpers import handle_adapter_errors
+
+        deployment_mapper = MagicMock()
+        deployment_mapper.format_conflict_detail.return_value = "friendly detail"
+
+        with pytest.raises(HTTPException) as exc_info, handle_adapter_errors(mapper=deployment_mapper):
+            raise ResourceConflictError(message="raw provider conflict", resource="tool")
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == "friendly detail"
+        deployment_mapper.format_conflict_detail.assert_called_once_with(
+            "raw provider conflict",
+            resource="tool",
+            resource_name=None,
+        )
+
+    def test_maps_conflict_passes_structured_resource_name_to_mapper_formatter(self):
+        from langflow.api.v1.mappers.deployments.helpers import handle_adapter_errors
+
+        deployment_mapper = MagicMock()
+        deployment_mapper.format_conflict_detail.return_value = "friendly detail"
+
+        with pytest.raises(HTTPException) as exc_info, handle_adapter_errors(mapper=deployment_mapper):
+            raise ResourceConflictError(
+                message="raw provider conflict",
+                resource="tool",
+                resource_name="Simple_Agent",
+            )
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == "friendly detail"
+        deployment_mapper.format_conflict_detail.assert_called_once_with(
+            "raw provider conflict",
+            resource="tool",
+            resource_name="Simple_Agent",
+        )
 
     def test_maps_conflict_without_mapper_passthrough(self):
         from langflow.api.v1.mappers.deployments.helpers import handle_adapter_errors
 
         with pytest.raises(HTTPException) as exc_info, handle_adapter_errors():
-            raise DeploymentConflictError(message="raw provider conflict")
+            raise ResourceConflictError(message="raw provider conflict")
 
         assert exc_info.value.status_code == 409
         assert exc_info.value.detail == "raw provider conflict"

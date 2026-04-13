@@ -223,6 +223,10 @@ class Component(CustomComponent):
     def get_output_logs(self) -> dict[str, Any]:
         return self._output_logs
 
+    def get_logs(self) -> list[Log]:
+        """Return the current list of logs for this component."""
+        return self._logs
+
     def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
         source_dict = {}
         if id_:
@@ -347,6 +351,9 @@ class Component(CustomComponent):
 
     def set_event_manager(self, event_manager: EventManager | None = None) -> None:
         self._event_manager = event_manager
+
+    def set_current_output(self, output_name: str) -> None:
+        self._current_output = output_name
 
     def reset_all_output_values(self) -> None:
         """Reset all output values to UNDEFINED."""
@@ -1013,7 +1020,10 @@ class Component(CustomComponent):
 
     def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
-        return_type = get_type_hints(method).get("return")
+        try:
+            return_type = get_type_hints(method).get("return")
+        except TypeError:
+            return []
         if return_type is None:
             return []
         extracted_return_types = self._extract_return_type(return_type)

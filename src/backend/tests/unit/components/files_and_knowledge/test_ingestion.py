@@ -106,6 +106,16 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         with pytest.raises(ValueError, match="Column 'nonexistent' not found in DataFrame"):
             component._validate_column_config(data_df)
 
+    def test_new_knowledge_dialog_uses_provider_credentials(self, component_class, default_kwargs):
+        """Test the create-knowledge dialog no longer exposes a redundant API key override."""
+        component = component_class(**default_kwargs)
+        dialog_inputs = component.inputs[0].dialog_inputs["fields"]["data"]["node"]
+        embedding_model_input = dialog_inputs["template"]["02_embedding_model"]
+
+        assert dialog_inputs["field_order"] == ["01_new_kb_name", "02_embedding_model"]
+        assert "03_api_key" not in dialog_inputs["template"]
+        assert "configured credentials" in embedding_model_input.info
+
     @patch("lfx.components.files_and_knowledge.ingestion.get_settings_service")
     @patch("lfx.components.files_and_knowledge.ingestion.encrypt_api_key")
     def test_build_embedding_metadata(self, mock_encrypt, mock_get_settings, component_class, default_kwargs):
@@ -309,7 +319,6 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         field_value = {
             "01_new_kb_name": "new_test_kb",
             "02_embedding_model": model_selection,
-            "03_api_key": "test-key",
         }
 
         # Mock embedding validation
@@ -322,8 +331,8 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
         assert result["knowledge_base"]["value"] == "new_test_kb"
         assert "new_test_kb" in result["knowledge_base"]["options"]
-        assert mock_get_embeddings.call_args.kwargs["api_key"] == "test-key"
-        assert mock_save_metadata.call_args.kwargs["api_key"] == "test-key"
+        assert "api_key" not in mock_get_embeddings.call_args.kwargs
+        assert "api_key" not in mock_save_metadata.call_args.kwargs
 
     @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
     async def test_build_kb_info_with_message_input(self, mock_get_embeddings, component_class, default_kwargs):
@@ -353,7 +362,6 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         field_value = {
             "01_new_kb_name": "invalid@name",  # Invalid character
             "02_embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "03_api_key": None,
         }
 
         with pytest.raises(ValueError, match="Invalid knowledge base name"):

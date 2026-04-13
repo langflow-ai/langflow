@@ -534,8 +534,10 @@ describe("Create mode — buildProviderAccountPayload", () => {
     expect(payload).toEqual({
       name: "My Account",
       provider_key: "watsonx-orchestrate",
-      url: "https://api.example.com",
-      provider_data: { api_key: "secret-key-123" }, // pragma: allowlist secret
+      provider_data: {
+        url: "https://api.example.com",
+        api_key: "secret-key-123", // pragma: allowlist secret
+      },
     });
   });
 
@@ -555,7 +557,7 @@ describe("Create mode — buildProviderAccountPayload", () => {
     expect(payload).toBeDefined();
     if (!payload) return;
     expect(payload.name).toBe("padded");
-    expect(payload.url).toBe("https://padded.com");
+    expect(payload.provider_data.url).toBe("https://padded.com");
     expect(payload.provider_data.api_key).toBe("padded-key"); // pragma: allowlist secret
   });
 });
@@ -565,6 +567,34 @@ describe("Create mode — buildProviderAccountPayload", () => {
 // ---------------------------------------------------------------------------
 
 describe("Create mode — buildDeploymentPayload", () => {
+  it("includes project_id when provided in initial state", () => {
+    const { result } = renderCreateHook({
+      projectId: "folder-123",
+    });
+
+    act(() => {
+      result.current.setDeploymentName("Test Agent");
+      result.current.setSelectedLlm("gpt-4");
+      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+    });
+
+    const payload = result.current.buildDeploymentPayload("provider-1");
+    expect(payload.project_id).toBe("folder-123");
+  });
+
+  it("omits project_id when no project is resolved", () => {
+    const { result } = renderCreateHook();
+
+    act(() => {
+      result.current.setDeploymentName("Test Agent");
+      result.current.setSelectedLlm("gpt-4");
+      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+    });
+
+    const payload = result.current.buildDeploymentPayload("provider-1");
+    expect(payload).not.toHaveProperty("project_id");
+  });
+
   it("builds correct spec with name, description, and type", () => {
     const { result } = renderCreateHook();
 
@@ -596,7 +626,7 @@ describe("Create mode — buildDeploymentPayload", () => {
     expect(payload.provider_data.llm).toBe("granite-3b");
   });
 
-  it("builds bind operations for each attached flow", () => {
+  it("builds add_flows entries for each attached flow", () => {
     const { result } = renderCreateHook();
 
     act(() => {
@@ -748,7 +778,7 @@ describe("Create mode — buildDeploymentPayload", () => {
     expect(payload.provider_data.connections).toEqual([]);
   });
 
-  it("returns empty operations when no flows attached", () => {
+  it("returns empty add_flows when no flows attached", () => {
     const { result } = renderCreateHook();
 
     act(() => {

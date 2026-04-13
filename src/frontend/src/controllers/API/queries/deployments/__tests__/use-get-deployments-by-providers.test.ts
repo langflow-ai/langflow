@@ -71,22 +71,22 @@ describe("useGetDeploymentsByProviders", () => {
     });
   });
 
-  it("combine merges deployments and injects provider_account_id", () => {
+  it("combine merges deployments and preserves provider_id", () => {
     useGetDeploymentsByProviders(["prov-1", "prov-2"]);
 
     const mockResults = [
       {
         data: {
           deployments: [
-            { id: "d1", name: "Agent 1" },
-            { id: "d2", name: "Agent 2" },
+            { id: "d1", name: "Agent 1", provider_id: "prov-1" },
+            { id: "d2", name: "Agent 2", provider_id: "prov-1" },
           ],
         },
         isLoading: false,
       },
       {
         data: {
-          deployments: [{ id: "d3", name: "Agent 3" }],
+          deployments: [{ id: "d3", name: "Agent 3", provider_id: "prov-2" }],
         },
         isLoading: false,
       },
@@ -96,10 +96,10 @@ describe("useGetDeploymentsByProviders", () => {
 
     expect(combined.deployments).toHaveLength(3);
     expect(combined.deployments[0]).toEqual(
-      expect.objectContaining({ id: "d1", provider_account_id: "prov-1" }),
+      expect.objectContaining({ id: "d1", provider_id: "prov-1" }),
     );
     expect(combined.deployments[2]).toEqual(
-      expect.objectContaining({ id: "d3", provider_account_id: "prov-2" }),
+      expect.objectContaining({ id: "d3", provider_id: "prov-2" }),
     );
     expect(combined.isLoading).toBe(false);
   });
@@ -123,7 +123,9 @@ describe("useGetDeploymentsByProviders", () => {
     const mockResults = [
       { data: undefined, isLoading: true },
       {
-        data: { deployments: [{ id: "d1", name: "Agent" }] },
+        data: {
+          deployments: [{ id: "d1", name: "Agent", provider_id: "prov-2" }],
+        },
         isLoading: false,
       },
     ];
@@ -131,7 +133,7 @@ describe("useGetDeploymentsByProviders", () => {
     const combined = capturedConfig.combine(mockResults);
 
     expect(combined.deployments).toHaveLength(1);
-    expect(combined.deployments[0].provider_account_id).toBe("prov-2");
+    expect(combined.deployments[0].provider_id).toBe("prov-2");
   });
 
   it("returns empty deployments for empty provider list", () => {
