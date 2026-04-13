@@ -255,6 +255,11 @@ module.exports = {
           items: [
             {
               type: "doc",
+              id: "Deployment/deployment-wxo",
+              label: "watsonx Orchestrate"
+            },
+            {
+              type: "doc",
               id: "Deployment/deployment-gcp",
               label: "Google Cloud Platform"
             },

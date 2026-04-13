@@ -1,0 +1,104 @@
+---
+title: Deploy Langflow on watsonx Orchestrate
+slug: /deployment-wxo
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialGlobalModelProviders from '@site/docs/_partial-global-model-providers.mdx';
+
+Create a flow and deploy it to [IBM watsonx Orchestrate](https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=getting-started-watsonx-orchestrate).
+
+Deploying a flow on IBM watsonx Orchestrate is different from the other Langflow deployment options.
+This workflow **does not** deploy a full-featured Langflow server and flow builder UI.
+Instead, Langflow packages your selected flow and flow version, and then publishes it to IBM watsonx Orchestrate as a tool that an IBM watsonx Orchestrate agent can call.
+Langflow is used to build and configure the flow, while IBM watsonx Orchestrate hosts the agent experience and invokes the deployed flow as part of that agent's toolset.
+
+## Prerequisites
+
+- [Install and start Langflow](/get-started-installation)
+- Create an [OpenAI API key](https://platform.openai.com/api-keys)
+- Create an [IBM watsonx Orchestrate deployment](https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=getting-started-watsonx-orchestrate)
+
+## Create and deploy a flow
+
+1. Create a flow in the Langflow UI, such as the Simple Agent starter flow in the [Quickstart](/get-started-quickstart).
+
+2. Click <Icon name="Rocket" aria-hidden="true"/> **Deploy**.
+The **Provider** pane opens.
+
+3. Enter a **Name**, **Service Instance URL**, and **API Key** from your IBM watsonx Orchestrate deployment.
+These values are found in the **Settings** page of your IBM watsonx Orchestrate deployment.
+The values look similar to the example below.
+
+   - **Name**: `YOUR_DEPLOYMENT_NAME`
+   - **Service Instance URL**: `https://api.dl.watson-orchestrate.ibm.com/instances/80194572-4421-6735-91ab-55c0d8e4f962`
+   - **API Key**: `YOUR_WATSONX_ORCHESTRATE_API_KEY`
+
+   The last segment of the Service Instance URL is the IBM watsonx Orchestrate tenant ID.
+   In this example, the tenant ID is `80194572-4421-6735-91ab-55c0d8e4f962`.
+
+4. Click **Next**.
+   The **Deployment Type** pane opens.
+5. Enter a **Type**, **Agent Name**, **Model**, and **Description**.
+
+    * The **Type** is always **Agent**. The deployed flow is an IBM watsonx Orchestrate agent with your flow available as a tool the agent can call.
+    * The **Model** list is populated from the connected watsonx Orchestrate deployment, not Langflow.
+
+6. In the **Attach Flows** pane, select a flow and a version of that flow to deploy.
+7. In the **Create Connections** pane, you can either select an available connection to bind to the flow, or create a new connection.
+   To create a new connection, enter a **Connection Name**, and include any environment variables the flow requires, such as the `OPENAI_API_KEY`.
+   Langflow auto-detects global variables from the flow JSON file, but additional variables can be manually added.
+8. To add the new connection to the list of available connections, click **Create Connection**.
+9. In the list of available connections, select the new connection, and then click **Attach Connection to Flow**.
+
+   :::tip
+   To bind the connection to the flow **without** environment variable binding, click **Skip**, and then click **Next**.
+   :::
+
+   For more information, see [Build flows](../Flows/concepts-flows.mdx#save-and-restore-flow-versions).
+10. To continue to the **Review & Confirm** pane, click **Next**.
+11. Confirm the deployment values are correct, and then click <Icon name="Rocket" aria-hidden="true"/> **Deploy**.
+
+    The Langflow terminal process reports the components found in your flow, and installs any required extra dependencies on your watsonx Orchestrate tenant automatically.
+    For example:
+
+    ```
+    Langflow version used: 1.9.0
+    Please ensure this flow is compatible with the Langflow version bundled in ADK.
+
+    Langflow components:
+    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┓
+    ┃ ID                        ┃ Name        ┃ Credentials            ┃ Requirements        ┃
+    ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━┩
+    │ note-JYVWq                │ N/A         │ N/A                    │ N/A                 │
+    ├───────────────────────────┼─────────────┼────────────────────────┼─────────────────────┤
+    │ note-YVBax                │ N/A         │ N/A                    │ N/A                 │
+    ├───────────────────────────┼─────────────┼────────────────────────┼─────────────────────┤
+    │ CalculatorComponent-hebEt │ Calculator  │ N/A                    │ lfx                 │
+    ├───────────────────────────┼─────────────┼────────────────────────┼─────────────────────┤
+    │ ChatInput-dZEGi           │ Chat Input  │ N/A                    │ lfx                 │
+    ├───────────────────────────┼─────────────┼────────────────────────┼─────────────────────┤
+    │ ChatOutput-qywYC          │ Chat Output │ N/A                    │ lfx                 │
+    ├───────────────────────────┼─────────────┼────────────────────────┼─────────────────────┤
+    │ Agent-QrQWK               │ Agent       │ api_key OPENAI_API_KEY │ lfx                 │
+    ├───────────────────────────┼─────────────┼────────────────────────┼─────────────────────┤
+    │ URLComponent-eEvTq        │ URL         │ N/A                    │ bs4                 │
+    │                           │             │                        │ langchain_community │
+    │                           │             │                        │ lfx                 │
+    │                           │             │                        │ markitdown          │
+    │                           │             │                        │ lxml                │
+    │                           │             │                        │ tabulate            │
+    └───────────────────────────┴─────────────┴────────────────────────┴─────────────────────┘
+    ```
+
+    In the Langflow UI, `Deployment successful` indicates your deployment succeeded.
+
+    :::tip
+    If you get an error that the tool name already exists on your deployment, click the <Icon name="Pencil" aria-hidden="true"/> icon by the tool name, and change the tool name.
+    :::
+
+12. Click **Test** to open a chat window with your agent on Orchestrate.
+    Enter a question, and the agent responds using the connected flow as a tool.
+13. Navigate to your IBM watsonx Orchestrate deployment, and confirm that your Langflow flow is listed as an agent.
