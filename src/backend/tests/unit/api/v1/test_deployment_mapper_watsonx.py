@@ -196,34 +196,77 @@ def test_watsonx_mapper_deployment_list_result_rejects_unknown_flattened_entry_f
     ("raw_message", "expected"),
     [
         (
-            "Agent already exists in provider",
-            "An agent with this name already exists in the provider. "
-            "Please choose a different name or delete the existing agent first.",
-        ),
-        (
-            "connection conflict for app_id xyz",
-            "A connection referenced in this request already exists in the provider. "
-            "Reference it as an existing connection instead of creating a new one.",
-        ),
-        (
-            "tool already exists",
-            "A tool with this name already exists in the provider. Please choose a different name.",
-        ),
-        (
             "app_id is required",
-            "A resource with this name already exists in the provider. app_id is required",
+            "A resource conflict occurred in the deployment provider. The requested operation could not be completed.",
         ),
         (
             "unexpected conflict",
-            "A resource with this name already exists in the provider. unexpected conflict",
+            "A resource conflict occurred in the deployment provider. The requested operation could not be completed.",
         ),
     ],
 )
-def test_watsonx_mapper_formats_conflict_detail(raw_message: str, expected: str) -> None:
+def test_watsonx_mapper_formats_conflict_detail_fallback_without_structured_entity(
+    raw_message: str, expected: str
+) -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
 
     detail = mapper.format_conflict_detail(raw_message)
 
+    assert detail == expected
+
+
+@pytest.mark.parametrize(
+    ("resource", "expected"),
+    [
+        ("tool", "A tool with this name already exists in the provider. Please choose a different name."),
+        (
+            "connection",
+            "A connection referenced in this request already exists in the provider. "
+            "Reference it as an existing connection instead of creating a new one.",
+        ),
+        (
+            "agent",
+            "An agent with this name already exists in the provider. "
+            "Please choose a different name or delete the existing agent first.",
+        ),
+    ],
+)
+def test_watsonx_mapper_formats_conflict_detail_from_structured_resource(resource: str, expected: str) -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    assert mapper.format_conflict_detail("provider conflict payload", resource=resource) == expected
+
+
+@pytest.mark.parametrize(
+    ("resource", "resource_name", "expected"),
+    [
+        (
+            "tool",
+            "Simple_Agent",
+            "A tool with name 'Simple_Agent' already exists in the provider. Please choose a different name.",
+        ),
+        (
+            "connection",
+            "cfg",
+            "A connection with app_id 'cfg' already exists in the provider. "
+            "Reference it as an existing connection instead of creating a new one.",
+        ),
+        (
+            "agent",
+            "My_Agent",
+            "An agent with name 'My_Agent' already exists in the provider. "
+            "Please choose a different name or delete the existing agent first.",
+        ),
+    ],
+)
+def test_watsonx_mapper_formats_conflict_detail_from_structured_resource_and_name(
+    resource: str, resource_name: str, expected: str
+) -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    detail = mapper.format_conflict_detail(
+        "provider conflict payload",
+        resource=resource,
+        resource_name=resource_name,
+    )
     assert detail == expected
 
 

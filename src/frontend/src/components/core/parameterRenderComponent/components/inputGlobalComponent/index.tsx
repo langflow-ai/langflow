@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
-import { looksLikeVariableName } from "../../../../../utils/reactflowUtils";
 import { cn } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { CommandItem } from "../../../../ui/command";
@@ -143,14 +142,11 @@ export default function InputGlobalComponent({
 
   let variableOptions = typedGlobalVariables.map((variable) => variable.name);
 
-  const isEnvVarName =
-    password && currentValue && looksLikeVariableName(currentValue);
   if (
-    (loadFromDb &&
-      currentValue &&
-      !valueExists &&
-      !variableOptions.includes(currentValue)) ||
-    (isEnvVarName && !variableOptions.includes(currentValue))
+    loadFromDb &&
+    currentValue &&
+    !valueExists &&
+    !variableOptions.includes(currentValue)
   ) {
     variableOptions = [...variableOptions, currentValue];
   }

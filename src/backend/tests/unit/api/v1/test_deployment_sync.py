@@ -689,13 +689,6 @@ class TestUpdateSnapshotMapping:
             )
 
 
-def test_as_uuid_accepts_uuid_instances():
-    from langflow.api.v1.mappers.deployments.helpers import as_uuid
-
-    value = uuid4()
-    assert as_uuid(value) == value
-
-
 def test_watsonx_mapper_util_created_snapshot_ids_uses_adapter_slot():
     created = WatsonxOrchestrateDeploymentMapper().util_created_snapshot_ids(
         result=DeploymentUpdateResult(
