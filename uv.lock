@@ -1925,22 +1925,18 @@ wheels = [
 
 [[package]]
 name = "cuga"
-version = "0.2.12"
+version = "0.2.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "a2a-sdk", extra = ["http-server"], marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "aiohttp", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "asyncpg", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "boto3", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "browsergym-core", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "cryptography", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "docker", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "dynaconf", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "fastapi", extra = ["standard"], marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "fastembed", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "fastmcp", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "httpx", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "hvac", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "langchain", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "langchain-core", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "langchain-groq", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
@@ -1954,22 +1950,23 @@ dependencies = [
     { name = "loguru", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "markdownify", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "mcp", extra = ["cli"], marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "openlit", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "pgvector", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "playwright", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "psutil", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "pyjwt", extra = ["crypto"], marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "pymilvus", extra = ["milvus-lite"], marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
+    { name = "pymilvus", extra = ["milvus-lite", "model"], marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "python-dotenv", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "pyyaml", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
+    { name = "sentence-transformers", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "sqlite-vec", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "tavily-python", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
+    { name = "torch", version = "2.11.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "torch", version = "2.11.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
     { name = "typer", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "uvicorn", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/99/28/0c8801b92e0d3b67b7105c8c06dde4141ef425b573c80155afc00c6e2484/cuga-0.2.12.tar.gz", hash = "sha256:24c471f255139f16a8e0afcf7140ca4f6055017fc3780234cdd46d22803164a7", size = 851306, upload-time = "2026-04-01T16:44:42.534Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/4d/01c010e51ca55aaf24c6532108ad13709a000cd78b358434ca6b891b2305/cuga-0.2.10.tar.gz", hash = "sha256:827c945a258befbd203bd0f6bb387a33a1f036b05edaebca46a6786fb993599d", size = 795697, upload-time = "2026-02-26T21:05:26.01Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f5/de/4a597275c111289868a28633566287a52376974049ce03a3a1033b73d891/cuga-0.2.12-py3-none-any.whl", hash = "sha256:8561a5d935964b1b1eec4f1fa883ad1c4d38f27fd99860058a0afad4efc95487", size = 1081717, upload-time = "2026-04-01T16:44:40.816Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/c1/525f9f2223e084c3feb66f31b77e6556f01b13712ad40468dd4fc58990c6/cuga-0.2.10-py3-none-any.whl", hash = "sha256:5d4f6b8a21e9d4ce25f4773043aa2f20d7e945b93f25ce4baf2f545d8db58860", size = 1018183, upload-time = "2026-02-26T21:05:27.725Z" },
 ]
 
 [[package]]
@@ -3074,28 +3071,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/16/08/a2eea4f20b85897740efe44887e1ac08f30dfa4bfc3de8962bdcbb21a5a1/fastavro-1.12.1-cp313-cp313t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:469fecb25cba07f2e1bfa4c8d008477cd6b5b34a59d48715e1b1a73f6160097d", size = 3432217, upload-time = "2025-10-10T15:41:53.149Z" },
     { url = "https://files.pythonhosted.org/packages/87/bb/b4c620b9eb6e9838c7f7e4b7be0762834443adf9daeb252a214e9ad3178c/fastavro-1.12.1-cp313-cp313t-musllinux_1_2_aarch64.whl", hash = "sha256:d71c8aa841ef65cfab709a22bb887955f42934bced3ddb571e98fdbdade4c609", size = 3366742, upload-time = "2025-10-10T15:41:55.237Z" },
     { url = "https://files.pythonhosted.org/packages/3d/d1/e69534ccdd5368350646fea7d93be39e5f77c614cca825c990bd9ca58f67/fastavro-1.12.1-cp313-cp313t-musllinux_1_2_x86_64.whl", hash = "sha256:b81fc04e85dfccf7c028e0580c606e33aa8472370b767ef058aae2c674a90746", size = 3383743, upload-time = "2025-10-10T15:41:57.68Z" },
-]
-
-[[package]]
-name = "fastembed"
-version = "0.8.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "huggingface-hub", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "loguru", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "mmh3", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine == 'arm64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
-    { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine == 'arm64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
-    { name = "onnxruntime", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "pillow", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "py-rust-stemmers", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "requests", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "tokenizers", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "tqdm", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/26/25/58865e36b6e8a9a0d0ff905b5601aa30db97956327c0df42ec4ed6accc21/fastembed-0.8.0.tar.gz", hash = "sha256:75966edfa8b006ee78514c726bd7f6a50721dadc89305279052be9db72fd53e8", size = 75115, upload-time = "2026-03-23T16:34:41.699Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2a/e8/26b7d78bb8972498c467ca34cb12ee2e60d26ba5eae6d8443189a1af37a5/fastembed-0.8.0-py3-none-any.whl", hash = "sha256:40bee672657574a1009e35ec50030a55f2b426842cb011845379817641bbbbd0", size = 116572, upload-time = "2026-03-23T16:34:40.69Z" },
 ]
 
 [[package]]
@@ -4425,18 +4400,6 @@ wheels = [
 ]
 
 [[package]]
-name = "hvac"
-version = "2.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "requests", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e2/57/b46c397fb3842cfb02a44609aa834c887f38dd75f290c2fc5a34da4b2fee/hvac-2.4.0.tar.gz", hash = "sha256:e0056ad9064e7923e874e6769015b032580b639e29246f5ab1044f7959c1c7e0", size = 332543, upload-time = "2025-10-30T12:57:47.512Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/55/33/71e45a6bd6875f44a26f99da31c63b6840123e88bedf2c0b1ce429b8be12/hvac-2.4.0-py3-none-any.whl", hash = "sha256:008db5efd8c2f77bd37d2368ea5f713edceae1c65f11fd608393179478649e0f", size = 155921, upload-time = "2025-10-30T12:57:46.253Z" },
-]
-
-[[package]]
 name = "hyperframe"
 version = "6.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5504,7 +5467,7 @@ wheels = [
 
 [[package]]
 name = "langchain-core"
-version = "1.2.27"
+version = "1.2.28"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonpatch" },
@@ -5516,9 +5479,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "uuid-utils" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/13/5c/56d19a252bbb26247b7a7cd20821d48804d7ca03212fec709cd8db7c2516/langchain_core-1.2.27.tar.gz", hash = "sha256:c18372e4c4c1454d49bf23a2e484431e71bd39b64173a0f621f0fc283d7183a4", size = 844935, upload-time = "2026-04-07T14:56:32.364Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f8/a4/317a1a3ac1df33a64adb3670bf88bbe3b3d5baa274db6863a979db472897/langchain_core-1.2.28.tar.gz", hash = "sha256:271a3d8bd618f795fdeba112b0753980457fc90537c46a0c11998516a74dc2cb", size = 846119, upload-time = "2026-04-08T18:19:34.867Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c1/c3/6e0865bc130c448270eb9511b47863a3f9145cdb519b19f6e4758fa63d6f/langchain_core-1.2.27-py3-none-any.whl", hash = "sha256:9ecd6b0393b969fe88f6b9b309367134080ab095946d79e6937dd3911aa42bd5", size = 508315, upload-time = "2026-04-07T14:56:30.93Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/92/32f785f077c7e898da97064f113c73fbd9ad55d1e2169cf3a391b183dedb/langchain_core-1.2.28-py3-none-any.whl", hash = "sha256:80764232581eaf8057bcefa71dbf8adc1f6a28d257ebd8b95ba9b8b452e8c6ac", size = 508727, upload-time = "2026-04-08T18:19:32.823Z" },
 ]
 
 [[package]]
@@ -6822,7 +6785,7 @@ requires-dist = [
     { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = "~=0.2.6" },
     { name = "langchain-cohere", marker = "extra == 'cohere'", specifier = "~=0.5.0" },
     { name = "langchain-community", specifier = "~=0.4.1" },
-    { name = "langchain-core", specifier = ">=1.2.22,<2.0.0" },
+    { name = "langchain-core", specifier = ">=1.2.28,<2.0.0" },
     { name = "langchain-elasticsearch", marker = "extra == 'elasticsearch'", specifier = "~=1.0.0" },
     { name = "langchain-experimental", specifier = "~=0.4.1" },
     { name = "langchain-google-calendar-tools", marker = "extra == 'google'", specifier = "~=0.0.1" },
@@ -7360,7 +7323,7 @@ requires-dist = [
     { name = "json-repair", specifier = ">=0.30.3,<1.0.0" },
     { name = "langchain", specifier = "~=1.2.0" },
     { name = "langchain-classic", specifier = "~=1.0.0" },
-    { name = "langchain-core", specifier = ">=1.2.22,<2.0.0" },
+    { name = "langchain-core", specifier = ">=1.2.28,<2.0.0" },
     { name = "langflow-sdk", editable = "src/sdk" },
     { name = "loguru", specifier = ">=0.7.3,<1.0.0" },
     { name = "markitdown", specifier = ">=0.1.4,<2.0.0" },
@@ -8982,43 +8945,6 @@ wheels = [
 ]
 
 [[package]]
-name = "openlit"
-version = "1.40.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anthropic", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "boto3", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "botocore", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "openai", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-api", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-exporter-otlp", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-aiohttp-client", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-asgi", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-django", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-falcon", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-fastapi", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-flask", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-httpx", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-pyramid", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-requests", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-starlette", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-tornado", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-urllib", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-urllib3", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-sdk", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-semantic-conventions", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "pydantic", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "requests", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "schedule", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "xmltodict", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ac/aa/ea8dd3533233a0b1ed91fab477db10a1aadca2d55ad2159676965d3c8b0d/openlit-1.40.2.tar.gz", hash = "sha256:32190b7e05d7b4f7f17b52e68babd95d5913d9f9ffb697c8ffe201efb0210198", size = 407219, upload-time = "2026-04-06T07:57:58.598Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ca/f2/839589ce5362b7e18b14e840581ef134b71e04b9aa3a24b83718ac0a0add/openlit-1.40.2-py3-none-any.whl", hash = "sha256:31a71481327f44a0d529e8ee8a6ef5ee06e6ef58a13648fae4b5049e31becd95", size = 575079, upload-time = "2026-04-06T07:57:56.944Z" },
-]
-
-[[package]]
 name = "openpyxl"
 version = "3.1.5"
 source = { registry = "https://pypi.org/simple" }
@@ -9165,22 +9091,6 @@ wheels = [
 ]
 
 [[package]]
-name = "opentelemetry-instrumentation-aiohttp-client"
-version = "0.61b0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-api", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-semantic-conventions", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-util-http", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "wrapt", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6f/6d/24fed4de661de107f2426b28bbd87b51eaab28a2339b62f269a36ae24505/opentelemetry_instrumentation_aiohttp_client-0.61b0.tar.gz", hash = "sha256:c53ab3b88efcb7ce98c1129cc0389f0a1f214eb3675269b6c157770adcf47877", size = 19292, upload-time = "2026-03-04T14:20:18.408Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/f3/1edc42716521a3f754ac32ffb908f102e0f131f8e43fcd9ab29cab286723/opentelemetry_instrumentation_aiohttp_client-0.61b0-py3-none-any.whl", hash = "sha256:09bc47514c162507b357366ce15578743fd6305078cf7d872db1c99c13fa6972", size = 14534, upload-time = "2026-03-04T14:19:05.165Z" },
-]
-
-[[package]]
 name = "opentelemetry-instrumentation-alephalpha"
 version = "0.57.0"
 source = { registry = "https://pypi.org/simple" }
@@ -9287,39 +9197,6 @@ wheels = [
 ]
 
 [[package]]
-name = "opentelemetry-instrumentation-django"
-version = "0.61b0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-api", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-wsgi", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-semantic-conventions", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-util-http", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/74/ef/6bc1a6560630f26b1c010af86b28f42bfbe6a601bd1647d1436e0d3436aa/opentelemetry_instrumentation_django-0.61b0.tar.gz", hash = "sha256:9885154dc128578de0e6b5ce49e965c786f8ab071175bec005dcd454510be951", size = 25996, upload-time = "2026-03-04T14:20:30.453Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/69/3b/74dad6d98fdee1d137f1c2748548d4159578508f21e3aef581c110e64041/opentelemetry_instrumentation_django-0.61b0-py3-none-any.whl", hash = "sha256:26c1b0b325a9783d4a2f4df660ba05cf929c3eda2ae9b07916b649bb44e1c5b6", size = 20773, upload-time = "2026-03-04T14:19:25.675Z" },
-]
-
-[[package]]
-name = "opentelemetry-instrumentation-falcon"
-version = "0.61b0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-api", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-wsgi", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-semantic-conventions", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-util-http", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "packaging", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/20/88/d20d9508e047548495737305aca01391713ae5e913b90b23a6818f5a7260/opentelemetry_instrumentation_falcon-0.61b0.tar.gz", hash = "sha256:0b64fde2edea0c5602c62f8a438d4e248ee5461140c0df670113fa92c41e292d", size = 17117, upload-time = "2026-03-04T14:20:32.095Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8b/64/02a5fcfed927b0ca4a005de9ddd437ccab846fe5363e515ca0f78e205e4b/opentelemetry_instrumentation_falcon-0.61b0-py3-none-any.whl", hash = "sha256:daf8e8f135bc3c4d2990edb35d4a3cdc7d7ea27fc221abbdabb27ff9b362d4fe", size = 14145, upload-time = "2026-03-04T14:19:29.367Z" },
-]
-
-[[package]]
 name = "opentelemetry-instrumentation-fastapi"
 version = "0.61b0"
 source = { registry = "https://pypi.org/simple" }
@@ -9333,23 +9210,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/37/35/aa727bb6e6ef930dcdc96a617b83748fece57b43c47d83ba8d83fbeca657/opentelemetry_instrumentation_fastapi-0.61b0.tar.gz", hash = "sha256:3a24f35b07c557ae1bbc483bf8412221f25d79a405f8b047de8b670722e2fa9f", size = 24800, upload-time = "2026-03-04T14:20:32.759Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/91/05/acfeb2cccd434242a0a7d0ea29afaf077e04b42b35b485d89aee4e0d9340/opentelemetry_instrumentation_fastapi-0.61b0-py3-none-any.whl", hash = "sha256:a1a844d846540d687d377516b2ff698b51d87c781b59f47c214359c4a241047c", size = 13485, upload-time = "2026-03-04T14:19:30.351Z" },
-]
-
-[[package]]
-name = "opentelemetry-instrumentation-flask"
-version = "0.61b0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-api", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-wsgi", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-semantic-conventions", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-util-http", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "packaging", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d9/33/d6852d8f2c3eef86f2f8c858d6f5315983c7063e07e595519e96d4c31c06/opentelemetry_instrumentation_flask-0.61b0.tar.gz", hash = "sha256:e9faf58dfd9860a1868442d180142645abdafc1a652dd73d469a5efd106a7d49", size = 24071, upload-time = "2026-03-04T14:20:33.437Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3e/41/619f3530324a58491f2d20f216a10dd7393629b29db4610dda642a27f4ed/opentelemetry_instrumentation_flask-0.61b0-py3-none-any.whl", hash = "sha256:e8ce474d7ce543bfbbb3e93f8a6f8263348af9d7b45502f387420cf3afa71253", size = 15996, upload-time = "2026-03-04T14:19:31.304Z" },
 ]
 
 [[package]]
@@ -9395,22 +9255,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/cc/99/21a2599fd39a4f61b14a42abf2be81b52b00ade43a6f2bda590beaaf5b9e/opentelemetry_instrumentation_haystack-0.57.0.tar.gz", hash = "sha256:9d1abf8850777e8bd7005bed76c3f1909161f431eac41ccd7a47598df0b0bcce", size = 85199, upload-time = "2026-03-30T15:58:36.768Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cc/0c/c05aec177a4bd3741a54fb2c1c73bc33dba3b713be136615b297adea102c/opentelemetry_instrumentation_haystack-0.57.0-py3-none-any.whl", hash = "sha256:47a5f419e38758f7c12f383759bb45d8fd404138792ef90a93c0412cad2bf3e3", size = 7506, upload-time = "2026-03-30T15:58:01.832Z" },
-]
-
-[[package]]
-name = "opentelemetry-instrumentation-httpx"
-version = "0.61b0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-api", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-semantic-conventions", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-util-http", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "wrapt", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/cd/2a/e2becd55e33c29d1d9ef76e2579040ed1951cb33bacba259f6aff2fdd2a6/opentelemetry_instrumentation_httpx-0.61b0.tar.gz", hash = "sha256:6569ec097946c5551c2a4252f74c98666addd1bf047c1dde6b4ef426719ff8dd", size = 24104, upload-time = "2026-03-04T14:20:34.752Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/af/88/dde310dce56e2d85cf1a09507f5888544955309edc4b8d22971d6d3d1417/opentelemetry_instrumentation_httpx-0.61b0-py3-none-any.whl", hash = "sha256:dee05c93a6593a5dc3ae5d9d5c01df8b4e2c5d02e49275e5558534ee46343d5e", size = 17198, upload-time = "2026-03-04T14:19:33.585Z" },
 ]
 
 [[package]]
@@ -9593,23 +9437,6 @@ wheels = [
 ]
 
 [[package]]
-name = "opentelemetry-instrumentation-pyramid"
-version = "0.61b0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-api", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-wsgi", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-semantic-conventions", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-util-http", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "wrapt", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/18/fa/75964814689cf0c06fa357a67f6504ef12703587269fd33dda20074cc147/opentelemetry_instrumentation_pyramid-0.61b0.tar.gz", hash = "sha256:cf3ff0c7b1efdea287ee3e569c8c690284b789e34a0e0ab1f27bff41b619230f", size = 16779, upload-time = "2026-03-04T14:20:45.057Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/4c/1bd04b67306f8e78ef4ea9ea01ccd6e303ed9649482a8b4d3e6b59b5f48d/opentelemetry_instrumentation_pyramid-0.61b0-py3-none-any.whl", hash = "sha256:04440b3b2594c4b1a8f459aa6faeb26b19dcb26ee625a167713051d70a5b043d", size = 14691, upload-time = "2026-03-04T14:19:47.561Z" },
-]
-
-[[package]]
 name = "opentelemetry-instrumentation-qdrant"
 version = "0.57.0"
 source = { registry = "https://pypi.org/simple" }
@@ -9701,22 +9528,6 @@ wheels = [
 ]
 
 [[package]]
-name = "opentelemetry-instrumentation-starlette"
-version = "0.61b0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-api", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation-asgi", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-semantic-conventions", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-util-http", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/0f/2c/5a81129c249a608e8226a3b1879e475354c8668b870f996379f994431e34/opentelemetry_instrumentation_starlette-0.61b0.tar.gz", hash = "sha256:6e4633bf0271aa2e00692dd46963df711c5ee32db13849e54edd8afefe9e1112", size = 14709, upload-time = "2026-03-04T14:20:48.904Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a5/32/8ae96898bc5cb42be5638d0725dfd29b2e1468c1dd60e2aed77bbd2c232f/opentelemetry_instrumentation_starlette-0.61b0-py3-none-any.whl", hash = "sha256:59378793b12d5c67143f27dd8b7eedbb4566abc24c924793933e8a33416ef883", size = 11947, upload-time = "2026-03-04T14:19:55.425Z" },
-]
-
-[[package]]
 name = "opentelemetry-instrumentation-threading"
 version = "0.61b0"
 source = { registry = "https://pypi.org/simple" }
@@ -9746,21 +9557,6 @@ wheels = [
 ]
 
 [[package]]
-name = "opentelemetry-instrumentation-tornado"
-version = "0.61b0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-api", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-semantic-conventions", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-util-http", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/38/2f/1c1663ef2d71b21501f6431e93d4a15fdd57773d49066cf5a699ac6751e5/opentelemetry_instrumentation_tornado-0.61b0.tar.gz", hash = "sha256:cbc12bc2f3ade09f5a438df8e2d9193ed0d99648b7ed049ba20aa2d886e426bd", size = 22816, upload-time = "2026-03-04T14:20:51.435Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/e2/8c2144ce49e24ad22f467d0b7f05bfde954ddc16f5d2516d4a8624c2de40/opentelemetry_instrumentation_tornado-0.61b0-py3-none-any.whl", hash = "sha256:815316bb602c4c5e869e28f87fe719f7226ca3a954a6c7b8715eb923fac3de48", size = 17491, upload-time = "2026-03-04T14:19:59.341Z" },
-]
-
-[[package]]
 name = "opentelemetry-instrumentation-transformers"
 version = "0.57.0"
 source = { registry = "https://pypi.org/simple" }
@@ -9773,21 +9569,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/22/c9/eb37e45e12cd98bf464c516c13dd0b413c0d7df59142c38c2c7aaba672c8/opentelemetry_instrumentation_transformers-0.57.0.tar.gz", hash = "sha256:aff3dd3bb468835e25190466c6bcd8c4c693864a343f18afd200ae7977073905", size = 73348, upload-time = "2026-03-30T15:58:56.985Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5f/91/44ae983ef549c82eb0652b261ef0622713225b33f5d522300d96d14e9a22/opentelemetry_instrumentation_transformers-0.57.0-py3-none-any.whl", hash = "sha256:5cb927d73cf4cee1175cdd4d937360e3ef6752ac17e29d8e141c988b8f970b02", size = 8608, upload-time = "2026-03-30T15:58:19.818Z" },
-]
-
-[[package]]
-name = "opentelemetry-instrumentation-urllib"
-version = "0.61b0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-api", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-semantic-conventions", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-util-http", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/81/37/77cd326b083390e74280c08bbd585153809619dad068e2d1b253fec1164d/opentelemetry_instrumentation_urllib-0.61b0.tar.gz", hash = "sha256:6a15ff862fc1603e0ea5ea75558f76f36436b02e0ae48daecedcb5e574cce160", size = 16894, upload-time = "2026-03-04T14:20:52.726Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/fc/a88fbfd8b9eb16ba1c21f0514c12696441be7fc42c7e319f3ee793bf9e96/opentelemetry_instrumentation_urllib-0.61b0-py3-none-any.whl", hash = "sha256:d7e409876580fb41102e3522ce81a756e53a74073c036a267a1c280cc0fa09b0", size = 13970, upload-time = "2026-03-04T14:20:01.24Z" },
 ]
 
 [[package]]
@@ -9879,21 +9660,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5a/cc/dc45062ea1758b59588674051755649bc0c8745809e017ed9c64b1698795/opentelemetry_instrumentation_writer-0.57.0.tar.gz", hash = "sha256:28a46091cfd9d88f2b05c10f21f5f858ed0cbe5643cb60cbbae3b2d72727b9a3", size = 170297, upload-time = "2026-03-30T15:59:03.069Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/24/b9/51b9731a5341220c63c5e92348a92063ed4a8a26e1a53313e7c4b8dd245d/opentelemetry_instrumentation_writer-0.57.0-py3-none-any.whl", hash = "sha256:c8b15a38088eb3004c34b9ec8d9891f27d22e87023c0f3cbf6e63bae4875816d", size = 11520, upload-time = "2026-03-30T15:58:24.685Z" },
-]
-
-[[package]]
-name = "opentelemetry-instrumentation-wsgi"
-version = "0.61b0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-api", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-instrumentation", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-semantic-conventions", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-    { name = "opentelemetry-util-http", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/89/e5/189f2845362cfe78e356ba127eab21456309def411c6874aa4800c3de816/opentelemetry_instrumentation_wsgi-0.61b0.tar.gz", hash = "sha256:380f2ae61714e5303275a80b2e14c58571573cd1fddf496d8c39fb9551c5e532", size = 19898, upload-time = "2026-03-04T14:20:54.068Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/96/75/d6b42ba26f3c921be6d01b16561b7bb863f843bad7ac3a5011f62617bcab/opentelemetry_instrumentation_wsgi-0.61b0-py3-none-any.whl", hash = "sha256:bd33b0824166f24134a3400648805e8d2e6a7951f070241294e8b8866611d7fa", size = 14628, upload-time = "2026-03-04T14:20:03.934Z" },
 ]
 
 [[package]]
@@ -10832,53 +10598,6 @@ memory = [
 ]
 
 [[package]]
-name = "py-rust-stemmers"
-version = "0.1.5"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/8e/63/4fbc14810c32d2a884e2e94e406a7d5bf8eee53e1103f558433817230342/py_rust_stemmers-0.1.5.tar.gz", hash = "sha256:e9c310cfb5c2470d7c7c8a0484725965e7cab8b1237e106a0863d5741da3e1f7", size = 9388, upload-time = "2025-02-19T13:56:28.708Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/d9/5d1743a160eb9e0bc4c162360278166474e5d168e318c0d5e1bc32b18c96/py_rust_stemmers-0.1.5-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:c7162ae66df2bb0fc39b350c24a049f5f5151c03c046092ba095c2141ec223a2", size = 272020, upload-time = "2025-02-19T13:54:53.957Z" },
-    { url = "https://files.pythonhosted.org/packages/98/21/a94c32ffa38417bad41d6e72cb89a32eac45cc8c6bed1a7b2b0f88bf3626/py_rust_stemmers-0.1.5-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:da6de2b694af6227ba8c5a0447d4e0ef69991e63ee558b969f90c415f33e54d0", size = 310546, upload-time = "2025-02-19T13:54:55.462Z" },
-    { url = "https://files.pythonhosted.org/packages/2c/43/95449704e43be071555448507ab9242f5edebe75fe5ff5fb9674bef0fd9f/py_rust_stemmers-0.1.5-cp310-cp310-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:a3abbd6d26722951a04550fff55460c0f26819169c23286e11ea25c645be6140", size = 315236, upload-time = "2025-02-19T13:54:56.577Z" },
-    { url = "https://files.pythonhosted.org/packages/a7/77/fbd2bd6d3bb5a3395e09b990fa7598be4093d7b8958e2cadfae3d14dcc5b/py_rust_stemmers-0.1.5-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:019221c57a7bcc51097fa3f124b62d0577b5b6167184ee51abd3aea822d78f69", size = 324419, upload-time = "2025-02-19T13:54:58.373Z" },
-    { url = "https://files.pythonhosted.org/packages/f4/8d/3566e9b067d3551d72320193aa9377a1ddabaf7d4624dd0a10f4c496d6f5/py_rust_stemmers-0.1.5-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:8dd5824194c279ee07f2675a55b3d728dfeec69a4b3c27329fab9b2ff5063c91", size = 324792, upload-time = "2025-02-19T13:54:59.547Z" },
-    { url = "https://files.pythonhosted.org/packages/9b/ce/9b4bdb548974c7e79f188057efb2a3426b2df8c9a3d8ac0d5a81b5f1a297/py_rust_stemmers-0.1.5-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:7cf4d69bf20cec373ba0e89df3d98549b1a0cfb130dbd859a50ed772dd044546", size = 488012, upload-time = "2025-02-19T13:55:00.943Z" },
-    { url = "https://files.pythonhosted.org/packages/fd/3e/ea9d8328af1c0661adb47daeb460185285e0e5e26aeca84df5cbde2e4e58/py_rust_stemmers-0.1.5-cp310-cp310-musllinux_1_2_armv7l.whl", hash = "sha256:b42eb52609ac958e7fcc441395457dc5183397e8014e954f4aed78de210837b9", size = 575579, upload-time = "2025-02-19T13:55:02.915Z" },
-    { url = "https://files.pythonhosted.org/packages/5c/ba/49ea71077a5a52017a0a30c47e944c0a4ee33a88c5eaf2d96a06e74771d6/py_rust_stemmers-0.1.5-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:c836aeb53409a44f38b153106374fe780099a7c976c582c5ae952061ff5d2fed", size = 493265, upload-time = "2025-02-19T13:55:04.966Z" },
-    { url = "https://files.pythonhosted.org/packages/d2/a7/26404770230634cec952b9f80444eba76bf8b514b1f3b550494566001893/py_rust_stemmers-0.1.5-cp310-none-win_amd64.whl", hash = "sha256:39550089f7a021a3a97fec2ff0d4ad77e471f0a65c0f100919555e60a4daabf0", size = 209394, upload-time = "2025-02-19T13:55:06.742Z" },
-    { url = "https://files.pythonhosted.org/packages/f2/d1/e16b587dc0ebc42916b1caad994bc37fbb19ad2c7e3f5f3a586ba2630c16/py_rust_stemmers-0.1.5-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:910d87d39ba75da1fe3d65df88b926b4b454ada8d73893cbd36e258a8a648158", size = 272019, upload-time = "2025-02-19T13:55:10.268Z" },
-    { url = "https://files.pythonhosted.org/packages/41/66/8777f125720acb896b336e6f8153e3ec39754563bc9b89523cfe06ba63da/py_rust_stemmers-0.1.5-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:31ff4fb9417cec35907c18a6463e3d5a4941a5aa8401f77fbb4156b3ada69e3f", size = 310547, upload-time = "2025-02-19T13:55:11.521Z" },
-    { url = "https://files.pythonhosted.org/packages/f1/f5/b79249c787c59b9ce2c5d007c0a0dc0fc1ecccfcf98a546c131cca55899e/py_rust_stemmers-0.1.5-cp311-cp311-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:07b3b8582313ef8a7f544acf2c887f27c3dd48c5ddca028fa0f498de7380e24f", size = 315238, upload-time = "2025-02-19T13:55:13.39Z" },
-    { url = "https://files.pythonhosted.org/packages/62/4c/c05c266ed74c063ae31dc5633ed63c48eb3b78034afcc80fe755d0cb09e7/py_rust_stemmers-0.1.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:804944eeb5c5559443d81f30c34d6e83c6292d72423f299e42f9d71b9d240941", size = 324420, upload-time = "2025-02-19T13:55:15.292Z" },
-    { url = "https://files.pythonhosted.org/packages/7f/65/feb83af28095397466e6e031989ff760cc89b01e7da169e76d4cf16a2252/py_rust_stemmers-0.1.5-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:c52c5c326de78c70cfc71813fa56818d1bd4894264820d037d2be0e805b477bd", size = 324791, upload-time = "2025-02-19T13:55:16.45Z" },
-    { url = "https://files.pythonhosted.org/packages/20/3e/162be2f9c1c383e66e510218d9d4946c8a84ee92c64f6d836746540e915f/py_rust_stemmers-0.1.5-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:d8f374c0f26ef35fb87212686add8dff394bcd9a1364f14ce40fe11504e25e30", size = 488014, upload-time = "2025-02-19T13:55:18.486Z" },
-    { url = "https://files.pythonhosted.org/packages/a0/ee/ed09ce6fde1eefe50aa13a8a8533aa7ebe3cc096d1a43155cc71ba28d298/py_rust_stemmers-0.1.5-cp311-cp311-musllinux_1_2_armv7l.whl", hash = "sha256:0ae0540453843bc36937abb54fdbc0d5d60b51ef47aa9667afd05af9248e09eb", size = 575581, upload-time = "2025-02-19T13:55:19.669Z" },
-    { url = "https://files.pythonhosted.org/packages/7b/31/2a48960a072e54d7cc244204d98854d201078e1bb5c68a7843a3f6d21ced/py_rust_stemmers-0.1.5-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:85944262c248ea30444155638c9e148a3adc61fe51cf9a3705b4055b564ec95d", size = 493269, upload-time = "2025-02-19T13:55:21.532Z" },
-    { url = "https://files.pythonhosted.org/packages/91/33/872269c10ca35b00c5376159a2a0611a0f96372be16b616b46b3d59d09fe/py_rust_stemmers-0.1.5-cp311-none-win_amd64.whl", hash = "sha256:147234020b3eefe6e1a962173e41d8cf1dbf5d0689f3cd60e3022d1ac5c2e203", size = 209399, upload-time = "2025-02-19T13:55:22.639Z" },
-    { url = "https://files.pythonhosted.org/packages/cb/32/fe1cc3d36a19c1ce39792b1ed151ddff5ee1d74c8801f0e93ff36e65f885/py_rust_stemmers-0.1.5-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:4d62410ada44a01e02974b85d45d82f4b4c511aae9121e5f3c1ba1d0bea9126b", size = 272021, upload-time = "2025-02-19T13:55:25.685Z" },
-    { url = "https://files.pythonhosted.org/packages/0a/38/b8f94e5e886e7ab181361a0911a14fb923b0d05b414de85f427e773bf445/py_rust_stemmers-0.1.5-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b28ef729a4c83c7d9418be3c23c0372493fcccc67e86783ff04596ef8a208cdf", size = 310547, upload-time = "2025-02-19T13:55:26.891Z" },
-    { url = "https://files.pythonhosted.org/packages/a9/08/62e97652d359b75335486f4da134a6f1c281f38bd3169ed6ecfb276448c3/py_rust_stemmers-0.1.5-cp312-cp312-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:a979c3f4ff7ad94a0d4cf566ca7bfecebb59e66488cc158e64485cf0c9a7879f", size = 315237, upload-time = "2025-02-19T13:55:28.116Z" },
-    { url = "https://files.pythonhosted.org/packages/1c/b9/fc0278432f288d2be4ee4d5cc80fd8013d604506b9b0503e8b8cae4ba1c3/py_rust_stemmers-0.1.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1c3593d895453fa06bf70a7b76d6f00d06def0f91fc253fe4260920650c5e078", size = 324419, upload-time = "2025-02-19T13:55:29.211Z" },
-    { url = "https://files.pythonhosted.org/packages/6b/5b/74e96eaf622fe07e83c5c389d101540e305e25f76a6d0d6fb3d9e0506db8/py_rust_stemmers-0.1.5-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:96ccc7fd042ffc3f7f082f2223bb7082ed1423aa6b43d5d89ab23e321936c045", size = 324792, upload-time = "2025-02-19T13:55:30.948Z" },
-    { url = "https://files.pythonhosted.org/packages/4f/f7/b76816d7d67166e9313915ad486c21d9e7da0ac02703e14375bb1cb64b5a/py_rust_stemmers-0.1.5-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:ef18cfced2c9c676e0d7d172ba61c3fab2aa6969db64cc8f5ca33a7759efbefe", size = 488014, upload-time = "2025-02-19T13:55:32.066Z" },
-    { url = "https://files.pythonhosted.org/packages/b9/ed/7d9bed02f78d85527501f86a867cd5002d97deb791b9a6b1b45b00100010/py_rust_stemmers-0.1.5-cp312-cp312-musllinux_1_2_armv7l.whl", hash = "sha256:541d4b5aa911381e3d37ec483abb6a2cf2351b4f16d5e8d77f9aa2722956662a", size = 575582, upload-time = "2025-02-19T13:55:34.005Z" },
-    { url = "https://files.pythonhosted.org/packages/93/40/eafd1b33688e8e8ae946d1ef25c4dc93f5b685bd104b9c5573405d7e1d30/py_rust_stemmers-0.1.5-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:ffd946a36e9ac17ca96821963663012e04bc0ee94d21e8b5ae034721070b436c", size = 493267, upload-time = "2025-02-19T13:55:35.294Z" },
-    { url = "https://files.pythonhosted.org/packages/2f/6a/15135b69e4fd28369433eb03264d201b1b0040ba534b05eddeb02a276684/py_rust_stemmers-0.1.5-cp312-none-win_amd64.whl", hash = "sha256:6ed61e1207f3b7428e99b5d00c055645c6415bb75033bff2d06394cbe035fd8e", size = 209395, upload-time = "2025-02-19T13:55:36.519Z" },
-    { url = "https://files.pythonhosted.org/packages/ed/be/0465dcb3a709ee243d464e89231e3da580017f34279d6304de291d65ccb0/py_rust_stemmers-0.1.5-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:4e308fc7687901f0c73603203869908f3156fa9c17c4ba010a7fcc98a7a1c5f2", size = 272019, upload-time = "2025-02-19T13:55:39.183Z" },
-    { url = "https://files.pythonhosted.org/packages/ab/b6/76ca5b1f30cba36835938b5d9abee0c130c81833d51b9006264afdf8df3c/py_rust_stemmers-0.1.5-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1f9efc4da5e734bdd00612e7506de3d0c9b7abc4b89d192742a0569d0d1fe749", size = 310545, upload-time = "2025-02-19T13:55:40.339Z" },
-    { url = "https://files.pythonhosted.org/packages/56/8f/5be87618cea2fe2e70e74115a20724802bfd06f11c7c43514b8288eb6514/py_rust_stemmers-0.1.5-cp313-cp313-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:cc2cc8d2b36bc05b8b06506199ac63d437360ae38caefd98cd19e479d35afd42", size = 315236, upload-time = "2025-02-19T13:55:41.55Z" },
-    { url = "https://files.pythonhosted.org/packages/00/02/ea86a316aee0f0a9d1449ad4dbffff38f4cf0a9a31045168ae8b95d8bdf8/py_rust_stemmers-0.1.5-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a231dc6f0b2a5f12a080dfc7abd9e6a4ea0909290b10fd0a4620e5a0f52c3d17", size = 324419, upload-time = "2025-02-19T13:55:42.693Z" },
-    { url = "https://files.pythonhosted.org/packages/2a/fd/1612c22545dcc0abe2f30fc08f30a2332f2224dd536fa1508444a9ca0e39/py_rust_stemmers-0.1.5-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:5845709d48afc8b29e248f42f92431155a3d8df9ba30418301c49c6072b181b0", size = 324794, upload-time = "2025-02-19T13:55:43.896Z" },
-    { url = "https://files.pythonhosted.org/packages/66/18/8a547584d7edac9e7ac9c7bdc53228d6f751c0f70a317093a77c386c8ddc/py_rust_stemmers-0.1.5-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:e48bfd5e3ce9d223bfb9e634dc1425cf93ee57eef6f56aa9a7120ada3990d4be", size = 488014, upload-time = "2025-02-19T13:55:45.088Z" },
-    { url = "https://files.pythonhosted.org/packages/3b/87/4619c395b325e26048a6e28a365afed754614788ba1f49b2eefb07621a03/py_rust_stemmers-0.1.5-cp313-cp313-musllinux_1_2_armv7l.whl", hash = "sha256:35d32f6e7bdf6fd90e981765e32293a8be74def807147dea9fdc1f65d6ce382f", size = 575582, upload-time = "2025-02-19T13:55:46.436Z" },
-    { url = "https://files.pythonhosted.org/packages/98/6e/214f1a889142b7df6d716e7f3fea6c41e87bd6c29046aa57e175d452b104/py_rust_stemmers-0.1.5-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:191ea8bf922c984631ffa20bf02ef0ad7eec0465baeaed3852779e8f97c7e7a3", size = 493269, upload-time = "2025-02-19T13:55:49.057Z" },
-    { url = "https://files.pythonhosted.org/packages/e1/b9/c5185df277576f995ae34418eb2b2ac12f30835412270f9e05c52face521/py_rust_stemmers-0.1.5-cp313-none-win_amd64.whl", hash = "sha256:e564c9efdbe7621704e222b53bac265b0e4fbea788f07c814094f0ec6b80adcf", size = 209397, upload-time = "2025-02-19T13:55:50.853Z" },
-    { url = "https://files.pythonhosted.org/packages/4a/66/3c547373839d615217cd94c47ae1965366fa37642ef1bc4f8d32a5884a84/py_rust_stemmers-0.1.5-pp310-pypy310_pp73-macosx_11_0_arm64.whl", hash = "sha256:154c27f5d576fabf2bacf53620f014562af4c6cf9eb09ba7477830f2be868902", size = 272130, upload-time = "2025-02-19T13:56:25.114Z" },
-    { url = "https://files.pythonhosted.org/packages/d8/8f/381502753e8917e874daefad0000f61d6069dffaba91acbdb864a74cae10/py_rust_stemmers-0.1.5-pp310-pypy310_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ec42b66927b62fd57328980b6c7004fe85e8fad89c952e8718da68b805a119e3", size = 310955, upload-time = "2025-02-19T13:56:26.368Z" },
-    { url = "https://files.pythonhosted.org/packages/3a/15/b1894b9741f7a48f0b4cbea458f7d4141a6df6a1b26bec05fcde96703ce1/py_rust_stemmers-0.1.5-pp310-pypy310_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:57b061c3b4af9e409d009d729b21bc53dabe47116c955ccf0b642a5a2d438f93", size = 324879, upload-time = "2025-02-19T13:56:27.462Z" },
-]
-
-[[package]]
 name = "pyarrow"
 version = "21.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -11388,6 +11107,27 @@ wheels = [
 [package.optional-dependencies]
 milvus-lite = [
     { name = "milvus-lite", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (sys_platform != 'darwin' and sys_platform != 'win32')" },
+]
+model = [
+    { name = "pymilvus-model", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
+]
+
+[[package]]
+name = "pymilvus-model"
+version = "0.3.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine == 'arm64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine == 'arm64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "onnxruntime", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
+    { name = "protobuf", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine == 'arm64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine == 'arm64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "transformers", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0c/8f/a8212f3d932d566fdec354b49befa09174b239c8b8ad25a33b798cee393b/pymilvus_model-0.3.2.tar.gz", hash = "sha256:10ab49a989396943e08555b971f85182ddb50da47076e699a157c9a5ff542872", size = 36268, upload-time = "2025-03-31T08:47:45.007Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5b/ba/b34e3f8c57c453c02daf1a1eff9c4b62a2e89fc10a29bc83fb685155fe14/pymilvus_model-0.3.2-py3-none-any.whl", hash = "sha256:df8a90519a2adc47bd40f37d8c250b0ad0c7aaafc6139b52dc896d5cfda55d35", size = 47699, upload-time = "2025-03-31T08:47:43.372Z" },
 ]
 
 [[package]]
@@ -13068,15 +12808,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/dd/a9/5cb50d494e54d02c03b3edfc66f4a71e50c4aab0b1ccd3723b27a7629b0e/sambanova-1.6.1.tar.gz", hash = "sha256:cb106fd1b0846de2a359ec274d6174628a27461b906c936d618d7708b8fde0ba", size = 257117, upload-time = "2026-04-06T22:29:21.774Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ef/0f/4d1c48f616818e8b1fca0105f088dc744a74ebaecc06eefd7d73b8dd3972/sambanova-1.6.1-py3-none-any.whl", hash = "sha256:3ee73c8f610b00c70ccb0de62452c5508e78676f7940cd38f38d9a7afdd50e4b", size = 127781, upload-time = "2026-04-06T22:29:22.904Z" },
-]
-
-[[package]]
-name = "schedule"
-version = "1.2.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0c/91/b525790063015759f34447d4cf9d2ccb52cdee0f1dd6ff8764e863bcb74c/schedule-1.2.2.tar.gz", hash = "sha256:15fe9c75fe5fd9b9627f3f19cc0ef1420508f9f9a46f45cd0769ef75ede5f0b7", size = 26452, upload-time = "2024-06-18T20:03:14.633Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/20/a7/84c96b61fd13205f2cafbe263cdb2745965974bdf3e0078f121dfeca5f02/schedule-1.2.2-py3-none-any.whl", hash = "sha256:5bef4a2a0183abf44046ae0d164cadcac21b1db011bdd8102e4a0c1e91e06a7d", size = 12220, upload-time = "2024-05-25T18:41:59.121Z" },
 ]
 
 [[package]]
