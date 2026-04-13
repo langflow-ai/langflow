@@ -18,6 +18,7 @@ maintainers = [
 
 [tool.uv]
 override-dependencies = [
+    "pyarrow>=23.0.1",
     "litellm>=1.83.0"
 ]
 
