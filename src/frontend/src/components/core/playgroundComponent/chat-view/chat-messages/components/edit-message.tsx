@@ -1,8 +1,10 @@
+import DOMPurify from "dompurify";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
-import { useTranslation } from "react-i18next";
 import CodeTabsComponent from "@/components/core/codeTabsComponent";
 import { preprocessChatMessage } from "@/utils/markdownUtils";
 import { cn } from "@/utils/utils";
@@ -18,6 +20,10 @@ type MarkdownFieldProps = {
   isAudioMessage?: boolean;
 };
 
+// Placeholder markers for <think> tags to preserve them through sanitization
+const THINK_OPEN_MARKER = "___THINK_OPEN___";
+const THINK_CLOSE_MARKER = "___THINK_CLOSE___";
+
 export const MarkdownField = ({
   chat,
   isEmpty,
@@ -26,8 +32,31 @@ export const MarkdownField = ({
   isAudioMessage,
 }: MarkdownFieldProps) => {
   const { t } = useTranslation();
-  // Process the chat message to handle <think> tags and clean up tables
-  const processedChatMessage = preprocessChatMessage(chatMessage);
+
+  // Memoize sanitization to avoid repeated work on re-renders
+  const sanitizedChatMessage = useMemo(() => {
+    // Short-circuit for empty messages
+    if (!chatMessage || chatMessage.trim() === "") {
+      return "";
+    }
+
+    // Process the chat message to handle <think> tags and clean up tables
+    let processed = preprocessChatMessage(chatMessage);
+
+    // Temporarily replace <think> tags with safe markers before sanitization
+    // This prevents DOMPurify from stripping them as unknown HTML tags
+    processed = processed
+      .replace(/`<think>`/g, THINK_OPEN_MARKER)
+      .replace(/`<\/think>`/g, THINK_CLOSE_MARKER);
+
+    // Sanitize to prevent XSS attacks
+    const sanitized = DOMPurify.sanitize(processed);
+
+    // Restore <think> markers after sanitization
+    return sanitized
+      .replace(new RegExp(THINK_OPEN_MARKER, "g"), "`<think>`")
+      .replace(new RegExp(THINK_CLOSE_MARKER, "g"), "`</think>`");
+  }, [chatMessage]);
 
   return (
     <div className="w-full items-baseline gap-2">
@@ -109,7 +138,7 @@ export const MarkdownField = ({
       >
         {isEmpty && !chat.stream_url
           ? t("chat.emptyOutputSendMessage")
-          : processedChatMessage}
+          : sanitizedChatMessage}
       </Markdown>
       {editedFlag}
     </div>
