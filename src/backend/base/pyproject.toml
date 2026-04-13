@@ -16,12 +16,6 @@ maintainers = [
     { name = "Italo dos Anjos", email = "italojohnnydosanjos@gmail.com" },
 ]
 
-[tool.uv]
-override-dependencies = [
-    "pyarrow>=23.0.1",
-    "litellm>=1.83.0"
-]
-
 dependencies = [
     "lfx~=0.4.0",
     "fastapi>=0.135.0,<1.0.0",
@@ -106,6 +100,12 @@ dependencies = [
     "dynaconf>=3.2.13,<4.0.0",
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
+]
+
+[tool.uv]
+override-dependencies = [
+    "pyarrow>=23.0.1",
+    "litellm>=1.83.0"
 ]
 
 [dependency-groups]
