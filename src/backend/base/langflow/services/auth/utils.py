@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import random
 from typing import TYPE_CHECKING, Annotated, Final
 
 from cryptography.fernet import Fernet
@@ -313,6 +314,34 @@ async def get_current_active_superuser(user: User = Depends(get_current_user)) -
     return result
 
 
+def add_base64_padding(value: str) -> str:
+    """Add base64 padding characters if needed.
+
+    Base64 strings must have a length that is a multiple of 4.
+    This adds the necessary '=' padding characters.
+    """
+    remainder = len(value) % 4
+    if remainder == 0:
+        return value
+    return value + "=" * (4 - remainder)
+
+
+def ensure_fernet_key(secret_key: str) -> bytes:
+    """Derive a valid Fernet key from a secret key string.
+
+    For short keys (< 32 chars), uses the key as a random seed to generate
+    a deterministic 32-byte key. For longer keys, adds base64 padding.
+    """
+    MINIMUM_KEY_LENGTH = 32  # noqa: N806
+    if len(secret_key) < MINIMUM_KEY_LENGTH:
+        random.seed(secret_key)
+        key = bytes(random.getrandbits(8) for _ in range(32))
+        key = base64.urlsafe_b64encode(key)
+    else:
+        key = add_base64_padding(secret_key).encode()
+    return key
+
+
 def get_fernet(settings_service: SettingsService) -> Fernet:
     """Get a Fernet instance for encryption/decryption.
 
@@ -322,24 +351,8 @@ def get_fernet(settings_service: SettingsService) -> Fernet:
     Returns:
         Fernet instance for encryption/decryption
     """
-    import random
-
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-
-    # Replicate the original _ensure_valid_key logic from AuthService
-    MINIMUM_KEY_LENGTH = 32  # noqa: N806
-    if len(secret_key) < MINIMUM_KEY_LENGTH:
-        # Generate deterministic key from seed for short keys
-        random.seed(secret_key)
-        key = bytes(random.getrandbits(8) for _ in range(32))
-        key = base64.urlsafe_b64encode(key)
-    else:
-        # Add padding for longer keys
-        padding_needed = 4 - len(secret_key) % 4
-        padded_key = secret_key + "=" * padding_needed
-        key = padded_key.encode()
-
-    return Fernet(key)
+    return Fernet(ensure_fernet_key(secret_key))
 
 
 def encrypt_api_key(api_key: str, settings_service: SettingsService | None = None) -> str:  # noqa: ARG001
