@@ -1313,8 +1313,9 @@ class MCPComposerService(Service):
                 # Map auth config to environment variables for OAuth
                 # Note: oauth_host and oauth_port are passed both via --host/--port CLI args
                 # (for server binding) and as environment variables (for OAuth flow)
-                # Note: oauth_callback_path must be a callback path (for example: "/oauth/callback"),
-                # not a full URL. Support legacy oauth_callback_url input for backwards compatibility.
+                # Note: mcp-composer expects the env var name OAUTH_CALLBACK_PATH, but the value
+                # is still the full callback URL used as the OAuth redirect_uri. Support legacy
+                # oauth_callback_path input for backwards compatibility.
                 oauth_env_mapping = {
                     "oauth_host": "OAUTH_HOST",
                     "oauth_port": "OAUTH_PORT",
