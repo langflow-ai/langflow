@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
@@ -44,6 +45,7 @@ export default function ModelInputComponent({
   inspectionPanel,
   showEmptyState = false,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element | null {
+  const { t } = useTranslation();
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -315,7 +317,7 @@ export default function ModelInputComponent({
       size="xs"
       disabled
     >
-      <LoadingTextComponent text="Loading models" />
+      <LoadingTextComponent text={t("modelInput.loadingModels")} />
     </Button>
   );
 
@@ -344,7 +346,7 @@ export default function ModelInputComponent({
   const renderManageProvidersButton = () => (
     <div className="bottom-0 bg-background">
       {renderFooterButton(
-        "Manage Model Providers",
+        t("modelInput.manageProviders"),
         "Settings",
         () => setOpenManageProvidersDialog(true),
         "manage-model-providers",
@@ -371,7 +373,7 @@ export default function ModelInputComponent({
             onSelect={handleModelSelect}
           />
           {renderFooterButton(
-            "Refresh List",
+            t("modelInput.refreshList"),
             "RotateCw",
             handleRefreshButtonPress,
             "refresh-model-list",
@@ -381,7 +383,7 @@ export default function ModelInputComponent({
             <div className="border-t bg-background">
               {renderFooterButton(
                 externalOptions.fields.data.node.display_name ||
-                  "Connect other models",
+                  t("modelInput.connectOtherModels"),
                 externalOptions.fields.data.node.icon || "CornerDownLeft",
                 () => handleExternalOptions("connect_other_models"),
                 "connect-other-models",
