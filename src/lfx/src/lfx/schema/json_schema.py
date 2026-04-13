@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import AliasChoices, BaseModel, Field, create_model
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, create_model
 
 from lfx.log.logger import logger
 
@@ -196,7 +196,9 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
                 fields[prop_name] = (py_type, Field(default, **field_kwargs))
 
-            model_cls = create_model(name, **fields)
+            # Preserve extras unless schema sets additionalProperties:false (#9881, #10975).
+            extra_mode = "ignore" if subschema.get("additionalProperties") is False else "allow"
+            model_cls = create_model(name, __config__=ConfigDict(extra=extra_mode), **fields)
         finally:
             building.discard(name)
         model_cache[name] = model_cls
@@ -224,4 +226,6 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
         top_fields[fname] = (py_type, Field(default, **field_kwargs))
 
-    return create_model("InputSchema", **top_fields)
+    # Same JSON Schema rule applies at the root: preserve extras unless explicitly forbidden.
+    top_extra_mode = "ignore" if schema.get("additionalProperties") is False else "allow"
+    return create_model("InputSchema", __config__=ConfigDict(extra=top_extra_mode), **top_fields)

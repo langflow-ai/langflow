@@ -1999,6 +1999,14 @@ async def update_tools(
             logger.error(f"Failed to create tool '{tool.name}' from server '{server_name}': {e}")
             msg = f"Failed to create tool '{tool.name}' from server '{server_name}': {e}"
             raise ValueError(msg) from e
+        except (TypeError, AttributeError, KeyError, NameError, RecursionError) as e:
+            # Per-tool resilience (#11229): isolate one bad schema, keep the rest of the toolset.
+            logger.exception(
+                f"Skipping tool '{getattr(tool, 'name', '<unknown>')}' from MCP server "
+                f"'{server_name}' due to schema-processing error: "
+                f"{type(e).__name__}: {e}. inputSchema={getattr(tool, 'inputSchema', None)!r}"
+            )
+            continue
 
     logger.info(f"Successfully loaded {len(tool_list)} tools from MCP server '{server_name}'")
     return mode, tool_list, tool_cache
