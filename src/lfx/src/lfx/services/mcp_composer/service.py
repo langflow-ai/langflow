@@ -1288,11 +1288,13 @@ class MCPComposerService(Service):
                 # Map auth config to environment variables for OAuth
                 # Note: oauth_host and oauth_port are passed both via --host/--port CLI args
                 # (for server binding) and as environment variables (for OAuth flow)
+                # Note: oauth_callback_path must be a callback path (for example: "/oauth/callback"),
+                # not a full URL. Support legacy oauth_callback_url input for backwards compatibility.
                 oauth_env_mapping = {
                     "oauth_host": "OAUTH_HOST",
                     "oauth_port": "OAUTH_PORT",
                     "oauth_server_url": "OAUTH_SERVER_URL",
-                    "oauth_callback_url": "OAUTH_CALLBACK_PATH",
+                    "oauth_callback_path": "OAUTH_CALLBACK_PATH",
                     "oauth_client_id": "OAUTH_CLIENT_ID",
                     "oauth_client_secret": "OAUTH_CLIENT_SECRET",  # pragma: allowlist secret
                     "oauth_auth_url": "OAUTH_AUTH_URL",
@@ -1301,16 +1303,20 @@ class MCPComposerService(Service):
                     "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE",
                 }
 
-                # Backwards compatibility: if oauth_callback_url not set, try oauth_callback_path
-                if ("oauth_callback_url" not in auth_config or not auth_config.get("oauth_callback_url")) and (
-                    "oauth_callback_path" in auth_config and auth_config.get("oauth_callback_path")
-                ):
-                    auth_config["oauth_callback_url"] = auth_config["oauth_callback_path"]
+                normalized_auth_config = dict(auth_config)
+
+                # Backwards compatibility: accept legacy oauth_callback_url input and normalize it
+                # to oauth_callback_path for internal use.
+                if (
+                    "oauth_callback_path" not in normalized_auth_config
+                    or not normalized_auth_config.get("oauth_callback_path")
+                ) and normalized_auth_config.get("oauth_callback_url"):
+                    normalized_auth_config["oauth_callback_path"] = normalized_auth_config["oauth_callback_url"]
 
                 # Add environment variables as command line arguments
                 # Only set non-empty values to avoid Pydantic validation errors
                 for config_key, env_key in oauth_env_mapping.items():
-                    value = auth_config.get(config_key)
+                    value = normalized_auth_config.get(config_key)
                     if value is not None and str(value).strip():
                         cmd.extend(["--env", env_key, str(value)])
 
