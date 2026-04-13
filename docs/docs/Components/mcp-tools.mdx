@@ -3,13 +3,14 @@ title: MCP Tools
 slug: /mcp-tools
 ---
 
-import Icon from "@site/src/components/icon";
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialMcpToolsAddSteps from '@site/docs/_partial-mcp-tools-add-steps.mdx';
 
 The **MCP Tools** component connects to a Model Context Protocol (MCP) server and exposes the MCP server's functions as tools for Langflow agents to use to respond to input.
 
 In addition to publicly available MCP servers and your own custom-built MCP servers, you can connect Langflow MCP servers, which allow your agent to use your Langflow flows as tools.
 To do this, use the **MCP Tools** component's [HTTP/SSE mode](/mcp-client#mcp-http-mode) to connect to your Langflow project's MCP server.
+
+<PartialMcpToolsAddSteps />
 
 For more information, see [Use Langflow as an MCP client](/mcp-client) and [Use Langflow as an MCP server](/mcp-server).
 
