@@ -130,6 +130,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
 
 test("change flow folder", async ({ page }) => {
   const uniqueFlowName = `move-${Math.random().toString(36).substring(2, 10)}`;
+  const destinationProjectName = `dest-${Math.random().toString(36).substring(2, 10)}`;
 
   await awaitBootstrapTest(page);
 
@@ -162,10 +163,10 @@ test("change flow folder", async ({ page }) => {
     .getByText("New Project")
     .last()
     .dblclick();
-  await page.getByTestId("input-project").fill("change-folder-destination");
+  await page.getByTestId("input-project").fill(destinationProjectName);
   await page.keyboard.press("Enter");
   await expect(
-    page.getByTestId("sidebar-nav-change-folder-destination"),
+    page.getByTestId(`sidebar-nav-${destinationProjectName}`),
   ).toBeVisible({ timeout: 10000 });
 
   // Go back to the source project where the flow currently lives.
@@ -181,12 +182,12 @@ test("change flow folder", async ({ page }) => {
     .getByTestId("list-card")
     .filter({ hasText: uniqueFlowName })
     .first()
-    .dragTo(page.getByTestId("sidebar-nav-change-folder-destination"));
+    .dragTo(page.getByTestId(`sidebar-nav-${destinationProjectName}`));
 
   // Click the destination folder and verify the moved flow is visible
   // WITHOUT a manual page refresh. This is the behavior that regresses
   // when the patch-flow cache invalidation is incomplete.
-  await page.getByTestId("sidebar-nav-change-folder-destination").click();
+  await page.getByTestId(`sidebar-nav-${destinationProjectName}`).click();
 
   await expect(
     page.getByTestId("list-card").filter({ hasText: uniqueFlowName }),
