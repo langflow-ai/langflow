@@ -110,7 +110,10 @@ describe("InputGlobalComponent", () => {
   });
 
   describe("options passed to InputComponent", () => {
-    const configuredVariables = [{ name: "MY_API_KEY" }, { name: "ANOTHER_VAR" }];
+    const configuredVariables = [
+      { name: "MY_API_KEY" },
+      { name: "ANOTHER_VAR" },
+    ];
 
     beforeEach(() => {
       mockUseGetGlobalVariables.mockReturnValue({
