@@ -622,6 +622,112 @@ class TestUpdateToolsStdioHeaders:
         assert original_args == ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
 
 
+class TestUpdateToolsPerToolResilience:
+    """update_tools must isolate per-tool schema-parsing failures (#11229)."""
+
+    @staticmethod
+    def _make_tool(name: str, schema: dict) -> MagicMock:
+        tool = MagicMock()
+        tool.name = name
+        tool.description = f"{name} description"
+        tool.inputSchema = schema
+        tool.outputSchema = None
+        return tool
+
+    @pytest.mark.asyncio
+    async def test_one_bad_tool_does_not_drop_the_other_tools_issue_11229(self):
+        """One bad schema must not abort the listing; the bad tool must be logged by name."""
+        good_tool_a = self._make_tool(
+            "good_a",
+            {"type": "object", "properties": {"q": {"type": "string"}}, "required": ["q"]},
+        )
+        bad_tool = self._make_tool(
+            "bad_linear_like",
+            {"type": "object", "properties": {"x": {"type": "string"}}},
+        )
+        good_tool_b = self._make_tool(
+            "good_b",
+            {"type": "object", "properties": {"n": {"type": "integer"}}, "required": ["n"]},
+        )
+
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = [good_tool_a, bad_tool, good_tool_b]
+        mock_stdio._connected = True
+
+        from lfx.schema.json_schema import create_input_schema_from_json_schema as real_converter
+
+        def selective_converter(schema):
+            if schema is bad_tool.inputSchema:
+                msg = "unhashable type: 'list'"
+                raise TypeError(msg)
+            return real_converter(schema)
+
+        with (
+            patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=selective_converter),
+            patch("lfx.base.mcp.util.logger") as mock_logger,
+        ):
+            mode, tool_list, tool_cache = await update_tools(
+                server_name="linear-like",
+                server_config={"command": "fake-cmd", "args": []},
+                mcp_stdio_client=mock_stdio,
+            )
+
+        loaded_names = [t.name for t in tool_list]
+        assert "good_a" in loaded_names
+        assert "good_b" in loaded_names
+        assert "bad_linear_like" not in loaded_names
+        assert set(tool_cache.keys()) == {"good_a", "good_b"}
+        assert mode == "Stdio"
+
+        all_log_calls = (
+            mock_logger.error.call_args_list + mock_logger.warning.call_args_list + mock_logger.exception.call_args_list
+        )
+        joined = " | ".join(str(call) for call in all_log_calls)
+        assert "bad_linear_like" in joined, f"failing tool name must appear in log; got: {joined!r}"
+
+    @pytest.mark.asyncio
+    async def test_resilience_under_many_mixed_tools(self):
+        """Stress: 20 tools, 10 healthy + 10 broken with varied error types — all 10 good survive."""
+        from lfx.schema.json_schema import create_input_schema_from_json_schema as real_converter
+
+        error_types = [TypeError, AttributeError, KeyError, NameError, RecursionError]
+        tools = []
+        bad_schemas: dict[int, type[Exception]] = {}
+        for i in range(20):
+            schema = {
+                "type": "object",
+                "properties": {"k": {"type": "string"}},
+                "required": ["k"],
+            }
+            tool = self._make_tool(f"tool_{i:02d}", schema)
+            tools.append(tool)
+            if i % 2 == 1:  # 10 odd indices fail with rotated error types
+                bad_schemas[id(schema)] = error_types[(i // 2) % len(error_types)]
+
+        def selective_converter(schema):
+            err_cls = bad_schemas.get(id(schema))
+            if err_cls is not None:
+                msg = f"simulated {err_cls.__name__}"
+                raise err_cls(msg)
+            return real_converter(schema)
+
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = tools
+        mock_stdio._connected = True
+
+        with patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=selective_converter):
+            _, tool_list, tool_cache = await update_tools(
+                server_name="stress",
+                server_config={"command": "fake-cmd", "args": []},
+                mcp_stdio_client=mock_stdio,
+            )
+
+        loaded = {t.name for t in tool_list}
+        expected_good = {f"tool_{i:02d}" for i in range(20) if i % 2 == 0}
+        assert loaded == expected_good, f"expected exactly the 10 healthy tools, got {loaded}"
+        assert set(tool_cache.keys()) == expected_good
+
+
 class TestFieldNameConversion:
     """Test camelCase to snake_case field name conversion functionality."""
 
@@ -1223,6 +1329,193 @@ class TestMCPUtilityFunctions:
         deep_validated = model_class.model_validate(deep_input)
         deep_result = deep_validated.model_dump()
         assert deep_result["msg"] == {"level1": {"level2": {"level3": "value"}}}
+
+    def test_nested_dict_preservation_with_declared_properties_issue_10975(self):
+        """Nested dicts must survive when the object also declares properties (#9881, #10975)."""
+        # FHIR-MCP shape from #10975: searchParam declared as object with one property,
+        # additionalProperties not explicitly forbidden.
+        fhir_schema = {
+            "type": "object",
+            "required": ["type", "searchParam"],
+            "properties": {
+                "type": {"type": "string"},
+                "searchParam": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        fhir_model = util.create_input_schema_from_json_schema(fhir_schema)
+        fhir_input = {
+            "type": "Observation",
+            "searchParam": {
+                "component-reference-gene.component-code-value-concept": "48018-6$BRCA2",
+            },
+        }
+        fhir_dump = fhir_model.model_validate(fhir_input).model_dump(exclude_none=True)
+        assert fhir_dump["searchParam"] == {
+            "component-reference-gene.component-code-value-concept": "48018-6$BRCA2",
+        }, "FHIR-MCP nested searchParam dict was stripped (issue #10975)"
+
+        # ROS-MCP shape from #9881: msg declared as object with a placeholder property.
+        ros_schema = {
+            "type": "object",
+            "required": ["msg", "msg_type", "topic"],
+            "properties": {
+                "topic": {"type": "string"},
+                "msg_type": {"type": "string"},
+                "msg": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        ros_model = util.create_input_schema_from_json_schema(ros_schema)
+        ros_input = {
+            "topic": "/turtle1/cmd_vel",
+            "msg_type": "geometry_msgs/msg/Twist",
+            "msg": {
+                "linear": {"x": 1, "y": 0, "z": 0},
+                "angular": {"x": 0, "y": 0, "z": 0},
+            },
+        }
+        ros_dump = ros_model.model_validate(ros_input).model_dump(exclude_none=True)
+        assert ros_dump["msg"] == {
+            "linear": {"x": 1, "y": 0, "z": 0},
+            "angular": {"x": 0, "y": 0, "z": 0},
+        }, "ROS-MCP nested msg dict was stripped (issue #9881)"
+        # Sibling primitive fields must continue to round-trip unchanged.
+        assert ros_dump["topic"] == "/turtle1/cmd_vel"
+        assert ros_dump["msg_type"] == "geometry_msgs/msg/Twist"
+
+    def test_object_with_additional_properties_false_still_drops_extras(self):
+        """additionalProperties:false must keep stripping extras after the #9881/#10975 fix."""
+        strict_schema = {
+            "type": "object",
+            "properties": {
+                "filter": {
+                    "type": "object",
+                    "properties": {"id": {"type": "string"}},
+                    "additionalProperties": False,
+                },
+            },
+        }
+        strict_model = util.create_input_schema_from_json_schema(strict_schema)
+        dumped = strict_model.model_validate({"filter": {"id": "abc", "rogue": "x"}}).model_dump(
+            exclude_none=True,
+        )
+        assert dumped["filter"].get("id") == "abc"
+        assert "rogue" not in dumped["filter"]
+
+    def test_top_level_extras_preserved_when_root_does_not_forbid(self):
+        """Root schema with no additionalProperties must pass top-level extras through (PR #12601 review)."""
+        # JSON Schema spec: additionalProperties defaults to true at any depth, including root.
+        # The fix in _build_model handles nested objects; this test guards the symmetric behaviour
+        # for the top-level create_model("InputSchema", ...).
+        schema = {
+            "type": "object",
+            "properties": {"declared": {"type": "string"}},
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        dumped = model.model_validate({"declared": "ok", "extra": "preserved"}).model_dump(exclude_none=True)
+        assert dumped == {"declared": "ok", "extra": "preserved"}
+
+    def test_top_level_strict_mode_when_root_forbids_additional_properties(self):
+        """Root schema with additionalProperties:false must still strip top-level extras."""
+        schema = {
+            "type": "object",
+            "properties": {"declared": {"type": "string"}},
+            "additionalProperties": False,
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        dumped = model.model_validate({"declared": "ok", "rogue": "x"}).model_dump(exclude_none=True)
+        assert dumped == {"declared": "ok"}
+        assert "rogue" not in dumped
+
+    def test_deeply_nested_dict_round_trip_preserves_all_levels(self):
+        """4-level nested dict under a permissive object must round-trip intact."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "envelope": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+            "required": ["envelope"],
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        deep = {
+            "envelope": {
+                "level1": {"level2": {"level3": {"level4": {"leaf": "value", "n": 42}}}},
+            },
+        }
+        out = model.model_validate(deep).model_dump(exclude_none=True)
+        assert out["envelope"]["level1"]["level2"]["level3"]["level4"]["leaf"] == "value"
+        assert out["envelope"]["level1"]["level2"]["level3"]["level4"]["n"] == 42
+
+    def test_array_of_objects_extras_are_preserved(self):
+        """Extras inside objects nested in arrays must also survive validation."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {"role": {"type": "string"}},
+                    },
+                },
+            },
+            "required": ["messages"],
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        payload = {
+            "messages": [
+                {"role": "user", "content": "hi", "metadata": {"lang": "pt-BR"}},
+                {"role": "assistant", "content": "olá", "tool_calls": [{"id": "x"}]},
+            ],
+        }
+        out = model.model_validate(payload).model_dump(exclude_none=True)
+        assert out["messages"][0]["content"] == "hi"
+        assert out["messages"][0]["metadata"] == {"lang": "pt-BR"}
+        assert out["messages"][1]["tool_calls"] == [{"id": "x"}]
+
+    def test_additional_properties_typed_schema_still_preserves_extras(self):
+        """additionalProperties:{type:...} is permissive — extras must survive."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "headers": {
+                    "type": "object",
+                    "properties": {"known": {"type": "string"}},
+                    "additionalProperties": {"type": "string"},
+                },
+            },
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        out = model.model_validate(
+            {"headers": {"x-custom-1": "a", "x-custom-2": "b"}},
+        ).model_dump(exclude_none=True)
+        assert out["headers"]["x-custom-1"] == "a"
+        assert out["headers"]["x-custom-2"] == "b"
+
+    def test_nested_object_with_none_or_empty_does_not_crash(self):
+        """None and {} for permissive nested object must round-trip cleanly."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        out_none = model.model_validate({"msg": None}).model_dump(exclude_none=True)
+        assert "msg" not in out_none
+        out_empty = model.model_validate({"msg": {}}).model_dump(exclude_none=True)
+        assert out_empty == {"msg": {}}
 
     @pytest.mark.asyncio
     async def test_validate_connection_params(self):

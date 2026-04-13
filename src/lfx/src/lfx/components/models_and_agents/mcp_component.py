@@ -3,20 +3,22 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
+from types import UnionType
+from typing import Any, get_args, get_origin
 
 from langchain_core.tools import StructuredTool  # noqa: TC002
+from pydantic import BaseModel
 
 from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
 from lfx.base.mcp.util import (
     MCPStdioClient,
     MCPStreamableHttpClient,
-    create_input_schema_from_json_schema,
     update_tools,
 )
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import InputTypes  # noqa: TC001
 from lfx.io import BoolInput, DictInput, DropdownInput, McpInput, MessageTextInput, Output
-from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
+from lfx.io.schema import schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
@@ -166,8 +168,7 @@ class MCPToolsComponent(ComponentWithCache):
                 msg = "Invalid tool object or missing input schema"
                 raise ValueError(msg)
 
-            flat_schema = flatten_schema(tool_obj.args_schema.schema())
-            input_schema = create_input_schema_from_json_schema(flat_schema)
+            input_schema = tool_obj.args_schema
             if not input_schema:
                 msg = f"Empty input schema for tool '{tool_obj.name}'"
                 raise ValueError(msg)
@@ -570,6 +571,61 @@ class MCPToolsComponent(ComponentWithCache):
         else:
             return build_config
 
+    @staticmethod
+    def _unwrap_optional_annotation(annotation: Any) -> Any:
+        """Remove a single None branch from a union annotation."""
+        if isinstance(annotation, UnionType):
+            non_none = [item for item in get_args(annotation) if item is not type(None)]
+            if len(non_none) == 1:
+                return non_none[0]
+            return annotation
+
+        if get_origin(annotation) is None:
+            return annotation
+
+        non_none = [item for item in get_args(annotation) if item is not type(None)]
+        if len(non_none) == 1 and len(non_none) != len(get_args(annotation)):
+            return non_none[0]
+        return annotation
+
+    @classmethod
+    def _is_object_like_annotation(cls, annotation: Any) -> bool:
+        """Return True when the annotation represents a dict-like payload."""
+        annotation = cls._unwrap_optional_annotation(annotation)
+        origin = get_origin(annotation)
+        if origin is dict:
+            return True
+        return annotation is dict or (isinstance(annotation, type) and issubclass(annotation, BaseModel))
+
+    @classmethod
+    def _should_include_tool_argument(cls, model_field: Any, value: Any) -> bool:
+        """Omit blank optional values so MCP server defaults remain intact."""
+        if value is None:
+            return False
+
+        if model_field.is_required():
+            return True
+
+        if isinstance(value, str) and value == "":
+            return False
+
+        return not (
+            value == {} and model_field.default is None and cls._is_object_like_annotation(model_field.annotation)
+        )
+
+    def _build_tool_kwargs(self, args_schema: type[BaseModel]) -> dict[str, Any]:
+        """Collect tool kwargs from component inputs, omitting blank optional values."""
+        kwargs: dict[str, Any] = {}
+        for arg_name, model_field in args_schema.model_fields.items():
+            value = getattr(self, arg_name, None)
+            if isinstance(value, Message):
+                value = value.text
+
+            if self._should_include_tool_argument(model_field, value):
+                kwargs[arg_name] = value
+
+        return kwargs
+
     def get_inputs_for_all_tools(self, tools: list) -> dict:
         """Get input schemas for all tools."""
         inputs = {}
@@ -577,9 +633,7 @@ class MCPToolsComponent(ComponentWithCache):
             if not tool or not hasattr(tool, "name"):
                 continue
             try:
-                flat_schema = flatten_schema(tool.args_schema.schema())
-                input_schema = create_input_schema_from_json_schema(flat_schema)
-                langflow_inputs = schema_to_langflow_inputs(input_schema)
+                langflow_inputs = schema_to_langflow_inputs(tool.args_schema)
                 inputs[tool.name] = langflow_inputs
             except (AttributeError, ValueError, TypeError, KeyError) as e:
                 msg = f"Error getting inputs for tool {getattr(tool, 'name', 'unknown')}: {e!s}"
@@ -670,16 +724,7 @@ class MCPToolsComponent(ComponentWithCache):
                     self.stdio_client.set_session_context(session_context)
                     self.streamable_http_client.set_session_context(session_context)
                 exec_tool = self._tool_cache[self.tool]
-                tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
-                kwargs = {}
-                for arg in tool_args:
-                    value = getattr(self, arg.name, None)
-                    if value is not None:
-                        if isinstance(value, Message):
-                            kwargs[arg.name] = value.text
-                        else:
-                            kwargs[arg.name] = value
-
+                kwargs = self._build_tool_kwargs(exec_tool.args_schema)
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
 
                 output = await exec_tool.coroutine(**unflattened_kwargs)
