@@ -507,6 +507,49 @@ class TestOAuthCallbackConfigForwarding:
         assert cmd[idx + 1] == callback_url
 
     @pytest.mark.asyncio
+    async def test_callback_url_wins_when_both_callback_fields_are_present(self, mcp_service):
+        """Verify canonical oauth_callback_url takes precedence over deprecated oauth_callback_path."""
+        project_id = "canonical-callback-test"
+        callback_url = "http://localhost:9000/auth/idaas/callback"
+        stale_callback_path = "http://localhost:9999/stale/callback"
+        auth_config = {
+            "auth_type": "oauth",
+            "oauth_host": "localhost",
+            "oauth_port": "9000",
+            "oauth_server_url": "http://localhost:9000",
+            "oauth_callback_url": callback_url,
+            "oauth_callback_path": stale_callback_path,
+            "oauth_client_id": "cid",
+            "oauth_client_secret": "csecret",  # pragma: allowlist secret
+            "oauth_auth_url": "http://auth",
+            "oauth_token_url": "http://token",
+        }
+
+        mock_settings = MagicMock()
+        mock_settings.settings.mcp_composer_version = "==0.1.0.8.10"
+
+        mock_process = MagicMock(pid=4444, poll=MagicMock(return_value=None))
+
+        with (
+            patch("lfx.services.mcp_composer.service.get_settings_service", return_value=mock_settings),
+            patch("subprocess.Popen", return_value=mock_process) as mock_popen,
+            patch.object(mcp_service, "_is_port_available", return_value=False),
+        ):
+            await mcp_service._start_project_composer_process(
+                project_id=project_id,
+                host="localhost",
+                port=9000,
+                streamable_http_url="http://test/mcp",
+                auth_config=auth_config,
+                max_startup_checks=1,
+                startup_delay=0.01,
+            )
+
+        cmd = mock_popen.call_args[0][0]
+        idx = cmd.index("OAUTH_CALLBACK_PATH")
+        assert cmd[idx + 1] == callback_url
+
+    @pytest.mark.asyncio
     async def test_subprocess_receives_callback_path_env_var(self, mcp_service):
         """Verify the subprocess command uses OAUTH_CALLBACK_PATH, not OAUTH_CALLBACK_URL.
 
@@ -563,3 +606,30 @@ class TestOAuthCallbackConfigForwarding:
         assert "OAUTH_CALLBACK_URL" not in cmd, (
             f"OAUTH_CALLBACK_URL should not be in command (mcp-composer rejects it): {cmd}"
         )
+
+    def test_callback_aliases_do_not_trigger_restart_when_effective_value_matches(self, mcp_service):
+        """Alias-only callback field changes should not force composer restarts."""
+        existing_auth = {
+            "auth_type": "oauth",
+            "oauth_host": "localhost",
+            "oauth_port": "9000",
+            "oauth_server_url": "http://localhost:9000",
+            "oauth_callback_path": "http://localhost:9000/auth/idaas/callback",
+            "oauth_client_id": "cid",
+            "oauth_client_secret": "csecret",  # pragma: allowlist secret
+            "oauth_auth_url": "http://auth",
+            "oauth_token_url": "http://token",
+        }
+        new_auth = {
+            "auth_type": "oauth",
+            "oauth_host": "localhost",
+            "oauth_port": "9000",
+            "oauth_server_url": "http://localhost:9000",
+            "oauth_callback_url": "http://localhost:9000/auth/idaas/callback",
+            "oauth_client_id": "cid",
+            "oauth_client_secret": "csecret",  # pragma: allowlist secret
+            "oauth_auth_url": "http://auth",
+            "oauth_token_url": "http://token",
+        }
+
+        assert mcp_service._has_auth_config_changed(existing_auth, new_auth) is False

@@ -14,7 +14,6 @@ from collections.abc import Callable
 from functools import wraps
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
 
 from lfx.log.logger import logger
 from lfx.services.base import Service
@@ -835,6 +834,28 @@ class MCPComposerService(Service):
         """
         return None if (value is None or value == "") else value
 
+    @classmethod
+    def _normalize_oauth_callback_aliases(cls, auth_config: dict[str, Any] | None) -> dict[str, Any]:
+        """Normalize OAuth callback aliases to a canonical full callback URL value.
+
+        `oauth_callback_url` is the canonical field name in Langflow. For compatibility,
+        we also accept `oauth_callback_path` and mirror the effective value to both keys so
+        comparisons and subprocess env var mapping stay consistent.
+        """
+        if not auth_config:
+            return {}
+
+        normalized_auth_config = dict(auth_config)
+        callback_url = cls._normalize_config_value(normalized_auth_config.get("oauth_callback_url"))
+        callback_path = cls._normalize_config_value(normalized_auth_config.get("oauth_callback_path"))
+        effective_callback = callback_url or callback_path
+
+        if effective_callback is not None:
+            normalized_auth_config["oauth_callback_url"] = effective_callback
+            normalized_auth_config["oauth_callback_path"] = effective_callback
+
+        return normalized_auth_config
+
     def _has_auth_config_changed(self, existing_auth: dict[str, Any] | None, new_auth: dict[str, Any] | None) -> bool:
         """Check if auth configuration has changed in a way that requires restart."""
         if not existing_auth and not new_auth:
@@ -842,6 +863,9 @@ class MCPComposerService(Service):
 
         if not existing_auth or not new_auth:
             return True
+
+        existing_auth = self._normalize_oauth_callback_aliases(existing_auth)
+        new_auth = self._normalize_oauth_callback_aliases(new_auth)
 
         auth_type = new_auth.get("auth_type", "")
 
@@ -1304,23 +1328,7 @@ class MCPComposerService(Service):
                     "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE",
                 }
 
-                normalized_auth_config = dict(auth_config)
-
-                # Backwards compatibility: accept legacy oauth_callback_url input and normalize it
-                # to oauth_callback_path for internal use.
-                if (
-                    "oauth_callback_path" not in normalized_auth_config
-                    or not normalized_auth_config.get("oauth_callback_path")
-                ) and normalized_auth_config.get("oauth_callback_url"):
-                    callback_url = str(normalized_auth_config["oauth_callback_url"]).strip()
-                    parsed_callback_url = urlsplit(callback_url)
-                    if parsed_callback_url.scheme or parsed_callback_url.netloc:
-                        callback_path = parsed_callback_url.path or "/"
-                        if parsed_callback_url.query:
-                            callback_path = f"{callback_path}?{parsed_callback_url.query}"
-                        normalized_auth_config["oauth_callback_path"] = callback_path
-                    else:
-                        normalized_auth_config["oauth_callback_path"] = callback_url
+                normalized_auth_config = self._normalize_oauth_callback_aliases(auth_config)
 
                 # Add environment variables as command line arguments
                 # Only set non-empty values to avoid Pydantic validation errors
