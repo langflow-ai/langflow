@@ -41,6 +41,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             "client_key_file": "",
             "client_key_password": "",
             "use_form_urlencoded": False,
+            "bearer_token": "",
         }
 
     @pytest.fixture
@@ -554,6 +555,51 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         request = respx.calls[0].request
         assert "application/json" in request.headers.get("content-type", "")
 
+    @respx.mock
+    async def test_bearer_token_added_to_headers(self, component):
+        """Test that bearer token is added as Authorization header when provided."""
+        url = "https://example.com/api/test"
+        respx.get(url).mock(return_value=Response(200, json={"ok": True}))
+
+        component.bearer_token = "my-secret-token"
+
+        result = await component.make_api_request()
+
+        assert isinstance(result, Data)
+        assert len(respx.calls) == 1
+        request = respx.calls[0].request
+        assert request.headers.get("authorization") == "Bearer my-secret-token"
+
+    @respx.mock
+    async def test_bearer_token_not_added_when_empty(self, component):
+        """Test that Authorization header is not added when bearer token is empty."""
+        url = "https://example.com/api/test"
+        respx.get(url).mock(return_value=Response(200, json={"ok": True}))
+
+        component.bearer_token = ""
+
+        result = await component.make_api_request()
+
+        assert isinstance(result, Data)
+        assert len(respx.calls) == 1
+        request = respx.calls[0].request
+        assert "authorization" not in request.headers
+
+    @respx.mock
+    async def test_bearer_token_not_added_when_whitespace(self, component):
+        """Test that Authorization header is not added when bearer token is only whitespace."""
+        url = "https://example.com/api/test"
+        respx.get(url).mock(return_value=Response(200, json={"ok": True}))
+
+        component.bearer_token = "   "
+
+        result = await component.make_api_request()
+
+        assert isinstance(result, Data)
+        assert len(respx.calls) == 1
+        request = respx.calls[0].request
+        assert "authorization" not in request.headers
+
 
 class TestAPIRequestSSRFProtection:
     """Test SSRF protection in API Request component."""
@@ -583,6 +629,7 @@ class TestAPIRequestSSRFProtection:
             "client_key_file": "",
             "client_key_password": "",
             "use_form_urlencoded": False,
+            "bearer_token": "",
         }
 
     @pytest.fixture

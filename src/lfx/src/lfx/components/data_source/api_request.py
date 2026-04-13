@@ -145,6 +145,12 @@ class APIRequestComponent(Component):
             input_types=["Data", "JSON"],
             real_time_refresh=True,
         ),
+        MessageTextInput(
+            name="bearer_token",
+            display_name="Auth Bearer Token",
+            info="Bearer token for Authorization header. Do not include the 'Bearer' prefix.",
+            advanced=True,
+        ),
         IntInput(
             name="timeout",
             display_name="Timeout",
@@ -517,6 +523,12 @@ class APIRequestComponent(Component):
 
         # Process headers and body
         headers = self._process_headers(headers)
+
+        # Add Authorization bearer header if token is provided
+        bearer_token = getattr(self, "bearer_token", None)
+        if bearer_token and str(bearer_token).strip():
+            headers["Authorization"] = f"Bearer {str(bearer_token).strip()}"
+
         body = self._process_body(body)
         url = self.add_query_params(url, query_params)
 
