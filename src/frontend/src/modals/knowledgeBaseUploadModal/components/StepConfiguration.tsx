@@ -80,7 +80,8 @@ export function StepConfiguration({
         {/* Name */}
         <div className="flex flex-col gap-2">
           <Label htmlFor="source-name" className="text-sm font-medium">
-            {t("knowledge.nameLabel")} <span className="text-destructive">*</span>
+            {t("knowledge.nameLabel")}{" "}
+            <span className="text-destructive">*</span>
           </Label>
           <Input
             id="source-name"
@@ -104,7 +105,8 @@ export function StepConfiguration({
         {/* Model Selection */}
         <div className="flex flex-col gap-2 pt-4">
           <Label className="text-sm font-medium">
-            {t("knowledge.embeddingModelLabel")} <span className="text-destructive">*</span>
+            {t("knowledge.embeddingModelLabel")}{" "}
+            <span className="text-destructive">*</span>
           </Label>
           {isAddSourcesMode ? (
             <div className="flex h-10 w-full items-center gap-2 rounded-md border border-input bg-muted px-3 py-2 text-sm">
@@ -299,7 +301,9 @@ export function StepConfiguration({
                   name="Settings2"
                   className="h-4 w-4 text-muted-foreground"
                 />
-                <span className="text-sm font-medium">{t("knowledge.chunkingSettings")}</span>
+                <span className="text-sm font-medium">
+                  {t("knowledge.chunkingSettings")}
+                </span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

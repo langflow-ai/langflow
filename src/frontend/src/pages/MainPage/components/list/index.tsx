@@ -218,7 +218,9 @@ const ListComponent = ({
           setOpen={setOpenDelete}
           onConfirm={handleDelete}
           description={descriptionModal}
-          note={!flowData.is_component ? t("deleteModal.noteMessageHistory") : ""}
+          note={
+            !flowData.is_component ? t("deleteModal.noteMessageHistory") : ""
+          }
         />
       )}
       <ExportModal
