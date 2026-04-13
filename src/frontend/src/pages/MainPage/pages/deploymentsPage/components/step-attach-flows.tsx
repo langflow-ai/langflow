@@ -116,6 +116,11 @@ export default function StepAttachFlows() {
     { id: crypto.randomUUID(), key: "", value: "" },
   ]);
   const [detectedVarCount, setDetectedVarCount] = useState(0);
+
+  const { mutateAsync: detectEnvVars } = usePostDetectEnvVars();
+  const { data: globalVariables } = useGetGlobalVariables();
+  const globalVariableOptions = (globalVariables ?? []).map((v) => v.name);
+
   // When a flow+version are pre-selected from outside (e.g., canvas deploy button),
   // auto-advance to the connections panel and detect env vars for the pre-selected version.
   useEffect(() => {
@@ -135,11 +140,11 @@ export default function StepAttachFlows() {
         if (detected.length > 0) {
           setDetectedVarCount(detected.length);
           setEnvVars(
-            detected.map((v) => ({
+            detected.map((variableName) => ({
               id: crypto.randomUUID(),
-              key: v.key,
-              value: v.global_variable_name ?? "",
-              globalVar: Boolean(v.global_variable_name),
+              key: variableName,
+              value: variableName,
+              globalVar: true,
             })),
           );
         }
@@ -153,10 +158,6 @@ export default function StepAttachFlows() {
     detect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const { mutateAsync: detectEnvVars } = usePostDetectEnvVars();
-  const { data: globalVariables } = useGetGlobalVariables();
-  const globalVariableOptions = (globalVariables ?? []).map((v) => v.name);
 
   const isDuplicateConnectionName = useMemo(() => {
     const trimmed = newConnectionName.trim().toLowerCase();
@@ -203,11 +204,11 @@ export default function StepAttachFlows() {
         if (detected.length > 0) {
           setDetectedVarCount(detected.length);
           setEnvVars(
-            detected.map((v) => ({
+            detected.map((variableName) => ({
               id: crypto.randomUUID(),
-              key: v.key,
-              value: v.global_variable_name ?? "",
-              globalVar: Boolean(v.global_variable_name),
+              key: variableName,
+              value: variableName,
+              globalVar: true,
             })),
           );
         } else {
