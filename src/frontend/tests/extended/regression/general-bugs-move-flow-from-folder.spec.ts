@@ -130,10 +130,7 @@ test("moved flow must appear when destination project was visited while still em
   await page.getByTestId("sidebar-nav-New Project").click();
 
   await expect(
-    page
-      .getByTestId("list-card")
-      .filter({ hasText: flowName })
-      .first(),
+    page.getByTestId("list-card").filter({ hasText: flowName }).first(),
   ).toBeVisible({ timeout: 3000 });
 
   // And the empty-state placeholder must NOT be rendered.
