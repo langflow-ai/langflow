@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StepperModal, StepperModalFooter } from "../stepperModal/StepperModal";
 import { FilesPanel } from "./components/FilesPanel";
 import { StepConfiguration } from "./components/StepConfiguration";
 import { StepReview } from "./components/StepReview";
-import { STEP_DESCRIPTIONS, STEP_TITLES } from "./constants";
+import { getStepDescriptions, getStepTitles } from "./constants";
 import { useKnowledgeBaseForm } from "./hooks/useKnowledgeBaseForm";
 import type { KnowledgeBaseUploadModalProps } from "./types";
 
@@ -20,6 +21,7 @@ export default function KnowledgeBaseUploadModal({
   hideAdvanced,
   existingKnowledgeBaseNames,
 }: KnowledgeBaseUploadModalProps) {
+  const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = controlledSetOpen ?? setInternalOpen;
@@ -96,12 +98,14 @@ export default function KnowledgeBaseUploadModal({
       currentStep={form.currentStep}
       totalSteps={2}
       title={
-        form.isAddSourcesMode ? "Add Sources" : STEP_TITLES[form.currentStep]
+        form.isAddSourcesMode
+          ? t("knowledge.addSourcesTitle")
+          : getStepTitles()[form.currentStep]
       }
       description={
         form.isAddSourcesMode && form.currentStep === 1
-          ? "Upload files and configure chunking settings"
-          : STEP_DESCRIPTIONS[form.currentStep]
+          ? t("knowledge.addSourcesDescription")
+          : getStepDescriptions()[form.currentStep]
       }
       icon="Database"
       height={(() => {
@@ -129,12 +133,16 @@ export default function KnowledgeBaseUploadModal({
           }
           isSubmitting={form.isSubmitting}
           submitTestId="kb-create-button"
-          submitLabel={form.isAddSourcesMode ? "Add Sources" : "Create"}
+          submitLabel={
+            form.isAddSourcesMode
+              ? t("knowledge.submitAddSources")
+              : t("knowledge.submitCreate")
+          }
           helpLabel={
             !hideAdvanced && form.currentStep === 1
               ? form.showAdvanced
-                ? "Hide Configuration"
-                : "Configure Sources"
+                ? t("knowledge.helpHideConfiguration")
+                : t("knowledge.helpConfigureSources")
               : undefined
           }
           onHelp={
