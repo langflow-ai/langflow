@@ -2,20 +2,20 @@
 
 from __future__ import annotations
 
-import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 from langflow.api.v1.schemas.deployments import DetectVarsRequest
-from langflow.api.v1.variable import _derive_env_var_name, detect_env_vars
-from langflow.services.database.models.flow_version.exceptions import FlowVersionNotFoundError
+from langflow.api.v1.variable import detect_env_vars
+from pydantic import ValidationError
 
 MODULE = "langflow.api.v1.variable"
 
 
-def _flow_version_with_data(data: dict) -> SimpleNamespace:
+def _flow_version_with_data(data: object) -> SimpleNamespace:
     return SimpleNamespace(data=data)
 
 
@@ -23,37 +23,8 @@ def _node(template: dict) -> dict:
     return {"data": {"node": {"template": template}}}
 
 
-# ---------------------------------------------------------------------------
-# _derive_env_var_name
-# ---------------------------------------------------------------------------
-
-
-class TestDeriveEnvVarName:
-    def test_falls_back_to_uppercased_field_key(self):
-        assert _derive_env_var_name("api_key", {}) == "API_KEY"
-
-    def test_uses_category_from_model_field_when_value_is_list(self):
-        template = {"model": {"value": [{"category": "OpenAI"}]}}
-        assert _derive_env_var_name("api_key", template) == "OPENAI_API_KEY"
-
-    def test_uses_category_from_json_encoded_model_value(self):
-        template = {"model": {"value": json.dumps([{"category": "Anthropic"}])}}
-        assert _derive_env_var_name("api_key", template) == "ANTHROPIC_API_KEY"
-
-    def test_normalizes_spaces_and_hyphens_in_category(self):
-        template = {"model": {"value": [{"category": "My-Custom Provider"}]}}
-        assert _derive_env_var_name("secret", template) == "MY_CUSTOM_PROVIDER_SECRET"
-
-    def test_ignores_empty_category(self):
-        template = {"model": {"value": [{"category": ""}]}}
-        assert _derive_env_var_name("token", template) == "TOKEN"
-
-    def test_ignores_non_dict_model_field(self):
-        assert _derive_env_var_name("key", {"model": "not-a-dict"}) == "KEY"
-
-    def test_ignores_malformed_json_in_model_value(self):
-        template = {"model": {"value": "{not valid json"}}
-        assert _derive_env_var_name("key", template) == "KEY"
+def _variable_service_with_names(names: list[str] | None = None) -> SimpleNamespace:
+    return SimpleNamespace(list_variables=AsyncMock(return_value=names or []))
 
 
 # ---------------------------------------------------------------------------
@@ -79,37 +50,48 @@ class TestDetectEnvVars:
                 ]
             }
         )
-        with patch(f"{MODULE}.get_flow_version_entry_or_raise", new_callable=AsyncMock, return_value=version):
+        with (
+            patch(
+                f"{MODULE}.get_flow_version_entries_by_ids",
+                new_callable=AsyncMock,
+                return_value={fv_id: version},
+            ),
+            patch(
+                f"{MODULE}.get_variable_service",
+                return_value=_variable_service_with_names(["MY_OPENAI_KEY"]),
+            ),
+        ):
             result = await detect_env_vars(
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
             )
-        assert len(result.variables) == 1
-        assert result.variables[0].key == "MY_OPENAI_KEY"
-        assert result.variables[0].global_variable_name == "MY_OPENAI_KEY"
+        assert result.variables == ["MY_OPENAI_KEY"]
 
     @pytest.mark.asyncio
-    async def test_returns_password_field_suggestions(self):
+    async def test_ignores_password_only_fields(self):
         fv_id = uuid4()
         version = _flow_version_with_data({"nodes": [_node({"api_key": {"password": True}})]})
-        with patch(f"{MODULE}.get_flow_version_entry_or_raise", new_callable=AsyncMock, return_value=version):
+        with (
+            patch(
+                f"{MODULE}.get_flow_version_entries_by_ids",
+                new_callable=AsyncMock,
+                return_value={fv_id: version},
+            ),
+            patch(
+                f"{MODULE}.get_variable_service",
+                return_value=_variable_service_with_names(["API_KEY"]),
+            ),
+        ):
             result = await detect_env_vars(
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
             )
-        assert len(result.variables) == 1
-        assert result.variables[0].key == "API_KEY"
-        assert result.variables[0].global_variable_name is None
+        assert result.variables == []
 
     @pytest.mark.asyncio
-    async def test_global_var_takes_precedence_over_password(self):
-        """Global var takes precedence over password suggestion.
-
-        When the same key appears as both a global var ref and a password
-        suggestion, only the global var entry is returned.
-        """
+    async def test_load_from_db_is_used_even_when_password_fields_exist(self):
         fv_id = uuid4()
         version = _flow_version_with_data(
             {
@@ -124,16 +106,23 @@ class TestDetectEnvVars:
                 ]
             }
         )
-        with patch(f"{MODULE}.get_flow_version_entry_or_raise", new_callable=AsyncMock, return_value=version):
+        with (
+            patch(
+                f"{MODULE}.get_flow_version_entries_by_ids",
+                new_callable=AsyncMock,
+                return_value={fv_id: version},
+            ),
+            patch(
+                f"{MODULE}.get_variable_service",
+                return_value=_variable_service_with_names(["API_KEY"]),
+            ),
+        ):
             result = await detect_env_vars(
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
             )
-        keys = {v.key for v in result.variables}
-        assert "API_KEY" in keys
-        api_key_var = next(v for v in result.variables if v.key == "API_KEY")
-        assert api_key_var.global_variable_name == "API_KEY"
+        assert result.variables == ["API_KEY"]
 
     @pytest.mark.asyncio
     async def test_deduplicates_across_versions(self):
@@ -141,74 +130,243 @@ class TestDetectEnvVars:
         version1 = _flow_version_with_data({"nodes": [_node({"api_key": {"load_from_db": True, "value": "MY_KEY"}})]})
         version2 = _flow_version_with_data({"nodes": [_node({"api_key": {"load_from_db": True, "value": "MY_KEY"}})]})
 
-        async def mock_get(session, *, version_id, user_id):  # noqa: ARG001
-            return version1 if version_id == fv1 else version2
-
-        with patch(f"{MODULE}.get_flow_version_entry_or_raise", side_effect=mock_get):
+        with (
+            patch(
+                f"{MODULE}.get_flow_version_entries_by_ids",
+                new_callable=AsyncMock,
+                return_value={fv1: version1, fv2: version2},
+            ),
+            patch(
+                f"{MODULE}.get_variable_service",
+                return_value=_variable_service_with_names(["MY_KEY"]),
+            ),
+        ):
             result = await detect_env_vars(
                 payload=DetectVarsRequest(flow_version_ids=[fv1, fv2]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
             )
-        assert len(result.variables) == 1
+        assert result.variables == ["MY_KEY"]
 
     @pytest.mark.asyncio
-    async def test_skips_missing_flow_versions(self):
+    async def test_fails_fast_for_missing_flow_versions(self):
         fv_id = uuid4()
 
-        async def mock_get(session, *, version_id, user_id):  # noqa: ARG001
-            raise FlowVersionNotFoundError(version_id)
-
-        with patch(f"{MODULE}.get_flow_version_entry_or_raise", side_effect=mock_get):
-            result = await detect_env_vars(
+        with (
+            patch(
+                f"{MODULE}.get_flow_version_entries_by_ids",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch(
+                f"{MODULE}.get_variable_service",
+                return_value=_variable_service_with_names(["ANY_KEY"]),
+            ),
+            pytest.raises(HTTPException, match=f"Flow version {fv_id} not found"),
+        ):
+            await detect_env_vars(
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
             )
-        assert result.variables == []
 
     @pytest.mark.asyncio
-    async def test_handles_non_dict_data(self):
+    async def test_fails_fast_for_non_dict_data(self):
         fv_id = uuid4()
         version = _flow_version_with_data(None)
-        with patch(f"{MODULE}.get_flow_version_entry_or_raise", new_callable=AsyncMock, return_value=version):
-            result = await detect_env_vars(
+        with (
+            patch(
+                f"{MODULE}.get_flow_version_entries_by_ids",
+                new_callable=AsyncMock,
+                return_value={fv_id: version},
+            ),
+            patch(
+                f"{MODULE}.get_variable_service",
+                return_value=_variable_service_with_names(["ANY_KEY"]),
+            ),
+            pytest.raises(
+                HTTPException,
+                match=(
+                    f"Flow version {fv_id} data must be a JSON object with a 'nodes' list containing node templates."
+                ),
+            ),
+        ):
+            await detect_env_vars(
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
             )
-        assert result.variables == []
 
     @pytest.mark.asyncio
-    async def test_empty_flow_version_ids(self):
-        result = await detect_env_vars(
-            payload=DetectVarsRequest(flow_version_ids=[]),
-            session=AsyncMock(),
-            current_user=SimpleNamespace(id=uuid4()),
-        )
-        assert result.variables == []
+    async def test_fails_fast_for_missing_nodes_list(self):
+        fv_id = uuid4()
+        version = _flow_version_with_data({})
+        with (
+            patch(
+                f"{MODULE}.get_flow_version_entries_by_ids",
+                new_callable=AsyncMock,
+                return_value={fv_id: version},
+            ),
+            patch(
+                f"{MODULE}.get_variable_service",
+                return_value=_variable_service_with_names(["ANY_KEY"]),
+            ),
+            pytest.raises(
+                HTTPException,
+                match=(
+                    f"Flow version {fv_id} data must be a JSON object with a 'nodes' list containing node templates."
+                ),
+            ),
+        ):
+            await detect_env_vars(
+                payload=DetectVarsRequest(flow_version_ids=[fv_id]),
+                session=AsyncMock(),
+                current_user=SimpleNamespace(id=uuid4()),
+            )
 
     @pytest.mark.asyncio
-    async def test_password_with_model_category(self):
+    async def test_fails_fast_for_non_list_nodes(self):
+        fv_id = uuid4()
+        version = _flow_version_with_data({"nodes": {"template": {}}})
+        with (
+            patch(
+                f"{MODULE}.get_flow_version_entries_by_ids",
+                new_callable=AsyncMock,
+                return_value={fv_id: version},
+            ),
+            patch(
+                f"{MODULE}.get_variable_service",
+                return_value=_variable_service_with_names(["ANY_KEY"]),
+            ),
+            pytest.raises(
+                HTTPException,
+                match=(
+                    f"Flow version {fv_id} data must be a JSON object with a 'nodes' list containing node templates."
+                ),
+            ),
+        ):
+            await detect_env_vars(
+                payload=DetectVarsRequest(flow_version_ids=[fv_id]),
+                session=AsyncMock(),
+                current_user=SimpleNamespace(id=uuid4()),
+            )
+
+    @pytest.mark.asyncio
+    async def test_rejects_empty_flow_version_ids(self):
+        with pytest.raises(ValidationError):
+            DetectVarsRequest(flow_version_ids=[])
+
+    @pytest.mark.asyncio
+    async def test_deduplicates_flow_version_ids_in_request(self):
+        flow_version_id = uuid4()
+        request = DetectVarsRequest(flow_version_ids=[flow_version_id, flow_version_id])
+        assert request.flow_version_ids == [flow_version_id]
+
+    @pytest.mark.asyncio
+    async def test_rejects_more_than_50_flow_version_ids(self):
+        with pytest.raises(ValidationError):
+            DetectVarsRequest(flow_version_ids=[uuid4() for _ in range(51)])
+
+    @pytest.mark.asyncio
+    async def test_strips_whitespace_from_detected_variable_name(self):
         fv_id = uuid4()
         version = _flow_version_with_data(
             {
                 "nodes": [
                     _node(
                         {
-                            "api_key": {"password": True},
-                            "model": {"value": [{"category": "OpenAI"}]},
+                            "api_key": {
+                                "load_from_db": True,
+                                "value": "  MY_OPENAI_KEY  ",
+                            }
                         }
                     )
                 ]
             }
         )
-        with patch(f"{MODULE}.get_flow_version_entry_or_raise", new_callable=AsyncMock, return_value=version):
+        with (
+            patch(
+                f"{MODULE}.get_flow_version_entries_by_ids",
+                new_callable=AsyncMock,
+                return_value={fv_id: version},
+            ),
+            patch(
+                f"{MODULE}.get_variable_service",
+                return_value=_variable_service_with_names(["MY_OPENAI_KEY"]),
+            ),
+        ):
             result = await detect_env_vars(
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
             )
-        assert len(result.variables) == 1
-        assert result.variables[0].key == "OPENAI_API_KEY"
-        assert result.variables[0].global_variable_name is None
+        assert result.variables == ["MY_OPENAI_KEY"]
+
+    @pytest.mark.asyncio
+    async def test_ignores_non_string_and_blank_variable_values(self):
+        fv_id = uuid4()
+        version = _flow_version_with_data(
+            {
+                "nodes": [
+                    _node(
+                        {
+                            "null_value": {"load_from_db": True, "value": None},
+                            "int_value": {"load_from_db": True, "value": 123},
+                            "blank_value": {"load_from_db": True, "value": "   "},
+                            "valid_value": {"load_from_db": True, "value": "VALID_KEY"},
+                        }
+                    )
+                ]
+            }
+        )
+        with (
+            patch(
+                f"{MODULE}.get_flow_version_entries_by_ids",
+                new_callable=AsyncMock,
+                return_value={fv_id: version},
+            ),
+            patch(
+                f"{MODULE}.get_variable_service",
+                return_value=_variable_service_with_names(["VALID_KEY"]),
+            ),
+        ):
+            result = await detect_env_vars(
+                payload=DetectVarsRequest(flow_version_ids=[fv_id]),
+                session=AsyncMock(),
+                current_user=SimpleNamespace(id=uuid4()),
+            )
+        assert result.variables == ["VALID_KEY"]
+
+    @pytest.mark.asyncio
+    async def test_filters_out_non_existing_variable_names(self):
+        fv_id = uuid4()
+        version = _flow_version_with_data(
+            {
+                "nodes": [
+                    _node(
+                        {
+                            "api_key": {"load_from_db": True, "value": "sk-live-secret"},
+                            "other_key": {"password": True},
+                        }
+                    )
+                ]
+            }
+        )
+        with (
+            patch(
+                f"{MODULE}.get_flow_version_entries_by_ids",
+                new_callable=AsyncMock,
+                return_value={fv_id: version},
+            ),
+            patch(
+                f"{MODULE}.get_variable_service",
+                return_value=_variable_service_with_names([]),
+            ),
+        ):
+            result = await detect_env_vars(
+                payload=DetectVarsRequest(flow_version_ids=[fv_id]),
+                session=AsyncMock(),
+                current_user=SimpleNamespace(id=uuid4()),
+            )
+
+        assert result.variables == []

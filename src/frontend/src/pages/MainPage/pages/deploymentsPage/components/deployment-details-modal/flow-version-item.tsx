@@ -5,12 +5,14 @@ import ConnectionItem from "./connection-item";
 interface FlowVersionItemProps {
   flowName: string | null;
   versionNumber: number;
+  toolName: string | null;
   connectionNames: string[];
 }
 
 export default function FlowVersionItem({
   flowName,
   versionNumber,
+  toolName,
   connectionNames,
 }: FlowVersionItemProps) {
   return (
@@ -31,6 +33,16 @@ export default function FlowVersionItem({
           v{versionNumber}
         </Badge>
       </div>
+
+      {toolName && (
+        <div className="flex items-center gap-2 pl-5">
+          <ForwardedIconComponent
+            name="Wrench"
+            className="h-3 w-3 shrink-0 text-muted-foreground"
+          />
+          <span className="text-xs text-muted-foreground">{toolName}</span>
+        </div>
+      )}
 
       {connectionNames.length > 0 && (
         <div className="flex flex-col gap-1 pl-5">

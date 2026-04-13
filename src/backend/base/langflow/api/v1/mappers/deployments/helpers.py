@@ -11,8 +11,8 @@ from fastapi import HTTPException, Query, status
 from fastapi_pagination import Params
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
-    DeploymentConflictError,
     DeploymentServiceError,
+    ResourceConflictError,
     http_status_for_deployment_error,
 )
 from lfx.services.adapters.deployment.schema import (
@@ -33,7 +33,6 @@ from sqlmodel import col, func, select
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
-    DeploymentProviderAccountGetResponse,
     DeploymentUpdateRequest,
 )
 from langflow.initial_setup.setup import get_or_create_default_folder
@@ -152,7 +151,10 @@ async def build_flow_artifacts_from_flow_versions(
     )
     rows = list((await db.exec(statement)).all())
     if len(rows) < len(flow_version_ids):
-        msg = "One or more flow version ids are invalid."
+        msg = (
+            "One or more flow versions are invalid. "
+            "Please ensure the flows belong to the project containing the deployment."
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
 
     artifacts: list[tuple[UUID, int, UUID, BaseFlowArtifact]] = []
@@ -296,15 +298,6 @@ def page_offset(page: int, size: int) -> int:
     return (page - 1) * size
 
 
-def as_uuid(value: UUID | str) -> UUID | None:
-    if isinstance(value, UUID):
-        return value
-    try:
-        return UUID(str(value))
-    except (TypeError, ValueError):
-        return None
-
-
 def raise_http_for_value_error(exc: ValueError) -> None:
     status_code = status.HTTP_404_NOT_FOUND if "not found" in str(exc).lower() else status.HTTP_400_BAD_REQUEST
     raise HTTPException(status_code=status_code, detail=str(exc)) from exc
@@ -325,8 +318,12 @@ def handle_adapter_errors(*, mapper: BaseDeploymentMapper | None = None):
     except DeploymentServiceError as exc:
         http_status = http_status_for_deployment_error(exc)
         detail = exc.message
-        if isinstance(exc, DeploymentConflictError) and mapper is not None:
-            detail = mapper.format_conflict_detail(exc.message)
+        if isinstance(exc, ResourceConflictError) and mapper is not None:
+            detail = mapper.format_conflict_detail(
+                exc.message,
+                resource=exc.resource,
+                resource_name=exc.resource_name,
+            )
         logger.exception("Adapter error (status=%s): %s", http_status, detail)
         raise HTTPException(
             status_code=http_status,
@@ -349,53 +346,6 @@ def handle_adapter_errors(*, mapper: BaseDeploymentMapper | None = None):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while communicating with the deployment provider.",
         ) from exc
-
-
-def resolve_provider_tenant_id(
-    *,
-    deployment_mapper: BaseDeploymentMapper,
-    provider_url: str,
-    provider_data: dict[str, Any],
-) -> str | None:
-    return deployment_mapper.resolve_provider_tenant_id(
-        provider_url=provider_url,
-        provider_data=provider_data,
-    )
-
-
-def to_provider_account_response(provider_account: DeploymentProviderAccount) -> DeploymentProviderAccountGetResponse:
-    from langflow.api.v1.mappers.deployments.registry import get_deployment_mapper
-
-    deployment_mapper = get_deployment_mapper(provider_account.provider_key or "")
-    return deployment_mapper.shape_provider_account_response(provider_account)
-
-
-def normalize_flow_version_query_ids(flow_version_ids: list[str] | None) -> list[UUID]:
-    if not flow_version_ids:
-        return []
-    normalized: list[UUID] = []
-    seen: set[UUID] = set()
-    for raw in flow_version_ids:
-        flow_version_uuid = as_uuid(raw.strip())
-        if flow_version_uuid is None:
-            msg = f"Invalid UUID in flow_version_ids query parameter: '{raw}'"
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
-        if flow_version_uuid in seen:
-            continue
-        seen.add(flow_version_uuid)
-        normalized.append(flow_version_uuid)
-    return normalized
-
-
-def normalize_flow_ids_query(flow_ids: list[UUID] | None) -> list[UUID]:
-    """Return a deduplicated list from an already-validated ``flow_ids`` query param.
-
-    ``FlowIdsQuery`` (Pydantic) handles UUID parsing and max-length
-    validation, so this is intentionally thin.
-    """
-    if not flow_ids:
-        return []
-    return list(dict.fromkeys(flow_ids))
 
 
 async def flow_version_ids_for_flows(db, *, flow_ids: list[UUID], user_id: UUID) -> list[UUID]:
@@ -940,6 +890,7 @@ async def list_deployments_synced(
     size: int,
     deployment_type: DeploymentType | None,
     flow_version_ids: list[UUID] | None = None,
+    project_id: UUID | None = None,
 ) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int]:
     """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
 
@@ -959,6 +910,7 @@ async def list_deployments_synced(
             offset=cursor,
             limit=size - len(accepted),
             flow_version_ids=flow_version_ids,
+            project_id=project_id,
         )
         if not batch:
             break
@@ -1023,6 +975,7 @@ async def list_deployments_synced(
         user_id=user_id,
         deployment_provider_account_id=provider_id,
         flow_version_ids=flow_version_ids,
+        project_id=project_id,
     )
     return accepted, total
 
