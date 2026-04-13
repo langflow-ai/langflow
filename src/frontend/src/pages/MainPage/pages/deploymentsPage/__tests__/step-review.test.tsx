@@ -8,6 +8,10 @@ jest.mock("../contexts/deployment-stepper-context", () => ({
   useDeploymentStepper: jest.fn(),
 }));
 
+jest.mock("@/controllers/API/queries/deployments", () => ({
+  useCheckToolNames: jest.fn(() => ({ data: undefined })),
+}));
+
 jest.mock(
   "@/controllers/API/queries/flows/use-get-refresh-flows-query",
   () => ({
@@ -57,6 +61,9 @@ describe("StepReview tool name editing", () => {
       setToolNameByFlow,
       attachedConnectionByFlow: new Map(),
       removedFlowIds: new Set(),
+      selectedInstance: null,
+      preExistingFlowIds: new Set(),
+      setHasToolNameErrors: jest.fn(),
     } as never);
 
     render(<StepReview />);

@@ -866,7 +866,7 @@ async def list_deployment_snapshots(
     deployment_id: DeploymentIdQuery | None = None,
     provider_snapshot_names: Annotated[
         list[str] | None,
-        Query(description="Filter snapshots by provider tool names."),
+        Query(min_length=1, description="Filter snapshots by provider tool names."),
     ] = None,
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
