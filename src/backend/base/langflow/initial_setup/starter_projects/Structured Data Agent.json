@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "FileDescriptionGeneratorComponent",
-            "id": "FileDescriptionGeneratorComponent-nPff9",
+            "id": "FileDescriptionGeneratorComponent-WI38L",
             "name": "descriptions",
             "output_types": [
               "JSON"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "Chroma-Nb0GH",
+            "id": "Chroma-ebQO6",
             "inputTypes": [
               "Data",
               "DataFrame"
@@ -23,12 +23,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-FileDescriptionGeneratorComponent-nPff9{œdataTypeœ:œFileDescriptionGeneratorComponentœ,œidœ:œFileDescriptionGeneratorComponent-nPff9œ,œnameœ:œdescriptionsœ,œoutput_typesœ:[œJSONœ]}-Chroma-Nb0GH{œfieldNameœ:œingest_dataœ,œidœ:œChroma-Nb0GHœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FileDescriptionGeneratorComponent-WI38L{œdataTypeœ:œFileDescriptionGeneratorComponentœ,œidœ:œFileDescriptionGeneratorComponent-WI38Lœ,œnameœ:œdescriptionsœ,œoutput_typesœ:[œJSONœ]}-Chroma-ebQO6{œfieldNameœ:œingest_dataœ,œidœ:œChroma-ebQO6œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FileDescriptionGeneratorComponent-nPff9",
-        "sourceHandle": "{œdataTypeœ:œFileDescriptionGeneratorComponentœ,œidœ:œFileDescriptionGeneratorComponent-nPff9œ,œnameœ:œdescriptionsœ,œoutput_typesœ:[œJSONœ]}",
-        "target": "Chroma-Nb0GH",
-        "targetHandle": "{œfieldNameœ:œingest_dataœ,œidœ:œChroma-Nb0GHœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "source": "FileDescriptionGeneratorComponent-WI38L",
+        "sourceHandle": "{œdataTypeœ:œFileDescriptionGeneratorComponentœ,œidœ:œFileDescriptionGeneratorComponent-WI38Lœ,œnameœ:œdescriptionsœ,œoutput_typesœ:[œJSONœ]}",
+        "target": "Chroma-ebQO6",
+        "targetHandle": "{œfieldNameœ:œingest_dataœ,œidœ:œChroma-ebQO6œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Chroma",
-            "id": "Chroma-3kWnQ",
+            "id": "Chroma-O0Ed4",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -44,19 +44,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "OpenDsStarAgent-EUldj",
+            "id": "OpenDsStarAgent-J2rwH",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Chroma-3kWnQ{œdataTypeœ:œChromaœ,œidœ:œChroma-3kWnQœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-EUldj{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-EUldjœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Chroma-O0Ed4{œdataTypeœ:œChromaœ,œidœ:œChroma-O0Ed4œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-J2rwH{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-J2rwHœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Chroma-3kWnQ",
-        "sourceHandle": "{œdataTypeœ:œChromaœ,œidœ:œChroma-3kWnQœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "OpenDsStarAgent-EUldj",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-EUldjœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "source": "Chroma-O0Ed4",
+        "sourceHandle": "{œdataTypeœ:œChromaœ,œidœ:œChroma-O0Ed4œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "OpenDsStarAgent-J2rwH",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-J2rwHœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -64,7 +64,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-cTYxF",
+            "id": "ChatInput-kU3FH",
             "name": "message",
             "output_types": [
               "Message"
@@ -72,19 +72,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenDsStarAgent-EUldj",
+            "id": "OpenDsStarAgent-J2rwH",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-cTYxF{œdataTypeœ:œChatInputœ,œidœ:œChatInput-cTYxFœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenDsStarAgent-EUldj{œfieldNameœ:œinput_valueœ,œidœ:œOpenDsStarAgent-EUldjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-kU3FH{œdataTypeœ:œChatInputœ,œidœ:œChatInput-kU3FHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenDsStarAgent-J2rwH{œfieldNameœ:œinput_valueœ,œidœ:œOpenDsStarAgent-J2rwHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-cTYxF",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-cTYxFœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "OpenDsStarAgent-EUldj",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenDsStarAgent-EUldjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "source": "ChatInput-kU3FH",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-kU3FHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenDsStarAgent-J2rwH",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenDsStarAgent-J2rwHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -92,7 +92,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenDsStarAgent",
-            "id": "OpenDsStarAgent-EUldj",
+            "id": "OpenDsStarAgent-J2rwH",
             "name": "response",
             "output_types": [
               "Message"
@@ -100,7 +100,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-RvJi8",
+            "id": "ChatOutput-uWfh5",
             "inputTypes": [
               "Data",
               "JSON",
@@ -111,12 +111,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenDsStarAgent-EUldj{œdataTypeœ:œOpenDsStarAgentœ,œidœ:œOpenDsStarAgent-EUldjœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-RvJi8{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-RvJi8œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenDsStarAgent-J2rwH{œdataTypeœ:œOpenDsStarAgentœ,œidœ:œOpenDsStarAgent-J2rwHœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-uWfh5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-uWfh5œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenDsStarAgent-EUldj",
-        "sourceHandle": "{œdataTypeœ:œOpenDsStarAgentœ,œidœ:œOpenDsStarAgent-EUldjœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-RvJi8",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-RvJi8œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}"
+        "source": "OpenDsStarAgent-J2rwH",
+        "sourceHandle": "{œdataTypeœ:œOpenDsStarAgentœ,œidœ:œOpenDsStarAgent-J2rwHœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-uWfh5",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-uWfh5œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -124,7 +124,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "FileContentRetriever",
-            "id": "FileContentRetriever-0SrPI",
+            "id": "FileContentRetriever-PqTwn",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -132,19 +132,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "OpenDsStarAgent-EUldj",
+            "id": "OpenDsStarAgent-J2rwH",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-FileContentRetriever-0SrPI{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-0SrPIœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-EUldj{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-EUldjœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FileContentRetriever-PqTwn{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-PqTwnœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-J2rwH{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-J2rwHœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FileContentRetriever-0SrPI",
-        "sourceHandle": "{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-0SrPIœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "OpenDsStarAgent-EUldj",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-EUldjœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "source": "FileContentRetriever-PqTwn",
+        "sourceHandle": "{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-PqTwnœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "OpenDsStarAgent-J2rwH",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-J2rwHœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -152,7 +152,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Chroma",
-            "id": "Chroma-Nb0GH",
+            "id": "Chroma-ebQO6",
             "name": "search_results",
             "output_types": [
               "JSON"
@@ -160,7 +160,7 @@
           },
           "targetHandle": {
             "fieldName": "inputs",
-            "id": "MergeFlows-3uCFi",
+            "id": "MergeFlows-Ky92k",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -172,12 +172,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Chroma-Nb0GH{œdataTypeœ:œChromaœ,œidœ:œChroma-Nb0GHœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œJSONœ]}-MergeFlows-3uCFi{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-3uCFiœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Chroma-ebQO6{œdataTypeœ:œChromaœ,œidœ:œChroma-ebQO6œ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œJSONœ]}-MergeFlows-Ky92k{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-Ky92kœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Chroma-Nb0GH",
-        "sourceHandle": "{œdataTypeœ:œChromaœ,œidœ:œChroma-Nb0GHœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œJSONœ]}",
-        "target": "MergeFlows-3uCFi",
-        "targetHandle": "{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-3uCFiœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}"
+        "source": "Chroma-ebQO6",
+        "sourceHandle": "{œdataTypeœ:œChromaœ,œidœ:œChroma-ebQO6œ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œJSONœ]}",
+        "target": "MergeFlows-Ky92k",
+        "targetHandle": "{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-Ky92kœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -185,7 +185,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "FileContentRetriever",
-            "id": "FileContentRetriever-29Jth",
+            "id": "FileContentRetriever-1957F",
             "name": "content",
             "output_types": [
               "Message"
@@ -193,7 +193,7 @@
           },
           "targetHandle": {
             "fieldName": "inputs",
-            "id": "MergeFlows-3uCFi",
+            "id": "MergeFlows-Ky92k",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -205,12 +205,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-FileContentRetriever-29Jth{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-29Jthœ,œnameœ:œcontentœ,œoutput_typesœ:[œMessageœ]}-MergeFlows-3uCFi{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-3uCFiœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FileContentRetriever-1957F{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-1957Fœ,œnameœ:œcontentœ,œoutput_typesœ:[œMessageœ]}-MergeFlows-Ky92k{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-Ky92kœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FileContentRetriever-29Jth",
-        "sourceHandle": "{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-29Jthœ,œnameœ:œcontentœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "MergeFlows-3uCFi",
-        "targetHandle": "{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-3uCFiœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}"
+        "source": "FileContentRetriever-1957F",
+        "sourceHandle": "{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-1957Fœ,œnameœ:œcontentœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "MergeFlows-Ky92k",
+        "targetHandle": "{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-Ky92kœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -218,7 +218,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaModel",
-            "id": "OllamaModel-e6tgK",
+            "id": "OllamaModel-SSPiM",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -226,19 +226,19 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "FileDescriptionGeneratorComponent-nPff9",
+            "id": "FileDescriptionGeneratorComponent-WI38L",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaModel-e6tgK{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-e6tgKœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-FileDescriptionGeneratorComponent-nPff9{œfieldNameœ:œllmœ,œidœ:œFileDescriptionGeneratorComponent-nPff9œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaModel-SSPiM{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-SSPiMœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-FileDescriptionGeneratorComponent-WI38L{œfieldNameœ:œllmœ,œidœ:œFileDescriptionGeneratorComponent-WI38Lœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaModel-e6tgK",
-        "sourceHandle": "{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-e6tgKœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
-        "target": "FileDescriptionGeneratorComponent-nPff9",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œFileDescriptionGeneratorComponent-nPff9œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "source": "OllamaModel-SSPiM",
+        "sourceHandle": "{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-SSPiMœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "FileDescriptionGeneratorComponent-WI38L",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œFileDescriptionGeneratorComponent-WI38Lœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -246,7 +246,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaModel",
-            "id": "OllamaModel-e6tgK",
+            "id": "OllamaModel-SSPiM",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -254,19 +254,19 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "OpenDsStarAgent-EUldj",
+            "id": "OpenDsStarAgent-J2rwH",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaModel-e6tgK{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-e6tgKœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-OpenDsStarAgent-EUldj{œfieldNameœ:œllmœ,œidœ:œOpenDsStarAgent-EUldjœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaModel-SSPiM{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-SSPiMœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-OpenDsStarAgent-J2rwH{œfieldNameœ:œllmœ,œidœ:œOpenDsStarAgent-J2rwHœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaModel-e6tgK",
-        "sourceHandle": "{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-e6tgKœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
-        "target": "OpenDsStarAgent-EUldj",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œOpenDsStarAgent-EUldjœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "source": "OllamaModel-SSPiM",
+        "sourceHandle": "{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-SSPiMœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "OpenDsStarAgent-J2rwH",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œOpenDsStarAgent-J2rwHœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -274,7 +274,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaEmbeddings",
-            "id": "OllamaEmbeddings-yA7Aa",
+            "id": "OllamaEmbeddings-S0dDJ",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -282,19 +282,19 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "Chroma-Nb0GH",
+            "id": "Chroma-ebQO6",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaEmbeddings-yA7Aa{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-yA7Aaœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-Nb0GH{œfieldNameœ:œembeddingœ,œidœ:œChroma-Nb0GHœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaEmbeddings-S0dDJ{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-S0dDJœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-ebQO6{œfieldNameœ:œembeddingœ,œidœ:œChroma-ebQO6œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaEmbeddings-yA7Aa",
-        "sourceHandle": "{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-yA7Aaœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
-        "target": "Chroma-Nb0GH",
-        "targetHandle": "{œfieldNameœ:œembeddingœ,œidœ:œChroma-Nb0GHœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
+        "source": "OllamaEmbeddings-S0dDJ",
+        "sourceHandle": "{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-S0dDJœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "target": "Chroma-ebQO6",
+        "targetHandle": "{œfieldNameœ:œembeddingœ,œidœ:œChroma-ebQO6œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -302,7 +302,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaEmbeddings",
-            "id": "OllamaEmbeddings-yA7Aa",
+            "id": "OllamaEmbeddings-S0dDJ",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -310,19 +310,19 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "Chroma-3kWnQ",
+            "id": "Chroma-O0Ed4",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaEmbeddings-yA7Aa{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-yA7Aaœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-3kWnQ{œfieldNameœ:œembeddingœ,œidœ:œChroma-3kWnQœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaEmbeddings-S0dDJ{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-S0dDJœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-O0Ed4{œfieldNameœ:œembeddingœ,œidœ:œChroma-O0Ed4œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaEmbeddings-yA7Aa",
-        "sourceHandle": "{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-yA7Aaœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
-        "target": "Chroma-3kWnQ",
-        "targetHandle": "{œfieldNameœ:œembeddingœ,œidœ:œChroma-3kWnQœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
+        "source": "OllamaEmbeddings-S0dDJ",
+        "sourceHandle": "{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-S0dDJœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "target": "Chroma-O0Ed4",
+        "targetHandle": "{œfieldNameœ:œembeddingœ,œidœ:œChroma-O0Ed4œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -330,7 +330,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-FyEDX",
+            "id": "File-JfBHw",
             "name": "message",
             "output_types": [
               "Message"
@@ -338,7 +338,7 @@
           },
           "targetHandle": {
             "fieldName": "file_data",
-            "id": "FileDescriptionGeneratorComponent-nPff9",
+            "id": "FileDescriptionGeneratorComponent-WI38L",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -347,12 +347,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-FyEDX{œdataTypeœ:œFileœ,œidœ:œFile-FyEDXœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileDescriptionGeneratorComponent-nPff9{œfieldNameœ:œfile_dataœ,œidœ:œFileDescriptionGeneratorComponent-nPff9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-File-JfBHw{œdataTypeœ:œFileœ,œidœ:œFile-JfBHwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileDescriptionGeneratorComponent-WI38L{œfieldNameœ:œfile_dataœ,œidœ:œFileDescriptionGeneratorComponent-WI38Lœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "File-FyEDX",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-FyEDXœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "FileDescriptionGeneratorComponent-nPff9",
-        "targetHandle": "{œfieldNameœ:œfile_dataœ,œidœ:œFileDescriptionGeneratorComponent-nPff9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "source": "File-JfBHw",
+        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-JfBHwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "FileDescriptionGeneratorComponent-WI38L",
+        "targetHandle": "{œfieldNameœ:œfile_dataœ,œidœ:œFileDescriptionGeneratorComponent-WI38Lœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -360,7 +360,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-FyEDX",
+            "id": "File-JfBHw",
             "name": "message",
             "output_types": [
               "Message"
@@ -368,7 +368,7 @@
           },
           "targetHandle": {
             "fieldName": "file_data",
-            "id": "FileContentRetriever-29Jth",
+            "id": "FileContentRetriever-1957F",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -377,18 +377,18 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-FyEDX{œdataTypeœ:œFileœ,œidœ:œFile-FyEDXœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileContentRetriever-29Jth{œfieldNameœ:œfile_dataœ,œidœ:œFileContentRetriever-29Jthœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-File-JfBHw{œdataTypeœ:œFileœ,œidœ:œFile-JfBHwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileContentRetriever-1957F{œfieldNameœ:œfile_dataœ,œidœ:œFileContentRetriever-1957Fœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "File-FyEDX",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-FyEDXœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "FileContentRetriever-29Jth",
-        "targetHandle": "{œfieldNameœ:œfile_dataœ,œidœ:œFileContentRetriever-29Jthœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "source": "File-JfBHw",
+        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-JfBHwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "FileContentRetriever-1957F",
+        "targetHandle": "{œfieldNameœ:œfile_dataœ,œidœ:œFileContentRetriever-1957Fœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "OpenDsStarAgent-EUldj",
+          "id": "OpenDsStarAgent-J2rwH",
           "node": {
             "base_classes": [
               "Message",
@@ -772,7 +772,7 @@
           "type": "OpenDsStarAgent"
         },
         "dragging": false,
-        "id": "OpenDsStarAgent-EUldj",
+        "id": "OpenDsStarAgent-J2rwH",
         "measured": {
           "height": 311,
           "width": 320
@@ -786,7 +786,7 @@
       },
       {
         "data": {
-          "id": "FileDescriptionGeneratorComponent-nPff9",
+          "id": "FileDescriptionGeneratorComponent-WI38L",
           "node": {
             "base_classes": [
               "JSON"
@@ -811,7 +811,7 @@
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
-              "code_hash": "fbb4ff1a04c8",
+              "code_hash": "cd156e54eeea",
               "dependencies": {
                 "dependencies": [
                   {
@@ -901,7 +901,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "\"\"\"Component that runs OpenDsStar's docling-based ingestion to generate file descriptions.\n\nTakes file data from a Read File component, runs the full ingestion pipeline\n(docling convert -> markdown shorten -> LLM describe) in a subprocess to avoid\nmemory issues, and outputs Data objects suitable for feeding into any Langflow\nvector store component.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport json\nimport subprocess\nimport sys\nimport textwrap\nimport traceback\nfrom pathlib import Path\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import HandleInput, IntInput, Output, StrInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.message import Message\n\n\ndef _dbg(msg: str) -> None:\n    \"\"\"Write debug message to stderr so it always appears in the terminal.\"\"\"\n    sys.stderr.write(f\"[FileDescriptionGeneratorComponent] {msg}\\n\")\n    sys.stderr.flush()\n\n\nclass FileDescriptionGeneratorComponent(Component):\n    display_name = \"File Description Generator\"\n    description = (\n        \"Runs OpenDsStar docling-based ingestion to generate searchable file descriptions. \"\n        \"Connect output to a vector store's Ingest Data input.\"\n    )\n    icon = \"file-search\"\n    name = \"FileDescriptionGeneratorComponent\"\n\n    inputs = [\n        HandleInput(\n            name=\"file_data\",\n            display_name=\"File Data\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            is_list=True,\n            info=\"Output from a Read File component.\",\n        ),\n        HandleInput(\n            name=\"llm\",\n            display_name=\"Language Model\",\n            input_types=[\"LanguageModel\"],\n            info=\"LLM used to generate file descriptions.\",\n        ),\n        StrInput(\n            name=\"cache_dir\",\n            display_name=\"Cache Directory\",\n            value=\"./opendsstar_cache\",\n            info=\"Directory for caching docling analysis and LLM descriptions.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            value=\"ibm-granite/granite-embedding-english-r2\",\n            info=\"Embedding model name (used only for cache keying, not for actual embedding).\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout (seconds)\",\n            value=1800,\n            info=\"Maximum time in seconds for the ingestion subprocess. Increase for large file sets.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"batch_size\",\n            display_name=\"Batch Size\",\n            value=8,\n            info=\"Number of files to process in each LLM batch.\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Descriptions\",\n            name=\"descriptions\",\n            method=\"generate_descriptions\",\n        ),\n    ]\n\n    def _serialize_llm(self) -> dict:\n        \"\"\"Serialize the LLM model for passing to a subprocess.\"\"\"\n        from lfx.base.data.docling_utils import _serialize_pydantic_model\n\n        return _serialize_pydantic_model(self.llm)\n\n    def generate_descriptions(self) -> list[Data]:\n        _dbg(\"========== generate_descriptions CALLED ==========\")\n\n        try:\n            from lfx.schema.dataframe import DataFrame\n\n            _dbg(f\"self.file_data type: {type(self.file_data).__name__}\")\n            _dbg(f\"self.file_data length: {len(self.file_data)}\")\n            _dbg(f\"self.file_data repr: {self.file_data!r}\")\n\n            # Extract file paths from inputs.\n            # DataFrames/Tables have file_path as a column; Data objects use the \"file_path\" key.\n            file_paths: list[str] = []\n            for i, item in enumerate(self.file_data):\n                _dbg(f\"  item[{i}] type: {type(item).__name__}\")\n                if isinstance(item, DataFrame):\n                    # First try attrs (legacy), then check for file_path column\n                    fp = item.attrs.get(\"source_file_path\", \"\")\n                    if fp:\n                        _dbg(f\"  item[{i}] DataFrame source_file_path from attrs={fp!r}\")\n                        file_paths.append(str(Path(fp)))\n                    elif \"file_path\" in item.columns and not item.empty:\n                        # Extract unique file paths from the file_path column\n                        unique_paths = item[\"file_path\"].dropna().unique().tolist()\n                        _dbg(f\"  item[{i}] DataFrame found {len(unique_paths)} file_path(s) in column\")\n                        file_paths.extend(str(Path(path)) for path in unique_paths if path)\n                    else:\n                        _dbg(\n                            f\"  WARNING: item[{i}] DataFrame has no source_file_path\"\n                            \" in attrs or file_path column, skipping\"\n                        )\n                elif isinstance(item, Message):\n                    fp = getattr(item, \"file_path\", \"\") or \"\"\n                    _dbg(f\"  item[{i}] Message file_path={fp!r}\")\n                    if fp:\n                        file_paths.append(str(Path(fp)))\n                    else:\n                        _dbg(f\"  WARNING: item[{i}] Message has no file_path, skipping\")\n                elif isinstance(item, Data):\n                    fp = item.data.get(\"file_path\", \"\")\n                    _dbg(f\"  item[{i}] Data file_path={fp!r}\")\n                    if fp:\n                        file_paths.append(str(Path(fp)))\n                    else:\n                        _dbg(f\"  WARNING: item[{i}] Data has no file_path key, skipping\")\n                else:\n                    _dbg(f\"  WARNING: item[{i}] unsupported type {type(item).__name__}, skipping\")\n\n            _dbg(f\"Extracted file_paths: {file_paths}\")\n\n            if not file_paths:\n                _dbg(\"NO FILE PATHS FOUND - returning empty list\")\n                return []\n\n            _dbg(f\"Processing {len(file_paths)} file(s) in subprocess...\")\n\n            # Serialize LLM\n            _dbg(f\"LLM type: {type(self.llm).__name__}\")\n            _dbg(\"Serializing LLM...\")\n            llm_config = self._serialize_llm()\n            _dbg(f\"LLM serialized, class_path: {llm_config.get('__class_path__', 'unknown')}\")\n\n            config = {\n                \"file_paths\": file_paths,\n                \"llm_config\": llm_config,\n                \"cache_dir\": self.cache_dir,\n                \"embedding_model\": self.embedding_model,\n                \"batch_size\": self.batch_size,\n            }\n\n            _dbg(f\"Config keys: {list(config.keys())}\")\n            _dbg(f\"cache_dir: {self.cache_dir}\")\n            _dbg(f\"embedding_model: {self.embedding_model}\")\n            _dbg(f\"batch_size: {self.batch_size}\")\n            _dbg(\"Launching subprocess...\")\n\n            # Run the entire ingestion in a single subprocess over all files\n            script = textwrap.dedent(\"\"\"\\\n                import json\n                import sys\n                import logging\n                from pathlib import Path\n\n                logging.basicConfig(level=logging.INFO, stream=sys.stderr)\n                logger = logging.getLogger(\"ingestion_subprocess\")\n\n                config = json.loads(sys.stdin.read())\n                logger.info(\"Subprocess started, %d file(s)\", len(config[\"file_paths\"]))\n\n                from OpenDsStar.ingestion.docling_based_ingestion.docling_description_builder import (\n                    DoclingDescriptionBuilder,\n                )\n                from lfx.base.data.docling_utils import _deserialize_pydantic_model\n\n                llm = _deserialize_pydantic_model(config[\"llm_config\"])\n                logger.info(\"LLM deserialized: %s\", type(llm).__name__)\n\n                builder = DoclingDescriptionBuilder(\n                    cache_dir=config[\"cache_dir\"],\n                    llm=llm,\n                    embedding_model=config[\"embedding_model\"],\n                    batch_size=config[\"batch_size\"],\n                    enable_caching=True,\n                )\n\n                file_paths = [Path(p) for p in config[\"file_paths\"]]\n                total = len(file_paths)\n                logger.info(\"Calling describe_files with %d file(s)...\", total)\n                sys.stderr.flush()\n                analysis_results, _ = builder.describe_files(file_paths)\n                logger.info(\"describe_files returned %d result(s)\", len(analysis_results))\n                sys.stderr.flush()\n\n                output = []\n                for doc_id, result in analysis_results.items():\n                    success = result.get(\"success\", False)\n                    logger.info(\"  %s: success=%s file_path=%s\", doc_id, success, result.get(\"file_path\", \"\"))\n                    if success:\n                        output.append({\n                            \"text\": result.get(\"answer\", \"\"),\n                            \"file_path\": result.get(\"file_path\", \"\"),\n                        })\n\n                logger.info(\"Outputting %d successful description(s)\", len(output))\n                json.dump(output, sys.stdout)\n            \"\"\")\n\n            timeout_seconds = getattr(self, \"timeout\", 1800) or 1800\n\n            proc = subprocess.Popen(  # noqa: S603\n                [sys.executable, \"-u\", \"-c\", script],\n                stdin=subprocess.PIPE,\n                stdout=subprocess.PIPE,\n                stderr=subprocess.PIPE,\n                text=True,\n            )\n\n            # Send config to stdin and close it so the subprocess can proceed\n            proc.stdin.write(json.dumps(config))\n            proc.stdin.close()\n\n            # Stream stderr in real-time while waiting for the process\n            import select\n            import time\n\n            stderr_lines: list[str] = []\n            start_time = time.monotonic()\n            stderr_buf = \"\"\n\n            # Check if select() is usable (not available with StringIO in tests)\n            try:\n                proc.stderr.fileno()\n                use_select = True\n            except Exception:  # noqa: BLE001\n                use_select = False\n\n            while proc.poll() is None:\n                elapsed = time.monotonic() - start_time\n                if elapsed > timeout_seconds:\n                    proc.kill()\n                    proc.wait()\n                    msg = (\n                        f\"Ingestion subprocess timed out after {timeout_seconds}s. \"\n                        f\"Increase the Timeout setting for large file sets.\"\n                    )\n                    raise TimeoutError(msg)\n\n                if use_select:\n                    ready, _, _ = select.select([proc.stderr], [], [], 1.0)\n                    if ready:\n                        chunk = proc.stderr.read(4096)\n                        if chunk:\n                            stderr_buf += chunk\n                            while \"\\n\" in stderr_buf:\n                                line, stderr_buf = stderr_buf.split(\"\\n\", 1)\n                                line = line.strip()\n                                if line:\n                                    _dbg(f\"[subprocess] {line}\")\n                                    self.log(line)\n                                    stderr_lines.append(line)\n                else:\n                    time.sleep(0.5)\n\n            # Read any remaining stderr/stdout after process exits\n            remaining_stderr = proc.stderr.read()\n            if remaining_stderr:\n                stderr_buf += remaining_stderr\n            for line in stderr_buf.strip().split(\"\\n\"):\n                line = line.strip()\n                if line:\n                    _dbg(f\"[subprocess] {line}\")\n                    self.log(line)\n                    stderr_lines.append(line)\n\n            stdout_data = proc.stdout.read()\n\n            _dbg(f\"Subprocess finished, returncode={proc.returncode}\")\n            _dbg(f\"Subprocess stdout length: {len(stdout_data)}\")\n\n            if proc.returncode != 0:\n                _dbg(f\"SUBPROCESS FAILED with exit code {proc.returncode}\")\n                stderr_tail = \"\\n\".join(stderr_lines[-20:])\n                msg = f\"Ingestion subprocess failed (exit code {proc.returncode}): {stderr_tail}\"\n                raise RuntimeError(msg)\n\n            _dbg(f\"Subprocess stdout preview: {stdout_data[:500]!r}\")\n\n            try:\n                output = json.loads(stdout_data)\n            except json.JSONDecodeError as e:\n                _dbg(f\"JSON DECODE ERROR: {e}\")\n                _dbg(f\"stdout was: {stdout_data[:1000]!r}\")\n                stderr_tail = \"\\n\".join(stderr_lines[-10:])\n                msg = f\"Invalid JSON from subprocess: {e}. stderr={stderr_tail}\"\n                raise RuntimeError(msg) from e\n\n            _dbg(f\"Parsed {len(output)} results from subprocess\")\n\n            results: list[Data] = []\n            for i, item in enumerate(output):\n                _dbg(f\"  result[{i}]: file_path={item.get('file_path', '')}, text_len={len(item.get('text', ''))}\")\n                results.append(\n                    Data(\n                        data={\n                            \"text\": item[\"text\"],\n                            \"file_path\": item[\"file_path\"],\n                        },\n                    )\n                )\n\n            _dbg(f\"Returning {len(results)} Data object(s)\")\n            _dbg(\"========== generate_descriptions DONE ==========\")\n            return results  # noqa: TRY300\n\n        except Exception as e:\n            _dbg(f\"EXCEPTION: {type(e).__name__}: {e}\")\n            _dbg(traceback.format_exc())\n            raise\n"
+                "value": "\"\"\"Component that runs OpenDsStar's docling-based ingestion to generate file descriptions.\n\nTakes file data from a Read File component, runs the full ingestion pipeline\n(docling convert -> markdown shorten -> LLM describe) in a subprocess to avoid\nmemory issues, and outputs Data objects suitable for feeding into any Langflow\nvector store component.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport json\nimport subprocess\nimport sys\nimport textwrap\nimport traceback\nfrom pathlib import Path\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import HandleInput, IntInput, Output, StrInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.message import Message\n\n\ndef _dbg(msg: str) -> None:\n    \"\"\"Write debug message to stderr so it always appears in the terminal.\"\"\"\n    sys.stderr.write(f\"[FileDescriptionGeneratorComponent] {msg}\\n\")\n    sys.stderr.flush()\n\n\nclass FileDescriptionGeneratorComponent(Component):\n    display_name = \"File Description Generator\"\n    description = (\n        \"Runs OpenDsStar docling-based ingestion to generate searchable file descriptions. \"\n        \"Connect output to a vector store's Ingest Data input.\"\n    )\n    icon = \"file-search\"\n    name = \"FileDescriptionGeneratorComponent\"\n\n    inputs = [\n        HandleInput(\n            name=\"file_data\",\n            display_name=\"File Data\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            is_list=True,\n            info=\"Output from a Read File component.\",\n        ),\n        HandleInput(\n            name=\"llm\",\n            display_name=\"Language Model\",\n            input_types=[\"LanguageModel\"],\n            info=\"LLM used to generate file descriptions.\",\n        ),\n        StrInput(\n            name=\"cache_dir\",\n            display_name=\"Cache Directory\",\n            value=\"./opendsstar_cache\",\n            info=\"Directory for caching docling analysis and LLM descriptions.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            value=\"ibm-granite/granite-embedding-english-r2\",\n            info=\"Embedding model name (used only for cache keying, not for actual embedding).\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout (seconds)\",\n            value=1800,\n            info=\"Maximum time in seconds for the ingestion subprocess. Increase for large file sets.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"batch_size\",\n            display_name=\"Batch Size\",\n            value=8,\n            info=\"Number of files to process in each LLM batch.\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Descriptions\",\n            name=\"descriptions\",\n            method=\"generate_descriptions\",\n        ),\n    ]\n\n    def _serialize_llm(self) -> dict:\n        \"\"\"Serialize the LLM model for passing to a subprocess.\"\"\"\n        from lfx.base.data.docling_utils import _serialize_pydantic_model\n\n        return _serialize_pydantic_model(self.llm)\n\n    def generate_descriptions(self) -> list[Data]:\n        _dbg(\"========== generate_descriptions CALLED ==========\")\n\n        try:\n            from lfx.schema.dataframe import DataFrame\n\n            _dbg(f\"self.file_data type: {type(self.file_data).__name__}\")\n            _dbg(f\"self.file_data length: {len(self.file_data)}\")\n            _dbg(f\"self.file_data repr: {self.file_data!r}\")\n\n            # Extract file paths from inputs.\n            # DataFrames/Tables have file_path as a column; Data objects use the \"file_path\" key.\n            file_paths: list[str] = []\n            for i, item in enumerate(self.file_data):\n                _dbg(f\"  item[{i}] type: {type(item).__name__}\")\n                if isinstance(item, DataFrame):\n                    # First try attrs (legacy), then check for file_path column\n                    fp = item.attrs.get(\"source_file_path\", \"\")\n                    if fp:\n                        _dbg(f\"  item[{i}] DataFrame source_file_path from attrs={fp!r}\")\n                        file_paths.append(str(Path(fp)))\n                    elif \"file_path\" in item.columns and not item.empty:\n                        # Extract unique file paths from the file_path column\n                        unique_paths = item[\"file_path\"].dropna().unique().tolist()\n                        _dbg(f\"  item[{i}] DataFrame found {len(unique_paths)} file_path(s) in column\")\n                        file_paths.extend(str(Path(path)) for path in unique_paths if path)\n                    else:\n                        _dbg(\n                            f\"  WARNING: item[{i}] DataFrame has no source_file_path\"\n                            \" in attrs or file_path column, skipping\"\n                        )\n                elif isinstance(item, Message):\n                    fp = getattr(item, \"file_path\", \"\") or \"\"\n                    _dbg(f\"  item[{i}] Message file_path={fp!r}\")\n                    if fp:\n                        file_paths.append(str(Path(fp)))\n                    else:\n                        _dbg(f\"  WARNING: item[{i}] Message has no file_path, skipping\")\n                elif isinstance(item, Data):\n                    fp = item.data.get(\"file_path\", \"\")\n                    _dbg(f\"  item[{i}] Data file_path={fp!r}\")\n                    if fp:\n                        file_paths.append(str(Path(fp)))\n                    else:\n                        _dbg(f\"  WARNING: item[{i}] Data has no file_path key, skipping\")\n                else:\n                    _dbg(f\"  WARNING: item[{i}] unsupported type {type(item).__name__}, skipping\")\n\n            _dbg(f\"Extracted file_paths: {file_paths}\")\n\n            if not file_paths:\n                _dbg(\"NO FILE PATHS FOUND - returning empty list\")\n                return []\n\n            _dbg(f\"Processing {len(file_paths)} file(s) in subprocess...\")\n\n            # Serialize LLM\n            _dbg(f\"LLM type: {type(self.llm).__name__}\")\n            _dbg(\"Serializing LLM...\")\n            llm_config = self._serialize_llm()\n            _dbg(f\"LLM serialized, class_path: {llm_config.get('__class_path__', 'unknown')}\")\n\n            config = {\n                \"file_paths\": file_paths,\n                \"llm_config\": llm_config,\n                \"cache_dir\": self.cache_dir,\n                \"embedding_model\": self.embedding_model,\n                \"batch_size\": self.batch_size,\n            }\n\n            _dbg(f\"Config keys: {list(config.keys())}\")\n            _dbg(f\"cache_dir: {self.cache_dir}\")\n            _dbg(f\"embedding_model: {self.embedding_model}\")\n            _dbg(f\"batch_size: {self.batch_size}\")\n            _dbg(\"Launching subprocess...\")\n\n            # Run the entire ingestion in a single subprocess over all files\n            script = textwrap.dedent(\"\"\"\\\n                import json\n                import sys\n                import logging\n                from pathlib import Path\n\n                logging.basicConfig(level=logging.INFO, stream=sys.stderr)\n                logger = logging.getLogger(\"ingestion_subprocess\")\n\n                config = json.loads(sys.stdin.read())\n                logger.info(\"Subprocess started, %d file(s)\", len(config[\"file_paths\"]))\n\n                from OpenDsStar.ingestion.docling_based_ingestion.docling_description_builder import (\n                    DoclingDescriptionBuilder,\n                )\n                from lfx.base.data.docling_utils import _deserialize_pydantic_model\n\n                llm = _deserialize_pydantic_model(config[\"llm_config\"])\n                logger.info(\"LLM deserialized: %s\", type(llm).__name__)\n\n                builder = DoclingDescriptionBuilder(\n                    cache_dir=config[\"cache_dir\"],\n                    llm=llm,\n                    embedding_model=config[\"embedding_model\"],\n                    batch_size=config[\"batch_size\"],\n                    enable_caching=True,\n                )\n\n                file_paths = [Path(p) for p in config[\"file_paths\"]]\n                total = len(file_paths)\n                logger.info(\"Calling describe_files with %d file(s)...\", total)\n                sys.stderr.flush()\n                analysis_results, _ = builder.describe_files(file_paths)\n                logger.info(\"describe_files returned %d result(s)\", len(analysis_results))\n                sys.stderr.flush()\n\n                output = []\n                for doc_id, result in analysis_results.items():\n                    success = result.get(\"success\", False)\n                    logger.info(\"  %s: success=%s file_path=%s\", doc_id, success, result.get(\"file_path\", \"\"))\n                    if success:\n                        output.append({\n                            \"text\": result.get(\"answer\", \"\"),\n                            \"file_path\": result.get(\"file_path\", \"\"),\n                        })\n\n                logger.info(\"Outputting %d successful description(s)\", len(output))\n                json.dump(output, sys.stdout)\n            \"\"\")\n\n            timeout_seconds = getattr(self, \"timeout\", 1800) or 1800\n\n            proc = subprocess.Popen(  # noqa: S603\n                [sys.executable, \"-u\", \"-c\", script],\n                stdin=subprocess.PIPE,\n                stdout=subprocess.PIPE,\n                stderr=subprocess.PIPE,\n                text=True,\n            )\n\n            # Send config to stdin and close it so the subprocess can proceed\n            proc.stdin.write(json.dumps(config))\n            proc.stdin.close()\n\n            # Stream stderr in real-time while waiting for the process\n            import select\n            import time\n\n            stderr_lines: list[str] = []\n            start_time = time.monotonic()\n            stderr_buf = \"\"\n\n            # Check if select() is usable (not available with StringIO in tests)\n            try:\n                proc.stderr.fileno()\n                use_select = True\n            except Exception:  # noqa: BLE001\n                use_select = False\n\n            while proc.poll() is None:\n                elapsed = time.monotonic() - start_time\n                if elapsed > timeout_seconds:\n                    proc.kill()\n                    proc.wait()\n                    msg = (\n                        f\"Ingestion subprocess timed out after {timeout_seconds}s. \"\n                        f\"Increase the Timeout setting for large file sets.\"\n                    )\n                    raise TimeoutError(msg)\n\n                if use_select:\n                    ready, _, _ = select.select([proc.stderr], [], [], 1.0)\n                    if ready:\n                        chunk = proc.stderr.read(4096)\n                        if chunk:\n                            stderr_buf += chunk\n                            while \"\\n\" in stderr_buf:\n                                line, stderr_buf = stderr_buf.split(\"\\n\", 1)\n                                line = line.strip()\n                                if line:\n                                    _dbg(f\"[subprocess] {line}\")\n                                    self.log(line)\n                                    stderr_lines.append(line)\n                else:\n                    time.sleep(0.5)\n\n            # Read any remaining stderr/stdout after process exits\n            remaining_stderr = proc.stderr.read()\n            if remaining_stderr:\n                stderr_buf += remaining_stderr\n            for remaining_line in stderr_buf.strip().split(\"\\n\"):\n                stripped = remaining_line.strip()\n                if stripped:\n                    _dbg(f\"[subprocess] {stripped}\")\n                    self.log(stripped)\n                    stderr_lines.append(stripped)\n\n            stdout_data = proc.stdout.read()\n\n            _dbg(f\"Subprocess finished, returncode={proc.returncode}\")\n            _dbg(f\"Subprocess stdout length: {len(stdout_data)}\")\n\n            if proc.returncode != 0:\n                _dbg(f\"SUBPROCESS FAILED with exit code {proc.returncode}\")\n                stderr_tail = \"\\n\".join(stderr_lines[-20:])\n                msg = f\"Ingestion subprocess failed (exit code {proc.returncode}): {stderr_tail}\"\n                raise RuntimeError(msg)\n\n            _dbg(f\"Subprocess stdout preview: {stdout_data[:500]!r}\")\n\n            try:\n                output = json.loads(stdout_data)\n            except json.JSONDecodeError as e:\n                _dbg(f\"JSON DECODE ERROR: {e}\")\n                _dbg(f\"stdout was: {stdout_data[:1000]!r}\")\n                stderr_tail = \"\\n\".join(stderr_lines[-10:])\n                msg = f\"Invalid JSON from subprocess: {e}. stderr={stderr_tail}\"\n                raise RuntimeError(msg) from e\n\n            _dbg(f\"Parsed {len(output)} results from subprocess\")\n\n            results: list[Data] = []\n            for i, item in enumerate(output):\n                _dbg(f\"  result[{i}]: file_path={item.get('file_path', '')}, text_len={len(item.get('text', ''))}\")\n                results.append(\n                    Data(\n                        data={\n                            \"text\": item[\"text\"],\n                            \"file_path\": item[\"file_path\"],\n                        },\n                    )\n                )\n\n            _dbg(f\"Returning {len(results)} Data object(s)\")\n            _dbg(\"========== generate_descriptions DONE ==========\")\n            return results  # noqa: TRY300\n\n        except Exception as e:\n            _dbg(f\"EXCEPTION: {type(e).__name__}: {e}\")\n            _dbg(traceback.format_exc())\n            raise\n"
               },
               "embedding_model": {
                 "_input_type": "StrInput",
@@ -997,21 +997,21 @@
           "type": "FileDescriptionGeneratorComponent"
         },
         "dragging": false,
-        "id": "FileDescriptionGeneratorComponent-nPff9",
+        "id": "FileDescriptionGeneratorComponent-WI38L",
         "measured": {
           "height": 245,
           "width": 320
         },
         "position": {
-          "x": -1023.889453669267,
-          "y": -2589.498649753237
+          "x": -993.6254802109156,
+          "y": -2587.170651794902
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "File-FyEDX",
+          "id": "File-JfBHw",
           "node": {
             "base_classes": [
               "Message"
@@ -1052,7 +1052,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2026-04-12T11:24:37.507Z",
+            "last_updated": "2026-04-13T09:04:37.199Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -1104,7 +1104,7 @@
             "pinned": false,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "21d9ec0b-495f-47ac-b2d1-3f9912a86a6c"
+                "value": "bd9d12c2-69e1-41f0-8e46-914b39f51ac4"
               },
               "_frontend_node_folder_id": {
                 "value": "4c3849a1-f6ba-4952-83e4-23faceb25a7d"
@@ -1738,7 +1738,7 @@
           "type": "File"
         },
         "dragging": false,
-        "id": "File-FyEDX",
+        "id": "File-JfBHw",
         "measured": {
           "height": 276,
           "width": 320
@@ -1752,7 +1752,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-cTYxF",
+          "id": "ChatInput-kU3FH",
           "node": {
             "base_classes": [
               "Message"
@@ -2033,21 +2033,21 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-cTYxF",
+        "id": "ChatInput-kU3FH",
         "measured": {
           "height": 52,
           "width": 192
         },
         "position": {
-          "x": -536.4116548849395,
-          "y": -1682.2319835576145
+          "x": -554.4263671195363,
+          "y": -1648.7760894076491
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-RvJi8",
+          "id": "ChatOutput-uWfh5",
           "node": {
             "base_classes": [
               "Message"
@@ -2334,21 +2334,21 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-RvJi8",
+        "id": "ChatOutput-uWfh5",
         "measured": {
           "height": 52,
           "width": 192
         },
         "position": {
-          "x": 38.57036737482291,
-          "y": -1681.0547183935823
+          "x": 33.42330673636668,
+          "y": -1634.7311726474763
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "note-e8vE2",
+          "id": "note-NhqZJ",
           "node": {
             "description": "# Ingestion Pipeline",
             "display_name": "",
@@ -2361,7 +2361,7 @@
         },
         "dragging": false,
         "height": 949,
-        "id": "note-e8vE2",
+        "id": "note-NhqZJ",
         "measured": {
           "height": 949,
           "width": 1357
@@ -2377,7 +2377,7 @@
       },
       {
         "data": {
-          "id": "note-ZrewV",
+          "id": "note-VN6WD",
           "node": {
             "description": "# Agent Inference",
             "display_name": "",
@@ -2389,10 +2389,10 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 1047,
-        "id": "note-ZrewV",
+        "height": 1059,
+        "id": "note-VN6WD",
         "measured": {
-          "height": 1047,
+          "height": 1059,
           "width": 1362
         },
         "position": {
@@ -2406,9 +2406,9 @@
       },
       {
         "data": {
-          "id": "note-kyUYH",
+          "id": "note-fpkLA",
           "node": {
-            "description": "## OpenDsStar — Structured Data Agent 📚                                                                                                                                                \n \n[OpenDsStar](https://github.com/IBM/OpenDsStar)\n is an open-source implementation of the [DS-STAR](https://arxiv.org/abs/2509.21825)\n agent (Nam et al., 2025), with several deliberate design enhancements that improve its modularity and extensibility. OpenDsStar is an autonomous data science agent for working with tabular data (CSV, Excel, Parquet, JSON, and TSV), enabling analysis, transformation, and reasoning over structured datasets.\n                                                                                                                                                                                       \n  How It Works                                              \n\n  1. Data (Yellow): Upload your data files.                                                                                                                                            \n  2. Ingestion (Green): Processes files by generating file descriptions and storing them in a vector database. Set a Persistent Directory on both the Vector Store and the File Content Retriever.\n  3. Agent (Blue): Ask questions in plain English. The agent retrieves relevant data and provides insights.                                                                            \n                                                                                                                                                                                       \n  Setup                                                                                                                                                                                \n                                                                                                                                                                                       \n  1. Models (Pink): Configure an LLM and an embedding model (Ollama, watsonx.ai, OpenAI, etc.).                                                                                        \n  2. Vector Store: Connect a vector store for indexing and retrieval.\n  3. Ingest: Upload data files and run the ingestion flow.                                                                                                                             \n  4. Chat: Open the playground and start asking questions. ",
+            "description": "## About OpenDsStar and structured data analysis\n\n**OpenDsStar — Structured Data Agent 📚**\n\n[OpenDsStar](https://github.com/IBM/OpenDsStar) is an open-source implementation of the [DS-Star](https://arxiv.org/abs/2509.21825) agent. It keeps the core DS-Star workflow of planning, code generation, execution, debugging, and verification, while using a more practical tool-centric architecture that improves modularity, extensibility, and execution efficiency.\n\nThis Langflow template applies OpenDsStar to **structured data analysis** over tabular datasets such as **CSV, Excel, Parquet, JSON, and TSV**. It enables natural-language exploration, retrieval, and reasoning over uploaded structured data.\n",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2418,24 +2418,24 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 802,
-        "id": "note-kyUYH",
+        "height": 340,
+        "id": "note-fpkLA",
         "measured": {
-          "height": 802,
-          "width": 575
+          "height": 340,
+          "width": 898
         },
         "position": {
-          "x": -2368.1476510371713,
+          "x": -2640.1476510371713,
           "y": -2700.9355487997504
         },
         "resizing": false,
         "selected": false,
         "type": "noteNode",
-        "width": 575
+        "width": 898
       },
       {
         "data": {
-          "id": "note-z8ff0",
+          "id": "note-aEsq9",
           "node": {
             "description": "# Models",
             "display_name": "",
@@ -2448,7 +2448,7 @@
         },
         "dragging": false,
         "height": 1018,
-        "id": "note-z8ff0",
+        "id": "note-aEsq9",
         "measured": {
           "height": 1018,
           "width": 421
@@ -2464,7 +2464,7 @@
       },
       {
         "data": {
-          "id": "note-o2Dtv",
+          "id": "note-4Lyh3",
           "node": {
             "description": "# Data",
             "display_name": "",
@@ -2477,7 +2477,7 @@
         },
         "dragging": false,
         "height": 479,
-        "id": "note-o2Dtv",
+        "id": "note-4Lyh3",
         "measured": {
           "height": 479,
           "width": 410
@@ -2493,7 +2493,7 @@
       },
       {
         "data": {
-          "id": "Chroma-Nb0GH",
+          "id": "Chroma-ebQO6",
           "node": {
             "base_classes": [
               "JSON",
@@ -2938,7 +2938,7 @@
           "type": "Chroma"
         },
         "dragging": false,
-        "id": "Chroma-Nb0GH",
+        "id": "Chroma-ebQO6",
         "measured": {
           "height": 459,
           "width": 320
@@ -2952,7 +2952,7 @@
       },
       {
         "data": {
-          "id": "Chroma-3kWnQ",
+          "id": "Chroma-O0Ed4",
           "node": {
             "base_classes": [
               "JSON",
@@ -2984,7 +2984,7 @@
             ],
             "frozen": false,
             "icon": "Chroma",
-            "last_updated": "2026-04-12T11:24:37.427Z",
+            "last_updated": "2026-04-13T09:04:37.001Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -3041,7 +3041,7 @@
             "pinned": false,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "21d9ec0b-495f-47ac-b2d1-3f9912a86a6c"
+                "value": "bd9d12c2-69e1-41f0-8e46-914b39f51ac4"
               },
               "_frontend_node_folder_id": {
                 "value": "4c3849a1-f6ba-4952-83e4-23faceb25a7d"
@@ -3455,21 +3455,21 @@
           "type": "Chroma"
         },
         "dragging": false,
-        "id": "Chroma-3kWnQ",
+        "id": "Chroma-O0Ed4",
         "measured": {
           "height": 457,
           "width": 320
         },
         "position": {
-          "x": -922.3897072468459,
-          "y": -1150.260010614723
+          "x": -924.4474270988917,
+          "y": -1586.4966192484394
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "FileContentRetriever-29Jth",
+          "id": "FileContentRetriever-1957F",
           "node": {
             "base_classes": [
               "Message",
@@ -3492,7 +3492,7 @@
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
-              "code_hash": "4c199ad58ee7",
+              "code_hash": "2650f1b36e87",
               "dependencies": {
                 "dependencies": [
                   {
@@ -3559,7 +3559,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "\"\"\"Component that retrieves file content by path, for use as an agent tool.\n\nTakes file data from a Read File component and allows an agent to look up\na specific file's content by providing its path.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport hashlib\nimport json\nimport tempfile\nfrom pathlib import Path\n\nimport pandas as pd\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import StrInput\nfrom lfx.io import HandleInput, Output, QueryInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\n\n\nclass FileContentRetrieverComponent(Component):\n    display_name = \"File Content Retriever\"\n    description = (\n        \"Retrieves the text content of a file given its path. \"\n        \"Connect to an agent as a tool so it can read file contents.\"\n    )\n    icon = \"file-text\"\n    name = \"FileContentRetriever\"\n    add_tool_output = True\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self._cached_text_map: dict[str, str] | None = None\n        self._cached_dataframe_map: dict[str, DataFrame] | None = None\n\n    def __deepcopy__(self, memo: dict):\n        \"\"\"Override deepcopy to preserve cached maps across tool invocations.\"\"\"\n        from copy import deepcopy as _deepcopy\n\n        new_component = super().__deepcopy__(memo)\n        # Copy the cached maps so they don't need to be rebuilt, but avoid sharing mutable state\n        new_component._cached_text_map = (  # noqa: SLF001\n            _deepcopy(self._cached_text_map, memo) if self._cached_text_map else None\n        )\n        new_component._cached_dataframe_map = (  # noqa: SLF001\n            _deepcopy(self._cached_dataframe_map, memo) if self._cached_dataframe_map else None\n        )\n        return new_component\n\n    inputs = [\n        HandleInput(\n            name=\"file_data\",\n            display_name=\"File Data\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            is_list=True,\n            info=\"Output from a Read File component.\",\n        ),\n        StrInput(\n            name=\"persistent_dir\",\n            display_name=\"Persistent Directory\",\n            value=\"\",\n            info=\"Optional directory for persisting file maps across runs. If empty, maps are kept in memory only.\",\n        ),\n        QueryInput(\n            name=\"file_path\",\n            display_name=\"File Path\",\n            info=(\n                \"The full file path as a string (e.g., '/path/to/file.csv'). \"\n                \"Do not pass search results or other objects.\"\n            ),\n            tool_mode=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"File Content\",\n            name=\"content\",\n            method=\"retrieve_content\",\n            info=\"Retrieves file content as text. \"\n            \"IMPORTANT: Pass ONLY the file path as a string (e.g., '/Users/name/document.txt'). \"\n            \"If you have search results from a vector store, you MUST extract the file_path string first. \"\n            \"Example: file_path = result['data']['file_path'], then call retrieve_content(file_path). \"\n            \"Returns: A Message containing the file's text content. \"\n            \"Raises ValueError if file path is missing or file not found.\",\n            tool_mode=True,\n        ),\n        Output(\n            display_name=\"Table\",\n            name=\"dataframe\",\n            method=\"retrieve_content_as_dataframe\",\n            info=\"Retrieves file content as a pandas DataFrame. \"\n            \"IMPORTANT: Pass ONLY the file path as a string (e.g., '/Users/name/data.csv'). \"\n            \"If you have search results from a vector store, you MUST extract the file_path string first. \"\n            \"Example: file_path = result['data']['file_path'], then call retrieve_content_as_dataframe(file_path). \"\n            \"Supported formats: CSV, Excel (.xlsx, .xls), Parquet, JSON, TSV. \"\n            \"Returns: A DataFrame with the file's tabular data. \"\n            \"Raises ValueError if file not found, unsupported format, or parsing fails.\",\n            tool_mode=True,\n        ),\n    ]\n\n    # ---- Persistence helpers ----\n\n    @staticmethod\n    def _path_hash(file_path: str) -> str:\n        \"\"\"Return a short hash for use as a safe filename.\"\"\"\n        return hashlib.sha256(file_path.encode()).hexdigest()[:16]\n\n    def _load_persistent_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:\n        \"\"\"Load maps from the persistent directory. Returns ({}, {}) if nothing on disk.\"\"\"\n        base = Path(self.persistent_dir)\n        text_map: dict[str, str] = {}\n        dataframe_map: dict[str, DataFrame] = {}\n\n        # Load text files: index maps file_path -> text filename on disk\n        text_index_file = base / \"text_index.json\"\n        text_dir = base / \"texts\"\n        if text_index_file.exists() and text_dir.exists():\n            try:\n                index = json.loads(text_index_file.read_text(encoding=\"utf-8\"))\n                for fp, txt_name in index.items():\n                    txt_path = text_dir / txt_name\n                    if txt_path.exists():\n                        try:\n                            text_map[fp] = txt_path.read_text(encoding=\"utf-8\")\n                        except OSError as e:\n                            logger.warning(f\"FileContentRetriever: Failed to load text for '{fp}': {e}\")\n                logger.debug(f\"FileContentRetriever: Loaded {len(text_map)} text entries from disk\")\n            except (json.JSONDecodeError, OSError) as e:\n                logger.warning(f\"FileContentRetriever: Failed to load text_index.json: {e}\")\n\n        # Load DataFrames: index maps file_path -> parquet filename on disk\n        df_index_file = base / \"dataframe_index.json\"\n        df_dir = base / \"dataframes\"\n        if df_index_file.exists() and df_dir.exists():\n            try:\n                index = json.loads(df_index_file.read_text(encoding=\"utf-8\"))\n                for fp, parquet_name in index.items():\n                    pq_path = df_dir / parquet_name\n                    if pq_path.exists():\n                        try:\n                            dataframe_map[fp] = DataFrame(pd.read_parquet(pq_path))\n                            dataframe_map[fp].attrs[\"source_file_path\"] = fp\n                        except Exception as e:  # noqa: BLE001\n                            logger.warning(f\"FileContentRetriever: Failed to load parquet for '{fp}': {e}\")\n                logger.debug(f\"FileContentRetriever: Loaded {len(dataframe_map)} dataframes from disk\")\n            except (json.JSONDecodeError, OSError) as e:\n                logger.warning(f\"FileContentRetriever: Failed to load dataframe_index.json: {e}\")\n\n        return text_map, dataframe_map\n\n    def _save_persistent_maps(self, text_map: dict[str, str], dataframe_map: dict[str, DataFrame]) -> None:\n        \"\"\"Save maps to the persistent directory (atomic writes).\"\"\"\n        base = Path(self.persistent_dir)\n        base.mkdir(parents=True, exist_ok=True)\n        text_dir = base / \"texts\"\n        text_dir.mkdir(exist_ok=True)\n        df_dir = base / \"dataframes\"\n        df_dir.mkdir(exist_ok=True)\n\n        # Save each text entry as a separate file\n        text_index: dict[str, str] = {}\n        for fp, text in text_map.items():\n            txt_name = f\"{self._path_hash(fp)}.txt\"\n            txt_path = text_dir / txt_name\n            txt_path.write_text(text, encoding=\"utf-8\")\n            text_index[fp] = txt_name\n\n        # Atomic write for text_index.json\n        self._atomic_json_write(base / \"text_index.json\", text_index, base)\n\n        # Save each DataFrame as parquet\n        df_index: dict[str, str] = {}\n        for fp, df in dataframe_map.items():\n            parquet_name = f\"{self._path_hash(fp)}.parquet\"\n            df.to_parquet(df_dir / parquet_name, index=False)\n            df_index[fp] = parquet_name\n\n        # Atomic write for dataframe_index.json\n        self._atomic_json_write(base / \"dataframe_index.json\", df_index, base)\n\n        logger.debug(\n            f\"FileContentRetriever: Saved {len(text_map)} text + {len(dataframe_map)} dataframes to '{base}'\"\n        )\n\n    @staticmethod\n    def _atomic_json_write(target: Path, data: dict, tmp_dir: Path) -> None:\n        \"\"\"Write JSON atomically via temp file + rename.\"\"\"\n        fd, tmp = tempfile.mkstemp(dir=str(tmp_dir), suffix=\".tmp\")\n        try:\n            with open(fd, \"w\", encoding=\"utf-8\") as f:\n                json.dump(data, f, ensure_ascii=False)\n            Path(tmp).replace(target)\n        except Exception:\n            Path(tmp).unlink(missing_ok=True)\n            raise\n\n    # ---- Map building helpers ----\n\n    def _build_maps_from_input(\n        self, skip_paths: set[str] | None = None,\n    ) -> tuple[dict[str, str], dict[str, DataFrame]]:\n        \"\"\"Build text and dataframe maps from self.file_data, skipping paths in *skip_paths*.\"\"\"\n        skip = skip_paths or set()\n        text_map: dict[str, str] = {}\n        dataframe_map: dict[str, DataFrame] = {}\n\n        if not self.file_data:\n            return text_map, dataframe_map\n\n        for item in self.file_data:\n            if isinstance(item, DataFrame):\n                fp = item.attrs.get(\"source_file_path\", \"\")\n                if fp and fp not in skip:\n                    dataframe_map[fp] = item\n                elif not item.empty and \"file_path\" in item.columns:\n                    has_text_col = \"text\" in item.columns\n                    for _, row in item.iterrows():\n                        path_str = str(row.get(\"file_path\", \"\"))\n                        if not path_str or path_str in skip:\n                            continue\n                        if has_text_col and path_str not in text_map:\n                            text = str(row[\"text\"]) if pd.notna(row[\"text\"]) else \"\"\n                            if text:\n                                text_map[path_str] = text\n            elif isinstance(item, Message):\n                fp = getattr(item, \"file_path\", \"\") or \"\"\n                text = item.get_text() or \"\"\n                if not fp or fp in skip:\n                    continue\n                if text:\n                    text_map[fp] = text\n            elif isinstance(item, Data):\n                fp = item.data.get(\"file_path\", \"\")\n                text = item.get_text() or \"\"\n                if not fp or fp in skip:\n                    continue\n                if text:\n                    text_map[fp] = text\n            else:\n                logger.warning(\n                    \"FileContentRetriever: Unsupported input type %s, skipping\",\n                    type(item).__name__,\n                )\n\n        return text_map, dataframe_map\n\n    @staticmethod\n    def _parse_text_to_dataframes(text_map: dict[str, str], dataframe_map: dict[str, DataFrame]) -> None:\n        \"\"\"Eagerly parse CSV/TSV/JSON text entries into DataFrames.\"\"\"\n        from io import StringIO\n\n        for fp, text in text_map.items():\n            if fp in dataframe_map:\n                continue\n            ext = Path(fp).suffix.lower()\n            try:\n                if ext == \".csv\":\n                    df = DataFrame(pd.read_csv(StringIO(text)))\n                elif ext == \".tsv\":\n                    df = DataFrame(pd.read_csv(StringIO(text), sep=\"\\t\"))\n                elif ext == \".json\":\n                    df = DataFrame(pd.read_json(StringIO(text)))\n                else:\n                    continue\n                df.attrs[\"source_file_path\"] = fp\n                dataframe_map[fp] = df\n                logger.debug(f\"FileContentRetriever: Parsed text into DataFrame for '{fp}'\")\n            except (ValueError, pd.errors.ParserError) as e:\n                logger.debug(f\"FileContentRetriever: Could not parse text as DataFrame for '{fp}': {e}\")\n\n    # ---- Main entry point ----\n\n    def _get_file_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:\n        \"\"\"Get cached file maps or build them if not cached.\n\n        Returns:\n            tuple: (text_map, dataframe_map)\n                - text_map: file_path -> text content\n                - dataframe_map: file_path -> DataFrame\n        \"\"\"\n        if self._cached_text_map is not None and self._cached_dataframe_map is not None:\n            logger.debug(\n                f\"FileContentRetriever: Using cached maps - \"\n                f\"{len(self._cached_text_map)} text files, {len(self._cached_dataframe_map)} dataframes\"\n            )\n            return self._cached_text_map, self._cached_dataframe_map\n\n        text_map: dict[str, str] = {}\n        dataframe_map: dict[str, DataFrame] = {}\n\n        # Load persisted maps if a persistent directory is configured\n        has_persistent = bool(getattr(self, \"persistent_dir\", \"\"))\n        if has_persistent:\n            text_map, dataframe_map = self._load_persistent_maps()\n\n        # Merge new input data (skip paths already loaded from disk)\n        existing_paths = {*text_map, *dataframe_map}\n        new_text, new_df = self._build_maps_from_input(skip_paths=existing_paths)\n        text_map.update(new_text)\n        dataframe_map.update(new_df)\n\n        # Eager CSV/TSV/JSON parsing\n        self._parse_text_to_dataframes(text_map, dataframe_map)\n\n        # Persist updated maps if directory is configured and there were new entries\n        if has_persistent and (new_text or new_df):\n            self._save_persistent_maps(text_map, dataframe_map)\n\n        self._cached_text_map = text_map\n        self._cached_dataframe_map = dataframe_map\n\n        _max_display = 5\n        all_keys = {*text_map.keys(), *dataframe_map.keys()}\n        if not all_keys:\n            logger.warning(\n                \"FileContentRetriever: Maps are empty — no files were loaded. \"\n                \"Check that file_data is connected and contains valid files with file_path metadata.\"\n            )\n        else:\n            logger.info(\n                f\"FileContentRetriever: Built and cached maps - \"\n                f\"{len(text_map)} text files, {len(dataframe_map)} dataframes. \"\n                f\"Available files: {list(all_keys)[:_max_display]}\"\n                f\"{'...' if len(all_keys) > _max_display else ''}\"\n            )\n\n        return text_map, dataframe_map\n\n    def retrieve_content(self, file_path: str = \"\") -> Message:\n        \"\"\"Retrieve file content as text.\n\n        Args:\n            file_path: The full file path as a string (e.g., '/path/to/file.txt').\n\n        Returns:\n            Message: The file content as text, or empty Message if no path provided.\n\n        Raises:\n            ValueError: If file not found.\n        \"\"\"\n        # Use explicit argument, fallback to self.file_path for backward compatibility\n        query = file_path or self.file_path\n\n        logger.debug(\n            f\"FileContentRetriever.retrieve_content called - \"\n            f\"arg file_path='{file_path}', self.file_path='{self.file_path}', query='{query}'\"\n        )\n\n        if not query:\n            # Eagerly build maps so they're cached before deepcopy in tool calls\n            self._get_file_maps()\n            logger.info(\"FileContentRetriever: No file path provided, returning empty Message\")\n            return Message(text=\"\")\n\n        # Get cached maps (built once and reused)\n        text_map, dataframe_map = self._get_file_maps()\n        content = text_map.get(query)\n\n        # Fall back to CSV representation of DataFrame if no text content\n        if content is None and query in dataframe_map:\n            content = dataframe_map[query].to_csv(index=False)\n\n        if content is None:\n            available = sorted({*text_map.keys(), *dataframe_map.keys()})\n            preview = available[:5]\n            extra = f\" (and {len(available) - 5} more)\" if len(available) > 5 else \"\"  # noqa: PLR2004\n            msg = f\"File '{query}' not found. Available files: {preview}{extra}\"\n            logger.error(f\"FileContentRetriever: {msg}\")\n            raise ValueError(msg)\n\n        logger.info(f\"FileContentRetriever: Successfully retrieved content for '{query}' ({len(content)} chars)\")\n        return Message(text=content)\n\n    def retrieve_content_as_dataframe(self, file_path: str = \"\") -> DataFrame:\n        \"\"\"Retrieve file content as a DataFrame for tabular data files.\n\n        Args:\n            file_path: The full file path as a string (e.g., '/path/to/file.csv').\n\n        Returns:\n            DataFrame: The file content as a pandas DataFrame, or empty DataFrame if no path provided.\n\n        Raises:\n            ValueError: If file not found or file type is not supported.\n        \"\"\"\n        # Supported tabular file extensions\n        tabular_extensions = {\".csv\", \".xlsx\", \".xls\", \".parquet\", \".json\", \".tsv\"}\n\n        # Use explicit argument, fallback to self.file_path for backward compatibility\n        query = file_path or self.file_path\n\n        logger.debug(\n            f\"FileContentRetriever.retrieve_content_as_dataframe called - \"\n            f\"arg file_path='{file_path}', self.file_path='{self.file_path}', query='{query}', \"\n            f\"type(file_path)={type(file_path)}, repr(file_path)={file_path!r}\"\n        )\n\n        if not query:\n            # Eagerly build maps so they're cached before deepcopy in tool calls\n            self._get_file_maps()\n            logger.info(\"FileContentRetriever: No file path provided, returning empty DataFrame\")\n            return DataFrame(pd.DataFrame())\n\n        # Check file extension\n        file_ext = Path(query).suffix.lower()\n        if file_ext not in tabular_extensions:\n            supported = \", \".join(sorted(tabular_extensions))\n            msg = (\n                f\"File type '{file_ext}' is not supported for DataFrame conversion. \"\n                f\"Supported formats: {supported}. \"\n                f\"File: '{query}'\"\n            )\n            logger.error(f\"FileContentRetriever: {msg}\")\n            raise ValueError(msg)\n\n        # Get cached maps (built once and reused)\n        text_map, dataframe_map = self._get_file_maps()\n\n        # Check if we have a DataFrame for this file\n        if query in dataframe_map:\n            df = dataframe_map[query]\n            logger.info(\n                f\"FileContentRetriever: Successfully retrieved DataFrame for '{query}' \"\n                f\"({len(df)} rows, {len(df.columns)} columns)\"\n            )\n            return df\n\n        available = sorted({*text_map.keys(), *dataframe_map.keys()})\n        max_preview = 5\n        preview = available[:max_preview]\n        extra = f\" (and {len(available) - max_preview} more)\" if len(available) > max_preview else \"\"\n        if available:\n            msg = f\"File '{query}' not found. Available: {preview}{extra}\"\n        else:\n            msg = f\"File '{query}' not found. No files were provided in file_data.\"\n        logger.error(f\"FileContentRetriever: {msg}\")\n        raise ValueError(msg)\n"
+                "value": "\"\"\"Component that retrieves file content by path, for use as an agent tool.\n\nTakes file data from a Read File component and allows an agent to look up\na specific file's content by providing its path.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport hashlib\nimport json\nimport tempfile\nfrom pathlib import Path\n\nimport pandas as pd\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import StrInput\nfrom lfx.io import HandleInput, Output, QueryInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\n\n\nclass FileContentRetrieverComponent(Component):\n    display_name = \"File Content Retriever\"\n    description = (\n        \"Retrieves the text content of a file given its path. \"\n        \"Connect to an agent as a tool so it can read file contents.\"\n    )\n    icon = \"file-text\"\n    name = \"FileContentRetriever\"\n    add_tool_output = True\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self._cached_text_map: dict[str, str] | None = None\n        self._cached_dataframe_map: dict[str, DataFrame] | None = None\n\n    def __deepcopy__(self, memo: dict):\n        \"\"\"Override deepcopy to preserve cached maps across tool invocations.\"\"\"\n        from copy import deepcopy as _deepcopy\n\n        new_component = super().__deepcopy__(memo)\n        # Copy the cached maps so they don't need to be rebuilt, but avoid sharing mutable state\n        new_component._cached_text_map = (  # noqa: SLF001\n            _deepcopy(self._cached_text_map, memo) if self._cached_text_map else None\n        )\n        new_component._cached_dataframe_map = (  # noqa: SLF001\n            _deepcopy(self._cached_dataframe_map, memo) if self._cached_dataframe_map else None\n        )\n        return new_component\n\n    inputs = [\n        HandleInput(\n            name=\"file_data\",\n            display_name=\"File Data\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            is_list=True,\n            info=\"Output from a Read File component.\",\n        ),\n        StrInput(\n            name=\"persistent_dir\",\n            display_name=\"Persistent Directory\",\n            value=\"\",\n            info=\"Optional directory for persisting file maps across runs. If empty, maps are kept in memory only.\",\n        ),\n        QueryInput(\n            name=\"file_path\",\n            display_name=\"File Path\",\n            info=(\n                \"The full file path as a string (e.g., '/path/to/file.csv'). \"\n                \"Do not pass search results or other objects.\"\n            ),\n            tool_mode=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"File Content\",\n            name=\"content\",\n            method=\"retrieve_content\",\n            info=\"Retrieves file content as text. \"\n            \"IMPORTANT: Pass ONLY the file path as a string (e.g., '/Users/name/document.txt'). \"\n            \"If you have search results from a vector store, you MUST extract the file_path string first. \"\n            \"Example: file_path = result['data']['file_path'], then call retrieve_content(file_path). \"\n            \"Returns: A Message containing the file's text content. \"\n            \"Raises ValueError if file path is missing or file not found.\",\n            tool_mode=True,\n        ),\n        Output(\n            display_name=\"Table\",\n            name=\"dataframe\",\n            method=\"retrieve_content_as_dataframe\",\n            info=\"Retrieves file content as a pandas DataFrame. \"\n            \"IMPORTANT: Pass ONLY the file path as a string (e.g., '/Users/name/data.csv'). \"\n            \"If you have search results from a vector store, you MUST extract the file_path string first. \"\n            \"Example: file_path = result['data']['file_path'], then call retrieve_content_as_dataframe(file_path). \"\n            \"Supported formats: CSV, Excel (.xlsx, .xls), Parquet, JSON, TSV. \"\n            \"Returns: A DataFrame with the file's tabular data. \"\n            \"Raises ValueError if file not found, unsupported format, or parsing fails.\",\n            tool_mode=True,\n        ),\n    ]\n\n    # ---- Persistence helpers ----\n\n    @staticmethod\n    def _path_hash(file_path: str) -> str:\n        \"\"\"Return a short hash for use as a safe filename.\"\"\"\n        return hashlib.sha256(file_path.encode()).hexdigest()[:16]\n\n    def _load_persistent_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:\n        \"\"\"Load maps from the persistent directory. Returns ({}, {}) if nothing on disk.\"\"\"\n        base = Path(self.persistent_dir)\n        text_map: dict[str, str] = {}\n        dataframe_map: dict[str, DataFrame] = {}\n\n        # Load text files: index maps file_path -> text filename on disk\n        text_index_file = base / \"text_index.json\"\n        text_dir = base / \"texts\"\n        if text_index_file.exists() and text_dir.exists():\n            try:\n                index = json.loads(text_index_file.read_text(encoding=\"utf-8\"))\n                for fp, txt_name in index.items():\n                    txt_path = text_dir / txt_name\n                    if txt_path.exists():\n                        try:\n                            text_map[fp] = txt_path.read_text(encoding=\"utf-8\")\n                        except OSError as e:\n                            logger.warning(f\"FileContentRetriever: Failed to load text for '{fp}': {e}\")\n                logger.debug(f\"FileContentRetriever: Loaded {len(text_map)} text entries from disk\")\n            except (json.JSONDecodeError, OSError) as e:\n                logger.warning(f\"FileContentRetriever: Failed to load text_index.json: {e}\")\n\n        # Load DataFrames: index maps file_path -> parquet filename on disk\n        df_index_file = base / \"dataframe_index.json\"\n        df_dir = base / \"dataframes\"\n        if df_index_file.exists() and df_dir.exists():\n            try:\n                index = json.loads(df_index_file.read_text(encoding=\"utf-8\"))\n                for fp, parquet_name in index.items():\n                    pq_path = df_dir / parquet_name\n                    if pq_path.exists():\n                        try:\n                            dataframe_map[fp] = DataFrame(pd.read_parquet(pq_path))\n                            dataframe_map[fp].attrs[\"source_file_path\"] = fp\n                        except Exception as e:  # noqa: BLE001\n                            logger.warning(f\"FileContentRetriever: Failed to load parquet for '{fp}': {e}\")\n                logger.debug(f\"FileContentRetriever: Loaded {len(dataframe_map)} dataframes from disk\")\n            except (json.JSONDecodeError, OSError) as e:\n                logger.warning(f\"FileContentRetriever: Failed to load dataframe_index.json: {e}\")\n\n        return text_map, dataframe_map\n\n    def _save_persistent_maps(self, text_map: dict[str, str], dataframe_map: dict[str, DataFrame]) -> None:\n        \"\"\"Save maps to the persistent directory (atomic writes).\"\"\"\n        base = Path(self.persistent_dir)\n        base.mkdir(parents=True, exist_ok=True)\n        text_dir = base / \"texts\"\n        text_dir.mkdir(exist_ok=True)\n        df_dir = base / \"dataframes\"\n        df_dir.mkdir(exist_ok=True)\n\n        # Save each text entry as a separate file\n        text_index: dict[str, str] = {}\n        for fp, text in text_map.items():\n            txt_name = f\"{self._path_hash(fp)}.txt\"\n            txt_path = text_dir / txt_name\n            txt_path.write_text(text, encoding=\"utf-8\")\n            text_index[fp] = txt_name\n\n        # Atomic write for text_index.json\n        self._atomic_json_write(base / \"text_index.json\", text_index, base)\n\n        # Save each DataFrame as parquet\n        df_index: dict[str, str] = {}\n        for fp, df in dataframe_map.items():\n            parquet_name = f\"{self._path_hash(fp)}.parquet\"\n            df.to_parquet(df_dir / parquet_name, index=False)\n            df_index[fp] = parquet_name\n\n        # Atomic write for dataframe_index.json\n        self._atomic_json_write(base / \"dataframe_index.json\", df_index, base)\n\n        logger.debug(f\"FileContentRetriever: Saved {len(text_map)} text + {len(dataframe_map)} dataframes to '{base}'\")\n\n    @staticmethod\n    def _atomic_json_write(target: Path, data: dict, tmp_dir: Path) -> None:\n        \"\"\"Write JSON atomically via temp file + rename.\"\"\"\n        import os\n\n        fd, tmp = tempfile.mkstemp(dir=str(tmp_dir), suffix=\".tmp\")\n        try:\n            os.close(fd)\n            with Path(tmp).open(\"w\", encoding=\"utf-8\") as f:\n                json.dump(data, f, ensure_ascii=False)\n            Path(tmp).replace(target)\n        except Exception:\n            Path(tmp).unlink(missing_ok=True)\n            raise\n\n    # ---- Map building helpers ----\n\n    def _build_maps_from_input(\n        self,\n        skip_paths: set[str] | None = None,\n    ) -> tuple[dict[str, str], dict[str, DataFrame]]:\n        \"\"\"Build text and dataframe maps from self.file_data, skipping paths in *skip_paths*.\"\"\"\n        skip = skip_paths or set()\n        text_map: dict[str, str] = {}\n        dataframe_map: dict[str, DataFrame] = {}\n\n        if not self.file_data:\n            return text_map, dataframe_map\n\n        for item in self.file_data:\n            if isinstance(item, DataFrame):\n                fp = item.attrs.get(\"source_file_path\", \"\")\n                if fp and fp not in skip:\n                    dataframe_map[fp] = item\n                elif not item.empty and \"file_path\" in item.columns:\n                    has_text_col = \"text\" in item.columns\n                    for _, row in item.iterrows():\n                        path_str = str(row.get(\"file_path\", \"\"))\n                        if not path_str or path_str in skip:\n                            continue\n                        if has_text_col and path_str not in text_map:\n                            text = str(row[\"text\"]) if pd.notna(row[\"text\"]) else \"\"\n                            if text:\n                                text_map[path_str] = text\n            elif isinstance(item, Message):\n                fp = getattr(item, \"file_path\", \"\") or \"\"\n                text = item.get_text() or \"\"\n                if not fp or fp in skip:\n                    continue\n                if text:\n                    text_map[fp] = text\n            elif isinstance(item, Data):\n                fp = item.data.get(\"file_path\", \"\")\n                text = item.get_text() or \"\"\n                if not fp or fp in skip:\n                    continue\n                if text:\n                    text_map[fp] = text\n            else:\n                logger.warning(\n                    \"FileContentRetriever: Unsupported input type %s, skipping\",\n                    type(item).__name__,\n                )\n\n        return text_map, dataframe_map\n\n    @staticmethod\n    def _parse_text_to_dataframes(text_map: dict[str, str], dataframe_map: dict[str, DataFrame]) -> None:\n        \"\"\"Eagerly parse CSV/TSV/JSON text entries into DataFrames.\"\"\"\n        from io import StringIO\n\n        for fp, text in text_map.items():\n            if fp in dataframe_map:\n                continue\n            ext = Path(fp).suffix.lower()\n            try:\n                if ext == \".csv\":\n                    df = DataFrame(pd.read_csv(StringIO(text)))\n                elif ext == \".tsv\":\n                    df = DataFrame(pd.read_csv(StringIO(text), sep=\"\\t\"))\n                elif ext == \".json\":\n                    df = DataFrame(pd.read_json(StringIO(text)))\n                else:\n                    continue\n                df.attrs[\"source_file_path\"] = fp\n                dataframe_map[fp] = df\n                logger.debug(f\"FileContentRetriever: Parsed text into DataFrame for '{fp}'\")\n            except (ValueError, pd.errors.ParserError) as e:\n                logger.debug(f\"FileContentRetriever: Could not parse text as DataFrame for '{fp}': {e}\")\n\n    # ---- Main entry point ----\n\n    def _get_file_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:\n        \"\"\"Get cached file maps or build them if not cached.\n\n        Returns:\n            tuple: (text_map, dataframe_map)\n                - text_map: file_path -> text content\n                - dataframe_map: file_path -> DataFrame\n        \"\"\"\n        if self._cached_text_map is not None and self._cached_dataframe_map is not None:\n            logger.debug(\n                f\"FileContentRetriever: Using cached maps - \"\n                f\"{len(self._cached_text_map)} text files, {len(self._cached_dataframe_map)} dataframes\"\n            )\n            return self._cached_text_map, self._cached_dataframe_map\n\n        text_map: dict[str, str] = {}\n        dataframe_map: dict[str, DataFrame] = {}\n\n        # Load persisted maps if a persistent directory is configured\n        has_persistent = bool(getattr(self, \"persistent_dir\", \"\"))\n        if has_persistent:\n            text_map, dataframe_map = self._load_persistent_maps()\n\n        # Merge new input data (skip paths already loaded from disk)\n        existing_paths = {*text_map, *dataframe_map}\n        new_text, new_df = self._build_maps_from_input(skip_paths=existing_paths)\n        text_map.update(new_text)\n        dataframe_map.update(new_df)\n\n        # Eager CSV/TSV/JSON parsing\n        self._parse_text_to_dataframes(text_map, dataframe_map)\n\n        # Persist updated maps if directory is configured and there were new entries\n        if has_persistent and (new_text or new_df):\n            self._save_persistent_maps(text_map, dataframe_map)\n\n        self._cached_text_map = text_map\n        self._cached_dataframe_map = dataframe_map\n\n        _max_display = 5\n        all_keys = {*text_map.keys(), *dataframe_map.keys()}\n        if not all_keys:\n            logger.warning(\n                \"FileContentRetriever: Maps are empty — no files were loaded. \"\n                \"Check that file_data is connected and contains valid files with file_path metadata.\"\n            )\n        else:\n            logger.info(\n                f\"FileContentRetriever: Built and cached maps - \"\n                f\"{len(text_map)} text files, {len(dataframe_map)} dataframes. \"\n                f\"Available files: {list(all_keys)[:_max_display]}\"\n                f\"{'...' if len(all_keys) > _max_display else ''}\"\n            )\n\n        return text_map, dataframe_map\n\n    def retrieve_content(self, file_path: str = \"\") -> Message:\n        \"\"\"Retrieve file content as text.\n\n        Args:\n            file_path: The full file path as a string (e.g., '/path/to/file.txt').\n\n        Returns:\n            Message: The file content as text, or empty Message if no path provided.\n\n        Raises:\n            ValueError: If file not found.\n        \"\"\"\n        # Use explicit argument, fallback to self.file_path for backward compatibility\n        query = file_path or self.file_path\n\n        logger.debug(\n            f\"FileContentRetriever.retrieve_content called - \"\n            f\"arg file_path='{file_path}', self.file_path='{self.file_path}', query='{query}'\"\n        )\n\n        if not query:\n            # Eagerly build maps so they're cached before deepcopy in tool calls\n            self._get_file_maps()\n            logger.info(\"FileContentRetriever: No file path provided, returning empty Message\")\n            return Message(text=\"\")\n\n        # Get cached maps (built once and reused)\n        text_map, dataframe_map = self._get_file_maps()\n        content = text_map.get(query)\n\n        # Fall back to CSV representation of DataFrame if no text content\n        if content is None and query in dataframe_map:\n            content = dataframe_map[query].to_csv(index=False)\n\n        if content is None:\n            available = sorted({*text_map.keys(), *dataframe_map.keys()})\n            preview = available[:5]\n            extra = f\" (and {len(available) - 5} more)\" if len(available) > 5 else \"\"  # noqa: PLR2004\n            msg = f\"File '{query}' not found. Available files: {preview}{extra}\"\n            logger.error(f\"FileContentRetriever: {msg}\")\n            raise ValueError(msg)\n\n        logger.info(f\"FileContentRetriever: Successfully retrieved content for '{query}' ({len(content)} chars)\")\n        return Message(text=content)\n\n    def retrieve_content_as_dataframe(self, file_path: str = \"\") -> DataFrame:\n        \"\"\"Retrieve file content as a DataFrame for tabular data files.\n\n        Args:\n            file_path: The full file path as a string (e.g., '/path/to/file.csv').\n\n        Returns:\n            DataFrame: The file content as a pandas DataFrame, or empty DataFrame if no path provided.\n\n        Raises:\n            ValueError: If file not found or file type is not supported.\n        \"\"\"\n        # Supported tabular file extensions\n        tabular_extensions = {\".csv\", \".xlsx\", \".xls\", \".parquet\", \".json\", \".tsv\"}\n\n        # Use explicit argument, fallback to self.file_path for backward compatibility\n        query = file_path or self.file_path\n\n        logger.debug(\n            f\"FileContentRetriever.retrieve_content_as_dataframe called - \"\n            f\"arg file_path='{file_path}', self.file_path='{self.file_path}', query='{query}', \"\n            f\"type(file_path)={type(file_path)}, repr(file_path)={file_path!r}\"\n        )\n\n        if not query:\n            # Eagerly build maps so they're cached before deepcopy in tool calls\n            self._get_file_maps()\n            logger.info(\"FileContentRetriever: No file path provided, returning empty DataFrame\")\n            return DataFrame(pd.DataFrame())\n\n        # Check file extension\n        file_ext = Path(query).suffix.lower()\n        if file_ext not in tabular_extensions:\n            supported = \", \".join(sorted(tabular_extensions))\n            msg = (\n                f\"File type '{file_ext}' is not supported for DataFrame conversion. \"\n                f\"Supported formats: {supported}. \"\n                f\"File: '{query}'\"\n            )\n            logger.error(f\"FileContentRetriever: {msg}\")\n            raise ValueError(msg)\n\n        # Get cached maps (built once and reused)\n        text_map, dataframe_map = self._get_file_maps()\n\n        # Check if we have a DataFrame for this file\n        if query in dataframe_map:\n            df = dataframe_map[query]\n            logger.info(\n                f\"FileContentRetriever: Successfully retrieved DataFrame for '{query}' \"\n                f\"({len(df)} rows, {len(df.columns)} columns)\"\n            )\n            return df\n\n        available = sorted({*text_map.keys(), *dataframe_map.keys()})\n        max_preview = 5\n        preview = available[:max_preview]\n        extra = f\" (and {len(available) - max_preview} more)\" if len(available) > max_preview else \"\"\n        if available:\n            msg = f\"File '{query}' not found. Available: {preview}{extra}\"\n        else:\n            msg = f\"File '{query}' not found. No files were provided in file_data.\"\n        logger.error(f\"FileContentRetriever: {msg}\")\n        raise ValueError(msg)\n"
               },
               "file_data": {
                 "_input_type": "HandleInput",
@@ -3639,7 +3639,7 @@
           "type": "FileContentRetriever"
         },
         "dragging": false,
-        "id": "FileContentRetriever-29Jth",
+        "id": "FileContentRetriever-1957F",
         "measured": {
           "height": 365,
           "width": 320
@@ -3653,7 +3653,7 @@
       },
       {
         "data": {
-          "id": "FileContentRetriever-0SrPI",
+          "id": "FileContentRetriever-PqTwn",
           "node": {
             "base_classes": [
               "Message",
@@ -3673,11 +3673,11 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2026-04-12T11:24:37.427Z",
+            "last_updated": "2026-04-13T09:04:37.002Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
-              "code_hash": "4c199ad58ee7",
+              "code_hash": "2650f1b36e87",
               "dependencies": {
                 "dependencies": [
                   {
@@ -3718,7 +3718,7 @@
             "pinned": false,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "21d9ec0b-495f-47ac-b2d1-3f9912a86a6c"
+                "value": "bd9d12c2-69e1-41f0-8e46-914b39f51ac4"
               },
               "_frontend_node_folder_id": {
                 "value": "4c3849a1-f6ba-4952-83e4-23faceb25a7d"
@@ -3740,7 +3740,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "\"\"\"Component that retrieves file content by path, for use as an agent tool.\n\nTakes file data from a Read File component and allows an agent to look up\na specific file's content by providing its path.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport hashlib\nimport json\nimport tempfile\nfrom pathlib import Path\n\nimport pandas as pd\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import StrInput\nfrom lfx.io import HandleInput, Output, QueryInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\n\n\nclass FileContentRetrieverComponent(Component):\n    display_name = \"File Content Retriever\"\n    description = (\n        \"Retrieves the text content of a file given its path. \"\n        \"Connect to an agent as a tool so it can read file contents.\"\n    )\n    icon = \"file-text\"\n    name = \"FileContentRetriever\"\n    add_tool_output = True\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self._cached_text_map: dict[str, str] | None = None\n        self._cached_dataframe_map: dict[str, DataFrame] | None = None\n\n    def __deepcopy__(self, memo: dict):\n        \"\"\"Override deepcopy to preserve cached maps across tool invocations.\"\"\"\n        from copy import deepcopy as _deepcopy\n\n        new_component = super().__deepcopy__(memo)\n        # Copy the cached maps so they don't need to be rebuilt, but avoid sharing mutable state\n        new_component._cached_text_map = (  # noqa: SLF001\n            _deepcopy(self._cached_text_map, memo) if self._cached_text_map else None\n        )\n        new_component._cached_dataframe_map = (  # noqa: SLF001\n            _deepcopy(self._cached_dataframe_map, memo) if self._cached_dataframe_map else None\n        )\n        return new_component\n\n    inputs = [\n        HandleInput(\n            name=\"file_data\",\n            display_name=\"File Data\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            is_list=True,\n            info=\"Output from a Read File component.\",\n        ),\n        StrInput(\n            name=\"persistent_dir\",\n            display_name=\"Persistent Directory\",\n            value=\"\",\n            info=\"Optional directory for persisting file maps across runs. If empty, maps are kept in memory only.\",\n        ),\n        QueryInput(\n            name=\"file_path\",\n            display_name=\"File Path\",\n            info=(\n                \"The full file path as a string (e.g., '/path/to/file.csv'). \"\n                \"Do not pass search results or other objects.\"\n            ),\n            tool_mode=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"File Content\",\n            name=\"content\",\n            method=\"retrieve_content\",\n            info=\"Retrieves file content as text. \"\n            \"IMPORTANT: Pass ONLY the file path as a string (e.g., '/Users/name/document.txt'). \"\n            \"If you have search results from a vector store, you MUST extract the file_path string first. \"\n            \"Example: file_path = result['data']['file_path'], then call retrieve_content(file_path). \"\n            \"Returns: A Message containing the file's text content. \"\n            \"Raises ValueError if file path is missing or file not found.\",\n            tool_mode=True,\n        ),\n        Output(\n            display_name=\"Table\",\n            name=\"dataframe\",\n            method=\"retrieve_content_as_dataframe\",\n            info=\"Retrieves file content as a pandas DataFrame. \"\n            \"IMPORTANT: Pass ONLY the file path as a string (e.g., '/Users/name/data.csv'). \"\n            \"If you have search results from a vector store, you MUST extract the file_path string first. \"\n            \"Example: file_path = result['data']['file_path'], then call retrieve_content_as_dataframe(file_path). \"\n            \"Supported formats: CSV, Excel (.xlsx, .xls), Parquet, JSON, TSV. \"\n            \"Returns: A DataFrame with the file's tabular data. \"\n            \"Raises ValueError if file not found, unsupported format, or parsing fails.\",\n            tool_mode=True,\n        ),\n    ]\n\n    # ---- Persistence helpers ----\n\n    @staticmethod\n    def _path_hash(file_path: str) -> str:\n        \"\"\"Return a short hash for use as a safe filename.\"\"\"\n        return hashlib.sha256(file_path.encode()).hexdigest()[:16]\n\n    def _load_persistent_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:\n        \"\"\"Load maps from the persistent directory. Returns ({}, {}) if nothing on disk.\"\"\"\n        base = Path(self.persistent_dir)\n        text_map: dict[str, str] = {}\n        dataframe_map: dict[str, DataFrame] = {}\n\n        # Load text files: index maps file_path -> text filename on disk\n        text_index_file = base / \"text_index.json\"\n        text_dir = base / \"texts\"\n        if text_index_file.exists() and text_dir.exists():\n            try:\n                index = json.loads(text_index_file.read_text(encoding=\"utf-8\"))\n                for fp, txt_name in index.items():\n                    txt_path = text_dir / txt_name\n                    if txt_path.exists():\n                        try:\n                            text_map[fp] = txt_path.read_text(encoding=\"utf-8\")\n                        except OSError as e:\n                            logger.warning(f\"FileContentRetriever: Failed to load text for '{fp}': {e}\")\n                logger.debug(f\"FileContentRetriever: Loaded {len(text_map)} text entries from disk\")\n            except (json.JSONDecodeError, OSError) as e:\n                logger.warning(f\"FileContentRetriever: Failed to load text_index.json: {e}\")\n\n        # Load DataFrames: index maps file_path -> parquet filename on disk\n        df_index_file = base / \"dataframe_index.json\"\n        df_dir = base / \"dataframes\"\n        if df_index_file.exists() and df_dir.exists():\n            try:\n                index = json.loads(df_index_file.read_text(encoding=\"utf-8\"))\n                for fp, parquet_name in index.items():\n                    pq_path = df_dir / parquet_name\n                    if pq_path.exists():\n                        try:\n                            dataframe_map[fp] = DataFrame(pd.read_parquet(pq_path))\n                            dataframe_map[fp].attrs[\"source_file_path\"] = fp\n                        except Exception as e:  # noqa: BLE001\n                            logger.warning(f\"FileContentRetriever: Failed to load parquet for '{fp}': {e}\")\n                logger.debug(f\"FileContentRetriever: Loaded {len(dataframe_map)} dataframes from disk\")\n            except (json.JSONDecodeError, OSError) as e:\n                logger.warning(f\"FileContentRetriever: Failed to load dataframe_index.json: {e}\")\n\n        return text_map, dataframe_map\n\n    def _save_persistent_maps(self, text_map: dict[str, str], dataframe_map: dict[str, DataFrame]) -> None:\n        \"\"\"Save maps to the persistent directory (atomic writes).\"\"\"\n        base = Path(self.persistent_dir)\n        base.mkdir(parents=True, exist_ok=True)\n        text_dir = base / \"texts\"\n        text_dir.mkdir(exist_ok=True)\n        df_dir = base / \"dataframes\"\n        df_dir.mkdir(exist_ok=True)\n\n        # Save each text entry as a separate file\n        text_index: dict[str, str] = {}\n        for fp, text in text_map.items():\n            txt_name = f\"{self._path_hash(fp)}.txt\"\n            txt_path = text_dir / txt_name\n            txt_path.write_text(text, encoding=\"utf-8\")\n            text_index[fp] = txt_name\n\n        # Atomic write for text_index.json\n        self._atomic_json_write(base / \"text_index.json\", text_index, base)\n\n        # Save each DataFrame as parquet\n        df_index: dict[str, str] = {}\n        for fp, df in dataframe_map.items():\n            parquet_name = f\"{self._path_hash(fp)}.parquet\"\n            df.to_parquet(df_dir / parquet_name, index=False)\n            df_index[fp] = parquet_name\n\n        # Atomic write for dataframe_index.json\n        self._atomic_json_write(base / \"dataframe_index.json\", df_index, base)\n\n        logger.debug(\n            f\"FileContentRetriever: Saved {len(text_map)} text + {len(dataframe_map)} dataframes to '{base}'\"\n        )\n\n    @staticmethod\n    def _atomic_json_write(target: Path, data: dict, tmp_dir: Path) -> None:\n        \"\"\"Write JSON atomically via temp file + rename.\"\"\"\n        fd, tmp = tempfile.mkstemp(dir=str(tmp_dir), suffix=\".tmp\")\n        try:\n            with open(fd, \"w\", encoding=\"utf-8\") as f:\n                json.dump(data, f, ensure_ascii=False)\n            Path(tmp).replace(target)\n        except Exception:\n            Path(tmp).unlink(missing_ok=True)\n            raise\n\n    # ---- Map building helpers ----\n\n    def _build_maps_from_input(\n        self, skip_paths: set[str] | None = None,\n    ) -> tuple[dict[str, str], dict[str, DataFrame]]:\n        \"\"\"Build text and dataframe maps from self.file_data, skipping paths in *skip_paths*.\"\"\"\n        skip = skip_paths or set()\n        text_map: dict[str, str] = {}\n        dataframe_map: dict[str, DataFrame] = {}\n\n        if not self.file_data:\n            return text_map, dataframe_map\n\n        for item in self.file_data:\n            if isinstance(item, DataFrame):\n                fp = item.attrs.get(\"source_file_path\", \"\")\n                if fp and fp not in skip:\n                    dataframe_map[fp] = item\n                elif not item.empty and \"file_path\" in item.columns:\n                    has_text_col = \"text\" in item.columns\n                    for _, row in item.iterrows():\n                        path_str = str(row.get(\"file_path\", \"\"))\n                        if not path_str or path_str in skip:\n                            continue\n                        if has_text_col and path_str not in text_map:\n                            text = str(row[\"text\"]) if pd.notna(row[\"text\"]) else \"\"\n                            if text:\n                                text_map[path_str] = text\n            elif isinstance(item, Message):\n                fp = getattr(item, \"file_path\", \"\") or \"\"\n                text = item.get_text() or \"\"\n                if not fp or fp in skip:\n                    continue\n                if text:\n                    text_map[fp] = text\n            elif isinstance(item, Data):\n                fp = item.data.get(\"file_path\", \"\")\n                text = item.get_text() or \"\"\n                if not fp or fp in skip:\n                    continue\n                if text:\n                    text_map[fp] = text\n            else:\n                logger.warning(\n                    \"FileContentRetriever: Unsupported input type %s, skipping\",\n                    type(item).__name__,\n                )\n\n        return text_map, dataframe_map\n\n    @staticmethod\n    def _parse_text_to_dataframes(text_map: dict[str, str], dataframe_map: dict[str, DataFrame]) -> None:\n        \"\"\"Eagerly parse CSV/TSV/JSON text entries into DataFrames.\"\"\"\n        from io import StringIO\n\n        for fp, text in text_map.items():\n            if fp in dataframe_map:\n                continue\n            ext = Path(fp).suffix.lower()\n            try:\n                if ext == \".csv\":\n                    df = DataFrame(pd.read_csv(StringIO(text)))\n                elif ext == \".tsv\":\n                    df = DataFrame(pd.read_csv(StringIO(text), sep=\"\\t\"))\n                elif ext == \".json\":\n                    df = DataFrame(pd.read_json(StringIO(text)))\n                else:\n                    continue\n                df.attrs[\"source_file_path\"] = fp\n                dataframe_map[fp] = df\n                logger.debug(f\"FileContentRetriever: Parsed text into DataFrame for '{fp}'\")\n            except (ValueError, pd.errors.ParserError) as e:\n                logger.debug(f\"FileContentRetriever: Could not parse text as DataFrame for '{fp}': {e}\")\n\n    # ---- Main entry point ----\n\n    def _get_file_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:\n        \"\"\"Get cached file maps or build them if not cached.\n\n        Returns:\n            tuple: (text_map, dataframe_map)\n                - text_map: file_path -> text content\n                - dataframe_map: file_path -> DataFrame\n        \"\"\"\n        if self._cached_text_map is not None and self._cached_dataframe_map is not None:\n            logger.debug(\n                f\"FileContentRetriever: Using cached maps - \"\n                f\"{len(self._cached_text_map)} text files, {len(self._cached_dataframe_map)} dataframes\"\n            )\n            return self._cached_text_map, self._cached_dataframe_map\n\n        text_map: dict[str, str] = {}\n        dataframe_map: dict[str, DataFrame] = {}\n\n        # Load persisted maps if a persistent directory is configured\n        has_persistent = bool(getattr(self, \"persistent_dir\", \"\"))\n        if has_persistent:\n            text_map, dataframe_map = self._load_persistent_maps()\n\n        # Merge new input data (skip paths already loaded from disk)\n        existing_paths = {*text_map, *dataframe_map}\n        new_text, new_df = self._build_maps_from_input(skip_paths=existing_paths)\n        text_map.update(new_text)\n        dataframe_map.update(new_df)\n\n        # Eager CSV/TSV/JSON parsing\n        self._parse_text_to_dataframes(text_map, dataframe_map)\n\n        # Persist updated maps if directory is configured and there were new entries\n        if has_persistent and (new_text or new_df):\n            self._save_persistent_maps(text_map, dataframe_map)\n\n        self._cached_text_map = text_map\n        self._cached_dataframe_map = dataframe_map\n\n        _max_display = 5\n        all_keys = {*text_map.keys(), *dataframe_map.keys()}\n        if not all_keys:\n            logger.warning(\n                \"FileContentRetriever: Maps are empty — no files were loaded. \"\n                \"Check that file_data is connected and contains valid files with file_path metadata.\"\n            )\n        else:\n            logger.info(\n                f\"FileContentRetriever: Built and cached maps - \"\n                f\"{len(text_map)} text files, {len(dataframe_map)} dataframes. \"\n                f\"Available files: {list(all_keys)[:_max_display]}\"\n                f\"{'...' if len(all_keys) > _max_display else ''}\"\n            )\n\n        return text_map, dataframe_map\n\n    def retrieve_content(self, file_path: str = \"\") -> Message:\n        \"\"\"Retrieve file content as text.\n\n        Args:\n            file_path: The full file path as a string (e.g., '/path/to/file.txt').\n\n        Returns:\n            Message: The file content as text, or empty Message if no path provided.\n\n        Raises:\n            ValueError: If file not found.\n        \"\"\"\n        # Use explicit argument, fallback to self.file_path for backward compatibility\n        query = file_path or self.file_path\n\n        logger.debug(\n            f\"FileContentRetriever.retrieve_content called - \"\n            f\"arg file_path='{file_path}', self.file_path='{self.file_path}', query='{query}'\"\n        )\n\n        if not query:\n            # Eagerly build maps so they're cached before deepcopy in tool calls\n            self._get_file_maps()\n            logger.info(\"FileContentRetriever: No file path provided, returning empty Message\")\n            return Message(text=\"\")\n\n        # Get cached maps (built once and reused)\n        text_map, dataframe_map = self._get_file_maps()\n        content = text_map.get(query)\n\n        # Fall back to CSV representation of DataFrame if no text content\n        if content is None and query in dataframe_map:\n            content = dataframe_map[query].to_csv(index=False)\n\n        if content is None:\n            available = sorted({*text_map.keys(), *dataframe_map.keys()})\n            preview = available[:5]\n            extra = f\" (and {len(available) - 5} more)\" if len(available) > 5 else \"\"  # noqa: PLR2004\n            msg = f\"File '{query}' not found. Available files: {preview}{extra}\"\n            logger.error(f\"FileContentRetriever: {msg}\")\n            raise ValueError(msg)\n\n        logger.info(f\"FileContentRetriever: Successfully retrieved content for '{query}' ({len(content)} chars)\")\n        return Message(text=content)\n\n    def retrieve_content_as_dataframe(self, file_path: str = \"\") -> DataFrame:\n        \"\"\"Retrieve file content as a DataFrame for tabular data files.\n\n        Args:\n            file_path: The full file path as a string (e.g., '/path/to/file.csv').\n\n        Returns:\n            DataFrame: The file content as a pandas DataFrame, or empty DataFrame if no path provided.\n\n        Raises:\n            ValueError: If file not found or file type is not supported.\n        \"\"\"\n        # Supported tabular file extensions\n        tabular_extensions = {\".csv\", \".xlsx\", \".xls\", \".parquet\", \".json\", \".tsv\"}\n\n        # Use explicit argument, fallback to self.file_path for backward compatibility\n        query = file_path or self.file_path\n\n        logger.debug(\n            f\"FileContentRetriever.retrieve_content_as_dataframe called - \"\n            f\"arg file_path='{file_path}', self.file_path='{self.file_path}', query='{query}', \"\n            f\"type(file_path)={type(file_path)}, repr(file_path)={file_path!r}\"\n        )\n\n        if not query:\n            # Eagerly build maps so they're cached before deepcopy in tool calls\n            self._get_file_maps()\n            logger.info(\"FileContentRetriever: No file path provided, returning empty DataFrame\")\n            return DataFrame(pd.DataFrame())\n\n        # Check file extension\n        file_ext = Path(query).suffix.lower()\n        if file_ext not in tabular_extensions:\n            supported = \", \".join(sorted(tabular_extensions))\n            msg = (\n                f\"File type '{file_ext}' is not supported for DataFrame conversion. \"\n                f\"Supported formats: {supported}. \"\n                f\"File: '{query}'\"\n            )\n            logger.error(f\"FileContentRetriever: {msg}\")\n            raise ValueError(msg)\n\n        # Get cached maps (built once and reused)\n        text_map, dataframe_map = self._get_file_maps()\n\n        # Check if we have a DataFrame for this file\n        if query in dataframe_map:\n            df = dataframe_map[query]\n            logger.info(\n                f\"FileContentRetriever: Successfully retrieved DataFrame for '{query}' \"\n                f\"({len(df)} rows, {len(df.columns)} columns)\"\n            )\n            return df\n\n        available = sorted({*text_map.keys(), *dataframe_map.keys()})\n        max_preview = 5\n        preview = available[:max_preview]\n        extra = f\" (and {len(available) - max_preview} more)\" if len(available) > max_preview else \"\"\n        if available:\n            msg = f\"File '{query}' not found. Available: {preview}{extra}\"\n        else:\n            msg = f\"File '{query}' not found. No files were provided in file_data.\"\n        logger.error(f\"FileContentRetriever: {msg}\")\n        raise ValueError(msg)\n"
+                "value": "\"\"\"Component that retrieves file content by path, for use as an agent tool.\n\nTakes file data from a Read File component and allows an agent to look up\na specific file's content by providing its path.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport hashlib\nimport json\nimport tempfile\nfrom pathlib import Path\n\nimport pandas as pd\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import StrInput\nfrom lfx.io import HandleInput, Output, QueryInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\n\n\nclass FileContentRetrieverComponent(Component):\n    display_name = \"File Content Retriever\"\n    description = (\n        \"Retrieves the text content of a file given its path. \"\n        \"Connect to an agent as a tool so it can read file contents.\"\n    )\n    icon = \"file-text\"\n    name = \"FileContentRetriever\"\n    add_tool_output = True\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self._cached_text_map: dict[str, str] | None = None\n        self._cached_dataframe_map: dict[str, DataFrame] | None = None\n\n    def __deepcopy__(self, memo: dict):\n        \"\"\"Override deepcopy to preserve cached maps across tool invocations.\"\"\"\n        from copy import deepcopy as _deepcopy\n\n        new_component = super().__deepcopy__(memo)\n        # Copy the cached maps so they don't need to be rebuilt, but avoid sharing mutable state\n        new_component._cached_text_map = (  # noqa: SLF001\n            _deepcopy(self._cached_text_map, memo) if self._cached_text_map else None\n        )\n        new_component._cached_dataframe_map = (  # noqa: SLF001\n            _deepcopy(self._cached_dataframe_map, memo) if self._cached_dataframe_map else None\n        )\n        return new_component\n\n    inputs = [\n        HandleInput(\n            name=\"file_data\",\n            display_name=\"File Data\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            is_list=True,\n            info=\"Output from a Read File component.\",\n        ),\n        StrInput(\n            name=\"persistent_dir\",\n            display_name=\"Persistent Directory\",\n            value=\"\",\n            info=\"Optional directory for persisting file maps across runs. If empty, maps are kept in memory only.\",\n        ),\n        QueryInput(\n            name=\"file_path\",\n            display_name=\"File Path\",\n            info=(\n                \"The full file path as a string (e.g., '/path/to/file.csv'). \"\n                \"Do not pass search results or other objects.\"\n            ),\n            tool_mode=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"File Content\",\n            name=\"content\",\n            method=\"retrieve_content\",\n            info=\"Retrieves file content as text. \"\n            \"IMPORTANT: Pass ONLY the file path as a string (e.g., '/Users/name/document.txt'). \"\n            \"If you have search results from a vector store, you MUST extract the file_path string first. \"\n            \"Example: file_path = result['data']['file_path'], then call retrieve_content(file_path). \"\n            \"Returns: A Message containing the file's text content. \"\n            \"Raises ValueError if file path is missing or file not found.\",\n            tool_mode=True,\n        ),\n        Output(\n            display_name=\"Table\",\n            name=\"dataframe\",\n            method=\"retrieve_content_as_dataframe\",\n            info=\"Retrieves file content as a pandas DataFrame. \"\n            \"IMPORTANT: Pass ONLY the file path as a string (e.g., '/Users/name/data.csv'). \"\n            \"If you have search results from a vector store, you MUST extract the file_path string first. \"\n            \"Example: file_path = result['data']['file_path'], then call retrieve_content_as_dataframe(file_path). \"\n            \"Supported formats: CSV, Excel (.xlsx, .xls), Parquet, JSON, TSV. \"\n            \"Returns: A DataFrame with the file's tabular data. \"\n            \"Raises ValueError if file not found, unsupported format, or parsing fails.\",\n            tool_mode=True,\n        ),\n    ]\n\n    # ---- Persistence helpers ----\n\n    @staticmethod\n    def _path_hash(file_path: str) -> str:\n        \"\"\"Return a short hash for use as a safe filename.\"\"\"\n        return hashlib.sha256(file_path.encode()).hexdigest()[:16]\n\n    def _load_persistent_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:\n        \"\"\"Load maps from the persistent directory. Returns ({}, {}) if nothing on disk.\"\"\"\n        base = Path(self.persistent_dir)\n        text_map: dict[str, str] = {}\n        dataframe_map: dict[str, DataFrame] = {}\n\n        # Load text files: index maps file_path -> text filename on disk\n        text_index_file = base / \"text_index.json\"\n        text_dir = base / \"texts\"\n        if text_index_file.exists() and text_dir.exists():\n            try:\n                index = json.loads(text_index_file.read_text(encoding=\"utf-8\"))\n                for fp, txt_name in index.items():\n                    txt_path = text_dir / txt_name\n                    if txt_path.exists():\n                        try:\n                            text_map[fp] = txt_path.read_text(encoding=\"utf-8\")\n                        except OSError as e:\n                            logger.warning(f\"FileContentRetriever: Failed to load text for '{fp}': {e}\")\n                logger.debug(f\"FileContentRetriever: Loaded {len(text_map)} text entries from disk\")\n            except (json.JSONDecodeError, OSError) as e:\n                logger.warning(f\"FileContentRetriever: Failed to load text_index.json: {e}\")\n\n        # Load DataFrames: index maps file_path -> parquet filename on disk\n        df_index_file = base / \"dataframe_index.json\"\n        df_dir = base / \"dataframes\"\n        if df_index_file.exists() and df_dir.exists():\n            try:\n                index = json.loads(df_index_file.read_text(encoding=\"utf-8\"))\n                for fp, parquet_name in index.items():\n                    pq_path = df_dir / parquet_name\n                    if pq_path.exists():\n                        try:\n                            dataframe_map[fp] = DataFrame(pd.read_parquet(pq_path))\n                            dataframe_map[fp].attrs[\"source_file_path\"] = fp\n                        except Exception as e:  # noqa: BLE001\n                            logger.warning(f\"FileContentRetriever: Failed to load parquet for '{fp}': {e}\")\n                logger.debug(f\"FileContentRetriever: Loaded {len(dataframe_map)} dataframes from disk\")\n            except (json.JSONDecodeError, OSError) as e:\n                logger.warning(f\"FileContentRetriever: Failed to load dataframe_index.json: {e}\")\n\n        return text_map, dataframe_map\n\n    def _save_persistent_maps(self, text_map: dict[str, str], dataframe_map: dict[str, DataFrame]) -> None:\n        \"\"\"Save maps to the persistent directory (atomic writes).\"\"\"\n        base = Path(self.persistent_dir)\n        base.mkdir(parents=True, exist_ok=True)\n        text_dir = base / \"texts\"\n        text_dir.mkdir(exist_ok=True)\n        df_dir = base / \"dataframes\"\n        df_dir.mkdir(exist_ok=True)\n\n        # Save each text entry as a separate file\n        text_index: dict[str, str] = {}\n        for fp, text in text_map.items():\n            txt_name = f\"{self._path_hash(fp)}.txt\"\n            txt_path = text_dir / txt_name\n            txt_path.write_text(text, encoding=\"utf-8\")\n            text_index[fp] = txt_name\n\n        # Atomic write for text_index.json\n        self._atomic_json_write(base / \"text_index.json\", text_index, base)\n\n        # Save each DataFrame as parquet\n        df_index: dict[str, str] = {}\n        for fp, df in dataframe_map.items():\n            parquet_name = f\"{self._path_hash(fp)}.parquet\"\n            df.to_parquet(df_dir / parquet_name, index=False)\n            df_index[fp] = parquet_name\n\n        # Atomic write for dataframe_index.json\n        self._atomic_json_write(base / \"dataframe_index.json\", df_index, base)\n\n        logger.debug(f\"FileContentRetriever: Saved {len(text_map)} text + {len(dataframe_map)} dataframes to '{base}'\")\n\n    @staticmethod\n    def _atomic_json_write(target: Path, data: dict, tmp_dir: Path) -> None:\n        \"\"\"Write JSON atomically via temp file + rename.\"\"\"\n        import os\n\n        fd, tmp = tempfile.mkstemp(dir=str(tmp_dir), suffix=\".tmp\")\n        try:\n            os.close(fd)\n            with Path(tmp).open(\"w\", encoding=\"utf-8\") as f:\n                json.dump(data, f, ensure_ascii=False)\n            Path(tmp).replace(target)\n        except Exception:\n            Path(tmp).unlink(missing_ok=True)\n            raise\n\n    # ---- Map building helpers ----\n\n    def _build_maps_from_input(\n        self,\n        skip_paths: set[str] | None = None,\n    ) -> tuple[dict[str, str], dict[str, DataFrame]]:\n        \"\"\"Build text and dataframe maps from self.file_data, skipping paths in *skip_paths*.\"\"\"\n        skip = skip_paths or set()\n        text_map: dict[str, str] = {}\n        dataframe_map: dict[str, DataFrame] = {}\n\n        if not self.file_data:\n            return text_map, dataframe_map\n\n        for item in self.file_data:\n            if isinstance(item, DataFrame):\n                fp = item.attrs.get(\"source_file_path\", \"\")\n                if fp and fp not in skip:\n                    dataframe_map[fp] = item\n                elif not item.empty and \"file_path\" in item.columns:\n                    has_text_col = \"text\" in item.columns\n                    for _, row in item.iterrows():\n                        path_str = str(row.get(\"file_path\", \"\"))\n                        if not path_str or path_str in skip:\n                            continue\n                        if has_text_col and path_str not in text_map:\n                            text = str(row[\"text\"]) if pd.notna(row[\"text\"]) else \"\"\n                            if text:\n                                text_map[path_str] = text\n            elif isinstance(item, Message):\n                fp = getattr(item, \"file_path\", \"\") or \"\"\n                text = item.get_text() or \"\"\n                if not fp or fp in skip:\n                    continue\n                if text:\n                    text_map[fp] = text\n            elif isinstance(item, Data):\n                fp = item.data.get(\"file_path\", \"\")\n                text = item.get_text() or \"\"\n                if not fp or fp in skip:\n                    continue\n                if text:\n                    text_map[fp] = text\n            else:\n                logger.warning(\n                    \"FileContentRetriever: Unsupported input type %s, skipping\",\n                    type(item).__name__,\n                )\n\n        return text_map, dataframe_map\n\n    @staticmethod\n    def _parse_text_to_dataframes(text_map: dict[str, str], dataframe_map: dict[str, DataFrame]) -> None:\n        \"\"\"Eagerly parse CSV/TSV/JSON text entries into DataFrames.\"\"\"\n        from io import StringIO\n\n        for fp, text in text_map.items():\n            if fp in dataframe_map:\n                continue\n            ext = Path(fp).suffix.lower()\n            try:\n                if ext == \".csv\":\n                    df = DataFrame(pd.read_csv(StringIO(text)))\n                elif ext == \".tsv\":\n                    df = DataFrame(pd.read_csv(StringIO(text), sep=\"\\t\"))\n                elif ext == \".json\":\n                    df = DataFrame(pd.read_json(StringIO(text)))\n                else:\n                    continue\n                df.attrs[\"source_file_path\"] = fp\n                dataframe_map[fp] = df\n                logger.debug(f\"FileContentRetriever: Parsed text into DataFrame for '{fp}'\")\n            except (ValueError, pd.errors.ParserError) as e:\n                logger.debug(f\"FileContentRetriever: Could not parse text as DataFrame for '{fp}': {e}\")\n\n    # ---- Main entry point ----\n\n    def _get_file_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:\n        \"\"\"Get cached file maps or build them if not cached.\n\n        Returns:\n            tuple: (text_map, dataframe_map)\n                - text_map: file_path -> text content\n                - dataframe_map: file_path -> DataFrame\n        \"\"\"\n        if self._cached_text_map is not None and self._cached_dataframe_map is not None:\n            logger.debug(\n                f\"FileContentRetriever: Using cached maps - \"\n                f\"{len(self._cached_text_map)} text files, {len(self._cached_dataframe_map)} dataframes\"\n            )\n            return self._cached_text_map, self._cached_dataframe_map\n\n        text_map: dict[str, str] = {}\n        dataframe_map: dict[str, DataFrame] = {}\n\n        # Load persisted maps if a persistent directory is configured\n        has_persistent = bool(getattr(self, \"persistent_dir\", \"\"))\n        if has_persistent:\n            text_map, dataframe_map = self._load_persistent_maps()\n\n        # Merge new input data (skip paths already loaded from disk)\n        existing_paths = {*text_map, *dataframe_map}\n        new_text, new_df = self._build_maps_from_input(skip_paths=existing_paths)\n        text_map.update(new_text)\n        dataframe_map.update(new_df)\n\n        # Eager CSV/TSV/JSON parsing\n        self._parse_text_to_dataframes(text_map, dataframe_map)\n\n        # Persist updated maps if directory is configured and there were new entries\n        if has_persistent and (new_text or new_df):\n            self._save_persistent_maps(text_map, dataframe_map)\n\n        self._cached_text_map = text_map\n        self._cached_dataframe_map = dataframe_map\n\n        _max_display = 5\n        all_keys = {*text_map.keys(), *dataframe_map.keys()}\n        if not all_keys:\n            logger.warning(\n                \"FileContentRetriever: Maps are empty — no files were loaded. \"\n                \"Check that file_data is connected and contains valid files with file_path metadata.\"\n            )\n        else:\n            logger.info(\n                f\"FileContentRetriever: Built and cached maps - \"\n                f\"{len(text_map)} text files, {len(dataframe_map)} dataframes. \"\n                f\"Available files: {list(all_keys)[:_max_display]}\"\n                f\"{'...' if len(all_keys) > _max_display else ''}\"\n            )\n\n        return text_map, dataframe_map\n\n    def retrieve_content(self, file_path: str = \"\") -> Message:\n        \"\"\"Retrieve file content as text.\n\n        Args:\n            file_path: The full file path as a string (e.g., '/path/to/file.txt').\n\n        Returns:\n            Message: The file content as text, or empty Message if no path provided.\n\n        Raises:\n            ValueError: If file not found.\n        \"\"\"\n        # Use explicit argument, fallback to self.file_path for backward compatibility\n        query = file_path or self.file_path\n\n        logger.debug(\n            f\"FileContentRetriever.retrieve_content called - \"\n            f\"arg file_path='{file_path}', self.file_path='{self.file_path}', query='{query}'\"\n        )\n\n        if not query:\n            # Eagerly build maps so they're cached before deepcopy in tool calls\n            self._get_file_maps()\n            logger.info(\"FileContentRetriever: No file path provided, returning empty Message\")\n            return Message(text=\"\")\n\n        # Get cached maps (built once and reused)\n        text_map, dataframe_map = self._get_file_maps()\n        content = text_map.get(query)\n\n        # Fall back to CSV representation of DataFrame if no text content\n        if content is None and query in dataframe_map:\n            content = dataframe_map[query].to_csv(index=False)\n\n        if content is None:\n            available = sorted({*text_map.keys(), *dataframe_map.keys()})\n            preview = available[:5]\n            extra = f\" (and {len(available) - 5} more)\" if len(available) > 5 else \"\"  # noqa: PLR2004\n            msg = f\"File '{query}' not found. Available files: {preview}{extra}\"\n            logger.error(f\"FileContentRetriever: {msg}\")\n            raise ValueError(msg)\n\n        logger.info(f\"FileContentRetriever: Successfully retrieved content for '{query}' ({len(content)} chars)\")\n        return Message(text=content)\n\n    def retrieve_content_as_dataframe(self, file_path: str = \"\") -> DataFrame:\n        \"\"\"Retrieve file content as a DataFrame for tabular data files.\n\n        Args:\n            file_path: The full file path as a string (e.g., '/path/to/file.csv').\n\n        Returns:\n            DataFrame: The file content as a pandas DataFrame, or empty DataFrame if no path provided.\n\n        Raises:\n            ValueError: If file not found or file type is not supported.\n        \"\"\"\n        # Supported tabular file extensions\n        tabular_extensions = {\".csv\", \".xlsx\", \".xls\", \".parquet\", \".json\", \".tsv\"}\n\n        # Use explicit argument, fallback to self.file_path for backward compatibility\n        query = file_path or self.file_path\n\n        logger.debug(\n            f\"FileContentRetriever.retrieve_content_as_dataframe called - \"\n            f\"arg file_path='{file_path}', self.file_path='{self.file_path}', query='{query}', \"\n            f\"type(file_path)={type(file_path)}, repr(file_path)={file_path!r}\"\n        )\n\n        if not query:\n            # Eagerly build maps so they're cached before deepcopy in tool calls\n            self._get_file_maps()\n            logger.info(\"FileContentRetriever: No file path provided, returning empty DataFrame\")\n            return DataFrame(pd.DataFrame())\n\n        # Check file extension\n        file_ext = Path(query).suffix.lower()\n        if file_ext not in tabular_extensions:\n            supported = \", \".join(sorted(tabular_extensions))\n            msg = (\n                f\"File type '{file_ext}' is not supported for DataFrame conversion. \"\n                f\"Supported formats: {supported}. \"\n                f\"File: '{query}'\"\n            )\n            logger.error(f\"FileContentRetriever: {msg}\")\n            raise ValueError(msg)\n\n        # Get cached maps (built once and reused)\n        text_map, dataframe_map = self._get_file_maps()\n\n        # Check if we have a DataFrame for this file\n        if query in dataframe_map:\n            df = dataframe_map[query]\n            logger.info(\n                f\"FileContentRetriever: Successfully retrieved DataFrame for '{query}' \"\n                f\"({len(df)} rows, {len(df.columns)} columns)\"\n            )\n            return df\n\n        available = sorted({*text_map.keys(), *dataframe_map.keys()})\n        max_preview = 5\n        preview = available[:max_preview]\n        extra = f\" (and {len(available) - max_preview} more)\" if len(available) > max_preview else \"\"\n        if available:\n            msg = f\"File '{query}' not found. Available: {preview}{extra}\"\n        else:\n            msg = f\"File '{query}' not found. No files were provided in file_data.\"\n        logger.error(f\"FileContentRetriever: {msg}\")\n        raise ValueError(msg)\n"
               },
               "file_data": {
                 "_input_type": "HandleInput",
@@ -3881,21 +3881,21 @@
           "type": "FileContentRetriever"
         },
         "dragging": false,
-        "id": "FileContentRetriever-0SrPI",
+        "id": "FileContentRetriever-PqTwn",
         "measured": {
           "height": 391,
           "width": 320
         },
         "position": {
-          "x": -921.3190217931448,
-          "y": -1589.5201386336905
+          "x": -928.3030156681489,
+          "y": -1094.7952717140656
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "MergeFlows-3uCFi",
+          "id": "MergeFlows-Ky92k",
           "node": {
             "base_classes": [
               "Message"
@@ -4000,7 +4000,7 @@
           "type": "MergeFlows"
         },
         "dragging": false,
-        "id": "MergeFlows-3uCFi",
+        "id": "MergeFlows-Ky92k",
         "measured": {
           "height": 185,
           "width": 320
@@ -4014,7 +4014,7 @@
       },
       {
         "data": {
-          "id": "OllamaModel-e6tgK",
+          "id": "OllamaModel-SSPiM",
           "node": {
             "base_classes": [
               "JSON",
@@ -4061,7 +4061,7 @@
             ],
             "frozen": false,
             "icon": "Ollama",
-            "last_updated": "2026-04-12T11:24:37.428Z",
+            "last_updated": "2026-04-13T09:04:37.004Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -4166,7 +4166,7 @@
             "pinned": false,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "21d9ec0b-495f-47ac-b2d1-3f9912a86a6c"
+                "value": "bd9d12c2-69e1-41f0-8e46-914b39f51ac4"
               },
               "_frontend_node_folder_id": {
                 "value": "4c3849a1-f6ba-4952-83e4-23faceb25a7d"
@@ -4881,7 +4881,7 @@
           "type": "OllamaModel"
         },
         "dragging": false,
-        "id": "OllamaModel-e6tgK",
+        "id": "OllamaModel-SSPiM",
         "measured": {
           "height": 538,
           "width": 320
@@ -4895,7 +4895,7 @@
       },
       {
         "data": {
-          "id": "OllamaEmbeddings-yA7Aa",
+          "id": "OllamaEmbeddings-S0dDJ",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -4914,7 +4914,7 @@
             ],
             "frozen": false,
             "icon": "Ollama",
-            "last_updated": "2026-04-12T11:24:37.429Z",
+            "last_updated": "2026-04-13T09:04:37.005Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -4968,7 +4968,7 @@
             "pinned": false,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "21d9ec0b-495f-47ac-b2d1-3f9912a86a6c"
+                "value": "bd9d12c2-69e1-41f0-8e46-914b39f51ac4"
               },
               "_frontend_node_folder_id": {
                 "value": "4c3849a1-f6ba-4952-83e4-23faceb25a7d"
@@ -5070,7 +5070,7 @@
           "type": "OllamaEmbeddings"
         },
         "dragging": false,
-        "id": "OllamaEmbeddings-yA7Aa",
+        "id": "OllamaEmbeddings-S0dDJ",
         "measured": {
           "height": 289,
           "width": 320
@@ -5079,19 +5079,106 @@
           "x": -1615.6528651719782,
           "y": -1467.3509572477371
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "note-KaS0r",
+          "node": {
+            "description": "## How the flow works\n\nThis flow is organized into four color-coded sections:\n\n**Data (Yellow)**  \nUpload one or more structured data files that you want the agent to analyze.\n\n**Models (Pink)**  \nConfigure a language model for reasoning and description generation, and an embedding model for indexing and retrieval.\n\n**Ingestion Pipeline (Green)**  \nThe ingestion flow reads uploaded files, generates semantic descriptions for them, stores those descriptions in a vector database, and prepares file retrieval data for later use.\n\n**Agent Inference (Blue)**  \nDuring chat, the OpenDsStar agent reuses the ingested vector data and file retrieval data through tools. It searches for relevant files, retrieves their contents when needed, reasons over the data, and returns an answer.\n\nIn short: **upload files → ingest and index them → reuse the ingested data at query time → analyze and answer**\n",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "neutral"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 652,
+        "id": "note-KaS0r",
+        "measured": {
+          "height": 652,
+          "width": 901
+        },
+        "position": {
+          "x": -2640.83854325085,
+          "y": -2336.696306704245
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 901
+      },
+      {
+        "data": {
+          "id": "note-EmjSF",
+          "node": {
+            "description": "## Setup\n\n**Configure the models**  \nSet a language model and an embedding model in the **Models** section.\n\n**Configure persistent storage correctly**  \nThis flow uses both the **Vector Store** and the **File Content Retriever** twice:\n- once in the **Ingestion Pipeline**\n- again in **Agent Inference**, where they are used as tools over the ingested data\n\nSet the directories as follows:\n- both **Vector Store** components should use the **same Persistent Directory**\n- both **File Content Retriever** components should use the **same Persistent Directory**\n- the **Vector Store** directory and the **File Content Retriever** directory should be **different**\n\nThis allows the ingestion and inference stages to share the same stored vector data and file retrieval data, while keeping those two storage layers separate.",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "neutral"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 633,
+        "id": "note-EmjSF",
+        "measured": {
+          "height": 633,
+          "width": 896
+        },
+        "position": {
+          "x": -2638.971056306658,
+          "y": -1655.3875698646252
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 896
+      },
+      {
+        "data": {
+          "id": "note-ZS44A",
+          "node": {
+            "description": "## How to run it\n\n**Upload your files**  \nAdd one or more structured data files in the **Data** section.\n\n**Run the ingestion pipeline**  \nExecute the ingestion flow so each file is processed, described, and indexed.\n\n**Open the chat / playground**  \nStart the agent flow and ask questions in plain English.\n\n**Analyze your data**  \nThe agent will use the ingested vector store and file retrieval tools to find relevant files, access their contents, and answer based on the uploaded data.\n",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "neutral"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 429,
+        "id": "note-ZS44A",
+        "measured": {
+          "height": 429,
+          "width": 895
+        },
+        "position": {
+          "x": -2635.9911997435142,
+          "y": -995.1145058811636
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 895
       }
     ],
     "viewport": {
-      "x": 1168.6748783954088,
-      "y": 1185.919882534884,
-      "zoom": 0.4231570364730762
+      "x": 1540.714797060176,
+      "y": 1397.5466174357234,
+      "zoom": 0.6345021536537461
     }
   },
-  "description": "OpenDsStar is an open-source framework for building autonomous data science agents. It provides a tool-based implementation of the DS-STAR approach.",
+  "description": "A complete workflow for structured data analysis using the OpenDsStar agent. OpenDsStar is an open-source implementation of the DS-Star agent, with several deliberate design enhancements, and can be used effectively for structured data analysis tasks",
   "endpoint_name": null,
-  "id": "21d9ec0b-495f-47ac-b2d1-3f9912a86a6c",
+  "id": "bd9d12c2-69e1-41f0-8e46-914b39f51ac4",
   "is_component": false,
   "last_tested_version": "1.8.1",
   "locked": false,
