@@ -423,7 +423,16 @@ async def retry_flow_operation_on_deployment_guard(
     flow_ids: list[UUID] | None = None,
     operation: Callable[[], Awaitable[TGuardOperationResult]],
 ) -> TGuardOperationResult:
-    """Run *operation* and retry once after flow-scoped deployment sync on guard errors."""
+    """Run *operation* and retry once after flow-scoped deployment sync on guard errors.
+
+    Contract:
+    The passed ``operation`` must perform guard enforcement itself (for example
+    via ORM/service preflight checks that raise ``DeploymentGuardError``) before
+    mutating state. This helper does not add guard checks; it only:
+    1) detects ``DeploymentGuardError`` failures from the operation,
+    2) performs best-effort deployment sync, and
+    3) retries the same operation once.
+    """
     try:
         async with db.begin_nested():
             return await operation()
@@ -446,7 +455,16 @@ async def retry_project_operation_on_deployment_guard(
     project_id: UUID,
     operation: Callable[[], Awaitable[TGuardOperationResult]],
 ) -> TGuardOperationResult:
-    """Run *operation* and retry once after project-scoped deployment sync on guard errors."""
+    """Run *operation* and retry once after project-scoped deployment sync on guard errors.
+
+    Contract:
+    The passed ``operation`` must perform guard enforcement itself (for example
+    via ORM/service preflight checks that raise ``DeploymentGuardError``) before
+    mutating state. This helper does not add project guards; it only:
+    1) detects ``DeploymentGuardError`` failures from the operation,
+    2) performs best-effort project deployment sync, and
+    3) retries the same operation once.
+    """
     try:
         async with db.begin_nested():
             return await operation()

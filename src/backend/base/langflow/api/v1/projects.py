@@ -37,6 +37,7 @@ from langflow.services.database.models.deployment.exceptions import (
     parse_deployment_guard_error,
 )
 from langflow.services.database.models.deployment.guards import check_project_has_deployments
+from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -128,6 +129,19 @@ async def create_project(
 
         async def _move_flows_into_project() -> None:
             if project.components_list:
+                component_flows = (
+                    await session.exec(
+                        select(Flow.id, Flow.folder_id).where(
+                            Flow.id.in_(project.components_list),  # type: ignore[attr-defined]
+                            Flow.user_id == current_user.id,
+                        )
+                    )
+                ).all()
+                await ensure_flow_moves_allowed(
+                    session,
+                    flow_folder_pairs=list(component_flows),
+                    new_folder_id=new_project.id,
+                )
                 update_statement_components = (
                     update(Flow)
                     .where(Flow.id.in_(project.components_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
@@ -136,6 +150,19 @@ async def create_project(
                 await session.exec(update_statement_components)
 
             if project.flows_list:
+                project_flows = (
+                    await session.exec(
+                        select(Flow.id, Flow.folder_id).where(
+                            Flow.id.in_(project.flows_list),  # type: ignore[attr-defined]
+                            Flow.user_id == current_user.id,
+                        )
+                    )
+                ).all()
+                await ensure_flow_moves_allowed(
+                    session,
+                    flow_folder_pairs=list(project_flows),
+                    new_folder_id=new_project.id,
+                )
                 update_statement_flows = (
                     update(Flow)
                     .where(Flow.id.in_(project.flows_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
@@ -348,12 +375,38 @@ async def update_project(
 
         async def _move_flows_for_project_update() -> None:
             if my_collection_project:
+                excluded_flow_rows = (
+                    await session.exec(
+                        select(Flow.id, Flow.folder_id).where(
+                            Flow.id.in_(excluded_flows),  # type: ignore[attr-defined]
+                            Flow.user_id == current_user.id,
+                        )
+                    )
+                ).all()
+                await ensure_flow_moves_allowed(
+                    session,
+                    flow_folder_pairs=list(excluded_flow_rows),
+                    new_folder_id=my_collection_project.id,
+                )
                 update_statement_my_collection = (
                     update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_project.id)  # type: ignore[attr-defined]
                 )
                 await session.exec(update_statement_my_collection)
 
             if concat_project_components:
+                component_flow_rows = (
+                    await session.exec(
+                        select(Flow.id, Flow.folder_id).where(
+                            Flow.id.in_(concat_project_components),  # type: ignore[attr-defined]
+                            Flow.user_id == current_user.id,
+                        )
+                    )
+                ).all()
+                await ensure_flow_moves_allowed(
+                    session,
+                    flow_folder_pairs=list(component_flow_rows),
+                    new_folder_id=existing_project.id,
+                )
                 update_statement_components = (
                     update(Flow).where(Flow.id.in_(concat_project_components)).values(folder_id=existing_project.id)  # type: ignore[attr-defined]
                 )
@@ -424,9 +477,7 @@ async def delete_project(
 
         await check_project_has_deployments(session, project_id=project_id)
         await session.delete(project)
-        # Flush eagerly so DB triggers/constraints run before returning 204.
-        # Without this, trigger errors may surface only during teardown commit,
-        # bypassing our endpoint-level DeploymentGuardError translation path.
+        # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
         await session.flush()
 
     try:

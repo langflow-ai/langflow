@@ -15,6 +15,7 @@ _GUARD_FRIENDLY_DETAILS: dict[str, str] = {
     "DEPLOYMENT_PROJECT_MOVE": (
         "This deployment cannot be moved to a different project. Re-create it in the target project instead."
     ),
+    "DEPLOYMENT_TYPE_UPDATE": ("The deployment type cannot be modified."),
     "DEPLOYMENT_RESOURCE_KEY_UPDATE": (
         "This deployment resource key cannot be modified on an existing deployment. Re-create it instead."
     ),
@@ -45,7 +46,6 @@ class DeploymentGuardError(Exception):
         super().__init__(detail)
 
 
-_GUARD_PREFIX = "DEPLOYMENT_GUARD:"
 _UNKNOWN_GUARD_FALLBACK_DETAIL = "Operation blocked by deployment guard ({code})."
 
 
@@ -55,7 +55,11 @@ def get_friendly_guard_detail(code: str) -> str:
 
 
 def parse_deployment_guard_error(exc: BaseException) -> DeploymentGuardError | None:
-    """Walk chained exceptions and extract guard messages shaped as ``DEPLOYMENT_GUARD:<CODE>:<DETAIL>``."""
+    """Return the first ``DeploymentGuardError`` found in an exception chain.
+
+    This intentionally does not parse generic exception messages. Guard failures
+    must be raised explicitly as ``DeploymentGuardError``.
+    """
     seen: set[int] = set()
     current: BaseException | None = exc
 
@@ -63,19 +67,6 @@ def parse_deployment_guard_error(exc: BaseException) -> DeploymentGuardError | N
         seen.add(id(current))
         if isinstance(current, DeploymentGuardError):
             return current
-        message = str(current)
-
-        _before_prefix, separator, after_prefix = message.partition(_GUARD_PREFIX)
-        # Require the full "DEPLOYMENT_GUARD:<CODE>:<DETAIL>" shape:
-        # - `separator` confirms the guard prefix
-        # - ":" in `after_prefix` confirms the CODE/DETAIL delimiter
-        if separator and ":" in after_prefix:
-            error_code, technical_detail = after_prefix.split(":", 1)
-            return DeploymentGuardError(
-                code=error_code,
-                technical_detail=technical_detail,
-                detail=get_friendly_guard_detail(error_code),
-            )
 
         current = current.__cause__ or current.__context__
 

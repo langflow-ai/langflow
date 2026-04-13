@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select
 
 from langflow.services.database.models.deployment.model import Deployment
+from langflow.services.database.models.deployment.orm_guards import ensure_deployment_immutable_fields
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
@@ -131,6 +132,19 @@ async def update_deployment(
     deployment_type: DeploymentType | object = _UNSET,
     description: str | None | object = _UNSET,
 ) -> Deployment:
+    next_project_id = project_id if project_id is not None else deployment.project_id
+    next_deployment_type = deployment.deployment_type if deployment_type is _UNSET else deployment_type
+    ensure_deployment_immutable_fields(
+        old_project_id=deployment.project_id,
+        new_project_id=next_project_id,
+        old_deployment_type=deployment.deployment_type,
+        new_deployment_type=next_deployment_type,
+        old_resource_key=deployment.resource_key,
+        new_resource_key=deployment.resource_key,
+        old_provider_account_id=deployment.deployment_provider_account_id,
+        new_provider_account_id=deployment.deployment_provider_account_id,
+    )
+
     if name is not None:
         deployment.name = _strip_or_raise(name, "name")
     if project_id is not None:

@@ -8,67 +8,26 @@ from langflow.services.database.models.deployment.exceptions import (
 )
 
 
-class _SimulatedDbError(Exception):
-    """Synthetic DB exception used for parser tests."""
-
-
 class _OuterWrapperError(Exception):
-    """Synthetic wrapper exception used to build a cause chain."""
-
-
-def _raise_with_cause() -> None:
-    guard_message = (
-        "DEPLOYMENT_GUARD:PROJECT_HAS_DEPLOYMENTS:"
-        "DELETE folder blocked: dependent rows exist in deployment for the target project. "
-        "[SQL: DELETE FROM folder WHERE id = ?] "
-        "(Background on this error at: https://sqlalche.me/e/20/gkpj)"
-    )
-    try:
-        raise _SimulatedDbError(guard_message)
-    except Exception as exc:
-        raise _OuterWrapperError from exc
+    """Synthetic wrapper exception used to build a chain."""
 
 
 def test_parse_deployment_guard_error_from_cause_chain() -> None:
+    guard_error = DeploymentGuardError(
+        code="PROJECT_HAS_DEPLOYMENTS",
+        technical_detail="DELETE folder blocked: dependent rows exist in deployment for the target project.",
+        detail=get_friendly_guard_detail("PROJECT_HAS_DEPLOYMENTS"),
+    )
     try:
-        _raise_with_cause()
+        try:
+            raise guard_error
+        except DeploymentGuardError as exc:
+            msg = "wrapped"
+            raise _OuterWrapperError(msg) from exc
     except _OuterWrapperError as exc:
         parsed = parse_deployment_guard_error(exc)
 
-    assert isinstance(parsed, DeploymentGuardError)
-    assert parsed.code == "PROJECT_HAS_DEPLOYMENTS"
-    assert (
-        parsed.technical_detail == "DELETE folder blocked: dependent rows exist in deployment for the target project. "
-        "[SQL: DELETE FROM folder WHERE id = ?] "
-        "(Background on this error at: https://sqlalche.me/e/20/gkpj)"
-    )
-    assert parsed.detail == (
-        "This project cannot be deleted because it has deployments. Please delete its deployments first."
-    )
-
-
-def test_parse_deployment_guard_error_preserves_raw_technical_detail() -> None:
-    message = (
-        "sqlite3.IntegrityError: DEPLOYMENT_GUARD:FLOW_HAS_DEPLOYED_VERSIONS:"
-        "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment for the target flow.\n"
-        "[SQL: DELETE FROM flow_version WHERE id = ?]"
-    )
-    exc = _SimulatedDbError(message)
-
-    parsed = parse_deployment_guard_error(exc)
-
-    assert isinstance(parsed, DeploymentGuardError)
-    assert parsed.code == "FLOW_HAS_DEPLOYED_VERSIONS"
-    assert (
-        parsed.technical_detail
-        == "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment "
-        "for the target flow.\n"
-        "[SQL: DELETE FROM flow_version WHERE id = ?]"
-    )
-    assert (
-        parsed.detail == "This flow cannot be deleted because it has deployed versions. "
-        "Please remove its versions from deployments first."
-    )
+    assert parsed is guard_error
 
 
 @pytest.mark.parametrize(
@@ -87,6 +46,11 @@ def test_parse_deployment_guard_error_preserves_raw_technical_detail() -> None:
             "UPDATE deployment.project_id blocked: project scope is immutable for existing deployments. "
             "Re-create the deployment in the target project.",
             "This deployment cannot be moved to a different project. Re-create it in the target project instead.",
+        ),
+        (
+            "DEPLOYMENT_TYPE_UPDATE",
+            "Cannot modify deployment type on an existing deployment.",
+            "The deployment type cannot be modified.",
         ),
         (
             "DEPLOYMENT_PROVIDER_ACCOUNT_MOVE",
@@ -119,8 +83,11 @@ def test_parse_deployment_guard_error_maps_code_to_friendly_detail(
     technical_detail: str,
     friendly_detail: str,
 ) -> None:
-    message = f"DEPLOYMENT_GUARD:{code}:{technical_detail}"
-    exc = _SimulatedDbError(message)
+    exc = DeploymentGuardError(
+        code=code,
+        technical_detail=technical_detail,
+        detail=friendly_detail,
+    )
 
     parsed = parse_deployment_guard_error(exc)
 
@@ -137,20 +104,21 @@ def test_get_friendly_guard_detail_falls_back_to_generic_code_message() -> None:
 
 
 def test_parse_deployment_guard_error_returns_none_when_absent() -> None:
-    parsed = parse_deployment_guard_error(Exception("plain error"))
+    parsed = parse_deployment_guard_error(Exception("plain error DEPLOYMENT_GUARD:PROJECT_HAS_DEPLOYMENTS:oops"))
     assert parsed is None
 
 
 def test_parse_deployment_guard_error_from_implicit_context_chain() -> None:
     """Parser should walk __context__ (implicit chaining), not just __cause__."""
-    guard_message = (
-        "DEPLOYMENT_GUARD:FLOW_HAS_DEPLOYED_VERSIONS:"
-        "DELETE flow_version blocked: dependent rows exist in flow_version_deployment_attachment for the target flow."
+    guard_error = DeploymentGuardError(
+        code="FLOW_HAS_DEPLOYED_VERSIONS",
+        technical_detail="DELETE flow_version blocked: dependent rows exist.",
+        detail=get_friendly_guard_detail("FLOW_HAS_DEPLOYED_VERSIONS"),
     )
     try:
         try:
-            raise _SimulatedDbError(guard_message)
-        except _SimulatedDbError:
+            raise guard_error
+        except DeploymentGuardError:
             msg = "wrapped"
             raise _OuterWrapperError(msg)  # noqa: B904 — intentional implicit chain
     except _OuterWrapperError as exc:

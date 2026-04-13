@@ -8,6 +8,7 @@ from sqlalchemy import and_, column, literal, union_all, values
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select
 
+from langflow.services.database.models.deployment.orm_guards import ensure_attachment_project_match
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
@@ -35,6 +36,12 @@ async def create_deployment_attachment(
     deployment_id: UUID,
     provider_snapshot_id: str,
 ) -> FlowVersionDeploymentAttachment:
+    await ensure_attachment_project_match(
+        db,
+        flow_version_id=flow_version_id,
+        deployment_id=deployment_id,
+    )
+
     row = FlowVersionDeploymentAttachment(
         user_id=user_id,
         flow_version_id=flow_version_id,

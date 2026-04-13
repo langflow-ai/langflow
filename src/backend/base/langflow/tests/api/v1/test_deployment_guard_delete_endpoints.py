@@ -170,13 +170,14 @@ async def test_cascade_delete_flow_prunes_orphan_attachments_before_delete_state
             _ExecResult(None),  # transaction delete
             _ExecResult(None),  # vertex_build delete
             _ExecResult(None),  # flow_version delete
+            _ExecResult([]),  # trace id lookup
             _ExecResult(None),  # flow delete
         ]
     )
 
     await cascade_delete_flow(session, flow_id)
 
-    assert session.exec.await_count == 8
+    assert session.exec.await_count == 9
 
 
 @pytest.mark.asyncio
@@ -224,7 +225,7 @@ async def test_delete_flow_remaps_guard_error_to_flow_delete_message(monkeypatch
 
 @pytest.mark.asyncio
 async def test_update_flow_translates_guard_error_from_flush(monkeypatch):
-    """update_flow must translate a raw DB guard exception into DeploymentGuardError."""
+    """update_flow must propagate DeploymentGuardError from guarded operations."""
     from langflow.api.v1.flows import update_flow
     from langflow.services.database.models.flow.model import FlowUpdate
 
@@ -247,10 +248,15 @@ async def test_update_flow_translates_guard_error_from_flush(monkeypatch):
     monkeypatch.setattr(
         "langflow.api.v1.flows._patch_flow",
         AsyncMock(
-            side_effect=Exception(
-                "DEPLOYMENT_GUARD:FLOW_DEPLOYED_IN_PROJECT:"
-                "Cannot move flow to a different project because it has versions deployed "
-                "in the current project. Detach deployed versions first."
+            side_effect=DeploymentGuardError(
+                code="FLOW_DEPLOYED_IN_PROJECT",
+                technical_detail=(
+                    "Cannot move flow to a different project because it has versions deployed in the current project."
+                ),
+                detail=(
+                    "This flow cannot be moved to another project until its versions "
+                    "are removed from deployments in its current project."
+                ),
             )
         ),
     )

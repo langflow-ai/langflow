@@ -4,7 +4,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from langflow.services.database.models.deployment.exceptions import parse_deployment_guard_error
+from langflow.services.database.models.deployment.exceptions import (
+    DeploymentGuardError,
+)
 
 
 class _AsyncNoopSavepoint:
@@ -25,7 +27,43 @@ async def test_flows_retry_on_deployment_guard_succeeds_after_sync(mock_sync_flo
     flow_id = uuid4()
     operation = AsyncMock(
         side_effect=[
-            RuntimeError("DEPLOYMENT_GUARD:FLOW_FOLDER_MOVE:Flow is deployed."),
+            DeploymentGuardError(
+                code="FLOW_FOLDER_MOVE",
+                technical_detail="Flow is deployed.",
+                detail="Flow is deployed.",
+            ),
+            "ok",
+        ]
+    )
+
+    result = await retry_flow_operation_on_deployment_guard(
+        db=db,
+        user_id=uuid4(),
+        flow_ids=[flow_id],
+        operation=operation,
+    )
+
+    assert result == "ok"
+    assert operation.await_count == 2
+    assert db.begin_nested.call_count == 2
+    mock_sync_flow_deployment_state.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@patch("langflow.api.v1.mappers.deployments.sync.sync_flow_deployment_state", new_callable=AsyncMock)
+async def test_flows_retry_on_deployment_guard_error_instance_succeeds_after_sync(mock_sync_flow_deployment_state):
+    from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
+
+    db = MagicMock()
+    db.begin_nested.return_value = _AsyncNoopSavepoint()
+    flow_id = uuid4()
+    operation = AsyncMock(
+        side_effect=[
+            DeploymentGuardError(
+                code="FLOW_FOLDER_MOVE",
+                technical_detail="Flow is deployed.",
+                detail="Flow is deployed.",
+            ),
             "ok",
         ]
     )
@@ -52,12 +90,20 @@ async def test_flows_retry_on_deployment_guard_propagates_second_guard(mock_sync
     db.begin_nested.return_value = _AsyncNoopSavepoint()
     operation = AsyncMock(
         side_effect=[
-            RuntimeError("DEPLOYMENT_GUARD:FLOW_FOLDER_MOVE:First guard."),
-            RuntimeError("DEPLOYMENT_GUARD:FLOW_FOLDER_MOVE:Second guard."),
+            DeploymentGuardError(
+                code="FLOW_FOLDER_MOVE",
+                technical_detail="First guard.",
+                detail="First guard.",
+            ),
+            DeploymentGuardError(
+                code="FLOW_FOLDER_MOVE",
+                technical_detail="Second guard.",
+                detail="Second guard.",
+            ),
         ]
     )
 
-    with pytest.raises(RuntimeError) as exc_info:
+    with pytest.raises(DeploymentGuardError) as exc_info:
         await retry_flow_operation_on_deployment_guard(
             db=db,
             user_id=uuid4(),
@@ -65,7 +111,7 @@ async def test_flows_retry_on_deployment_guard_propagates_second_guard(mock_sync
             operation=operation,
         )
 
-    assert parse_deployment_guard_error(exc_info.value) is not None
+    assert exc_info.value.technical_detail == "Second guard."
     assert operation.await_count == 2
     mock_sync_flow_deployment_state.assert_awaited_once()
 
@@ -80,7 +126,41 @@ async def test_projects_retry_on_deployment_guard_uses_project_sync(mock_sync_pr
     project_id = uuid4()
     operation = AsyncMock(
         side_effect=[
-            RuntimeError("DEPLOYMENT_GUARD:PROJECT_DELETE:Project has deployments."),
+            DeploymentGuardError(
+                code="PROJECT_DELETE",
+                technical_detail="Project has deployments.",
+                detail="Project has deployments.",
+            ),
+            None,
+        ]
+    )
+
+    await retry_project_operation_on_deployment_guard(
+        db=db,
+        user_id=uuid4(),
+        project_id=project_id,
+        operation=operation,
+    )
+
+    assert operation.await_count == 2
+    mock_sync_project_deployments.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@patch("langflow.api.v1.mappers.deployments.sync.sync_project_deployments", new_callable=AsyncMock)
+async def test_projects_retry_on_deployment_guard_error_instance_uses_project_sync(mock_sync_project_deployments):
+    from langflow.api.v1.mappers.deployments.sync import retry_project_operation_on_deployment_guard
+
+    db = MagicMock()
+    db.begin_nested.return_value = _AsyncNoopSavepoint()
+    project_id = uuid4()
+    operation = AsyncMock(
+        side_effect=[
+            DeploymentGuardError(
+                code="PROJECT_DELETE",
+                technical_detail="Project has deployments.",
+                detail="Project has deployments.",
+            ),
             None,
         ]
     )
