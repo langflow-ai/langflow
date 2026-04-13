@@ -19,6 +19,7 @@ export default function SaveSnapshotButton({
     usePostCreateSnapshot();
   const [isSavingDisplay, setIsSavingDisplay] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [description, setDescription] = useState("");
 
   const handleDismiss = () => {
     // Switching the section unmounts the version sidebar, whose cleanup
@@ -31,7 +32,7 @@ export default function SaveSnapshotButton({
   const handleSave = () => {
     setIsSavingDisplay(true);
     createSnapshot(
-      { flowId, description: null },
+      { flowId, description: description.trim() || null },
       {
         onSuccess: () => {
           setSuccessData({ title: "Version saved" });
@@ -57,6 +58,19 @@ export default function SaveSnapshotButton({
       description="Capture the current state as a restore point"
       actionSlot={
         <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Version name (optional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !isSavingDisplay && !isCreating && !savedSuccess) {
+                handleSave();
+              }
+            }}
+            disabled={isSavingDisplay || isCreating || savedSuccess}
+            className="h-8 w-48 rounded-md border border-input bg-background px-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          />
           <CanvasBannerButton variant="outline" onClick={handleDismiss}>
             Keep Building
           </CanvasBannerButton>
