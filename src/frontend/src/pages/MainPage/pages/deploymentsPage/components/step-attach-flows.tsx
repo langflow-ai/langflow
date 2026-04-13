@@ -8,8 +8,8 @@ import { usePostDetectEnvVars } from "@/controllers/API/queries/variables/use-po
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
-import type { ConnectionItem, EnvVarEntry } from "../types";
-import type { ConnectionTab } from "./step-attach-flows-connection-panel";
+import { useConnectionPanelState } from "../hooks/use-connection-panel-state";
+import type { ConnectionItem } from "../types";
 import { ConnectionPanel } from "./step-attach-flows-connection-panel";
 import { FlowListPanel } from "./step-attach-flows-flow-list-panel";
 import { VersionPanel } from "./step-attach-flows-version-panel";
@@ -81,6 +81,7 @@ export default function StepAttachFlows() {
     const existingConnections: ConnectionItem[] = configsData.configs.map(
       (cfg) => ({
         id: cfg.app_id,
+        connectionId: cfg.connection_id,
         name: cfg.app_id,
         variableCount: 0,
         isNew: false,
@@ -106,16 +107,53 @@ export default function StepAttachFlows() {
     versionTag: string;
   } | null>(null);
   const [rightPanel, setRightPanel] = useState<RightPanelView>("versions");
-  const [connectionTab, setConnectionTab] =
-    useState<ConnectionTab>("available");
-  const [selectedConnections, setSelectedConnections] = useState<Set<string>>(
-    new Set(),
-  );
-  const [newConnectionName, setNewConnectionName] = useState("");
-  const [envVars, setEnvVars] = useState<EnvVarEntry[]>(() => [
-    { id: crypto.randomUUID(), key: "", value: "" },
-  ]);
-  const [detectedVarCount, setDetectedVarCount] = useState(0);
+
+  const commitPendingAttachment = useCallback(() => {
+    if (pendingAttachment) {
+      onSelectVersion(
+        pendingAttachment.flowId,
+        pendingAttachment.versionId,
+        pendingAttachment.versionTag,
+      );
+      setPendingAttachment(null);
+    }
+  }, [pendingAttachment, onSelectVersion]);
+
+  const resetPendingAttachment = useCallback(() => {
+    setPendingAttachment(null);
+  }, []);
+
+  const effectiveFlowId = selectedFlowId ?? flows[0]?.id ?? null;
+
+  const {
+    connectionTab,
+    setConnectionTab,
+    selectedConnections,
+    setSelectedConnections,
+    newConnectionName,
+    setNewConnectionName,
+    envVars,
+    detectedVarCount,
+    isDuplicateConnectionName,
+    handleAttachConnection,
+    handleCreateConnection,
+    handleSkipConnection,
+    handleChangeFlow,
+    handleAddEnvVar,
+    handleEnvVarChange,
+    handleEnvVarSelectGlobalVar,
+    initConnectionsForFlow,
+    updateDetectedEnvVars,
+  } = useConnectionPanelState({
+    connections,
+    setConnections,
+    effectiveFlowId,
+    attachedConnectionByFlow,
+    onAttachConnection,
+    commitPendingAttachment,
+    resetPendingAttachment,
+    setRightPanel,
+  });
 
   const { mutateAsync: detectEnvVars } = usePostDetectEnvVars();
   const { data: globalVariables } = useGetGlobalVariables();
@@ -123,6 +161,8 @@ export default function StepAttachFlows() {
 
   // When a flow+version are pre-selected from outside (e.g., canvas deploy button),
   // auto-advance to the connections panel and detect env vars for the pre-selected version.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run only on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const preSelected = initialFlowId
       ? selectedVersionByFlow.get(initialFlowId)
@@ -137,17 +177,7 @@ export default function StepAttachFlows() {
           flow_version_ids: [preSelected.versionId],
         });
         const detected = result.variables ?? [];
-        if (detected.length > 0) {
-          setDetectedVarCount(detected.length);
-          setEnvVars(
-            detected.map((variableName) => ({
-              id: crypto.randomUUID(),
-              key: variableName,
-              value: variableName,
-              globalVar: true,
-            })),
-          );
-        }
+        updateDetectedEnvVars(detected);
       } catch {
         setErrorData({
           title: "Could not auto-detect environment variables",
@@ -156,16 +186,7 @@ export default function StepAttachFlows() {
       }
     };
     detect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const isDuplicateConnectionName = useMemo(() => {
-    const trimmed = newConnectionName.trim().toLowerCase();
-    if (!trimmed) return false;
-    return connections.some((c) => c.name.trim().toLowerCase() === trimmed);
-  }, [newConnectionName, connections]);
-
-  const effectiveFlowId = selectedFlowId ?? flows[0]?.id ?? null;
 
   const { data: versionResponse, isLoading: isLoadingVersions } =
     useGetFlowVersions(
@@ -187,13 +208,7 @@ export default function StepAttachFlows() {
         versionTag: version?.version_tag ?? "",
       });
       setRightPanel("connections");
-      setSelectedConnections(
-        new Set(attachedConnectionByFlow.get(effectiveFlowId) ?? []),
-      );
-      // Default to "create" tab when there are no existing connections
-      if (connections.length === 0) {
-        setConnectionTab("create");
-      }
+      initConnectionsForFlow(effectiveFlowId);
 
       // Auto-detect global variable references via the backend detection endpoint
       try {
@@ -201,23 +216,9 @@ export default function StepAttachFlows() {
           flow_version_ids: [versionId],
         });
         const detected = result.variables ?? [];
-        if (detected.length > 0) {
-          setDetectedVarCount(detected.length);
-          setEnvVars(
-            detected.map((variableName) => ({
-              id: crypto.randomUUID(),
-              key: variableName,
-              value: variableName,
-              globalVar: true,
-            })),
-          );
-        } else {
-          setDetectedVarCount(0);
-          setEnvVars([{ id: crypto.randomUUID(), key: "", value: "" }]);
-        }
+        updateDetectedEnvVars(detected);
       } catch {
-        setDetectedVarCount(0);
-        setEnvVars([{ id: crypto.randomUUID(), key: "", value: "" }]);
+        updateDetectedEnvVars([]);
         setErrorData({
           title: "Could not auto-detect environment variables",
           list: ["Add them manually in the connection form."],
@@ -227,97 +228,12 @@ export default function StepAttachFlows() {
     [
       effectiveFlowId,
       versions,
-      connections,
       detectEnvVars,
-      attachedConnectionByFlow,
       setErrorData,
+      initConnectionsForFlow,
+      updateDetectedEnvVars,
     ],
   );
-
-  const commitPendingAttachment = useCallback(() => {
-    if (pendingAttachment) {
-      onSelectVersion(
-        pendingAttachment.flowId,
-        pendingAttachment.versionId,
-        pendingAttachment.versionTag,
-      );
-      setPendingAttachment(null);
-    }
-  }, [pendingAttachment, onSelectVersion]);
-
-  const handleAttachConnection = useCallback(() => {
-    if (!effectiveFlowId) return;
-    if (connectionTab === "available" && selectedConnections.size > 0) {
-      commitPendingAttachment();
-      onAttachConnection((prev) => {
-        const next = new Map(prev);
-        next.set(effectiveFlowId, Array.from(selectedConnections));
-        return next;
-      });
-      setRightPanel("versions");
-      setSelectedConnections(new Set());
-    }
-  }, [
-    effectiveFlowId,
-    connectionTab,
-    selectedConnections,
-    onAttachConnection,
-    commitPendingAttachment,
-  ]);
-
-  const handleCreateConnection = useCallback(() => {
-    const filteredVars = envVars.filter((v) => v.key.trim());
-    const environmentVariables: Record<string, string> = {};
-    const globalVarKeys = new Set<string>();
-    for (const v of filteredVars) {
-      const key = v.key.trim();
-      environmentVariables[key] = v.value;
-      if (v.globalVar) {
-        globalVarKeys.add(key);
-      }
-    }
-    const sanitizedId = newConnectionName
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "_")
-      .replace(/[^a-z0-9_]/g, "");
-    const newConn = {
-      id: sanitizedId,
-      name: newConnectionName.trim(),
-      variableCount: filteredVars.length,
-      isNew: true,
-      environmentVariables,
-      globalVarKeys,
-    };
-    setConnections((prev) => [...prev, newConn]);
-    setSelectedConnections(
-      (prev) => new Set([...Array.from(prev), newConn.id]),
-    );
-    setConnectionTab("available");
-    setNewConnectionName("");
-    setEnvVars([{ id: crypto.randomUUID(), key: "", value: "" }]);
-  }, [envVars, newConnectionName, setConnections]);
-
-  const handleSkipConnection = useCallback(() => {
-    commitPendingAttachment();
-    if (effectiveFlowId) {
-      onAttachConnection((prev) => {
-        const next = new Map(prev);
-        next.delete(effectiveFlowId);
-        return next;
-      });
-    }
-    setRightPanel("versions");
-    setSelectedConnections(new Set());
-  }, [effectiveFlowId, onAttachConnection, commitPendingAttachment]);
-
-  const handleChangeFlow = useCallback(() => {
-    setPendingAttachment(null);
-    setRightPanel("versions");
-    setSelectedConnections(new Set());
-    setDetectedVarCount(0);
-    setEnvVars([{ id: crypto.randomUUID(), key: "", value: "" }]);
-  }, []);
 
   const handleDetachFlow = useCallback(
     (flowId: string) => {
@@ -333,53 +249,13 @@ export default function StepAttachFlows() {
     [handleRemoveAttachedFlow, setToolNameByFlow],
   );
 
-  const handleSelectFlow = useCallback((flowId: string) => {
-    setSelectedFlowId(flowId);
-    setRightPanel("versions");
-    setSelectedConnections(new Set());
-    setDetectedVarCount(0);
-    setEnvVars([{ id: crypto.randomUUID(), key: "", value: "" }]);
-  }, []);
-
-  const handleAddEnvVar = useCallback(() => {
-    setEnvVars((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), key: "", value: "" },
-    ]);
-  }, []);
-
-  const handleEnvVarChange = useCallback(
-    (id: string, field: "key" | "value", val: string) => {
-      setEnvVars((prev) =>
-        prev.map((item) =>
-          item.id === id ? { ...item, [field]: val, globalVar: false } : item,
-        ),
-      );
+  const handleSelectFlow = useCallback(
+    (flowId: string) => {
+      setSelectedFlowId(flowId);
+      setRightPanel("versions");
+      setSelectedConnections(new Set());
     },
-    [],
-  );
-
-  const handleEnvVarSelectGlobalVar = useCallback(
-    (id: string, selected: string) => {
-      setEnvVars((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                key:
-                  selected !== "" &&
-                  (item.key.trim() === "" ||
-                    (item.globalVar && item.key === item.value))
-                    ? selected
-                    : item.key,
-                value: selected,
-                globalVar: selected !== "",
-              }
-            : item,
-        ),
-      );
-    },
-    [],
+    [setSelectedConnections],
   );
 
   return (

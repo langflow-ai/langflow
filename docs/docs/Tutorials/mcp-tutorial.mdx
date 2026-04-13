@@ -80,13 +80,9 @@ You need one **MCP Tools** component for each MCP server that you want your flow
     * Langflow Docker image: Install the server inside the Docker container.
     * Langflow Desktop or system-wide Langflow OSS: Install the server globally or in the same user environment where you run Langflow.
 
-2. In your **Simple Agent** flow, remove the **URL** and **Calculator** tools, and then add an [**MCP Tools**](/mcp-client) component.
+2. In your **Simple Agent** flow, remove the **URL** and **Calculator** tools.
 
-3. Click the **MCP Tools** component, and then click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
-
-    :::tip
-    To manage all of your MCP server connections, click <McpIcon /> **MCP servers** in the visual editor, or click your profile icon, select **Settings**, and then click **MCP Servers**.
-    :::
+3. Open the <McpIcon /> **MCP** section in the left sidebar, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**, and register the weather MCP server.
 
 4. In the **Add MCP Server** pane, provide the server startup command and arguments to connect the weather MCP server to your flow. For this tutorial, use either the **JSON** or **STDIO** option.
 
@@ -132,11 +128,13 @@ You need one **MCP Tools** component for each MCP server that you want your flow
 
 5. Click **Add Server**, and then wait for the **Actions** list to populate. This means that the MCP server successfully connected.
 
+6. Drag the weather MCP server from the **MCP** sidebar onto the canvas to add the [**MCP Tools**](/mcp-client) component for that server.
+
     With this weather server, the **MCP Tools** component also adds an optional **City** field.
     For this tutorial, don't enter anything in this field.
     Instead, you will add a geolocation MCP server in the next step, which the agent will use to detect your location.
 
-6. Click the **MCP Tools** component, enable **Tool Mode** in the [component's header menu](/concepts-components#component-menus), and then connect the component's **Toolset** port to the **Agent** component's **Tools** port.
+7. Click the **MCP Tools** component, enable **Tool Mode** in the [component's header menu](/concepts-components#component-menus), and then connect the component's **Toolset** port to the **Agent** component's **Tools** port.
 
     At this point your flow has four connected components:
 
@@ -146,7 +144,7 @@ You need one **MCP Tools** component for each MCP server that you want your flow
 
     ![An Agent component connected to an MCP weather server](/img/tutorial-mcp-weather.png)
 
-7. To test the weather MCP server, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM `Is it safe to go hiking in the Adirondacks today?`
+8. To test the weather MCP server, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM `Is it safe to go hiking in the Adirondacks today?`
 
     The **Playground** shows you the agent's logic as it analyzes the request and select tools to use.
 
@@ -182,9 +180,9 @@ Note that this tool returns the IP geolocation of your Langflow server, so if yo
 
 This MCP server can be started with one [npx](https://docs.npmjs.com/cli/v8/commands/npx) command, which downloads and runs the [Toolkit MCP server Node registry package](https://www.npmjs.com/package/@cyanheads/toolkit-mcp-server) without installing the package locally.
 
-To add the Toolkip MCP server to your flow, do the following:
+To add the Toolkit MCP server to your flow, do the following:
 
-1. Add another **MCP Tools** component to your flow, click the component, and then click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
+1. Open the <McpIcon /> **MCP** sidebar, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**, and register a second server.
 
 2. Select **STDIO**.
 
@@ -199,7 +197,9 @@ To add the Toolkip MCP server to your flow, do the following:
 
 5. Click **Add Server**, and then wait for the **Actions** list to populate. This means that the MCP server successfully connected.
 
-6. Click the **MCP Tools** component, enable **Tool Mode** in the [component's header menu](/concepts-components#component-menus), and then connect the component's **Toolset** port to the **Agent** component's **Tools** port.
+6. Drag the **ip_geolocation** MCP server from the **MCP** sidebar to the canvas to add the second **MCP Tools** component.
+
+7. Click the new **MCP Tools** component, enable **Tool Mode** in the [component's header menu](/concepts-components#component-menus), and then connect the component's **Toolset** port to the **Agent** component's **Tools** port.
 
     Your flow now has an additional **MCP Tools** component for a total of five components.
 
