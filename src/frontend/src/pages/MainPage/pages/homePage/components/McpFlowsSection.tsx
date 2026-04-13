@@ -18,10 +18,7 @@ export const McpFlowsSection = ({
   return (
     <div className="w-full xl:w-2/5">
       <div className="flex flex-row justify-between pt-1">
-        <ShadTooltip
-          content={t("mcp.flowsTooltip")}
-          side="right"
-        >
+        <ShadTooltip content={t("mcp.flowsTooltip")} side="right">
           <div className="flex items-center text-sm font-medium hover:cursor-help">
             {t("mcp.flowsTools")}
             <ForwardedIconComponent

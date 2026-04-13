@@ -75,7 +75,10 @@ const KnowledgeBasesTab = ({
           });
         } else if (kb.status === "ready" && previousStatus === "ingesting") {
           setSuccessData({
-            title: t("knowledge.ingestionComplete", { name: kb.name, chunks: kb.chunks }),
+            title: t("knowledge.ingestionComplete", {
+              name: kb.name,
+              chunks: kb.chunks,
+            }),
           });
         }
       }

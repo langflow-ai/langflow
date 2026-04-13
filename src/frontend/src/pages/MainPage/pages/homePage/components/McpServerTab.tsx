@@ -106,7 +106,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
           <div className={cn("flex flex-col", !ENABLE_MCP_COMPOSER && "mt-2")}>
             <div className="flex flex-row justify-start border-b border-border">
-              {[{ id: "auto-install", label: t("mcp.autoInstall") }, { id: "json", label: "JSON" }].map((item) => (
+              {[
+                { id: "auto-install", label: t("mcp.autoInstall") },
+                { id: "json", label: "JSON" },
+              ].map((item) => (
                 <Button
                   unstyled
                   key={item.id}

@@ -19,7 +19,9 @@ const KnowledgeBaseEmptyState = ({
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
       <div className="flex flex-col items-center gap-2">
-        <h3 className="text-2xl font-semibold">{t("knowledge.noKnowledgeBases")}</h3>
+        <h3 className="text-2xl font-semibold">
+          {t("knowledge.noKnowledgeBases")}
+        </h3>
         <p className="text-lg text-secondary-foreground">
           {t("knowledge.emptyDescription")}
         </p>

@@ -817,7 +817,9 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                                 className="h-4 w-4"
                               />
                             </span>
-                            <span className="min-w-0 truncate">{t("sidebar.discoverMore")}</span>
+                            <span className="min-w-0 truncate">
+                              {t("sidebar.discoverMore")}
+                            </span>
                           </Button>
                         )}
                       </>

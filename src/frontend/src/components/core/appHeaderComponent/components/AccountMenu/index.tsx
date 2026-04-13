@@ -171,7 +171,6 @@ export const AccountMenu = () => {
             </div>
           </div>
 
-
           {!autoLogin && (
             <div>
               <HeaderMenuItemButton onClick={handleLogout} icon="log-out">

@@ -77,7 +77,10 @@ export const McpAuthSection = ({
         className="!text-mmd !font-normal"
         onClick={() => setAuthModalOpen(true)}
       >
-        <ForwardedIconComponent name="Fingerprint" className="h-4 w-4 shrink-0" />
+        <ForwardedIconComponent
+          name="Fingerprint"
+          className="h-4 w-4 shrink-0"
+        />
         {hasAuthentication ? t("mcp.editAuth") : t("mcp.addAuth")}
       </Button>
     </div>

@@ -213,7 +213,11 @@ export const SourceChunksPage = () => {
                           </Select>
                         </div>
                         <span className="text-sm text-muted-foreground">
-                          {t("knowledge.showing", { start: startIndex + 1, end: Math.min(startIndex + pageSize, total), total })}
+                          {t("knowledge.showing", {
+                            start: startIndex + 1,
+                            end: Math.min(startIndex + pageSize, total),
+                            total,
+                          })}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -262,7 +266,9 @@ export const SourceChunksPage = () => {
                             onKeyDown={handlePageInputKeyDown}
                             className="h-7 w-16 rounded border border-input bg-background px-2 text-center text-sm focus:outline-none focus:ring-1 focus:ring-ring [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-inner-spin-button]:[filter:invert(1)] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-outer-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:[filter:invert(1)]"
                           />
-                          <span>{t("knowledge.ofTotal", { total: totalPages })}</span>
+                          <span>
+                            {t("knowledge.ofTotal", { total: totalPages })}
+                          </span>
                         </div>
                         <Button
                           variant="outline"

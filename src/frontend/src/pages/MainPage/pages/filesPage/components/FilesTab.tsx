@@ -78,7 +78,10 @@ const FilesTab = ({
         files: files,
       });
       setSuccessData({
-        title: filesIds.length > 1 ? t("files.filesUploadedSuccessfully") : t("files.uploadedSuccessfully"),
+        title:
+          filesIds.length > 1
+            ? t("files.filesUploadedSuccessfully")
+            : t("files.uploadedSuccessfully"),
       });
     } catch (error: any) {
       setErrorData({
@@ -259,9 +262,7 @@ const FilesTab = ({
         onError: (error) => {
           setErrorData({
             title: t("files.errorDeleting"),
-            list: [
-              error.message || t("files.errorDeletingDetail"),
-            ],
+            list: [error.message || t("files.errorDeletingDetail")],
           });
         },
       },
