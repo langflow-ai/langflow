@@ -139,33 +139,55 @@ test("change flow folder", async ({ page }) => {
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 
-  await page.getByPlaceholder("Search flows").isVisible();
-  await page.getByText("Flows").first().isVisible();
-  if (await page.getByText("Components").first().isVisible()) {
-    await page.getByText("Components").first().isVisible();
-  } else {
-    await page.getByText("MCP Server").first().isVisible();
-  }
+  await expect(page.getByPlaceholder("Search flows")).toBeVisible();
 
   await page.getByTestId("add-project-button").click();
   await page
     .locator("[data-testid='project-sidebar']")
     .getByText("New Project")
     .last()
-    .isVisible();
+    .waitFor({ state: "visible", timeout: 10000 });
   await page
     .locator("[data-testid='project-sidebar']")
     .getByText("New Project")
     .last()
     .dblclick();
-  await page.getByTestId("input-project").fill("new project test name");
+  await page.getByTestId("input-project").fill("change-folder-destination");
   await page.keyboard.press("Enter");
-  await page.getByText("new project test name").last().isVisible();
+  await expect(
+    page.getByTestId("sidebar-nav-change-folder-destination"),
+  ).toBeVisible({ timeout: 10000 });
 
-  await page.getByText("Starter Project").last().click();
-  await page.getByText("Basic Prompting").first().hover();
-  await page.mouse.down();
-  await page.getByText("test").first().hover();
-  await page.mouse.up();
-  await page.getByText("Basic Prompting").first().isVisible();
+  // Go back to the source project where the flow currently lives.
+  await page.getByTestId("sidebar-nav-Starter Project").click();
+  await expect(page.getByText("Basic Prompting").first()).toBeVisible({
+    timeout: 10000,
+  });
+
+  // Real HTML5 drag-and-drop: `dragTo()` populates `DataTransfer` so
+  // the `use-on-file-drop.ts` handler reads `getData("flow")` and
+  // triggers the folder-change mutation. `mouse.down/up` would NOT.
+  await page
+    .getByTestId("list-card")
+    .filter({ hasText: "Basic Prompting" })
+    .first()
+    .dragTo(page.getByTestId("sidebar-nav-change-folder-destination"));
+
+  // Click the destination folder and verify the moved flow is visible
+  // WITHOUT a manual page refresh. This is the behavior that regresses
+  // when the patch-flow cache invalidation is incomplete.
+  await page.getByTestId("sidebar-nav-change-folder-destination").click();
+
+  await expect(
+    page
+      .getByTestId("list-card")
+      .filter({ hasText: "Basic Prompting" })
+      .first(),
+  ).toBeVisible({ timeout: 10000 });
+
+  // And the flow must NOT remain in the source project.
+  await page.getByTestId("sidebar-nav-Starter Project").click();
+  await expect(
+    page.getByTestId("list-card").filter({ hasText: "Basic Prompting" }),
+  ).toHaveCount(0, { timeout: 10000 });
 });
