@@ -200,7 +200,10 @@ export default function StepReview() {
       // Check against existing provider tools (skip for pre-existing flows in edit mode)
       if (!errors.has(item.flowId) && existingToolNames.has(normalized)) {
         if (!(isEditMode && preExistingFlowIds.has(item.flowId))) {
-          errors.set(item.flowId, "Tool name already exists in the provider");
+          errors.set(
+            item.flowId,
+            "Edit tool name (already exists in provider)",
+          );
         }
       }
     }
