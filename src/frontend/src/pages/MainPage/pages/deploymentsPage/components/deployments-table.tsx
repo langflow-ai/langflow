@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/utils/utils";
-import type { Deployment, DeploymentType } from "../types";
+import { type Deployment, type DeploymentType } from "../types";
 import DeploymentExpandedRow from "./deployment-expanded-row";
 
 interface DeploymentsTableProps {
@@ -158,7 +158,7 @@ export default function DeploymentsTable({
                 </TableCell>
                 <TableCell>
                   <span className="text-sm">
-                    {providerMap[deployment.provider_account_id ?? ""] ?? "—"}
+                    {providerMap[deployment.provider_id ?? ""] ?? "—"}
                   </span>
                 </TableCell>
                 <TableCell>

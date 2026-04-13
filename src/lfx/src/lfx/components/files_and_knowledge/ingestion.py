@@ -87,7 +87,6 @@ class KnowledgeIngestionComponent(Component):
                         "field_order": [
                             "01_new_kb_name",
                             "02_embedding_model",
-                            "03_api_key",
                         ],
                         "template": {
                             "01_new_kb_name": StrInput(
@@ -99,16 +98,12 @@ class KnowledgeIngestionComponent(Component):
                             "02_embedding_model": ModelInput(
                                 name="embedding_model",
                                 display_name="Choose Embedding Model",
-                                info="Select the embedding model to use for this knowledge base.",
+                                info=(
+                                    "Select the embedding model to use for this knowledge base. "
+                                    "Langflow uses the configured credentials for that model provider."
+                                ),
                                 required=True,
                                 model_type="embedding",
-                            ),
-                            "03_api_key": SecretStrInput(
-                                name="api_key",
-                                display_name="Embedding Provider API Key",
-                                info="Optional API key override used to validate and save this knowledge base.",
-                                required=False,
-                                advanced=True,
                             ),
                         },
                     },
@@ -254,7 +249,7 @@ class KnowledgeIngestionComponent(Component):
         Args:
             model_selection: Model selection list from ModelInput
                 (e.g. [{'name': ..., 'provider': ..., 'metadata': ...}])
-            api_key: Optional API key override.
+            api_key: Optional runtime API key override.
         """
         model_dict = model_selection[0] if isinstance(model_selection, list) else model_selection
         embedding_model = model_dict.get("name", "")
@@ -718,13 +713,10 @@ class KnowledgeIngestionComponent(Component):
                 if isinstance(model_selection, dict):
                     model_selection = [model_selection]
 
-                api_key = field_value.get("03_api_key") or None
-
                 # Build and validate the embedding model via the shared utility
                 embed_model = get_embeddings(
                     model=model_selection,
                     user_id=self.user_id,
-                    api_key=api_key,
                 )
 
                 # Try to generate a dummy embedding to validate without blocking the event loop
@@ -749,7 +741,6 @@ class KnowledgeIngestionComponent(Component):
                 self._save_embedding_metadata(
                     kb_path=kb_path,
                     model_selection=model_selection,
-                    api_key=api_key,
                 )
 
             # Update the knowledge base options dynamically

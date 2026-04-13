@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
@@ -71,6 +72,9 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiDeploymentUpdatePayload,
     WatsonxApiDeploymentUpdateResultData,
     WatsonxApiFlowArtifactProviderData,
+    WatsonxApiProviderAccountCreate,
+    WatsonxApiProviderAccountResponse,
+    WatsonxApiProviderAccountUpdate,
     WatsonxApiProviderDeploymentListItem,
     WatsonxApiSnapshotListProviderData,
     WatsonxApiUpsertFlowItem,
@@ -99,7 +103,11 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS as WXO_ADAPTER_PAYLOAD_SCHEMAS,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import normalize_wxo_name
-from langflow.services.database.models.deployment_provider_account.utils import extract_tenant_from_url
+from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+from langflow.services.database.models.deployment_provider_account.utils import (
+    check_provider_url_allowed,
+    extract_tenant_from_url,
+)
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     list_deployment_attachments_for_flow_version_ids,
 )
@@ -152,6 +160,8 @@ def _validate_tool_name(name: str) -> str:
 class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     """Deployment mapper for Watsonx Orchestrate provider."""
 
+    _PROVIDER_LABEL = "watsonx Orchestrate"  # used when surfacing errors
+
     api_payloads = DeploymentApiPayloads(
         deployment_create=PayloadSlot(
             adapter_model=WatsonxApiDeploymentCreatePayload,
@@ -197,18 +207,45 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             adapter_model=WatsonxApiDeploymentLlmListResultData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
+        provider_account_create=PayloadSlot(adapter_model=WatsonxApiProviderAccountCreate),
+        provider_account_update=PayloadSlot(adapter_model=WatsonxApiProviderAccountUpdate),
+        provider_account_response=PayloadSlot(
+            adapter_model=WatsonxApiProviderAccountResponse,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
     )
 
-    def resolve_provider_tenant_id(
+    def _validate_create_provider_data(
+        self,
+        provider_data: dict[str, Any],
+    ) -> tuple[WatsonxApiProviderAccountCreate, str]:
+        """Parse, validate, and resolve tenant for create provider_data.
+
+        Returns the parsed payload and the resolved tenant_id.
+        Used by ``resolve_provider_account_create`` which needs the
+        tenant_id for the DB model.
+        """
+        parsed = self._parse_and_check_url(provider_data)
+        tenant_id = parsed.tenant_id
+        if not tenant_id:
+            tenant_id = extract_tenant_from_url(
+                parsed.url,
+                WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+            )
+        if not tenant_id:
+            msg = (
+                "provider_data.tenant_id is required for watsonx-orchestrate provider accounts. "
+                "Provide tenant_id explicitly or use a provider_data.url containing /instances/{tenant_id}."
+            )
+            raise ValueError(msg)
+        return parsed, tenant_id
+
+    def validate_create_provider_url(
         self,
         *,
-        provider_url: str,
         provider_data: dict[str, Any],
-    ) -> str | None:
-        tenant_id = self.resolve_provider_tenant_id_from_data(provider_data=provider_data)
-        if tenant_id:
-            return tenant_id
-        return extract_tenant_from_url(provider_url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
+    ) -> str:
+        return self._parse_and_check_url(provider_data).url
 
     def format_conflict_detail(self, raw_message: str) -> str:
         lower = raw_message.lower()
@@ -226,41 +263,80 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             return "A tool with this name already exists in the provider. Please choose a different name."
         return super().format_conflict_detail(raw_message)
 
-    def _validate_provider_data(self, provider_data: dict[str, Any]) -> dict[str, Any]:
-        verify_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.verify_credentials
-        credential_payload = self._credential_provider_data(provider_data)
-        if verify_slot:
-            validated = verify_slot.apply(credential_payload)
-            return validated if isinstance(validated, dict) else dict(validated)
-        return credential_payload
+    def _parse_and_check_url(
+        self,
+        provider_data: dict[str, Any],
+    ) -> WatsonxApiProviderAccountCreate:
+        """Parse and validate provider_data for the create path.
 
-    def _credential_provider_data(self, provider_data: dict[str, Any]) -> dict[str, Any]:
-        """Return provider_data minus mapper-owned metadata keys."""
-        credential_payload: dict[str, Any] = dict(provider_data)
-        credential_payload.pop("tenant_id", None)
-        return credential_payload
+        Validates schema, then checks the URL against the hostname allowlist.
+        """
+        parsed: WatsonxApiProviderAccountCreate = self._parse_api_payload_slot(
+            slot=self.api_payloads.provider_account_create,
+            slot_name="provider_account_create",
+            raw=provider_data,
+        )
+        check_provider_url_allowed(parsed.url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
+        return parsed
 
-    def resolve_credential_fields(
+    def resolve_credentials(
         self,
         *,
         provider_data: dict[str, Any],
     ) -> dict[str, Any]:
-        validated = self._validate_provider_data(provider_data)
-        api_key = validated.get("api_key")
-        if not api_key or not isinstance(api_key, str) or not api_key.strip():
-            msg = "provider_data must contain a non-empty 'api_key' string"
-            raise ValueError(msg)
-        return {"api_key": api_key.strip()}
+        parsed: WatsonxApiProviderAccountUpdate = self._parse_api_payload_slot(
+            slot=self.api_payloads.provider_account_update,
+            slot_name="provider_account_update",
+            raw=provider_data,
+        )
+        return parsed.model_dump()
 
-    def resolve_verify_credentials(
+    def resolve_provider_account_create(
+        self,
+        *,
+        payload: DeploymentProviderAccountCreateRequest,
+        user_id: UUID,
+    ) -> DeploymentProviderAccount:
+        """Assemble provider-account DB model for create.
+
+        The returned model carries a **plaintext** ``api_key``.  The CRUD
+        layer (``create_provider_account_from_model``) encrypts it before
+        persistence.
+        """
+        parsed, tenant_id = self._validate_create_provider_data(payload.provider_data)
+        return DeploymentProviderAccount(
+            user_id=user_id,
+            name=payload.name,
+            provider_tenant_id=tenant_id,
+            provider_key=payload.provider_key,
+            provider_url=parsed.url,
+            api_key=parsed.api_key,
+        )
+
+    def resolve_provider_account_provider_data(
+        self,
+        provider_account: DeploymentProviderAccount,
+    ) -> dict[str, Any] | None:
+        parsed = self._parse_required_payload_slot(
+            slot=self.api_payloads.provider_account_response,
+            slot_name="provider_account_response",
+            raw={
+                "url": provider_account.provider_url,
+                "tenant_id": provider_account.provider_tenant_id,
+            },
+            operation="building the provider account response",
+        )
+        return parsed.model_dump(mode="json", exclude_none=True)
+
+    def resolve_verify_credentials_for_create(
         self,
         *,
         payload: DeploymentProviderAccountCreateRequest,
     ) -> VerifyCredentials:
-        validated = self._validate_provider_data(payload.provider_data)
+        parsed = self._parse_and_check_url(payload.provider_data)
         return VerifyCredentials(
-            base_url=payload.url,
-            provider_data=validated,
+            base_url=parsed.url,
+            provider_data={"api_key": parsed.api_key},
         )
 
     def resolve_verify_credentials_for_update(
@@ -269,18 +345,21 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         payload: DeploymentProviderAccountUpdateRequest,
         existing_account: DeploymentProviderAccount,
     ) -> VerifyCredentials | None:
-        provider_data_changed = "provider_data" in payload.model_fields_set
-        if not provider_data_changed:
+        if "provider_data" not in payload.model_fields_set:
             return None
-
         if payload.provider_data is None:
             msg = "'provider_data' cannot be null when provided."
             raise ValueError(msg)
-        provider_data = self.resolve_credential_fields(provider_data=payload.provider_data)
+
+        parsed: WatsonxApiProviderAccountUpdate = self._parse_api_payload_slot(
+            slot=self.api_payloads.provider_account_update,
+            slot_name="provider_account_update",
+            raw=payload.provider_data,
+        )
 
         return VerifyCredentials(
             base_url=existing_account.provider_url,
-            provider_data=provider_data,
+            provider_data={"api_key": parsed.api_key},
         )
 
     def util_create_flow_artifact_provider_data(
@@ -340,8 +419,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update_result,
             slot_name="deployment_update_result",
             raw=result.provider_result,
-            missing_payload_detail="Deployment provider update result is missing provider_result payload.",
-            malformed_payload_detail="Deployment provider update result contains invalid provider_result payload.",
+            operation="updating the deployment",
         )
         create_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create_result
         if create_slot is None:
@@ -701,8 +779,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create_result,
             slot_name="deployment_create_result",
             raw=result.provider_result,
-            missing_payload_detail="Deployment provider create result is missing provider_result payload.",
-            malformed_payload_detail="Deployment provider create result contains invalid provider_result payload.",
+            operation="creating the deployment",
         )
         created_tools: list[WatsonxApiCreatedTool] = []
         for binding in adapter_provider_result.tools_with_refs:
@@ -757,8 +834,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update_result,
             slot_name="deployment_update_result",
             raw=result.provider_result,
-            missing_payload_detail="Deployment provider update result is missing provider_result payload.",
-            malformed_payload_detail="Deployment provider update result contains invalid provider_result payload.",
+            operation="updating the deployment",
         )
         created_tools = self._to_api_created_tools(
             adapter_created_snapshot_bindings=adapter_provider_result.created_snapshot_bindings
@@ -785,8 +861,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_llm_list_result,
             slot_name="deployment_llm_list_result",
             raw=result.provider_result,
-            missing_payload_detail="Deployment provider llm list result is missing provider_result payload.",
-            malformed_payload_detail="Deployment provider llm list result contains invalid provider_result payload.",
+            operation="listing available models",
         )
         api_slot = self.api_payloads.deployment_llm_list_result
         if api_slot is None:
@@ -819,8 +894,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot=slot,
             slot_name="deployment_create_result",
             raw=result.provider_result,
-            missing_payload_detail="Deployment provider create result is missing provider_result payload.",
-            malformed_payload_detail="Deployment provider create result contains invalid provider_result payload.",
+            operation="creating the deployment",
         )
         return CreateSnapshotBindings(
             snapshot_bindings=[
@@ -842,8 +916,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot=slot,
             slot_name="deployment_update_result",
             raw=result.provider_result,
-            missing_payload_detail="Deployment provider update result is missing provider_result payload.",
-            malformed_payload_detail="Deployment provider update result contains invalid provider_result payload.",
+            operation="updating the deployment",
         )
         if not parsed.created_snapshot_ids and not parsed.added_snapshot_bindings:
             msg = "Deployment provider update result is missing required snapshot reconciliation bindings."
@@ -868,8 +941,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot=slot,
             slot_name="deployment_update_result",
             raw=result.provider_result,
-            missing_payload_detail="Deployment provider update result is missing provider_result payload.",
-            malformed_payload_detail="Deployment provider update result contains invalid provider_result payload.",
+            operation="updating the deployment",
         )
         if not parsed.created_snapshot_ids and not parsed.added_snapshot_bindings:
             msg = "Deployment provider update result is missing required snapshot reconciliation bindings."
@@ -920,8 +992,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.execution_create_result,
             slot_name="execution_create_result",
             raw=result.provider_result,
-            missing_payload_detail="Deployment provider execution result is missing provider_result payload.",
-            malformed_payload_detail="Deployment provider execution result contains invalid provider_result payload.",
+            operation="starting the execution",
         )
         api_provider_result = WatsonxApiAgentExecutionCreateResultData(
             execution_id=adapter_provider_result.execution_id,
@@ -935,10 +1006,11 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             cancelled_at=adapter_provider_result.cancelled_at,
             last_error=adapter_provider_result.last_error,
         )
-        provider_result = api_provider_result.model_dump(exclude_none=True) or None
         return ExecutionCreateResponse(
             deployment_id=deployment_id,
-            provider_data=provider_result,
+            provider_data=api_provider_result.model_dump(),
+            # includes None intentionally, simply passes through
+            # wxo api response, which can contain null values
         )
 
     def shape_execution_status_result(
@@ -951,8 +1023,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.execution_status_result,
             slot_name="execution_status_result",
             raw=result.provider_result,
-            missing_payload_detail="Deployment provider execution result is missing provider_result payload.",
-            malformed_payload_detail="Deployment provider execution result contains invalid provider_result payload.",
+            operation="checking execution status",
         )
         api_provider_result = WatsonxApiAgentExecutionStatusResultData(
             execution_id=adapter_provider_result.execution_id,
@@ -966,10 +1037,11 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             cancelled_at=adapter_provider_result.cancelled_at,
             last_error=adapter_provider_result.last_error,
         )
-        provider_result = api_provider_result.model_dump(exclude_none=True) or None
         return ExecutionStatusResponse(
             deployment_id=deployment_id,
-            provider_data=provider_result,
+            provider_data=api_provider_result.model_dump(),
+            # includes None intentionally, simply passes through
+            # wxo api response, which can contain null values
         )
 
     def shape_deployment_list_result(
@@ -1097,10 +1169,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         total: int,
     ) -> DeploymentFlowVersionListResponse:
         normalized_rows = self._normalize_flow_version_attachment_rows(rows)
-        snapshot_data_by_id = self._resolve_snapshot_data_by_id(
-            snapshot_result=snapshot_result,
-        )
-        snapshot_name_by_id = self._resolve_snapshot_name_by_id(
+        flow_version_item_data_by_snapshot_id = self._resolve_flow_version_item_data_by_snapshot_id(
             snapshot_result=snapshot_result,
         )
 
@@ -1112,10 +1181,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 version_number=row.flow_version.version_number,
                 attached_at=row.attachment.created_at,
                 provider_snapshot_id=row.snapshot_id,
-                provider_data=self.shape_deployment_flow_version_item_data(
-                    snapshot_data=snapshot_data_by_id.get(row.snapshot_id),
-                    tool_name=snapshot_name_by_id.get(row.snapshot_id),
-                ),
+                provider_data=flow_version_item_data_by_snapshot_id.get(row.snapshot_id),
             )
             for row in normalized_rows
         ]
@@ -1147,81 +1213,51 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             )
         return normalized_rows
 
-    def _resolve_snapshot_data_by_id(
+    def _resolve_flow_version_item_data_by_snapshot_id(
         self,
         *,
         snapshot_result: SnapshotListResult | None,
-    ) -> dict[str, dict[str, Any] | None]:
+    ) -> dict[str, dict[str, Any]]:
+        """Build API flow-version item provider_data keyed by snapshot id."""
         if snapshot_result is None:
             return {}
         if not snapshot_result.snapshots:
             return {}
 
-        snapshot_data_by_id: dict[str, dict[str, Any] | None] = {}
+        item_data_by_snapshot_id: dict[str, dict[str, Any]] = {}
         for snapshot in snapshot_result.snapshots:
             snapshot_id = str(snapshot.id).strip()
             if not snapshot_id:
-                continue
+                msg = "Invalid flow-version provider_data payload: snapshot id must be a non-empty string."
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+
             provider_data = snapshot.provider_data
-            snapshot_data_by_id[snapshot_id] = provider_data if isinstance(provider_data, dict) else None
 
-        return snapshot_data_by_id
+            if not isinstance(provider_data, dict) or not provider_data:
+                msg = "Invalid flow-version provider_data payload: snapshot provider_data must be a non-empty object."
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
 
-    @staticmethod
-    def _resolve_snapshot_name_by_id(
-        *,
-        snapshot_result: SnapshotListResult | None,
-    ) -> dict[str, str]:
-        """Map snapshot IDs to their provider tool names.
+            raw_connections = provider_data.get("connections")
+            if not isinstance(raw_connections, dict):
+                msg = "Invalid flow-version provider_data payload: connections must be a dict."
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
 
-        The tool name is the wxO-side name, which may differ from the
-        Langflow flow name if the user provided a custom ``tool_name``
-        at deploy time or renamed the tool directly in the wxO console.
+            try:
+                item_data_by_snapshot_id[snapshot_id] = self._validate_slot(
+                    self.api_payloads.deployment_item_data,
+                    {
+                        "app_ids": list(raw_connections.keys()),
+                        "tool_name": snapshot.name,
+                    },
+                )
+            except AdapterPayloadValidationError as exc:
+                detail = exc.format_first_error()
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Invalid flow-version provider_data payload: {detail}",
+                ) from exc
 
-        Edge cases:
-        - Provider unreachable / snapshot_result is None: returns ``{}``.
-          ``provider_data.tool_name`` will be absent/``None`` and the frontend
-          falls back to the Langflow flow name for display.
-        - Tool renamed in wxO console: the new name is returned here since
-          ``snapshot_result`` is fetched fresh on each request.
-        - Tool deleted in wxO: missing from ``snapshot_result.snapshots``,
-          so no entry in the returned dict. ``provider_data.tool_name`` will be
-          absent/``None``.
-        """
-        if not snapshot_result or not snapshot_result.snapshots:
-            return {}
-        result: dict[str, str] = {}
-        for snapshot in snapshot_result.snapshots:
-            snapshot_id = str(snapshot.id).strip()
-            name = str(snapshot.name or "").strip()
-            if snapshot_id and name:
-                result[snapshot_id] = name
-        return result
-
-    def shape_deployment_flow_version_item_data(
-        self,
-        *,
-        snapshot_data: dict[str, Any] | None,
-        tool_name: str | None = None,
-    ) -> dict[str, Any] | None:
-        raw_connections = snapshot_data.get("connections") if snapshot_data else None
-        app_ids = list(raw_connections.keys()) if isinstance(raw_connections, dict) else []
-        if not app_ids and not tool_name:
-            return None
-        try:
-            return self._validate_slot(
-                self.api_payloads.deployment_item_data,
-                {
-                    "app_ids": app_ids,
-                    "tool_name": tool_name,
-                },
-            )
-        except AdapterPayloadValidationError as exc:
-            detail = exc.format_first_error()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Invalid flow-version provider_data payload: {detail}",
-            ) from exc
+        return item_data_by_snapshot_id
 
     def _shape_provider_deployment_list_entry(self, item: Any) -> dict[str, Any]:
         item_provider_data = item.provider_data
@@ -1256,8 +1292,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot=self.api_payloads.config_item_data,
             slot_name="config_item_data",
             raw=provider_data,
-            missing_payload_detail="Config item provider_data payload is missing.",
-            malformed_payload_detail="Invalid config item provider_data payload:",
+            operation="reading the configuration",
         )
 
     def _parse_required_payload_slot(
@@ -1266,24 +1301,33 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         slot: PayloadSlot | None,
         slot_name: str,
         raw: Any,
-        missing_payload_detail: str,
-        malformed_payload_detail: str,
+        operation: str = "this operation",
     ) -> Any:
+        """Parse an adapter result payload, raising 500 on failure.
+
+        Use for data returned **from** the adapter/provider (outbound).
+        Failures are internal errors — the user cannot fix them.
+        ``slot_name`` is logged for debugging but not exposed to the user.
+        See ``_parse_api_payload_slot`` for user-supplied input.
+        """
         if slot is None:
-            msg = f"Watsonx {slot_name} payload slot is not configured."
+            logger.error("Payload slot '%s' is not configured for %s", slot_name, self._PROVIDER_LABEL)
+            msg = f"The {self._PROVIDER_LABEL} integration is not configured for {operation}."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
         try:
             return slot.parse(raw)
         except AdapterPayloadMissingError as exc:
+            logger.error("Empty adapter result for slot '%s' (%s)", slot_name, self._PROVIDER_LABEL)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=missing_payload_detail,
+                detail=f"Empty result while {operation} ({self._PROVIDER_LABEL}).",
             ) from exc
         except AdapterPayloadValidationError as exc:
             detail = exc.format_first_error()
+            logger.error("Invalid adapter result for slot '%s' (%s): %s", slot_name, self._PROVIDER_LABEL, detail)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"{malformed_payload_detail} {detail}",
+                detail=f"Unexpected result while {operation} ({self._PROVIDER_LABEL}): {detail}",
             ) from exc
 
     def _parse_api_payload_slot(
@@ -1293,21 +1337,29 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         slot_name: str,
         raw: Any,
     ) -> Any:
+        """Parse a user-supplied API payload, raising 422 on failure.
+
+        Use for data sent **by** the user in the API request (inbound).
+        Failures are input errors — the user can fix them.
+        ``slot_name`` is logged for debugging but not exposed to the user.
+        See ``_parse_required_payload_slot`` for adapter results.
+        """
         if slot is None:
-            msg = f"Watsonx {slot_name} payload slot is not configured."
+            logger.error("Payload slot '%s' is not configured for %s", slot_name, self._PROVIDER_LABEL)
+            msg = f"The {self._PROVIDER_LABEL} integration is not configured for this operation."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
         try:
             return slot.parse(raw)
         except AdapterPayloadMissingError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Missing provider_data payload.",
+                detail=f"Missing provider_data for {self._PROVIDER_LABEL}.",
             ) from exc
         except AdapterPayloadValidationError as exc:
             detail = exc.format_first_error()
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid provider_data payload: {detail}",
+                detail=f"Invalid provider_data for {self._PROVIDER_LABEL}: {detail}",
             ) from exc
 
     def _to_bind_provider_operation(self, *, raw_name: str, app_ids: list[str]) -> AdapterPayload:

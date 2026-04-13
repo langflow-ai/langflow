@@ -7,8 +7,8 @@ import { UseRequestProcessor } from "../../services/request-processor";
 export interface ProviderAccountCreateRequest {
   name: string;
   provider_key: string;
-  url: string;
   provider_data: {
+    url: string;
     api_key: string;
   };
 }
