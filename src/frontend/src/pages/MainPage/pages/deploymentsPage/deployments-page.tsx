@@ -83,6 +83,7 @@ export default function DeploymentsPage() {
         <ProvidersContent
           isLoading={isLoadingProviders}
           providers={providers}
+          multipleProviders={providers.length > 1}
           addProviderOpen={addProviderOpen}
           setAddProviderOpen={setAddProviderOpen}
         />

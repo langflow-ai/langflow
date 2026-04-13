@@ -80,8 +80,8 @@ export default function DeploymentsContent({
 
   return (
     <>
-      {providers.length >= 1 && (
-        <div className="flex items-center gap-2">
+      {providers.length > 1 && (
+        <div className="flex h-8 items-center gap-2">
           <span className="text-sm text-muted-foreground">Environment:</span>
           <Select
             value={selectedProviderId}
@@ -101,7 +101,7 @@ export default function DeploymentsContent({
         </div>
       )}
 
-      {content}
+      <div className="pt-4">{content}</div>
 
       <DeploymentStepperModal
         open={stepperOpen}
