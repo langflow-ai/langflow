@@ -1,11 +1,4 @@
 import { useState } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useDeleteDeployment } from "@/controllers/API/queries/deployments/use-delete-deployment";
 import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation";
 import { useTestDeploymentModal } from "../hooks/use-test-deployment-modal";
@@ -24,8 +17,6 @@ interface DeploymentsContentProps {
   providers: ProviderAccount[];
   deployments: Deployment[];
   isLoading: boolean;
-  selectedProviderId: string;
-  setSelectedProviderId: (id: string) => void;
   providerMap: Record<string, string>;
   stepperOpen: boolean;
   setStepperOpen: (open: boolean) => void;
@@ -35,8 +26,6 @@ export default function DeploymentsContent({
   providers,
   deployments,
   isLoading,
-  selectedProviderId,
-  setSelectedProviderId,
   providerMap,
   stepperOpen,
   setStepperOpen,
@@ -80,28 +69,7 @@ export default function DeploymentsContent({
 
   return (
     <>
-      {providers.length > 1 && (
-        <div className="flex h-8 items-center gap-2">
-          <span className="text-sm text-muted-foreground">Environment:</span>
-          <Select
-            value={selectedProviderId}
-            onValueChange={setSelectedProviderId}
-          >
-            <SelectTrigger className="w-[220px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {providers.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      <div className="pt-4">{content}</div>
+      {content}
 
       <DeploymentStepperModal
         open={stepperOpen}

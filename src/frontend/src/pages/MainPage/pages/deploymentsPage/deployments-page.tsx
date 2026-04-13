@@ -2,6 +2,13 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
 import { useGetDeploymentsByProviders } from "@/controllers/API/queries/deployments/use-get-deployments-by-providers";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -66,13 +73,45 @@ export default function DeploymentsPage() {
         )}
       </div>
 
+      {providers.length > 1 && (
+        <div
+          className="flex h-8 min-h-8 shrink-0 items-center gap-2"
+          data-testid="deployments-shared-toolbar"
+        >
+          {activeSubTab === "deployments" ? (
+            <>
+              <span className="shrink-0 text-sm text-muted-foreground">
+                Environment:
+              </span>
+              <Select
+                value={selectedProviderId}
+                onValueChange={setSelectedProviderId}
+              >
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {providers.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+              These environments are used when you create or run deployments.
+            </p>
+          )}
+        </div>
+      )}
+
       {activeSubTab === "deployments" && (
         <DeploymentsContent
           providers={providers}
           deployments={deployments}
           isLoading={isLoadingProviders || isLoadingDeployments}
-          selectedProviderId={selectedProviderId}
-          setSelectedProviderId={setSelectedProviderId}
           providerMap={providerMap}
           stepperOpen={stepperOpen}
           setStepperOpen={setStepperOpen}
@@ -83,7 +122,6 @@ export default function DeploymentsPage() {
         <ProvidersContent
           isLoading={isLoadingProviders}
           providers={providers}
-          multipleProviders={providers.length > 1}
           addProviderOpen={addProviderOpen}
           setAddProviderOpen={setAddProviderOpen}
         />

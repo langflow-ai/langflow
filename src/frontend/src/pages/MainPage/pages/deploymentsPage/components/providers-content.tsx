@@ -21,7 +21,6 @@ const buildProviderDeleteParams = (id: string) => ({ provider_id: id });
 interface ProvidersContentProps {
   isLoading: boolean;
   providers: ProviderAccount[];
-  multipleProviders: boolean;
   addProviderOpen: boolean;
   setAddProviderOpen: (open: boolean) => void;
 }
@@ -86,7 +85,6 @@ function ProvidersEmptyState({ onAddProvider }: { onAddProvider: () => void }) {
 export default function ProvidersContent({
   isLoading,
   providers,
-  multipleProviders,
   addProviderOpen,
   setAddProviderOpen,
 }: ProvidersContentProps) {
@@ -115,8 +113,7 @@ export default function ProvidersContent({
 
   return (
     <>
-      {multipleProviders && <div className="h-8 shrink-0" aria-hidden />}
-      <div className="pt-4">{content}</div>
+      {content}
 
       <AddProviderModal open={addProviderOpen} setOpen={setAddProviderOpen} />
 
