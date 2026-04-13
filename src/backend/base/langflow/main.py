@@ -432,18 +432,20 @@ def create_app():
     __version__ = get_version_info()["version"]
     configure()
     lifespan = get_lifespan(version=__version__)
+
+    settings = get_settings_service().settings
+
     app = FastAPI(
         title="Langflow",
         version=__version__,
         lifespan=lifespan,
+        root_path=settings.root_path,
     )
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
 
     setup_sentry(app)
-
-    settings = get_settings_service().settings
 
     # Warn about future CORS changes
     warn_about_future_cors_changes(settings)
@@ -496,6 +498,28 @@ def create_app():
                     content={"detail": "Invalid multipart formatting"},
                 )
 
+        return await call_next(request)
+
+    @app.middleware("http")
+    async def forwarded_prefix_middleware(request: Request, call_next):
+        """Honour X-Forwarded-Prefix set by a reverse proxy.
+
+        When a reverse proxy (e.g. Nginx) strips a URL prefix before forwarding
+        the request, it can advertise the original prefix via X-Forwarded-Prefix.
+        We propagate this into the ASGI ``root_path`` so that transports like
+        MCP SSE include the prefix in the POST-back URLs they hand to clients.
+
+        This middleware is only active when ``root_path`` is configured in
+        settings (i.e. the operator has explicitly opted into reverse-proxy
+        mode).  The header value takes precedence over the static setting
+        because the proxy is the runtime source of truth for the prefix.
+        """
+        if not settings.root_path:
+            return await call_next(request)
+
+        prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
+        if prefix and prefix.startswith("/") and "://" not in prefix and "?" not in prefix and "#" not in prefix:
+            request.scope["root_path"] = prefix
         return await call_next(request)
 
     @app.middleware("http")
