@@ -107,9 +107,6 @@ override-dependencies = [
     "litellm>=1.83.0"
 ]
 
-[tool.hatch.metadata]
-allow-direct-references = true
-
 [dependency-groups]
 dev = [
     "asgi-lifespan>=2.1.0",
