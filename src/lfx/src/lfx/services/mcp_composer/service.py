@@ -1292,7 +1292,7 @@ class MCPComposerService(Service):
                     "oauth_host": "OAUTH_HOST",
                     "oauth_port": "OAUTH_PORT",
                     "oauth_server_url": "OAUTH_SERVER_URL",
-                    "oauth_callback_url": "OAUTH_CALLBACK_URL",
+                    "oauth_callback_url": "OAUTH_CALLBACK_PATH",
                     "oauth_client_id": "OAUTH_CLIENT_ID",
                     "oauth_client_secret": "OAUTH_CLIENT_SECRET",  # pragma: allowlist secret
                     "oauth_auth_url": "OAUTH_AUTH_URL",

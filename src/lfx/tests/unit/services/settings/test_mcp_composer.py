@@ -405,3 +405,160 @@ class TestPortChangeHandling:
         mock_start.assert_awaited()
         kwargs = mock_start.call_args.kwargs
         assert kwargs["legacy_sse_url"] == f"{streamable_url}/sse"
+
+
+class TestOAuthCallbackEnvMapping:
+    """Test that OAuth callback URL is mapped to the correct env var for mcp-composer."""
+
+    @pytest.mark.asyncio
+    async def test_callback_url_mapped_to_oauth_callback_path(self, mcp_service):
+        """Verify oauth_callback_url is sent as OAUTH_CALLBACK_PATH, not OAUTH_CALLBACK_URL.
+
+        mcp-composer's ServerSettings model expects a 'callback_path' field
+        (populated via OAUTH_CALLBACK_PATH env var). Sending OAUTH_CALLBACK_URL
+        produces an 'Extra inputs are not permitted' Pydantic validation error.
+        """
+        project_id = "callback-test"
+        callback = "http://localhost:9000/auth/idaas/callback"
+        auth_config = {
+            "auth_type": "oauth",
+            "oauth_host": "localhost",
+            "oauth_port": "9000",
+            "oauth_server_url": "http://localhost:9000",
+            "oauth_callback_url": callback,
+            "oauth_client_id": "cid",
+            "oauth_client_secret": "csecret",  # pragma: allowlist secret
+            "oauth_auth_url": "http://auth",
+            "oauth_token_url": "http://token",
+            "oauth_mcp_scope": "mcp",
+            "oauth_provider_scope": "openid",
+        }
+
+        mcp_service._start_locks[project_id] = asyncio.Lock()
+
+        mock_process = MagicMock(pid=1111)
+        with (
+            patch.object(mcp_service, "_is_port_available", return_value=True),
+            patch.object(
+                mcp_service,
+                "_start_project_composer_process",
+                new=AsyncMock(return_value=mock_process),
+            ) as mock_start,
+        ):
+            await mcp_service._do_start_project_composer(
+                project_id=project_id,
+                streamable_http_url="http://test/mcp",
+                auth_config=auth_config,
+                max_retries=1,
+                max_startup_checks=1,
+                startup_delay=0.1,
+            )
+
+        mock_start.assert_awaited()
+        # auth_config is the 5th positional arg (index 4)
+        passed_auth = mock_start.call_args[0][4]
+
+        # The auth_config should still carry the value under oauth_callback_url
+        assert passed_auth["oauth_callback_url"] == callback
+
+    @pytest.mark.asyncio
+    async def test_callback_path_backwards_compat(self, mcp_service):
+        """Verify legacy oauth_callback_path is promoted and sent as OAUTH_CALLBACK_PATH."""
+        project_id = "compat-test"
+        callback = "http://localhost:9000/auth/callback"
+        auth_config = {
+            "auth_type": "oauth",
+            "oauth_host": "localhost",
+            "oauth_port": "9000",
+            "oauth_server_url": "http://localhost:9000",
+            "oauth_callback_path": callback,
+            "oauth_client_id": "cid",
+            "oauth_client_secret": "csecret",  # pragma: allowlist secret
+            "oauth_auth_url": "http://auth",
+            "oauth_token_url": "http://token",
+        }
+
+        mock_settings = MagicMock()
+        mock_settings.settings.mcp_composer_version = "==0.1.0.8.10"
+
+        mock_process = MagicMock(pid=2222, poll=MagicMock(return_value=None))
+
+        with (
+            patch("lfx.services.mcp_composer.service.get_settings_service", return_value=mock_settings),
+            patch("subprocess.Popen", return_value=mock_process) as mock_popen,
+            patch.object(mcp_service, "_is_port_available", return_value=False),
+        ):
+            await mcp_service._start_project_composer_process(
+                project_id=project_id,
+                host="localhost",
+                port=9000,
+                streamable_http_url="http://test/mcp",
+                auth_config=auth_config,
+                max_startup_checks=1,
+                startup_delay=0.01,
+            )
+
+        cmd = mock_popen.call_args[0][0]
+
+        # Legacy oauth_callback_path should be promoted and sent as OAUTH_CALLBACK_PATH
+        assert "OAUTH_CALLBACK_PATH" in cmd, f"Expected OAUTH_CALLBACK_PATH in command but got: {cmd}"
+        idx = cmd.index("OAUTH_CALLBACK_PATH")
+        assert cmd[idx + 1] == callback
+
+    @pytest.mark.asyncio
+    async def test_subprocess_receives_callback_path_env_var(self, mcp_service):
+        """Verify the subprocess command uses OAUTH_CALLBACK_PATH, not OAUTH_CALLBACK_URL.
+
+        This is the core regression test: mcp-composer's ServerSettings has a
+        'callback_path' field (env_prefix='OAUTH_'), so the env var must be
+        OAUTH_CALLBACK_PATH.  Sending OAUTH_CALLBACK_URL causes a Pydantic
+        'extra_forbidden' validation error.
+        """
+        project_id = "env-var-test"
+        callback = "http://localhost:9000/auth/idaas/callback"
+        auth_config = {
+            "auth_type": "oauth",
+            "oauth_host": "localhost",
+            "oauth_port": "9000",
+            "oauth_server_url": "http://localhost:9000",
+            "oauth_callback_url": callback,
+            "oauth_client_id": "cid",
+            "oauth_client_secret": "csecret",  # pragma: allowlist secret
+            "oauth_auth_url": "http://auth",
+            "oauth_token_url": "http://token",
+            "oauth_mcp_scope": "mcp",
+            "oauth_provider_scope": "openid",
+        }
+
+        mock_settings = MagicMock()
+        mock_settings.settings.mcp_composer_version = "==0.1.0.8.10"
+
+        mock_process = MagicMock(pid=3333, poll=MagicMock(return_value=None))
+
+        with (
+            patch("lfx.services.mcp_composer.service.get_settings_service", return_value=mock_settings),
+            patch("subprocess.Popen", return_value=mock_process) as mock_popen,
+            patch.object(mcp_service, "_is_port_available", return_value=False),
+        ):
+            await mcp_service._start_project_composer_process(
+                project_id=project_id,
+                host="localhost",
+                port=9000,
+                streamable_http_url="http://test/mcp",
+                auth_config=auth_config,
+                max_startup_checks=1,
+                startup_delay=0.01,
+            )
+
+        cmd = mock_popen.call_args[0][0]
+
+        # OAUTH_CALLBACK_PATH must appear in the command
+        assert "OAUTH_CALLBACK_PATH" in cmd, f"Expected OAUTH_CALLBACK_PATH in command but got: {cmd}"
+        # The callback value should follow the env key
+        idx = cmd.index("OAUTH_CALLBACK_PATH")
+        assert cmd[idx + 1] == callback
+
+        # OAUTH_CALLBACK_URL must NOT appear (would cause extra_forbidden error)
+        assert "OAUTH_CALLBACK_URL" not in cmd, (
+            f"OAUTH_CALLBACK_URL should not be in command (mcp-composer rejects it): {cmd}"
+        )
