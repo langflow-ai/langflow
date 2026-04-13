@@ -824,6 +824,23 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             )
         return snapshots
 
+    async def check_tool_names_exist(
+        self,
+        *,
+        user_id: IdLike,
+        names: list[str],
+        db: AsyncSession,
+    ) -> list[str]:
+        """Return the subset of *names* that already exist as tools in the provider."""
+        if not names:
+            return []
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
+        try:
+            tools = await asyncio.to_thread(clients.tool.get_drafts_by_names, names)
+        except Exception:  # noqa: BLE001
+            return []
+        return [str(tool.get("name") or "") for tool in (tools or []) if isinstance(tool, dict) and tool.get("name")]
+
     async def verify_credentials(
         self,
         *,

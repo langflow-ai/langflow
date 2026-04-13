@@ -100,6 +100,10 @@ interface DeploymentStepperContextType {
   handleRemoveAttachedFlow: (flowId: string) => void;
   handleUndoRemoveFlow: (flowId: string) => void;
 
+  // Tool name validation
+  hasToolNameErrors: boolean;
+  setHasToolNameErrors: Dispatch<SetStateAction<boolean>>;
+
   // Deploy / Update
   needsProviderAccountCreation: boolean;
   buildProviderAccountPayload: () => ProviderAccountCreateRequest | null;
@@ -160,6 +164,8 @@ export function DeploymentStepperProvider({
   const [attachedConnectionByFlow, setAttachedConnectionByFlow] = useState<
     Map<string, string[]>
   >(initialState?.initialConnectionsByFlow ?? new Map());
+
+  const [hasToolNameErrors, setHasToolNameErrors] = useState(false);
 
   // Edit mode: track which pre-existing flows the user wants to detach.
   const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(new Set());
@@ -251,6 +257,9 @@ export function DeploymentStepperProvider({
       // In edit mode, user can proceed without new attachments (may just change desc/LLM).
       return isEditMode || selectedVersionByFlow.size > 0;
     }
+    if (logical === 4) {
+      return !hasToolNameErrors;
+    }
     return true;
   }, [
     currentStep,
@@ -262,6 +271,7 @@ export function DeploymentStepperProvider({
     selectedLlm,
     selectedVersionByFlow,
     isEditMode,
+    hasToolNameErrors,
   ]);
 
   const handleNext = useCallback(() => {
@@ -546,6 +556,8 @@ export function DeploymentStepperProvider({
       removedFlowIds,
       handleRemoveAttachedFlow,
       handleUndoRemoveFlow,
+      hasToolNameErrors,
+      setHasToolNameErrors,
       needsProviderAccountCreation,
       buildProviderAccountPayload,
       buildDeploymentPayload,
@@ -577,6 +589,7 @@ export function DeploymentStepperProvider({
       removedFlowIds,
       handleRemoveAttachedFlow,
       handleUndoRemoveFlow,
+      hasToolNameErrors,
       needsProviderAccountCreation,
       buildProviderAccountPayload,
       buildDeploymentPayload,
