@@ -27,7 +27,16 @@ import pkgutil
 import sys
 from pathlib import Path
 
+import re
+
 OUTPUT_PATH = Path(__file__).parent.parent.parent / "src/backend/base/langflow/locales/en.json"
+STARTER_PROJECTS_DIR = (
+    Path(__file__).parent.parent.parent / "src/backend/base/langflow/initial_setup/starter_projects"
+)
+
+
+def _safe_key(name: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
 
 
 def collect_strings() -> dict[str, str]:
@@ -93,6 +102,25 @@ def collect_strings() -> dict[str, str]:
                 out_name = getattr(out, "name", None)
                 if isinstance(out_name, str) and isinstance(out_display, str) and out_name and out_display:
                     flat[f"components.{component_key}.outputs.{out_name}.display_name"] = out_display
+
+    # Tier 3 — starter project names & descriptions (auto-discovered from JSON files)
+    starter_count = 0
+    for project_file in sorted(STARTER_PROJECTS_DIR.glob("*.json")):
+        try:
+            with project_file.open(encoding="utf-8") as f:
+                project = json.load(f)
+        except Exception:  # noqa: BLE001
+            continue
+        name = project.get("name")
+        description = project.get("description", "")
+        if name and isinstance(name, str):
+            key = _safe_key(name)
+            flat[f"starter_flows.{key}.name"] = name
+            starter_count += 1
+            if description and isinstance(description, str):
+                flat[f"starter_flows.{key}.description"] = description
+
+    print(f"Found {starter_count} starter project(s) in {STARTER_PROJECTS_DIR.name}/")
 
     return dict(sorted(flat.items()))
 

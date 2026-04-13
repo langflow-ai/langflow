@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
@@ -10,6 +11,7 @@ type EmptyPageProps = {
 };
 
 export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
+  const { t } = useTranslation();
   const folders = useFolderStore((state) => state.folders);
   const handleFileDrop = useFileDrop(undefined);
 
@@ -26,13 +28,13 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
               className="pt-5 font-chivo text-2xl font-semibold text-foreground"
               data-testid="mainpage_title"
             >
-              {folders?.length > 1 ? "Empty project" : "Start building"}
+              {folders?.length > 1 ? t("emptyPage.emptyProject") : t("emptyPage.startBuilding")}
             </h3>
             <p
               data-testid="empty-project-description"
               className="pb-5 text-sm text-secondary-foreground"
             >
-              Begin with a template, or start from scratch.
+              {t("emptyPage.description")}
             </p>
             <Button
               variant="default"
@@ -46,7 +48,7 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
                 className="h-4 w-4"
               />
               <span className="hidden whitespace-nowrap font-semibold md:inline">
-                New Flow
+                {t("emptyPage.newFlow")}
               </span>
             </Button>
           </div>

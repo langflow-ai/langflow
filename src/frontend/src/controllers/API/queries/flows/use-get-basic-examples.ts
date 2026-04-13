@@ -1,6 +1,7 @@
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { useQueryFunctionType } from "@/types/api";
 import type { FlowType } from "@/types/flow";
+import { useTranslation } from "react-i18next";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -11,6 +12,7 @@ export const useGetBasicExamplesQuery: useQueryFunctionType<
 > = (options) => {
   const { query } = UseRequestProcessor();
   const setExamples = useFlowsManagerStore((state) => state.setExamples);
+  const { i18n } = useTranslation();
 
   const getBasicExamplesFn = async () => {
     return await api.get<FlowType[]>(`${getURL("FLOWS")}/basic_examples/`);
@@ -24,7 +26,7 @@ export const useGetBasicExamplesQuery: useQueryFunctionType<
     return data;
   };
 
-  const queryResult = query(["useGetBasicExamplesQuery"], responseFn, {
+  const queryResult = query(["useGetBasicExamplesQuery", i18n.language], responseFn, {
     ...options,
     retry: 3,
   });

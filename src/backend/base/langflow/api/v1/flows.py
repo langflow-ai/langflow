@@ -8,7 +8,7 @@ from typing import Annotated
 from uuid import UUID
 
 import orjson
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
@@ -455,38 +455,44 @@ _starter_flows_lock = asyncio.Lock()
 async def read_basic_examples(
     *,
     session: DbSession,
+    request: Request,
 ):
     """Retrieve a list of basic example flows."""
-    cached_response = _starter_flows_cache.get("starter_flows")
-    if cached_response is not CACHE_MISS:
-        return cached_response
+    cached_flow_reads = _starter_flows_cache.get("starter_flows")
+    if cached_flow_reads is CACHE_MISS:
+        async with _starter_flows_lock:
+            cached_flow_reads = _starter_flows_cache.get("starter_flows")
+            if cached_flow_reads is CACHE_MISS:
+                try:
+                    starter_folder = (
+                        await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))
+                    ).first()
 
-    async with _starter_flows_lock:
-        cached_response = _starter_flows_cache.get("starter_flows")
-        if cached_response is not CACHE_MISS:
-            return cached_response
+                    if not starter_folder:
+                        return compress_response([])
 
-        try:
-            starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
+                    all_starter_folder_flows = (
+                        await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))
+                    ).all()
 
-            if not starter_folder:
-                return []
+                    cached_flow_reads = [
+                        FlowRead.model_validate(flow, from_attributes=True) for flow in all_starter_folder_flows
+                    ]
+                    _starter_flows_cache.set("starter_flows", cached_flow_reads)
 
-            all_starter_folder_flows = (
-                await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))
-            ).all()
+                except Exception as e:
+                    import logging as _logging
 
-            flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in all_starter_folder_flows]
-            response = compress_response(flow_reads)
-            _starter_flows_cache.set("starter_flows", response)
+                    _logging.getLogger(__name__).exception("Error loading basic examples")
+                    raise HTTPException(
+                        status_code=500, detail="An internal error occurred while loading examples."
+                    ) from e
 
-        except Exception as e:
-            import logging as _logging
+    # Translate per-request — always called so name_key is set for all locales
+    from langflow.utils.i18n import translate_starter_flows
 
-            _logging.getLogger(__name__).exception("Error loading basic examples")
-            raise HTTPException(status_code=500, detail="An internal error occurred while loading examples.") from e
-        else:
-            return response
+    locale = getattr(request.state, "locale", "en")
+    return compress_response(translate_starter_flows(cached_flow_reads, locale))
 
 
 @router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)

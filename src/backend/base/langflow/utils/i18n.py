@@ -12,7 +12,9 @@ Fallback chain: requested locale → "en" → raw default string.
 
 from __future__ import annotations
 
+import copy
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +64,25 @@ def get_supported_locales() -> list[str]:
     if not _translations:
         _load_translations()
     return list(_translations.keys())
+
+
+def _safe_flow_key(name: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
+
+
+def translate_starter_flows(flow_reads: list, locale: str) -> list:
+    """Return copies of flow_reads with name/description translated for locale."""
+    result = []
+    for flow in flow_reads:
+        key = _safe_flow_key(flow.name or "")
+        flow_copy = copy.copy(flow)
+        flow_copy.name_key = key
+        flow_copy.name = translate(f"starter_flows.{key}.name", locale, flow.name or "")
+        flow_copy.description = translate(
+            f"starter_flows.{key}.description", locale, flow.description or ""
+        ) or flow_copy.description
+        result.append(flow_copy)
+    return result
 
 
 def translate_component_dict(all_types: dict[str, Any], locale: str) -> dict[str, Any]:
