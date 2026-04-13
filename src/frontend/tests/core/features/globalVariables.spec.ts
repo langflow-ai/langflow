@@ -3,7 +3,6 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to save or delete a global variable",
@@ -42,6 +41,8 @@ test(
     const credentialName = Math.random().toString();
 
     await page.getByText("OpenAI", { exact: true }).last().click();
+
+    await page.getByTestId("remove-icon-badge").click();
 
     await page.getByTestId("icon-Globe").nth(0).click();
     await page.getByText("Add New Variable", { exact: true }).click();
