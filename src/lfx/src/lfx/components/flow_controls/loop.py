@@ -169,22 +169,34 @@ class LoopComponent(Component):
                 raise cached_error
             return self.ctx.get(f"{self._id}_aggregated", [])
 
+        import time
+
+        started_at = time.perf_counter()
         try:
             self.initialize_data()
             data_list = self.ctx.get(f"{self._id}_data", [])
+            self.log(f"Starting loop over {len(data_list)} item(s)", name="Start")
 
             if not data_list:
                 self.update_ctx({f"{self._id}_aggregated": [], f"{self._id}_iterated": True})
+                self.log("No items to iterate, skipping loop body", name="Skipped")
                 return []
 
             aggregated_results = await self.execute_loop_body(data_list, event_manager=self._event_manager)
         except Exception as exc:
             from lfx.log.logger import logger
 
+            elapsed = time.perf_counter() - started_at
+            self.log(f"Loop failed after {elapsed:.3f}s: {exc}", name="Error")
             await logger.aexception(f"Loop {self._id} failed while executing loop body")
             self.update_ctx({f"{self._id}_iteration_error": exc, f"{self._id}_iterated": True})
             raise
 
+        elapsed = time.perf_counter() - started_at
+        self.log(
+            f"Completed {len(aggregated_results)} iteration(s) in {elapsed:.3f}s",
+            name="Complete",
+        )
         self.update_ctx({f"{self._id}_aggregated": aggregated_results, f"{self._id}_iterated": True})
         return aggregated_results
 

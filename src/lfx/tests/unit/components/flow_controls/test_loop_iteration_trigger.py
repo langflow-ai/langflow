@@ -226,3 +226,20 @@ async def test_ctx_isolation_across_runs():
         )
 
     assert counts == [3, 3], f"Each run should build ChatOutput 3 times, got {counts}"
+
+
+@pytest.mark.asyncio
+async def test_iterate_writes_summary_logs():
+    """_iterate produces a Start and a Complete log with row counts.
+
+    Logs are attributed to the first output that triggers `_iterate`
+    (here `item_output`), so the Logs tab on the Loop node shows the
+    run summary against the `item` output.
+    """
+    graph, loop, _ = _build_item_only_topology(row_count=3)
+    [r async for r in graph.async_start()]
+
+    item_logs = loop._output_logs.get("item", [])
+    messages = [(log.name, log.message) for log in item_logs]
+    assert ("Start", "Starting loop over 3 item(s)") in messages, messages
+    assert any(name == "Complete" and "Completed 3 iteration(s)" in msg for name, msg in messages), messages
