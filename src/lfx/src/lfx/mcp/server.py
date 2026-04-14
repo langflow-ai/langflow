@@ -1286,7 +1286,7 @@ async def unfreeze_component(flow_id: str, component_id: str) -> dict[str, str]:
     return result
 
 
-@mcp.tool()
+@mcp.tool(name="layout_flow")
 @_tracked
 async def layout_flow_tool(flow_id: str) -> dict[str, str]:
     """Re-layout a flow's components using the Sugiyama algorithm.
