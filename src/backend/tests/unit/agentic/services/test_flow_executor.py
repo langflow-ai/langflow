@@ -503,25 +503,29 @@ class TestExecuteFlowFileStreamingEvents:
             assert exc_info.value.status_code == 500
 
     @pytest.mark.asyncio
-    async def test_should_propagate_original_error_message_in_http_detail_on_execution_failure(self):
+    async def test_should_carry_original_error_internally_without_leaking_in_http_detail(self):
         """Bug: streaming execution wrapped any error as a generic 'An internal error occurred'.
 
-        That hides the root cause (e.g. pydantic InputSchema validation failures from a
+        That hid the root cause (e.g. pydantic InputSchema validation failures from a
         weak model emitting malformed tool calls) from the upstream friendly-error
-        mapper, so the user always sees the same generic message instead of an
-        actionable one. The HTTPException detail should include the original error
-        text so extract_friendly_error can pattern-match on it.
+        mapper, so the user always saw the same generic message instead of an
+        actionable one.
+
+        Fix: raise FlowExecutionError — a custom HTTPException that keeps the public
+        ``detail`` generic (no stack traces leak to HTTP clients) while exposing
+        ``original_error_message`` for internal callers (the assistant retry loop)
+        to feed into extract_friendly_error.
         """
+        from langflow.agentic.services.flow_types import FlowExecutionError
 
         async def mock_consume(*_args, **_kwargs):
             yield ("end", None)
 
+        raw_error_text = "1 validation error for InputSchema\ninput_value\n  Input should be a valid string"
         mock_result = MagicMock()
         mock_result.has_error = True
         mock_result.has_result = False
-        mock_result.error = RuntimeError(
-            "1 validation error for InputSchema\ninput_value\n  Input should be a valid string"
-        )
+        mock_result.error = RuntimeError(raw_error_text)
 
         with (
             patch(f"{MODULE}.resolve_flow_path", return_value=(Path("/fake/test.json"), "json")),
@@ -531,14 +535,21 @@ class TestExecuteFlowFileStreamingEvents:
             patch(f"{MODULE}._run_graph_with_events", new_callable=AsyncMock),
             patch(f"{MODULE}.FlowExecutionResult", return_value=mock_result),
         ):
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(FlowExecutionError) as exc_info:
                 async for _ in execute_flow_file_streaming("test.json"):
                     pass
 
+            # Public HTTP detail MUST be generic — no raw error text leaked
             assert exc_info.value.status_code == 500
             detail = str(exc_info.value.detail)
-            assert "InputSchema" in detail or "Input should be a valid string" in detail, (
-                f"Expected original error text in HTTPException detail, got: {detail!r}"
+            assert "InputSchema" not in detail, f"Raw error text leaked in public detail: {detail!r}"
+            assert "Input should be a valid string" not in detail, f"Raw error text leaked in public detail: {detail!r}"
+
+            # Internal original_error_message MUST carry the raw error so the
+            # friendly-error mapper in assistant_service can pattern-match on it
+            original = exc_info.value.original_error_message
+            assert "InputSchema" in original or "Input should be a valid string" in original, (
+                f"Expected original error text in FlowExecutionError.original_error_message, got: {original!r}"
             )
 
     @pytest.mark.asyncio
