@@ -309,11 +309,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         try:
             api_models = await asyncio.to_thread(fetch_models_adapter, client_manager)
-            for model in api_models:
-                model_name = model.get("model_name") if isinstance(model, dict) else getattr(model, "model_name", None)
-                if model_name and model_name in hardcoded_names:
-                    continue
-                raw_models.append(model)
+            raw_models.extend(m for m in api_models if m["model_name"] not in hardcoded_names)
             parsed_models: WatsonxDeploymentLlmListResultData = self._parse_provider_payload(
                 slot=self.payload_schemas.deployment_llm_list_result,
                 slot_name="deployment_llm_list_result",
