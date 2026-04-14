@@ -53,6 +53,7 @@ export type noteClassType = Pick<
     [key: string]: any;
   };
   outputs?: OutputFieldType[];
+  i18n_key?: string;
 };
 
 export type NoteDataType = {

@@ -189,6 +189,44 @@ async def read_flow(
     raise HTTPException(status_code=404, detail="Flow not found")
 
 
+@router.get("/{flow_id}/note_translations", dependencies=[Depends(get_current_active_user)], status_code=200)
+async def get_note_translations(
+    *,
+    session: DbSession,
+    flow_id: UUID,
+    request: Request,
+) -> dict[str, str]:
+    """Return translated note node descriptions for the current locale.
+
+    Returns a mapping of node_id → translated markdown text.  Only nodes
+    with a matching translation key are included; nodes without translations
+    are omitted so the caller can leave them unchanged.
+    """
+    from langflow.utils.i18n import _safe_flow_key, translate
+
+    flow = await session.get(Flow, flow_id)
+    if not flow or not flow.data:
+        return {}
+
+    locale = getattr(request.state, "locale", "en")
+    nodes = flow.data.get("nodes", [])
+    result: dict[str, str] = {}
+    note_index = 0
+    for node in nodes:
+        if node.get("type") == "noteNode":
+            node_id = node.get("id")
+            # Prefer stamped i18n_key, fall back to positional recompute
+            i18n_key = node.get("data", {}).get("node", {}).get("i18n_key")
+            if not i18n_key:
+                flow_key = _safe_flow_key(flow.name or "")
+                i18n_key = f"template_notes.{flow_key}.{note_index}"
+            translated = translate(i18n_key, locale, "")
+            if translated:
+                result[node_id] = translated
+            note_index += 1
+    return result
+
+
 @router.get("/public_flow/{flow_id}", response_model=FlowRead, status_code=200)
 async def read_public_flow(
     *,
@@ -489,10 +527,24 @@ async def read_basic_examples(
                     ) from e
 
     # Translate per-request — always called so name_key is set for all locales
-    from langflow.utils.i18n import translate_starter_flows
+    from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
 
     locale = getattr(request.state, "locale", "en")
-    return compress_response(translate_starter_flows(cached_flow_reads, locale))
+    translated = translate_starter_flows(cached_flow_reads, locale)
+
+    # Translate note node descriptions in each flow
+    result = []
+    for flow in translated:
+        flow_copy = flow.model_copy()
+        if flow_copy.data and isinstance(flow_copy.data, dict):
+            nodes = flow_copy.data.get("nodes", [])
+            translated_nodes = translate_flow_notes(nodes, flow_copy.name or "", locale)
+            flow_copy.data = {
+                **flow_copy.data,
+                "nodes": translated_nodes,
+            }
+        result.append(flow_copy)
+    return compress_response(result)
 
 
 @router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)

@@ -7,6 +7,10 @@ const detectedLang =
   navigator.language.split("-")[0] ||
   "en";
 
+// i18next hardcodes a Locize promotional message via console.info during init.
+// Suppress it by temporarily replacing console.info for the synchronous init call.
+const _consoleInfo = console.info.bind(console);
+console.info = () => {};
 i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },
@@ -17,6 +21,7 @@ i18n.use(initReactI18next).init({
     escapeValue: false,
   },
 });
+console.info = _consoleInfo;
 
 export async function loadLanguage(lang: string): Promise<void> {
   if (lang === "en") return;

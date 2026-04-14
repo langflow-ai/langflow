@@ -14,26 +14,18 @@ export const useGetBasicExamplesQuery: useQueryFunctionType<
   const setExamples = useFlowsManagerStore((state) => state.setExamples);
   const { i18n } = useTranslation();
 
-  const getBasicExamplesFn = async () => {
-    return await api.get<FlowType[]>(`${getURL("FLOWS")}/basic_examples/`);
-  };
-
   const responseFn = async () => {
-    const { data } = await getBasicExamplesFn();
+    const { data } = await api.get<FlowType[]>(
+      `${getURL("FLOWS")}/basic_examples/`,
+    );
     if (data) {
       setExamples(data);
     }
     return data;
   };
 
-  const queryResult = query(
-    ["useGetBasicExamplesQuery", i18n.language],
-    responseFn,
-    {
-      ...options,
-      retry: 3,
-    },
-  );
-
-  return queryResult;
+  return query(["useGetBasicExamplesQuery", i18n.language], responseFn, {
+    ...options,
+    retry: 3,
+  });
 };

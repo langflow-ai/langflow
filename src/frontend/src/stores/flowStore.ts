@@ -1304,9 +1304,16 @@ export function syncNodeTranslations(): void {
 
   const { data: typesData, types } = useTypesStore.getState();
 
+  let noteIndex = 0;
   const updatedNodes = nodes.map((node) => {
     const nodeType = node.data.type;
     const category = types[nodeType];
+
+    // Skip note nodes — translations are handled by useGetNoteTranslationsQuery
+    if (node.type === "noteNode") {
+      noteIndex += 1;
+      return node;
+    }
 
     // Skip custom/group nodes not in the types catalog
     if (!category || !typesData[category]?.[nodeType]) return node;
@@ -1346,6 +1353,28 @@ export function syncNodeTranslations(): void {
     };
   });
 
+  useFlowStore.setState({ nodes: updatedNodes });
+}
+
+/**
+ * Apply translated note node descriptions to the canvas.
+ * Called from NoteNode when note_translations endpoint data arrives.
+ * translations is a map of node_id → translated markdown text.
+ */
+export function syncNoteTranslations(translations: Record<string, string>): void {
+  const { nodes } = useFlowStore.getState();
+  const updatedNodes = nodes.map((node) => {
+    if (node.type !== "noteNode") return node;
+    const translated = translations[node.id];
+    if (!translated) return node;
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        node: { ...node.data.node!, description: translated },
+      },
+    };
+  });
   useFlowStore.setState({ nodes: updatedNodes });
 }
 
