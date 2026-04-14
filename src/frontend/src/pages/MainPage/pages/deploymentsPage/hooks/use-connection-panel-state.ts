@@ -180,25 +180,22 @@ export function useConnectionPanelState({
     [attachedConnectionByFlow, connections.length],
   );
 
-  const updateDetectedEnvVars = useCallback(
-    (vars: Array<{ key: string; global_variable_name?: string | null }>) => {
-      if (vars.length > 0) {
-        setDetectedVarCount(vars.length);
-        setEnvVars(
-          vars.map((v) => ({
-            id: crypto.randomUUID(),
-            key: v.key,
-            value: v.global_variable_name ?? "",
-            globalVar: Boolean(v.global_variable_name),
-          })),
-        );
-      } else {
-        setDetectedVarCount(0);
-        setEnvVars([{ id: crypto.randomUUID(), key: "", value: "" }]);
-      }
-    },
-    [],
-  );
+  const updateDetectedEnvVars = useCallback((names: string[]) => {
+    if (names.length > 0) {
+      setDetectedVarCount(names.length);
+      setEnvVars(
+        names.map((name) => ({
+          id: crypto.randomUUID(),
+          key: name,
+          value: name,
+          globalVar: true,
+        })),
+      );
+    } else {
+      setDetectedVarCount(0);
+      setEnvVars([{ id: crypto.randomUUID(), key: "", value: "" }]);
+    }
+  }, []);
 
   return {
     connectionTab,

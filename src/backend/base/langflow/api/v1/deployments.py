@@ -102,9 +102,11 @@ from langflow.services.database.models.deployment_provider_account.crud import (
     update_provider_account as update_provider_account_row,
 )
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+    AttachmentConflictError,
     get_attachment_by_provider_snapshot_id,
     list_deployment_attachments,
     list_deployment_attachments_for_flow_version_ids,
+    update_flow_version_by_provider_snapshot_id,
 )
 
 router = APIRouter(prefix="/deployments", tags=["Deployments"], include_in_schema=False)
@@ -524,7 +526,7 @@ async def create_deployment(
         )
 
         await session.commit()
-    except Exception:
+    except Exception as exc:
         # Compensate: delete the provider resource so it doesn't become orphaned.
         # Only the deployment resource itself is deleted (e.g. the WXO agent).
         # Secondary resources (snapshots/tools, configs) may remain orphaned --
@@ -550,6 +552,8 @@ async def create_deployment(
                 user_id=current_user.id,
                 db=session,
             )
+        if isinstance(exc, AttachmentConflictError):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
         raise
     return deployment_mapper.shape_deployment_create_result(
         provider_create_result, deployment_row, provider_key=provider_account.provider_key
@@ -996,17 +1000,40 @@ async def update_snapshot(
             flow_artifact=flow_artifact,
         )
 
-    # Provider mutation succeeded — update the local attachment record.
+    # Provider mutation succeeded — update all local attachment rows that share
+    # this provider snapshot id.
     # If the DB flush fails, attempt a best-effort compensating re-upload
     # of the previous flow version's artifact.
+    # Concurrency note: rollback uses a single previously-read flow_version_id.
+    # This assumes the snapshot->flow_version invariant held before this call.
+    # Because the invariant is enforced in app logic (not a DB constraint),
+    # concurrent writers can still race and violate that assumption.
     previous_flow_version_id = attachment.flow_version_id
-    attachment.flow_version_id = body.flow_version_id
-    session.add(attachment)
     try:
-        await session.flush()
-        await session.refresh(attachment)
+        updated_rows = await update_flow_version_by_provider_snapshot_id(
+            session,
+            user_id=current_user.id,
+            provider_snapshot_id=snapshot_id,
+            flow_version_id=body.flow_version_id,
+        )
+        if updated_rows == 0:
+            logger.warning(
+                "Snapshot '%s' update changed zero attachment rows after provider mutation "
+                "(user_id=%s, requested_flow_version_id=%s). Possible concurrent modification.",
+                snapshot_id,
+                current_user.id,
+                body.flow_version_id,
+            )
+        await session.commit()
     except Exception:
         await session.rollback()
+        logger.warning(
+            "DB update/commit failed after provider snapshot update for snapshot '%s' "
+            "(requested_flow_version_id=%s). Attempting compensating provider rollback.",
+            snapshot_id,
+            body.flow_version_id,
+            exc_info=True,
+        )
         try:
             prev_version = await get_flow_version_entry(
                 session,
@@ -1035,7 +1062,7 @@ async def update_snapshot(
             logger.warning(
                 "Best-effort rollback failed for snapshot '%s'. "
                 "Provider content reflects flow_version_id=%s but attachment "
-                "record points to flow_version_id=%s. Manual reconciliation may be needed.",
+                "records point to flow_version_id=%s. Manual reconciliation may be needed.",
                 snapshot_id,
                 body.flow_version_id,
                 previous_flow_version_id,
@@ -1243,7 +1270,7 @@ async def update_deployment(
             )
 
         await session.commit()
-    except Exception:
+    except Exception as exc:
         # Provider was already mutated by deployment_adapter.update above.
         # Roll back the session to discard any pending DB changes (or reset
         # it from the "inactive" state after a failed commit) so the mapper
@@ -1259,6 +1286,8 @@ async def update_deployment(
             user_id=current_user.id,
             db=session,
         )
+        if isinstance(exc, AttachmentConflictError):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
         raise
 
     return deployment_mapper.shape_deployment_update_result(
