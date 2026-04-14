@@ -21,6 +21,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
+    SnapshotUpdateRequest,
 )
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from lfx.services.adapters.deployment.exceptions import (
@@ -894,6 +895,151 @@ class TestConfigAndSnapshotListRoutes:
             page=1,
             size=10,
         )
+
+
+# ---------------------------------------------------------------------------
+# update_snapshot
+# ---------------------------------------------------------------------------
+
+
+class TestUpdateSnapshotRoute:
+    @pytest.mark.asyncio
+    @patch("langflow.services.database.models.flow_version.crud.get_flow_version_entry", new_callable=AsyncMock)
+    @patch("langflow.services.database.models.deployment.crud.get_deployment", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.update_flow_version_by_provider_snapshot_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_attachment_by_provider_snapshot_id", new_callable=AsyncMock)
+    async def test_updates_all_attachment_rows_for_snapshot(
+        self,
+        mock_get_attachment,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_update_rows,
+        mock_get_deployment_row,
+        mock_get_flow_version,
+    ):
+        from langflow.api.v1.deployments import update_snapshot
+
+        user = _fake_user()
+        flow_id = uuid4()
+        target_flow_version_id = uuid4()
+        attachment = SimpleNamespace(
+            flow_version_id=uuid4(),
+            deployment_id=uuid4(),
+            provider_snapshot_id="tool-1",
+        )
+        deployment = _fake_deployment_row(
+            id=attachment.deployment_id,
+            deployment_provider_account_id=uuid4(),
+        )
+        provider_account = _fake_provider_account()
+        provider_account.id = deployment.deployment_provider_account_id
+
+        mock_get_attachment.return_value = attachment
+        mock_get_deployment_row.return_value = deployment
+        mock_get_flow_version.return_value = SimpleNamespace(id=target_flow_version_id, flow_id=flow_id, data={})
+        mock_get_pa.return_value = provider_account
+        adapter = AsyncMock()
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        mapper.resolve_snapshot_update_artifact.return_value = {"artifact": "payload"}
+        mock_get_mapper.return_value = mapper
+        mock_update_rows.return_value = 2
+
+        session = AsyncMock()
+        session.get.return_value = SimpleNamespace(id=flow_id)
+
+        response = await update_snapshot(
+            provider_snapshot_id=" tool-1 ",
+            body=SnapshotUpdateRequest(flow_version_id=target_flow_version_id),
+            session=session,
+            current_user=user,
+        )
+
+        assert response.flow_version_id == target_flow_version_id
+        assert response.provider_snapshot_id == "tool-1"
+        mock_get_attachment.assert_awaited_once_with(
+            session,
+            user_id=user.id,
+            provider_snapshot_id="tool-1",
+        )
+        mock_update_rows.assert_awaited_once_with(
+            session,
+            user_id=user.id,
+            provider_snapshot_id="tool-1",
+            flow_version_id=target_flow_version_id,
+        )
+        session.commit.assert_awaited_once()
+        session.rollback.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @patch("langflow.services.database.models.flow_version.crud.get_flow_version_entry", new_callable=AsyncMock)
+    @patch("langflow.services.database.models.deployment.crud.get_deployment", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.update_flow_version_by_provider_snapshot_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_attachment_by_provider_snapshot_id", new_callable=AsyncMock)
+    async def test_commit_failure_attempts_provider_compensation(
+        self,
+        mock_get_attachment,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_update_rows,
+        mock_get_deployment_row,
+        mock_get_flow_version,
+    ):
+        from langflow.api.v1.deployments import update_snapshot
+
+        user = _fake_user()
+        flow_id = uuid4()
+        previous_flow_version_id = uuid4()
+        target_flow_version_id = uuid4()
+        attachment = SimpleNamespace(
+            flow_version_id=previous_flow_version_id,
+            deployment_id=uuid4(),
+            provider_snapshot_id="tool-1",
+        )
+        deployment = _fake_deployment_row(
+            id=attachment.deployment_id,
+            deployment_provider_account_id=uuid4(),
+        )
+        provider_account = _fake_provider_account()
+        provider_account.id = deployment.deployment_provider_account_id
+
+        target_version = SimpleNamespace(id=target_flow_version_id, flow_id=flow_id, data={"nodes": []})
+        previous_version = SimpleNamespace(id=previous_flow_version_id, flow_id=flow_id, data={"nodes": []})
+        mock_get_flow_version.side_effect = [target_version, previous_version]
+        mock_get_attachment.return_value = attachment
+        mock_get_deployment_row.return_value = deployment
+        mock_get_pa.return_value = provider_account
+        adapter = AsyncMock()
+        adapter.update_snapshot.return_value = None
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        mapper.resolve_snapshot_update_artifact.side_effect = [{"artifact": "new"}, {"artifact": "previous"}]
+        mock_get_mapper.return_value = mapper
+        mock_update_rows.return_value = 2
+
+        session = AsyncMock()
+        session.get.return_value = SimpleNamespace(id=flow_id)
+        session.commit.side_effect = RuntimeError("commit failed")
+
+        with pytest.raises(RuntimeError, match="commit failed"):
+            await update_snapshot(
+                provider_snapshot_id="tool-1",
+                body=SnapshotUpdateRequest(flow_version_id=target_flow_version_id),
+                session=session,
+                current_user=user,
+            )
+
+        session.commit.assert_awaited_once()
+        session.rollback.assert_awaited_once()
+        assert adapter.update_snapshot.await_count == 2
 
 
 # ---------------------------------------------------------------------------

@@ -265,18 +265,17 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         if resource == "connection":
             return (
                 f"A connection with app_id '{normalized_resource_name}' already exists in the provider. "
-                "Reference it as an existing connection instead of creating a new one."
+                "Please choose a different name."
                 if normalized_resource_name
                 else "A connection referenced in this request already exists in the provider. "
-                "Reference it as an existing connection instead of creating a new one."
+                "Please choose a different name."
             )
         if resource == "agent":
             return (
                 f"An agent with name '{normalized_resource_name}' already exists in the provider. "
-                "Please choose a different name or delete the existing agent first."
+                "Please choose a different name."
                 if normalized_resource_name
-                else "An agent with this name already exists in the provider. "
-                "Please choose a different name or delete the existing agent first."
+                else "An agent with this name already exists in the provider. Please choose a different name."
             )
 
         return super().format_conflict_detail(
