@@ -35,7 +35,12 @@ export function useGetDeploymentsByProviders(
     queries: providerIds.map((pid) => ({
       queryKey: [
         "useGetDeployments",
-        { provider_id: pid, project_id: projectId, page: 1, size: 20 },
+        {
+          provider_id: pid,
+          ...(projectId ? { project_id: projectId } : {}),
+          page: 1,
+          size: 20,
+        },
       ],
       queryFn: () => fetchDeployments(pid, projectId),
       enabled: !!pid,
