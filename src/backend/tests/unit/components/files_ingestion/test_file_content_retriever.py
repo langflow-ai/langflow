@@ -752,10 +752,10 @@ class TestFileContentRetrieverPersistence:
         assert result.text == "original"  # Should keep the persisted version
 
     def test_persistent_adds_new_files(self, component_class, tmp_path):
-        """Test that new files are merged into the persisted maps."""
+        """Test that new files are added when input includes both old and new files."""
         persist_dir = str(tmp_path / "persist")
 
-        # First run
+        # First run: one file
         c1 = component_class()
         c1.set_attributes(
             {
@@ -765,15 +765,17 @@ class TestFileContentRetrieverPersistence:
         )
         c1.retrieve_content(file_path="/a.txt")
 
-        # Second run: add a new file
+        # Second run: both old and new file in input
         c2 = component_class()
         c2.set_attributes(
             {
-                "file_data": [Data(text="file2", data={"file_path": "/b.txt"})],
+                "file_data": [
+                    Data(text="file1", data={"file_path": "/a.txt"}),
+                    Data(text="file2", data={"file_path": "/b.txt"}),
+                ],
                 "persistent_dir": persist_dir,
             }
         )
-        # Both files should be available
         assert c2.retrieve_content(file_path="/a.txt").text == "file1"
         c2._cached_text_map = None
         c2._cached_dataframe_map = None
@@ -796,6 +798,76 @@ class TestFileContentRetrieverPersistence:
         )
         # Should still work, falling back to building from input
         result = c.retrieve_content(file_path="/ok.txt")
+        assert result.text == "content"
+
+    def test_persistent_auto_sync_removes_stale_entries(self, component_class, tmp_path):
+        """Test that files removed from file_data are removed from persisted maps."""
+        persist_dir = str(tmp_path / "persist")
+
+        # First run: persist two files
+        c1 = component_class()
+        c1.set_attributes(
+            {
+                "file_data": [
+                    Data(text="file_a", data={"file_path": "/a.txt"}),
+                    Data(text="file_b", data={"file_path": "/b.txt"}),
+                ],
+                "persistent_dir": persist_dir,
+            }
+        )
+        c1.retrieve_content(file_path="/a.txt")
+
+        # Second run: only provide /a.txt (removed /b.txt)
+        c2 = component_class()
+        c2.set_attributes(
+            {
+                "file_data": [Data(text="file_a", data={"file_path": "/a.txt"})],
+                "persistent_dir": persist_dir,
+            }
+        )
+        assert c2.retrieve_content(file_path="/a.txt").text == "file_a"
+
+        # /b.txt should be gone
+        c2._cached_text_map = None
+        c2._cached_dataframe_map = None
+        with pytest.raises(ValueError, match="not found"):
+            c2.retrieve_content(file_path="/b.txt")
+
+        # Third run: verify /b.txt is also gone from disk
+        c3 = component_class()
+        c3.set_attributes(
+            {
+                "file_data": [Data(text="file_a", data={"file_path": "/a.txt"})],
+                "persistent_dir": persist_dir,
+            }
+        )
+        with pytest.raises(ValueError, match="not found"):
+            c3.retrieve_content(file_path="/b.txt")
+
+    def test_persistent_auto_sync_does_not_wipe_on_empty_input(self, component_class, tmp_path):
+        """Test that auto-sync does not remove entries when file_data is empty (tool call scenario)."""
+        persist_dir = str(tmp_path / "persist")
+
+        # First run: persist a file
+        c1 = component_class()
+        c1.set_attributes(
+            {
+                "file_data": [Data(text="content", data={"file_path": "/keep.txt"})],
+                "persistent_dir": persist_dir,
+            }
+        )
+        c1.retrieve_content(file_path="/keep.txt")
+
+        # Second run: empty file_data (simulates tool call via deepcopy)
+        c2 = component_class()
+        c2.set_attributes(
+            {
+                "file_data": [],
+                "persistent_dir": persist_dir,
+            }
+        )
+        # Should still find the file from disk, not wiped
+        result = c2.retrieve_content(file_path="/keep.txt")
         assert result.text == "content"
 
     def test_no_persistent_dir_works_as_before(self, component_class):

@@ -184,6 +184,16 @@ class FileContentRetrieverComponent(Component):
         # Atomic write for dataframe_index.json
         self._atomic_json_write(base / "dataframe_index.json", df_index, base)
 
+        # Clean up orphaned files on disk
+        valid_txt_files = set(text_index.values())
+        for f in text_dir.iterdir():
+            if f.name not in valid_txt_files:
+                f.unlink(missing_ok=True)
+        valid_pq_files = set(df_index.values())
+        for f in df_dir.iterdir():
+            if f.name not in valid_pq_files:
+                f.unlink(missing_ok=True)
+
         logger.debug(f"FileContentRetriever: Saved {len(text_map)} text + {len(dataframe_map)} dataframes to '{base}'")
 
     @staticmethod
@@ -252,6 +262,28 @@ class FileContentRetrieverComponent(Component):
 
         return text_map, dataframe_map
 
+    def _collect_input_paths(self) -> set[str]:
+        """Collect all file paths present in the current file_data input."""
+        paths: set[str] = set()
+        if not self.file_data:
+            return paths
+        for item in self.file_data:
+            if isinstance(item, DataFrame):
+                fp = item.attrs.get("source_file_path", "")
+                if fp:
+                    paths.add(fp)
+                elif not item.empty and "file_path" in item.columns:
+                    paths.update(str(p) for p in item["file_path"].dropna() if p)
+            elif isinstance(item, Message):
+                fp = getattr(item, "file_path", "") or ""
+                if fp:
+                    paths.add(fp)
+            elif isinstance(item, Data):
+                fp = item.data.get("file_path", "")
+                if fp:
+                    paths.add(fp)
+        return paths
+
     @staticmethod
     def _parse_text_to_dataframes(text_map: dict[str, str], dataframe_map: dict[str, DataFrame]) -> None:
         """Eagerly parse CSV/TSV/JSON text entries into DataFrames."""
@@ -310,8 +342,22 @@ class FileContentRetrieverComponent(Component):
         # Eager CSV/TSV/JSON parsing
         self._parse_text_to_dataframes(text_map, dataframe_map)
 
-        # Persist updated maps if directory is configured and there were new entries
-        if has_persistent and (new_text or new_df):
+        # Auto-sync: remove persisted entries no longer in file_data input
+        # Only sync when file_data is non-empty (tool calls have empty file_data)
+        maps_changed = bool(new_text or new_df)
+        if has_persistent and self.file_data:
+            input_paths = self._collect_input_paths()
+            if input_paths:
+                stale = {*text_map, *dataframe_map} - input_paths
+                if stale:
+                    for path in stale:
+                        text_map.pop(path, None)
+                        dataframe_map.pop(path, None)
+                    logger.info(f"FileContentRetriever: Removed {len(stale)} stale entries: {sorted(stale)}")
+                    maps_changed = True
+
+        # Persist updated maps if directory is configured and maps changed
+        if has_persistent and maps_changed:
             self._save_persistent_maps(text_map, dataframe_map)
 
         self._cached_text_map = text_map
