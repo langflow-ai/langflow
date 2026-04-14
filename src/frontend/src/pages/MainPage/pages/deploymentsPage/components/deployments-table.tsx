@@ -44,7 +44,7 @@ const COLUMNS = [
 
 const TYPE_CONFIG: Record<DeploymentType, { icon: string; className: string }> =
   {
-    agent: { icon: "Bot", className: "text-error" },
+    agent: { icon: "Bot", className: "text-accent-pink-foreground" },
     mcp: { icon: "Plug", className: "text-accent-emerald" },
   };
 
