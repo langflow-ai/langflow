@@ -221,13 +221,11 @@ def test_watsonx_mapper_formats_conflict_detail_fallback_without_structured_enti
         ("tool", "A tool with this name already exists in the provider. Please choose a different name."),
         (
             "connection",
-            "A connection referenced in this request already exists in the provider. "
-            "Reference it as an existing connection instead of creating a new one.",
+            "A connection referenced in this request already exists in the provider. Please choose a different name.",
         ),
         (
             "agent",
-            "An agent with this name already exists in the provider. "
-            "Please choose a different name or delete the existing agent first.",
+            "An agent with this name already exists in the provider. Please choose a different name.",
         ),
     ],
 )
@@ -247,14 +245,12 @@ def test_watsonx_mapper_formats_conflict_detail_from_structured_resource(resourc
         (
             "connection",
             "cfg",
-            "A connection with app_id 'cfg' already exists in the provider. "
-            "Reference it as an existing connection instead of creating a new one.",
+            "A connection with app_id 'cfg' already exists in the provider. Please choose a different name.",
         ),
         (
             "agent",
             "My_Agent",
-            "An agent with name 'My_Agent' already exists in the provider. "
-            "Please choose a different name or delete the existing agent first.",
+            "An agent with name 'My_Agent' already exists in the provider. Please choose a different name.",
         ),
     ],
 )

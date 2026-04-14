@@ -6,7 +6,7 @@ import sqlalchemy as sa
 from lfx.log.logger import logger
 from sqlalchemy import and_, column, literal, union_all, values
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import col, delete, func, select
+from sqlmodel import col, delete, func, select, update
 
 from langflow.services.database.models.deployment.orm_guards import ensure_attachment_project_match
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
@@ -28,6 +28,64 @@ if TYPE_CHECKING:
 _SNAPSHOT_ID_ERROR = "provider_snapshot_id must not be empty"
 
 
+class AttachmentConflictError(ValueError):
+    """Base exception for flow-version attachment conflicts."""
+
+
+class SnapshotFlowVersionConflictError(AttachmentConflictError):
+    """Raised when one provider snapshot is linked to multiple flow versions."""
+
+
+class DeploymentAttachmentConflictError(AttachmentConflictError):
+    """Raised when a deployment attachment violates DB uniqueness constraints."""
+
+
+async def _check_snapshot_flow_version_conflict(
+    db: AsyncSession,
+    *,
+    provider_snapshot_id: str | None,
+    flow_version_id: UUID,
+) -> None:
+    """Ensure a provider_snapshot_id is only ever linked to one flow version.
+
+    A tool can appear in multiple deployments, but every row with the same
+    provider_snapshot_id must point to the same flow_version_id.  For example:
+
+        (FV=1, tool=A, deploy=X)  ✓  — first use of tool A
+        (FV=1, tool=A, deploy=Y)  ✓  — same FV, different deployment, OK
+        (FV=2, tool=A, deploy=Z)  ✗  — different FV for tool A, rejected
+
+    This cannot be expressed as a DB unique constraint, so we enforce it here.
+
+    Concurrency note: this is a read-before-write guard with no DB-level lock
+    or uniqueness guarantee on provider_snapshot_id. Concurrent transactions
+    can still both pass this check before either commit.
+    """
+    if not provider_snapshot_id:
+        return
+    stmt = (
+        select(FlowVersionDeploymentAttachment.flow_version_id)
+        .where(
+            FlowVersionDeploymentAttachment.provider_snapshot_id == provider_snapshot_id,
+            FlowVersionDeploymentAttachment.flow_version_id != flow_version_id,
+        )
+        .limit(1)
+    )
+    conflict = (await db.exec(stmt)).first()
+    if conflict is not None:
+        logger.info(
+            "Snapshot flow-version conflict detected for provider_snapshot_id=%s (requested=%s existing=%s).",
+            provider_snapshot_id,
+            flow_version_id,
+            conflict,
+        )
+        msg = (
+            f"Tool '{provider_snapshot_id}' is already attached to a different flow version. "
+            f"Each tool can only be linked to one flow version."
+        )
+        raise SnapshotFlowVersionConflictError(msg)
+
+
 async def create_deployment_attachment(
     db: AsyncSession,
     *,
@@ -41,7 +99,11 @@ async def create_deployment_attachment(
         flow_version_id=flow_version_id,
         deployment_id=deployment_id,
     )
-
+    await _check_snapshot_flow_version_conflict(
+        db,
+        provider_snapshot_id=provider_snapshot_id,
+        flow_version_id=flow_version_id,
+    )
     row = FlowVersionDeploymentAttachment(
         user_id=user_id,
         flow_version_id=flow_version_id,
@@ -62,7 +124,7 @@ async def create_deployment_attachment(
         msg = (
             f"Attachment conflicts with an existing record (flow_version={flow_version_id}, deployment={deployment_id})"
         )
-        raise ValueError(msg) from exc
+        raise DeploymentAttachmentConflictError(msg) from exc
     await db.refresh(row)
     return row
 
@@ -180,7 +242,13 @@ async def update_deployment_attachment_provider_snapshot_id(
     attachment: FlowVersionDeploymentAttachment,
     provider_snapshot_id: str,
 ) -> FlowVersionDeploymentAttachment:
-    attachment.provider_snapshot_id = require_non_empty(provider_snapshot_id, _SNAPSHOT_ID_ERROR)
+    provider_snapshot_id = require_non_empty(provider_snapshot_id, _SNAPSHOT_ID_ERROR)
+    await _check_snapshot_flow_version_conflict(
+        db,
+        provider_snapshot_id=provider_snapshot_id,
+        flow_version_id=attachment.flow_version_id,
+    )
+    attachment.provider_snapshot_id = provider_snapshot_id
     db.add(attachment)
     await db.flush()
     await db.refresh(attachment)
@@ -412,6 +480,33 @@ async def get_attachment_by_provider_snapshot_id(
         FlowVersionDeploymentAttachment.provider_snapshot_id == provider_snapshot_id,
     )
     return (await db.exec(stmt)).first()
+
+
+async def update_flow_version_by_provider_snapshot_id(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    provider_snapshot_id: str,
+    flow_version_id: UUID,
+) -> int:
+    """Update all attachment rows that share a provider_snapshot_id.
+
+    A single provider snapshot can be attached to multiple deployments, so
+    route handlers must update every matching row together.
+
+    Concurrency note: this is a set-based UPDATE without an explicit lock/read
+    phase. If concurrent writers touch the same snapshot id, last commit wins.
+    """
+    stmt = (
+        update(FlowVersionDeploymentAttachment)
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.provider_snapshot_id == provider_snapshot_id,
+        )
+        .values(flow_version_id=flow_version_id)
+    )
+    result = await db.exec(stmt)
+    return int(result.rowcount or 0)
 
 
 async def count_attachments_by_deployment_ids(
