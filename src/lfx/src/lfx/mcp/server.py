@@ -191,6 +191,26 @@ async def _patch_flow(flow_id: str, flow: dict) -> dict:
     return await _get_client().patch(f"/flows/{flow_id}", json_data={"data": flow["data"]})
 
 
+def _extract_vertex_error(build_data: dict[str, Any]) -> str:
+    """Best-effort error message from a failed end_vertex event payload.
+
+    On failure, the build pipeline puts the exception in `params` and stuffs
+    a structured error into the first output's `message`. Prefer the structured
+    message; fall back to params; fall back to a generic string.
+    """
+    outputs = (build_data.get("data") or {}).get("outputs") or {}
+    for output in outputs.values():
+        if not isinstance(output, dict):
+            continue
+        message = output.get("message")
+        if isinstance(message, dict) and message.get("errorMessage"):
+            return str(message["errorMessage"])
+    params = build_data.get("params")
+    if params:
+        return str(params)
+    return "Unknown error"
+
+
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
@@ -1066,55 +1086,69 @@ async def get_component_output(
 async def validate_flow(flow_id: str) -> dict[str, Any]:
     """Validate a flow and return structured per-component results.
 
-    Unlike build_flow (which returns a job_id), this waits for the build
-    to complete and returns a clear pass/fail with specific errors.
-    Use this before run_flow to catch issues early.
+    Streams the build inline (`event_delivery=direct`) and aggregates per-vertex
+    results from `end_vertex` events. Fast-fails on the first failing component
+    or top-level build error -- downstream vertices depend on upstream success
+    and would not produce useful additional information.
 
     Args:
         flow_id: The flow UUID.
     """
-    import asyncio
-
-    # Get expected component count
     flow = await _get_flow(flow_id)
     expected = len(flow.get("data", {}).get("nodes", []))
     if expected == 0:
         return {"valid": True, "component_count": 0, "errors": [], "warnings": []}
 
-    # Trigger a build
-    build_result = await _get_client().post(f"/build/{flow_id}/flow")
-    job_id = build_result.get("job_id", "")
-    if not job_id:
-        return {"valid": False, "error": "Build did not return a job_id"}
+    completed: set[str] = set()
+    errors: list[dict[str, str]] = []
 
-    # Poll until build completes or timeout
-    builds: dict[str, Any] = {}
-    for _ in range(30):
-        await asyncio.sleep(1.0)
-        data = await _get_client().get(f"/monitor/builds?flow_id={flow_id}")
-        builds = data.get("vertex_builds", {})
-        if len(builds) >= expected:
-            break
-    else:
+    try:
+        async for event in _get_client().stream_post(f"/build/{flow_id}/flow?event_delivery=direct"):
+            event_type = event.get("event", "")
+            data = event.get("data") or {}
+
+            if event_type == "end_vertex":
+                build_data = data.get("build_data") or {}
+                vertex_id = build_data.get("id") or ""
+                if vertex_id:
+                    completed.add(vertex_id)
+                if not build_data.get("valid", False):
+                    errors.append(
+                        {
+                            "component_id": vertex_id or "unknown",
+                            "error": _extract_vertex_error(build_data),
+                        }
+                    )
+                    # Fast-fail: downstream vertices won't run, no point waiting.
+                    return {
+                        "valid": False,
+                        "component_count": len(completed),
+                        "errors": errors,
+                    }
+
+            elif event_type == "error":
+                # Top-level build failure (e.g. graph could not be constructed).
+                message = data.get("exception") or data.get("reason") or data.get("error") or "Build error"
+                return {
+                    "valid": False,
+                    "component_count": len(completed),
+                    "errors": [{"component_id": "flow", "error": str(message)}],
+                }
+
+            elif event_type == "end":
+                break
+    except RuntimeError as exc:
         return {
             "valid": False,
-            "error": f"Build timed out: {len(builds)}/{expected} components completed",
+            "error": f"Build request failed: {exc}",
+            "component_count": len(completed),
+            "errors": errors,
         }
 
-    errors = []
-    for comp_id, build_list in builds.items():
-        if not build_list:
-            continue
-        latest = build_list[-1]
-        if not latest.get("valid", False):
-            artifacts = latest.get("artifacts", {})
-            error_msg = artifacts.get("error", str(artifacts)) if isinstance(artifacts, dict) else str(artifacts)
-            errors.append({"component_id": comp_id, "error": error_msg or "Unknown error"})
-
     return {
-        "valid": len(errors) == 0,
-        "component_count": len(builds),
-        "errors": errors,
+        "valid": True,
+        "component_count": len(completed),
+        "errors": [],
     }
 
 
