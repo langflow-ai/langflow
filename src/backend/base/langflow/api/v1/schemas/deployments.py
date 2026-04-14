@@ -9,7 +9,7 @@ Two identifier domains coexist in these schemas:
   ``provider_id`` maps to ``deployment_provider_account.id``.
 
 * **Provider-owned (str)** -- ``reference_id``, ``config_id``,
-  ``execution_id``.
+  ``run_id``.
   Opaque values assigned or consumed by the external deployment provider.
   ``provider_key`` is Langflow-owned adapter vocabulary.
   Provider-specific metadata (for example URL and tenant/account identifiers)
@@ -434,7 +434,7 @@ class RunCreateRequest(BaseModel):
 
     provider_data: dict[str, Any] | None = Field(
         default=None,
-        description="Provider-owned opaque execution input payload.",
+        description="Provider-owned opaque run input payload.",
     )
 
 
@@ -444,7 +444,7 @@ class _RunResponseBase(BaseModel):
     Only Langflow-owned identifiers live at the top level.  All
     provider-owned data (including the provider's ``id``)
     is returned inside ``provider_data`` so that ownership boundaries
-    stay clear and a future Langflow-managed execution id won't
+    stay clear and a future Langflow-managed run id won't
     collide with provider terminology.
     """
 
