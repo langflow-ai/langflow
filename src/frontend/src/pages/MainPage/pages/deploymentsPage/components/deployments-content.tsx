@@ -20,6 +20,7 @@ interface DeploymentsContentProps {
   providerMap: Record<string, string>;
   stepperOpen: boolean;
   setStepperOpen: (open: boolean) => void;
+  hasDeploymentsElsewhere?: boolean;
 }
 
 export default function DeploymentsContent({
@@ -29,6 +30,7 @@ export default function DeploymentsContent({
   providerMap,
   stepperOpen,
   setStepperOpen,
+  hasDeploymentsElsewhere = false,
 }: DeploymentsContentProps) {
   const testModal = useTestDeploymentModal();
 
@@ -50,7 +52,14 @@ export default function DeploymentsContent({
   const content = (() => {
     if (isLoading) return <DeploymentsLoadingSkeleton />;
     if (deployments.length === 0)
-      return <DeploymentsEmptyState onAction={() => setStepperOpen(true)} />;
+      return hasDeploymentsElsewhere ? (
+        <DeploymentsEmptyState
+          onAction={() => setStepperOpen(true)}
+          message="No deployments in this environment."
+        />
+      ) : (
+        <DeploymentsEmptyState onAction={() => setStepperOpen(true)} />
+      );
     return (
       <DeploymentsTable
         deployments={deployments}
