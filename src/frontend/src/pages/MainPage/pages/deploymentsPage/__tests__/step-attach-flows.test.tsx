@@ -150,19 +150,41 @@ jest.mock(
       placeholder,
       value,
       onChange,
+      options,
+      selectedOption,
+      setSelectedOption,
     }: {
       id: string;
       placeholder: string;
       value: string;
       onChange: (v: string) => void;
+      options?: string[];
+      selectedOption?: string;
+      setSelectedOption?: (v: string) => void;
     }) {
       return (
-        <input
-          data-testid={`input-${id}`}
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
+        <div data-testid={`input-component-${id}`}>
+          <input
+            data-testid={`input-${id}`}
+            placeholder={placeholder}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+          />
+          {options && options.length > 0 && (
+            <select
+              data-testid={`select-${id}`}
+              value={selectedOption ?? ""}
+              onChange={(e) => setSelectedOption?.(e.target.value)}
+            >
+              <option value="">Select...</option>
+              {options.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       );
     },
 );
@@ -430,5 +452,92 @@ describe("Edit mode features", () => {
     const flowItems = screen.getAllByTestId(/^flow-item-/);
     // flow-1 is attached, so it should appear first
     expect(flowItems[0]).toHaveAttribute("data-testid", "flow-item-flow-1");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Detected env vars auto-population
+// ---------------------------------------------------------------------------
+
+describe("Detected env vars auto-population", () => {
+  it("populates env var rows with keys and global variable selections from detection", async () => {
+    const user = userEvent.setup();
+    mockDetectEnvVars.mockResolvedValueOnce({
+      variables: ["OPENAI_API_KEY", "DB_PASS"],
+    });
+    render(<StepAttachFlows />);
+
+    await user.click(screen.getByTestId("version-item-ver-1"));
+
+    await waitFor(() => {
+      const keyInputs = screen.getAllByPlaceholderText("Key");
+      expect(keyInputs).toHaveLength(2);
+      expect(keyInputs[0]).toHaveValue("OPENAI_API_KEY");
+      expect(keyInputs[1]).toHaveValue("DB_PASS");
+    });
+
+    const selects = screen.getAllByTestId(/^select-env-val-/);
+    expect(selects).toHaveLength(2);
+  });
+
+  it("renders empty row when detection returns no variables", async () => {
+    const user = userEvent.setup();
+    mockDetectEnvVars.mockResolvedValueOnce({ variables: [] });
+    render(<StepAttachFlows />);
+
+    await user.click(screen.getByTestId("version-item-ver-1"));
+
+    await waitFor(() => {
+      const keyInputs = screen.getAllByPlaceholderText("Key");
+      expect(keyInputs).toHaveLength(1);
+      expect(keyInputs[0]).toHaveValue("");
+    });
+  });
+
+  it("renders empty row when detection fails", async () => {
+    const user = userEvent.setup();
+    mockDetectEnvVars.mockRejectedValueOnce(new Error("network error"));
+    render(<StepAttachFlows />);
+
+    await user.click(screen.getByTestId("version-item-ver-1"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Select or Create New Connection"),
+      ).toBeInTheDocument();
+    });
+
+    const keyInputs = screen.getAllByPlaceholderText("Key");
+    expect(keyInputs).toHaveLength(1);
+    expect(keyInputs[0]).toHaveValue("");
+  });
+
+  it("auto-detects env vars for pre-selected flow version on mount", async () => {
+    const user = userEvent.setup();
+    mockInitialFlowId = "flow-1";
+    mockSelectedVersionByFlow = new Map([
+      ["flow-1", { versionId: "ver-1", versionTag: "v1" }],
+    ]);
+    mockDetectEnvVars.mockResolvedValueOnce({
+      variables: ["GLOBAL_SECRET"],
+    });
+
+    render(<StepAttachFlows />);
+
+    await waitFor(() => {
+      expect(mockDetectEnvVars).toHaveBeenCalledWith({
+        flow_version_ids: ["ver-1"],
+      });
+    });
+
+    // The pre-selected useEffect switches to the connection panel but defaults
+    // to the "available" tab. Switch to "Create Connection" to see env var rows.
+    await user.click(screen.getByText("Create Connection"));
+
+    await waitFor(() => {
+      const keyInputs = screen.getAllByPlaceholderText("Key");
+      expect(keyInputs).toHaveLength(1);
+      expect(keyInputs[0]).toHaveValue("GLOBAL_SECRET");
+    });
   });
 });
