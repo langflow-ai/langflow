@@ -18,6 +18,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
+    SnapshotListParams,
     SnapshotListResult,
     VerifyCredentials,
 )
@@ -265,18 +266,17 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         if resource == "connection":
             return (
                 f"A connection with app_id '{normalized_resource_name}' already exists in the provider. "
-                "Reference it as an existing connection instead of creating a new one."
+                "Please choose a different name."
                 if normalized_resource_name
                 else "A connection referenced in this request already exists in the provider. "
-                "Reference it as an existing connection instead of creating a new one."
+                "Please choose a different name."
             )
         if resource == "agent":
             return (
                 f"An agent with name '{normalized_resource_name}' already exists in the provider. "
-                "Please choose a different name or delete the existing agent first."
+                "Please choose a different name."
                 if normalized_resource_name
-                else "An agent with this name already exists in the provider. "
-                "Please choose a different name or delete the existing agent first."
+                else "An agent with this name already exists in the provider. Please choose a different name."
             )
 
         return super().format_conflict_detail(
@@ -312,6 +312,22 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             raw=provider_data,
         )
         return parsed.model_dump()
+
+    async def resolve_snapshot_list_adapter_params(
+        self,
+        *,
+        deployment_resource_key: str | None,
+        snapshot_names: list[str] | None = None,
+        provider_params: dict[str, Any] | None,
+        db: AsyncSession,
+    ) -> SnapshotListParams:
+        normalized = [name for n in snapshot_names if (name := normalize_wxo_name(n))] if snapshot_names else None
+        return await super().resolve_snapshot_list_adapter_params(
+            deployment_resource_key=deployment_resource_key,
+            snapshot_names=normalized,
+            provider_params=provider_params,
+            db=db,
+        )
 
     def resolve_provider_account_create(
         self,
