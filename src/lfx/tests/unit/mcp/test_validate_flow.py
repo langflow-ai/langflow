@@ -1,14 +1,14 @@
 """Tests for lfx.mcp.server.validate_flow.
 
-The tool triggers a build and polls /monitor/builds until all components
-report back. These tests verify the fast-fail and partial-error-reporting
-behaviour so a missing required config doesn't leave callers waiting
-the full poll window with no actionable information.
+The tool streams the build inline (event_delivery=direct) and aggregates
+per-vertex results from `end_vertex` events. These tests verify the
+fast-fail and partial-error-reporting behaviour so a missing required
+config doesn't leave callers waiting with no actionable information.
 """
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 def _flow_with_nodes(count: int) -> dict:
@@ -22,16 +22,40 @@ def _flow_with_nodes(count: int) -> dict:
     }
 
 
-def _build(comp_id: str, *, valid: bool, error: str | None = None) -> dict:
-    artifacts = {"error": error} if error is not None else {}
+def _end_vertex_event(vertex_id: str, *, valid: bool, error_message: str | None = None) -> dict:
+    outputs: dict = {}
+    if not valid and error_message is not None:
+        outputs = {"output": {"message": {"errorMessage": error_message, "stackTrace": ""}, "type": "error"}}
     return {
-        "id": f"build-{comp_id}",
-        "valid": valid,
-        "artifacts": artifacts,
+        "event": "end_vertex",
+        "data": {
+            "build_data": {
+                "id": vertex_id,
+                "valid": valid,
+                "params": error_message if not valid else "",
+                "data": {"outputs": outputs},
+            },
+        },
     }
 
 
-def _patch_validate(*, flow: dict, client: AsyncMock):
+def _end_event() -> dict:
+    return {"event": "end", "data": {"build_duration": 0.1}}
+
+
+def _stream_client(events: list[dict]) -> MagicMock:
+    """Build a client mock whose stream_post yields the given events."""
+
+    async def _stream(*_args, **_kwargs):
+        for event in events:
+            yield event
+
+    client = MagicMock()
+    client.stream_post = _stream
+    return client
+
+
+def _patch_validate(*, flow: dict, client: MagicMock):
     """Patch the dependencies validate_flow reaches out to."""
     from contextlib import contextmanager
 
@@ -40,7 +64,6 @@ def _patch_validate(*, flow: dict, client: AsyncMock):
         with (
             patch("lfx.mcp.server._get_client", return_value=client),
             patch("lfx.mcp.server._get_flow", new_callable=AsyncMock, return_value=flow),
-            patch("asyncio.sleep", new_callable=AsyncMock),
         ):
             yield
 
@@ -52,7 +75,7 @@ class TestValidateFlow:
         from lfx.mcp.server import validate_flow
 
         flow = _flow_with_nodes(0)
-        client = AsyncMock()
+        client = _stream_client([])
 
         with _patch_validate(flow=flow, client=client):
             result = await validate_flow("flow-1")
@@ -63,16 +86,12 @@ class TestValidateFlow:
         from lfx.mcp.server import validate_flow
 
         flow = _flow_with_nodes(2)
-        client = AsyncMock()
-        client.post = AsyncMock(return_value={"job_id": "job-1"})
-        client.get = AsyncMock(
-            return_value={
-                "vertex_builds": {
-                    "A-1": [_build("A-1", valid=True)],
-                    "B-1": [_build("B-1", valid=True)],
-                },
-            },
-        )
+        events = [
+            _end_vertex_event("A-1", valid=True),
+            _end_vertex_event("B-1", valid=True),
+            _end_event(),
+        ]
+        client = _stream_client(events)
 
         with _patch_validate(flow=flow, client=client):
             result = await validate_flow("flow-1")
@@ -84,69 +103,62 @@ class TestValidateFlow:
     async def test_fails_fast_when_a_component_build_fails(self) -> None:
         """Return immediately when any component reports valid: false.
 
-        Downstream components depend on it and will not run, so polling
-        to the timeout yields no new information.
+        Downstream components depend on it and will not run, so consuming
+        the remainder of the stream yields no new information.
         """
         from lfx.mcp.server import validate_flow
 
         flow = _flow_with_nodes(3)
-        client = AsyncMock()
-        client.post = AsyncMock(return_value={"job_id": "job-1"})
-        # Monitor reports 1 of 3 builds complete, and that one failed.
-        # The other two components will never run because their upstream failed.
-        client.get = AsyncMock(
-            return_value={
-                "vertex_builds": {
-                    "A-1": [_build("A-1", valid=False, error="Missing required field: api_key")],
-                },
-            },
-        )
+        # A fails; B and C would never fire end_vertex in reality. We include
+        # trailing events to verify the iterator stops early.
+        trailing_marker = MagicMock()
+        events = [
+            _end_vertex_event("A-1", valid=False, error_message="Missing required field: api_key"),
+            trailing_marker,
+        ]
+        client = _stream_client(events)
 
         with _patch_validate(flow=flow, client=client):
             result = await validate_flow("flow-1")
 
         assert result["valid"] is False
         assert result["errors"] == [{"component_id": "A-1", "error": "Missing required field: api_key"}]
-        # Only one GET to /monitor/builds should be needed, not the full 30 polls.
-        assert client.get.await_count == 1
+        assert result["component_count"] == 1
 
-    async def test_timeout_includes_errors_from_completed_builds(self) -> None:
-        """Surface progress in the timeout response.
-
-        If the build never finishes but some components already completed,
-        the timeout response should still report component_count so the
-        caller can see how far the build got.
-        """
+    async def test_top_level_error_event_returns_failure(self) -> None:
+        """If the build itself fails before any vertex runs, return that error."""
         from lfx.mcp.server import validate_flow
 
-        flow = _flow_with_nodes(5)
-        client = AsyncMock()
-        client.post = AsyncMock(return_value={"job_id": "job-1"})
-        # Only 2 of 5 components complete and all are valid; rest hang.
-        client.get = AsyncMock(
-            return_value={
-                "vertex_builds": {
-                    "A-1": [_build("A-1", valid=True)],
-                    "B-1": [_build("B-1", valid=True)],
-                },
-            },
-        )
+        flow = _flow_with_nodes(2)
+        events = [
+            {"event": "error", "data": {"exception": "Graph has a cycle"}},
+        ]
+        client = _stream_client(events)
 
         with _patch_validate(flow=flow, client=client):
             result = await validate_flow("flow-1")
 
         assert result["valid"] is False
-        assert "timed out" in result["error"]
-        assert result["component_count"] == 2
+        assert result["errors"] == [{"component_id": "flow", "error": "Graph has a cycle"}]
+        assert result["component_count"] == 0
 
-    async def test_missing_job_id_short_circuits(self) -> None:
+    async def test_build_request_failure_is_surfaced(self) -> None:
+        """Network / HTTP failure during the streaming build is reported."""
         from lfx.mcp.server import validate_flow
 
         flow = _flow_with_nodes(1)
-        client = AsyncMock()
-        client.post = AsyncMock(return_value={})
+
+        async def _stream(*_args, **_kwargs):
+            msg = "POST /build/flow-1/flow failed (500)"
+            raise RuntimeError(msg)
+            yield  # pragma: no cover - unreachable, makes this an async generator
+
+        client = MagicMock()
+        client.stream_post = _stream
 
         with _patch_validate(flow=flow, client=client):
             result = await validate_flow("flow-1")
 
-        assert result == {"valid": False, "error": "Build did not return a job_id"}
+        assert result["valid"] is False
+        assert "Build request failed" in result["error"]
+        assert result["component_count"] == 0
