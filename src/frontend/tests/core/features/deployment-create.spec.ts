@@ -8,18 +8,33 @@ import {
   FLOWS_MOCK,
   LLMS_MOCK,
   PROVIDERS_MOCK,
+  SNAPSHOTS_DUPLICATE_MOCK,
+  SNAPSHOTS_EMPTY_MOCK,
 } from "../../utils/deployment-mocks";
 
 // ---------------------------------------------------------------------------
 // Helper: set up all required API route mocks
 // ---------------------------------------------------------------------------
-async function setupDeploymentMocks(page: Page, folderId: string) {
+async function setupDeploymentMocks(
+  page: Page,
+  folderId: string,
+  snapshotsMock: object = SNAPSHOTS_EMPTY_MOCK,
+) {
   // Broad catch-all registered FIRST so specific routes (registered after) take priority via LIFO
   await page.route("**/api/v1/deployments*", (route) => {
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ deployments: [] }),
+    });
+  });
+
+  // Snapshots (used for duplicate tool name check on review step)
+  await page.route("**/api/v1/deployments/snapshots**", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(snapshotsMock),
     });
   });
 
@@ -86,7 +101,10 @@ async function setupDeploymentMocks(page: Page, folderId: string) {
 // ---------------------------------------------------------------------------
 // Helper: navigate to the deployments page and open the stepper
 // ---------------------------------------------------------------------------
-async function openDeploymentStepper(page: Page) {
+async function openDeploymentStepper(
+  page: Page,
+  snapshotsMock: object = SNAPSHOTS_EMPTY_MOCK,
+) {
   // Listen for the folders/projects API response BEFORE bootstrap to capture
   // the real myCollectionId. The step-attach-flows component filters flows by
   // folder_id === myCollectionId, so mock flows must carry the same id.
@@ -111,7 +129,7 @@ async function openDeploymentStepper(page: Page) {
     // proceed with empty id — test will likely fail at flow-item assertion
   }
 
-  await setupDeploymentMocks(page, myCollectionId);
+  await setupDeploymentMocks(page, myCollectionId, snapshotsMock);
   await page.getByTestId("deployments-btn").click();
   await page.waitForSelector('[data-testid="subtab-deployments"]');
   await page.getByTestId("create-deployment-empty-btn").click();
@@ -425,5 +443,99 @@ test(
     // The input should disappear and the new name should be visible
     await expect(toolNameInput).not.toBeVisible();
     await expect(page.getByText("Custom Tool Name")).toBeVisible();
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Test 8: Review step — shows duplicate tool name error when provider has existing tool
+// ---------------------------------------------------------------------------
+test(
+  "deployment-create: review step shows error when tool name already exists in provider",
+  { tag: ["@deployment", "@workspace"] },
+  async ({ page }) => {
+    test.skip(
+      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+    );
+
+    await openDeploymentStepper(page, SNAPSHOTS_DUPLICATE_MOCK);
+    await goToStepReview(page);
+
+    // The duplicate tool name error should appear
+    await expect(
+      page.getByText("Edit tool name (already exists in provider)"),
+    ).toBeVisible({ timeout: 10000 });
+
+    // Deploy button should be disabled while there are tool name errors
+    await expect(page.getByTestId("deployment-stepper-next")).toBeDisabled();
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Test 9: Review step — no error when tool name does not exist in provider
+// ---------------------------------------------------------------------------
+test(
+  "deployment-create: review step shows no error when tool name is unique",
+  { tag: ["@deployment", "@workspace"] },
+  async ({ page }) => {
+    test.skip(
+      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+    );
+
+    await openDeploymentStepper(page, SNAPSHOTS_EMPTY_MOCK);
+    await goToStepReview(page);
+
+    // No duplicate error should be present
+    await expect(
+      page.getByText("Edit tool name (already exists in provider)"),
+    ).not.toBeVisible();
+
+    // Deploy button should be enabled
+    await expect(page.getByTestId("deployment-stepper-next")).toBeEnabled();
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Test 10: Review step — fixing duplicate tool name clears error
+// ---------------------------------------------------------------------------
+test(
+  "deployment-create: editing tool name to unique value clears duplicate error",
+  { tag: ["@deployment", "@workspace"] },
+  async ({ page }) => {
+    test.skip(
+      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+    );
+
+    await openDeploymentStepper(page, SNAPSHOTS_DUPLICATE_MOCK);
+    await goToStepReview(page);
+
+    // Error should be visible initially
+    await expect(
+      page.getByText("Edit tool name (already exists in provider)"),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("deployment-stepper-next")).toBeDisabled();
+
+    // Override the snapshots mock to return empty (unique name) for the next check
+    await page.route("**/api/v1/deployments/snapshots**", (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(SNAPSHOTS_EMPTY_MOCK),
+      });
+    });
+
+    // Edit the tool name to something unique
+    await page.getByTestId("edit-tool-name").click();
+    const toolNameInput = page.getByTestId("tool-name-input");
+    await toolNameInput.fill("Unique Tool Name");
+    await toolNameInput.press("Enter");
+
+    // Error should clear and deploy button should re-enable
+    await expect(
+      page.getByText("Edit tool name (already exists in provider)"),
+    ).not.toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("deployment-stepper-next")).toBeEnabled();
   },
 );

@@ -1,6 +1,7 @@
 import { memo, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/utils/utils";
 import type { ConnectionItem } from "../types";
 import { CheckboxSelectItem } from "./radio-select-item";
 
@@ -59,7 +60,7 @@ export const ConnectionSearchList = memo(function ConnectionSearchList({
   }
 
   return (
-    <>
+    <div className={cn(filteredConnections.length > 0 && "pr-3")}>
       <div className="min-w-0">
         <Input
           icon="Search"
@@ -74,22 +75,24 @@ export const ConnectionSearchList = memo(function ConnectionSearchList({
           No connections match &ldquo;{searchQuery}&rdquo;
         </p>
       ) : (
-        filteredConnections.map((conn) => (
-          <CheckboxSelectItem
-            key={conn.connectionId}
-            value={conn.id}
-            checked={selectedConnections.has(conn.id)}
-            onChange={() => onToggleConnection(conn.id)}
-            data-testid={`connection-item-${conn.id}`}
-          >
-            <div className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium leading-tight">
-                {conn.name}
-              </span>
-            </div>
-          </CheckboxSelectItem>
-        ))
+        <div className="mt-2 space-y-1.5">
+          {filteredConnections.map((conn) => (
+            <CheckboxSelectItem
+              key={conn.connectionId}
+              value={conn.id}
+              checked={selectedConnections.has(conn.id)}
+              onChange={() => onToggleConnection(conn.id)}
+              data-testid={`connection-item-${conn.id}`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium leading-tight">
+                  {conn.name}
+                </span>
+              </div>
+            </CheckboxSelectItem>
+          ))}
+        </div>
       )}
-    </>
+    </div>
   );
 });

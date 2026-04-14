@@ -72,9 +72,9 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentSnapshotListResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
-    ExecutionCreateRequest,
-    ExecutionCreateResponse,
-    ExecutionStatusResponse,
+    RunCreateRequest,
+    RunCreateResponse,
+    RunStatusResponse,
 )
 
 from .contracts import (
@@ -219,7 +219,7 @@ class BaseDeploymentMapper:
         *,
         deployment_resource_key: str,
         db: AsyncSession,
-        payload: ExecutionCreateRequest,
+        payload: RunCreateRequest,
     ) -> ExecutionCreate:
         return ExecutionCreate(
             deployment_id=deployment_resource_key,
@@ -297,12 +297,14 @@ class BaseDeploymentMapper:
         self,
         *,
         deployment_resource_key: str | None,
+        snapshot_names: list[str] | None = None,
         provider_params: dict[str, Any] | None,
         db: AsyncSession,
     ) -> SnapshotListParams:
         resolved_provider_params = await self.resolve_snapshot_list_params(provider_params, db)
         return SnapshotListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
+            snapshot_names=snapshot_names or None,
             provider_params=resolved_provider_params,
         )
 
@@ -780,11 +782,11 @@ class BaseDeploymentMapper:
         result: ExecutionCreateResult,
         *,
         deployment_id: UUID,
-    ) -> ExecutionCreateResponse:
+    ) -> RunCreateResponse:
         provider_result = self.shape_execution_create_provider_data(
             result.provider_result if isinstance(result.provider_result, dict) else None
         )
-        return ExecutionCreateResponse(
+        return RunCreateResponse(
             deployment_id=deployment_id,
             provider_data=provider_result,
         )
@@ -794,11 +796,11 @@ class BaseDeploymentMapper:
         result: ExecutionStatusResult,
         *,
         deployment_id: UUID,
-    ) -> ExecutionStatusResponse:
+    ) -> RunStatusResponse:
         provider_result = self.shape_execution_status_provider_data(
             result.provider_result if isinstance(result.provider_result, dict) else None
         )
-        return ExecutionStatusResponse(
+        return RunStatusResponse(
             deployment_id=deployment_id,
             provider_data=provider_result,
         )

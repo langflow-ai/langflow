@@ -17,6 +17,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentType,
     DeploymentUpdateResult,
 )
+from pydantic import AfterValidator, StringConstraints
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.v1.mappers.deployments import get_deployment_mapper
@@ -65,11 +66,11 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentTypeListResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
-    ExecutionCreateRequest,
-    ExecutionCreateResponse,
-    ExecutionStatusResponse,
     FlowIdsQuery,
     FlowVersionIdsQuery,
+    RunCreateRequest,
+    RunCreateResponse,
+    RunStatusResponse,
     SnapshotUpdateRequest,
     SnapshotUpdateResponse,
 )
@@ -134,6 +135,16 @@ DeploymentIdQuery = Annotated[
     UUID,
     Query(description="Langflow DB deployment UUID (`deployment.id`)."),
 ]
+SnapshotNameQueryItem = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+def _dedupe_snapshot_names(values: list[str] | None) -> list[str] | None:
+    if values is None:
+        return None
+    return list(dict.fromkeys(values))
+
+
+SnapshotNamesQuery = Annotated[list[SnapshotNameQueryItem] | None, AfterValidator(_dedupe_snapshot_names)]
 IncludeProviderDeleteQuery = Annotated[
     bool,
     Query(
@@ -728,14 +739,14 @@ async def list_deployment_llms(
 
 
 @router.post(
-    "/{deployment_id}/executions",
-    response_model=ExecutionCreateResponse,
+    "/{deployment_id}/runs",
+    response_model=RunCreateResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_deployment_execution(
+async def create_deployment_run(
     deployment_id: DeploymentIdPath,
     session: DbSession,
-    payload: ExecutionCreateRequest,
+    payload: RunCreateRequest,
     current_user: CurrentActiveUser,
 ):
     deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
@@ -764,10 +775,10 @@ async def create_deployment_execution(
     )
 
 
-@router.get("/{deployment_id}/executions/{execution_id}", response_model=ExecutionStatusResponse)
-async def get_deployment_execution(
+@router.get("/{deployment_id}/runs/{run_id}", response_model=RunStatusResponse)
+async def get_deployment_run(
     deployment_id: DeploymentIdPath,
-    execution_id: Annotated[str, Path(min_length=1, description="Provider-owned opaque execution identifier.")],
+    run_id: Annotated[str, Path(min_length=1, description="Provider-owned opaque run identifier.")],
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
 ):
@@ -776,7 +787,7 @@ async def get_deployment_execution(
         user_id=current_user.id,
         db=session,
     )
-    execution_lookup_id = execution_id.strip()
+    execution_lookup_id = run_id.strip()
     with (
         handle_adapter_errors(mapper=deployment_mapper),
         deployment_provider_scope(deployment_row.deployment_provider_account_id),
@@ -874,10 +885,20 @@ async def list_deployment_snapshots(
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
     deployment_id: DeploymentIdQuery | None = None,
+    names: Annotated[
+        SnapshotNamesQuery,
+        Query(min_length=1, description="Filter by provider-owned snapshot names."),
+    ] = None,
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
     """List deployment snapshots/tools."""
+    if deployment_id is not None and names is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="filtering by both deployment_id and names is not supported.",
+        )
+
     provider_account = await get_owned_provider_account_or_404(
         provider_id=provider_id,
         user_id=current_user.id,
@@ -898,6 +919,7 @@ async def list_deployment_snapshots(
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     adapter_params = await deployment_mapper.resolve_snapshot_list_adapter_params(
         deployment_resource_key=deployment_row.resource_key if deployment_row is not None else None,
+        snapshot_names=names,
         provider_params=None,
         db=session,
     )

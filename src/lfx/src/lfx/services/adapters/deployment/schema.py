@@ -507,11 +507,27 @@ class SnapshotListParams(_BaseListParams[T_SnapshotListParams]):
         None,
         description="Snapshot ids to filter by.",
     )
+    snapshot_names: list[str] | None = Field(
+        None,
+        min_length=1,
+        description="Snapshot names to filter by.",
+    )
 
     @field_validator("snapshot_ids")
     @classmethod
     def validate_snapshot_ids(cls, value: list[IdLike] | None, info) -> list[str] | None:
         return cls._normalize_filter_id_values(value, field_name=info.field_name)
+
+    @field_validator("snapshot_names")
+    @classmethod
+    def validate_snapshot_names(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        stripped = [name.strip() for name in value]
+        if any(not name for name in stripped):
+            msg = "snapshot_names must not contain empty or whitespace-only entries."
+            raise ValueError(msg)
+        return stripped
 
 
 class DeploymentCreate(BaseModel):
