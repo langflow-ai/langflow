@@ -541,11 +541,11 @@
                 "dependencies": [
                   {
                     "name": "chromadb",
-                    "version": "1.5.6"
+                    "version": "1.5.7"
                   },
                   {
                     "name": "cryptography",
-                    "version": "46.0.6"
+                    "version": "46.0.7"
                   },
                   {
                     "name": "langchain_chroma",
@@ -565,7 +565,7 @@
                   },
                   {
                     "name": "langchain_openai",
-                    "version": "1.1.9"
+                    "version": "1.1.12"
                   },
                   {
                     "name": "langchain_huggingface",
