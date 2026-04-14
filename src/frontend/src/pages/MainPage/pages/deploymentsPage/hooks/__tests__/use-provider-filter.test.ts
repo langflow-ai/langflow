@@ -95,6 +95,19 @@ describe("useProviderFilter", () => {
     expect(result.current.selectedProviderId).toBe("p1");
   });
 
+  it("providerIdsToQuery follows selectedProviderId", () => {
+    const providers = [makeProvider({ id: "p1" }), makeProvider({ id: "p2" })];
+    const { result } = renderHook(() => useProviderFilter(providers));
+
+    expect(result.current.providerIdsToQuery).toEqual(["p1"]);
+
+    act(() => {
+      result.current.setSelectedProviderId("p2");
+    });
+
+    expect(result.current.providerIdsToQuery).toEqual(["p2"]);
+  });
+
   it("resets selection to the first available provider when the selected provider is removed", async () => {
     const { result, rerender } = renderHook(
       ({ list }: { list: ProviderAccount[] }) => useProviderFilter(list),
