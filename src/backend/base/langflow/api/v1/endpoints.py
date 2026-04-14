@@ -681,6 +681,7 @@ async def simplified_run_flow_session(
 async def webhook_events_stream(
     flow_id_or_name: str,  # noqa: ARG001 - Used by get_flow_by_id_or_endpoint_name dependency
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
+    user: Annotated[User | UserRead, Depends(get_current_user_for_sse)],
     request: Request,
 ):
     """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
@@ -691,9 +692,6 @@ async def webhook_events_stream(
     Authentication: Requires user to be logged in (via cookie) or provide API key.
     The user must own the flow to subscribe to its events.
     """
-    # Authenticate user via cookie or API key
-    user = await get_current_user_for_sse(request)
-
     # Verify user owns the flow
     if str(flow.user_id) != str(user.id):
         raise HTTPException(

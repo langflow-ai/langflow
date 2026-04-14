@@ -1635,7 +1635,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.27"
+                    "version": "1.2.28"
                   },
                   {
                     "name": "pydantic",
@@ -1643,7 +1643,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.193.0"
+                    "version": "2.194.0"
                   }
                 ],
                 "total_dependencies": 4
@@ -2687,7 +2687,7 @@
                   },
                   {
                     "name": "cryptography",
-                    "version": "46.0.6"
+                    "version": "46.0.7"
                   },
                   {
                     "name": "langchain_chroma",
@@ -2707,7 +2707,7 @@
                   },
                   {
                     "name": "chromadb",
-                    "version": "1.5.6"
+                    "version": "1.5.7"
                   }
                 ],
                 "total_dependencies": 7
@@ -3053,11 +3053,11 @@
                 "dependencies": [
                   {
                     "name": "chromadb",
-                    "version": "1.5.6"
+                    "version": "1.5.7"
                   },
                   {
                     "name": "cryptography",
-                    "version": "46.0.6"
+                    "version": "46.0.7"
                   },
                   {
                     "name": "langchain_chroma",
@@ -3077,7 +3077,7 @@
                   },
                   {
                     "name": "langchain_openai",
-                    "version": "1.1.9"
+                    "version": "1.1.12"
                   },
                   {
                     "name": "langchain_huggingface",
