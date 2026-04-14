@@ -310,7 +310,7 @@ jobs:
           else
             if [ ${{inputs.pre_release}} == "true" ]; then
               last_released_version=$(curl -s "https://pypi.org/pypi/langflow-sdk/json" | jq -r '.releases | keys | .[]' | grep -E '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
-              version="$(python3 ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
+              version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
               echo "Latest SDK pre-release version: $last_released_version"
               echo "SDK pre-release version to be released: $version"
             else
