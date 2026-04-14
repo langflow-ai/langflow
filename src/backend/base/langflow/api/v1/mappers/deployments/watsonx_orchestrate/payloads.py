@@ -586,6 +586,15 @@ class WatsonxApiExecutionInput(BaseModel):
     message: dict[str, Any] | None = None
     thread_id: str | None = None
 
+    @model_validator(mode="after")
+    def validate_input_or_message_exclusive(self) -> WatsonxApiExecutionInput:
+        has_input = self.input is not None
+        has_message = self.message is not None
+        if has_input == has_message:
+            msg = "provider_data must include exactly one of 'input' or 'message'."
+            raise ValueError(msg)
+        return self
+
 
 class _WatsonxApiAgentExecutionResultBase(BaseModel):
     """Shared fields for API-facing agent execution result payloads.

@@ -306,6 +306,16 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         check_provider_url_allowed(parsed.url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
         return parsed
 
+    async def resolve_execution_input(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
+        """Validate run provider_data and reject missing payloads at API boundary."""
+        _ = db
+        parsed: WatsonxApiExecutionInput = self._parse_api_payload_slot(
+            slot=self.api_payloads.execution_input,
+            slot_name="execution_input",
+            raw=raw,
+        )
+        return parsed.model_dump(mode="json", exclude_none=True)
+
     def resolve_credentials(
         self,
         *,
