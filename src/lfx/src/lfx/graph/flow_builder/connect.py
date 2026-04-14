@@ -144,6 +144,15 @@ def add_connection(
 
     edge_id = f"reactflow__edge-{source_id}{source_handle_s}-{target_id}{target_handle_s}"
 
+    # Idempotent: if an edge with this exact id already exists, return it
+    # rather than appending a duplicate. The id is deterministic from
+    # source/target/handles, so a repeat call (batch retry, UI-then-MCP, etc.)
+    # would otherwise create a second edge with the same id and double-wire
+    # the flow at runtime.
+    for existing in flow["data"]["edges"]:
+        if existing.get("id") == edge_id:
+            return existing
+
     edge = {
         "animated": False,
         "className": "",

@@ -331,6 +331,21 @@ class TestConnect:
         assert edge["animated"] is False
         assert edge["selected"] is False
 
+    def test_add_connection_is_idempotent(self):
+        """Repeating add_connection for the same pair must not duplicate the edge.
+
+        Regression for LE-866: connecting components via batch (or after the
+        edge was already created in the UI) appended a second edge with the
+        same deterministic id, double-wiring the flow at runtime.
+        """
+        flow = _fresh_flow()
+        r1 = add_component(flow, "ChatInput", REGISTRY)
+        r2 = add_component(flow, "ChatOutput", REGISTRY)
+        first = add_connection(flow, r1["id"], "message", r2["id"], "input_value")
+        second = add_connection(flow, r1["id"], "message", r2["id"], "input_value")
+        assert len(flow["data"]["edges"]) == 1
+        assert first is second  # returns the existing edge dict
+
     def test_remove_connection(self):
         flow = _fresh_flow()
         r1 = add_component(flow, "ChatInput", REGISTRY)
