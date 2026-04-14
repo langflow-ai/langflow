@@ -91,6 +91,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.status impor
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
     build_langflow_artifact_bytes,
+    create_langflow_tool,
     extract_langflow_connections_binding,
     upload_tool_artifact_bytes,
     verify_tools_by_ids,
@@ -1005,10 +1006,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         method; this prevents accidental overwrites of externally managed
         WXO tools.
         """
-        from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import (
-            create_langflow_tool as _create_langflow_tool,
-        )
-
         from langflow.utils.version import get_version_info
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
@@ -1038,10 +1035,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             if detected_version:
                 flow_definition["last_tested_version"] = detected_version
 
-        tool = _create_langflow_tool(
+        tool = create_langflow_tool(
             tool_definition=flow_definition,
             connections={},
-            show_details=True,
         )
 
         artifact_bytes = build_langflow_artifact_bytes(

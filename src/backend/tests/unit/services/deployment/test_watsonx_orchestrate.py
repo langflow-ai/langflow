@@ -2690,11 +2690,12 @@ def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkey
         )
     )
 
-    def mock_create_langflow_tool(*, tool_definition, connections):  # noqa: ARG001
+    def mock_create_langflow_tool(*, tool_definition, connections, show_details):  # noqa: ARG001
+        assert show_details is False
         captured_tool_definition.update(tool_definition)
         return fake_tool
 
-    monkeypatch.setattr(tools_module, "create_langflow_tool", mock_create_langflow_tool)
+    monkeypatch.setattr(tools_module, "_create_langflow_tool", mock_create_langflow_tool)
     monkeypatch.setattr(
         tools_module,
         "build_langflow_artifact_bytes",
@@ -2757,11 +2758,12 @@ def test_create_wxo_flow_tool_excludes_provider_data_from_artifact(monkeypatch):
         )
     )
 
-    def mock_create_langflow_tool(*, tool_definition, connections):  # noqa: ARG001
+    def mock_create_langflow_tool(*, tool_definition, connections, show_details):  # noqa: ARG001
+        assert show_details is False
         captured_flow_definition.update(tool_definition)
         return fake_tool
 
-    monkeypatch.setattr(tools_module, "create_langflow_tool", mock_create_langflow_tool)
+    monkeypatch.setattr(tools_module, "_create_langflow_tool", mock_create_langflow_tool)
     monkeypatch.setattr(
         tools_module,
         "build_langflow_artifact_bytes",
@@ -2822,7 +2824,7 @@ def test_create_wxo_flow_tool_normalizes_name_for_raw_payload(monkeypatch):
     )
     monkeypatch.setattr(
         tools_module,
-        "create_langflow_tool",
+        "_create_langflow_tool",
         lambda **kwargs: fake_tool,  # noqa: ARG005
     )
     monkeypatch.setattr(
