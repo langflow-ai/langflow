@@ -141,16 +141,25 @@ export default function StepProvider() {
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          Configure{" "}
+          Configure your watsonx Orchestrate credentials below. New to wxO?{" "}
+          <a
+            href="https://www.ibm.com/products/watsonx-orchestrate#pricing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary hover:underline"
+          >
+            Sign up for watsonx Orchestrate
+          </a>
+          . Already have an account?{" "}
           <a
             href="https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started"
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-primary hover:underline"
           >
-            watsonx Orchestrate
-          </a>{" "}
-          credentials.
+            Find your credentials
+          </a>
+          .
         </p>
       </div>
 

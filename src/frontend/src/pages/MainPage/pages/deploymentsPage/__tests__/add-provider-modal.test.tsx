@@ -59,6 +59,23 @@ describe("Rendering", () => {
     expect(screen.getByText("watsonx Orchestrate")).toBeInTheDocument();
   });
 
+  it("renders signup and credentials help links", () => {
+    renderModal();
+
+    expect(
+      screen.getByRole("link", { name: "Sign up for watsonx Orchestrate" }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.ibm.com/products/watsonx-orchestrate#pricing",
+    );
+    expect(
+      screen.getByRole("link", { name: "Find your credentials" }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started",
+    );
+  });
+
   it("renders form fields: Name, API Key, Service Instance URL", () => {
     renderModal();
     expect(screen.getByPlaceholderText("e.g. Production")).toBeInTheDocument();
