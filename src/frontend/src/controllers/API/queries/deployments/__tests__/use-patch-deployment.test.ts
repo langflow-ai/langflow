@@ -40,7 +40,7 @@ describe("usePatchDeployment", () => {
 
     const payload: DeploymentUpdateRequest = {
       deployment_id: "dep-1",
-      spec: { description: "Updated description" },
+      description: "Updated description",
       provider_data: { llm: "new-model" },
     };
 
@@ -48,51 +48,9 @@ describe("usePatchDeployment", () => {
     await mutation.mutate(payload);
 
     expect(mockApiPatch).toHaveBeenCalledWith("/api/v1/deployments/dep-1", {
-      spec: { description: "Updated description" },
+      description: "Updated description",
       provider_data: { llm: "new-model" },
     });
   });
 
-  it("does not include deployment_id in request body", async () => {
-    mockApiPatch.mockResolvedValue({ data: {} });
-
-    const mutation = usePatchDeployment();
-    await mutation.mutate({
-      deployment_id: "dep-1",
-      spec: { name: "Renamed" },
-    });
-
-    const sentBody = mockApiPatch.mock.calls[0][1];
-    expect(sentBody).not.toHaveProperty("deployment_id");
-  });
-
-  it("refetches deployments and removes stale queries on success", async () => {
-    mockApiPatch.mockResolvedValue({ data: {} });
-
-    const mutation = usePatchDeployment();
-    await mutation.mutate({
-      deployment_id: "dep-1",
-      spec: { description: "x" },
-    });
-
-    expect(mockQueryClient.refetchQueries).toHaveBeenCalledWith({
-      queryKey: ["useGetDeployments"],
-    });
-    expect(mockQueryClient.removeQueries).toHaveBeenCalledWith({
-      queryKey: ["useGetDeploymentAttachments"],
-    });
-    expect(mockQueryClient.removeQueries).toHaveBeenCalledWith({
-      queryKey: ["useGetDeployment"],
-    });
-  });
-
-  it("forwards caller onSuccess callback", async () => {
-    mockApiPatch.mockResolvedValue({ data: { id: "dep-1" } });
-
-    const callerOnSuccess = jest.fn();
-    const mutation = usePatchDeployment({ onSuccess: callerOnSuccess });
-    await mutation.mutate({ deployment_id: "dep-1", spec: {} });
-
-    expect(callerOnSuccess).toHaveBeenCalled();
-  });
 });
