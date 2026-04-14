@@ -384,10 +384,31 @@ async def delete_deployment_by_resource_key(
     deployment_provider_account_id: UUID,
     resource_key: str,
 ) -> int:
+    resource_key_s = resource_key.strip()
+    # Delete attachment rows explicitly before deleting the deployment.
+    # This keeps behavior correct even when DB-level FK cascades are disabled
+    # (for example, SQLite with foreign_keys=OFF), avoiding orphan attachments.
+    deployment_id = (
+        await db.exec(
+            select(Deployment.id).where(
+                Deployment.user_id == user_id,
+                Deployment.deployment_provider_account_id == deployment_provider_account_id,
+                Deployment.resource_key == resource_key_s,
+            )
+        )
+    ).first()
+    if deployment_id is not None:
+        await db.exec(
+            delete(FlowVersionDeploymentAttachment).where(
+                FlowVersionDeploymentAttachment.user_id == user_id,
+                FlowVersionDeploymentAttachment.deployment_id == deployment_id,
+            )
+        )
+
     stmt = delete(Deployment).where(
         Deployment.user_id == user_id,
         Deployment.deployment_provider_account_id == deployment_provider_account_id,
-        Deployment.resource_key == resource_key.strip(),
+        Deployment.resource_key == resource_key_s,
     )
     result = await db.exec(stmt)
     if result.rowcount is None:
@@ -406,6 +427,16 @@ async def delete_deployment_by_id(
     deployment_id: UUID | str,
 ) -> int:
     deployment_uuid = parse_uuid(deployment_id, field_name="deployment_id")
+    # Delete attachment rows explicitly before deleting the deployment.
+    # This keeps behavior correct even when DB-level FK cascades are disabled
+    # (for example, SQLite with foreign_keys=OFF), avoiding orphan attachments.
+    await db.exec(
+        delete(FlowVersionDeploymentAttachment).where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.deployment_id == deployment_uuid,
+        )
+    )
+
     stmt = delete(Deployment).where(
         Deployment.user_id == user_id,
         Deployment.id == deployment_uuid,

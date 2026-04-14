@@ -13,9 +13,15 @@ from langflow.services.database.models.deployment.crud import (
     list_deployments_page,
     update_deployment,
 )
+from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.model import (
     DeploymentProviderAccount,
     DeploymentProviderKey,
+)
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    FlowVersionDeploymentAttachment,
 )
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
@@ -23,7 +29,7 @@ from lfx.services.adapters.deployment.schema import DeploymentType
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 _TEST_PASSWORD = "hashed"  # noqa: S105  # pragma: allowlist secret
@@ -229,9 +235,13 @@ async def test_update_deployment_empty_name_raises():
 @pytest.mark.asyncio
 async def test_delete_by_resource_key_none_rowcount_logs_error():
     db = _make_db()
+    lookup_result = MagicMock()
+    lookup_result.first.return_value = uuid4()
+    attachment_delete_result = MagicMock()
+    attachment_delete_result.rowcount = 3
     mock_result = MagicMock()
     mock_result.rowcount = None
-    db.exec.return_value = mock_result
+    db.exec.side_effect = [lookup_result, attachment_delete_result, mock_result]
 
     with patch("langflow.services.database.models.deployment.crud.logger") as mock_logger:
         mock_logger.aerror = AsyncMock()
@@ -243,15 +253,52 @@ async def test_delete_by_resource_key_none_rowcount_logs_error():
         )
 
     assert count == 0
+    assert db.exec.await_count == 3
+    lookup_stmt = str(db.exec.await_args_list[0].args[0]).lower()
+    attachment_stmt = str(db.exec.await_args_list[1].args[0]).lower()
+    deployment_stmt = str(db.exec.await_args_list[2].args[0]).lower()
+    assert "select deployment.id" in lookup_stmt
+    assert "delete from flow_version_deployment_attachment" in attachment_stmt
+    assert "delete from deployment" in deployment_stmt
     mock_logger.aerror.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_delete_by_resource_key_missing_row_skips_attachment_delete():
+    db = _make_db()
+    lookup_result = MagicMock()
+    lookup_result.first.return_value = None
+    deployment_delete_result = MagicMock()
+    deployment_delete_result.rowcount = 0
+    db.exec.side_effect = [lookup_result, deployment_delete_result]
+
+    with patch("langflow.services.database.models.deployment.crud.logger") as mock_logger:
+        mock_logger.aerror = AsyncMock()
+        count = await delete_deployment_by_resource_key(
+            db,
+            user_id=uuid4(),
+            deployment_provider_account_id=uuid4(),
+            resource_key="rk-missing",
+        )
+
+    assert count == 0
+    assert db.exec.await_count == 2
+    lookup_stmt = str(db.exec.await_args_list[0].args[0]).lower()
+    deployment_stmt = str(db.exec.await_args_list[1].args[0]).lower()
+    assert "select deployment.id" in lookup_stmt
+    assert "delete from deployment" in deployment_stmt
+    assert "flow_version_deployment_attachment" not in deployment_stmt
+    mock_logger.aerror.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_delete_by_id_none_rowcount_logs_error():
     db = _make_db()
+    attachment_delete_result = MagicMock()
+    attachment_delete_result.rowcount = 1
     mock_result = MagicMock()
     mock_result.rowcount = None
-    db.exec.return_value = mock_result
+    db.exec.side_effect = [attachment_delete_result, mock_result]
 
     with patch("langflow.services.database.models.deployment.crud.logger") as mock_logger:
         mock_logger.aerror = AsyncMock()
@@ -262,7 +309,112 @@ async def test_delete_by_id_none_rowcount_logs_error():
         )
 
     assert count == 0
+    assert db.exec.await_count == 2
+    attachment_stmt = str(db.exec.await_args_list[0].args[0]).lower()
+    deployment_stmt = str(db.exec.await_args_list[1].args[0]).lower()
+    assert "delete from flow_version_deployment_attachment" in attachment_stmt
+    assert "delete from deployment" in deployment_stmt
     mock_logger.aerror.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# FK-disabled safety test (real SQLite, FK off)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_delete_by_id_prunes_attachments_when_fk_disabled():
+    engine = create_async_engine(
+        "sqlite+aiosqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _disable_fk(dbapi_connection, connection_record):  # noqa: ARG001
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=OFF")
+        cursor.close()
+
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+    async with AsyncSession(engine, expire_on_commit=False) as db:
+        user = User(username="fk-off-user", password=_TEST_PASSWORD, is_active=True)
+        db.add(user)
+        await db.flush()
+
+        folder = Folder(name="fk-off-folder", user_id=user.id)
+        db.add(folder)
+        await db.flush()
+
+        provider_account = DeploymentProviderAccount(
+            user_id=user.id,
+            provider_tenant_id="tenant-fk-off",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            name="provider-fk-off",
+            provider_url="https://provider-fk-off.example.com",
+            api_key="encrypted-value",  # pragma: allowlist secret
+        )
+        db.add(provider_account)
+        await db.flush()
+
+        deployment = Deployment(
+            user_id=user.id,
+            project_id=folder.id,
+            deployment_provider_account_id=provider_account.id,
+            resource_key="rk-fk-off",
+            name="deployment-fk-off",
+            deployment_type=DeploymentType.AGENT,
+        )
+        db.add(deployment)
+        await db.flush()
+
+        flow = Flow(
+            name="flow-fk-off",
+            user_id=user.id,
+            folder_id=folder.id,
+            data={"nodes": [], "edges": []},
+        )
+        db.add(flow)
+        await db.flush()
+
+        flow_version = FlowVersion(
+            flow_id=flow.id,
+            user_id=user.id,
+            version_number=1,
+            data={"nodes": [], "edges": []},
+        )
+        db.add(flow_version)
+        await db.flush()
+
+        attachment = FlowVersionDeploymentAttachment(
+            user_id=user.id,
+            flow_version_id=flow_version.id,
+            deployment_id=deployment.id,
+            provider_snapshot_id="snapshot-fk-off",
+        )
+        db.add(attachment)
+        await db.commit()
+
+        deleted = await delete_deployment_by_id(db, user_id=user.id, deployment_id=deployment.id)
+        await db.commit()
+        assert deleted == 1
+
+        deployment_row = (await db.exec(select(Deployment).where(Deployment.id == deployment.id))).first()
+        attachment_row = (
+            await db.exec(
+                select(FlowVersionDeploymentAttachment).where(
+                    FlowVersionDeploymentAttachment.deployment_id == deployment.id
+                )
+            )
+        ).first()
+        assert deployment_row is None
+        assert attachment_row is None
+
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+    await engine.dispose()
 
 
 # ---------------------------------------------------------------------------

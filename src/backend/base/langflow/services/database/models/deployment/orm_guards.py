@@ -181,7 +181,14 @@ async def ensure_attachment_project_match(
     flow_version_id: UUID,
     deployment_id: UUID,
 ) -> None:
-    """Block cross-project flow-version deployment attachments."""
+    """Block cross-project flow-version deployment attachments.
+
+    Note:
+        This guard compares project scopes only. If both lookups resolve to
+        ``None`` (for example, both records are missing), the equality check
+        passes and this guard returns. Entity existence is still enforced by
+        downstream FK/constraint checks on flush/commit.
+    """
     flow_project_id = (
         await db.exec(
             select(Flow.folder_id)
