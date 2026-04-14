@@ -91,6 +91,27 @@ def _fake_attachment(*, provider_snapshot_id: str | None = None) -> SimpleNamesp
 
 
 # ---------------------------------------------------------------------------
+# query parameter validators
+# ---------------------------------------------------------------------------
+
+
+class TestQueryParameterValidators:
+    def test_dedupe_snapshot_names_preserves_order(self):
+        from langflow.api.v1.deployments import _dedupe_snapshot_names
+
+        assert _dedupe_snapshot_names(["my_tool", "other_tool", "my_tool", "third_tool"]) == [
+            "my_tool",
+            "other_tool",
+            "third_tool",
+        ]
+
+    def test_dedupe_snapshot_names_keeps_none(self):
+        from langflow.api.v1.deployments import _dedupe_snapshot_names
+
+        assert _dedupe_snapshot_names(None) is None
+
+
+# ---------------------------------------------------------------------------
 # create_deployment: rollback on commit failure
 # ---------------------------------------------------------------------------
 
@@ -876,6 +897,7 @@ class TestConfigAndSnapshotListRoutes:
         result = await list_deployment_snapshots(
             provider_id=pa.id,
             deployment_id=deployment.id,
+            names=None,
             page=1,
             size=10,
             session=AsyncMock(),
@@ -885,6 +907,7 @@ class TestConfigAndSnapshotListRoutes:
         assert result is expected_response
         mapper.resolve_snapshot_list_adapter_params.assert_awaited_once_with(
             deployment_resource_key="dep-key",
+            snapshot_names=None,
             provider_params=None,
             db=ANY,
         )
@@ -894,6 +917,73 @@ class TestConfigAndSnapshotListRoutes:
             adapter.list_snapshots.return_value,
             page=1,
             size=10,
+        )
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_list_snapshots_rejects_deployment_id_with_names(
+        self,
+        mock_get_pa,
+    ):
+        from langflow.api.v1.deployments import list_deployment_snapshots
+
+        with pytest.raises(HTTPException) as exc_info:
+            await list_deployment_snapshots(
+                provider_id=uuid4(),
+                deployment_id=uuid4(),
+                names=["my_tool"],
+                page=1,
+                size=10,
+                session=AsyncMock(),
+                current_user=_fake_user(),
+            )
+
+        assert exc_info.value.status_code == 422
+        assert exc_info.value.detail == "filtering by both deployment_id and names is not supported."
+        mock_get_pa.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_list_snapshots_passes_names_to_mapper(
+        self,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+    ):
+        from langflow.api.v1.deployments import list_deployment_snapshots
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        adapter = AsyncMock()
+        adapter.list_snapshots.return_value = SnapshotListResult(
+            snapshots=[SnapshotItem(id="tool-1", name="my_tool")],
+        )
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        adapter_params = MagicMock()
+        expected_response = MagicMock()
+        mapper.resolve_snapshot_list_adapter_params = AsyncMock(return_value=adapter_params)
+        mapper.shape_snapshot_list_result.return_value = expected_response
+        mock_get_mapper.return_value = mapper
+
+        result = await list_deployment_snapshots(
+            provider_id=pa.id,
+            deployment_id=None,
+            names=["my_tool", "other_tool"],
+            page=1,
+            size=10,
+            session=AsyncMock(),
+            current_user=_fake_user(),
+        )
+
+        assert result is expected_response
+        mapper.resolve_snapshot_list_adapter_params.assert_awaited_once_with(
+            deployment_resource_key=None,
+            snapshot_names=["my_tool", "other_tool"],
+            provider_params=None,
+            db=ANY,
         )
 
 

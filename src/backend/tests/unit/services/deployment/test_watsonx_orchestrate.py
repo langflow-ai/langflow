@@ -186,6 +186,9 @@ class FakeToolClient:
             return [{"name": tool_name}]
         return []
 
+    def get_drafts_by_names(self, names: list[str]):
+        return [dict(tool) for tool in self._tools_by_id.values() if tool.get("name") in names]
+
     def update(self, tool_id: str, payload: dict):
         self.update_calls.append((tool_id, payload))
         current = self._tools_by_id.get(tool_id, {"id": tool_id})
@@ -4229,6 +4232,152 @@ async def test_list_snapshots_snapshot_ids_trusts_verified_results_without_reval
     assert result.snapshots[0].provider_data == {"unexpected": "value"}
 
 
+def test_snapshot_list_params_snapshot_names_strips_whitespace():
+    params = SnapshotListParams(snapshot_names=["  my_tool  ", "other "])
+    assert params.snapshot_names == ["my_tool", "other"]
+
+
+def test_snapshot_list_params_snapshot_names_rejects_empty_strings():
+    with pytest.raises(ValidationError):
+        SnapshotListParams(snapshot_names=[""])
+
+
+def test_snapshot_list_params_snapshot_names_rejects_whitespace_only():
+    with pytest.raises(ValidationError):
+        SnapshotListParams(snapshot_names=["  "])
+
+
+def test_snapshot_list_params_snapshot_names_rejects_empty_list():
+    with pytest.raises(ValidationError):
+        SnapshotListParams(snapshot_names=[])
+
+
+def test_snapshot_list_params_snapshot_names_none_is_valid():
+    params = SnapshotListParams(snapshot_names=None)
+    assert params.snapshot_names is None
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_snapshot_names_returns_matching_tools(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient(
+            [
+                {"id": "tool-1", "name": "my_tool", "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}}},
+                {"id": "tool-2", "name": "other_tool"},
+            ]
+        ),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_snapshots(
+        user_id="user-1",
+        db=object(),
+        params=SnapshotListParams(snapshot_names=["my_tool"]),
+    )
+
+    assert len(result.snapshots) == 1
+    assert result.snapshots[0].id == "tool-1"
+    assert result.snapshots[0].name == "my_tool"
+    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_snapshot_names_returns_empty_when_no_match(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient(
+            [
+                {"id": "tool-1", "name": "existing_tool"},
+            ]
+        ),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_snapshots(
+        user_id="user-1",
+        db=object(),
+        params=SnapshotListParams(snapshot_names=["nonexistent_tool"]),
+    )
+
+    assert len(result.snapshots) == 0
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_snapshot_names_ignored_when_deployment_ids_present(monkeypatch):
+    """When deployment_ids present, snapshot_names should be ignored and deployment-scoped path used."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=FakeToolClient(
+            [
+                {"id": "tool-1", "name": "agent_tool", "binding": {"langflow": {"connections": {}}}},
+                {"id": "tool-2", "name": "my_tool"},
+            ]
+        ),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_snapshots(
+        user_id="user-1",
+        db=object(),
+        params=SnapshotListParams(deployment_ids=["dep-1"], snapshot_names=["my_tool"]),
+    )
+
+    # Should return agent's tools (deployment-scoped), not name-filtered results
+    assert len(result.snapshots) == 1
+    assert result.snapshots[0].id == "tool-1"
+    assert result.snapshots[0].name == "agent_tool"
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_snapshot_names_wraps_provider_error(monkeypatch):
+    """get_drafts_by_names failure is wrapped via raise_as_deployment_error."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_tool = FakeToolClient([])
+
+    def get_drafts_by_names_raises(names):  # noqa: ARG001
+        msg = "provider timeout"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(fake_tool, "get_drafts_by_names", get_drafts_by_names_raises)
+
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=fake_tool,
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(DeploymentError, match="listing"):
+        await service.list_snapshots(
+            user_id="user-1",
+            db=object(),
+            params=SnapshotListParams(snapshot_names=["my_tool"]),
+        )
+
+
 @pytest.mark.anyio
 async def test_verify_tools_by_ids_returns_only_connections_provider_data():
     fake_clients = SimpleNamespace(
@@ -6669,14 +6818,14 @@ def test_api_execution_create_schema_parses_all_explicit_fields():
     )
 
     data = {
-        "execution_id": "e-1",
+        "id": "e-1",
         "agent_id": "a-1",
         "status": "accepted",
         "result": None,
         "started_at": "2026-01-01T00:00:00Z",
     }
     parsed = WatsonxApiAgentExecutionCreateResultData.model_validate(data)
-    assert parsed.execution_id == "e-1"
+    assert parsed.id == "e-1"
     assert parsed.agent_id == "a-1"
     assert parsed.status == "accepted"
     assert parsed.started_at == "2026-01-01T00:00:00Z"
@@ -6689,7 +6838,7 @@ def test_api_execution_status_schema_parses_all_explicit_fields():
     )
 
     data = {
-        "execution_id": "e-1",
+        "id": "e-1",
         "agent_id": "a-1",
         "status": "failed",
         "result": None,
@@ -6698,7 +6847,7 @@ def test_api_execution_status_schema_parses_all_explicit_fields():
         "last_error": "something broke",
     }
     parsed = WatsonxApiAgentExecutionStatusResultData.model_validate(data)
-    assert parsed.execution_id == "e-1"
+    assert parsed.id == "e-1"
     assert parsed.agent_id == "a-1"
     assert parsed.status == "failed"
     assert parsed.failed_at == "2026-01-01T00:00:05Z"
@@ -6725,7 +6874,7 @@ def test_api_execution_schemas_omit_langflow_owned_fields():
 
     for schema in (WatsonxApiAgentExecutionCreateResultData, WatsonxApiAgentExecutionStatusResultData):
         assert "deployment_id" not in schema.model_fields
-        assert "execution_id" in schema.model_fields
+        assert "id" in schema.model_fields
         assert not hasattr(schema, "resolved_deployment_id")
 
 
@@ -6739,20 +6888,20 @@ def test_api_execution_schema_normalizes_id_fields():
     for schema in (WatsonxApiAgentExecutionCreateResultData, WatsonxApiAgentExecutionStatusResultData):
         parsed = schema.model_validate(
             {
-                "execution_id": "  e-1  ",
+                "id": "  e-1  ",
                 "agent_id": "  a-1  ",
             }
         )
-        assert parsed.execution_id == "e-1"
+        assert parsed.id == "e-1"
         assert parsed.agent_id == "a-1"
 
         parsed_blank = schema.model_validate(
             {
-                "execution_id": "  ",
+                "id": "  ",
                 "agent_id": "",
             }
         )
-        assert parsed_blank.execution_id is None
+        assert parsed_blank.id is None
         assert parsed_blank.agent_id is None
 
 
@@ -6781,12 +6930,12 @@ def test_shape_execution_create_result_maps_all_fields():
 
     response = mapper.shape_execution_create_result(adapter_result, deployment_id=deployment_id)
     assert response.deployment_id == deployment_id
-    assert response.provider_data["execution_id"] == "e-1"
+    assert response.provider_data["id"] == "e-1"
     assert response.provider_data["status"] == "accepted"
     assert response.provider_data["started_at"] == "2026-01-01T00:00:00Z"
     assert response.provider_data["agent_id"] == "agent-1"
     assert "deployment_id" not in response.provider_data
-    assert "run_id" not in response.provider_data
+    assert "execution_id" not in response.provider_data
 
 
 def test_shape_execution_status_result_maps_all_fields():
@@ -6810,12 +6959,12 @@ def test_shape_execution_status_result_maps_all_fields():
 
     response = mapper.shape_execution_status_result(adapter_result, deployment_id=deployment_id)
     assert response.deployment_id == deployment_id
-    assert response.provider_data["execution_id"] == "e-2"
+    assert response.provider_data["id"] == "e-2"
     assert response.provider_data["status"] == "completed"
     assert response.provider_data["result"] == {"output": "done"}
     assert response.provider_data["completed_at"] == "2026-01-01T00:01:00Z"
     assert "deployment_id" not in response.provider_data
-    assert "run_id" not in response.provider_data
+    assert "execution_id" not in response.provider_data
 
 
 def test_shape_execution_status_result_none_execution_id():
@@ -6838,7 +6987,7 @@ def test_shape_execution_status_result_none_execution_id():
         adapter_result,
         deployment_id=deployment_id,
     )
-    assert response.provider_data["execution_id"] is None
+    assert response.provider_data["id"] is None
     assert response.provider_data["status"] == "in_progress"
 
 
