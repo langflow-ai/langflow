@@ -90,6 +90,23 @@ describe("Basic rendering", () => {
       }),
     );
   });
+
+  it("renders signup and credentials help links", () => {
+    render(<StepProvider />);
+
+    expect(
+      screen.getByRole("link", { name: "Sign up for watsonx Orchestrate" }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.ibm.com/products/watsonx-orchestrate#pricing",
+    );
+    expect(
+      screen.getByRole("link", { name: "Find your credentials" }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started",
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
