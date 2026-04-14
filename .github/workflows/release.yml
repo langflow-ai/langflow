@@ -557,7 +557,15 @@ jobs:
           fi
           uv pip install $FIND_LINKS --prerelease=allow -e src/backend/base
       - name: Check for dependency incompatibility
-        run: uv pip check
+        run: |
+          # Filter out known cuga/playwright conflict (we override playwright for CVE fixes)
+          uv pip check 2>&1 | grep -v "cuga.*requires.*playwright" || true
+          # Fail if there are other dependency issues
+          if uv pip check 2>&1 | grep -v "cuga.*requires.*playwright" | grep -q "requires"; then
+            echo "Dependency incompatibility detected (excluding known cuga/playwright override)"
+            uv pip check
+            exit 1
+          fi
       - name: Set version for pre-release
         if: ${{ inputs.pre_release }}
         run: |
@@ -704,7 +712,15 @@ jobs:
           fi
           uv pip install $FIND_LINKS --prerelease=allow -e .
       - name: Check for dependency incompatibility
-        run: uv pip check
+        run: |
+          # Filter out known cuga/playwright conflict (we override playwright for CVE fixes)
+          uv pip check 2>&1 | grep -v "cuga.*requires.*playwright" || true
+          # Fail if there are other dependency issues
+          if uv pip check 2>&1 | grep -v "cuga.*requires.*playwright" | grep -q "requires"; then
+            echo "Dependency incompatibility detected (excluding known cuga/playwright override)"
+            uv pip check
+            exit 1
+          fi
       - name: Set version for pre-release
         if: ${{ inputs.pre_release }}
         run: |

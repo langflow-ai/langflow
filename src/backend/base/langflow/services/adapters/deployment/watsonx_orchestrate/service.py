@@ -105,6 +105,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentLlmListResultData,
     WatsonxDeploymentUpdatePayload,
     WatsonxDeploymentUpdateResultData,
+    WatsonxModelOut,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
@@ -295,8 +296,19 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> DeploymentListLlmsResult:
         """List provider-available LLM model names."""
         client_manager = await self._get_provider_clients(user_id=user_id, db=db)
+
+        # hardcode known default models to the top of the list
+        # (these are not included in wxO's API response)
+        raw_models = [
+            WatsonxModelOut(model_name="groq/openai/gpt-oss-120b"),
+            WatsonxModelOut(model_name="bedrock/openai.gpt-oss-120b-1:0"),
+        ]
+
+        hardcoded_names = {m.model_name for m in raw_models}
+
         try:
-            raw_models = await asyncio.to_thread(client_manager.get_models_raw)
+            api_models = await asyncio.to_thread(client_manager.get_models_raw)
+            raw_models.extend(m for m in api_models if m.model_name not in hardcoded_names)
             parsed_models: WatsonxDeploymentLlmListResultData = self._parse_provider_payload(
                 slot=self.payload_schemas.deployment_llm_list_result,
                 slot_name="deployment_llm_list_result",
