@@ -303,18 +303,7 @@ def create_wxo_flow_tool(
             raise InvalidContentError(message=msg)
         flow_definition["last_tested_version"] = detected_version
 
-    tool: LangflowTool = create_langflow_tool(
-        tool_definition=flow_definition,
-        connections=connections,
-        show_details=True,
-        # TODO: show_details is only set to true because the adk
-        # has a bug where it fails to create requirements
-        # when it is set to False.
-        # Reset to False when the bug is fixed in the adk.
-        # Even better, for us, remove this parameter entirely
-        # and just default to False internally and not expose
-        # it to the caller.
-    )
+    tool: LangflowTool = create_langflow_tool(tool_definition=flow_definition, connections=connections)
 
     tool_payload = tool.__tool_spec__.model_dump(
         mode="json",
@@ -347,13 +336,12 @@ def create_langflow_tool(
     *,
     tool_definition: dict[str, Any],
     connections: dict[str, str],
-    show_details: bool,
 ) -> LangflowTool:
     """Module-level wrapper to keep tool creation monkeypatchable in tests."""
     return _create_langflow_tool(
         tool_definition=tool_definition,
         connections=connections,
-        show_details=show_details,
+        show_details=False,
     )
 
 
