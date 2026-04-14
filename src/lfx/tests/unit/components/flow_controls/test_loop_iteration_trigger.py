@@ -103,12 +103,13 @@ async def test_item_only_topology_dispatches_each_row_to_chatoutput():
     # 3 rows -> 3 subgraph iterations -> 3 ChatOutput builds.
     assert len(chat_output_runs) == 3, f"ChatOutput should have been built once per row, got {len(chat_output_runs)}"
 
-    # Item inspector surfaces the dispatched inputs as a DataFrame so the
-    # UI renders them as a table rather than as JSON.
+    # Item inspector surfaces the dispatched inputs wrapped in a Data
+    # envelope so the outer item edge remains compatible with Data-typed
+    # consumers in the loop body.
     loop_result = next(r for r in results if getattr(r, "vertex", None) and r.vertex.id == "loop")
     item = loop_result.result_dict.outputs["item"]
-    assert item["type"] == "array"
-    assert [row["text"] for row in item["message"]] == ["Row 0", "Row 1", "Row 2"]
+    assert item["message"]["count"] == 3
+    assert [row["text"] for row in item["message"]["items"]] == ["Row 0", "Row 1", "Row 2"]
 
 
 @pytest.mark.asyncio
@@ -207,21 +208,12 @@ async def test_iterate_caches_and_re_raises_errors():
 
 
 @pytest.mark.asyncio
-async def test_iteration_is_consistent_across_fresh_graphs():
-    """Building the topology fresh each run must produce identical iteration results.
+async def test_ctx_isolation_across_runs():
+    """Each async_start over the same topology must iterate the full input.
 
-    Production rebuilds the graph from JSON for every flow execution
-    (via Graph.from_payload), so each run gets a fresh `ctx`. This test
-    locks in that two such runs produce the same per-row dispatch count,
-    which guards against any cross-run leak that would somehow ride
-    along with re-imported state (caches, class-level dicts, etc.).
-
-    Note: reusing the same Graph instance across runs is intentionally
-    not exercised here. `Graph.context` is set once per Graph instance
-    and is not reset by `async_start`, so a Loop whose `_iterate` cached
-    `_iterated=True` on the first run would short-circuit a second run.
-    That is a framework-level behavior that does not surface in
-    production where graphs are per-request.
+    ctx lives per-run, so the `_iterated` guard must not leak and suppress
+    the second run. This locks in the per-run isolation claim in
+    `_iterate`'s docstring.
     """
     counts = []
     for _ in range(2):
@@ -234,7 +226,7 @@ async def test_iteration_is_consistent_across_fresh_graphs():
             sum(1 for d in events.get("end_vertex", []) if d.get("build_data", {}).get("id") == "ChatOutput-sink")
         )
 
-    assert counts == [3, 3], f"Each fresh run should build ChatOutput 3 times, got {counts}"
+    assert counts == [3, 3], f"Each run should build ChatOutput 3 times, got {counts}"
 
 
 @pytest.mark.asyncio

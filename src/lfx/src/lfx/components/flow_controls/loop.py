@@ -201,24 +201,25 @@ class LoopComponent(Component):
         self.update_ctx({f"{self._id}_aggregated": aggregated_results, f"{self._id}_iterated": True})
         return aggregated_results
 
-    async def item_output(self) -> DataFrame:
+    async def item_output(self) -> Data:
         """Display the inputs dispatched to the loop body.
 
-        Also triggers the iteration (idempotent) so the loop runs when only
-        the Item output has a downstream consumer and `done` is not
-        connected. Under normal graph execution `item_output` runs whenever
-        the Item output has a downstream consumer, which makes it a reliable
-        entry point for driving the subgraph. The `item` branch is then
-        stopped so downstream vertices aren't executed by the outer graph
-        (the loop body runs internally via the subgraph in `_iterate`).
+        Also triggers the iteration (idempotent) when `done` has no
+        downstream consumer, so the loop still runs if only the Item
+        output is connected. When `done` IS connected we leave iteration
+        to `done_output`. The `item` branch is stopped in both cases so
+        downstream vertices aren't executed by the outer graph (the loop
+        body runs internally via the subgraph in `_iterate`).
 
-        Returns the rows that were iterated over as a DataFrame so the
-        inspector renders them as a table rather than as JSON.
+        Returns a `Data` envelope so the outer item edge remains
+        compatible with Data-typed consumers in the loop body. The
+        wrapped payload exposes the iterated rows for inspection.
         """
         self.stop("item")
-        await self._iterate()
+        if self._vertex is not None and "done" not in self._vertex.edges_source_names:
+            await self._iterate()
         data_list = self.ctx.get(f"{self._id}_data", [])
-        return DataFrame(data_list)
+        return Data(data={"count": len(data_list), "items": [d.data for d in data_list]})
 
     async def done_output(self) -> DataFrame:
         """Return the aggregated results from the loop iteration.
