@@ -106,6 +106,7 @@ export default function StepReview() {
     removedFlowIds,
     selectedInstance,
     preExistingFlowIds,
+    initialToolNameByFlow,
     setHasToolNameErrors,
   } = useDeploymentStepper();
 
@@ -157,13 +158,24 @@ export default function StepReview() {
   const toolNamesToCheck = useMemo(() => {
     const names: string[] = [];
     for (const item of reviewFlows) {
-      // Skip pre-existing flows in edit mode — those already have tools in provider.
-      if (isEditMode && preExistingFlowIds.has(item.flowId)) continue;
       const normalized = normalizeWxoName(item.toolName);
-      if (normalized) names.push(normalized);
+      if (!normalized) continue;
+      // Skip pre-existing flows only if their tool name hasn't changed.
+      if (isEditMode && preExistingFlowIds.has(item.flowId)) {
+        const original = normalizeWxoName(
+          initialToolNameByFlow.get(item.flowId) ?? "",
+        );
+        if (
+          normalized.toLowerCase() === original.toLowerCase() ||
+          normalized.toLowerCase() ===
+            normalizeWxoName(item.flowName).toLowerCase()
+        )
+          continue;
+      }
+      names.push(normalized);
     }
     return names;
-  }, [reviewFlows, isEditMode, preExistingFlowIds]);
+  }, [reviewFlows, isEditMode, preExistingFlowIds, initialToolNameByFlow]);
 
   const { data: checkNamesData } = useCheckToolNames(
     { providerId: selectedInstance?.id ?? "", names: toolNamesToCheck },
@@ -197,9 +209,18 @@ export default function StepReview() {
         batchNames.set(normalized, item.flowId);
       }
 
-      // Check against existing provider tools (skip for pre-existing flows in edit mode)
+      // Check against existing provider tools (skip for pre-existing flows only if name unchanged)
       if (!errors.has(item.flowId) && existingToolNames.has(normalized)) {
-        if (!(isEditMode && preExistingFlowIds.has(item.flowId))) {
+        let skipProviderCheck = false;
+        if (isEditMode && preExistingFlowIds.has(item.flowId)) {
+          const original = normalizeWxoName(
+            initialToolNameByFlow.get(item.flowId) ?? "",
+          ).toLowerCase();
+          skipProviderCheck =
+            normalized === original ||
+            normalized === normalizeWxoName(item.flowName).toLowerCase();
+        }
+        if (!skipProviderCheck) {
           errors.set(
             item.flowId,
             "Edit tool name (already exists in provider)",
@@ -209,7 +230,13 @@ export default function StepReview() {
     }
 
     return errors;
-  }, [reviewFlows, existingToolNames, isEditMode, preExistingFlowIds]);
+  }, [
+    reviewFlows,
+    existingToolNames,
+    isEditMode,
+    preExistingFlowIds,
+    initialToolNameByFlow,
+  ]);
 
   useEffect(() => {
     setHasToolNameErrors(toolNameErrors.size > 0);

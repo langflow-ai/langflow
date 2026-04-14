@@ -93,6 +93,8 @@ interface DeploymentStepperContextType {
   /** User-provided tool names per flow. Key = flowId. */
   toolNameByFlow: Map<string, string>;
   setToolNameByFlow: Dispatch<SetStateAction<Map<string, string>>>;
+  /** Original tool names from provider before this edit session (edit mode). Key = flowId. */
+  initialToolNameByFlow: Map<string, string>;
   /** Flow IDs that were already attached before this edit session (edit mode). */
   preExistingFlowIds: Set<string>;
   /** Flow IDs that were originally attached but the user chose to detach (edit mode). */
@@ -550,6 +552,7 @@ export function DeploymentStepperProvider({
       handleSelectVersion,
       toolNameByFlow,
       setToolNameByFlow,
+      initialToolNameByFlow,
       attachedConnectionByFlow,
       setAttachedConnectionByFlow,
       preExistingFlowIds,
@@ -584,6 +587,7 @@ export function DeploymentStepperProvider({
       selectedVersionByFlow,
       handleSelectVersion,
       toolNameByFlow,
+      initialToolNameByFlow,
       attachedConnectionByFlow,
       preExistingFlowIds,
       removedFlowIds,
