@@ -19,6 +19,7 @@ runs fully and sets vertex.result correctly.
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from lfx.graph.graph.base import Graph
 from lfx.services.cache.utils import CacheMiss
 
 
@@ -240,15 +241,42 @@ class TestCacheRestorationEdgeCases:
         assert should_build is True, "Cache miss should trigger build"
 
     @pytest.mark.asyncio
-    async def test_service_unavailable_fallback_returns_cache_miss(self):
-        """Fallback cache getter should behave like a cache miss, not a cache hit."""
+    async def test_service_unavailable_graph_step_uses_cache_miss_fallback(self, monkeypatch):
+        """Graph execution should use a cache-miss fallback when chat service is unavailable."""
 
-        async def get_cache_func(*args, **kwargs):  # noqa: ARG001
-            return CacheMiss()
+        monkeypatch.setattr("lfx.graph.graph.base.get_chat_service", lambda: None)
 
-        cached_result = await get_cache_func(key="frozen-vertex")
+        graph = Graph()
+        graph._prepared = True  # noqa: SLF001
+        graph.extend_run_queue(["frozen-vertex"])
+        graph.get_next_runnable_vertices = AsyncMock(return_value=[])
+        graph.reset_inactivated_vertices = Mock()
+        graph.reset_activated_vertices = Mock()
 
-        assert isinstance(cached_result, CacheMiss)
+        vertex = Mock()
+        vertex.id = "frozen-vertex"
+        vertex.frozen = True
+        vertex.built = False
+        vertex.is_loop = False
+        vertex.display_name = "TestComponent"
+        vertex.result = None
+        vertex.artifacts = {}
+        vertex.results = {}
+        vertex.built_object = {}
+        vertex.built_result = {}
+        vertex.full_data = {}
+        vertex.built_object_repr = Mock(return_value="built")
+
+        async def build_vertex(*args, **kwargs):  # noqa: ARG001
+            vertex.result = {"result": "fresh-build"}
+
+        vertex.build = AsyncMock(side_effect=build_vertex)
+        graph.get_vertex = Mock(return_value=vertex)
+
+        await graph.astep()
+
+        vertex.build.assert_awaited_once()
+        assert vertex.result == {"result": "fresh-build"}
 
     def test_loop_component_should_always_build_even_when_frozen(self):
         """Test that Loop component always builds even when frozen and built.
