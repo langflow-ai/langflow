@@ -27,20 +27,6 @@ OPENAI_MODELS_DETAILED = [
     # GPT-5.3 Series
     create_model_metadata(
         provider="OpenAI",
-        name="gpt-5.3",
-        icon="OpenAI",
-        tool_calling=True,
-        reasoning=True,
-    ),
-    create_model_metadata(
-        provider="OpenAI",
-        name="gpt-5.3-instant",
-        icon="OpenAI",
-        tool_calling=True,
-        reasoning=True,
-    ),
-    create_model_metadata(
-        provider="OpenAI",
         name="gpt-5.3-codex",
         icon="OpenAI",
         tool_calling=True,

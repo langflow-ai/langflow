@@ -63,7 +63,7 @@ function AssistantLoadingStateComponent({
         className={
           showStreamingPreview ||
           progress.error ||
-          progress.attempt > 0 ||
+          progress.attempt > 1 ||
           finalCode ||
           isReady
             ? "px-4 pb-4"
