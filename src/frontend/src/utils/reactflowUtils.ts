@@ -1643,7 +1643,11 @@ export function mergeNodeTemplates({
     const nodeTemplate = cloneDeep(node.data.node!.template);
     Object.keys(nodeTemplate)
       .filter((field_name) => field_name.charAt(0) !== "_")
-      .filter((field_name) => typeof nodeTemplate[field_name] === "object" && nodeTemplate[field_name] !== null)
+      .filter(
+        (field_name) =>
+          typeof nodeTemplate[field_name] === "object" &&
+          nodeTemplate[field_name] !== null,
+      )
       .forEach((key) => {
         if (
           node.type === "genericNode" &&
