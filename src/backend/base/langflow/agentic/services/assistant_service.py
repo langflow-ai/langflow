@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import aclosing
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
@@ -19,6 +20,7 @@ from langflow.agentic.helpers.sse import (
     format_progress_event,
     format_token_event,
 )
+from langflow.agentic.helpers.streaming_retry import emit_execution_retry_events
 from langflow.agentic.helpers.validation import validate_component_code, validate_component_runtime
 from langflow.agentic.services.flow_executor import (
     execute_flow_file,
@@ -26,10 +28,12 @@ from langflow.agentic.services.flow_executor import (
     extract_response_text,
 )
 from langflow.agentic.services.flow_types import (
+    EXECUTION_RETRY_TEMPLATE,
     MAX_VALIDATION_RETRIES,
     OFF_TOPIC_REFUSAL_MESSAGE,
     VALIDATION_RETRY_TEMPLATE,
     VALIDATION_UI_DELAY_SECONDS,
+    FlowExecutionError,
 )
 from langflow.agentic.services.helpers.intent_classification import classify_intent
 
@@ -237,55 +241,75 @@ async def execute_flow_with_validation_streaming(
 
             result = None
             cancelled = False
-            flow_generator = execute_flow_file_streaming(
-                flow_filename=flow_filename,
-                input_value=current_input,
-                global_variables=global_variables,
-                user_id=user_id,
-                session_id=session_id,
-                provider=provider,
-                model_name=model_name,
-                api_key_var=api_key_var,
-                is_disconnected=is_disconnected,
-                cancel_event=cancel_event,
-            )
-            try:
-                # Use streaming executor to get token events
-                async for event_type, event_data in flow_generator:
-                    if event_type == "token":
-                        # Stream tokens for both Q&A and component generation
-                        # For components, the frontend shows live code preview
-                        yield format_token_event(event_data)
-                    elif event_type == "end":
-                        # Flow completed, store result
-                        result = event_data
-                    elif event_type == "cancelled":
-                        # Flow was cancelled due to client disconnect
-                        logger.info("Flow execution cancelled by client disconnect")
-                        cancelled = True
-                        break
-            except GeneratorExit:
-                # This generator was closed (client disconnected)
-                logger.info("Assistant generator closed, setting cancel event")
-                cancel_event.set()
-                await flow_generator.aclose()
-                yield format_cancelled_event()
-                return
-            except HTTPException as e:
-                friendly_msg = extract_friendly_error(str(e.detail))
-                logger.error(f"Flow execution failed: {friendly_msg}")
-                yield format_error_event(friendly_msg)
-                return
-            except (ValueError, RuntimeError, OSError) as e:
-                friendly_msg = extract_friendly_error(str(e))
-                logger.error(f"Flow execution failed: {friendly_msg}")
-                yield format_error_event(friendly_msg)
-                return
+            execution_error: str | None = None
+            # aclosing guarantees the async generator is closed on every exit path
+            # (normal completion, exception, or cancellation) — not relying on GC.
+            async with aclosing(
+                execute_flow_file_streaming(
+                    flow_filename=flow_filename,
+                    input_value=current_input,
+                    global_variables=global_variables,
+                    user_id=user_id,
+                    session_id=session_id,
+                    provider=provider,
+                    model_name=model_name,
+                    api_key_var=api_key_var,
+                    is_disconnected=is_disconnected,
+                    cancel_event=cancel_event,
+                )
+            ) as flow_generator:
+                try:
+                    async for event_type, event_data in flow_generator:
+                        if event_type == "token":
+                            # Stream tokens for both Q&A and component generation
+                            # For components, the frontend shows live code preview
+                            yield format_token_event(event_data)
+                        elif event_type == "end":
+                            result = event_data
+                        elif event_type == "cancelled":
+                            logger.info("Flow execution cancelled by client disconnect")
+                            cancelled = True
+                            break
+                except GeneratorExit:
+                    logger.info("Assistant generator closed, setting cancel event")
+                    cancel_event.set()
+                    yield format_cancelled_event()
+                    return
+                except FlowExecutionError as e:
+                    # Internal retry loop reads the raw error to pick a friendly message;
+                    # the public HTTP detail stays generic (see FlowExecutionError docstring).
+                    execution_error = extract_friendly_error(e.original_error_message)
+                except HTTPException as e:
+                    execution_error = extract_friendly_error(str(e.detail))
+                except (ValueError, RuntimeError, OSError) as e:
+                    execution_error = extract_friendly_error(str(e))
 
-            # Handle cancellation
             if cancelled:
                 yield format_cancelled_event()
                 return
+
+            if execution_error is not None:
+                logger.error(f"Flow execution failed (attempt {attempt + 1}): {execution_error}")
+
+                # Q&A has no retry semantics — emit error and exit immediately
+                if not is_component_request:
+                    yield format_error_event(execution_error)
+                    return
+
+                async for event in emit_execution_retry_events(
+                    attempt=attempt,
+                    total_attempts=total_attempts,
+                    error=execution_error,
+                ):
+                    yield event
+
+                if attempt >= total_attempts - 1:
+                    return  # complete event already emitted by the helper
+                current_input = EXECUTION_RETRY_TEMPLATE.format(
+                    error=execution_error,
+                    original_input=sanitization.sanitized_input,
+                )
+                continue
 
             if result is None:
                 logger.error("Flow execution returned no result")
