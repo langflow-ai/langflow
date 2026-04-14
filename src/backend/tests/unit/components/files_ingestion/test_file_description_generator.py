@@ -38,6 +38,17 @@ def _mock_popen(stdout: str = "", stderr: str = "", returncode: int = 0):
     return patcher, mock_proc
 
 
+def _wrap_output(results: list, *, failed: list | None = None) -> dict:
+    """Wrap subprocess results in the expected output format."""
+    failed_items = []
+    for f in failed or []:
+        if isinstance(f, dict):
+            failed_items.append(f)
+        else:
+            failed_items.append({"file_path": f, "error": "Test error"})
+    return {"results": results, "failed": failed_items, "total": len(results) + len(failed_items)}
+
+
 class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
@@ -86,7 +97,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with _mock_popen(stdout=json.dumps(mock_output))[0]:
+            with _mock_popen(stdout=json.dumps(_wrap_output(mock_output)))[0]:
                 result = component.generate_descriptions()
 
                 assert len(result) == 2
@@ -123,7 +134,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with _mock_popen(stdout=json.dumps(mock_output))[0]:
+            with _mock_popen(stdout=json.dumps(_wrap_output(mock_output)))[0]:
                 result = component.generate_descriptions()
 
                 assert len(result) == 2
@@ -156,7 +167,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with _mock_popen(stdout=json.dumps(mock_output))[0]:
+            with _mock_popen(stdout=json.dumps(_wrap_output(mock_output)))[0]:
                 result = component.generate_descriptions()
 
                 assert len(result) == 2
@@ -196,7 +207,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with _mock_popen(stdout=json.dumps(mock_output))[0]:
+            with _mock_popen(stdout=json.dumps(_wrap_output(mock_output)))[0]:
                 result = component.generate_descriptions()
 
                 assert len(result) == 1
@@ -228,7 +239,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with _mock_popen(stdout=json.dumps(mock_output))[0]:
+            with _mock_popen(stdout=json.dumps(_wrap_output(mock_output)))[0]:
                 result = component.generate_descriptions()
 
                 assert len(result) == 1
@@ -280,7 +291,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with _mock_popen(stdout=json.dumps(mock_output))[0]:
+            with _mock_popen(stdout=json.dumps(_wrap_output(mock_output)))[0]:
                 result = component.generate_descriptions()
 
                 # Should skip unsupported type and process valid Data
@@ -315,36 +326,41 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
                 component.generate_descriptions()
 
     def test_generate_descriptions_empty_json_array(self, component_class, default_kwargs):
-        """Test handling of empty JSON array response (all files failed processing)."""
+        """Test that all files failing raises RuntimeError."""
         component = component_class()
         component.set_attributes(default_kwargs)
+
+        empty_output = json.dumps(_wrap_output([], failed=["/path/to/file1.txt", "/path/to/file2.txt"]))
 
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with _mock_popen(stdout="[]")[0]:
-                result = component.generate_descriptions()
+            with (
+                _mock_popen(stdout=empty_output)[0],
+                pytest.raises(RuntimeError, match="Ingestion failed"),
+            ):
+                component.generate_descriptions()
 
-                assert result == []
-
-    def test_generate_descriptions_partial_success(self, component_class, default_kwargs):
-        """Test when subprocess returns partial results (some files failed)."""
+    def test_generate_descriptions_partial_success_raises(self, component_class, default_kwargs):
+        """Test that partial success (some files failed) raises RuntimeError."""
         component = component_class()
         component.set_attributes(default_kwargs)
 
-        # Only one file succeeded
-        mock_output = [
-            {"text": "Description of file1", "file_path": "/path/to/file1.txt"},
-        ]
+        partial_output = json.dumps(
+            _wrap_output(
+                [{"text": "Description of file1", "file_path": "/path/to/file1.txt"}],
+                failed=["/path/to/file2.txt"],
+            )
+        )
 
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with _mock_popen(stdout=json.dumps(mock_output), stderr="WARNING: file2.txt failed")[0]:
-                result = component.generate_descriptions()
-
-                assert len(result) == 1
-                assert result[0].data["file_path"] == "/path/to/file1.txt"
+            with (
+                _mock_popen(stdout=partial_output, stderr="WARNING: file2.txt failed")[0],
+                pytest.raises(RuntimeError, match="Ingestion failed"),
+            ):
+                component.generate_descriptions()
 
     def test_generate_descriptions_subprocess_timeout(self, component_class, default_kwargs):
         """Test handling of subprocess timeout."""
@@ -389,7 +405,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            patcher, mock_proc = _mock_popen(stdout=json.dumps(mock_output))
+            patcher, mock_proc = _mock_popen(stdout=json.dumps(_wrap_output(mock_output)))
             with patcher:
                 component.generate_descriptions()
 
@@ -410,7 +426,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with _mock_popen(stdout=json.dumps(mock_output))[0]:
+            with _mock_popen(stdout=json.dumps(_wrap_output(mock_output)))[0]:
                 result = component.generate_descriptions()
 
                 assert len(result) == 1
@@ -447,7 +463,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            patcher, mock_proc = _mock_popen(stdout=json.dumps(mock_output))
+            patcher, mock_proc = _mock_popen(stdout=json.dumps(_wrap_output(mock_output)))
             with patcher:
                 result = component.generate_descriptions()
 
@@ -483,7 +499,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with _mock_popen(stdout=json.dumps(mock_output))[0], pytest.raises(KeyError, match="text"):
+            with _mock_popen(stdout=json.dumps(_wrap_output(mock_output)))[0], pytest.raises(KeyError, match="text"):
                 component.generate_descriptions()
 
     def test_generate_descriptions_missing_file_path_key_in_output(self, component_class, default_kwargs):
@@ -499,7 +515,10 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         with patch("lfx.base.data.docling_utils._serialize_pydantic_model") as mock_serialize:
             mock_serialize.return_value = {"__class_path__": "test.MockLLM"}
 
-            with _mock_popen(stdout=json.dumps(mock_output))[0], pytest.raises(KeyError, match="file_path"):
+            with (
+                _mock_popen(stdout=json.dumps(_wrap_output(mock_output)))[0],
+                pytest.raises(KeyError, match="file_path"),
+            ):
                 component.generate_descriptions()
 
     def test_generate_descriptions_exception_propagation(self, component_class, default_kwargs):

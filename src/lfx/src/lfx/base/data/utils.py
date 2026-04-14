@@ -17,6 +17,11 @@ from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
 
+# Max bytes to feed to chardet for encoding detection.
+# Scanning the first 100 KB is sufficient for reliable detection
+# and avoids O(n) overhead on large files (e.g. 800s for 1.5 GB).
+_CHARDET_SAMPLE_BYTES = 102400
+
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
 TEXT_FILE_TYPES = [
@@ -154,10 +159,10 @@ def read_text_file(file_path: str) -> str:
     """
     file_path_ = Path(file_path)
     raw_data = file_path_.read_bytes()
-    result = chardet.detect(raw_data)
+    result = chardet.detect(raw_data[:_CHARDET_SAMPLE_BYTES])
     encoding = result["encoding"]
 
-    if encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
+    if not encoding or encoding in {"ascii", "Windows-1252", "Windows-1254", "MacRoman"}:
         encoding = "utf-8"
 
     return file_path_.read_text(encoding=encoding)
@@ -177,12 +182,12 @@ async def read_text_file_async(file_path: str) -> str:
     # Use storage-aware read to get bytes
     raw_data = await read_file_bytes(file_path)
 
-    # Auto-detect encoding
-    result = chardet.detect(raw_data)
+    # Auto-detect encoding (sample only — full scan is O(n) and slow on large files)
+    result = chardet.detect(raw_data[:_CHARDET_SAMPLE_BYTES])
     encoding = result.get("encoding")
 
-    # If encoding detection fails (e.g., binary file), default to utf-8
-    if not encoding or encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
+    # Default to utf-8 for ASCII (superset), failed detection, or ambiguous Windows encodings
+    if not encoding or encoding in {"ascii", "Windows-1252", "Windows-1254", "MacRoman"}:
         encoding = "utf-8"
 
     return raw_data.decode(encoding, errors="replace")
