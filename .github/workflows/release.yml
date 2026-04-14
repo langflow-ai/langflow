@@ -798,13 +798,20 @@ jobs:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
       lfx-artifact-name: "dist-lfx"
-      sdk-artifact-name: "dist-sdk"
+      sdk-artifact-name: ${{ needs.build-sdk.result == 'success' && 'dist-sdk' || '' }}
       pre_release: ${{ inputs.pre_release }}
 
   publish-base:
     name: Publish Langflow Base to PyPI
-    if: ${{ inputs.release_package_base }}
-    needs: [build-base, test-cross-platform, ci]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.release_package_base &&
+      needs.build-base.result == 'success' &&
+      needs.test-cross-platform.result == 'success' &&
+      needs.ci.result == 'success' &&
+      (needs.publish-lfx.result == 'success' || needs.publish-lfx.result == 'skipped')
+    needs: [build-base, test-cross-platform, ci, publish-lfx]
     runs-on: ubuntu-latest
     steps:
       - name: Download base artifact
