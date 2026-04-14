@@ -176,8 +176,7 @@ export default function StepAttachFlows() {
         const result = await detectEnvVars({
           flow_version_ids: [preSelected.versionId],
         });
-        const detected = result.variables ?? [];
-        updateDetectedEnvVars(detected);
+        updateDetectedEnvVars(result.variables ?? []);
       } catch {
         setErrorData({
           title: "Could not auto-detect environment variables",
@@ -215,8 +214,7 @@ export default function StepAttachFlows() {
         const result = await detectEnvVars({
           flow_version_ids: [versionId],
         });
-        const detected = result.variables ?? [];
-        updateDetectedEnvVars(detected);
+        updateDetectedEnvVars(result.variables ?? []);
       } catch {
         updateDetectedEnvVars([]);
         setErrorData({
