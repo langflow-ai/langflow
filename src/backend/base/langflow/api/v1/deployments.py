@@ -63,11 +63,11 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentTypeListResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
-    ExecutionCreateRequest,
-    ExecutionCreateResponse,
-    ExecutionStatusResponse,
     FlowIdsQuery,
     FlowVersionIdsQuery,
+    RunCreateRequest,
+    RunCreateResponse,
+    RunStatusResponse,
     SnapshotUpdateRequest,
     SnapshotUpdateResponse,
 )
@@ -733,14 +733,14 @@ async def list_deployment_llms(
 
 
 @router.post(
-    "/{deployment_id}/executions",
-    response_model=ExecutionCreateResponse,
+    "/{deployment_id}/runs",
+    response_model=RunCreateResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_deployment_execution(
+async def create_deployment_run(
     deployment_id: DeploymentIdPath,
     session: DbSession,
-    payload: ExecutionCreateRequest,
+    payload: RunCreateRequest,
     current_user: CurrentActiveUser,
 ):
     deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
@@ -769,10 +769,10 @@ async def create_deployment_execution(
     )
 
 
-@router.get("/{deployment_id}/executions/{execution_id}", response_model=ExecutionStatusResponse)
-async def get_deployment_execution(
+@router.get("/{deployment_id}/runs/{run_id}", response_model=RunStatusResponse)
+async def get_deployment_run(
     deployment_id: DeploymentIdPath,
-    execution_id: Annotated[str, Path(min_length=1, description="Provider-owned opaque execution identifier.")],
+    run_id: Annotated[str, Path(min_length=1, description="Provider-owned opaque run identifier.")],
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
 ):
@@ -781,7 +781,7 @@ async def get_deployment_execution(
         user_id=current_user.id,
         db=session,
     )
-    execution_lookup_id = execution_id.strip()
+    execution_lookup_id = run_id.strip()
     with (
         handle_adapter_errors(mapper=deployment_mapper),
         deployment_provider_scope(deployment_row.deployment_provider_account_id),
