@@ -1293,3 +1293,188 @@ async def test_list_versions_sync_failure_does_not_block_response(client: AsyncC
             params={"deployment_provider_id": provider_account_id},
         )
         assert len(entries) == 1
+
+
+async def test_get_single_version_reports_unknown_deployment_status_when_unattached(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """Single-version reads return deployment status as unknown."""
+    _set_deployments_feature_flag(monkeypatch, enabled=True)
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    resp = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json()["is_deployed"] is None
+
+
+async def test_get_single_version_reports_unknown_deployment_status_when_attached(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """Single-version reads return unknown deployment status even when attached."""
+    from uuid import UUID
+
+    from langflow.services.deps import session_scope
+
+    _set_deployments_feature_flag(monkeypatch, enabled=True)
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    async with session_scope() as session:
+        from langflow.services.database.models.flow.model import Flow
+        from sqlmodel import select
+
+        flow_row = (await session.exec(select(Flow).where(Flow.id == UUID(flow["id"])))).one()
+        provider_account = await _create_provider_account_row(session, user_id=flow_row.user_id)
+        deployment = await _create_deployment_row(
+            session,
+            user_id=flow_row.user_id,
+            project_id=flow_row.folder_id,
+            provider_account_id=provider_account.id,
+            name="single-get-attached",
+            resource_key="rk-single-get-attached",
+        )
+        await _attach_version_to_deployment(
+            session,
+            user_id=flow_row.user_id,
+            flow_version_id=UUID(snap["id"]),
+            deployment_id=deployment.id,
+        )
+
+    resp = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json()["is_deployed"] is None
+
+
+async def test_get_single_version_reports_unknown_deployment_status_when_feature_disabled(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """Feature-flag state does not change single-version deployment status behavior."""
+    from uuid import UUID
+
+    from langflow.services.deps import session_scope
+
+    _set_deployments_feature_flag(monkeypatch, enabled=False)
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    async with session_scope() as session:
+        from langflow.services.database.models.flow.model import Flow
+        from sqlmodel import select
+
+        flow_row = (await session.exec(select(Flow).where(Flow.id == UUID(flow["id"])))).one()
+        provider_account = await _create_provider_account_row(session, user_id=flow_row.user_id)
+        deployment = await _create_deployment_row(
+            session,
+            user_id=flow_row.user_id,
+            project_id=flow_row.folder_id,
+            provider_account_id=provider_account.id,
+            name="single-get-disabled",
+            resource_key="rk-single-get-disabled",
+        )
+        await _attach_version_to_deployment(
+            session,
+            user_id=flow_row.user_id,
+            flow_version_id=UUID(snap["id"]),
+            deployment_id=deployment.id,
+        )
+
+    resp = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json()["is_deployed"] is None
+
+
+async def test_get_single_version_sync_failure_does_not_block_response(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """Single-version reads remain healthy if the list sync helper would fail."""
+    from unittest.mock import AsyncMock, patch
+
+    _set_deployments_feature_flag(monkeypatch, enabled=True)
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    with patch(SYNC_MODULE, new_callable=AsyncMock, side_effect=RuntimeError("provider down")) as mock_sync:
+        resp = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["id"] == snap["id"]
+        assert resp.json()["is_deployed"] is None
+        mock_sync.assert_not_awaited()
+
+
+async def test_get_single_version_does_not_trigger_sync_prune(client: AsyncClient, logged_in_headers, monkeypatch):
+    """Single-version reads should not trigger sync/prune side effects."""
+    from unittest.mock import AsyncMock, patch
+    from uuid import UUID
+
+    from langflow.services.deps import session_scope
+
+    _set_deployments_feature_flag(monkeypatch, enabled=True)
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    async with session_scope() as session:
+        from langflow.services.database.models.flow.model import Flow
+        from langflow.services.database.models.flow_version_deployment_attachment.model import (
+            FlowVersionDeploymentAttachment,
+        )
+        from sqlmodel import select
+
+        flow_row = (await session.exec(select(Flow).where(Flow.id == UUID(flow["id"])))).one()
+        user_id = flow_row.user_id
+        provider_account = await _create_provider_account_row(session, user_id=user_id)
+        deployment = await _create_deployment_row(
+            session,
+            user_id=user_id,
+            project_id=flow_row.folder_id,
+            provider_account_id=provider_account.id,
+            name="single-get-no-sync",
+            resource_key="rk-single-get-no-sync",
+        )
+        await _attach_version_to_deployment(
+            session,
+            user_id=user_id,
+            flow_version_id=UUID(snap["id"]),
+            deployment_id=deployment.id,
+            provider_snapshot_id="tool-xyz-789",
+        )
+
+    with patch(SYNC_MODULE, new_callable=AsyncMock) as mock_sync:
+        resp = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["is_deployed"] is None
+        mock_sync.assert_not_awaited()
+
+    async with session_scope() as session:
+        from langflow.services.database.models.flow_version_deployment_attachment.model import (
+            FlowVersionDeploymentAttachment,
+        )
+        from sqlmodel import select
+
+        attachment = (
+            await session.exec(
+                select(FlowVersionDeploymentAttachment).where(
+                    FlowVersionDeploymentAttachment.flow_version_id == UUID(snap["id"]),
+                )
+            )
+        ).first()
+        assert attachment is not None
+
+
+async def test_get_flow_version_entries_by_ids_rejects_oversized_batch():
+    from unittest.mock import AsyncMock
+    from uuid import uuid4
+
+    from langflow.services.database.models.flow_version.crud import get_flow_version_entries_by_ids
+
+    session = AsyncMock()
+    version_ids = [uuid4() for _ in range(51)]
+
+    with pytest.raises(ValueError, match="version_ids supports at most 50 values"):
+        await get_flow_version_entries_by_ids(
+            session=session,
+            version_ids=version_ids,
+            user_id=uuid4(),
+        )
+
+    session.exec.assert_not_called()
