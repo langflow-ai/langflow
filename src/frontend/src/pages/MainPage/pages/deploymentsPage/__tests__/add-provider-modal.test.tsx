@@ -50,7 +50,7 @@ describe("Rendering", () => {
     renderModal();
     expect(screen.getByText("Add Environment")).toBeInTheDocument();
     expect(
-      screen.getByText(/Configure your watsonx Orchestrate credentials/),
+      screen.getByText(/Configure watsonx Orchestrate credentials/),
     ).toBeInTheDocument();
   });
 

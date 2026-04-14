@@ -4,6 +4,14 @@ import type { FlowType } from "@/types/flow";
 import type { FlowVersionEntry } from "@/types/flow/version";
 import { cn } from "@/utils/utils";
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 export const VersionPanel = memo(function VersionPanel({
   selectedFlow,
   versions,
@@ -59,7 +67,7 @@ export const VersionPanel = memo(function VersionPanel({
                       : "border-transparent bg-muted hover:border-border",
                   )}
                 >
-                  <span className="flex flex-col">
+                  <span className="flex flex-col gap-1">
                     <span className="flex items-center gap-2 text-sm font-medium leading-tight">
                       {version.version_tag}
                       {isAttachedVersion && (
@@ -72,9 +80,9 @@ export const VersionPanel = memo(function VersionPanel({
                         </Badge>
                       )}
                     </span>
-                    <span className="text-sm leading-tight text-muted-foreground">
+                    <span className="text-xxs leading-tight text-muted-foreground">
                       Created:{" "}
-                      {new Date(version.created_at).toLocaleDateString()}
+                      {formatDate(version.created_at)}
                     </span>
                   </span>
                 </button>

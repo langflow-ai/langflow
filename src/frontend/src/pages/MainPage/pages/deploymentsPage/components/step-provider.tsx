@@ -141,17 +141,16 @@ export default function StepProvider() {
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          Configure your watsonx Orchestrate credentials below. Sign in or sign
-          up to{" "}
+          Configure{" "}
           <a
             href="https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started"
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-primary hover:underline"
           >
-            find your credentials
-          </a>
-          .
+            watsonx Orchestrate
+          </a>{" "}
+          credentials.
         </p>
       </div>
 
