@@ -712,7 +712,7 @@
               }
             ],
             "pinned": false,
-            "score": 7.568328950209746e-06,
+            "score": 7.568328950209746e-6,
             "template": {
               "_type": "Component",
               "code": {
@@ -1192,7 +1192,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.27"
+                    "version": "1.2.28"
                   }
                 ],
                 "total_dependencies": 3

@@ -1204,7 +1204,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.27"
+                    "version": "1.2.28"
                   }
                 ],
                 "total_dependencies": 3
@@ -2094,6 +2094,7 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
+                "options": [],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -2105,8 +2106,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": "",
-                "options": []
+                "value": ""
               },
               "output_schema": {
                 "_input_type": "TableInput",
