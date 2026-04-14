@@ -307,7 +307,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         hardcoded_names = {m.model_name for m in raw_models}
 
         try:
-            # raw_models = await asyncio.to_thread(client_manager.get_models_raw)
             api_models = await asyncio.to_thread(client_manager.get_models_raw)
             raw_models.extend(m for m in api_models if m.model_name not in hardcoded_names)
             parsed_models: WatsonxDeploymentLlmListResultData = self._parse_provider_payload(
