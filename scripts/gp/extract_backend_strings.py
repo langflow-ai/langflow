@@ -86,19 +86,30 @@ def collect_strings() -> dict[str, str]:
             if isinstance(description, str) and description:
                 flat[f"components.{component_key}.description"] = description
 
-            # Tier 2 — input field display_names
+            # Tier 2 — input field display_names, info, and placeholder
             for inp in getattr(cls, "inputs", []) or []:
                 field_display = getattr(inp, "display_name", None)
                 field_name = getattr(inp, "name", None)
-                if isinstance(field_name, str) and isinstance(field_display, str) and field_name and field_display:
-                    flat[f"components.{component_key}.inputs.{field_name}.display_name"] = field_display
+                field_info = getattr(inp, "info", None)
+                field_placeholder = getattr(inp, "placeholder", None)
+                if isinstance(field_name, str) and field_name:
+                    if isinstance(field_display, str) and field_display:
+                        flat[f"components.{component_key}.inputs.{field_name}.display_name"] = field_display
+                    if isinstance(field_info, str) and field_info:
+                        flat[f"components.{component_key}.inputs.{field_name}.info"] = field_info
+                    if isinstance(field_placeholder, str) and field_placeholder:
+                        flat[f"components.{component_key}.inputs.{field_name}.placeholder"] = field_placeholder
 
-            # Tier 2 — output display_names
+            # Tier 2 — output display_names and info
             for out in getattr(cls, "outputs", []) or []:
                 out_display = getattr(out, "display_name", None)
                 out_name = getattr(out, "name", None)
-                if isinstance(out_name, str) and isinstance(out_display, str) and out_name and out_display:
-                    flat[f"components.{component_key}.outputs.{out_name}.display_name"] = out_display
+                out_info = getattr(out, "info", None)
+                if isinstance(out_name, str) and out_name:
+                    if isinstance(out_display, str) and out_display:
+                        flat[f"components.{component_key}.outputs.{out_name}.display_name"] = out_display
+                    if isinstance(out_info, str) and out_info:
+                        flat[f"components.{component_key}.outputs.{out_name}.info"] = out_info
 
     # Tier 3 — starter project names & descriptions (auto-discovered from JSON files)
     starter_count = 0

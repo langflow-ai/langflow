@@ -158,33 +158,52 @@ def translate_component_dict(all_types: dict[str, Any], locale: str) -> dict[str
             )
             translated["description"] = translate(f"components.{name}.description", locale, data.get("description", ""))
 
-            # Tier 2 — template field display_names (inputs serialised as dicts)
+            # Tier 2 — template field display_names and info (inputs serialised as dicts)
             if "template" in data and isinstance(data["template"], dict):
                 translated["template"] = {**data["template"]}
                 for field_name, field in data["template"].items():
-                    if isinstance(field, dict) and "display_name" in field:
-                        translated["template"][field_name] = {
-                            **field,
-                            "display_name": translate(
+                    if isinstance(field, dict):
+                        field_updates = {}
+                        if "display_name" in field:
+                            field_updates["display_name"] = translate(
                                 f"components.{name}.inputs.{field_name}.display_name",
                                 locale,
                                 field["display_name"],
-                            ),
-                        }
+                            )
+                        if "info" in field and field["info"]:
+                            field_updates["info"] = translate(
+                                f"components.{name}.inputs.{field_name}.info",
+                                locale,
+                                field["info"],
+                            )
+                        if "placeholder" in field and field["placeholder"]:
+                            field_updates["placeholder"] = translate(
+                                f"components.{name}.inputs.{field_name}.placeholder",
+                                locale,
+                                field["placeholder"],
+                            )
+                        if field_updates:
+                            translated["template"][field_name] = {**field, **field_updates}
 
-            # Tier 2 — output display_names
+            # Tier 2 — output display_names and info
             if "outputs" in data and isinstance(data["outputs"], list):
-                translated["outputs"] = [
-                    {
-                        **out,
+                translated["outputs"] = []
+                for out in data["outputs"]:
+                    out_name = out.get("name", "")
+                    out_updates = {
                         "display_name": translate(
-                            f"components.{name}.outputs.{out.get('name', '')}.display_name",
+                            f"components.{name}.outputs.{out_name}.display_name",
                             locale,
                             out.get("display_name", ""),
                         ),
                     }
-                    for out in data["outputs"]
-                ]
+                    if out.get("info"):
+                        out_updates["info"] = translate(
+                            f"components.{name}.outputs.{out_name}.info",
+                            locale,
+                            out["info"],
+                        )
+                    translated["outputs"].append({**out, **out_updates})
 
             result[category][name] = translated
     return result
