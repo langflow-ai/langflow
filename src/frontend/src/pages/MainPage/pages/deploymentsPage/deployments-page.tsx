@@ -94,7 +94,7 @@ export default function DeploymentsPage() {
     providers.length > 1 &&
     !isLoadingProviders &&
     !isLoadingDeployments &&
-    visibleDeployments.length > 0;
+    allDeployments.length > 0;
 
   const showHeaderButton =
     activeSubTab === "providers"
