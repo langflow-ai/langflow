@@ -31,7 +31,7 @@ export const useCheckToolNames: useQueryFunctionType<
       {
         params: {
           provider_id: providerId,
-          provider_snapshot_names: names,
+          names,
           size: 50,
         },
         paramsSerializer: { indexes: null },

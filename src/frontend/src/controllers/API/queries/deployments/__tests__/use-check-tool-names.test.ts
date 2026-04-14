@@ -29,7 +29,7 @@ import { useCheckToolNames } from "../use-check-tool-names";
 describe("useCheckToolNames", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("calls snapshots endpoint with provider_snapshot_names param", () => {
+  it("calls snapshots endpoint with names param", () => {
     mockApiGet.mockResolvedValue({
       data: {
         provider_data: {
@@ -47,7 +47,7 @@ describe("useCheckToolNames", () => {
     expect(mockApiGet).toHaveBeenCalledWith("/api/v1/deployments/snapshots", {
       params: {
         provider_id: "prov-1",
-        provider_snapshot_names: ["my_tool", "other_tool"],
+        names: ["my_tool", "other_tool"],
         size: 50,
       },
       paramsSerializer: { indexes: null },
@@ -81,7 +81,7 @@ describe("useCheckToolNames", () => {
       "/api/v1/deployments/snapshots",
       expect.objectContaining({
         params: expect.objectContaining({
-          provider_snapshot_names: ["my_tool", "another_tool"],
+          names: ["my_tool", "another_tool"],
         }),
       }),
     );
@@ -100,7 +100,7 @@ describe("useCheckToolNames", () => {
       "/api/v1/deployments/snapshots",
       expect.objectContaining({
         params: expect.objectContaining({
-          provider_snapshot_names: ["nonexistent"],
+          names: ["nonexistent"],
         }),
       }),
     );

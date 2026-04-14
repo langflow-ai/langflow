@@ -90,6 +90,27 @@ def _fake_attachment(*, provider_snapshot_id: str | None = None) -> SimpleNamesp
 
 
 # ---------------------------------------------------------------------------
+# query parameter validators
+# ---------------------------------------------------------------------------
+
+
+class TestQueryParameterValidators:
+    def test_dedupe_snapshot_names_preserves_order(self):
+        from langflow.api.v1.deployments import _dedupe_snapshot_names
+
+        assert _dedupe_snapshot_names(["my_tool", "other_tool", "my_tool", "third_tool"]) == [
+            "my_tool",
+            "other_tool",
+            "third_tool",
+        ]
+
+    def test_dedupe_snapshot_names_keeps_none(self):
+        from langflow.api.v1.deployments import _dedupe_snapshot_names
+
+        assert _dedupe_snapshot_names(None) is None
+
+
+# ---------------------------------------------------------------------------
 # create_deployment: rollback on commit failure
 # ---------------------------------------------------------------------------
 
@@ -875,7 +896,7 @@ class TestConfigAndSnapshotListRoutes:
         result = await list_deployment_snapshots(
             provider_id=pa.id,
             deployment_id=deployment.id,
-            provider_snapshot_names=None,
+            names=None,
             page=1,
             size=10,
             session=AsyncMock(),
@@ -898,10 +919,33 @@ class TestConfigAndSnapshotListRoutes:
         )
 
     @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_list_snapshots_rejects_deployment_id_with_names(
+        self,
+        mock_get_pa,
+    ):
+        from langflow.api.v1.deployments import list_deployment_snapshots
+
+        with pytest.raises(HTTPException) as exc_info:
+            await list_deployment_snapshots(
+                provider_id=uuid4(),
+                deployment_id=uuid4(),
+                names=["my_tool"],
+                page=1,
+                size=10,
+                session=AsyncMock(),
+                current_user=_fake_user(),
+            )
+
+        assert exc_info.value.status_code == 422
+        assert exc_info.value.detail == "filtering by both deployment_id and names is not supported."
+        mock_get_pa.assert_not_awaited()
+
+    @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    async def test_list_snapshots_passes_provider_snapshot_names_to_mapper(
+    async def test_list_snapshots_passes_names_to_mapper(
         self,
         mock_get_pa,
         mock_get_mapper,
@@ -926,7 +970,7 @@ class TestConfigAndSnapshotListRoutes:
         result = await list_deployment_snapshots(
             provider_id=pa.id,
             deployment_id=None,
-            provider_snapshot_names=["my_tool", "other_tool"],
+            names=["my_tool", "other_tool"],
             page=1,
             size=10,
             session=AsyncMock(),

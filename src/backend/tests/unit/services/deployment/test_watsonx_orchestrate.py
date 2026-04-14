@@ -4348,6 +4348,37 @@ async def test_list_snapshots_snapshot_names_ignored_when_deployment_ids_present
 
 
 @pytest.mark.anyio
+async def test_list_snapshots_snapshot_names_wraps_provider_error(monkeypatch):
+    """get_drafts_by_names failure is wrapped via raise_as_deployment_error."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_tool = FakeToolClient([])
+
+    def get_drafts_by_names_raises(names):  # noqa: ARG001
+        msg = "provider timeout"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(fake_tool, "get_drafts_by_names", get_drafts_by_names_raises)
+
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=fake_tool,
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(DeploymentError, match="listing"):
+        await service.list_snapshots(
+            user_id="user-1",
+            db=object(),
+            params=SnapshotListParams(snapshot_names=["my_tool"]),
+        )
+
+
+@pytest.mark.anyio
 async def test_verify_tools_by_ids_returns_only_connections_provider_data():
     fake_clients = SimpleNamespace(
         tool=FakeToolClient(
