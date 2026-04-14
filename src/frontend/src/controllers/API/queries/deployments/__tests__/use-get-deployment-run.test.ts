@@ -22,51 +22,51 @@ jest.mock("@/controllers/API/services/request-processor", () => ({
   })),
 }));
 
-import { useGetDeploymentExecution } from "../use-get-deployment-execution";
-import type { DeploymentExecutionResponse } from "../use-post-deployment-execution";
+import { useGetDeploymentRun } from "../use-get-deployment-run";
+import type { DeploymentRunResponse } from "../use-post-deployment-run";
 
-describe("useGetDeploymentExecution", () => {
+describe("useGetDeploymentRun", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("calls GET with encoded deployment_id and execution_id", async () => {
+  it("calls GET with encoded deployment_id and run_id", async () => {
     const response = {
       deployment_id: "dep-1",
-      provider_data: { execution_id: "exec-1", status: "completed" },
+      provider_data: { id: "exec-1", status: "completed" },
     };
     mockApiGet.mockResolvedValue({ data: response });
 
-    const mutation = useGetDeploymentExecution();
+    const mutation = useGetDeploymentRun();
     await mutation.mutate({
       deployment_id: "dep-1",
-      execution_id: "exec-1",
+      run_id: "exec-1",
     });
 
     expect(mockApiGet).toHaveBeenCalledWith(
-      "/api/v1/deployments/dep-1/executions/exec-1",
+      "/api/v1/deployments/dep-1/runs/exec-1",
     );
   });
 
-  it("encodes special characters in execution_id", async () => {
+  it("encodes special characters in run_id", async () => {
     mockApiGet.mockResolvedValue({
       data: { deployment_id: "dep-1", provider_data: null },
     });
 
-    const mutation = useGetDeploymentExecution();
+    const mutation = useGetDeploymentRun();
     await mutation.mutate({
       deployment_id: "dep-1",
-      execution_id: "exec/with spaces",
+      run_id: "exec/with spaces",
     });
 
     expect(mockApiGet).toHaveBeenCalledWith(
-      "/api/v1/deployments/dep-1/executions/exec%2Fwith%20spaces",
+      "/api/v1/deployments/dep-1/runs/exec%2Fwith%20spaces",
     );
   });
 
-  it("returns execution status response", async () => {
+  it("returns run status response", async () => {
     const response = {
       deployment_id: "dep-1",
       provider_data: {
-        execution_id: "exec-1",
+        id: "exec-1",
         status: "failed",
         last_error: "Model timeout",
         failed_at: "2026-01-01T00:00:05Z",
@@ -74,11 +74,11 @@ describe("useGetDeploymentExecution", () => {
     };
     mockApiGet.mockResolvedValue({ data: response });
 
-    const mutation = useGetDeploymentExecution();
+    const mutation = useGetDeploymentRun();
     const result = (await mutation.mutate({
       deployment_id: "dep-1",
-      execution_id: "exec-1",
-    })) as unknown as DeploymentExecutionResponse;
+      run_id: "exec-1",
+    })) as unknown as DeploymentRunResponse;
 
     expect(result).toEqual(response);
     expect(result.provider_data).toBeDefined();
