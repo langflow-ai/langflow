@@ -81,8 +81,7 @@ export const VersionPanel = memo(function VersionPanel({
                       )}
                     </span>
                     <span className="text-xxs leading-tight text-muted-foreground">
-                      Created:{" "}
-                      {formatDate(version.created_at)}
+                      Created: {formatDate(version.created_at)}
                     </span>
                   </span>
                 </button>
