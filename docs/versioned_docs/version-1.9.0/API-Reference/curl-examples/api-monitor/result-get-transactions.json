@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "timestamp": "2024-12-23T20:05:01.061Z",
+      "vertex_id": "string",
+      "target_id": "string",
+      "inputs": {},
+      "outputs": {},
+      "status": "string",
+      "error": "string",
+      "flow_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    }
+  ],
+  "total": 0,
+  "page": 1,
+  "size": 1,
+  "pages": 0
+}

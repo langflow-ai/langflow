@@ -1,0 +1,429 @@
+---
+title: Monitor endpoints
+slug: /api-monitor
+---
+import CodeSnippet from '@site/src/components/CodeSnippet';
+import exampleApiMonitorGetVertexBuilds from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/get-vertex-builds.sh';
+import resultApiMonitorResultGetVertexBuilds from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-get-vertex-builds.json';
+import exampleApiMonitorDeleteVertexBuilds from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/delete-vertex-builds.sh';
+import resultApiMonitorResultDeleteVertexBuilds from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-delete-vertex-builds.txt';
+import exampleApiMonitorGetMessages from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/get-messages.sh';
+import exampleApiMonitorGetMessages2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/get-messages-2.sh';
+import resultApiMonitorResultGetMessages2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-get-messages-2.json';
+import exampleApiMonitorDeleteMessages from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/delete-messages.sh';
+import resultApiMonitorResultDeleteMessages from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-delete-messages.txt';
+import exampleApiMonitorUpdateMessage from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/update-message.sh';
+import resultApiMonitorResultUpdateMessage from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-update-message.json';
+import exampleApiMonitorUpdateSessionId from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/update-session-id.sh';
+import resultApiMonitorResultUpdateSessionId from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-update-session-id.json';
+import exampleApiMonitorDeleteMessagesBySession from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/delete-messages-by-session.sh';
+import resultApiMonitorResultDeleteMessagesBySession from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-delete-messages-by-session.txt';
+import exampleApiMonitorExampleRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/example-request.sh';
+import exampleApiMonitorGetTransactions from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/get-transactions.sh';
+import resultApiMonitorResultGetTransactions from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-monitor/result-get-transactions.json';
+import examplePythonApiMonitorExampleRequest from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/example-request.py';
+import examplePythonApiMonitorGetVertexBuilds from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/get-vertex-builds.py';
+import exampleJavascriptApiMonitorGetVertexBuilds from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/get-vertex-builds.js';
+import examplePythonApiMonitorDeleteVertexBuilds from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/delete-vertex-builds.py';
+import exampleJavascriptApiMonitorDeleteVertexBuilds from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/delete-vertex-builds.js';
+import examplePythonApiMonitorGetMessages from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/get-messages.py';
+import exampleJavascriptApiMonitorGetMessages from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/get-messages.js';
+import examplePythonApiMonitorGetMessages2 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/get-messages-2.py';
+import exampleJavascriptApiMonitorGetMessages2 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/get-messages-2.js';
+import examplePythonApiMonitorDeleteMessages from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/delete-messages.py';
+import exampleJavascriptApiMonitorDeleteMessages from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/delete-messages.js';
+import examplePythonApiMonitorUpdateMessage from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/update-message.py';
+import exampleJavascriptApiMonitorUpdateMessage from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/update-message.js';
+import examplePythonApiMonitorUpdateSessionId from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/update-session-id.py';
+import exampleJavascriptApiMonitorUpdateSessionId from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/update-session-id.js';
+import examplePythonApiMonitorDeleteMessagesBySession from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/delete-messages-by-session.py';
+import exampleJavascriptApiMonitorDeleteMessagesBySession from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/delete-messages-by-session.js';
+import examplePythonApiMonitorGetTransactions from '!!raw-loader!@site/docs/API-Reference/python-examples/api-monitor/get-transactions.py';
+import exampleJavascriptApiMonitorGetTransactions from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-monitor/get-transactions.js';
+
+
+
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The `/monitor` endpoints are for internal Langflow functionality, primarily related to running flows in the **Playground**, storing chat history, and generating flow logs.
+
+This information is primarily for those who are building custom components or contributing to the Langflow codebase in a way that requires calling or understanding these endpoints.
+
+For typical application development with Langflow, there are more appropriate options for monitoring, debugging, and memory management.
+For more information, see the following:
+
+* [Logs](/logging): Langflow log storage locations, customization options, and where to view logs in the visual editor
+* [Test flows in the Playground](/concepts-playground): Run flows and inspect message history
+* [Memory management options](/memory): Langflow storage locations and options, including the database, cache, and chat history
+
+## Vertex builds
+
+The Vertex build endpoints (`/monitor/builds`) are exclusively for **Playground** functionality.
+
+When you run a flow in the **Playground**, Langflow calls the `/build/$FLOW_ID/flow` endpoint in [chat.py](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/chat.py#L130). This call retrieves the flow data, builds a graph, and executes the graph. As each component (or node) is executed, the `build_vertex` function calls `build_and_run`, which may call the individual components' `def_build` method, if it exists. If a component doesn't have a `def_build` function, the build still returns a component.
+
+The `build` function allows components to execute logic at runtime. For example, the [**Recursive Character Text Splitter** component](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/components/langchain_utilities/recursive_character.py) is a child of the `LCTextSplitterComponent` class. When text needs to be processed, the parent class's `build` method is called, which creates a `RecursiveCharacterTextSplitter` object and uses it to split the text according to the defined parameters. The split text is then passed on to the next component. This all occurs when the component is built.
+
+### Get Vertex builds
+
+Retrieve Vertex builds for a specific flow.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorGetVertexBuilds} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorGetVertexBuilds} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorGetVertexBuilds} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiMonitorResultGetVertexBuilds} language="json" />
+
+</details>
+
+### Delete Vertex builds
+
+Delete Vertex builds for a specific flow.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorDeleteVertexBuilds} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorDeleteVertexBuilds} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorDeleteVertexBuilds} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiMonitorResultDeleteVertexBuilds} language="text" />
+
+</details>
+
+## Messages endpoints
+
+The `/monitor/messages` endpoints store, retrieve, edit, and delete records in the message table in [`langflow.db`](/memory)
+Typically, these are called implicitly when running flows that produce message history, or when inspecting and modifying **Playground** memories.
+
+### Get messages
+
+Retrieve a list of all messages:
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorGetMessages} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorGetMessages} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorGetMessages} language="bash" />
+
+</TabItem>
+</Tabs>
+
+To filter messages, use the `flow_id`, `session_id`, `sender`, and `sender_name` query parameters.
+
+To sort the results, use the `order_by` query parameter.
+
+This example retrieves messages sent by `Machine` and `AI` in a given chat session (`session_id`) and orders the messages by timestamp.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorGetMessages2} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorGetMessages2} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorGetMessages2} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiMonitorResultGetMessages2} language="json" />
+
+</details>
+
+### Delete messages
+
+Delete specific messages by their IDs.
+
+This example deletes the message retrieved in the previous `GET /messages` example.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorDeleteMessages} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorDeleteMessages} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorDeleteMessages} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiMonitorResultDeleteMessages} language="text" />
+
+</details>
+
+### Update message
+
+Update a specific message by its ID.
+
+This example updates the `text` value of message `3ab66cc6-c048-48f8-ab07-570f5af7b160`.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorUpdateMessage} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorUpdateMessage} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorUpdateMessage} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiMonitorResultUpdateMessage} language="json" />
+
+</details>
+
+### Update session ID
+
+Update the session ID for messages.
+
+This example updates the `session_ID` value `01ce083d-748b-4b8d-97b6-33adbb6a528a` to `different_session_id`.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorUpdateSessionId} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorUpdateSessionId} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorUpdateSessionId} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiMonitorResultUpdateSessionId} language="json" />
+
+</details>
+
+### Delete messages by session
+
+Delete all messages for a specific session.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorDeleteMessagesBySession} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorDeleteMessagesBySession} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorDeleteMessagesBySession} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiMonitorResultDeleteMessagesBySession} language="text" />
+
+</details>
+
+## Get traces
+
+ Retrieve trace metadata and span trees for a specific flow.
+
+### Example request
+
+Use `GET /monitor/traces` and filter by `flow_id`:
+
+<Tabs>
+<TabItem value="python" label="Python">
+
+<CodeSnippet source={examplePythonApiMonitorExampleRequest} language="python" />
+
+</TabItem>
+<TabItem value="typescript" label="TypeScript">
+
+```ts
+const baseUrl = process.env.LANGFLOW_SERVER_URL ?? "http://localhost:7860";
+const apiKey = process.env.LANGFLOW_API_KEY!;
+const flowId = "YOUR_FLOW_ID";
+
+async function listTraces() {
+  const url = new URL("/api/v1/monitor/traces", baseUrl);
+  url.searchParams.set("flow_id", flowId);
+  url.searchParams.set("page", "1");
+  url.searchParams.set("size", "50");
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      accept: "application/json",
+      "x-api-key": apiKey,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Request failed with status ${res.status}`);
+  }
+
+  const data = await res.json();
+  console.log(data);
+}
+
+listTraces().catch(console.error);
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorExampleRequest} language="bash" />
+
+</TabItem>
+</Tabs>
+
+### Example response
+
+```json
+{
+  "traces": [
+    {
+      "id": "426656db-fc3c-4a3a-acf8-c60acf099543",
+      "name": "Simple Agent - 9e774f60-857b-44b4-bbcd-87bd23848ee8",
+      "status": "ok",
+      "startTime": "2026-03-03T19:13:30.692628Z",
+      "totalLatencyMs": 18693,
+      "totalTokens": 2050,
+      "flowId": "9e774f60-857b-44b4-bbcd-87bd23848ee8",
+      "sessionId": "9e774f60-857b-44b4-bbcd-87bd23848ee8",
+      "input": {
+        "input_value": "Use tools to teach me about vertex graphs"
+      },
+      "output": {
+        "message": {
+          "text_key": "text",
+          "data": {
+            "timestamp": "2026-03-03 19:13:30 UTC",
+            "sender": "Machine",
+            "sender_name": "AI",
+            "session_id": "9e774f60-857b-44b4-bbcd-87bd23848ee8",
+            "text": "I can teach you the concept, but I couldn’t pull the Wikipedia pages with the tool ... (truncated)"
+          }
+        }
+      }
+    }
+  ],
+  "total": 1,
+  "pages": 1
+}
+```
+
+## Get transactions
+
+Retrieve all transactions, which are interactions between components, for a specific flow.
+This information is also available in [flow logs](/logging).
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiMonitorGetTransactions} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiMonitorGetTransactions} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiMonitorGetTransactions} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiMonitorResultGetTransactions} language="json" />
+
+</details>
+
+## See also
+
+- [Use voice mode](/concepts-voice-mode)
+- [Session ID](/session-id)

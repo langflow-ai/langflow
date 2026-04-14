@@ -209,7 +209,7 @@ exclude = [
     "src/backend/base/langflow/alembic/*",
     "src/frontend/tests/assets/*",
     "src/lfx/src/lfx/_assets/component_index.json",
-    "docs/docs/API-Reference/python-examples/**",
+    "docs/**/API-Reference/python-examples/**",
 ]
 line-length = 120
 

@@ -491,10 +491,6 @@ module.exports = {
           id: "API-Reference/api-flows-run",
           label: "Flow trigger endpoints",
         },
-        "API-Reference/api-reference-api-examples",
-        "API-Reference/typescript-client",
-        "API-Reference/flow-devops-sdk",
-        "API-Reference/api-flows-run",
         {
           type: "category",
           label: "Developer API (Beta)",
