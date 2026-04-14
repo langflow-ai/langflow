@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -18,16 +18,7 @@ import SubTabToggle, {
   type DeploymentSubTab,
 } from "./components/sub-tab-toggle";
 import { useProviderFilter } from "./hooks/use-provider-filter";
-import type { Deployment, ProviderAccount } from "./types";
-
-function deploymentMatchesProvider(
-  deployment: Deployment,
-  selectedProviderId: string,
-): boolean {
-  return (
-    String(deployment.provider_id ?? "") === String(selectedProviderId ?? "")
-  );
-}
+import type { ProviderAccount } from "./types";
 
 function EnvironmentPickerRow({
   providers,
@@ -80,28 +71,16 @@ export default function DeploymentsPage() {
     providerMap,
   } = useProviderFilter(providers);
 
-  const { deployments: allDeployments, isLoading: isLoadingDeployments } =
+  const { deployments, isLoading: isLoadingDeployments } =
     useGetDeploymentsByProviders(providerIdsToQuery, currentFolderId);
 
-  const visibleDeployments = useMemo(() => {
-    if (providers.length <= 1) return allDeployments;
-    return allDeployments.filter((d) =>
-      deploymentMatchesProvider(d, selectedProviderId),
-    );
-  }, [allDeployments, providers.length, selectedProviderId]);
-
   const showEnvironmentToolbar =
-    providers.length > 1 &&
-    !isLoadingProviders &&
-    !isLoadingDeployments &&
-    allDeployments.length > 0;
+    providers.length > 1 && !isLoadingProviders;
 
   const showHeaderButton =
     activeSubTab === "providers"
       ? !isLoadingProviders && providers.length > 0
-      : !isLoadingProviders &&
-        !isLoadingDeployments &&
-        visibleDeployments.length > 0;
+      : !isLoadingProviders && !isLoadingDeployments && deployments.length > 0;
 
   return (
     <div className="flex flex-col gap-4 pt-4">
@@ -155,14 +134,11 @@ export default function DeploymentsPage() {
       {activeSubTab === "deployments" && (
         <DeploymentsContent
           providers={providers}
-          deployments={visibleDeployments}
+          deployments={deployments}
           isLoading={isLoadingProviders || isLoadingDeployments}
           providerMap={providerMap}
           stepperOpen={stepperOpen}
           setStepperOpen={setStepperOpen}
-          hasDeploymentsElsewhere={
-            visibleDeployments.length === 0 && allDeployments.length > 0
-          }
         />
       )}
 

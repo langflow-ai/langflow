@@ -18,10 +18,10 @@ const makeProvider = (
 });
 
 describe("useProviderFilter", () => {
-  it("returns all provider IDs in providerIdsToQuery", () => {
+  it("returns only the selected provider ID in providerIdsToQuery", () => {
     const providers = [makeProvider({ id: "p1" }), makeProvider({ id: "p2" })];
     const { result } = renderHook(() => useProviderFilter(providers));
-    expect(result.current.providerIdsToQuery).toEqual(["p1", "p2"]);
+    expect(result.current.providerIdsToQuery).toEqual(["p1"]);
     expect(result.current.selectedProviderId).toBe("p1");
   });
 
@@ -50,6 +50,7 @@ describe("useProviderFilter", () => {
       result.current.setSelectedProviderId("p2");
     });
     expect(result.current.selectedProviderId).toBe("p2");
+    expect(result.current.providerIdsToQuery).toEqual(["p2"]);
   });
 
   it("returns empty providerMap for empty provider list", () => {
@@ -74,7 +75,7 @@ describe("useProviderFilter", () => {
       ],
     });
 
-    expect(result.current.providerIdsToQuery).toEqual(["p1", "p2"]);
+    expect(result.current.providerIdsToQuery).toEqual(["p1"]);
     expect(result.current.providerMap).toEqual({ p1: "Prod", p2: "Staging" });
     expect(result.current.selectedProviderId).toBe("p1");
   });

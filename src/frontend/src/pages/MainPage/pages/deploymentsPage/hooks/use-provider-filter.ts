@@ -4,7 +4,6 @@ import type { ProviderAccount } from "../types";
 interface ProviderFilter {
   selectedProviderId: string;
   setSelectedProviderId: (id: string) => void;
-  /** All provider IDs — used to load deployments across environments. */
   providerIdsToQuery: string[];
   providerMap: Record<string, string>;
 }
@@ -29,8 +28,8 @@ export function useProviderFilter(
   }, [providers, selectedProviderId]);
 
   const providerIdsToQuery = useMemo(
-    () => providers.map((p) => p.id),
-    [providers],
+    () => (selectedProviderId ? [selectedProviderId] : []),
+    [selectedProviderId],
   );
 
   const providerMap = useMemo(
