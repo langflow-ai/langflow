@@ -6,14 +6,17 @@ validate_component_code, and static validation helpers.
 
 import ast
 import os
+from textwrap import dedent
 from unittest.mock import patch
 
+import pytest
 from langflow.agentic.helpers.validation import (
     _extract_class_name_regex,
     _extract_io_names,
     _extract_output_methods,
     _safe_extract_class_name,
     validate_component_code,
+    validate_component_runtime,
 )
 
 MODULE = "langflow.agentic.helpers.validation"
@@ -313,3 +316,126 @@ class InputOnlyComponent(Component):
 """
         result = validate_component_code(code)
         assert result.is_valid is True
+
+
+class TestValidateComponentRuntimeExecution:
+    r"""Runtime execution validation catches pydantic-schema bugs static passes cannot detect.
+
+    Bug report: the Assistant generated a Web Scraper component whose
+    ``build_articles`` output method constructed ``Data(data=[...])`` with a list
+    instead of a dict. Static + template validation passed; the bug only
+    surfaced when the user later ran the flow and pydantic raised
+    ``ValidationError: data\n  Input should be a valid dictionary``. Runtime
+    validation must execute the output methods and surface these pydantic-schema
+    failures so the retry loop can recover before the component is handed to the
+    user.
+    """
+
+    @pytest.mark.asyncio
+    async def test_should_return_error_when_output_method_builds_data_with_list_payload(self):
+        """Bug: Data(data=[list]) slips through runtime validation.
+
+        Exercises the EXACT error path from the bug report: an output method
+        that constructs ``Data(data=[{"title": ...}])`` — which pydantic rejects
+        because ``Data.data`` must be a dict. The test asserts that
+        validate_component_runtime surfaces the pydantic ValidationError
+        instead of returning None.
+        """
+        buggy_code = dedent(
+            """
+            from lfx.custom import Component
+            from lfx.schema.data import Data
+            from lfx.template.field.base import Output
+
+
+            class DummyScraper(Component):
+                display_name = "Dummy Scraper"
+                description = "Returns dummy articles"
+
+                inputs = []
+                outputs = [
+                    Output(display_name="Articles", name="articles", method="build_articles"),
+                ]
+
+                def build_articles(self) -> Data:
+                    return Data(data=[{"title": "Dummy Article", "content": "Placeholder."}])
+            """
+        ).strip()
+
+        error = await validate_component_runtime(buggy_code)
+
+        assert error is not None, (
+            "validate_component_runtime should surface Data(data=[list]) pydantic "
+            "errors instead of silently returning None"
+        )
+        lowered = error.lower()
+        assert "valid" in lowered, f"Expected a pydantic validation error message, got: {error!r}"
+        assert "dict" in lowered, f"Expected the pydantic message to mention 'dict', got: {error!r}"
+
+    @pytest.mark.asyncio
+    async def test_should_return_error_when_output_method_builds_message_with_wrong_type(self):
+        """Fix must extend beyond Data to any pydantic model the method builds.
+
+        Exercises the same class of bug against ``Message``: the method passes
+        a list to ``text`` (which pydantic coerces to str but validates on
+        field-shape). Using ``sender`` with a non-string dict triggers
+        ValidationError too.
+        """
+        buggy_code = dedent(
+            """
+            from lfx.custom import Component
+            from lfx.schema.message import Message
+            from lfx.template.field.base import Output
+
+
+            class DummyMessageComponent(Component):
+                display_name = "Dummy Message"
+                description = "Builds a broken Message"
+
+                inputs = []
+                outputs = [
+                    Output(display_name="Out", name="out", method="build_message"),
+                ]
+
+                def build_message(self) -> Message:
+                    return Message(text="ok", sender={"not": "a string"})
+            """
+        ).strip()
+
+        error = await validate_component_runtime(buggy_code)
+
+        assert error is not None, (
+            "validate_component_runtime should surface pydantic errors for Message, not only for Data"
+        )
+
+    @pytest.mark.asyncio
+    async def test_should_return_none_when_output_method_builds_valid_data(self):
+        """Baseline: a correctly built Data object must not produce an error.
+
+        Guards against the fix becoming too aggressive and rejecting valid
+        components (e.g. marking every execution failure as a bug).
+        """
+        good_code = dedent(
+            """
+            from lfx.custom import Component
+            from lfx.schema.data import Data
+            from lfx.template.field.base import Output
+
+
+            class GoodScraper(Component):
+                display_name = "Good Scraper"
+                description = "Returns a valid Data object"
+
+                inputs = []
+                outputs = [
+                    Output(display_name="Articles", name="articles", method="build_articles"),
+                ]
+
+                def build_articles(self) -> Data:
+                    return Data(data={"title": "Dummy Article", "content": "Placeholder."})
+            """
+        ).strip()
+
+        error = await validate_component_runtime(good_code)
+
+        assert error is None, f"Expected None for a valid component, got: {error!r}"
