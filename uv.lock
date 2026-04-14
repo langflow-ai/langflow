@@ -1927,7 +1927,7 @@ wheels = [
 
 [[package]]
 name = "cuga"
-version = "0.2.20"
+version = "0.2.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "a2a-sdk", extra = ["http-server"], marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
@@ -1974,9 +1974,9 @@ dependencies = [
     { name = "typer-slim", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "uvicorn", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/76/2c/959d374ee60efdd32365c7e92a68df09ee4e0b94db41981d3480ecc18e2b/cuga-0.2.20.tar.gz", hash = "sha256:ef1bc9d2b869b913b7bb17dfa5e1885609c483b9c0bfda7034873e0ebff11c32", size = 3024715, upload-time = "2026-04-14T19:16:34.97Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bc/bc/d16f00dc04b07fb0e545ba51fc5f4da7ef9eeaf72746c96d508f6f4ffa93/cuga-0.2.21.tar.gz", hash = "sha256:9914349fb5c7bead57fc385bf219614c92b0159dcd14927e3dcadbd913f56c22", size = 3024828, upload-time = "2026-04-14T20:26:00.951Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/84/94/52fd1badcd456f5a3a5b2cdf57c87a4b4f7fcf1a22995582b659fa495bf5/cuga-0.2.20-py3-none-any.whl", hash = "sha256:3d01286dcfedbd3535f87bc2caaaa501a5190fb19ffa57dbc100355039d43273", size = 3289443, upload-time = "2026-04-14T19:16:37.225Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/eb/e8050b70da6098eeeee31152cd413acf62b8c79092977f6b449a232677e1/cuga-0.2.21-py3-none-any.whl", hash = "sha256:a85ad8dbafbd511e1fe1b708bbd149e16a10316fd90648d59be5a18ab586ca3f", size = 3289497, upload-time = "2026-04-14T20:26:03.171Z" },
 ]
 
 [[package]]
@@ -5523,7 +5523,7 @@ wheels = [
 
 [[package]]
 name = "langchain-core"
-version = "1.2.28"
+version = "1.2.29"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonpatch" },
@@ -5535,9 +5535,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "uuid-utils" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f8/a4/317a1a3ac1df33a64adb3670bf88bbe3b3d5baa274db6863a979db472897/langchain_core-1.2.28.tar.gz", hash = "sha256:271a3d8bd618f795fdeba112b0753980457fc90537c46a0c11998516a74dc2cb", size = 846119, upload-time = "2026-04-08T18:19:34.867Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a0/d8/7bdf30e4bfc5175609201806e399506a0a78a48e14367dc8b776a9b4c89c/langchain_core-1.2.29.tar.gz", hash = "sha256:cfb89c92bca81ad083eafcdfe6ec40f9803c9abf7dd166d0f8a8de1d2de03ca6", size = 846121, upload-time = "2026-04-14T20:44:58.117Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/92/32f785f077c7e898da97064f113c73fbd9ad55d1e2169cf3a391b183dedb/langchain_core-1.2.28-py3-none-any.whl", hash = "sha256:80764232581eaf8057bcefa71dbf8adc1f6a28d257ebd8b95ba9b8b452e8c6ac", size = 508727, upload-time = "2026-04-08T18:19:32.823Z" },
+    { url = "https://files.pythonhosted.org/packages/72/37/fed31f80436b1d7bb222f1f2345300a77a88215416acf8d1cb7c8fda7388/langchain_core-1.2.29-py3-none-any.whl", hash = "sha256:11f02e57ee1c24e6e0e6577acbd35df77b205d4692a3df956b03b5389cbe44a0", size = 508733, upload-time = "2026-04-14T20:44:56.712Z" },
 ]
 
 [[package]]
@@ -7741,14 +7741,14 @@ wheels = [
 
 [[package]]
 name = "mako"
-version = "1.3.10"
+version = "1.3.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "markupsafe" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9e/38/bd5b78a920a64d708fe6bc8e0a2c075e1389d53bef8413725c63ba041535/mako-1.3.10.tar.gz", hash = "sha256:99579a6f39583fa7e5630a28c3c1f440e4e97a414b80372649c0ce338da2ea28", size = 392474, upload-time = "2025-04-10T12:44:31.16Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/59/8a/805404d0c0b9f3d7a326475ca008db57aea9c5c9f2e1e39ed0faa335571c/mako-1.3.11.tar.gz", hash = "sha256:071eb4ab4c5010443152255d77db7faa6ce5916f35226eb02dc34479b6858069", size = 399811, upload-time = "2026-04-14T20:19:51.493Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/87/fb/99f81ac72ae23375f22b7afdb7642aba97c00a713c217124420147681a2f/mako-1.3.10-py3-none-any.whl", hash = "sha256:baef24a52fc4fc514a0887ac600f9f1cff3d82c61d4d700a1fa84d597b88db59", size = 78509, upload-time = "2025-04-10T12:50:53.297Z" },
+    { url = "https://files.pythonhosted.org/packages/68/a5/19d7aaa7e433713ffe881df33705925a196afb9532efc8475d26593921a6/mako-1.3.11-py3-none-any.whl", hash = "sha256:e372c6e333cf004aa736a15f425087ec977e1fcbd2966aae7f17c8dc1da27a77", size = 78503, upload-time = "2026-04-14T20:19:53.233Z" },
 ]
 
 [[package]]
