@@ -23,6 +23,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentUpdateRequest,
     SnapshotUpdateRequest,
 )
+from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
@@ -1278,6 +1279,87 @@ class TestProviderAccountRoutes:
         assert exc_info.value.detail == "Provider account is already tracked by user."
 
     @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_update_provider_account_raw_guard_exception_propagates(
+        self,
+        mock_get_provider_account,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_update_provider_account,
+    ):
+        """PATCH preserves raw guard-shaped DB exceptions without rewriting them."""
+        from langflow.api.v1.deployments import update_provider_account
+
+        existing_account = _fake_provider_account()
+        mock_get_provider_account.return_value = existing_account
+
+        mapper = MagicMock()
+        mapper.resolve_verify_credentials_for_update.return_value = None
+        mapper.resolve_provider_account_update.return_value = {"provider_data": {"tenant_id": "tenant-renamed"}}
+        mock_get_mapper.return_value = mapper
+        mock_resolve_adapter.return_value = AsyncMock()
+        mock_update_provider_account.side_effect = Exception(
+            "DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE:"
+            "Cannot modify provider key, provider tenant id, or provider URL "
+            "on an existing deployment provider account. "
+            "Re-create the account instead."
+        )
+
+        with pytest.raises(
+            Exception,
+            match="DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE",
+        ):
+            await update_provider_account(
+                provider_id=existing_account.id,
+                session=AsyncMock(),
+                payload=DeploymentProviderAccountUpdateRequest(provider_data={"tenant_id": "tenant-renamed"}),
+                current_user=_fake_user(),
+            )
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_update_provider_account_propagates_deployment_guard_error_instance(
+        self,
+        mock_get_provider_account,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_update_provider_account,
+    ):
+        """PATCH preserves ORM-raised DeploymentGuardError exceptions."""
+        from langflow.api.v1.deployments import update_provider_account
+
+        existing_account = _fake_provider_account()
+        mock_get_provider_account.return_value = existing_account
+
+        mapper = MagicMock()
+        mapper.resolve_verify_credentials_for_update.return_value = None
+        mapper.resolve_provider_account_update.return_value = {"provider_data": {"tenant_id": "tenant-renamed"}}
+        mock_get_mapper.return_value = mapper
+        mock_resolve_adapter.return_value = AsyncMock()
+        mock_update_provider_account.side_effect = DeploymentGuardError(
+            code="DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE",
+            technical_detail="Cannot modify provider key, provider tenant id, or provider URL.",
+            detail="Cannot modify provider key, provider tenant id, or provider URL.",
+        )
+
+        with pytest.raises(
+            DeploymentGuardError,
+            match="Cannot modify provider key, provider tenant id, or provider URL",
+        ):
+            await update_provider_account(
+                provider_id=existing_account.id,
+                session=AsyncMock(),
+                payload=DeploymentProviderAccountUpdateRequest(provider_data={"tenant_id": "tenant-renamed"}),
+                current_user=_fake_user(),
+            )
+
+    @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 1))
     @patch(f"{ROUTES_MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
@@ -1842,15 +1924,9 @@ class TestGetDeploymentSync:
         """Snapshot-level sync corrects the attached_count in the response."""
         from langflow.api.v1.deployments import get_deployment
 
-        class _SnapshotMapper:
-            @staticmethod
-            def util_snapshot_ids_to_verify(attachments):
-                return [
-                    attachment.provider_snapshot_id for attachment in attachments if attachment.provider_snapshot_id
-                ]
-
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
+        mapper = MagicMock()
         provider_deployment = MagicMock()
         provider_deployment.name = "deployed-agent"
         provider_deployment.description = "desc"
@@ -1859,7 +1935,7 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper(), "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
 
         att_good = _fake_attachment(provider_snapshot_id="snap-1")
         att_stale = _fake_attachment(provider_snapshot_id="snap-stale")
@@ -1879,25 +1955,19 @@ class TestGetDeploymentSync:
     @patch(f"{ROUTES_MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
-    async def test_no_snapshot_sync_when_no_snapshot_ids(
+    async def test_snapshot_sync_invalid_attachment_snapshot_id_falls_back_to_unverified_count(
         self,
         mock_resolve,
         mock_list_att,
         mock_fetch_snap,
         mock_sync_snap,
     ):
-        """When no attachments have provider_snapshot_id, snapshot sync is skipped."""
+        """Missing attachment snapshot ids trigger rollback and fallback counting."""
         from langflow.api.v1.deployments import get_deployment
-
-        class _SnapshotMapper:
-            @staticmethod
-            def util_snapshot_ids_to_verify(attachments):
-                return [
-                    attachment.provider_snapshot_id for attachment in attachments if attachment.provider_snapshot_id
-                ]
 
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
+        mapper = MagicMock()
         provider_deployment = MagicMock()
         provider_deployment.name = "deployed-agent"
         provider_deployment.description = "desc"
@@ -1906,13 +1976,14 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper(), "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
         mock_list_att.return_value = [_fake_attachment(provider_snapshot_id=None)]
 
         session = AsyncMock()
         result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
         assert result.attached_count == 1
+        session.rollback.assert_awaited_once()
         mock_fetch_snap.assert_not_awaited()
         mock_sync_snap.assert_not_awaited()
 
@@ -1931,15 +2002,9 @@ class TestGetDeploymentSync:
         """When snapshot-level sync raises, the response uses unverified attachment count."""
         from langflow.api.v1.deployments import get_deployment
 
-        class _SnapshotMapper:
-            @staticmethod
-            def util_snapshot_ids_to_verify(attachments):
-                return [
-                    attachment.provider_snapshot_id for attachment in attachments if attachment.provider_snapshot_id
-                ]
-
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
+        mapper = MagicMock()
         provider_deployment = MagicMock()
         provider_deployment.name = "deployed-agent"
         provider_deployment.description = "desc"
@@ -1948,7 +2013,7 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper(), "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
 
         att1 = _fake_attachment(provider_snapshot_id="snap-1")
         att2 = _fake_attachment(provider_snapshot_id="snap-2")

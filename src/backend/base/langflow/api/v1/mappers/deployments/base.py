@@ -82,6 +82,7 @@ from .contracts import (
     CreateFlowArtifactProviderData,
     CreateSnapshotBindings,
     FlowVersionPatch,
+    ProviderSnapshotBinding,
     UpdateSnapshotBindings,
 )
 from .helpers import page_offset
@@ -638,23 +639,20 @@ class BaseDeploymentMapper:
         _ = payload
         return FlowVersionPatch()
 
-    def util_snapshot_ids_to_verify(
+    def extract_snapshot_bindings(
         self,
-        attachments: list[Any],
-    ) -> list[str]:
-        """Extract provider snapshot IDs that should be verified against the provider.
+        provider_view: DeploymentListResult,
+    ) -> list[ProviderSnapshotBinding]:
+        """Extract per-deployment snapshot bindings from an already-fetched provider list response.
 
-        Called by read-path snapshot-level sync to determine which attachments
-        carry a provider-trackable snapshot identity.  The route passes the
-        returned IDs to the adapter's ``list_snapshots`` by-IDs mode and
-        deletes DB rows whose IDs are no longer present on the provider.
+        Returns a flat list of (resource_key, snapshot_id) pairs representing
+        the authoritative binding state on the provider. Deployments absent
+        from the response (e.g. deleted) produce no entries.
 
-        The base implementation returns an empty list, meaning snapshot-level
-        sync is a no-op for providers that do not track snapshots separately.
-        Provider mappers that assign ``provider_snapshot_id`` on attachments
-        must override this to extract those IDs.
+        Base returns empty — providers that don't track per-deployment
+        snapshot bindings get a no-op attachment sync.
         """
-        _ = attachments
+        _ = provider_view
         return []
 
     async def resolve_rollback_update(

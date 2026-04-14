@@ -47,6 +47,7 @@ from langflow.api.v1.mappers.deployments.contracts import (
     CreateSnapshotBinding,
     CreateSnapshotBindings,
     FlowVersionPatch,
+    ProviderSnapshotBinding,
     UpdateSnapshotBinding,
     UpdateSnapshotBindings,
 )
@@ -725,15 +726,23 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             provider_data=provider_payload,
         )
 
-    def util_snapshot_ids_to_verify(
-        self,
-        attachments: list[Any],
-    ) -> list[str]:
-        return [
-            att.provider_snapshot_id
-            for att in attachments
-            if getattr(att, "provider_snapshot_id", None) and att.provider_snapshot_id.strip()
-        ]
+    def extract_snapshot_bindings(self, provider_view) -> list[ProviderSnapshotBinding]:
+        bindings: list[ProviderSnapshotBinding] = []
+        for item in provider_view.deployments:
+            if not item.id:
+                msg = "deployment id is required from wxO adapter."
+                raise ValueError(msg)
+            resource_key = str(item.id)
+
+            tool_ids = item.provider_data.get("tool_ids", None)
+            if tool_ids is None:
+                msg = "tool_ids is required from wxO adapter."
+                raise ValueError(msg)
+            bindings.extend(
+                ProviderSnapshotBinding(resource_key=resource_key, snapshot_id=str(snapshot_id))
+                for snapshot_id in tool_ids
+            )
+        return bindings
 
     async def resolve_rollback_update(
         self,
