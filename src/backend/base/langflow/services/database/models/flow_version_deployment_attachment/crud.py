@@ -18,6 +18,38 @@ if TYPE_CHECKING:
     from langflow.services.database.models.flow_version.model import FlowVersion
 
 
+async def _check_snapshot_flow_version_conflict(
+    db: AsyncSession,
+    *,
+    provider_snapshot_id: str | None,
+    flow_version_id: UUID,
+) -> None:
+    """Ensure a provider_snapshot_id is only ever linked to one flow version.
+
+    A tool can appear in multiple deployments, but every row with the same
+    provider_snapshot_id must point to the same flow_version_id.  For example:
+
+        (FV=1, tool=A, deploy=X)  ✓  — first use of tool A
+        (FV=1, tool=A, deploy=Y)  ✓  — same FV, different deployment, OK
+        (FV=2, tool=A, deploy=Z)  ✗  — different FV for tool A, rejected
+
+    This cannot be expressed as a DB unique constraint, so we enforce it here.
+    """
+    if not provider_snapshot_id:
+        return
+    stmt = select(FlowVersionDeploymentAttachment.flow_version_id).where(
+        FlowVersionDeploymentAttachment.provider_snapshot_id == provider_snapshot_id,
+        FlowVersionDeploymentAttachment.flow_version_id != flow_version_id,
+    ).limit(1)
+    conflict = (await db.exec(stmt)).first()
+    if conflict is not None:
+        msg = (
+            f"Tool '{provider_snapshot_id}' is already attached to a different flow version. "
+            f"Each tool can only be linked to one flow version."
+        )
+        raise ValueError(msg)
+
+
 async def create_deployment_attachment(
     db: AsyncSession,
     *,
@@ -26,6 +58,9 @@ async def create_deployment_attachment(
     deployment_id: UUID,
     provider_snapshot_id: str | None = None,
 ) -> FlowVersionDeploymentAttachment:
+    await _check_snapshot_flow_version_conflict(
+        db, provider_snapshot_id=provider_snapshot_id, flow_version_id=flow_version_id,
+    )
     row = FlowVersionDeploymentAttachment(
         user_id=user_id,
         flow_version_id=flow_version_id,
@@ -164,6 +199,9 @@ async def update_deployment_attachment_provider_snapshot_id(
     attachment: FlowVersionDeploymentAttachment,
     provider_snapshot_id: str | None,
 ) -> FlowVersionDeploymentAttachment:
+    await _check_snapshot_flow_version_conflict(
+        db, provider_snapshot_id=provider_snapshot_id, flow_version_id=attachment.flow_version_id,
+    )
     attachment.provider_snapshot_id = provider_snapshot_id
     db.add(attachment)
     await db.flush()

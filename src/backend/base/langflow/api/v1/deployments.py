@@ -524,7 +524,7 @@ async def create_deployment(
         )
 
         await session.commit()
-    except Exception:
+    except Exception as exc:
         # Compensate: delete the provider resource so it doesn't become orphaned.
         # Only the deployment resource itself is deleted (e.g. the WXO agent).
         # Secondary resources (snapshots/tools, configs) may remain orphaned --
@@ -550,6 +550,8 @@ async def create_deployment(
                 user_id=current_user.id,
                 db=session,
             )
+        if isinstance(exc, ValueError):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
         raise
     return deployment_mapper.shape_deployment_create_result(
         provider_create_result, deployment_row, provider_key=provider_account.provider_key
@@ -1243,7 +1245,7 @@ async def update_deployment(
             )
 
         await session.commit()
-    except Exception:
+    except Exception as exc:
         # Provider was already mutated by deployment_adapter.update above.
         # Roll back the session to discard any pending DB changes (or reset
         # it from the "inactive" state after a failed commit) so the mapper
@@ -1259,6 +1261,8 @@ async def update_deployment(
             user_id=current_user.id,
             db=session,
         )
+        if isinstance(exc, ValueError):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
         raise
 
     return deployment_mapper.shape_deployment_update_result(

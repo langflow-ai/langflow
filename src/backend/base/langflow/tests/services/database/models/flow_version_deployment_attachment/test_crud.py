@@ -89,6 +89,7 @@ async def provider_account(db: AsyncSession, user: User) -> DeploymentProviderAc
         user_id=user.id,
         provider_tenant_id="tenant-1",
         provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+        name="test-provider",
         provider_url="https://provider.example.com",
         api_key="encrypted-value",  # pragma: allowlist secret
     )
@@ -541,6 +542,178 @@ class TestCountAttachmentsByDeploymentIds:
     ):
         counts = await count_attachments_by_deployment_ids(db, user_id=user.id, deployment_ids=[deployment.id])
         assert deployment.id not in counts
+
+
+@pytest.mark.asyncio
+class TestSnapshotFlowVersionConflict:
+    """Ensure a provider_snapshot_id can only be linked to one flow version.
+
+    Valid:   (FV=1, tool=A, deploy=X) + (FV=1, tool=A, deploy=Y)  — same FV, different deployments
+    Invalid: (FV=1, tool=A, deploy=X) + (FV=2, tool=A, deploy=Y)  — different FV, same tool
+    """
+
+    async def test_create_rejects_same_tool_different_flow_version(
+        self,
+        db: AsyncSession,
+        user: User,
+        flow: Flow,
+        flow_version: FlowVersion,
+        deployment: Deployment,
+        folder: Folder,
+        provider_account: DeploymentProviderAccount,
+    ):
+        # First attachment: FV1, tool-A, deployment-1
+        await create_deployment_attachment(
+            db,
+            user_id=user.id,
+            flow_version_id=flow_version.id,
+            deployment_id=deployment.id,
+            provider_snapshot_id="tool-A",
+        )
+        await db.commit()
+
+        # Second flow version + deployment
+        fv2 = FlowVersion(flow_id=flow.id, user_id=user.id, version_number=2, data={})
+        db.add(fv2)
+        d2 = Deployment(
+            user_id=user.id,
+            project_id=folder.id,
+            deployment_provider_account_id=provider_account.id,
+            resource_key="rk-2",
+            name="deploy-2",
+            deployment_type=DeploymentType.AGENT,
+        )
+        db.add(d2)
+        await db.commit()
+        await db.refresh(fv2)
+        await db.refresh(d2)
+
+        # Should reject: FV2, tool-A, deployment-2 — same tool, different flow version
+        with pytest.raises(ValueError, match="already attached to a different flow version"):
+            await create_deployment_attachment(
+                db,
+                user_id=user.id,
+                flow_version_id=fv2.id,
+                deployment_id=d2.id,
+                provider_snapshot_id="tool-A",
+            )
+
+    async def test_create_allows_same_tool_same_flow_version_different_deployment(
+        self,
+        db: AsyncSession,
+        user: User,
+        flow_version: FlowVersion,
+        deployment: Deployment,
+        folder: Folder,
+        provider_account: DeploymentProviderAccount,
+    ):
+        await create_deployment_attachment(
+            db,
+            user_id=user.id,
+            flow_version_id=flow_version.id,
+            deployment_id=deployment.id,
+            provider_snapshot_id="tool-A",
+        )
+        await db.commit()
+
+        d2 = Deployment(
+            user_id=user.id,
+            project_id=folder.id,
+            deployment_provider_account_id=provider_account.id,
+            resource_key="rk-2",
+            name="deploy-2",
+            deployment_type=DeploymentType.AGENT,
+        )
+        db.add(d2)
+        await db.commit()
+        await db.refresh(d2)
+
+        # Should succeed: same FV, same tool, different deployment
+        att2 = await create_deployment_attachment(
+            db,
+            user_id=user.id,
+            flow_version_id=flow_version.id,
+            deployment_id=d2.id,
+            provider_snapshot_id="tool-A",
+        )
+        await db.commit()
+        assert att2.provider_snapshot_id == "tool-A"
+
+    async def test_update_rejects_same_tool_different_flow_version(
+        self,
+        db: AsyncSession,
+        user: User,
+        flow: Flow,
+        flow_version: FlowVersion,
+        deployment: Deployment,
+        folder: Folder,
+        provider_account: DeploymentProviderAccount,
+    ):
+        # FV1 owns tool-A
+        await create_deployment_attachment(
+            db,
+            user_id=user.id,
+            flow_version_id=flow_version.id,
+            deployment_id=deployment.id,
+            provider_snapshot_id="tool-A",
+        )
+        await db.commit()
+
+        # FV2 has no tool yet
+        fv2 = FlowVersion(flow_id=flow.id, user_id=user.id, version_number=2, data={})
+        db.add(fv2)
+        d2 = Deployment(
+            user_id=user.id,
+            project_id=folder.id,
+            deployment_provider_account_id=provider_account.id,
+            resource_key="rk-2",
+            name="deploy-2",
+            deployment_type=DeploymentType.AGENT,
+        )
+        db.add(d2)
+        await db.commit()
+        await db.refresh(fv2)
+        await db.refresh(d2)
+
+        att2 = await create_deployment_attachment(
+            db,
+            user_id=user.id,
+            flow_version_id=fv2.id,
+            deployment_id=d2.id,
+        )
+        await db.commit()
+
+        # Should reject: updating FV2's attachment to use tool-A (owned by FV1)
+        with pytest.raises(ValueError, match="already attached to a different flow version"):
+            await update_deployment_attachment_provider_snapshot_id(
+                db, attachment=att2, provider_snapshot_id="tool-A",
+            )
+
+    async def test_create_allows_null_snapshot_ids(
+        self,
+        db: AsyncSession,
+        user: User,
+        flow: Flow,
+        flow_version: FlowVersion,
+        deployment: Deployment,
+    ):
+        """Multiple attachments with None provider_snapshot_id should not conflict."""
+        fv2 = FlowVersion(flow_id=flow.id, user_id=user.id, version_number=2, data={})
+        db.add(fv2)
+        await db.commit()
+        await db.refresh(fv2)
+
+        att1 = await create_deployment_attachment(
+            db, user_id=user.id, flow_version_id=flow_version.id, deployment_id=deployment.id,
+        )
+        await db.commit()
+        att2 = await create_deployment_attachment(
+            db, user_id=user.id, flow_version_id=fv2.id, deployment_id=deployment.id,
+        )
+        await db.commit()
+
+        assert att1.provider_snapshot_id is None
+        assert att2.provider_snapshot_id is None
 
 
 @pytest.mark.asyncio
