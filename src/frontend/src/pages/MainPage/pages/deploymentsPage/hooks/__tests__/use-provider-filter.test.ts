@@ -2,10 +2,6 @@ import { act, renderHook } from "@testing-library/react";
 import type { ProviderAccount } from "../../types";
 import { useProviderFilter } from "../use-provider-filter";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 const makeProvider = (
   overrides: Partial<ProviderAccount> = {},
 ): ProviderAccount => ({
@@ -21,168 +17,119 @@ const makeProvider = (
   ...overrides,
 });
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe("useProviderFilter", () => {
-  describe("initial state", () => {
-    it("initializes with first provider selected", () => {
-      const providers = [
-        makeProvider({ id: "p1" }),
-        makeProvider({ id: "p2" }),
-      ];
-      const { result } = renderHook(() => useProviderFilter(providers));
-      expect(result.current.selectedProviderId).toBe("p1");
-    });
+  it("returns only the selected provider ID in providerIdsToQuery", () => {
+    const providers = [makeProvider({ id: "p1" }), makeProvider({ id: "p2" })];
+    const { result } = renderHook(() => useProviderFilter(providers));
+    expect(result.current.providerIdsToQuery).toEqual(["p1"]);
+    expect(result.current.selectedProviderId).toBe("p1");
+  });
 
-    it("initializes with empty string when no providers given", () => {
-      const { result } = renderHook(() => useProviderFilter([]));
-      expect(result.current.selectedProviderId).toBe("");
-    });
+  it("returns empty providerIdsToQuery for empty provider list", () => {
+    const { result } = renderHook(() => useProviderFilter([]));
+    expect(result.current.providerIdsToQuery).toEqual([]);
+    expect(result.current.selectedProviderId).toBe("");
+  });
 
-    it("returns only the first provider ID in providerIdsToQuery", () => {
-      const providers = [
-        makeProvider({ id: "p1" }),
-        makeProvider({ id: "p2" }),
-      ];
-      const { result } = renderHook(() => useProviderFilter(providers));
-      expect(result.current.providerIdsToQuery).toEqual(["p1"]);
-    });
+  it("builds providerMap from provider list", () => {
+    const providers = [
+      makeProvider({ id: "p1", name: "Prod" }),
+      makeProvider({ id: "p2", name: "Staging" }),
+    ];
+    const { result } = renderHook(() => useProviderFilter(providers));
+    expect(result.current.providerMap).toEqual({ p1: "Prod", p2: "Staging" });
+  });
 
-    it("returns empty providerIdsToQuery for empty provider list", () => {
-      const { result } = renderHook(() => useProviderFilter([]));
-      expect(result.current.providerIdsToQuery).toEqual([]);
+  it("allows changing selectedProviderId", () => {
+    const providers = [
+      makeProvider({ id: "p1", name: "Prod" }),
+      makeProvider({ id: "p2", name: "Staging" }),
+    ];
+    const { result } = renderHook(() => useProviderFilter(providers));
+    act(() => {
+      result.current.setSelectedProviderId("p2");
     });
+    expect(result.current.selectedProviderId).toBe("p2");
+    expect(result.current.providerIdsToQuery).toEqual(["p2"]);
+  });
 
-    it("builds providerMap from provider list", () => {
-      const providers = [
+  it("returns empty providerMap for empty provider list", () => {
+    const { result } = renderHook(() => useProviderFilter([]));
+    expect(result.current.providerMap).toEqual({});
+  });
+
+  it("updates providerIdsToQuery and providerMap when providers list changes", () => {
+    const initial = [makeProvider({ id: "p1", name: "Prod" })];
+    const { result, rerender } = renderHook(
+      ({ list }: { list: ProviderAccount[] }) => useProviderFilter(list),
+      { initialProps: { list: initial } },
+    );
+
+    expect(result.current.providerIdsToQuery).toEqual(["p1"]);
+    expect(result.current.providerMap).toEqual({ p1: "Prod" });
+
+    rerender({
+      list: [
         makeProvider({ id: "p1", name: "Prod" }),
         makeProvider({ id: "p2", name: "Staging" }),
-      ];
-      const { result } = renderHook(() => useProviderFilter(providers));
-      expect(result.current.providerMap).toEqual({ p1: "Prod", p2: "Staging" });
+      ],
     });
 
-    it("returns empty providerMap for empty provider list", () => {
-      const { result } = renderHook(() => useProviderFilter([]));
-      expect(result.current.providerMap).toEqual({});
-    });
+    expect(result.current.providerIdsToQuery).toEqual(["p1"]);
+    expect(result.current.providerMap).toEqual({ p1: "Prod", p2: "Staging" });
+    expect(result.current.selectedProviderId).toBe("p1");
   });
 
-  describe("provider selection", () => {
-    it("returns only the selected provider ID in providerIdsToQuery", () => {
-      const providers = [
-        makeProvider({ id: "p1" }),
-        makeProvider({ id: "p2" }),
-      ];
-      const { result } = renderHook(() => useProviderFilter(providers));
+  it("selects the first provider once providers load after starting empty", async () => {
+    const { result, rerender } = renderHook(
+      ({ list }: { list: ProviderAccount[] }) => useProviderFilter(list),
+      { initialProps: { list: [] } },
+    );
 
-      act(() => {
-        result.current.setSelectedProviderId("p2");
-      });
+    expect(result.current.selectedProviderId).toBe("");
 
-      expect(result.current.providerIdsToQuery).toEqual(["p2"]);
-      expect(result.current.selectedProviderId).toBe("p2");
+    await act(async () => {
+      rerender({ list: [makeProvider({ id: "p1", name: "Prod" })] });
     });
 
-    it("providerIdsToQuery is always a single-element array", () => {
-      const providers = [
-        makeProvider({ id: "p1" }),
-        makeProvider({ id: "p2" }),
-        makeProvider({ id: "p3" }),
-      ];
-      const { result } = renderHook(() => useProviderFilter(providers));
-
-      // Initially selects first provider — single element
-      expect(result.current.providerIdsToQuery).toHaveLength(1);
-
-      act(() => {
-        result.current.setSelectedProviderId("p3");
-      });
-
-      expect(result.current.providerIdsToQuery).toHaveLength(1);
-      expect(result.current.providerIdsToQuery).toEqual(["p3"]);
-    });
+    expect(result.current.selectedProviderId).toBe("p1");
   });
 
-  describe("selects first provider once providers load", () => {
-    it("updates selection when providers arrive after mount", () => {
-      const { result, rerender } = renderHook(
-        ({ list }: { list: ProviderAccount[] }) => useProviderFilter(list),
-        { initialProps: { list: [] } },
-      );
+  it("providerIdsToQuery follows selectedProviderId", () => {
+    const providers = [makeProvider({ id: "p1" }), makeProvider({ id: "p2" })];
+    const { result } = renderHook(() => useProviderFilter(providers));
 
-      expect(result.current.selectedProviderId).toBe("");
+    expect(result.current.providerIdsToQuery).toEqual(["p1"]);
 
-      rerender({
-        list: [makeProvider({ id: "p1" }), makeProvider({ id: "p2" })],
-      });
-
-      expect(result.current.selectedProviderId).toBe("p1");
+    act(() => {
+      result.current.setSelectedProviderId("p2");
     });
+
+    expect(result.current.providerIdsToQuery).toEqual(["p2"]);
   });
 
-  describe("reset on provider deletion", () => {
-    it("selects next available provider when selected provider is removed", () => {
-      const providers = [
-        makeProvider({ id: "p1" }),
-        makeProvider({ id: "p2" }),
-      ];
-      const { result, rerender } = renderHook(
-        ({ list }: { list: ProviderAccount[] }) => useProviderFilter(list),
-        { initialProps: { list: providers } },
-      );
+  it("resets selection to the first available provider when the selected provider is removed", async () => {
+    const { result, rerender } = renderHook(
+      ({ list }: { list: ProviderAccount[] }) => useProviderFilter(list),
+      {
+        initialProps: {
+          list: [
+            makeProvider({ id: "p1", name: "Prod" }),
+            makeProvider({ id: "p2", name: "Staging" }),
+          ],
+        },
+      },
+    );
 
-      act(() => {
-        result.current.setSelectedProviderId("p2");
-      });
-      expect(result.current.selectedProviderId).toBe("p2");
+    act(() => {
+      result.current.setSelectedProviderId("p2");
+    });
+    expect(result.current.selectedProviderId).toBe("p2");
 
-      rerender({ list: [makeProvider({ id: "p1" })] });
-
-      expect(result.current.selectedProviderId).toBe("p1");
+    await act(async () => {
+      rerender({ list: [makeProvider({ id: "p1", name: "Prod" })] });
     });
 
-    it("does not reset when the selected provider still exists", () => {
-      const providers = [
-        makeProvider({ id: "p1" }),
-        makeProvider({ id: "p2" }),
-      ];
-      const { result, rerender } = renderHook(
-        ({ list }: { list: ProviderAccount[] }) => useProviderFilter(list),
-        { initialProps: { list: providers } },
-      );
-
-      act(() => {
-        result.current.setSelectedProviderId("p1");
-      });
-
-      // Remove p2 (not the selected one)
-      rerender({ list: [makeProvider({ id: "p1" })] });
-
-      expect(result.current.selectedProviderId).toBe("p1");
-    });
-  });
-
-  describe("providerMap updates", () => {
-    it("updates providerMap when providers list changes", () => {
-      const initial = [makeProvider({ id: "p1", name: "Prod" })];
-      const { result, rerender } = renderHook(
-        ({ list }: { list: ProviderAccount[] }) => useProviderFilter(list),
-        { initialProps: { list: initial } },
-      );
-
-      expect(result.current.providerMap).toEqual({ p1: "Prod" });
-
-      rerender({
-        list: [
-          makeProvider({ id: "p1", name: "Prod" }),
-          makeProvider({ id: "p2", name: "Staging" }),
-        ],
-      });
-
-      expect(result.current.providerMap).toEqual({ p1: "Prod", p2: "Staging" });
-    });
+    expect(result.current.selectedProviderId).toBe("p1");
   });
 });
