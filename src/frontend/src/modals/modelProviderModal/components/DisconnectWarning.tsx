@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
@@ -18,7 +19,9 @@ const DisconnectWarning = ({
   onConfirm,
   isLoading,
   className,
-}: DisconnectWarningProps) => (
+}: DisconnectWarningProps) => {
+  const { t } = useTranslation();
+  return (
   <div
     className={cn(
       "border border-border border-destructive rounded-md transition-all h-fit duration-300 ease-in-out",
@@ -32,14 +35,14 @@ const DisconnectWarning = ({
           name="Circle"
           className="text-destructive w-3 h-3 fill-destructive mr-2 animate-pulse"
         />
-        Warning
+        {t("modelProviders.warning")}
       </div>
 
       <p className="flex flex-col text-sm h-full">{message}</p>
 
       <div className="flex gap-2 justify-end ">
         <Button size="sm" variant="ghost" onClick={onCancel}>
-          Cancel
+          {t("modelProviders.cancelButton")}
         </Button>
         <Button
           size="sm"
@@ -47,11 +50,12 @@ const DisconnectWarning = ({
           onClick={onConfirm}
           loading={isLoading}
         >
-          Confirm
+          {t("modelProviders.confirmButton")}
         </Button>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default DisconnectWarning;

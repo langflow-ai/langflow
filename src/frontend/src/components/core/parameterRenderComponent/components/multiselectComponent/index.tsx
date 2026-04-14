@@ -1,5 +1,6 @@
 import Fuse from "fuse.js";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "../../../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import ShadTooltip from "../../../../common/shadTooltipComponent";
@@ -31,6 +32,7 @@ export default function MultiselectComponent({
   hideOnSelection,
   inspectionPanel,
 }: InputProps<string[], MultiselectComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const treatedValue = typeof value === "string" ? [value] : value;
 
@@ -125,7 +127,7 @@ export default function MultiselectComponent({
           {treatedValue.length > 0 &&
           options.find((option) => treatedValue.includes(option))
             ? treatedValue.join(", ")
-            : "Choose an option..."}
+            : t("multiselect.chooseOption")}
         </span>
         <ForwardedIconComponent
           name="ChevronsUpDown"
@@ -163,7 +165,7 @@ export default function MultiselectComponent({
 
   const renderOptionsList = () => (
     <CommandList className="overflow-y-scroll">
-      <CommandEmpty>No values found.</CommandEmpty>
+      <CommandEmpty>{t("multiselect.noValuesFound")}</CommandEmpty>
       <CommandGroup>
         {filteredOptions.map((option, index) => (
           <ShadTooltip key={index} delayDuration={700} content={option}>
