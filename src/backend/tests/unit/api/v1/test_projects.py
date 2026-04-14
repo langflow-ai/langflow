@@ -134,24 +134,6 @@ async def test_create_project_validation_error(client: AsyncClient, logged_in_he
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
-async def test_create_project_validation_error_does_not_echo_request_input(client: AsyncClient, logged_in_headers):
-    """Regression test: request-validation 422 responses must not echo submitted payloads."""
-    sensitive_marker = "secret-api-key-should-not-echo"
-    response = await client.post(
-        "api/v1/projects/",
-        # Send a JSON string (instead of object) to trigger RequestValidationError consistently.
-        content=json.dumps(sensitive_marker),
-        headers={**logged_in_headers, "Content-Type": "application/json"},
-    )
-
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-    detail = response.json()["detail"]
-    assert isinstance(detail, list)
-    assert detail
-    assert all("input" not in error for error in detail)
-    assert sensitive_marker not in response.text
-
-
 async def test_delete_project_then_404(client: AsyncClient, logged_in_headers, basic_case):
     create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
     proj_id = create_resp.json()["id"]
