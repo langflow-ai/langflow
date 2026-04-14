@@ -158,10 +158,11 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
     async def test_should_return_helpful_message_when_openai_returns_model_not_found(
         self, component_class, default_kwargs
     ):
-        """Bug: _get_exception_message only handles BadRequestError, so NotFoundError
-        (HTTP 404) with code=model_not_found falls through and returns None, leaving
-        the raw verbose OpenAI error to bubble up as ComponentBuildError without
-        actionable context.
+        """Bug: NotFoundError(model_not_found) falls through _get_exception_message and returns None.
+
+        Before fix: only BadRequestError was handled, so NotFoundError (HTTP 404) with
+        code=model_not_found left the raw verbose OpenAI error to bubble up as
+        ComponentBuildError without actionable context.
 
         Expected: _get_exception_message recognizes openai.NotFoundError with
         code=model_not_found and returns a helpful message that references the model
@@ -195,12 +196,13 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         )
 
     async def test_should_not_expose_fictional_gpt53_ids_in_openai_model_name_options(self):
-        """Bug: gpt-5.3 and gpt-5.3-instant were listed as selectable model options but
-        do not exist as OpenAI API model IDs, causing a 404 model_not_found at runtime.
+        """Bug: fictional gpt-5.3 ids in the OpenAI dropdown cause 404 at runtime.
 
-        Only gpt-5.3-chat-latest and gpt-5.3-codex exist in the OpenAI API for the 5.3
-        family. The bare gpt-5.3 id and gpt-5.3-instant (a ChatGPT product name, not an
-        API model id) must not be exposed as selectable options.
+        gpt-5.3 and gpt-5.3-instant were listed as selectable model options but do
+        not exist as OpenAI API model IDs. Only gpt-5.3-chat-latest and gpt-5.3-codex
+        exist in the OpenAI API for the 5.3 family. The bare gpt-5.3 id and
+        gpt-5.3-instant (a ChatGPT product name, not an API model id) must not be
+        exposed as selectable options.
         """
         from lfx.base.models.openai_constants import (
             OPENAI_CHAT_MODEL_NAMES,
