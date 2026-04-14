@@ -5052,6 +5052,8 @@ async def test_list_llms_returns_normalized_model_names(monkeypatch):
 
     assert result.provider_result == {
         "models": [
+            {"model_name": "groq/openai/gpt-oss-120b"},
+            {"model_name": "bedrock/openai.gpt-oss-120b-1:0"},
             {"model_name": "granite-3.1-8b"},
             {"model_name": "granite-3.3-8b"},
             {"model_name": "granite-3.1-8b"},

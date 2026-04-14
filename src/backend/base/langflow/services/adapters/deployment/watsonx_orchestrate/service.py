@@ -106,6 +106,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentCreatePayload,
     WatsonxDeploymentCreateResultData,
     WatsonxDeploymentLlmListResultData,
+    WatsonxModelOut,
     WatsonxDeploymentUpdatePayload,
     WatsonxDeploymentUpdateResultData,
     WatsonxModelOut,
@@ -305,7 +306,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             WatsonxModelOut(model_name="groq/openai/gpt-oss-120b"),
             WatsonxModelOut(model_name="bedrock/openai.gpt-oss-120b-1:0"),
         ]
-
         hardcoded_names = {m.model_name for m in raw_models}
 
         try:
