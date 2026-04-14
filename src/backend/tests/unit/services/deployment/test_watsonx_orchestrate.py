@@ -5062,7 +5062,7 @@ async def test_list_llms_returns_normalized_model_names(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_list_llms_invalid_payload_raises_invalid_content(monkeypatch):
+async def test_list_llms_invalid_payload_raises_deployment_error(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": []},
@@ -5080,7 +5080,7 @@ async def test_list_llms_invalid_payload_raises_invalid_content(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    with pytest.raises(InvalidContentError):
+    with pytest.raises(DeploymentError, match="listing deployment LLMs"):
         await service.list_llms(user_id="user-1", db=object())
 
 
