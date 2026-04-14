@@ -455,8 +455,11 @@ jobs:
           CURRENT_CONSTRAINT=$(grep -E '^\s*"langflow-sdk' pyproject.toml | head -1)
           echo "Current constraint: $CURRENT_CONSTRAINT"
 
-          # Create new constraint: >=SDK_VERSION,<1.dev0
-          NEW_CONSTRAINT="\"langflow-sdk>=$SDK_VERSION,<1.dev0\""
+          # Create new constraint using the next major derived from SDK_VERSION
+          SDK_BASE_VERSION=$(echo "$SDK_VERSION" | sed 's/[^0-9.].*$//')
+          SDK_MAJOR=$(echo "$SDK_BASE_VERSION" | cut -d. -f1)
+          NEXT_MAJOR=$((SDK_MAJOR + 1))
+          NEW_CONSTRAINT="\"langflow-sdk>=$SDK_VERSION,<$NEXT_MAJOR.dev0\""
 
           echo "New constraint: $NEW_CONSTRAINT"
 
