@@ -31,6 +31,15 @@ def extract_friendly_error(error_msg: str) -> str:
     if "content" in error_lower and any(term in error_lower for term in ["filter", "policy", "safety"]):
         return "Request blocked by content policy. Please modify your prompt."
 
+    # Pydantic schema validation errors — typical sign that a weak model emitted a
+    # malformed tool call or response, and the downstream component rejected it.
+    schema_error_terms = ("validation error for", "input should be a valid", "pydantic.validationerror")
+    if any(term in error_lower for term in schema_error_terms):
+        return (
+            "The selected model produced output that didn't match the expected schema. "
+            "Try again or use a more capable model."
+        )
+
     return _truncate_error_message(error_msg)
 
 

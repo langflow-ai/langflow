@@ -35,6 +35,17 @@ BROKEN CODE:
 
 Please provide a corrected version of the component code."""
 
+EXECUTION_RETRY_TEMPLATE = """The previous attempt to generate a component failed during flow execution.
+
+ERROR:
+{error}
+
+ORIGINAL REQUEST:
+{original_input}
+
+Respond with a complete, valid Langflow component as a Python class extending Component, \
+inside a single ```python code block. Do not emit raw tool calls or partial JSON."""
+
 
 @dataclass
 class IntentResult:

@@ -503,6 +503,45 @@ class TestExecuteFlowFileStreamingEvents:
             assert exc_info.value.status_code == 500
 
     @pytest.mark.asyncio
+    async def test_should_propagate_original_error_message_in_http_detail_on_execution_failure(self):
+        """Bug: streaming execution wrapped any error as a generic 'An internal error occurred'.
+
+        That hides the root cause (e.g. pydantic InputSchema validation failures from a
+        weak model emitting malformed tool calls) from the upstream friendly-error
+        mapper, so the user always sees the same generic message instead of an
+        actionable one. The HTTPException detail should include the original error
+        text so extract_friendly_error can pattern-match on it.
+        """
+
+        async def mock_consume(*_args, **_kwargs):
+            yield ("end", None)
+
+        mock_result = MagicMock()
+        mock_result.has_error = True
+        mock_result.has_result = False
+        mock_result.error = RuntimeError(
+            "1 validation error for InputSchema\ninput_value\n  Input should be a valid string"
+        )
+
+        with (
+            patch(f"{MODULE}.resolve_flow_path", return_value=(Path("/fake/test.json"), "json")),
+            patch(f"{MODULE}.load_graph_for_execution", new_callable=AsyncMock, return_value=MagicMock(context={})),
+            patch(f"{MODULE}.create_default_event_manager"),
+            patch(f"{MODULE}.consume_streaming_events", side_effect=mock_consume),
+            patch(f"{MODULE}._run_graph_with_events", new_callable=AsyncMock),
+            patch(f"{MODULE}.FlowExecutionResult", return_value=mock_result),
+        ):
+            with pytest.raises(HTTPException) as exc_info:
+                async for _ in execute_flow_file_streaming("test.json"):
+                    pass
+
+            assert exc_info.value.status_code == 500
+            detail = str(exc_info.value.detail)
+            assert "InputSchema" in detail or "Input should be a valid string" in detail, (
+                f"Expected original error text in HTTPException detail, got: {detail!r}"
+            )
+
+    @pytest.mark.asyncio
     async def test_should_handle_preparation_error(self):
         """Should raise HTTPException on JSONDecodeError/OSError/ValueError."""
         with (

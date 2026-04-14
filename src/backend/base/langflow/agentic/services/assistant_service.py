@@ -26,6 +26,7 @@ from langflow.agentic.services.flow_executor import (
     extract_response_text,
 )
 from langflow.agentic.services.flow_types import (
+    EXECUTION_RETRY_TEMPLATE,
     MAX_VALIDATION_RETRIES,
     OFF_TOPIC_REFUSAL_MESSAGE,
     VALIDATION_RETRY_TEMPLATE,
@@ -237,6 +238,7 @@ async def execute_flow_with_validation_streaming(
 
             result = None
             cancelled = False
+            execution_error: str | None = None
             flow_generator = execute_flow_file_streaming(
                 flow_filename=flow_filename,
                 input_value=current_input,
@@ -272,20 +274,59 @@ async def execute_flow_with_validation_streaming(
                 yield format_cancelled_event()
                 return
             except HTTPException as e:
-                friendly_msg = extract_friendly_error(str(e.detail))
-                logger.error(f"Flow execution failed: {friendly_msg}")
-                yield format_error_event(friendly_msg)
-                return
+                execution_error = extract_friendly_error(str(e.detail))
             except (ValueError, RuntimeError, OSError) as e:
-                friendly_msg = extract_friendly_error(str(e))
-                logger.error(f"Flow execution failed: {friendly_msg}")
-                yield format_error_event(friendly_msg)
-                return
+                execution_error = extract_friendly_error(str(e))
 
             # Handle cancellation
             if cancelled:
                 yield format_cancelled_event()
                 return
+
+            if execution_error is not None:
+                logger.error(f"Flow execution failed (attempt {attempt + 1}): {execution_error}")
+
+                # Q&A has no retry semantics — emit error and exit immediately
+                if not is_component_request:
+                    yield format_error_event(execution_error)
+                    return
+
+                # Component generation: surface the failure and retry if attempts remain
+                yield format_progress_event(
+                    "validation_failed",
+                    attempt + 1,
+                    total_attempts,
+                    message="Generation failed",
+                    error=execution_error,
+                )
+                await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
+
+                if attempt >= total_attempts - 1:
+                    # Max attempts exhausted — emit a complete event so the frontend
+                    # renders the "Component generation failed" card with the spec message
+                    yield format_complete_event(
+                        {
+                            "result": "",
+                            "validated": False,
+                            "validation_error": execution_error,
+                            "validation_attempts": attempt + 1,
+                        }
+                    )
+                    return
+
+                yield format_progress_event(
+                    "retrying",
+                    attempt + 1,
+                    total_attempts,
+                    message="Retrying with error context...",
+                    error=execution_error,
+                )
+                await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
+                current_input = EXECUTION_RETRY_TEMPLATE.format(
+                    error=execution_error,
+                    original_input=sanitization.sanitized_input,
+                )
+                continue
 
             if result is None:
                 logger.error("Flow execution returned no result")

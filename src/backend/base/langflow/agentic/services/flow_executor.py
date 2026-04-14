@@ -248,7 +248,7 @@ async def execute_flow_file_streaming(
         logger.error(f"Flow execution error: {execution_result.error}")
         raise HTTPException(
             status_code=500,
-            detail="An internal error occurred while executing the flow.",
+            detail=str(execution_result.error),
         ) from execution_result.error
 
     yield ("end", execution_result.result if execution_result.has_result else {})
