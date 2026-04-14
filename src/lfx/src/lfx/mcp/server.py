@@ -191,6 +191,21 @@ async def _patch_flow(flow_id: str, flow: dict) -> dict:
     return await _get_client().patch(f"/flows/{flow_id}", json_data={"data": flow["data"]})
 
 
+def _collect_build_errors(builds: dict[str, Any]) -> list[dict[str, str]]:
+    """Collect per-component errors from a /monitor/builds response."""
+    errors: list[dict[str, str]] = []
+    for comp_id, build_list in builds.items():
+        if not build_list:
+            continue
+        latest = build_list[-1]
+        if latest.get("valid", False):
+            continue
+        artifacts = latest.get("artifacts", {})
+        error_msg = artifacts.get("error", str(artifacts)) if isinstance(artifacts, dict) else str(artifacts)
+        errors.append({"component_id": comp_id, "error": error_msg or "Unknown error"})
+    return errors
+
+
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
@@ -1087,34 +1102,35 @@ async def validate_flow(flow_id: str) -> dict[str, Any]:
     if not job_id:
         return {"valid": False, "error": "Build did not return a job_id"}
 
-    # Poll until build completes or timeout
+    # Poll until build completes or timeout. Short-circuit as soon as any
+    # component reports valid: false -- downstream components depend on it
+    # and won't run, so waiting the full timeout yields no new information.
     builds: dict[str, Any] = {}
     for _ in range(30):
         await asyncio.sleep(1.0)
         data = await _get_client().get(f"/monitor/builds?flow_id={flow_id}")
         builds = data.get("vertex_builds", {})
+        errors = _collect_build_errors(builds)
+        if errors:
+            return {
+                "valid": False,
+                "component_count": len(builds),
+                "errors": errors,
+            }
         if len(builds) >= expected:
             break
     else:
         return {
             "valid": False,
             "error": f"Build timed out: {len(builds)}/{expected} components completed",
+            "component_count": len(builds),
+            "errors": _collect_build_errors(builds),
         }
 
-    errors = []
-    for comp_id, build_list in builds.items():
-        if not build_list:
-            continue
-        latest = build_list[-1]
-        if not latest.get("valid", False):
-            artifacts = latest.get("artifacts", {})
-            error_msg = artifacts.get("error", str(artifacts)) if isinstance(artifacts, dict) else str(artifacts)
-            errors.append({"component_id": comp_id, "error": error_msg or "Unknown error"})
-
     return {
-        "valid": len(errors) == 0,
+        "valid": True,
         "component_count": len(builds),
-        "errors": errors,
+        "errors": [],
     }
 
 
