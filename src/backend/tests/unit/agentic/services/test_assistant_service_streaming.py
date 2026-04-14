@@ -374,6 +374,126 @@ class TestErrorHandling:
             assert len(error_events) >= 1
 
     @pytest.mark.asyncio
+    async def test_should_emit_complete_event_with_validated_false_when_all_attempts_raise(self):
+        """Bug: exhausted retries should emit a complete event, not a bare error event.
+
+        When every attempt fails at execution time (weak model keeps blowing up), the
+        user should see the 'Component generation failed' card rendered by the frontend
+        from a complete event with validated=False, not a bare error event.
+
+        Before Bug A's fix: first failure returned immediately with format_error_event
+        and the user saw the raw "An internal error occurred" line.
+        After fix: the streaming service retries up to total_attempts and, when all
+        attempts fail, emits a format_complete_event with validated=False so the
+        frontend renders the failure card and the spec's "use a more capable model"
+        message.
+        """
+        from fastapi import HTTPException
+
+        def streaming_factory(**_kw):
+            async def always_raises():
+                raise HTTPException(
+                    status_code=500,
+                    detail="1 validation error for InputSchema\ninput_value\n  Input should be a valid string",
+                )
+                yield  # pragma: no cover — makes this an async generator
+
+            return always_raises()
+
+        with (
+            patch(
+                f"{MODULE}.classify_intent",
+                new_callable=AsyncMock,
+                return_value=_make_intent("generate_component"),
+            ),
+            patch(f"{MODULE}.execute_flow_file_streaming", side_effect=streaming_factory),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="create a component",
+                global_variables={},
+                max_retries=1,
+            )
+            events = await _collect_events(gen)
+
+            # Final event must be a complete event with validated=false so the frontend
+            # renders the failure card rather than a raw error line.
+            complete_events = [e for e in events if '"event": "complete"' in e]
+            assert complete_events, f"Expected a complete event after exhausted retries. Events: {events}"
+            assert any('"validated": false' in e.lower() for e in complete_events), (
+                f"Expected validated=false in final complete event. Events: {complete_events}"
+            )
+
+    @pytest.mark.asyncio
+    async def test_should_retry_component_generation_when_flow_execution_raises(self):
+        """Bug: weak models (e.g. llama3.2) emit malformed tool calls that blow up the flow.
+
+        When intent=generate_component and execute_flow_file_streaming raises an
+        HTTPException on the first attempt, the assistant should retry up to
+        max_retries instead of bailing out immediately. Today the streaming service
+        catches HTTPException and returns, so the user sees "An internal error occurred"
+        with no retry — even though the spec defines automatic retry on failure.
+        """
+        from fastapi import HTTPException
+
+        component_code = "class FixedComp(Component): pass"
+        response_text = f"```python\n{component_code}\n```"
+
+        mock_success = MagicMock()
+        mock_success.is_valid = True
+        mock_success.class_name = "FixedComp"
+
+        call_count = 0
+
+        def streaming_factory(**_kw):
+            async def first_call_raises():
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="An internal error occurred while executing the flow.",
+                    )
+                yield "end", {"result": response_text}
+
+            return first_call_raises()
+
+        with (
+            patch(
+                f"{MODULE}.classify_intent",
+                new_callable=AsyncMock,
+                return_value=_make_intent("generate_component"),
+            ),
+            patch(f"{MODULE}.execute_flow_file_streaming", side_effect=streaming_factory),
+            patch(f"{MODULE}.extract_component_code", return_value=component_code),
+            patch(f"{MODULE}.validate_component_code", return_value=mock_success),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
+            patch(f"{MODULE}.extract_response_text", return_value=response_text),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="create a component",
+                global_variables={},
+                max_retries=2,
+            )
+            events = await _collect_events(gen)
+
+            # Must retry — at least 2 calls to the streaming flow executor
+            assert call_count >= 2, (
+                f"Expected retry after flow execution error, but execute_flow_file_streaming "
+                f"was called only {call_count} time(s)."
+            )
+
+            # Final event should be a complete event with validated=True
+            complete_events = [e for e in events if '"event": "complete"' in e]
+            assert complete_events, "Expected a complete event after successful retry"
+            assert any('"validated": true' in e.lower() for e in complete_events), (
+                f"Expected validated=true in complete event after successful retry. Events: {complete_events}"
+            )
+
+    @pytest.mark.asyncio
     async def test_should_emit_error_when_no_result(self):
         """Should emit error event when flow returns no result."""
         flow_gen = _make_flow_events([])  # No events = no result
