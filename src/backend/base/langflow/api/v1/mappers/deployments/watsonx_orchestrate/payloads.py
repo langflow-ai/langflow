@@ -577,6 +577,16 @@ class WatsonxApiRenameToolOperation(BaseModel):
     tool_name: NormalizedStr = Field(min_length=1)
 
 
+class WatsonxApiExecutionInput(BaseModel):
+    """API-facing provider_data payload for POST deployment runs."""
+
+    model_config = {"extra": "forbid"}
+
+    input: str | None = None
+    message: dict[str, Any] | None = None
+    thread_id: str | None = None
+
+
 class _WatsonxApiAgentExecutionResultBase(BaseModel):
     """Shared fields for API-facing agent execution result payloads.
 

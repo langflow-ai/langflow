@@ -72,6 +72,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiDeploymentLlmListResultData,
     WatsonxApiDeploymentUpdatePayload,
     WatsonxApiDeploymentUpdateResultData,
+    WatsonxApiExecutionInput,
     WatsonxApiFlowArtifactProviderData,
     WatsonxApiProviderAccountCreate,
     WatsonxApiProviderAccountResponse,
@@ -202,6 +203,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         ),
         execution_status_result=PayloadSlot(
             adapter_model=WatsonxApiAgentExecutionStatusResultData,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
+        execution_input=PayloadSlot(
+            adapter_model=WatsonxApiExecutionInput,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
         deployment_llm_list_result=PayloadSlot(

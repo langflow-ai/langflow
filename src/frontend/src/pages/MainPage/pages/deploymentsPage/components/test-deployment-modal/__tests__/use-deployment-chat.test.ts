@@ -170,6 +170,24 @@ describe("useDeploymentChat", () => {
     );
   });
 
+  it("never sends agent_id in provider_data when creating a run", async () => {
+    mockPostRun.mockResolvedValueOnce(
+      makePostResponse({ status: "completed", id: null }),
+    );
+
+    const { result } = renderHook(() =>
+      useDeploymentChat({ providerId: "my-provider", deploymentId: "my-dep" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("hello world");
+    });
+
+    expect(mockPostRun).toHaveBeenCalledTimes(1);
+    const firstCallPayload = mockPostRun.mock.calls[0][0];
+    expect(firstCallPayload.provider_data).not.toHaveProperty("agent_id");
+  });
+
   // -------------------------------------------------------------------------
   // Immediate terminal — no polling
   // -------------------------------------------------------------------------

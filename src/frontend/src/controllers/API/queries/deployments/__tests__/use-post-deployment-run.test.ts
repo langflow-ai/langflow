@@ -71,6 +71,32 @@ describe("usePostDeploymentRun", () => {
     expect(sentPayload.provider_data.thread_id).toBe("thread-1");
   });
 
+  it("does not include agent_id in run request provider_data", async () => {
+    mockApiPost.mockResolvedValue({
+      data: {
+        deployment_id: "dep-1",
+        provider_data: { id: "exec-3", status: "running" },
+      },
+    });
+
+    const payload: DeploymentRunRequest = {
+      deployment_id: "dep-1",
+      provider_data: { input: "Hello from FE", thread_id: "thread-2" },
+    };
+
+    const mutation = usePostDeploymentRun();
+    await mutation.mutate(payload);
+
+    const sentPayload = mockApiPost.mock.calls[0][1];
+    expect(sentPayload).toStrictEqual({
+      provider_data: {
+        input: "Hello from FE",
+        thread_id: "thread-2",
+      },
+    });
+    expect(sentPayload.provider_data).not.toHaveProperty("agent_id");
+  });
+
   it("returns run response with provider_data", async () => {
     const response = {
       deployment_id: "dep-1",

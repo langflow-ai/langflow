@@ -86,6 +86,51 @@ def test_watsonx_mapper_is_registered() -> None:
     assert mapper.api_payloads.snapshot_list_result is not None
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "provider_data",
+    [
+        {"input": "hello"},
+        {"message": {"role": "user", "content": "hello"}},
+        {"input": "hello", "thread_id": "thread-1"},
+        {},
+    ],
+)
+async def test_watsonx_mapper_execution_input_accepts_supported_request_shapes(provider_data: dict) -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    resolved = await mapper.resolve_execution_input(provider_data, db=_FakeDb([]))
+    assert resolved == provider_data
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_execution_input_rejects_agent_id_override_field() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    with pytest.raises(AdapterPayloadValidationError) as exc_info:
+        await mapper.resolve_execution_input(
+            {"input": "hello", "agent_id": "agent-1"},
+            db=_FakeDb([]),
+        )
+    assert "agent_id" in exc_info.value.format_first_error()
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_execution_input_rejects_unknown_fields() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    with pytest.raises(AdapterPayloadValidationError) as exc_info:
+        await mapper.resolve_execution_input(
+            {"input": "hello", "llm_params": {"temperature": 0.2}},
+            db=_FakeDb([]),
+        )
+    assert "llm_params" in exc_info.value.format_first_error()
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_execution_input_accepts_none_provider_data() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    resolved = await mapper.resolve_execution_input(None, db=_FakeDb([]))
+    assert resolved is None
+
+
 def test_watsonx_mapper_provider_list_entry_rejects_non_dict_provider_data() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     item = SimpleNamespace(
