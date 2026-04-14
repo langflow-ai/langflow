@@ -5,6 +5,7 @@ slug: /mcp-component-astra
 
 import Icon from "@site/src/components/icon";
 import PartialMcpNodeTip from '@site/docs/_partial-mcp-node-tip.mdx';
+import McpIcon from '@site/static/logos/mcp-icon.svg';
 
 This guide demonstrates how to [use Langflow as an MCP client](/mcp-client) by using the **MCP Tools** component to run a [DataStax Astra DB MCP server](https://github.com/datastax/astra-db-mcp) in an agent flow.
 
@@ -22,20 +23,20 @@ This guide demonstrates how to [use Langflow as an MCP client](/mcp-client) by u
 
     You can also use an existing flow or create a blank flow.
 
-6. Remove the **URL** tool, and then replace it with an [**MCP Tools** component](/mcp-client).
+6. Remove the **URL** tool from the flow.
 
-7. Configure the **MCP Tools** component as follows:
+7. Register the Astra DB MCP server from the <McpIcon /> **MCP** sidebar and add **MCP Tools** to the canvas.
+Use the following values:
 
-    1. In the **MCP Server** field, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
-    2. Select **Stdio** mode.
-    3. In the **Name** field, enter a name for the MCP server.
-    4. In the **Commmand** field, add the following code to connect to an Astra DB MCP server:
+    1. In the **Name** field, enter a name for the MCP server.
+
+    2. In the **Command** field, add the following code to connect to an Astra DB MCP server:
 
         ```bash
         npx -y @datastax/astra-db-mcp
         ```
 
-    5. In the **Environment Variables** fields, add variables for `ASTRA_DB_APPLICATION_TOKEN` and `ASTRA_DB_API_ENDPOINT` with the values from your Astra database.
+    3. In the **Environment Variables** fields, add variables for `ASTRA_DB_APPLICATION_TOKEN` and `ASTRA_DB_API_ENDPOINT` with the values from your Astra database.
 
         :::info
         Environment variables declared in your Langflow `.env` file can be referenced in your MCP server commands, but you cannot reference global variables declared in Langflow.

@@ -52,9 +52,18 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
-### Breaking changes
-
 ### New features and enhancements
+
+- Langflow MCP client for Bob (IBM) and Claude Code
+
+    The **Settings** page now includes <Icon name="Terminal" aria-hidden="true"/> **Langflow MCP Client**, with instructions to connect **Bob (IBM)** and **Claude Code** to your Langflow instance.
+    For more information, see [Langflow MCP client](../Agents/langflow-mcp-client.mdx).
+
+- MCP Tools: register servers first, and then add from the MCP sidebar
+
+    **MCP Tools** is no longer added from the **Agents** component list. Register each MCP server under **Settings** > **MCP Servers*, or from the flow editor <McpIcon /> **MCP** sidebar.
+    Each saved server appears as a unique **MCP Tools** component that can be dragged to the canvas.
+    For more information, see [Use Langflow as an MCP client](/mcp-client#use-the-mcp-tools-component).
 
 - Flow DevOps Toolkit SDK
 
@@ -70,6 +79,11 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Renamed **Data Operations** and **DataFrame Operations** components
 
     The **Data Operations** component is now the [**JSON Operations** component](/data-operations), and the **DataFrame Operations** component is now the [**Table Operations** component](/dataframe-operations).
+
+- Flow version history in the visual editor
+
+    You can now save point-in-time versions of a flow from **Version History**, preview saved versions in read-only mode, and restore an earlier version to your working draft.
+    For more information, see [Build flows](../Flows/concepts-flows.mdx#save-and-restore-flow-versions).
 
 - Enabled tool calling for Gemini 3 preview models
 

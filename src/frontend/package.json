@@ -11,6 +11,12 @@
     "glob": "^11.1.0",
     "test-exclude": "^7.0.0",
     "picomatch": ">=4.0.4",
+    "jest-util": {
+      "picomatch": ">=4.0.4"
+    },
+    "jest-message-util": {
+      "picomatch": ">=4.0.4"
+    },
     "playwright": "^1.59.1",
     "brace-expansion": ">=5.0.5",
     "handlebars": ">=4.7.9"
@@ -50,7 +56,7 @@
     "ag-grid-community": "^32.3.9",
     "ag-grid-react": "^32.3.9",
     "ansi-to-html": "^0.7.2",
-    "axios": "^1.12.0",
+    "axios": "^1.15.0",
     "base64-js": "^1.5.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
@@ -65,7 +71,7 @@
     "framer-motion": "^11.2.10",
     "fuse.js": "^7.0.0",
     "i18next": "^25.8.18",
-    "lodash": "^4.17.23",
+    "lodash": "^4.18.0",
     "lucide-react": "^0.575.0",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.48",
@@ -160,7 +166,7 @@
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.5.2",
     "@types/jest": "^29.5.12",
-    "@types/lodash": "4.17.5",
+    "@types/lodash": "^4.17.5",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

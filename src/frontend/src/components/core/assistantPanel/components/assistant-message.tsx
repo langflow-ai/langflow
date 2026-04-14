@@ -1,10 +1,9 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import langflowAssistantIcon from "@/assets/langflow_assistant.svg";
 import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
-import { AuthContext } from "@/contexts/authContext";
-import { BASE_URL_API } from "@/customization/config-constants";
+import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import { cn } from "@/utils/utils";
 import type { AssistantMessage } from "../assistant-panel.types";
@@ -43,7 +42,6 @@ export function AssistantMessageItem({
   onApprove,
   onRetry,
 }: AssistantMessageItemProps) {
-  const { userData } = useContext(AuthContext);
   const isUser = message.role === "user";
   const isStreaming = message.status === "streaming";
   const hasValidatedResult =
@@ -101,10 +99,6 @@ export function AssistantMessageItem({
 
   // Show loading state during component generation
   const isGeneratingCode = isStreaming && isComponentGeneration;
-
-  const profileImageUrl = `${BASE_URL_API}files/profile_pictures/${
-    userData?.profile_image ?? "Space/046-rocket.svg"
-  }`;
 
   const renderContent = () => {
     // Show detailed loading state during component generation
@@ -259,11 +253,7 @@ export function AssistantMessageItem({
     <div className="mb-6" data-testid={`assistant-message-${message.role}`}>
       <div className="flex items-start gap-3">
         {isUser ? (
-          <img
-            src={profileImageUrl}
-            alt="User"
-            className="h-7 w-7 shrink-0 rounded-full"
-          />
+          <CustomProfileIcon className="h-7 w-7 shrink-0 rounded-full" />
         ) : (
           <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg">
             <img
