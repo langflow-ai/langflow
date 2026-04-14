@@ -106,7 +106,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentCreatePayload,
     WatsonxDeploymentCreateResultData,
     WatsonxDeploymentLlmListResultData,
-    WatsonxModelOut,
     WatsonxDeploymentUpdatePayload,
     WatsonxDeploymentUpdateResultData,
     WatsonxModelOut,
