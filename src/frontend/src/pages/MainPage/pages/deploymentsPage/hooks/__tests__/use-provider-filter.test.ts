@@ -78,4 +78,44 @@ describe("useProviderFilter", () => {
     expect(result.current.providerMap).toEqual({ p1: "Prod", p2: "Staging" });
     expect(result.current.selectedProviderId).toBe("p1");
   });
+
+  it("selects the first provider once providers load after starting empty", async () => {
+    const { result, rerender } = renderHook(
+      ({ list }: { list: ProviderAccount[] }) => useProviderFilter(list),
+      { initialProps: { list: [] } },
+    );
+
+    expect(result.current.selectedProviderId).toBe("");
+
+    await act(async () => {
+      rerender({ list: [makeProvider({ id: "p1", name: "Prod" })] });
+    });
+
+    expect(result.current.selectedProviderId).toBe("p1");
+  });
+
+  it("resets selection to the first available provider when the selected provider is removed", async () => {
+    const { result, rerender } = renderHook(
+      ({ list }: { list: ProviderAccount[] }) => useProviderFilter(list),
+      {
+        initialProps: {
+          list: [
+            makeProvider({ id: "p1", name: "Prod" }),
+            makeProvider({ id: "p2", name: "Staging" }),
+          ],
+        },
+      },
+    );
+
+    act(() => {
+      result.current.setSelectedProviderId("p2");
+    });
+    expect(result.current.selectedProviderId).toBe("p2");
+
+    await act(async () => {
+      rerender({ list: [makeProvider({ id: "p1", name: "Prod" })] });
+    });
+
+    expect(result.current.selectedProviderId).toBe("p1");
+  });
 });
