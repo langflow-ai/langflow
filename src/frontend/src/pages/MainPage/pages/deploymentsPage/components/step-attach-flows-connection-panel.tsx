@@ -82,12 +82,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
           key={connectionTab}
         >
           {connectionTab === "available" ? (
-            <div
-              className={cn(
-                "min-w-0 space-y-3",
-                connections.length > 0 && "pr-3",
-              )}
-            >
+            <div className="min-w-0 space-y-3">
               <ConnectionSearchList
                 connections={connections}
                 selectedConnections={selectedConnections}

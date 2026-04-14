@@ -1,6 +1,7 @@
 import { memo, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/utils/utils";
 import type { ConnectionItem } from "../types";
 import { CheckboxSelectItem } from "./radio-select-item";
 
@@ -59,7 +60,7 @@ export const ConnectionSearchList = memo(function ConnectionSearchList({
   }
 
   return (
-    <>
+    <div className={cn(filteredConnections.length > 0 && "pr-3")}>
       <div className="min-w-0">
         <Input
           icon="Search"
@@ -90,6 +91,6 @@ export const ConnectionSearchList = memo(function ConnectionSearchList({
           </CheckboxSelectItem>
         ))
       )}
-    </>
+    </div>
   );
 });
