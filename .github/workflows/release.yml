@@ -293,6 +293,9 @@ jobs:
           python-version: "3.13"
           prune-cache: false
 
+      - name: Install SDK dependencies
+        run: uv sync --dev --package langflow-sdk
+
       - name: Determine version
         id: version
         run: |
