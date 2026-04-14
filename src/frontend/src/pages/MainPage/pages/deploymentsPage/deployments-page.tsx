@@ -74,8 +74,7 @@ export default function DeploymentsPage() {
   const { deployments, isLoading: isLoadingDeployments } =
     useGetDeploymentsByProviders(providerIdsToQuery, currentFolderId);
 
-  const showEnvironmentToolbar =
-    providers.length > 1 && !isLoadingProviders;
+  const showEnvironmentToolbar = providers.length > 1 && !isLoadingProviders;
 
   const showHeaderButton =
     activeSubTab === "providers"
