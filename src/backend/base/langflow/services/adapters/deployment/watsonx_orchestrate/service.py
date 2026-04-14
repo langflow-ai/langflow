@@ -298,7 +298,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         client_manager = await self._get_provider_clients(user_id=user_id, db=db)
 
         # hardcode known default models to the top of the list
-        # (these are not included in the API response)
+        # (these are not included in wxO's API response)
         raw_models = [
             WatsonxModelOut(model_name="groq/openai/gpt-oss-120b"),
             WatsonxModelOut(model_name="bedrock/openai.gpt-oss-120b-1:0"),
