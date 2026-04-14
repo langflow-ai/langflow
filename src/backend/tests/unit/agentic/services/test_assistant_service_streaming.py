@@ -224,7 +224,7 @@ class TestComponentGeneration:
             patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
-            patch(f"{MODULE}.validate_component_runtime", return_value=None),
+            patch(f"{MODULE}.validate_component_runtime", new_callable=AsyncMock, return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -270,7 +270,7 @@ class TestComponentGeneration:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", side_effect=[mock_fail, mock_success]),
-            patch(f"{MODULE}.validate_component_runtime", return_value=None),
+            patch(f"{MODULE}.validate_component_runtime", new_callable=AsyncMock, return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -468,7 +468,7 @@ class TestErrorHandling:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=streaming_factory),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_success),
-            patch(f"{MODULE}.validate_component_runtime", return_value=None),
+            patch(f"{MODULE}.validate_component_runtime", new_callable=AsyncMock, return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
