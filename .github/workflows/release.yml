@@ -856,8 +856,14 @@ jobs:
 
   publish-sdk:
     name: Publish langflow-sdk to PyPI
-    if: ${{ inputs.release_sdk }}
     needs: [build-sdk, test-cross-platform, ci]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.release_sdk &&
+      needs.build-sdk.result == 'success' &&
+      needs.ci.result == 'success' &&
+      (needs.test-cross-platform.result == 'success' || needs.test-cross-platform.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
