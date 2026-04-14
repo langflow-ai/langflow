@@ -13,7 +13,7 @@ async function fetchDeployments(
     {
       params: {
         provider_id: providerId,
-        project_id: projectId,
+        ...(projectId ? { project_id: projectId } : {}),
         page: 1,
         size: 20,
       },
@@ -42,10 +42,21 @@ export function useGetDeploymentsByProviders(
     })),
     combine: (results): UseGetDeploymentsByProvidersResult => {
       const merged: Deployment[] = [];
-      for (const result of results) {
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        const pid = providerIds[i];
         const data = result.data;
-        if (data?.deployments) {
-          merged.push(...data.deployments);
+        if (!data?.deployments || !pid) {
+          continue;
+        }
+        for (const d of data.deployments) {
+          merged.push({
+            ...d,
+            provider_id:
+              d.provider_id !== undefined && d.provider_id !== null
+                ? String(d.provider_id)
+                : String(pid),
+          });
         }
       }
       return {

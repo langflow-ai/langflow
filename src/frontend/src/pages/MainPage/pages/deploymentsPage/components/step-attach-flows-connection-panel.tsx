@@ -95,7 +95,12 @@ export const ConnectionPanel = memo(function ConnectionPanel({
         {/* Tab content */}
         <div className="mt-4 flex-1 overflow-x-hidden overflow-y-auto">
           {connectionTab === "available" ? (
-            <div className="min-w-0 space-y-3">
+            <div
+              className={cn(
+                "min-w-0 space-y-3",
+                connections.length > 0 && "pr-3",
+              )}
+            >
               {connections.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
                   <ForwardedIconComponent
