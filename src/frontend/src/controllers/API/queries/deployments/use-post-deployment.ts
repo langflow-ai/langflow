@@ -55,6 +55,7 @@ export const usePostDeployment: useMutationFunctionType<
 
   return mutate(["usePostDeployment"], fn, {
     ...options,
+    retry: 1,
     onSuccess: () => {
       return queryClient.refetchQueries({ queryKey: ["useGetDeployments"] });
     },

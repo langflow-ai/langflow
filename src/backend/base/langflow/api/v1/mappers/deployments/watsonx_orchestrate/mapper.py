@@ -18,6 +18,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
+    SnapshotListParams,
     SnapshotListResult,
     VerifyCredentials,
 )
@@ -311,6 +312,22 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             raw=provider_data,
         )
         return parsed.model_dump()
+
+    async def resolve_snapshot_list_adapter_params(
+        self,
+        *,
+        deployment_resource_key: str | None,
+        snapshot_names: list[str] | None = None,
+        provider_params: dict[str, Any] | None,
+        db: AsyncSession,
+    ) -> SnapshotListParams:
+        normalized = [name for n in snapshot_names if (name := normalize_wxo_name(n))] if snapshot_names else None
+        return await super().resolve_snapshot_list_adapter_params(
+            deployment_resource_key=deployment_resource_key,
+            snapshot_names=normalized,
+            provider_params=provider_params,
+            db=db,
+        )
 
     def resolve_provider_account_create(
         self,
