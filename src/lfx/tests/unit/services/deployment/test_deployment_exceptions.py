@@ -13,7 +13,6 @@ from lfx.services.adapters.deployment.exceptions import (
     AuthorizationError,
     AuthSchemeError,
     CredentialResolutionError,
-    DeploymentConflictError,
     DeploymentNotFoundError,
     DeploymentSupportError,
     DeploymentTimeoutError,
@@ -22,10 +21,11 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidDeploymentTypeError,
     OperationNotSupportedError,
     RateLimitError,
+    ResourceConflictError,
     ResourceNotFoundError,
     ServiceUnavailableError,
     http_status_for_deployment_error,
-    raise_for_status_and_detail,
+    raise_as_deployment_error,
 )
 from lfx.services.interfaces import DeploymentServiceProtocol
 
@@ -47,7 +47,7 @@ def test_exception_hierarchy_is_preserved() -> None:
     assert issubclass(AuthSchemeError, AuthenticationError)
 
     # Deployment operation subtypes
-    assert issubclass(DeploymentConflictError, DeploymentError)
+    assert issubclass(ResourceConflictError, DeploymentError)
     assert issubclass(InvalidContentError, DeploymentError)
     assert issubclass(InvalidDeploymentOperationError, DeploymentError)
     assert issubclass(ResourceNotFoundError, DeploymentError)
@@ -59,7 +59,7 @@ def test_exception_hierarchy_is_preserved() -> None:
 def test_exception_error_codes_are_set() -> None:
     assert AuthorizationError("forbidden", error_code="authorization_error").error_code == "authorization_error"
     assert CredentialResolutionError().error_code == "credentials_resolution_error"
-    assert DeploymentConflictError().error_code == "deployment_conflict"
+    assert ResourceConflictError().error_code == "deployment_conflict"
     assert RateLimitError().error_code == "deployment_rate_limited"
     assert DeploymentTimeoutError().error_code == "deployment_timeout"
     assert ServiceUnavailableError().error_code == "deployment_provider_unavailable"
@@ -71,6 +71,12 @@ def test_exception_error_codes_are_set() -> None:
     assert AuthSchemeError().error_code == "unsupported_auth_type"
     assert DeploymentNotConfiguredError().error_code == "deployment_not_configured"
     assert OperationNotSupportedError().error_code == "operation_not_supported"
+
+
+def test_deployment_conflict_error_resource_is_optional_and_normalized() -> None:
+    err = ResourceConflictError(resource=" TOOL ")
+    assert err.resource == "tool"
+    assert ResourceConflictError().resource is None
 
 
 def test_deployment_type_exceptions_have_distinct_default_messages() -> None:
@@ -206,71 +212,95 @@ def test_deployment_service_error_catches_both_hierarchies() -> None:
         raise DeploymentNotFoundError
 
 
-def test_raise_for_status_and_detail_maps_known_http_statuses() -> None:
+def test_raise_as_deployment_error_maps_known_http_statuses() -> None:
     with pytest.raises(AuthenticationError):
-        raise_for_status_and_detail(status_code=401, detail="unauthorized", message_prefix="x")
+        raise_as_deployment_error(status_code=401, detail="unauthorized", message_prefix="x")
     with pytest.raises(AuthorizationError):
-        raise_for_status_and_detail(status_code=403, detail="forbidden", message_prefix="x")
+        raise_as_deployment_error(status_code=403, detail="forbidden", message_prefix="x")
     with pytest.raises(ResourceNotFoundError):
-        raise_for_status_and_detail(status_code=404, detail="missing", message_prefix="x")
-    with pytest.raises(DeploymentConflictError):
-        raise_for_status_and_detail(status_code=409, detail="conflict", message_prefix="x")
+        raise_as_deployment_error(status_code=404, detail="missing", message_prefix="x")
+    with pytest.raises(ResourceConflictError):
+        raise_as_deployment_error(status_code=409, detail="conflict", message_prefix="x")
     with pytest.raises(InvalidContentError):
-        raise_for_status_and_detail(status_code=422, detail="unprocessable", message_prefix="x")
+        raise_as_deployment_error(status_code=422, detail="unprocessable", message_prefix="x")
     with pytest.raises(InvalidDeploymentOperationError):
-        raise_for_status_and_detail(status_code=400, detail="bad request", message_prefix="x")
+        raise_as_deployment_error(status_code=400, detail="bad request", message_prefix="x")
     with pytest.raises(InvalidDeploymentOperationError):
-        raise_for_status_and_detail(status_code=405, detail="method not allowed", message_prefix="x")
+        raise_as_deployment_error(status_code=405, detail="method not allowed", message_prefix="x")
     with pytest.raises(InvalidContentError):
-        raise_for_status_and_detail(status_code=413, detail="payload too large", message_prefix="x")
+        raise_as_deployment_error(status_code=413, detail="payload too large", message_prefix="x")
     with pytest.raises(InvalidContentError):
-        raise_for_status_and_detail(status_code=415, detail="unsupported media type", message_prefix="x")
+        raise_as_deployment_error(status_code=415, detail="unsupported media type", message_prefix="x")
     with pytest.raises(ResourceNotFoundError):
-        raise_for_status_and_detail(status_code=410, detail="gone", message_prefix="x")
+        raise_as_deployment_error(status_code=410, detail="gone", message_prefix="x")
     with pytest.raises(RateLimitError):
-        raise_for_status_and_detail(status_code=429, detail="too many requests", message_prefix="x")
+        raise_as_deployment_error(status_code=429, detail="too many requests", message_prefix="x")
     with pytest.raises(DeploymentTimeoutError):
-        raise_for_status_and_detail(status_code=408, detail="timeout", message_prefix="x")
+        raise_as_deployment_error(status_code=408, detail="timeout", message_prefix="x")
     with pytest.raises(DeploymentTimeoutError):
-        raise_for_status_and_detail(status_code=504, detail="gateway timeout", message_prefix="x")
+        raise_as_deployment_error(status_code=504, detail="gateway timeout", message_prefix="x")
     with pytest.raises(ServiceUnavailableError):
-        raise_for_status_and_detail(status_code=502, detail="bad gateway", message_prefix="x")
+        raise_as_deployment_error(status_code=502, detail="bad gateway", message_prefix="x")
     with pytest.raises(ServiceUnavailableError):
-        raise_for_status_and_detail(status_code=503, detail="service unavailable", message_prefix="x")
+        raise_as_deployment_error(status_code=503, detail="service unavailable", message_prefix="x")
 
 
-def test_raise_for_status_and_detail_uses_detail_heuristics_without_status() -> None:
+def test_raise_as_deployment_error_does_not_infer_conflict_hints_from_detail() -> None:
+    with pytest.raises(ResourceConflictError) as exc_info:
+        raise_as_deployment_error(
+            status_code=409,
+            detail="Tool with name 'Simple_Agent' already exists for this tenant.",
+            message_prefix="x",
+        )
+    assert exc_info.value.resource is None
+    assert exc_info.value.resource_name is None
+
+
+def test_raise_as_deployment_error_uses_explicit_conflict_hints() -> None:
+    with pytest.raises(ResourceConflictError) as exc_info:
+        raise_as_deployment_error(
+            status_code=409,
+            detail="already exists",
+            message_prefix="x",
+            resource="TOOL",
+            resource_name=" Simple_Agent ",
+        )
+    assert exc_info.value.resource == "tool"
+    assert exc_info.value.resource_name == "Simple_Agent"
+
+
+def test_raise_as_deployment_error_uses_detail_heuristics_without_status() -> None:
     with pytest.raises(AuthorizationError):
-        raise_for_status_and_detail(status_code=None, detail="permission denied")
+        raise_as_deployment_error(status_code=None, detail="permission denied")
     with pytest.raises(InvalidContentError):
-        raise_for_status_and_detail(status_code=None, detail="invalid payload")
+        raise_as_deployment_error(status_code=None, detail="invalid payload")
     with pytest.raises(RateLimitError):
-        raise_for_status_and_detail(status_code=None, detail="rate limit exceeded")
+        raise_as_deployment_error(status_code=None, detail="rate limit exceeded")
     with pytest.raises(DeploymentTimeoutError):
-        raise_for_status_and_detail(status_code=None, detail="request timed out")
+        raise_as_deployment_error(status_code=None, detail="request timed out")
     with pytest.raises(ServiceUnavailableError):
-        raise_for_status_and_detail(status_code=None, detail="service unavailable")
+        raise_as_deployment_error(status_code=None, detail="service unavailable")
 
 
-def test_raise_for_status_and_detail_chains_cause_when_provided() -> None:
+def test_raise_as_deployment_error_chains_cause_when_provided() -> None:
     """When cause is passed, the raised exception preserves the chain."""
     original = RuntimeError("upstream broke")
     with pytest.raises(ResourceNotFoundError) as exc_info:
-        raise_for_status_and_detail(status_code=404, detail="gone", cause=original)
+        raise_as_deployment_error(status_code=404, detail="gone", cause=original)
     assert exc_info.value.__cause__ is original
     assert exc_info.value.cause is original
 
 
 def _raise_for_status_inside_except_handler() -> None:
-    """Helper: call raise_for_status_and_detail while an exception is active."""
+    """Helper: call raise_as_deployment_error while an exception is active."""
     try:
         msg = "should be suppressed"
         raise RuntimeError(msg)
     except RuntimeError:
-        raise_for_status_and_detail(status_code=404, detail="gone")
+        raise_as_deployment_error(status_code=404, detail="gone")
 
 
-def test_raise_for_status_and_detail_suppresses_context_without_cause() -> None:
+def test_raise_as_deployment_error_suppresses_context_without_cause() -> None:
     """Default (no cause) suppresses implicit exception context."""
     with pytest.raises(ResourceNotFoundError) as exc_info:
         _raise_for_status_inside_except_handler()
@@ -281,7 +311,7 @@ def test_raise_for_status_and_detail_suppresses_context_without_cause() -> None:
 @pytest.mark.parametrize(
     ("exc", "expected_status"),
     [
-        (DeploymentConflictError(), 409),
+        (ResourceConflictError(), 409),
         (InvalidDeploymentOperationError(), 400),
         (DeploymentSupportError(), 400),
         (InvalidDeploymentTypeError(), 400),

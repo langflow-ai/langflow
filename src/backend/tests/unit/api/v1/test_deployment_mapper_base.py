@@ -584,7 +584,10 @@ def test_base_mapper_formats_conflict_detail_with_generic_fallback() -> None:
 
     detail = mapper.format_conflict_detail("provider conflict detail")
 
-    assert detail == "A resource with this name already exists in the provider. provider conflict detail"
+    assert (
+        detail
+        == "A resource conflict occurred in the deployment provider. The requested operation could not be completed."
+    )
 
 
 def test_base_mapper_shapes_deployment_update_result() -> None:

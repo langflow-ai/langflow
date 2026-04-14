@@ -412,13 +412,23 @@ class BaseDeploymentMapper:
         _ = provider_data
         raise NotImplementedError
 
-    def format_conflict_detail(self, raw_message: str) -> str:
+    def format_conflict_detail(
+        self,
+        raw_message: str,
+        *,
+        resource: str | None = None,
+        resource_name: str | None = None,
+    ) -> str:
         """Format provider conflict errors for API responses.
 
         Provider-specific mappers may override this to map provider-native
-        conflict wording to clearer end-user guidance.
+        conflict wording to clearer end-user guidance.  Subclasses use
+        *resource* and *resource_name* to produce targeted messages.
         """
-        return f"A resource with this name already exists in the provider. {raw_message}"
+        _ = raw_message, resource, resource_name
+        return (
+            "A resource conflict occurred in the deployment provider. The requested operation could not be completed."
+        )
 
     def resolve_credentials(
         self,

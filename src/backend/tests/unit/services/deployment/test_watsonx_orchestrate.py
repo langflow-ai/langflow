@@ -12,13 +12,13 @@ from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.exceptions import (
     AuthorizationError,
     CredentialResolutionError,
-    DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
     DeploymentSupportError,
     InvalidContentError,
     InvalidDeploymentOperationError,
     OperationNotSupportedError,
+    ResourceConflictError,
     ResourceNotFoundError,
 )
 from lfx.services.adapters.deployment.schema import (
@@ -2015,7 +2015,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
     monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
 
-    with pytest.raises(DeploymentConflictError, match="already exists in the provider"):
+    with pytest.raises(ResourceConflictError, match="already exists in the provider") as exc_info:
         await service.update(
             user_id="user-1",
             deployment_id="dep-1",
@@ -2053,6 +2053,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
             ),
             db=object(),
         )
+    assert exc_info.value.resource == "connection"
 
 
 @pytest.mark.anyio
@@ -2078,7 +2079,7 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
     monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
 
-    with pytest.raises(DeploymentConflictError, match="already exists in the provider"):
+    with pytest.raises(ResourceConflictError, match="already exists in the provider") as exc_info:
         await service.create(
             user_id="user-1",
             payload=DeploymentCreate(
@@ -2120,6 +2121,7 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
             ),
             db=object(),
         )
+    assert exc_info.value.resource == "connection"
 
     assert captured["attempted_app_id"] == "cfg"
 
@@ -4453,7 +4455,7 @@ def test_is_retryable_create_exception_retryable_status_codes():
 def test_is_retryable_create_exception_domain_exceptions_not_retryable():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import is_retryable_create_exception
 
-    assert is_retryable_create_exception(DeploymentConflictError()) is False
+    assert is_retryable_create_exception(ResourceConflictError()) is False
     assert is_retryable_create_exception(InvalidContentError()) is False
     assert is_retryable_create_exception(InvalidDeploymentOperationError()) is False
 
@@ -4828,6 +4830,40 @@ async def test_list_deployments_without_params(monkeypatch):
     result = await service.list(user_id="user-1", db=object(), params=None)
     assert len(result.deployments) == 1
     assert result.deployments[0].id == "dep-1"
+
+
+@pytest.mark.anyio
+async def test_list_conflict_does_not_force_agent_resource_hint(monkeypatch):
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+
+    class FailingListAgentClient(FakeAgentClient):
+        def _get(self, path: str, params: dict | None = None):  # noqa: ARG002
+            if path == "/agents":
+                raise ClientAPIException(
+                    response=SimpleNamespace(status_code=409, text='{"detail":"resource already exists"}')
+                )
+            return {}
+
+    fake_agent = FailingListAgentClient({"id": "dep-1", "tools": []})
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_agent,
+            agent=fake_agent,
+        )
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(ResourceConflictError) as exc_info:
+        await service.list(user_id="user-1", db=object(), params=None)
+
+    assert exc_info.value.resource is None
+    assert exc_info.value.resource_name is None
 
 
 @pytest.mark.anyio
@@ -5268,6 +5304,63 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
     assert len(created_calls) == 2
 
 
+@pytest.mark.anyio
+async def test_upload_wxo_flow_tool_maps_tool_conflict_with_structured_resource():
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    def mock_create_tool(payload: dict):  # noqa: ARG001
+        raise ClientAPIException(
+            response=SimpleNamespace(
+                status_code=409,
+                text='{"detail":"Tool with name \'Simple_Agent\' already exists for this tenant."}',
+            )
+        )
+
+    fake_clients = SimpleNamespace(
+        tool=SimpleNamespace(create=mock_create_tool),
+        upload_tool_artifact=lambda tool_id, files: {"id": tool_id},  # noqa: ARG005
+    )
+
+    with pytest.raises(ResourceConflictError) as exc_info:
+        await tools_module.upload_wxo_flow_tool(
+            clients=fake_clients,
+            tool_payload={"name": "Simple_Agent"},
+            artifact_bytes=b"artifact",
+        )
+
+    assert exc_info.value.resource == "tool"
+    assert exc_info.value.resource_name == "Simple_Agent"
+
+
+@pytest.mark.anyio
+async def test_create_agent_deployment_maps_agent_conflict_with_structured_resource():
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    def mock_create_agent(payload: dict):  # noqa: ARG001
+        raise ClientAPIException(
+            response=SimpleNamespace(
+                status_code=409,
+                text='{"detail":"Agent with name \'my_agent\' already exists for this tenant."}',
+            )
+        )
+
+    fake_clients = SimpleNamespace(agent=SimpleNamespace(create=mock_create_agent))
+
+    with pytest.raises(ResourceConflictError) as exc_info:
+        await create_core_module.create_agent_deployment(
+            clients=fake_clients,
+            tool_ids=["tool-1"],
+            agent_name="my_agent",
+            agent_display_name="My Agent",
+            deployment_name="my deployment",
+            description="desc",
+            llm=TEST_WXO_LLM,
+        )
+
+    assert exc_info.value.resource == "agent"
+    assert exc_info.value.resource_name == "my_agent"
+
+
 def test_extract_error_detail_json_string():
     from langflow.services.adapters.deployment.watsonx_orchestrate.utils import extract_error_detail
 
@@ -5396,11 +5489,13 @@ def test_raise_as_deployment_error_maps_conflict():
     resp = SimpleNamespace(status_code=500, text='{"detail":"resource already exists"}')
     exc = ClientAPIException(response=resp)
 
-    with pytest.raises(DeploymentConflictError, match="already exists"):
+    with pytest.raises(ResourceConflictError, match="already exists"):
         raise_as_deployment_error(
             exc,
             error_prefix=ErrorPrefix.UPDATE,
             log_msg="unexpected update conflict",
+            resource="agent",
+            resource_name="my-agent",
         )
 
 
@@ -5791,9 +5886,9 @@ def test_retry_rollback_uses_retryable_filter():
         )
 
     # Domain exceptions that are non-retryable
-    from lfx.services.adapters.deployment.exceptions import DeploymentConflictError, InvalidContentError
+    from lfx.services.adapters.deployment.exceptions import InvalidContentError, ResourceConflictError
 
-    assert not is_retryable_create_exception(DeploymentConflictError())
+    assert not is_retryable_create_exception(ResourceConflictError())
     assert not is_retryable_create_exception(InvalidContentError())
 
     # Generic exceptions are retryable (e.g. transient network errors)
@@ -5897,21 +5992,21 @@ def test_raise_for_status_separates_status_codes_from_string_heuristics():
     Now, the 404 status code check is standalone, and 'not found' string heuristic only
     fires as a fallback for unmapped status codes.
     """
-    from lfx.services.adapters.deployment.exceptions import ResourceNotFoundError, raise_for_status_and_detail
+    from lfx.services.adapters.deployment.exceptions import ResourceNotFoundError, raise_as_deployment_error
 
     # status_code=404 raises ResourceNotFoundError regardless of detail text
     with pytest.raises(ResourceNotFoundError):
-        raise_for_status_and_detail(status_code=404, detail="anything", message_prefix="test")
+        raise_as_deployment_error(status_code=404, detail="anything", message_prefix="test")
 
-    # status_code=409 raises DeploymentConflictError regardless of detail text
-    with pytest.raises(DeploymentConflictError):
-        raise_for_status_and_detail(status_code=409, detail="anything", message_prefix="test")
+    # status_code=409 raises ResourceConflictError regardless of detail text
+    with pytest.raises(ResourceConflictError):
+        raise_as_deployment_error(status_code=409, detail="anything", message_prefix="test")
 
     # String heuristics still work as fallback for unmapped/None status codes
     with pytest.raises(ResourceNotFoundError):
-        raise_for_status_and_detail(status_code=None, detail="agent not found", message_prefix="test")
-    with pytest.raises(DeploymentConflictError):
-        raise_for_status_and_detail(status_code=None, detail="resource already exists", message_prefix="test")
+        raise_as_deployment_error(status_code=None, detail="agent not found", message_prefix="test")
+    with pytest.raises(ResourceConflictError):
+        raise_as_deployment_error(status_code=None, detail="resource already exists", message_prefix="test")
 
 
 # ---------------------------------------------------------------------------
@@ -5921,7 +6016,7 @@ def test_raise_for_status_separates_status_codes_from_string_heuristics():
 
 @pytest.mark.anyio
 async def test_create_maps_409_conflict_to_deployment_conflict_error():
-    """Create raises DeploymentConflictError when the provider agent create returns a 409."""
+    """Create raises ResourceConflictError when the provider agent create returns a 409."""
     from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
@@ -5937,7 +6032,7 @@ async def test_create_maps_409_conflict_to_deployment_conflict_error():
     )
     _attach_provider_clients(service, clients)
 
-    with pytest.raises(DeploymentConflictError, match="already exist"):
+    with pytest.raises(ResourceConflictError, match="already exist"):
         await service.create(
             user_id="user-1",
             db=object(),
@@ -5950,6 +6045,51 @@ async def test_create_maps_409_conflict_to_deployment_conflict_error():
                 provider_data=_create_provider_spec(),
             ),
         )
+
+
+@pytest.mark.anyio
+async def test_create_tool_conflict_detail_is_not_misclassified_as_agent(monkeypatch):
+    """Service-layer catch does not carry resource hints — resource stays None.
+
+    This proves the conflict is not misclassified as 'agent'.  The inner-layer test
+    ``test_upload_wxo_flow_tool_maps_tool_conflict_with_structured_resource``
+    covers the path where ``resource='tool'`` is correctly attached.
+    """
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    _attach_provider_clients(service, FakeWXOClients())
+
+    async def mock_apply_provider_create_plan_with_rollback(**kwargs):  # noqa: ARG001
+        raise ClientAPIException(
+            response=SimpleNamespace(
+                status_code=409,
+                text='{"detail":"Tool with name \'Simple_Agent\' already exists for this tenant."}',
+            )
+        )
+
+    monkeypatch.setattr(
+        service_module,
+        "apply_provider_create_plan_with_rollback",
+        mock_apply_provider_create_plan_with_rollback,
+    )
+
+    with pytest.raises(ResourceConflictError) as exc_info:
+        await service.create(
+            user_id="user-1",
+            db=object(),
+            payload=DeploymentCreate(
+                spec=BaseDeploymentData(
+                    name="ahhahahaqwerg",
+                    description="desc",
+                    type=DeploymentType.AGENT,
+                ),
+                provider_data=_create_provider_spec(),
+            ),
+        )
+
+    assert exc_info.value.resource is None
+    assert exc_info.value.resource_name is None
 
 
 @pytest.mark.anyio
@@ -6265,7 +6405,9 @@ async def test_create_preserves_exception_chain_on_unexpected_error():
             ),
         )
 
-    assert exc_info.value.__cause__ is original_error
+    inner = exc_info.value.__cause__
+    assert isinstance(inner, DeploymentError)
+    assert inner.__cause__ is original_error
 
 
 @pytest.mark.anyio

@@ -9,7 +9,9 @@ export interface EnvVarEntry {
 
 export interface ConnectionItem {
   id: string;
+  connectionId: string;
   name: string;
+  environment?: string;
   variableCount: number;
   isNew: boolean;
   environmentVariables: Record<string, string>;

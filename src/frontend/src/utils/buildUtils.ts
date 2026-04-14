@@ -674,7 +674,7 @@ export async function processBatchedEvents(
  * @param {(lock: boolean) => void} [callbacks.setLockChat] - Callback to lock/unlock chat.
  * @returns {Promise<boolean>} Promise that resolves to true if the event was handled successfully.
  */
-async function onEvent(
+export async function onEvent(
   type: string,
   data: any,
   buildResults: boolean[],
@@ -809,9 +809,30 @@ async function onEvent(
       buildResults.push(false);
       return true;
     }
-    case "build_end":
+    case "build_end": {
+      if (!data?.id) {
+        console.error("[buildUtils] Received build_end event without id", data);
+        break;
+      }
       useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
       break;
+    }
+    case "log": {
+      const { component_id, output, name, message, type: logType } = data ?? {};
+      if (!component_id || !output) {
+        console.error(
+          "[buildUtils] Received malformed log event; missing component_id or output",
+          data,
+        );
+        break;
+      }
+      useFlowStore.getState().appendLogToFlowPool(component_id, output, {
+        name,
+        message,
+        type: logType,
+      });
+      break;
+    }
     default:
       return true;
   }

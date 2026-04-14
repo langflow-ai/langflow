@@ -31,7 +31,7 @@ export function CheckboxSelectItem({
     <label
       data-testid={testId}
       className={cn(
-        "flex w-full cursor-pointer items-center gap-4 rounded-xl border bg-muted p-3 text-left transition-colors",
+        "relative flex w-full cursor-pointer items-center gap-4 overflow-hidden rounded-xl border bg-muted p-3 text-left transition-colors",
         checked ? "border-primary" : "border-transparent hover:border-border",
       )}
     >
@@ -72,7 +72,7 @@ export function RadioSelectItem({
     <label
       data-testid={testId}
       className={cn(
-        "flex w-full cursor-pointer items-center gap-4 rounded-xl border bg-muted p-3 text-left transition-colors",
+        "relative flex w-full cursor-pointer items-center gap-4 overflow-hidden rounded-xl border bg-muted p-3 text-left transition-colors",
         selected ? "border-primary" : "border-transparent hover:border-border",
         className,
       )}
