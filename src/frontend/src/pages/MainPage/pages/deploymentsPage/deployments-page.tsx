@@ -160,6 +160,9 @@ export default function DeploymentsPage() {
           providerMap={providerMap}
           stepperOpen={stepperOpen}
           setStepperOpen={setStepperOpen}
+          hasDeploymentsElsewhere={
+            visibleDeployments.length === 0 && allDeployments.length > 0
+          }
         />
       )}
 
