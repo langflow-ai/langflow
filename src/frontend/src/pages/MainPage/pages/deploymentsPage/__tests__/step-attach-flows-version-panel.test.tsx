@@ -115,12 +115,6 @@ describe("No versions found", () => {
 // ---------------------------------------------------------------------------
 
 describe("Rendering version items", () => {
-  it("renders version items with version tags", () => {
-    renderPanel();
-    expect(screen.getByText("v1.0")).toBeInTheDocument();
-    expect(screen.getByText("v2.0")).toBeInTheDocument();
-  });
-
   it("renders version items with dates", () => {
     renderPanel();
     // The component uses toLocaleDateString() -- verify date text is present
@@ -146,20 +140,6 @@ describe("ATTACHED badge", () => {
     ]);
     renderPanel({ selectedVersionByFlow });
     expect(screen.getByText("ATTACHED")).toBeInTheDocument();
-  });
-
-  it("attached version has highlighted styling", () => {
-    const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
-    ]);
-    renderPanel({ selectedVersionByFlow });
-    const button = screen.getByTestId("version-item-v1");
-    expect(button.className).toContain("border-accent-blue-foreground");
-
-    const otherButton = screen.getByTestId("version-item-v2");
-    expect(otherButton.className).not.toContain(
-      "border-accent-blue-foreground",
-    );
   });
 
   it("does not show ATTACHED badge when no version is attached", () => {

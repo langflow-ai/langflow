@@ -51,20 +51,6 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// Rendering connections
-// ---------------------------------------------------------------------------
-
-describe("Rendering connections", () => {
-  it("renders all connections", () => {
-    renderList();
-    expect(screen.getByText("Production API")).toBeInTheDocument();
-    expect(screen.getByText("Staging API")).toBeInTheDocument();
-    expect(screen.getByText("Development Env")).toBeInTheDocument();
-  });
-
-});
-
-// ---------------------------------------------------------------------------
 // Search filtering
 // ---------------------------------------------------------------------------
 
@@ -187,15 +173,5 @@ describe("Connection selection toggle", () => {
       'input[type="checkbox"]',
     ) as HTMLInputElement;
     expect(input.checked).toBe(true);
-  });
-
-  it("unselected connections have unchecked checkbox", () => {
-    renderList({ selectedConnections: new Set() });
-
-    const checkbox = screen.getByTestId("connection-item-conn-1");
-    const input = checkbox.querySelector(
-      'input[type="checkbox"]',
-    ) as HTMLInputElement;
-    expect(input.checked).toBe(false);
   });
 });

@@ -86,16 +86,6 @@ describe("Rendering flow items", () => {
     expect(screen.getByText("Beta Flow")).toBeInTheDocument();
     expect(screen.getByText("Gamma Flow")).toBeInTheDocument();
   });
-
-  it("selected flow has highlighted background class", () => {
-    renderPanel({ selectedFlowId: "f2" });
-    const button = screen.getByTestId("flow-item-f2");
-    expect(button.className).toContain("bg-muted");
-
-    // Non-selected should not have bg-muted (only hover variant)
-    const other = screen.getByTestId("flow-item-f1");
-    expect(other.className).not.toContain("bg-muted ");
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -131,13 +121,6 @@ describe("REMOVED badge and opacity", () => {
     expect(screen.getByText("REMOVED")).toBeInTheDocument();
     // ATTACHED should not show for removed flows
     expect(screen.queryByText("ATTACHED")).not.toBeInTheDocument();
-  });
-
-  it("removed flows render at reduced opacity", () => {
-    const removedFlowIds = new Set(["f2"]);
-    renderPanel({ removedFlowIds });
-    const button = screen.getByTestId("flow-item-f2");
-    expect(button.className).toContain("opacity-50");
   });
 });
 

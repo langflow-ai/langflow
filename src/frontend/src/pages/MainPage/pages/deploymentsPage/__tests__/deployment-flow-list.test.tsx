@@ -1,42 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import type { DeploymentFlowVersionItem } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 
-// ---------------------------------------------------------------------------
-// Mocks — child components rendered as simple divs
-// ---------------------------------------------------------------------------
-
 jest.mock(
-  "../components/deployment-details-modal/flow-version-item",
+  "@/components/common/genericIconComponent",
   () =>
-    function MockFlowVersionItem({
-      flowName,
-      versionNumber,
-      toolName,
-      connectionNames,
-    }: {
-      flowName: string | null;
-      versionNumber: number;
-      toolName: string | null;
-      connectionNames: string[];
-    }) {
-      return (
-        <div data-testid="flow-version-item">
-          <span data-testid="flow-name">{flowName ?? "null"}</span>
-          <span data-testid="version-number">{versionNumber}</span>
-          <span data-testid="tool-name">{toolName ?? "null"}</span>
-          <span data-testid="connection-names">
-            {connectionNames.join(",")}
-          </span>
-        </div>
-      );
+    function MockIcon({ name }: { name: string }) {
+      return <span data-testid={`icon-${name}`} />;
     },
 );
 
 import DeploymentFlowList from "../components/deployment-details-modal/deployment-flow-list";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function makeFlowVersion(
   overrides: Partial<DeploymentFlowVersionItem> = {},
@@ -65,57 +38,41 @@ function renderList(
   );
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe("DeploymentFlowList", () => {
-  it("renders the correct flow count in the header", () => {
-    const versions = [
-      makeFlowVersion({ id: "fv-1", flow_name: "Flow A" }),
-      makeFlowVersion({ id: "fv-2", flow_name: "Flow B" }),
-      makeFlowVersion({ id: "fv-3", flow_name: "Flow C" }),
-    ];
-    renderList(versions);
-    expect(screen.getByText("Attached Flows (3)")).toBeInTheDocument();
-  });
-
-  it('shows "No flows attached" when the list is empty', () => {
+  it("shows the empty state when there are no attached flows", () => {
     renderList([]);
+
     expect(screen.getByText("Attached Flows (0)")).toBeInTheDocument();
     expect(screen.getByText("No flows attached")).toBeInTheDocument();
   });
 
-  it("renders a FlowVersionItem for each flow version", () => {
-    const versions = [
-      makeFlowVersion({ id: "fv-1", flow_name: "Alpha" }),
-      makeFlowVersion({ id: "fv-2", flow_name: "Beta" }),
+  it("renders real flow details instead of mocked child props", () => {
+    const flowVersions = [
+      makeFlowVersion({
+        id: "fv-1",
+        flow_name: "Alpha",
+        version_number: 2,
+        provider_data: { tool_name: "search_docs" },
+      }),
+      makeFlowVersion({
+        id: "fv-2",
+        flow_name: null,
+        version_number: 5,
+        provider_data: null,
+      }),
     ];
-    renderList(versions);
-    const items = screen.getAllByTestId("flow-version-item");
-    expect(items).toHaveLength(2);
-  });
 
-  it("invokes getConnectionNames callback for each flow version", () => {
-    const getConnectionNames = jest.fn().mockReturnValue(["conn-a", "conn-b"]);
-    const versions = [
-      makeFlowVersion({ id: "fv-1", flow_name: "Flow X" }),
-    ];
-    renderList(versions, getConnectionNames);
-    expect(getConnectionNames).toHaveBeenCalledTimes(1);
-    expect(getConnectionNames).toHaveBeenCalledWith(versions[0]);
-    expect(screen.getByTestId("connection-names")).toHaveTextContent(
-      "conn-a,conn-b",
+    renderList(flowVersions, (flowVersion) =>
+      flowVersion.id === "fv-1" ? ["Prod Connection", "Backup Connection"] : [],
     );
-  });
 
-  it("handles undefined provider_data by passing null tool_name", () => {
-    const versions = [
-      makeFlowVersion({ id: "fv-1", provider_data: null }),
-    ];
-    renderList(versions);
-    // provider_data?.tool_name ?? null → null, mock renders "null"
-    expect(screen.getByTestId("tool-name")).toHaveTextContent("null");
+    expect(screen.getByText("Attached Flows (2)")).toBeInTheDocument();
+    expect(screen.getByText("Alpha")).toBeInTheDocument();
+    expect(screen.getByText("Unknown flow")).toBeInTheDocument();
+    expect(screen.getByText("v2")).toBeInTheDocument();
+    expect(screen.getByText("v5")).toBeInTheDocument();
+    expect(screen.getByText("search_docs")).toBeInTheDocument();
+    expect(screen.getByText("Prod Connection")).toBeInTheDocument();
+    expect(screen.getByText("Backup Connection")).toBeInTheDocument();
   });
-
 });

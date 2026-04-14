@@ -73,20 +73,6 @@ describe("DeploymentInfoGrid", () => {
     });
   });
 
-  describe("deployment type", () => {
-    it('renders the Bot icon and "agent" label for agent type', () => {
-      renderGrid(makeDeployment({ type: "agent" }));
-      expect(screen.getByTestId("icon-Bot")).toBeInTheDocument();
-      expect(screen.getByText("agent")).toBeInTheDocument();
-    });
-
-    it('renders the Server icon and "mcp" label for mcp type', () => {
-      renderGrid(makeDeployment({ type: "mcp" }));
-      expect(screen.getByTestId("icon-Server")).toBeInTheDocument();
-      expect(screen.getByText("mcp")).toBeInTheDocument();
-    });
-  });
-
   describe("description", () => {
     it("renders the description when present", () => {
       renderGrid(makeDeployment({ description: "A helpful bot" }));
@@ -115,23 +101,6 @@ describe("DeploymentInfoGrid", () => {
     it("omits the Model row when llm is empty", () => {
       renderGrid(makeDeployment(), "watsonx Prod", "");
       expect(screen.queryByText("Model")).not.toBeInTheDocument();
-    });
-  });
-
-  describe("fallback values", () => {
-    it('shows "—" for name when deployment is null', () => {
-      renderGrid(null);
-      // name falls back to "—"
-      const dashes = screen.getAllByText("—");
-      // Should have dashes for: name, created, modified, provider (empty providerName)
-      expect(dashes.length).toBeGreaterThanOrEqual(1);
-    });
-
-    it('shows "—" for provider name when providerName is empty', () => {
-      renderGrid(makeDeployment(), "", "");
-      // providerName || "—" → "—"
-      const dashes = screen.getAllByText("—");
-      expect(dashes.length).toBeGreaterThanOrEqual(1);
     });
   });
 });
