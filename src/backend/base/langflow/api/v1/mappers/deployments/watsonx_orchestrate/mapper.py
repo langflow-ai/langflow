@@ -94,8 +94,8 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentSnapshotListResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
-    ExecutionCreateResponse,
-    ExecutionStatusResponse,
+    RunCreateResponse,
+    RunStatusResponse,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
@@ -1025,7 +1025,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         result: ExecutionCreateResult,
         *,
         deployment_id: UUID,
-    ) -> ExecutionCreateResponse:
+    ) -> RunCreateResponse:
         adapter_provider_result = self._parse_required_payload_slot(
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.execution_create_result,
             slot_name="execution_create_result",
@@ -1033,7 +1033,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             operation="starting the execution",
         )
         api_provider_result = WatsonxApiAgentExecutionCreateResultData(
-            execution_id=adapter_provider_result.execution_id,
+            id=adapter_provider_result.execution_id,
             agent_id=adapter_provider_result.agent_id,
             thread_id=adapter_provider_result.thread_id,
             status=adapter_provider_result.status,
@@ -1044,7 +1044,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             cancelled_at=adapter_provider_result.cancelled_at,
             last_error=adapter_provider_result.last_error,
         )
-        return ExecutionCreateResponse(
+        return RunCreateResponse(
             deployment_id=deployment_id,
             provider_data=api_provider_result.model_dump(),
             # includes None intentionally, simply passes through
@@ -1056,7 +1056,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         result: ExecutionStatusResult,
         *,
         deployment_id: UUID,
-    ) -> ExecutionStatusResponse:
+    ) -> RunStatusResponse:
         adapter_provider_result = self._parse_required_payload_slot(
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.execution_status_result,
             slot_name="execution_status_result",
@@ -1064,7 +1064,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             operation="checking execution status",
         )
         api_provider_result = WatsonxApiAgentExecutionStatusResultData(
-            execution_id=adapter_provider_result.execution_id,
+            id=adapter_provider_result.execution_id,
             agent_id=adapter_provider_result.agent_id,
             thread_id=adapter_provider_result.thread_id,
             status=adapter_provider_result.status,
@@ -1075,7 +1075,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             cancelled_at=adapter_provider_result.cancelled_at,
             last_error=adapter_provider_result.last_error,
         )
-        return ExecutionStatusResponse(
+        return RunStatusResponse(
             deployment_id=deployment_id,
             provider_data=api_provider_result.model_dump(),
             # includes None intentionally, simply passes through

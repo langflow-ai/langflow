@@ -6818,14 +6818,14 @@ def test_api_execution_create_schema_parses_all_explicit_fields():
     )
 
     data = {
-        "execution_id": "e-1",
+        "id": "e-1",
         "agent_id": "a-1",
         "status": "accepted",
         "result": None,
         "started_at": "2026-01-01T00:00:00Z",
     }
     parsed = WatsonxApiAgentExecutionCreateResultData.model_validate(data)
-    assert parsed.execution_id == "e-1"
+    assert parsed.id == "e-1"
     assert parsed.agent_id == "a-1"
     assert parsed.status == "accepted"
     assert parsed.started_at == "2026-01-01T00:00:00Z"
@@ -6838,7 +6838,7 @@ def test_api_execution_status_schema_parses_all_explicit_fields():
     )
 
     data = {
-        "execution_id": "e-1",
+        "id": "e-1",
         "agent_id": "a-1",
         "status": "failed",
         "result": None,
@@ -6847,7 +6847,7 @@ def test_api_execution_status_schema_parses_all_explicit_fields():
         "last_error": "something broke",
     }
     parsed = WatsonxApiAgentExecutionStatusResultData.model_validate(data)
-    assert parsed.execution_id == "e-1"
+    assert parsed.id == "e-1"
     assert parsed.agent_id == "a-1"
     assert parsed.status == "failed"
     assert parsed.failed_at == "2026-01-01T00:00:05Z"
@@ -6874,7 +6874,7 @@ def test_api_execution_schemas_omit_langflow_owned_fields():
 
     for schema in (WatsonxApiAgentExecutionCreateResultData, WatsonxApiAgentExecutionStatusResultData):
         assert "deployment_id" not in schema.model_fields
-        assert "execution_id" in schema.model_fields
+        assert "id" in schema.model_fields
         assert not hasattr(schema, "resolved_deployment_id")
 
 
@@ -6888,20 +6888,20 @@ def test_api_execution_schema_normalizes_id_fields():
     for schema in (WatsonxApiAgentExecutionCreateResultData, WatsonxApiAgentExecutionStatusResultData):
         parsed = schema.model_validate(
             {
-                "execution_id": "  e-1  ",
+                "id": "  e-1  ",
                 "agent_id": "  a-1  ",
             }
         )
-        assert parsed.execution_id == "e-1"
+        assert parsed.id == "e-1"
         assert parsed.agent_id == "a-1"
 
         parsed_blank = schema.model_validate(
             {
-                "execution_id": "  ",
+                "id": "  ",
                 "agent_id": "",
             }
         )
-        assert parsed_blank.execution_id is None
+        assert parsed_blank.id is None
         assert parsed_blank.agent_id is None
 
 
@@ -6930,12 +6930,12 @@ def test_shape_execution_create_result_maps_all_fields():
 
     response = mapper.shape_execution_create_result(adapter_result, deployment_id=deployment_id)
     assert response.deployment_id == deployment_id
-    assert response.provider_data["execution_id"] == "e-1"
+    assert response.provider_data["id"] == "e-1"
     assert response.provider_data["status"] == "accepted"
     assert response.provider_data["started_at"] == "2026-01-01T00:00:00Z"
     assert response.provider_data["agent_id"] == "agent-1"
     assert "deployment_id" not in response.provider_data
-    assert "run_id" not in response.provider_data
+    assert "execution_id" not in response.provider_data
 
 
 def test_shape_execution_status_result_maps_all_fields():
@@ -6959,12 +6959,12 @@ def test_shape_execution_status_result_maps_all_fields():
 
     response = mapper.shape_execution_status_result(adapter_result, deployment_id=deployment_id)
     assert response.deployment_id == deployment_id
-    assert response.provider_data["execution_id"] == "e-2"
+    assert response.provider_data["id"] == "e-2"
     assert response.provider_data["status"] == "completed"
     assert response.provider_data["result"] == {"output": "done"}
     assert response.provider_data["completed_at"] == "2026-01-01T00:01:00Z"
     assert "deployment_id" not in response.provider_data
-    assert "run_id" not in response.provider_data
+    assert "execution_id" not in response.provider_data
 
 
 def test_shape_execution_status_result_none_execution_id():
@@ -6987,7 +6987,7 @@ def test_shape_execution_status_result_none_execution_id():
         adapter_result,
         deployment_id=deployment_id,
     )
-    assert response.provider_data["execution_id"] is None
+    assert response.provider_data["id"] is None
     assert response.provider_data["status"] == "in_progress"
 
 

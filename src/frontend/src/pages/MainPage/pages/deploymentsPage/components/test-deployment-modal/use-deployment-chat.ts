@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useGetDeploymentExecution } from "@/controllers/API/queries/deployments/use-get-deployment-execution";
-import { usePostDeploymentExecution } from "@/controllers/API/queries/deployments/use-post-deployment-execution";
+import { useGetDeploymentRun } from "@/controllers/API/queries/deployments/use-get-deployment-run";
+import { usePostDeploymentRun } from "@/controllers/API/queries/deployments/use-post-deployment-run";
 import type { ChatMessage } from "./types";
 import {
   extractTextFromResult,
@@ -53,8 +53,8 @@ export function useDeploymentChat({
     };
   }, []);
 
-  const { mutateAsync: postExecution } = usePostDeploymentExecution();
-  const { mutateAsync: getExecution } = useGetDeploymentExecution();
+  const { mutateAsync: postRun } = usePostDeploymentRun();
+  const { mutateAsync: getRun } = useGetDeploymentRun();
 
   const stopPolling = useCallback(() => {
     if (pollTimerRef.current !== null) {
@@ -96,7 +96,7 @@ export function useDeploymentChat({
       let executionId: string | null = null;
 
       try {
-        const createResponse = await postExecution({
+        const createResponse = await postRun({
           deployment_id: deploymentId,
           provider_data: {
             input: text,
@@ -105,7 +105,7 @@ export function useDeploymentChat({
         });
 
         const providerData = createResponse.provider_data;
-        executionId = providerData?.execution_id ?? null;
+        executionId = providerData?.id ?? null;
 
         const newThreadId = extractThreadId(
           providerData as Record<string, unknown> | null,
@@ -181,9 +181,9 @@ export function useDeploymentChat({
           }
 
           try {
-            const statusResponse = await getExecution({
+            const statusResponse = await getRun({
               deployment_id: deploymentId,
-              execution_id: currentExecutionId,
+              run_id: currentExecutionId,
             });
 
             if (!isMountedRef.current) return;
@@ -258,8 +258,8 @@ export function useDeploymentChat({
       threadId,
       providerId,
       deploymentId,
-      postExecution,
-      getExecution,
+      postRun,
+      getRun,
       stopPolling,
       updateAssistantMessage,
     ],

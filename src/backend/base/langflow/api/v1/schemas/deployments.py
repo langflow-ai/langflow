@@ -425,11 +425,11 @@ class DeploymentUpdateRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Execution sub-resource schemas
+# Run sub-resource schemas
 # ---------------------------------------------------------------------------
 
 
-class ExecutionCreateRequest(BaseModel):
+class RunCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     provider_data: dict[str, Any] | None = Field(
@@ -438,11 +438,11 @@ class ExecutionCreateRequest(BaseModel):
     )
 
 
-class _ExecutionResponseBase(BaseModel):
-    """Shared fields for execution responses.
+class _RunResponseBase(BaseModel):
+    """Shared fields for run responses.
 
     Only Langflow-owned identifiers live at the top level.  All
-    provider-owned data (including the provider's ``execution_id``)
+    provider-owned data (including the provider's ``id``)
     is returned inside ``provider_data`` so that ownership boundaries
     stay clear and a future Langflow-managed execution id won't
     collide with provider terminology.
@@ -452,25 +452,25 @@ class _ExecutionResponseBase(BaseModel):
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description=(
-            "Provider-owned opaque execution result payload.  "
-            "Contains at least ``execution_id`` (the provider's opaque run identifier) "
+            "Provider-owned opaque run result payload.  "
+            "Contains at least ``id`` (the provider's opaque run identifier) "
             "when the provider has assigned one."
         ),
     )
 
 
-class ExecutionCreateResponse(_ExecutionResponseBase):
-    """Response returned when an execution is created.
+class RunCreateResponse(_RunResponseBase):
+    """Response returned when a run is created.
 
-    Intentionally distinct from ``ExecutionStatusResponse`` even though both
+    Intentionally distinct from ``RunStatusResponse`` even though both
     currently share the same shape, mirroring the service-layer separation.
     """
 
 
-class ExecutionStatusResponse(_ExecutionResponseBase):
-    """Response returned when querying an execution status.
+class RunStatusResponse(_RunResponseBase):
+    """Response returned when querying a run status.
 
-    Intentionally distinct from ``ExecutionCreateResponse`` even though both
+    Intentionally distinct from ``RunCreateResponse`` even though both
     currently share the same shape, mirroring the service-layer separation.
     """
 

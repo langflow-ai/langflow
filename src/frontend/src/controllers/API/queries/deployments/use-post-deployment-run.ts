@@ -3,7 +3,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-export interface DeploymentExecutionRequest {
+export interface DeploymentRunRequest {
   deployment_id: string;
   provider_data: {
     input: string;
@@ -11,8 +11,8 @@ export interface DeploymentExecutionRequest {
   };
 }
 
-export interface DeploymentExecutionProviderData {
-  execution_id?: string | null;
+export interface DeploymentRunProviderData {
+  id?: string | null;
   agent_id?: string | null;
   status?: string | null;
   result?: Record<string, unknown> | null;
@@ -24,28 +24,28 @@ export interface DeploymentExecutionProviderData {
   last_error?: string | null;
 }
 
-export interface DeploymentExecutionResponse {
+export interface DeploymentRunResponse {
   deployment_id: string;
-  provider_data: DeploymentExecutionProviderData | null;
+  provider_data: DeploymentRunProviderData | null;
 }
 
-export const usePostDeploymentExecution: useMutationFunctionType<
+export const usePostDeploymentRun: useMutationFunctionType<
   undefined,
-  DeploymentExecutionRequest,
-  DeploymentExecutionResponse
+  DeploymentRunRequest,
+  DeploymentRunResponse
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
 
   const fn = async (
-    payload: DeploymentExecutionRequest,
-  ): Promise<DeploymentExecutionResponse> => {
+    payload: DeploymentRunRequest,
+  ): Promise<DeploymentRunResponse> => {
     const { deployment_id, ...body } = payload;
-    const res = await api.post<DeploymentExecutionResponse>(
-      `${getURL("DEPLOYMENTS")}/${encodeURIComponent(deployment_id)}/executions`,
+    const res = await api.post<DeploymentRunResponse>(
+      `${getURL("DEPLOYMENTS")}/${encodeURIComponent(deployment_id)}/runs`,
       body,
     );
     return res.data;
   };
 
-  return mutate(["usePostDeploymentExecution"], fn, options);
+  return mutate(["usePostDeploymentRun"], fn, options);
 };
