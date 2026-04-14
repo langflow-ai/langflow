@@ -146,6 +146,7 @@
   "misc.outputsModalTitle": "Outputs",
   "misc.chatTitle": "Langflow Chat",
   "misc.playground": "Playground",
+  "misc.share": "Share",
   "misc.textInputModalTitle": "Edit text content",
   "misc.fetchError": "Couldn't establish a connection.",
   "misc.fetchErrorDesc": "Check if everything is working properly and try again.",

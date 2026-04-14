@@ -4,6 +4,7 @@ import React, {
   type SetStateAction,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { useHref } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltipComponent from "@/components/common/shadTooltipComponent";
@@ -55,6 +56,7 @@ export default function PublishDropdown({
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const [openExportModal, setOpenExportModal] = useState(false);
+  const { t } = useTranslation();
 
   const handlePublishedSwitch = async (checked: boolean) => {
     mutateAsync(
@@ -103,7 +105,7 @@ export default function PublishDropdown({
             className="!px-2.5 font-normal"
             data-testid="publish-button"
           >
-            Share
+            {t("misc.share")}
             <IconComponent name="ChevronDown" className="!h-5 !w-5" />
           </Button>
         </DropdownMenuTrigger>

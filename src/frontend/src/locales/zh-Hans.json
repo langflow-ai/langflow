@@ -310,6 +310,7 @@
   "misc.outputsModalTitle": "输出",
   "misc.playground": "Playground",
   "misc.saveWithApiCheckbox": "使用我的 API 密钥节省开支",
+  "misc.share": "共享",
   "misc.textInputModalTitle": "编辑文本内容",
   "misc.timeoutError": "请稍等片刻，服务器正在处理您的请求。",
   "misc.timeoutErrorDesc": "服务器正在处理请求。",

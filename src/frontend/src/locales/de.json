@@ -310,6 +310,7 @@
   "misc.outputsModalTitle": "Ausgaben",
   "misc.playground": "Spielplatz",
   "misc.saveWithApiCheckbox": "Mit meinen API-Schlüsseln sparen",
+  "misc.share": "Zur gemeinsamen Nutzung freigeben",
   "misc.textInputModalTitle": "Textinhalt bearbeiten",
   "misc.timeoutError": "Bitte haben Sie einen Moment Geduld, während der Server Ihre Anfrage bearbeitet.",
   "misc.timeoutErrorDesc": "Der Server ist ausgelastet.",
