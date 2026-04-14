@@ -395,7 +395,8 @@ jobs:
           cd src/sdk
           uv venv test-env --seed
           uv pip install --python ./test-env/bin/python dist/*.whl
-          ./test-env/bin/python -c "from langflow_sdk._version import __version__; print(f'langflow-sdk {__version__} imported successfully')"
+          EXPECTED_VERSION="${{ needs.determine-sdk-version.outputs.version }}"
+          ./test-env/bin/python -c "from importlib.metadata import version; import langflow_sdk; installed_version = version('langflow-sdk'); print(f'langflow-sdk {installed_version} imported successfully'); assert installed_version == '$EXPECTED_VERSION', f'Installed version {installed_version} does not match expected version $EXPECTED_VERSION'"
       - name: Upload Artifact
         uses: actions/upload-artifact@v6
         with:
