@@ -5,8 +5,8 @@ import MultiselectComponent from "@/components/core/parameterRenderComponent/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ProviderVariable } from "@/constants/providerConstants";
+import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
-import { openInNewTab } from "@/utils/utils";
 import DisconnectWarning from "./DisconnectWarning";
 import type { Provider } from "./types";
 
@@ -146,7 +146,7 @@ const ProviderConfigurationForm = ({
               className="underline cursor-pointer hover:text-primary"
               onClick={() => {
                 if (selectedProvider.api_docs_url) {
-                  openInNewTab(selectedProvider.api_docs_url);
+                  customOpenNewTab(selectedProvider.api_docs_url);
                 }
               }}
             >
