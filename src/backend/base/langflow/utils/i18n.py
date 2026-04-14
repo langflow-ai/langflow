@@ -85,6 +85,30 @@ def translate_starter_flows(flow_reads: list, locale: str) -> list:
     return result
 
 
+def translate_flow_notes(nodes: list[dict], flow_name: str, locale: str) -> list[dict]:
+    """Return a copy of nodes with note node descriptions translated for locale.
+
+    For each noteNode, looks up template_notes.{flow_key}.{index} and substitutes
+    the translated markdown. Falls back to the original description if no translation exists.
+    Never mutates the input list.
+    """
+    import copy as _copy
+
+    flow_key = _safe_flow_key(flow_name)
+    result = []
+    note_index = 0
+    for node in nodes:
+        if node.get("type") == "noteNode":
+            node = _copy.deepcopy(node)
+            description = node.get("data", {}).get("node", {}).get("description", "")
+            key = f"template_notes.{flow_key}.{note_index}"
+            translated = translate(key, locale, description)
+            node["data"]["node"]["description"] = translated
+            note_index += 1
+        result.append(node)
+    return result
+
+
 def translate_component_dict(all_types: dict[str, Any], locale: str) -> dict[str, Any]:
     """Return a copy of all_types with display_names substituted for locale.
 
