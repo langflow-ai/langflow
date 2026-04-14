@@ -274,6 +274,7 @@ jobs:
   determine-sdk-version:
     name: Determine SDK Version
     needs: [validate-tag, validate-dependencies]
+    if: ${{ inputs.release_sdk || inputs.release_lfx }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
