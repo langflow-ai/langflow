@@ -75,21 +75,23 @@ export const ConnectionSearchList = memo(function ConnectionSearchList({
           No connections match &ldquo;{searchQuery}&rdquo;
         </p>
       ) : (
-        filteredConnections.map((conn) => (
-          <CheckboxSelectItem
-            key={conn.connectionId}
-            value={conn.id}
-            checked={selectedConnections.has(conn.id)}
-            onChange={() => onToggleConnection(conn.id)}
-            data-testid={`connection-item-${conn.id}`}
-          >
-            <div className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium leading-tight">
-                {conn.name}
-              </span>
-            </div>
-          </CheckboxSelectItem>
-        ))
+        <div className="mt-2 space-y-1.5">
+          {filteredConnections.map((conn) => (
+            <CheckboxSelectItem
+              key={conn.connectionId}
+              value={conn.id}
+              checked={selectedConnections.has(conn.id)}
+              onChange={() => onToggleConnection(conn.id)}
+              data-testid={`connection-item-${conn.id}`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium leading-tight">
+                  {conn.name}
+                </span>
+              </div>
+            </CheckboxSelectItem>
+          ))}
+        </div>
       )}
     </div>
   );
