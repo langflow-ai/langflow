@@ -72,9 +72,9 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentSnapshotListResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
-    ExecutionCreateRequest,
-    ExecutionCreateResponse,
-    ExecutionStatusResponse,
+    RunCreateRequest,
+    RunCreateResponse,
+    RunStatusResponse,
 )
 
 from .contracts import (
@@ -218,7 +218,7 @@ class BaseDeploymentMapper:
         *,
         deployment_resource_key: str,
         db: AsyncSession,
-        payload: ExecutionCreateRequest,
+        payload: RunCreateRequest,
     ) -> ExecutionCreate:
         return ExecutionCreate(
             deployment_id=deployment_resource_key,
@@ -784,11 +784,11 @@ class BaseDeploymentMapper:
         result: ExecutionCreateResult,
         *,
         deployment_id: UUID,
-    ) -> ExecutionCreateResponse:
+    ) -> RunCreateResponse:
         provider_result = self.shape_execution_create_provider_data(
             result.provider_result if isinstance(result.provider_result, dict) else None
         )
-        return ExecutionCreateResponse(
+        return RunCreateResponse(
             deployment_id=deployment_id,
             provider_data=provider_result,
         )
@@ -798,11 +798,11 @@ class BaseDeploymentMapper:
         result: ExecutionStatusResult,
         *,
         deployment_id: UUID,
-    ) -> ExecutionStatusResponse:
+    ) -> RunStatusResponse:
         provider_result = self.shape_execution_status_provider_data(
             result.provider_result if isinstance(result.provider_result, dict) else None
         )
-        return ExecutionStatusResponse(
+        return RunStatusResponse(
             deployment_id=deployment_id,
             provider_data=provider_result,
         )
