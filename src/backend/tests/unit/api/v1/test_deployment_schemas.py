@@ -497,7 +497,6 @@ class TestExecutionCreateRequest:
             ExecutionCreateRequest(provider_data={"input": "x"}, unknown_field="y")
 
 
-
 # ---------------------------------------------------------------------------
 # ExecutionCreateResponse — all fields including nullable provider_data
 # ---------------------------------------------------------------------------
@@ -509,7 +508,6 @@ class TestExecutionCreateResponse:
 
         with pytest.raises(ValidationError, match="deployment_id"):
             ExecutionCreateResponse()
-
 
 
 # ---------------------------------------------------------------------------
@@ -531,7 +529,6 @@ class TestSnapshotUpdateRequest:
             SnapshotUpdateRequest(flow_version_id=uuid4(), extra_field="bad")
 
 
-
 # ---------------------------------------------------------------------------
 # SnapshotUpdateResponse — response fields
 # ---------------------------------------------------------------------------
@@ -549,4 +546,3 @@ class TestSnapshotUpdateResponse:
 
         with pytest.raises(ValidationError, match="provider_snapshot_id"):
             SnapshotUpdateResponse(flow_version_id=uuid4())
-

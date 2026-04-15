@@ -12,7 +12,6 @@ from lfx.services.adapters.deployment.schema import (
     ItemResult,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -223,7 +222,6 @@ def test_shape_execution_create_result_with_provider_data() -> None:
     assert response.provider_data == {"execution_id": "exec-1", "status": "running"}
 
 
-
 # ---------------------------------------------------------------------------
 # shape_deployment_list_items (DB-backed list)
 # ---------------------------------------------------------------------------
@@ -284,10 +282,7 @@ def test_shape_config_list_result_pagination() -> None:
     from lfx.services.adapters.deployment.schema import ConfigListItem, ConfigListResult
 
     mapper = BaseDeploymentMapper()
-    configs = [
-        ConfigListItem(id=f"cfg-{i}", name=f"Config {i}")
-        for i in range(5)
-    ]
+    configs = [ConfigListItem(id=f"cfg-{i}", name=f"Config {i}") for i in range(5)]
     result = ConfigListResult(configs=configs, provider_result={"extra": "meta"})
 
     response = mapper.shape_config_list_result(result, page=2, size=2)
