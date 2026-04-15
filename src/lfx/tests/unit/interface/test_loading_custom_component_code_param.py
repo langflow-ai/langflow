@@ -10,7 +10,6 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-
 from lfx.interface.initialize import loading
 
 
@@ -61,11 +60,11 @@ class _StrictBuildComponentAsync:
 
 
 @pytest.mark.parametrize(
-    ("params_factory",),
+    "params_factory",
     [
-        (lambda: {"code": "not executed"},),
-        (lambda: {},),
-        (lambda: {"code": None},),
+        lambda: {"code": "not executed"},
+        dict,
+        lambda: {"code": None},
     ],
 )
 async def test_build_custom_component_does_not_pass_code_to_strict_build(params_factory):
