@@ -264,19 +264,14 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         const output = outputBySelectedOutput ?? outputByFallback;
 
         if (output) {
-          // Match exactly how NodeOutputParameter builds the handle:
-          // - Regular outputs: [selectedType]
-          // - Loop outputs: [selectedType, ...loop_types]
+          // Source handles (right side) only use [selectedType].
+          // loop_types is only for loop INPUT handles (left side).
           const selectedType = output.selected ?? output.types[0];
-          const outputTypes =
-            output.allows_loop && output.loop_types
-              ? [selectedType, ...output.loop_types]
-              : [selectedType];
 
           const id: sourceHandleType = {
             id: sourceNode.data.id,
             name: output?.name ?? name,
-            output_types: outputTypes,
+            output_types: [selectedType],
             dataType: sourceNode.data.type,
           };
 
@@ -473,19 +468,14 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
           (output) => output.name === name,
         );
         if (output) {
-          // Match exactly how NodeOutputParameter builds the handle:
-          // - Regular outputs: [selectedType]
-          // - Loop outputs: [selectedType, ...loop_types]
+          // Source handles (right side) only use [selectedType].
+          // loop_types is only for loop INPUT handles (left side).
           const selectedType = output.selected ?? output.types[0];
-          const outputTypes =
-            output.allows_loop && output.loop_types
-              ? [selectedType, ...output.loop_types]
-              : [selectedType];
 
           const id: sourceHandleType = {
             id: sourceNode.data.id,
             name: name,
-            output_types: outputTypes,
+            output_types: [selectedType],
             dataType: sourceNode.data.type,
           };
           if (scapedJSONStringfy(id) !== sourceHandle) {

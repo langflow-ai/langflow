@@ -1,14 +1,23 @@
 from lfx.custom.custom_component.component import Component
 
 
-def _extract_model_name(value):
-    """Extract model name from ModelInput format (list of dicts with 'name' key)."""
+def _extract_model_name(value) -> str | None:
+    """Extract model name from various formats.
+
+    Handles:
+    - String model name (e.g., "gpt-4o-mini")
+    - ModelInput format: list of dicts with 'name' key (e.g., [{'name': 'gpt-4o', ...}])
+    - Single dict with 'name' key
+    """
     if isinstance(value, str):
         return value
-    if isinstance(value, list) and value and isinstance(value[0], dict):
-        return value[0].get("name")
-    if isinstance(value, dict):
-        return value.get("name")
+    if isinstance(value, list) and value:
+        # ModelInput format: list of model option dicts
+        first_item = value[0]
+        if isinstance(first_item, dict) and "name" in first_item:
+            return first_item["name"]
+    if isinstance(value, dict) and "name" in value:
+        return value["name"]
     return None
 
 

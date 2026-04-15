@@ -222,6 +222,60 @@ class WhileLoopComponent(Component):
         # End vertex didn't produce output - loop body stopped (termination condition)
         return None
 
+    def _extract_termination_output(self, results: list, start_vertex_id: str | None) -> DataFrame | None:
+        """Extract the start vertex's output when the loop terminates.
+
+        When the loop body takes a different branch (e.g., AgentStep fires ai_message
+        instead of tool_calls), the start vertex still produced a result that should be
+        included in the final accumulated state.
+
+        Args:
+            results: List of VertexBuildResult objects from the last subgraph execution
+            start_vertex_id: The vertex ID of the first vertex in the loop body
+
+        Returns:
+            DataFrame containing the start vertex's output, or None
+        """
+        if not results or not start_vertex_id:
+            return None
+
+        for result in results:
+            if not (hasattr(result, "vertex") and result.vertex.id == start_vertex_id):
+                continue
+            if not (hasattr(result, "result_dict") and result.result_dict and result.result_dict.outputs):
+                continue
+
+            # Look through all outputs for a Message with actual text content
+            for output_data in result.result_dict.outputs.values():
+                value = None
+                if isinstance(output_data, dict) and "message" in output_data:
+                    value = output_data["message"]
+                elif hasattr(output_data, "message"):
+                    value = output_data.message
+
+                if value is None:
+                    continue
+
+                # Extract text from the value (handles Message, str, dict, duck-typed)
+                text = ""
+                sender = "Machine"
+                if isinstance(value, Message):
+                    text = value.text or ""
+                    sender = value.sender or "Machine"
+                elif isinstance(value, str):
+                    text = value
+                elif isinstance(value, dict):
+                    text = str(value.get("text", ""))
+                    sender = value.get("sender", "Machine") or "Machine"
+                elif hasattr(value, "text"):
+                    text = str(value.text) if value.text else ""
+                    sender = getattr(value, "sender", "Machine") or "Machine"
+
+                if text:
+                    return DataFrame([{"text": text, "sender": sender}])
+
+        return None
+
     async def execute_loop(self) -> DataFrame:
         """Execute the loop body repeatedly until termination.
 
@@ -299,7 +353,13 @@ class WhileLoopComponent(Component):
 
                 if iteration_output is None:
                     # No feedback output - loop body took a different branch (termination)
-                    # This happens when e.g. AgentStep outputs ai_message instead of tool_calls
+                    # This happens when e.g. AgentStep outputs ai_message instead of tool_calls.
+                    # Extract the start vertex's output (e.g., AI response) so it's included
+                    # in the final accumulated state.
+                    termination_output = self._extract_termination_output(results, start_vertex_id)
+                    if termination_output is not None:
+                        new_rows = termination_output.to_dict(orient="records")
+                        accumulated_state = accumulated_state.add_rows(new_rows)
                     break
 
             # Accumulate: existing state + new data from loop body
