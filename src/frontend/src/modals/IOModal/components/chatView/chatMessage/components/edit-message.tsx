@@ -1,10 +1,11 @@
-import DOMPurify from "dompurify";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
+import { AlertCircle } from "lucide-react";
 import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import { preprocessChatMessage } from "@/utils/markdownUtils";
 import { cn } from "@/utils/utils";
@@ -18,10 +19,6 @@ type MarkdownFieldProps = {
   isAudioMessage?: boolean;
 };
 
-// Placeholder markers for <think> tags to preserve them through sanitization
-const THINK_OPEN_MARKER = "___THINK_OPEN___";
-const THINK_CLOSE_MARKER = "___THINK_CLOSE___";
-
 export const MarkdownField = ({
   chat,
   isEmpty,
@@ -30,37 +27,51 @@ export const MarkdownField = ({
   isAudioMessage,
 }: MarkdownFieldProps) => {
   const { t } = useTranslation();
+  const [showSanitizationWarning, setShowSanitizationWarning] = useState(false);
 
-  // Memoize sanitization to avoid repeated work on re-renders
-  const sanitizedChatMessage = useMemo(() => {
+  // Memoize preprocessing to avoid repeated work on re-renders
+  const processedChatMessage = useMemo(() => {
     // Short-circuit for empty messages
     if (!chatMessage || chatMessage.trim() === "") {
       return "";
     }
 
     // Process the chat message to handle <think> tags and clean up tables
-    let processed = preprocessChatMessage(chatMessage);
+    return preprocessChatMessage(chatMessage);
+  }, [chatMessage]);
 
-    // Temporarily replace <think> tags with safe markers before sanitization
-    // This prevents DOMPurify from stripping them as unknown HTML tags
-    processed = processed
-      .replace(/`<think>`/g, THINK_OPEN_MARKER)
-      .replace(/`<\/think>`/g, THINK_CLOSE_MARKER);
+  // Detect if content might have been sanitized (contains HTML tags but no code blocks)
+  useEffect(() => {
+    if (!chatMessage) {
+      setShowSanitizationWarning(false);
+      return;
+    }
 
-    // Sanitize to prevent XSS attacks
-    const sanitized = DOMPurify.sanitize(processed);
+    // Check if message contains HTML-like tags
+    const hasHtmlTags = /<[a-z][\s\S]*>/i.test(chatMessage);
+    // Check if it's in a code block
+    const hasCodeBlock = /```[\s\S]*```|`[^`]+`/.test(chatMessage);
 
-    // Restore <think> markers after sanitization
-    return sanitized
-      .replace(new RegExp(THINK_OPEN_MARKER, "g"), "`<think>`")
-      .replace(new RegExp(THINK_CLOSE_MARKER, "g"), "`</think>`");
+    // Show warning if there are HTML tags but they're not in code blocks
+    setShowSanitizationWarning(hasHtmlTags && !hasCodeBlock);
   }, [chatMessage]);
 
   return (
     <div className="w-full items-baseline gap-2">
+      {showSanitizationWarning && (
+        <div className="mb-3 flex items-start gap-2 rounded-md border border-yellow-500/50 bg-yellow-500/10 p-3 text-sm text-yellow-700 dark:text-yellow-400">
+          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div>
+            <strong>HTML content was sanitized for security.</strong>
+            <br />
+            To display HTML code, please wrap it in code blocks using triple
+            backticks (```html).
+          </div>
+        </div>
+      )}
       <Markdown
         remarkPlugins={[remarkGfm as any]}
-        rehypePlugins={[rehypeMathjax, rehypeRaw]}
+        rehypePlugins={[rehypeMathjax, rehypeRaw, rehypeSanitize]}
         className={cn(
           "markdown prose flex w-full max-w-full flex-col items-baseline text-sm font-normal word-break-break-word dark:prose-invert",
           isEmpty ? "text-muted-foreground" : "text-primary",
@@ -138,7 +149,7 @@ export const MarkdownField = ({
       >
         {isEmpty && !chat.stream_url
           ? t("chat.emptyOutputSendMessage")
-          : sanitizedChatMessage}
+          : processedChatMessage}
       </Markdown>
       {editedFlag}
     </div>
