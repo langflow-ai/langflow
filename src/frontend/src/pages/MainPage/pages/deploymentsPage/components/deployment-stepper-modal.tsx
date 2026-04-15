@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +13,8 @@ import { useGetDeployment } from "@/controllers/API/queries/deployments/use-get-
 import { useGetDeploymentAttachments } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 import { usePatchDeployment } from "@/controllers/API/queries/deployments/use-patch-deployment";
 import { usePostDeployment } from "@/controllers/API/queries/deployments/use-post-deployment";
+import useFlowStore from "@/stores/flowStore";
+import { useFolderStore } from "@/stores/foldersStore";
 import {
   DeploymentStepperProvider,
   useDeploymentStepper,
@@ -52,6 +55,13 @@ export default function DeploymentStepperModal({
 }: DeploymentStepperModalProps) {
   const [isDeploying, setIsDeploying] = useState(false);
   const isEditMode = !!editingDeployment;
+  const { folderId } = useParams();
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const currentFlowProjectId = useFlowStore(
+    (state) => state.currentFlow?.folder_id,
+  );
+  const resolvedProjectId =
+    currentFlowProjectId ?? folderId ?? myCollectionId ?? undefined;
 
   // Edit mode: fetch existing attachments and deployment detail for LLM.
   const { data: attachmentsData, isLoading: isLoadingAttachments } =
@@ -66,16 +76,16 @@ export default function DeploymentStepperModal({
     );
 
   // Build initial maps from attachments for the stepper context.
-  // Tool names and connection bindings come from the provider (wxO) via
+  // Tool names and connection assignments come from the provider (wxO) via
   // the /flows endpoint, NOT from the Langflow database. This means:
   //
   // - If a user renames a tool in the wxO console, the new name appears
   //   here on the next edit. Langflow doesn't cache tool names locally.
-  // - If a tool is deleted in wxO, provider_data.tool_name will be null and the
+  // - If a tool is deleted in wxO, provider_data will be null and the
   //   review page falls back to the Langflow flow name.
   // - If a connection is deleted in wxO but the tool still references it,
   //   the app_id will appear in connectionsByFlow. The backend will fail
-  //   fast during the update if the caller tries to bind a new tool to
+  //   fast during the update if the caller tries to attach a new tool to
   //   that stale connection.
   const editInitialState = useMemo(() => {
     if (!isEditMode || !attachmentsData?.flow_versions) return null;
@@ -97,7 +107,7 @@ export default function DeploymentStepperModal({
       if (providerToolName) {
         toolNames.set(fv.flow_id, providerToolName);
       }
-      // Pre-populate attached connections from existing tool bindings.
+      // Pre-populate attached connections from existing tool assignments.
       const appIds = fv.provider_data?.app_ids;
       if (appIds && appIds.length > 0) {
         connectionsByFlow.set(fv.flow_id, appIds);
@@ -126,6 +136,7 @@ export default function DeploymentStepperModal({
       <DialogContent
         className="flex h-[85vh] w-[900px] !max-w-none flex-col gap-0 overflow-hidden border-none bg-transparent p-0 shadow-none"
         closeButtonClassName="top-5 right-4"
+        overlayClassName="bg-black/30 dark:bg-black/50 backdrop-blur"
       >
         {isLoadingEditData ? (
           <div className="flex flex-1 items-center justify-center">
@@ -137,6 +148,7 @@ export default function DeploymentStepperModal({
           <DeploymentStepperProvider
             key={`${open}-${editingDeployment?.id ?? ""}-${initialProvider?.id ?? ""}-${initialInstance?.id ?? ""}`}
             initialState={{
+              projectId: resolvedProjectId,
               initialFlowId,
               selectedVersionByFlow:
                 initialVersionByFlow ?? editInitialState?.versionMap,

@@ -96,6 +96,21 @@ def get_model_providers() -> list[str]:
     return sorted({md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group})
 
 
+def get_provider_for_model_name(model_name: str) -> str:
+    """Return the provider for a model name by searching MODELS_DETAILED.
+
+    Retained for backwards compatibility with components authored against the
+    pre-refactor ``unified_models`` module (e.g. flows exported from 1.8.x).
+    """
+    if not model_name or not isinstance(model_name, str):
+        return ""
+    for group in MODELS_DETAILED:
+        for md in group:
+            if md.get("name") == model_name:
+                return md.get("provider", "") or ""
+    return ""
+
+
 def get_provider_from_variable_key(variable_key: str) -> str | None:
     """Get provider name from a variable key.
 

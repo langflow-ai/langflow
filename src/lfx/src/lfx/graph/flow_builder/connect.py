@@ -144,6 +144,22 @@ def add_connection(
 
     edge_id = f"reactflow__edge-{source_id}{source_handle_s}-{target_id}{target_handle_s}"
 
+    # Idempotent: if a connection between the same source output and target
+    # input already exists, return it rather than appending a duplicate. We
+    # compare structurally (source/target ids + handle name/fieldName) instead
+    # of by edge id, since UI-saved edges from older Langflow versions use a
+    # different id prefix (`xy-edge__` vs `reactflow__edge-`) even though the
+    # underlying connection is the same. A repeat call (batch retry, UI-then-MCP)
+    # would otherwise double-wire the flow at runtime.
+    for existing in flow["data"]["edges"]:
+        if (
+            existing.get("source") == source_id
+            and existing.get("target") == target_id
+            and (existing.get("data") or {}).get("sourceHandle", {}).get("name") == source_output
+            and (existing.get("data") or {}).get("targetHandle", {}).get("fieldName") == target_input
+        ):
+            return existing
+
     edge = {
         "animated": False,
         "className": "",

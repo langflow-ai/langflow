@@ -47,7 +47,19 @@ export default function StepType() {
     isLoading: llmsLoading,
     error: llmsError,
   } = useGetDeploymentLlms({ providerId }, { enabled: !!providerId });
-  const llmModels = llmData?.provider_data?.models ?? [];
+  const PREFERRED_MODEL = "groq/openai/gpt-oss-120b";
+  const llmModels = (() => {
+    const raw = llmData?.provider_data?.models ?? [];
+    const hasPreferred = raw.some((m) => m.model_name === PREFERRED_MODEL);
+    const models = hasPreferred
+      ? raw
+      : [{ model_name: PREFERRED_MODEL }, ...raw];
+    return models.sort((a, b) => {
+      if (a.model_name === PREFERRED_MODEL) return -1;
+      if (b.model_name === PREFERRED_MODEL) return 1;
+      return 0;
+    });
+  })();
 
   useEffect(() => {
     if (llmsError) {

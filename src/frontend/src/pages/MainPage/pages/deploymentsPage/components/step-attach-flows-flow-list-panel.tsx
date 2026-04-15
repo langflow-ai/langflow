@@ -42,13 +42,20 @@ export const FlowListPanel = memo(function FlowListPanel({
             .map((cid) => connections.find((c) => c.id === cid)?.name)
             .filter(Boolean);
           return (
-            <button
+            <div
               key={flow.id}
-              type="button"
+              role="button"
+              tabIndex={0}
               data-testid={`flow-item-${flow.id}`}
               onClick={() => onSelectFlow(flow.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelectFlow(flow.id);
+                }
+              }}
               className={cn(
-                "flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors",
+                "flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 text-left transition-colors",
                 isRemoved && "opacity-50",
                 selectedFlowId === flow.id ? "bg-muted" : "hover:bg-muted/60",
               )}
@@ -129,7 +136,7 @@ export const FlowListPanel = memo(function FlowListPanel({
                   />
                 </button>
               )}
-            </button>
+            </div>
           );
         })}
       </div>

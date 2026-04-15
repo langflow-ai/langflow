@@ -54,7 +54,7 @@ const makeEnvironment = (
   id: "env-1",
   name: "Prod Environment",
   provider_key: "watsonx-orchestrate",
-  url: "https://api.prod.example.com",
+  provider_data: { url: "https://api.prod.example.com" },
   created_at: "2025-05-01T00:00:00Z",
   updated_at: "2025-05-01T00:00:00Z",
   ...overrides,
@@ -88,6 +88,23 @@ describe("Basic rendering", () => {
         type: "watsonx",
         name: "watsonx Orchestrate",
       }),
+    );
+  });
+
+  it("renders signup and credentials help links", () => {
+    render(<StepProvider />);
+
+    expect(
+      screen.getByRole("link", { name: "Sign up for watsonx Orchestrate" }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.ibm.com/products/watsonx-orchestrate#pricing",
+    );
+    expect(
+      screen.getByRole("link", { name: "Find your credentials" }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started",
     );
   });
 });
@@ -127,7 +144,7 @@ describe("With existing environments", () => {
         makeEnvironment({
           id: "env-2",
           name: "Staging",
-          url: "https://api.staging.example.com",
+          provider_data: { url: "https://api.staging.example.com" },
         }),
       ],
     };

@@ -1,0 +1,96 @@
+---
+title: Logs endpoints
+slug: /api-logs
+---
+import CodeSnippet from '@site/src/components/CodeSnippet';
+import exampleApiLogsStreamLogs from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-logs/stream-logs.sh';
+import resultApiLogsResultStreamLogs from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-logs/result-stream-logs.txt';
+import exampleApiLogsRetrieveLogsWithOptionalParameters from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-logs/retrieve-logs-with-optional-parameters.sh';
+import resultApiLogsResultRetrieveLogsWithOptionalParameters from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-logs/result-retrieve-logs-with-optional-parameters.txt';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import examplePythonApiLogsStreamLogs from '!!raw-loader!@site/docs/API-Reference/python-examples/api-logs/stream-logs.py';
+import exampleJavascriptApiLogsStreamLogs from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-logs/stream-logs.js';
+import examplePythonApiLogsRetrieveLogsWithOptionalParameters from '!!raw-loader!@site/docs/API-Reference/python-examples/api-logs/retrieve-logs-with-optional-parameters.py';
+import exampleJavascriptApiLogsRetrieveLogsWithOptionalParameters from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-logs/retrieve-logs-with-optional-parameters.js';
+
+
+
+Retrieve logs for your Langflow flows and server.
+
+## Enable log retrieval
+
+The `/logs` endpoint requires log retrieval to be enabled in your Langflow instance.
+
+To enable log retrieval, set the following [environment variables](/environment-variables) in your Langflow `.env` file, and then start Langflow with `uv run langflow run --env-file .env`:
+
+```text
+LANGFLOW_ENABLE_LOG_RETRIEVAL=True
+LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000 // Must be greater than 0
+LANGFLOW_LOG_LEVEL=DEBUG // Can be DEBUG, ERROR, INFO, WARNING, or CRITICAL
+```
+
+## Stream logs
+
+Stream logs in real-time using Server Sent Events (SSE):
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiLogsStreamLogs} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiLogsStreamLogs} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiLogsStreamLogs} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiLogsResultStreamLogs} language="text" />
+
+</details>
+
+## Retrieve logs with optional parameters
+
+Retrieve logs with optional query parameters:
+
+- `lines_before`: The number of logs before the timestamp or the last log.
+- `lines_after`: The number of logs after the timestamp.
+- `timestamp`: The timestamp to start getting logs from.
+
+The default values for all three parameters is `0`.
+With default values, the endpoint returns the last 10 lines of logs.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiLogsRetrieveLogsWithOptionalParameters} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiLogsRetrieveLogsWithOptionalParameters} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiLogsRetrieveLogsWithOptionalParameters} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiLogsResultRetrieveLogsWithOptionalParameters} language="text" />
+
+</details>
