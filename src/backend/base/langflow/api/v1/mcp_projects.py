@@ -1450,6 +1450,8 @@ async def init_mcp_servers():
 
             for project in projects:
                 try:
+                    mcp_server_auth_override: dict[str, Any] | None = None
+
                     # Auto-enable API key auth for projects without auth settings or with "none" auth
                     # when AUTO_LOGIN is false
                     if not settings_service.auth_settings.AUTO_LOGIN:
@@ -1466,6 +1468,7 @@ async def init_mcp_servers():
                             default_auth = {"auth_type": "apikey"}
                             project.auth_settings = encrypt_auth_settings(default_auth)
                             session.add(project)
+                            mcp_server_auth_override = default_auth
                             await logger.ainfo(
                                 f"Auto-enabled API key authentication for existing project {project.name} "
                                 f"({project.id}) due to AUTO_LOGIN=false"
@@ -1483,6 +1486,7 @@ async def init_mcp_servers():
                         clean_auth = AuthSettings(auth_type=fallback_auth_type)
                         project.auth_settings = clean_auth.model_dump(exclude_none=True)
                         session.add(project)
+                        mcp_server_auth_override = clean_auth.model_dump(exclude_none=True)
                         await logger.adebug(
                             f"Updated OAuth project {project.name} ({project.id}) to use {fallback_auth_type} "
                             f"authentication because MCP Composer is disabled"
@@ -1491,6 +1495,27 @@ async def init_mcp_servers():
                     get_project_sse(project.id)
                     get_project_mcp_server(project.id)
                     await logger.adebug(f"Initialized MCP server for project: {project.name} ({project.id})")
+
+                    if (
+                        mcp_server_auth_override is not None
+                        and settings_service.settings.add_projects_to_mcp_servers
+                        and project.user_id is not None
+                    ):
+                        from langflow.api.v1.projects_mcp_helpers import register_mcp_servers_for_project
+
+                        project_user = await session.get(User, project.user_id)
+                        if project_user is not None:
+                            await register_mcp_servers_for_project(
+                                project,
+                                mcp_server_auth_override,
+                                project_user,
+                                session,
+                            )
+                            await logger.adebug(
+                                "Reconciled MCP server config for project %s (%s) after auth change on startup",
+                                project.name,
+                                project.id,
+                            )
 
                     # Only register with MCP Composer if OAuth authentication is configured
                     if get_settings_service().settings.mcp_composer_enabled and project.auth_settings:

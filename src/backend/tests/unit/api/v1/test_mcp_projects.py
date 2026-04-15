@@ -846,6 +846,82 @@ async def test_init_mcp_servers_error_handling_streamable():
         await init_mcp_servers()
 
 
+async def test_init_mcp_servers_reconciles_project_server_auth_when_auto_login_disabled(user_test_project, active_user):
+    """Startup should refresh persisted MCP server config after forcing API key auth."""
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        project.auth_settings = None
+        session.add(project)
+
+    with (
+        patch("langflow.api.v1.mcp_projects.get_project_sse"),
+        patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
+        patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
+        patch(
+            "langflow.api.v1.projects_mcp_helpers.register_mcp_servers_for_project", new=AsyncMock()
+        ) as mock_register,
+        patch("langflow.api.v1.mcp_projects.get_settings_service") as mock_get_settings,
+    ):
+        mock_service = MagicMock()
+        mock_service.settings = SimpleNamespace(mcp_composer_enabled=False, add_projects_to_mcp_servers=True)
+        mock_service.auth_settings = SimpleNamespace(AUTO_LOGIN=False)
+        mock_get_settings.return_value = mock_service
+
+        await init_mcp_servers()
+
+    assert any(
+        call.args[0].id == user_test_project.id
+        and call.args[1] == {"auth_type": "apikey"}
+        and call.args[2].id == active_user.id
+        for call in mock_register.await_args_list
+    )
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        assert project.auth_settings is not None
+        assert project.auth_settings["auth_type"] == "apikey"
+
+
+async def test_init_mcp_servers_reconciles_project_server_auth_when_oauth_falls_back(user_test_project, active_user):
+    """Startup should refresh persisted MCP server config after OAuth falls back to API key auth."""
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        project.auth_settings = {"auth_type": "oauth"}
+        session.add(project)
+
+    with (
+        patch("langflow.api.v1.mcp_projects.get_project_sse"),
+        patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
+        patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
+        patch(
+            "langflow.api.v1.projects_mcp_helpers.register_mcp_servers_for_project", new=AsyncMock()
+        ) as mock_register,
+        patch("langflow.api.v1.mcp_projects.get_settings_service") as mock_get_settings,
+    ):
+        mock_service = MagicMock()
+        mock_service.settings = SimpleNamespace(mcp_composer_enabled=False, add_projects_to_mcp_servers=True)
+        mock_service.auth_settings = SimpleNamespace(AUTO_LOGIN=False)
+        mock_get_settings.return_value = mock_service
+
+        await init_mcp_servers()
+
+    assert any(
+        call.args[0].id == user_test_project.id
+        and call.args[1] == {"auth_type": "apikey"}
+        and call.args[2].id == active_user.id
+        for call in mock_register.await_args_list
+    )
+
+
 async def test_list_project_tools_with_mcp_enabled_filter(
     client: AsyncClient, user_test_project, active_user, logged_in_headers
 ):
