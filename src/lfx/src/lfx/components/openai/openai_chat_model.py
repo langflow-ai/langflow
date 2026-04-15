@@ -153,9 +153,18 @@ class OpenAIModelComponent(LCModelComponent):
             str: The message from the exception.
         """
         try:
-            from openai import BadRequestError
+            from openai import BadRequestError, NotFoundError
         except ImportError:
             return None
+        if isinstance(e, NotFoundError):
+            body = getattr(e, "body", None) or {}
+            if isinstance(body, dict) and body.get("code") == "model_not_found":
+                return (
+                    f"Model '{self.model_name}' is not available for this OpenAI account. "
+                    "Your API tier may not have access yet — check "
+                    "https://platform.openai.com/settings/organization/limits "
+                    "or select a different model."
+                )
         if isinstance(e, BadRequestError):
             message = e.body.get("message")
             if message:

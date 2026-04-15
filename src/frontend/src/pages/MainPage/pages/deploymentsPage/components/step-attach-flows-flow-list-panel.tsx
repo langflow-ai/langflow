@@ -44,16 +44,23 @@ export const FlowListPanel = memo(function FlowListPanel({
           return (
             <div
               key={flow.id}
+              role="button"
+              tabIndex={0}
+              data-testid={`flow-item-${flow.id}`}
+              onClick={() => onSelectFlow(flow.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelectFlow(flow.id);
+                }
+              }}
               className={cn(
-                "flex items-center gap-3 rounded-lg p-3 transition-colors",
+                "flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 text-left transition-colors",
                 isRemoved && "opacity-50",
                 selectedFlowId === flow.id ? "bg-muted" : "hover:bg-muted/60",
               )}
             >
-              <button
-                type="button"
-                data-testid={`flow-item-${flow.id}`}
-                onClick={() => onSelectFlow(flow.id)}
+              <div
                 className="flex min-w-0 flex-1 items-center gap-3 text-left"
               >
                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
@@ -101,7 +108,7 @@ export const FlowListPanel = memo(function FlowListPanel({
                     </p>
                   )}
                 </div>
-              </button>
+              </div>
               {attached && !isRemoved && onRemoveFlow && (
                 <button
                   type="button"

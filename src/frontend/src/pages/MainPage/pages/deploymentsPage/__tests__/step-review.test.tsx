@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { useCheckToolNames } from "@/controllers/API/queries/deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useFolderStore } from "@/stores/foldersStore";
 import StepReview from "../components/step-review";
@@ -8,6 +9,14 @@ import type { ConnectionItem } from "../types";
 jest.mock("../contexts/deployment-stepper-context", () => ({
   useDeploymentStepper: jest.fn(),
 }));
+
+jest.mock("@/controllers/API/queries/deployments", () => ({
+  useCheckToolNames: jest.fn(() => ({ data: undefined })),
+}));
+
+const mockedUseCheckToolNames = useCheckToolNames as jest.MockedFunction<
+  typeof useCheckToolNames
+>;
 
 jest.mock(
   "@/controllers/API/queries/flows/use-get-refresh-flows-query",
@@ -47,6 +56,28 @@ const mockedUseFolderStore = useFolderStore as jest.MockedFunction<
 // Helpers
 // ---------------------------------------------------------------------------
 
+function buildBaseStepper(overrides: Record<string, unknown> = {}) {
+  return {
+    isEditMode: false,
+    deploymentType: "agent",
+    deploymentName: "Agent One",
+    selectedLlm: "meta-llama/llama-3-3-70b-instruct",
+    connections: [],
+    selectedVersionByFlow: new Map([
+      ["flow-1", { versionId: "ver-1", versionTag: "v1" }],
+    ]),
+    toolNameByFlow: new Map<string, string>(),
+    setToolNameByFlow: jest.fn(),
+    attachedConnectionByFlow: new Map(),
+    removedFlowIds: new Set(),
+    selectedInstance: null,
+    preExistingFlowIds: new Set<string>(),
+    initialToolNameByFlow: new Map<string, string>(),
+    setHasToolNameErrors: jest.fn(),
+    ...overrides,
+  } as never;
+}
+
 function setupFolderStore() {
   mockedUseFolderStore.mockImplementation((selector) =>
     selector({ myCollectionId: "folder-1" } as never),
@@ -75,6 +106,10 @@ function defaultStepperValues(
     setToolNameByFlow: jest.fn(),
     attachedConnectionByFlow: new Map(),
     removedFlowIds: new Set<string>(),
+    selectedInstance: null,
+    preExistingFlowIds: new Set<string>(),
+    initialToolNameByFlow: new Map<string, string>(),
+    setHasToolNameErrors: jest.fn(),
     ...overrides,
   };
 }
@@ -97,33 +132,28 @@ function setup(
 }
 
 // ---------------------------------------------------------------------------
-// Original test
+// Tool name editing
 // ---------------------------------------------------------------------------
 
 describe("StepReview tool name editing", () => {
-  it("persists tool name edits when input loses focus", () => {
-    const setToolNameByFlow = jest.fn();
-
+  beforeEach(() => {
     mockedUseFolderStore.mockImplementation((selector) =>
       selector({ myCollectionId: "folder-1" } as never),
     );
     mockedUseGetRefreshFlowsQuery.mockReturnValue({
-      data: [{ id: "flow-1", name: "New Flow", folder_id: "folder-1" }],
+      data: [
+        { id: "flow-1", name: "New Flow", folder_id: "folder-1" },
+        { id: "flow-2", name: "Other Flow", folder_id: "folder-1" },
+      ],
     } as never);
-    mockedUseDeploymentStepper.mockReturnValue({
-      isEditMode: false,
-      deploymentType: "agent",
-      deploymentName: "Agent One",
-      selectedLlm: "meta-llama/llama-3-3-70b-instruct",
-      connections: [],
-      selectedVersionByFlow: new Map([
-        ["flow-1", { versionId: "ver-1", versionTag: "v1" }],
-      ]),
-      toolNameByFlow: new Map(),
-      setToolNameByFlow,
-      attachedConnectionByFlow: new Map(),
-      removedFlowIds: new Set(),
-    } as never);
+    mockedUseCheckToolNames.mockReturnValue({ data: undefined } as never);
+  });
+
+  it("persists tool name edits when input loses focus", () => {
+    const setToolNameByFlow = jest.fn();
+    mockedUseDeploymentStepper.mockReturnValue(
+      buildBaseStepper({ setToolNameByFlow }),
+    );
 
     render(<StepReview />);
 
@@ -613,4 +643,99 @@ describe("EditableToolName sub-component", () => {
     expect(updated.has("flow-1")).toBe(false);
   });
 
+});
+
+// ---------------------------------------------------------------------------
+// 7. Duplicate tool name detection (edit mode)
+// ---------------------------------------------------------------------------
+
+describe("StepReview duplicate tool name detection in edit mode", () => {
+  beforeEach(() => {
+    mockedUseFolderStore.mockImplementation((selector) =>
+      selector({ myCollectionId: "folder-1" } as never),
+    );
+    mockedUseGetRefreshFlowsQuery.mockReturnValue({
+      data: [
+        { id: "flow-1", name: "New Flow", folder_id: "folder-1" },
+        { id: "flow-2", name: "Other Flow", folder_id: "folder-1" },
+      ],
+    } as never);
+  });
+
+  it("shows provider duplicate error when pre-existing flow tool name is changed to an existing name", () => {
+    const setHasToolNameErrors = jest.fn();
+    mockedUseCheckToolNames.mockReturnValue({
+      data: { existing_names: ["taken_tool"] },
+    } as never);
+    mockedUseDeploymentStepper.mockReturnValue(
+      buildBaseStepper({
+        isEditMode: true,
+        preExistingFlowIds: new Set(["flow-1"]),
+        initialToolNameByFlow: new Map([["flow-1", "original_tool"]]),
+        toolNameByFlow: new Map([["flow-1", "taken_tool"]]),
+        selectedInstance: { id: "inst-1" },
+        setHasToolNameErrors,
+      }),
+    );
+
+    render(<StepReview />);
+
+    expect(
+      screen.getByText("Edit tool name (already exists in provider)"),
+    ).toBeInTheDocument();
+    expect(setHasToolNameErrors).toHaveBeenCalledWith(true);
+  });
+
+  it("does not show error when pre-existing flow tool name is unchanged", () => {
+    const setHasToolNameErrors = jest.fn();
+    mockedUseCheckToolNames.mockReturnValue({
+      data: { existing_names: ["original_tool"] },
+    } as never);
+    mockedUseDeploymentStepper.mockReturnValue(
+      buildBaseStepper({
+        isEditMode: true,
+        preExistingFlowIds: new Set(["flow-1"]),
+        initialToolNameByFlow: new Map([["flow-1", "original_tool"]]),
+        toolNameByFlow: new Map([["flow-1", "original_tool"]]),
+        selectedInstance: { id: "inst-1" },
+        setHasToolNameErrors,
+      }),
+    );
+
+    render(<StepReview />);
+
+    expect(
+      screen.queryByText("Edit tool name (already exists in provider)"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows batch duplicate error when two flows have the same renamed tool name", () => {
+    const setHasToolNameErrors = jest.fn();
+    mockedUseCheckToolNames.mockReturnValue({ data: undefined } as never);
+    mockedUseDeploymentStepper.mockReturnValue(
+      buildBaseStepper({
+        isEditMode: true,
+        selectedVersionByFlow: new Map([
+          ["flow-1", { versionId: "ver-1", versionTag: "v1" }],
+          ["flow-2", { versionId: "ver-2", versionTag: "v2" }],
+        ]),
+        preExistingFlowIds: new Set(["flow-1"]),
+        initialToolNameByFlow: new Map([["flow-1", "original_tool"]]),
+        toolNameByFlow: new Map([
+          ["flow-1", "same_name"],
+          ["flow-2", "same_name"],
+        ]),
+        selectedInstance: { id: "inst-1" },
+        setHasToolNameErrors,
+      }),
+    );
+
+    render(<StepReview />);
+
+    const errors = screen.getAllByText(
+      "Duplicate tool name within this deployment",
+    );
+    expect(errors.length).toBe(2);
+    expect(setHasToolNameErrors).toHaveBeenCalledWith(true);
+  });
 });

@@ -2,10 +2,6 @@ import { act, renderHook } from "@testing-library/react";
 import type { ConnectionItem } from "../../types";
 import { useConnectionPanelState } from "../use-connection-panel-state";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 const baseParams = () => ({
   connections: [] as ConnectionItem[],
   setConnections: jest.fn(),
@@ -29,11 +25,11 @@ const makeConnection = (
   ...overrides,
 });
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe("useConnectionPanelState", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   // -------------------------------------------------------------------------
   // handleAttachConnection
   // -------------------------------------------------------------------------
@@ -431,6 +427,41 @@ describe("useConnectionPanelState", () => {
       });
 
     });
+
+    it("tracks globalVar keys in the created connection", () => {
+      const setConnections = jest.fn();
+      const params = { ...baseParams(), setConnections };
+      const { result } = renderHook(() => useConnectionPanelState(params));
+
+      act(() => {
+        result.current.updateDetectedEnvVars(["API_KEY"]);
+      });
+      // Add a manual (non-global) row
+      act(() => {
+        result.current.handleAddEnvVar();
+      });
+      act(() => {
+        const manualId = result.current.envVars[1].id;
+        result.current.handleEnvVarChange(manualId, "key", "RAW_VAL");
+      });
+      act(() => {
+        result.current.setNewConnectionName("test-conn");
+      });
+      act(() => {
+        result.current.handleCreateConnection();
+      });
+
+      expect(setConnections).toHaveBeenCalled();
+      const updater = setConnections.mock.calls[0][0];
+      const newList = updater([]);
+      expect(newList).toHaveLength(1);
+
+      const conn = newList[0];
+      expect(conn.environmentVariables.API_KEY).toBe("API_KEY");
+      expect(conn.environmentVariables.RAW_VAL).toBe("");
+      expect(conn.globalVarKeys?.has("API_KEY")).toBe(true);
+      expect(conn.globalVarKeys?.has("RAW_VAL")).toBe(false);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -512,10 +543,7 @@ describe("useConnectionPanelState", () => {
 
       // First set some detected vars
       act(() => {
-        result.current.updateDetectedEnvVars([
-          { key: "VAR1" },
-          { key: "VAR2" },
-        ]);
+        result.current.updateDetectedEnvVars(["VAR1", "VAR2"]);
       });
       expect(result.current.detectedVarCount).toBe(2);
 
@@ -971,107 +999,63 @@ describe("useConnectionPanelState", () => {
   // updateDetectedEnvVars
   // -------------------------------------------------------------------------
   describe("updateDetectedEnvVars", () => {
-    it("sets detectedVarCount and envVars from input array", () => {
-      const params = baseParams();
-      const { result } = renderHook(() => useConnectionPanelState(params));
+    it("populates env var rows using each name as both key and global var value", () => {
+      const { result } = renderHook(() => useConnectionPanelState(baseParams()));
 
       act(() => {
-        result.current.updateDetectedEnvVars([
-          { key: "API_KEY", global_variable_name: "my_global" },
-          { key: "DB_URL" },
-        ]);
+        result.current.updateDetectedEnvVars(["OPENAI_API_KEY", "DB_PASS"]);
       });
 
-      expect(result.current.detectedVarCount).toBe(2);
-      expect(result.current.envVars).toHaveLength(2);
+      const vars = result.current.envVars;
+      expect(vars).toHaveLength(2);
 
-      expect(result.current.envVars[0].key).toBe("API_KEY");
-      expect(result.current.envVars[0].value).toBe("my_global");
-      expect(result.current.envVars[0].globalVar).toBe(true);
+      expect(vars[0].key).toBe("OPENAI_API_KEY");
+      expect(vars[0].value).toBe("OPENAI_API_KEY");
+      expect(vars[0].globalVar).toBe(true);
 
-      expect(result.current.envVars[1].key).toBe("DB_URL");
-      expect(result.current.envVars[1].value).toBe("");
-      expect(result.current.envVars[1].globalVar).toBe(false);
+      expect(vars[1].key).toBe("DB_PASS");
+      expect(vars[1].value).toBe("DB_PASS");
+      expect(vars[1].globalVar).toBe(true);
     });
 
-    it("handles null global_variable_name as empty value with globalVar false", () => {
-      const params = baseParams();
-      const { result } = renderHook(() => useConnectionPanelState(params));
+    it("sets detectedVarCount to the number of detected variables", () => {
+      const { result } = renderHook(() => useConnectionPanelState(baseParams()));
 
       act(() => {
-        result.current.updateDetectedEnvVars([
-          { key: "VAR", global_variable_name: null },
-        ]);
+        result.current.updateDetectedEnvVars(["A", "B", "C"]);
       });
 
-      expect(result.current.envVars[0].value).toBe("");
-      expect(result.current.envVars[0].globalVar).toBe(false);
+      expect(result.current.detectedVarCount).toBe(3);
     });
 
-    it("resets to single empty row when empty array is passed", () => {
-      const params = baseParams();
-      const { result } = renderHook(() => useConnectionPanelState(params));
+    it("resets to a single empty row when given an empty array", () => {
+      const { result } = renderHook(() => useConnectionPanelState(baseParams()));
 
-      // First set some vars
       act(() => {
-        result.current.updateDetectedEnvVars([
-          { key: "A" },
-          { key: "B" },
-        ]);
+        result.current.updateDetectedEnvVars(["X"]);
       });
-      expect(result.current.envVars).toHaveLength(2);
-      expect(result.current.detectedVarCount).toBe(2);
+      expect(result.current.envVars).toHaveLength(1);
+      expect(result.current.detectedVarCount).toBe(1);
 
-      // Now pass empty array
       act(() => {
         result.current.updateDetectedEnvVars([]);
       });
 
-      expect(result.current.detectedVarCount).toBe(0);
       expect(result.current.envVars).toHaveLength(1);
       expect(result.current.envVars[0].key).toBe("");
       expect(result.current.envVars[0].value).toBe("");
+      expect(result.current.detectedVarCount).toBe(0);
     });
 
-    it("sets globalVar true only when global_variable_name is a non-empty string", () => {
-      const params = baseParams();
-      const { result } = renderHook(() => useConnectionPanelState(params));
+    it("assigns unique ids to each generated env var row", () => {
+      const { result } = renderHook(() => useConnectionPanelState(baseParams()));
 
       act(() => {
-        result.current.updateDetectedEnvVars([
-          { key: "A", global_variable_name: "some_global" },
-          { key: "B", global_variable_name: "" },
-          { key: "C", global_variable_name: null },
-          { key: "D" },
-        ]);
+        result.current.updateDetectedEnvVars(["A", "B"]);
       });
 
-      expect(result.current.envVars[0].globalVar).toBe(true);
-      // Empty string is falsy, so Boolean("") === false
-      expect(result.current.envVars[1].globalVar).toBe(false);
-      expect(result.current.envVars[2].globalVar).toBe(false);
-      expect(result.current.envVars[3].globalVar).toBe(false);
-    });
-
-    it("replaces all existing envVars when called multiple times", () => {
-      const params = baseParams();
-      const { result } = renderHook(() => useConnectionPanelState(params));
-
-      act(() => {
-        result.current.updateDetectedEnvVars([{ key: "FIRST" }]);
-      });
-      expect(result.current.envVars).toHaveLength(1);
-      expect(result.current.envVars[0].key).toBe("FIRST");
-
-      act(() => {
-        result.current.updateDetectedEnvVars([
-          { key: "SECOND_A" },
-          { key: "SECOND_B" },
-        ]);
-      });
-      expect(result.current.envVars).toHaveLength(2);
-      expect(result.current.envVars[0].key).toBe("SECOND_A");
-      expect(result.current.envVars[1].key).toBe("SECOND_B");
+      const ids = result.current.envVars.map((v) => v.id);
+      expect(new Set(ids).size).toBe(2);
     });
   });
 });

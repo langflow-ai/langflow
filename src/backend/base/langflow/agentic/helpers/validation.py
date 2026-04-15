@@ -10,6 +10,7 @@ import ast
 import re
 
 from lfx.custom.validate import extract_class_name
+from pydantic import ValidationError
 
 from langflow.agentic.api.schemas import ValidationResult
 
@@ -124,28 +125,109 @@ def _extract_output_methods(tree: ast.Module, class_name: str) -> list[str]:
     return methods
 
 
-def validate_component_runtime(code: str, user_id: str | None = None) -> str | None:
-    """Try to instantiate the component at runtime to catch import/class errors.
+def _format_validation_error(exc: ValidationError) -> str:
+    """Return a compact single-line message for a pydantic ValidationError.
 
-    Returns None if validation passes, or an error message string if it fails.
-    This catches issues that static AST validation cannot detect, such as:
-    - Wrong import paths (e.g., 'from lfx.base import Component' instead of 'from lfx.custom import Component')
+    The retry loop in assistant_service feeds this string into
+    extract_friendly_error, which pattern-matches on phrases like
+    ``"input should be a valid"`` to route the error to a targeted corrective
+    prompt. Pydantic's first error line is just ``"1 validation error for X"``
+    — the actionable detail lives in subsequent lines — so we collapse the
+    full error into one line to keep the downstream patterns matching.
+    """
+    errors = exc.errors()
+    if errors:
+        parts = []
+        for err in errors[:3]:
+            loc = ".".join(str(x) for x in err.get("loc", ()))
+            msg = err.get("msg", "")
+            parts.append(f"{loc}: {msg}" if loc else msg)
+        return f"ValidationError: {'; '.join(parts)}"
+
+    text = str(exc).replace("\n", " ").strip()
+    return f"ValidationError: {text}" if text else "ValidationError"
+
+
+def _format_root_error(exc: BaseException) -> str:
+    """Collapse an exception chain to a compact, single-line error string."""
+    root = exc.__cause__ or exc
+    if isinstance(root, ValidationError):
+        return _format_validation_error(root)
+
+    error_type = type(root).__name__
+    error_msg = str(root).split("\n")[0].strip() if str(root) else str(exc).split("\n")[0].strip()
+    return f"{error_type}: {error_msg}" if error_msg else error_type
+
+
+async def _execute_output_methods_for_validation(cc_instance) -> str | None:
+    """Invoke every output method and surface pydantic-schema failures only.
+
+    Executes ``cc_instance._build_results()`` — which calls every output method
+    bound to the component — and catches ``pydantic.ValidationError`` (raised
+    when a method constructs a schema object with the wrong shape, e.g.
+    ``Data(data=[list])`` or ``Message(sender=<not-a-string>)``).
+
+    Non-schema runtime errors (network failures, missing inputs, auth problems)
+    are **intentionally swallowed**: a correct component can still fail
+    execution in the validation sandbox for environmental reasons, and we must
+    not mark it as broken on that basis. The retry loop in assistant_service
+    consumes only the schema errors this helper returns.
+
+    Note: uses ``_build_results`` directly instead of the public ``build_results``
+    because the latter emits events via ``send_error`` and relies on a
+    tracing/event manager that the validation sandbox does not wire up.
+    """
+    try:
+        cc_instance.set_attributes({})
+    except ValidationError as exc:
+        return _format_root_error(exc)
+    except (AttributeError, TypeError, ValueError):
+        return None
+
+    try:
+        await cc_instance._build_results()  # noqa: SLF001 — sandbox bypass of send_error/tracing
+    except ValidationError as exc:
+        return _format_validation_error(exc)
+    except Exception as exc:  # noqa: BLE001 — see sandbox rationale in docstring
+        cause = exc.__cause__ or exc.__context__
+        if isinstance(cause, ValidationError):
+            return _format_validation_error(cause)
+        return None
+    return None
+
+
+async def validate_component_runtime(code: str, user_id: str | None = None) -> str | None:
+    """Try to instantiate and execute the component at runtime.
+
+    Returns None if validation passes, or a compact error message string if
+    it fails. Catches issues that static AST validation cannot detect:
+
+    - Wrong import paths (e.g., ``from lfx.base import Component`` instead of
+      ``from lfx.custom import Component``)
     - Missing dependencies
     - Invalid class hierarchy
+    - **Pydantic-schema bugs raised while running the output methods**
+      (e.g. ``Data(data=[list])`` when a dict is expected, ``Message`` built
+      with the wrong field types, ``DataFrame`` with malformed rows, or any
+      other pydantic model the component tries to construct)
+
+    The execution step is a sandbox: non-schema runtime errors (network,
+    filesystem, auth, missing inputs) are swallowed because a correctly
+    generated component can legitimately fail in the sandbox for environmental
+    reasons. Only pydantic-schema errors — which are almost always LLM-coding
+    mistakes — are surfaced so the retry loop can recover before the component
+    is handed to the user.
     """
     try:
         from lfx.custom.custom_component.component import Component as ComponentClass
         from lfx.custom.utils import build_custom_component_template
 
         component_instance = ComponentClass(_code=code)
-        build_custom_component_template(component_instance, user_id=user_id)
-    except Exception as e:  # noqa: BLE001
-        # Extract just the root cause, not the full traceback
-        root = e.__cause__ or e
-        error_type = type(root).__name__
-        error_msg = str(root).split("\n")[0].strip() if str(root) else str(e).split("\n")[0].strip()
-        return f"{error_type}: {error_msg}" if error_msg else error_type
-    return None
+        _, cc_instance = build_custom_component_template(component_instance, user_id=user_id)
+    except Exception as e:  # noqa: BLE001 — compact one-line error for the retry prompt
+        return _format_root_error(e)
+
+    return await _execute_output_methods_for_validation(cc_instance)
 
 
 def validate_component_code(code: str) -> ValidationResult:

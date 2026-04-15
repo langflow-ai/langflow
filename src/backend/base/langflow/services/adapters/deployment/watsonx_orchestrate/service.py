@@ -77,6 +77,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution im
     create_agent_run,
     get_agent_run,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.models import (
+    fetch_models_adapter,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
     retry_create,
     rollback_created_resources,
@@ -105,7 +108,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentLlmListResultData,
     WatsonxDeploymentUpdatePayload,
     WatsonxDeploymentUpdateResultData,
+    WatsonxModelOut,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     extract_agent_tool_ids,
@@ -123,8 +128,6 @@ if TYPE_CHECKING:
 
     from lfx.services.settings.service import SettingsService
     from sqlalchemy.ext.asyncio import AsyncSession
-
-    from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
 
 class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
@@ -295,8 +298,18 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> DeploymentListLlmsResult:
         """List provider-available LLM model names."""
         client_manager = await self._get_provider_clients(user_id=user_id, db=db)
+
+        # hardcode known default models to the top of the list
+        # (these are not included in wxO's API response)
+        raw_models = [
+            WatsonxModelOut(model_name="groq/openai/gpt-oss-120b"),
+            WatsonxModelOut(model_name="bedrock/openai.gpt-oss-120b-1:0"),
+        ]
+        hardcoded_names = {m.model_name for m in raw_models}
+
         try:
-            raw_models = await asyncio.to_thread(client_manager.get_models_raw)
+            api_models = await asyncio.to_thread(fetch_models_adapter, client_manager)
+            raw_models.extend(m for m in api_models if m["model_name"] not in hardcoded_names)
             parsed_models: WatsonxDeploymentLlmListResultData = self._parse_provider_payload(
                 slot=self.payload_schemas.deployment_llm_list_result,
                 slot_name="deployment_llm_list_result",
@@ -701,17 +714,21 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> SnapshotListResult:
         """List snapshots visible to this adapter.
 
-        Supports three modes:
+        Supports four modes:
         - **deployment-scoped**: requires exactly one ``deployment_id`` in params;
           returns tools bound to that agent.
         - **snapshot-ids-only**: when ``snapshot_ids`` is provided and
           ``deployment_ids`` is empty/None, fetches tools directly by ID to
           verify which ones still exist in the provider.
+        - **snapshot-names**: when ``snapshot_names`` is provided and
+          ``deployment_ids`` is empty/None, fetches tools by name to check
+          which ones exist in the provider tenant.
         - **tenant-scoped**: when neither deployment_ids nor snapshot_ids are
           provided, returns all draft tools visible in the provider tenant.
         """
         has_deployment_ids = params and params.deployment_ids
         has_snapshot_ids = params and params.snapshot_ids
+        has_snapshot_names = params and params.snapshot_names
 
         if has_snapshot_ids and has_deployment_ids:
             logger.warning(
@@ -723,6 +740,30 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         if has_snapshot_ids and not has_deployment_ids:
             return await verify_tools_by_ids(clients, params.snapshot_ids)  # type: ignore[union-attr]
+        if has_snapshot_names and not has_deployment_ids:
+            try:
+                raw_tools = await asyncio.to_thread(clients.tool.get_drafts_by_names, params.snapshot_names)  # type: ignore[union-attr]
+            except Exception as exc:  # noqa: BLE001
+                raise_as_deployment_error(
+                    exc,
+                    error_prefix=ErrorPrefix.LIST,
+                    log_msg="Unexpected error while listing wxO snapshots by name",
+                )
+            snapshots = [
+                SnapshotItem(
+                    id=tool["id"],
+                    name=tool.get("name") or tool["id"],
+                    provider_data=self._validate_snapshot_item_provider_data(
+                        {"connections": extract_langflow_connections_binding(tool)}
+                    ),
+                )
+                for tool in (raw_tools or [])
+                if isinstance(tool, dict) and tool.get("id")
+            ]
+            return SnapshotListResult(
+                snapshots=snapshots,
+                provider_result=self.payload_schemas.snapshot_list_result.parse({}).model_dump(exclude_none=True),
+            )
         if not has_deployment_ids:
             try:
                 raw_tools = await asyncio.to_thread(clients.get_tools_raw)
@@ -830,7 +871,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         user_id: IdLike,  # noqa: ARG002
         payload: VerifyCredentials,
     ) -> VerifyCredentialsResult:
-        """Verify WXO credentials by obtaining a token from the provider."""
+        """Verify WXO credentials for the target instance.
+
+        Obtains an IAM/MCSP token, then calls the wxO models listing API for the
+        configured instance URL. Token-only checks are insufficient because a
+        valid API key may authenticate while still lacking access to the tenant
+        represented by the instance URL.
+        """
         verify_slot = self.payload_schemas.verify_credentials
         if verify_slot is None:
             msg = "Required slot 'verify_credentials' is not configured."
@@ -872,6 +919,31 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             )
             raise_deployment_error_from_status(
                 status_code=exc.status_code,
+                detail="Credential verification failed.",
+                message_prefix="Credential verification",
+                cause=None,
+            )
+        except Exception as exc:
+            raise DeploymentError(
+                message="Credential verification failed unexpectedly.",
+                error_code="deployment_error",
+                cause=exc,
+            ) from exc
+
+        def _probe_instance_models() -> None:
+            wxo_client = WxOClient(instance_url=payload.base_url, authenticator=authenticator)
+            fetch_models_adapter(wxo_client)
+
+        try:
+            await asyncio.to_thread(_probe_instance_models)
+        except ClientAPIException as exc:
+            status_code = exc.response.status_code if exc.response is not None else None
+            logger.error(  # noqa: TRY400
+                "Credential verification failed: wxO instance probe rejected request (status=%s)",
+                status_code,
+            )
+            raise_deployment_error_from_status(
+                status_code=status_code,
                 detail="Credential verification failed.",
                 message_prefix="Credential verification",
                 cause=None,

@@ -50,13 +50,26 @@ describe("Rendering", () => {
     renderModal();
     expect(screen.getByText("Add Environment")).toBeInTheDocument();
     expect(
-      screen.getByText(/Configure your watsonx Orchestrate credentials/),
+      screen.getByText(
+        (_, el) =>
+          el?.textContent?.startsWith(
+            "Configure your watsonx Orchestrate credentials below.",
+          ) ?? false,
+      ),
     ).toBeInTheDocument();
   });
 
   it("shows watsonx Orchestrate provider badge", () => {
     renderModal();
-    expect(screen.getByText("watsonx Orchestrate")).toBeInTheDocument();
+    expect(
+      screen.getByText((content, el) => {
+        return (
+          content === "watsonx Orchestrate" &&
+          el?.tagName === "SPAN" &&
+          el?.className.includes("font-medium")
+        );
+      }),
+    ).toBeInTheDocument();
   });
 
   it("renders signup and credentials help links", () => {
