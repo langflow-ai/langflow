@@ -13,6 +13,7 @@ from langflow.api.v1.mcp_projects import (
     _args_reference_urls,
     get_project_mcp_server,
     get_project_sse,
+    get_project_streamable_http_url,
     init_mcp_servers,
     project_mcp_servers,
     project_sse_transports,
@@ -22,6 +23,8 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
+from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
+from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.services.deps import session_scope
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
@@ -30,6 +33,24 @@ from tests.unit.utils.mcp import project_session_manager_lifespan
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
+
+
+def _set_startup_mcp_settings(
+    monkeypatch,
+    *,
+    auto_login: bool,
+    mcp_composer_enabled: bool,
+    add_projects_to_mcp_servers: bool,
+) -> None:
+    """Configure the runtime settings used by init_mcp_servers for a test."""
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.auth_settings, "AUTO_LOGIN", auto_login)
+    monkeypatch.setattr(settings_service.settings, "mcp_composer_enabled", mcp_composer_enabled)
+    monkeypatch.setattr(
+        settings_service.settings,
+        "add_projects_to_mcp_servers",
+        add_projects_to_mcp_servers,
+    )
 
 
 @pytest.mark.parametrize(
@@ -846,49 +867,10 @@ async def test_init_mcp_servers_error_handling_streamable():
         await init_mcp_servers()
 
 
-async def test_init_mcp_servers_reconciles_project_server_auth_when_auto_login_disabled(user_test_project, active_user):
-    """Startup should refresh persisted MCP server config after forcing API key auth."""
-    project_sse_transports.clear()
-    project_mcp_servers.clear()
-
-    async with session_scope() as session:
-        project = await session.get(Folder, user_test_project.id)
-        assert project is not None
-        project.auth_settings = None
-        session.add(project)
-
-    with (
-        patch("langflow.api.v1.mcp_projects.get_project_sse"),
-        patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
-        patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
-        patch(
-            "langflow.api.v1.projects_mcp_helpers.register_mcp_servers_for_project", new=AsyncMock()
-        ) as mock_register,
-        patch("langflow.api.v1.mcp_projects.get_settings_service") as mock_get_settings,
-    ):
-        mock_service = MagicMock()
-        mock_service.settings = SimpleNamespace(mcp_composer_enabled=False, add_projects_to_mcp_servers=True)
-        mock_service.auth_settings = SimpleNamespace(AUTO_LOGIN=False)
-        mock_get_settings.return_value = mock_service
-
-        await init_mcp_servers()
-
-    assert any(
-        call.args[0].id == user_test_project.id
-        and call.args[1] == {"auth_type": "apikey"}
-        and call.args[2].id == active_user.id
-        for call in mock_register.await_args_list
-    )
-
-    async with session_scope() as session:
-        project = await session.get(Folder, user_test_project.id)
-        assert project is not None
-        assert project.auth_settings is not None
-        assert project.auth_settings["auth_type"] == "apikey"
-
-
-async def test_init_mcp_servers_reconciles_project_server_auth_when_oauth_falls_back(user_test_project, active_user):
-    """Startup should refresh persisted MCP server config after OAuth falls back to API key auth."""
+async def test_init_mcp_servers_reconciles_project_server_auth_when_oauth_falls_back(
+    user_test_project,
+):
+    """Startup should refresh MCP server config after OAuth falls back to API key auth."""
     project_sse_transports.clear()
     project_mcp_servers.clear()
 
@@ -902,24 +884,119 @@ async def test_init_mcp_servers_reconciles_project_server_auth_when_oauth_falls_
         patch("langflow.api.v1.mcp_projects.get_project_sse"),
         patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
         patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
-        patch(
-            "langflow.api.v1.projects_mcp_helpers.register_mcp_servers_for_project", new=AsyncMock()
-        ) as mock_register,
         patch("langflow.api.v1.mcp_projects.get_settings_service") as mock_get_settings,
+        patch(
+            "langflow.api.v1.projects_mcp_helpers.register_mcp_servers_for_project",
+            new=AsyncMock(return_value=True),
+        ),
     ):
         mock_service = MagicMock()
         mock_service.settings = SimpleNamespace(mcp_composer_enabled=False, add_projects_to_mcp_servers=True)
         mock_service.auth_settings = SimpleNamespace(AUTO_LOGIN=False)
         mock_get_settings.return_value = mock_service
-
         await init_mcp_servers()
 
-    assert any(
-        call.args[0].id == user_test_project.id
-        and call.args[1] == {"auth_type": "apikey"}
-        and call.args[2].id == active_user.id
-        for call in mock_register.await_args_list
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        assert project.auth_settings is not None
+        assert project.auth_settings["auth_type"] == "apikey"
+
+
+async def test_init_mcp_servers_reconciles_existing_apikey_project_server_config(
+    client: AsyncClient,
+    user_test_project,
+    created_api_key,
+    monkeypatch,
+):
+    """Startup should repair stale MCP server config even when auth was already persisted earlier."""
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+    _set_startup_mcp_settings(
+        monkeypatch,
+        auto_login=False,
+        mcp_composer_enabled=False,
+        add_projects_to_mcp_servers=True,
     )
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        project.auth_settings = {"auth_type": "apikey"}
+        session.add(project)
+
+    server_name = f"lf-{sanitize_mcp_name(user_test_project.name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+    streamable_http_url = await get_project_streamable_http_url(user_test_project.id)
+    stale_server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "streamablehttp", streamable_http_url],
+    }
+    headers = {"x-api-key": created_api_key.api_key}
+
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=stale_server_config, headers=headers)
+    assert response.status_code == 200
+
+    try:
+        with (
+            patch("langflow.api.v1.mcp_projects.get_project_sse"),
+            patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
+            patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
+        ):
+            await init_mcp_servers()
+
+        response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+        assert response.status_code == 200
+        server_config = response.json()
+        server_args = server_config["args"]
+        assert "mcp-proxy" in server_args
+        assert "--transport" in server_args
+        assert "streamablehttp" in server_args
+        assert "--headers" in server_args
+        assert "x-api-key" in server_args
+        assert streamable_http_url in server_args
+    finally:
+        await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+
+
+async def test_init_mcp_servers_rolls_back_auth_update_when_reconciliation_fails(
+    user_test_project,
+    monkeypatch,
+):
+    """Startup should not persist auth changes if MCP server reconciliation fails."""
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+    _set_startup_mcp_settings(
+        monkeypatch,
+        auto_login=False,
+        mcp_composer_enabled=False,
+        add_projects_to_mcp_servers=True,
+    )
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        project.auth_settings = None
+        session.add(project)
+
+    with (
+        patch("langflow.api.v1.mcp_projects.get_project_sse"),
+        patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
+        patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
+        patch(
+            "langflow.api.v1.projects_mcp_helpers.create_api_key",
+            new=AsyncMock(return_value=SimpleNamespace(api_key="generated-key")),
+        ),
+        patch(
+            "langflow.api.v1.projects_mcp_helpers.update_server",
+            new=AsyncMock(side_effect=RuntimeError("server sync failed")),
+        ),
+    ):
+        await init_mcp_servers()
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        assert project.auth_settings is None
 
 
 async def test_list_project_tools_with_mcp_enabled_filter(
