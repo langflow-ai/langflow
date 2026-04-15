@@ -202,7 +202,7 @@ async def get_note_translations(
     with a matching translation key are included; nodes without translations
     are omitted so the caller can leave them unchanged.
     """
-    from langflow.utils.i18n import _safe_flow_key, translate
+    from langflow.utils.i18n import translate
 
     flow = await session.get(Flow, flow_id)
     if not flow or not flow.data:
@@ -211,19 +211,13 @@ async def get_note_translations(
     locale = getattr(request.state, "locale", "en")
     nodes = flow.data.get("nodes", [])
     result: dict[str, str] = {}
-    note_index = 0
     for node in nodes:
         if node.get("type") == "noteNode":
-            node_id = node.get("id")
-            # Prefer stamped i18n_key, fall back to positional recompute
             i18n_key = node.get("data", {}).get("node", {}).get("i18n_key")
-            if not i18n_key:
-                flow_key = _safe_flow_key(flow.name or "")
-                i18n_key = f"template_notes.{flow_key}.{note_index}"
-            translated = translate(i18n_key, locale, "")
-            if translated:
-                result[node_id] = translated
-            note_index += 1
+            if i18n_key:
+                translated = translate(i18n_key, locale, "")
+                if translated:
+                    result[node.get("id")] = translated
     return result
 
 
@@ -532,13 +526,17 @@ async def read_basic_examples(
     locale = getattr(request.state, "locale", "en")
     translated = translate_starter_flows(cached_flow_reads, locale)
 
-    # Translate note node descriptions in each flow
+    # Translate note node descriptions in each flow.
+    # Use name_key (the original English name set by translate_starter_flows) so that
+    # translate_flow_notes can resolve the correct template_notes.* key even when the
+    # flow name has already been translated into the requested locale.
     result = []
     for flow in translated:
         flow_copy = flow.model_copy()
         if flow_copy.data and isinstance(flow_copy.data, dict):
             nodes = flow_copy.data.get("nodes", [])
-            translated_nodes = translate_flow_notes(nodes, flow_copy.name or "", locale)
+            original_name = getattr(flow_copy, "name_key", None) or flow_copy.name or ""
+            translated_nodes = translate_flow_notes(nodes, original_name, locale)
             flow_copy.data = {
                 **flow_copy.data,
                 "nodes": translated_nodes,

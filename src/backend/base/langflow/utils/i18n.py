@@ -85,32 +85,14 @@ def translate_starter_flows(flow_reads: list, locale: str) -> list:
     return result
 
 
-def stamp_note_keys(data: dict, flow_name: str) -> dict:
-    """Stamp i18n_key onto each noteNode in flow data if keys exist in en.json.
-
-    Only stamps keys for starter templates (where template_notes.* keys exist).
-    User-created flows are unaffected.
-    """
-    if not _translations:
-        _load_translations()
-
-    flow_key = _safe_flow_key(flow_name)
-    nodes = data.get("nodes", [])
-    note_index = 0
-    for node in nodes:
-        if node.get("type") == "noteNode":
-            key = f"template_notes.{flow_key}.{note_index}"
-            if translate(key, "en", "") != "":
-                node.setdefault("data", {}).setdefault("node", {})["i18n_key"] = key
-            note_index += 1
-    return data
-
 
 def translate_flow_notes(nodes: list[dict], flow_name: str, locale: str) -> list[dict]:
     """Return a copy of nodes with note node descriptions translated for locale.
 
     For each noteNode, looks up template_notes.{flow_key}.{index} and substitutes
     the translated markdown. Falls back to the original description if no translation exists.
+    Also stamps i18n_key onto each noteNode so the key travels with the node when
+    a user copies the template — at this point flow_name is still the original English name.
     Never mutates the input list.
     """
     import copy as _copy
@@ -125,6 +107,7 @@ def translate_flow_notes(nodes: list[dict], flow_name: str, locale: str) -> list
             key = f"template_notes.{flow_key}.{note_index}"
             translated = translate(key, locale, description)
             node["data"]["node"]["description"] = translated
+            node["data"]["node"]["i18n_key"] = key
             note_index += 1
         result.append(node)
     return result
