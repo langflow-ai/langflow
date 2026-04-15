@@ -443,6 +443,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "MariTalk", name: "maritalk", icon: "Maritalk" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
   { display_name: "Memories", name: "memories", icon: "Cpu" },
+  { display_name: "Mengram", name: "mengram", icon: "Mengram" },
   { display_name: "Milvus", name: "milvus", icon: "Milvus" },
   { display_name: "MistralAI", name: "mistral", icon: "MistralAI" },
   { display_name: "MongoDB", name: "mongodb", icon: "MongoDB" },

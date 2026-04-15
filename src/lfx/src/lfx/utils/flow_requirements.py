@@ -61,6 +61,7 @@ IMPORT_NAME_OVERRIDES: dict[str, str] = {
     "cv2": "opencv-python",
     "googleapiclient": "google-api-python-client",
     "mem0": "mem0ai",
+    "mengram": "mengram-ai",
     "sklearn": "scikit-learn",
     "attr": "attrs",
     "gi": "PyGObject",

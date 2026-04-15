@@ -62,6 +62,7 @@ import { LiteLLMIcon } from "@/icons/LiteLLM";
 import { LMStudioIcon } from "@/icons/LMStudio";
 import { MaritalkIcon } from "@/icons/Maritalk";
 import { Mem0 } from "@/icons/Mem0";
+import { MengramIcon } from "@/icons/Mengram";
 import { MetaIcon } from "@/icons/Meta";
 import { MidjourneyIcon } from "@/icons/Midjorney";
 import { MilvusIcon } from "@/icons/Milvus";
@@ -186,6 +187,7 @@ export const eagerIconsMapping = {
   LMStudio: LMStudioIcon,
   Maritalk: MaritalkIcon,
   Mem0: Mem0,
+  Mengram: MengramIcon,
   Meta: MetaIcon,
   Midjourney: MidjourneyIcon,
   Milvus: MilvusIcon,
