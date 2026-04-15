@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
 """Script to inspect ChromaDB database contents.
+
 Displays statistics and document values (truncated to 200 chars).
 
 Usage:
@@ -68,7 +68,10 @@ def inspect_chroma_db(db_path: str) -> None:
 
             # Get all documents (with limit for safety)
             max_docs = min(count, 100)  # Limit to 100 docs for display
-            results = collection.get(limit=max_docs, include=["documents", "metadatas", "embeddings"])
+            results = collection.get(
+                limit=max_docs,
+                include=["documents", "metadatas", "embeddings"]
+            )
 
             print(f"\nShowing {len(results['ids'])} of {count} documents:")
             print("-" * 80)
@@ -79,21 +82,21 @@ def inspect_chroma_db(db_path: str) -> None:
                 print(f"    ID: {doc_id}")
 
                 # Document text
-                if results["documents"] and i - 1 < len(results["documents"]):
-                    doc_text = results["documents"][i - 1]
+                if results["documents"] and i-1 < len(results["documents"]):
+                    doc_text = results["documents"][i-1]
                     if doc_text:
                         truncated = truncate_text(doc_text, 2000)
                         print(f"    Text: {truncated}")
 
                 # Metadata
-                if results["metadatas"] and i - 1 < len(results["metadatas"]):
-                    doc_metadata = results["metadatas"][i - 1]
+                if results["metadatas"] and i-1 < len(results["metadatas"]):
+                    doc_metadata = results["metadatas"][i-1]
                     if doc_metadata:
                         print(f"    Metadata: {doc_metadata}")
 
                 # Embedding info (just dimensions, not full vector)
-                if results["embeddings"] is not None and i - 1 < len(results["embeddings"]):
-                    embedding = results["embeddings"][i - 1]
+                if results["embeddings"] is not None and i-1 < len(results["embeddings"]):
+                    embedding = results["embeddings"][i-1]
                     if embedding is not None:
                         print(f"    Embedding: {len(embedding)} dimensions")
 
@@ -103,17 +106,17 @@ def inspect_chroma_db(db_path: str) -> None:
         print("\n" + "=" * 80)
         print("Inspection complete!")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Error inspecting database: {e}")
         import traceback
-
         traceback.print_exc()
         sys.exit(1)
 
 
 def main():
     """Main entry point."""
-    if len(sys.argv) != 2:
+    _expected_argc = 2
+    if len(sys.argv) != _expected_argc:
         print("Usage: python scripts/inspect_chroma_db.py /path/to/chroma/db")
         sys.exit(1)
 

@@ -23,42 +23,41 @@ class OpenDsStarAgentRunnable(Runnable):
 
     def invoke(
         self,
-        input: dict[str, Any] | str,
+        input_value: dict[str, Any] | str,
         config: RunnableConfig | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> dict[str, Any]:
         """Invoke the underlying graph synchronously."""
-        if isinstance(input, dict) and "input" in input:
-            query = input["input"]
-        elif isinstance(input, str):
-            query = input
+        if isinstance(input_value, dict) and "input" in input_value:
+            query = input_value["input"]
+        elif isinstance(input_value, str):
+            query = input_value
         else:
-            query = str(input)
+            query = str(input_value)
 
         recursion_limit = max(100, self.agent.max_steps * 10)
         merged_config = {"recursion_limit": recursion_limit}
         if config:
             merged_config.update(config)
 
-        result = self.agent._graph.graph.invoke(
+        return self.agent._graph.graph.invoke(  # noqa: SLF001
             {
                 "user_query": query,
                 "max_steps": self.agent.max_steps,
                 "code_mode": self.agent.code_mode,
                 "output_max_length": self.agent.output_max_length,
                 "logs_max_length": self.agent.logs_max_length,
-                "tools": self.agent._graph.tools,
+                "tools": self.agent._graph.tools,  # noqa: SLF001
                 "max_debug_tries": self.agent.max_debug_tries,
             },
             config=merged_config,
         )
-        return result
 
     async def astream(
         self,
-        input: dict[str, Any] | str,
+        input_value: dict[str, Any] | str,
         config: RunnableConfig | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> AsyncIterator[dict[str, Any]]:
         """Async stream the agent output node by node.
 
@@ -70,26 +69,26 @@ class OpenDsStarAgentRunnable(Runnable):
         import asyncio
 
         # Extract the input message
-        if isinstance(input, dict) and "input" in input:
-            query = input["input"]
-        elif isinstance(input, str):
-            query = input
+        if isinstance(input_value, dict) and "input" in input_value:
+            query = input_value["input"]
+        elif isinstance(input_value, str):
+            query = input_value
         else:
-            query = str(input)
+            query = str(input_value)
 
         # Create the stream generator
         recursion_limit = max(100, self.agent.max_steps * 10)
         merged_config = {"recursion_limit": recursion_limit}
         if config:
             merged_config.update(config)
-        stream_gen: Iterator[dict[str, Any]] = self.agent._graph.graph.stream(
+        stream_gen: Iterator[dict[str, Any]] = self.agent._graph.graph.stream(  # noqa: SLF001
             {
                 "user_query": query,
                 "max_steps": self.agent.max_steps,
                 "code_mode": self.agent.code_mode,
                 "output_max_length": self.agent.output_max_length,
                 "logs_max_length": self.agent.logs_max_length,
-                "tools": self.agent._graph.tools,
+                "tools": self.agent._graph.tools,  # noqa: SLF001
                 "max_debug_tries": self.agent.max_debug_tries,
             },
             config=merged_config,
@@ -111,14 +110,14 @@ class OpenDsStarAgentRunnable(Runnable):
                 break
 
         # After streaming all nodes, yield the final result
-        result = await self.ainvoke(input, config)
+        result = await self.ainvoke(input_value, config)
         yield {"chunk": result, "type": "final"}
 
     async def astream_events(
         self,
-        input: dict[str, Any] | str,
+        input_value: dict[str, Any] | str,
         config: RunnableConfig | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> AsyncIterator[dict[str, Any]]:
         """Async stream events in LangChain format for Langflow compatibility.
 
@@ -126,12 +125,12 @@ class OpenDsStarAgentRunnable(Runnable):
         so it works with Langflow's process_agent_events().
         """
         # Extract the input message
-        if isinstance(input, dict) and "input" in input:
-            query = input["input"]
-        elif isinstance(input, str):
-            query = input
+        if isinstance(input_value, dict) and "input" in input_value:
+            query = input_value["input"]
+        elif isinstance(input_value, str):
+            query = input_value
         else:
-            query = str(input)
+            query = str(input_value)
 
         # Generate a run_id for this execution
         run_id = str(uuid.uuid4())
@@ -177,14 +176,14 @@ class OpenDsStarAgentRunnable(Runnable):
         # Stream from the underlying graph using "values" mode to get full state after each node
         def _stream_graph():
             """Synchronous generator that streams from the graph."""
-            return self.agent._graph.graph.stream(
+            return self.agent._graph.graph.stream(  # noqa: SLF001
                 {
                     "user_query": query,
                     "max_steps": self.agent.max_steps,
                     "code_mode": self.agent.code_mode,
                     "output_max_length": self.agent.output_max_length,
                     "logs_max_length": self.agent.logs_max_length,
-                    "tools": self.agent._graph.tools,
+                    "tools": self.agent._graph.tools,  # noqa: SLF001
                     "max_debug_tries": self.agent.max_debug_tries,
                 },
                 config=graph_config,
@@ -235,7 +234,8 @@ class OpenDsStarAgentRunnable(Runnable):
                 # Also emit a chain stream chunk summarizing notes for backwards compatibility
                 trajectory_text = "\n".join(
                     [
-                        f"[{self._normalize_node_name(event.get('event_type', 'unknown'))}] {self._normalize_node_name(event.get('note', ''))}"
+                        f"[{self._normalize_node_name(event.get('event_type', 'unknown'))}]"
+                        f" {self._normalize_node_name(event.get('note', ''))}"
                         for event in new_events
                     ]
                 )
@@ -381,17 +381,18 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             logger.warning("OpenDsStarAgent - tools attribute not set, initializing to empty list")
             self.tools = []
 
-        # Clean up tools list - remove empty strings or None which Langflow sometimes passes when the input is functionally empty
+        # Clean up tools list - remove empty strings or None which Langflow
+        # sometimes passes when the input is functionally empty
         if isinstance(self.tools, list):
             self.tools = [t for t in self.tools if t and not (isinstance(t, str) and not t.strip())]
         elif isinstance(self.tools, str) and not self.tools.strip():
             self.tools = []
 
-        logger.info(f"OpenDsStarAgent.message_response - Tools available: {len(self.tools)}")
+        logger.info("OpenDsStarAgent.message_response - Tools available: %d", len(self.tools))
         if self.tools:
             for idx, tool in enumerate(self.tools):
                 tool_name = getattr(tool, "name", "UNKNOWN")
-                logger.info(f"  Tool {idx + 1}: {tool_name}")
+                logger.info("  Tool %d: %s", idx + 1, tool_name)
 
         # Set shared callbacks for tracing the tools used by the agent
         if self.tools:
@@ -404,7 +405,7 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
         self.status = message
         return message
 
-    def build_agent(self) -> Runnable:  # type: ignore
+    def build_agent(self) -> Runnable:  # type: ignore[override]
         """Build the OpenDsStar agent.
 
         Override parent's build_agent to return the OpenDsStar agent runnable directly.
@@ -445,7 +446,8 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             input_text = str(self.input_value) if self.input_value else ""
 
         if not input_text:
-            raise ValueError("Input text is empty")
+            msg = "Input text is empty"
+            raise ValueError(msg)
 
         sender_name = get_chat_output_sender_name(self) or self.display_name or "AI"
         session_id = getattr(getattr(self, "graph", None), "session_id", getattr(self, "_session_id", uuid.uuid4()))
@@ -479,19 +481,19 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
                 from agents.ds_star.ds_star_execute_env import set_main_event_loop
 
                 set_main_event_loop(asyncio.get_running_loop())
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001
+                logger.debug("Could not set main event loop for ds_star_execute_env", exc_info=True)
 
             # Stream from the graph directly
             recursion_limit = max(100, actual_agent.max_steps * 10)
-            stream_gen = actual_agent._graph.graph.stream(
+            stream_gen = actual_agent._graph.graph.stream(  # noqa: SLF001
                 {
                     "user_query": input_text,
                     "max_steps": actual_agent.max_steps,
                     "code_mode": actual_agent.code_mode,
                     "output_max_length": actual_agent.output_max_length,
                     "logs_max_length": actual_agent.logs_max_length,
-                    "tools": actual_agent._graph.tools,
+                    "tools": actual_agent._graph.tools,  # noqa: SLF001
                     "max_debug_tries": actual_agent.max_debug_tries,
                 },
                 config={"recursion_limit": recursion_limit},
@@ -781,7 +783,7 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             agent_message = await self.send_message(message=agent_message)
 
         except Exception as e:
-            logger.error(f"Error in run_agent: {e}")
+            logger.exception("Error in run_agent")
             agent_message.text = f"Error: {e!s}"
             agent_message.properties.state = "complete"
             agent_message.error = True
@@ -792,7 +794,7 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
         return agent_message
 
     def _add_media_from_text(self, agent_message: Message, text: str) -> str:
-        """Extract image URLs/data‑URIs from text and add MediaContent blocks.
+        """Extract image URLs/data-URIs from text and add MediaContent blocks.
 
         This allows charts returned as plain URIs to appear as images in the
         chat UI rather than raw text.  The original text is returned with the
@@ -919,18 +921,15 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             # If a single tool was provided, wrap it in a list
             tools = [tools]
 
-        print(f"DEBUG OPEN_DS_STAR_AGENT: RAW TOOLS RECEIVED = {tools!r}")
+        logger = logging.getLogger(__name__)
+        logger.debug("OPEN_DS_STAR_AGENT: RAW TOOLS RECEIVED = %r", tools)
 
         # Clean up empty strings or None which Langflow sometimes passes when the input is functionally empty
         tools = [t for t in tools if t and not (isinstance(t, str) and not t.strip())]
 
-        print(f"DEBUG OPEN_DS_STAR_AGENT: CLEANED TOOLS = {tools!r}")
-
-        # Add debug logging
-
-        logger = logging.getLogger(__name__)
-        logger.info(f"OpenDsStarAgent - Creating agent with {len(tools)} tools")
-        logger.info(f"OpenDsStarAgent - Tools type: {type(tools)}")
+        logger.debug("OPEN_DS_STAR_AGENT: CLEANED TOOLS = %r", tools)
+        logger.info("OpenDsStarAgent - Creating agent with %d tools", len(tools))
+        logger.info("OpenDsStarAgent - Tools type: %s", type(tools))
 
         if not tools:
             logger.warning("=" * 80)
@@ -945,7 +944,7 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             for idx, tool in enumerate(tools):
                 tool_name = getattr(tool, "name", "UNKNOWN")
                 tool_desc = getattr(tool, "description", "No description")
-                logger.info(f"  {idx + 1}. {tool_name}: {tool_desc[:100]}")
+                logger.info("  %d. %s: %s", idx + 1, tool_name, tool_desc[:100])
 
         # Validate tools format - must be Tool objects with .name and other attributes
         if tools:
@@ -973,7 +972,12 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
         code_timeout = getattr(self, "code_timeout", 60)
 
         logger.info(
-            f"OpenDsStarAgent - Creating agent with model={self.llm}, max_steps={max_iterations}, code_mode={code_mode}, system_prompt length={len(system_prompt) if system_prompt else 0}"
+            "OpenDsStarAgent - Creating agent with model=%s, max_steps=%s,"
+            " code_mode=%s, system_prompt length=%d",
+            self.llm,
+            max_iterations,
+            code_mode,
+            len(system_prompt) if system_prompt else 0,
         )
 
         # Create the agent with all configured parameters
@@ -987,11 +991,12 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             code_timeout=code_timeout,
         )
 
-        logger.info(f"OpenDsStarAgent - Agent created successfully with {len(agent.tools)} tools")
+        logger.info("OpenDsStarAgent - Agent created successfully with %d tools", len(agent.tools))
 
         if not agent.tools:
             logger.warning(
-                "Agent has NO tools after creation. It will only be able to solve problems using built-in Python libraries."
+                "Agent has NO tools after creation. It will only be able to solve"
+                " problems using built-in Python libraries."
             )
 
         # Wrap in runnable interface for LangChain compatibility

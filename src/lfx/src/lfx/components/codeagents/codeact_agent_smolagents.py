@@ -1,3 +1,4 @@
+import logging
 import time
 from collections.abc import AsyncIterator, Iterator
 from typing import Any, ClassVar
@@ -9,6 +10,10 @@ from lfx.inputs.inputs import BoolInput, DataInput, DropdownInput, MessageTextIn
 from lfx.io import HandleInput, IntInput
 from lfx.schema.message import Message
 from lfx.template.field.base import RangeSpec
+
+logger = logging.getLogger(__name__)
+
+_MAX_LOG_DISPLAY_LENGTH = 500
 
 
 class CodeActAgentSmolagentsRunnable(Runnable):
@@ -28,23 +33,23 @@ class CodeActAgentSmolagentsRunnable(Runnable):
         self.agent = agent
         self.start_time = None
 
-    def invoke(self, input: dict[str, Any] | str, config: RunnableConfig | None = None) -> dict[str, Any]:
+    def invoke(self, input_value: dict[str, Any] | str, config: RunnableConfig | None = None) -> dict[str, Any]:
         """Invoke the CodeActAgentSmolagents synchronously.
 
         Args:
-            input: Either a dict with "input" key or a string query
+            input_value: Either a dict with "input" key or a string query
             config: Optional LangChain runnable configuration
 
         Returns:
             Dict with "output" key containing the agent's answer
         """
         # Extract the input message
-        if isinstance(input, dict) and "input" in input:
-            query = input["input"]
-        elif isinstance(input, str):
-            query = input
+        if isinstance(input_value, dict) and "input" in input_value:
+            query = input_value["input"]
+        elif isinstance(input_value, str):
+            query = input_value
         else:
-            query = str(input)
+            query = str(input_value)
 
         # Invoke the agent (config is passed through if provided)
         result = self.agent.invoke(query, config=config)
@@ -58,57 +63,55 @@ class CodeActAgentSmolagentsRunnable(Runnable):
 
     async def ainvoke(
         self,
-        input: dict[str, Any] | str,
+        input_value: dict[str, Any] | str,
         config: RunnableConfig | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> dict[str, Any]:
         """Async invoke - currently just calls sync version.
 
         Note: CodeActAgentSmolagents doesn't have native async support yet,
         so this is a synchronous implementation wrapped as async.
         """
-        return self.invoke(input, config)
+        return self.invoke(input_value, config)
 
     def stream(
         self,
-        input: dict[str, Any] | str,
+        input_value: dict[str, Any] | str,
         config: RunnableConfig | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> Iterator[dict[str, Any]]:
         """Stream the agent output step-by-step.
 
         Uses CodeActAgentSmolagents' stream_invoke to yield intermediate steps.
         """
         # Extract the input message
-        if isinstance(input, dict) and "input" in input:
-            query = input["input"]
-        elif isinstance(input, str):
-            query = input
+        if isinstance(input_value, dict) and "input" in input_value:
+            query = input_value["input"]
+        elif isinstance(input_value, str):
+            query = input_value
         else:
-            query = str(input)
+            query = str(input_value)
 
         # Stream from the agent
-        for event in self.agent.stream_invoke(query, config=config):
-            # Yield each event as it arrives
-            yield event
+        yield from self.agent.stream_invoke(query, config=config)
 
     async def astream(
         self,
-        input: dict[str, Any] | str,
+        input_value: dict[str, Any] | str,
         config: RunnableConfig | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> AsyncIterator[dict[str, Any]]:
         """Async stream the agent output step-by-step.
 
         Currently wraps the sync stream in async context.
         """
         # Extract the input message
-        if isinstance(input, dict) and "input" in input:
-            query = input["input"]
-        elif isinstance(input, str):
-            query = input
+        if isinstance(input_value, dict) and "input" in input_value:
+            query = input_value["input"]
+        elif isinstance(input_value, str):
+            query = input_value
         else:
-            query = str(input)
+            query = str(input_value)
 
         # Stream from the agent (wrapped in async)
         import asyncio
@@ -176,7 +179,10 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
             display_name="Show Code Steps",
             options=["All Steps", "Final Code Only", "None"],
             value="All Steps",
-            info="Display coding steps: 'All Steps' shows each code generation and execution, 'Final Code Only' shows only the last successful code, 'None' hides all code steps",
+            info=(
+                "Display coding steps: 'All Steps' shows each code generation and execution,"
+                " 'Final Code Only' shows only the last successful code, 'None' hides all code steps"
+            ),
         ),
         BoolInput(
             name="handle_parsing_errors",
@@ -229,7 +235,7 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
         self.status = message
         return message
 
-    def build_agent(self) -> Runnable:  # type: ignore
+    def build_agent(self) -> Runnable:  # type: ignore[override]
         """Build the CodeActAgentSmolagents.
 
         Override parent's build_agent to return the CodeActAgentSmolagents runnable directly.
@@ -245,9 +251,7 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
         self.validate_tool_names()
 
         # Create and return the CodeActAgentSmolagents runnable directly
-        agent_runnable = self.create_agent_runnable()
-
-        return agent_runnable
+        return self.create_agent_runnable()
 
     async def run_agent(self, agent: Runnable) -> Message:
         """Override parent's run_agent to stream trajectory updates directly.
@@ -256,7 +260,6 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
         as they happen, providing real-time feedback to the user.
         """
         import asyncio
-        import logging
         import uuid
 
         from lfx.base.agents.utils import get_chat_output_sender_name
@@ -265,7 +268,6 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
         from lfx.schema.message import Message
         from lfx.utils.constants import MESSAGE_SENDER_AI
 
-        logger = logging.getLogger(__name__)
         logger.info("=" * 80)
         logger.info("run_agent called for CodeActAgentSmolagents with streaming")
         logger.info("=" * 80)
@@ -274,19 +276,17 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
         if isinstance(self.input_value, Message):
             lc_message = self.input_value.to_lc_message()
             if hasattr(lc_message, "content"):
-                if isinstance(lc_message.content, str):
-                    input_text = lc_message.content
-                else:
-                    input_text = str(lc_message.content)
+                input_text = lc_message.content if isinstance(lc_message.content, str) else str(lc_message.content)
             else:
                 input_text = str(lc_message)
         else:
             input_text = str(self.input_value)
 
         if not input_text:
-            raise ValueError("Input text is empty")
+            msg = "Input text is empty"
+            raise ValueError(msg)
 
-        logger.info(f"Input text: {input_text[:100]}...")
+        logger.info("Input text: %s...", input_text[:100])
 
         # Create initial message
         sender_name = get_chat_output_sender_name(self) or self.display_name or "AI"
@@ -348,7 +348,7 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
                 # Calculate per-event delta so that the UI sum equals total elapsed time
                 # (not cumulative from start, which would inflate the total when summed)
                 current_event_time = time.time()
-                dur = int(round((current_event_time - last_event_time) * 1000))
+                dur = round((current_event_time - last_event_time) * 1000)
                 last_event_time = current_event_time
 
                 # Build a node summary block, always present
@@ -361,9 +361,8 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
                     summary_output.append(f"Step: {step_idx}")
 
                 if event.get("code"):
-                    summary_output.append(
-                        "Code generated" if node_name.lower().startswith("code_generation") else "Code present"
-                    )
+                    code_label = "Code generated" if node_name.lower().startswith("code_generation") else "Code present"
+                    summary_output.append(code_label)
                 if event.get("logs"):
                     summary_output.append("Execution logs")
                 if event.get("error"):
@@ -405,7 +404,11 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
                 # Append logs block when requested
                 if "logs" in event and str(event.get("logs", "")).strip():
                     logs_text = str(event.get("logs", "")).strip()
-                    display_logs = logs_text if len(logs_text) <= 500 else logs_text[:500] + "..."
+                    display_logs = (
+                        logs_text
+                        if len(logs_text) <= _MAX_LOG_DISPLAY_LENGTH
+                        else logs_text[:_MAX_LOG_DISPLAY_LENGTH] + "..."
+                    )
                     if show_code_steps in ("All Steps",):
                         agent_message.content_blocks[0].contents.append(
                             TextContent(
@@ -466,7 +469,7 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
                 agent_message = await self.send_message(message=agent_message)
             else:
                 # Real error - display it
-                logger.error(f"Error in run_agent: {e}")
+                logger.exception("Error in run_agent")
                 agent_message.text = f"Error: {error_msg}"
                 agent_message.properties.state = "complete"
                 agent_message.error = True
@@ -479,7 +482,6 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
     @staticmethod
     def _normalize_node_name(node_name: Any) -> str:
         """Normalize node names for UI display by stripping common prefixes."""
-        import logging
         import re
 
         if not node_name:
@@ -491,7 +493,7 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
         normalized = re.sub(r"(?i)^(?:NODE\s*N\s*)+", "", normalized).strip()
         normalized = re.sub(r"(?i)^N[\s:-]+", "", normalized).strip()
 
-        logging.getLogger(__name__).debug(
+        logger.debug(
             "normalize_node_name: raw=%r normalized=%r",
             node_name_str,
             normalized,
@@ -540,7 +542,8 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
 
         # Accept all LangFlow model forms directly.
         if llm_model is None:
-            raise ValueError("No language model connected. Please connect a Language Model component to the LLM input.")
+            msg = "No language model connected. Please connect a Language Model component to the LLM input."
+            raise ValueError(msg)
 
         # Preserve string IDs so OpenDsStar wrapper can accept them.
         if isinstance(llm_model, str):
@@ -591,17 +594,17 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
                 from OpenDsStar.agents.codeact_smolagents.codeact_agent_smolagents import CodeActAgentSmolagents
             except ImportError:
                 # Debugging info
-                import os
                 import sys
+                from pathlib import Path
 
-                print("DEBUG: sys.path:", sys.path)
-                print("DEBUG: CWD:", os.getcwd())
+                logger.debug("DEBUG: sys.path: %s", sys.path)
+                logger.debug("DEBUG: CWD: %s", Path.cwd())
                 try:
                     import agents
 
-                    print("DEBUG: found agents module at:", agents.__file__)
+                    logger.debug("DEBUG: found agents module at: %s", agents.__file__)
                 except ImportError:
-                    print("DEBUG: could not import agents module")
+                    logger.debug("DEBUG: could not import agents module")
 
                 # Retry or re-raise
                 from agents.codeact_smolagents.codeact_agent_smolagents import CodeActAgentSmolagents
@@ -676,9 +679,9 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
             model=llm_model,
             temperature=0.0,  # Fixed for now, could be made configurable
             tools=tools,
-            system_prompt=system_prompt
-            if system_prompt
-            else "You are a helpful assistant that can execute code to solve tasks.",
+            system_prompt=(
+                system_prompt if system_prompt else "You are a helpful assistant that can execute code to solve tasks."
+            ),
             max_steps=max_iterations,
             code_timeout=code_timeout,
         )
