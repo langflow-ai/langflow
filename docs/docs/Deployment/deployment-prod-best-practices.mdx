@@ -38,6 +38,11 @@ Consider the following factors in your resource estimation and performance testi
 
 * Infrastructure options that might require more resources, such as multi-core CPUs.
 
+* Multi-worker memory optimization on Linux and macOS.
+
+    If you run Langflow with multiple Gunicorn workers, you can test `LANGFLOW_GUNICORN_PRELOAD=True` to preload the FastAPI app in the Gunicorn master before workers fork.
+    This can reduce per-worker memory usage through copy-on-write sharing, but you should validate it in staging before making it part of your default production configuration.
+
 ### Use an external PostgreSQL database
 
 An external PostgreSQL database is recommended for production deployments to improve scalability and reliability as compared to the default SQLite database.
@@ -105,6 +110,9 @@ Effective monitoring ensures Langflow operates reliably and performs well under 
     To expose your Langflow server's Prometheus metrics, set `LANGFLOW_PROMETHEUS_ENABLED=True` (the default is `false`).
     The default port for the Prometheus metrics is 9090.
     To change the port, set `LANGFLOW_PROMETHEUS_PORT`.
+
+    In multi-worker Gunicorn deployments, the built-in Prometheus endpoint is per-worker and isn't aggregated across workers.
+    For complete metrics, prefer one worker per pod or use an external metrics aggregation strategy.
 
 * **API performance**: Monitor response times, error rates, and request throughput. Set alerts for high latency or error spikes.
 * **Observability tools**: Integrate with [LangWatch](/integrations-langwatch) or [Opik](/integrations-opik) for detailed flow tracing and metrics. Use these tools to debug flow performance and optimize execution.
