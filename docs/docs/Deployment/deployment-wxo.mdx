@@ -115,3 +115,84 @@ A **Deployment Environment** is a saved watsonx Orchestrate target that Langflow
 
 Use the **Deployment Environments** tab to add, list, and delete IBM watsonx Orchestrate environments in Langflow.
 To manage the tenant itself, use the IBM watsonx Orchestrate dashboard.
+
+## Send requests to your flow
+
+After you deploy your flow to IBM watsonx Orchestrate, you can connect to it through the Langflow deployment execution endpoints.
+
+Prefix the following paths with your Langflow server URL, such as `http://localhost:7860`.
+
+1. In Langflow, click **Projects**, and then click **Deployments**.
+2. Copy the deployment ID for the deployed flow you want to run.
+3. Create a deployment execution.
+
+**POST** `/api/v1/deployments/{deployment_id}/executions`
+
+**Path params:** `deployment_id` (uuid)
+**Query params:** none
+
+**Request body (all fields)**
+```json
+{
+  "provider_data": {
+    "input": "Summarize today's tickets",
+    "message": {
+      "role": "user",
+      "content": "Summarize today's tickets"
+    },
+    "agent_id": "agent-123",
+    "thread_id": "thread-123"
+  }
+}
+```
+
+**Response body (`201`, all fields)**
+```json
+{
+  "deployment_id": "3ea34379-1f72-4a33-9f6e-9e3ca88365b5",
+  "provider_data": {
+    "execution_id": "run-42",
+    "agent_id": "agent-123",
+    "thread_id": "thread-123",
+    "status": "accepted",
+    "result": null,
+    "started_at": null,
+    "completed_at": null,
+    "failed_at": null,
+    "cancelled_at": null,
+    "last_error": null
+  }
+}
+```
+
+4. Copy the returned `execution_id` from `provider_data.execution_id`.
+5. Check the deployment execution status until the flow run completes.
+
+**GET** `/api/v1/deployments/{deployment_id}/executions/{execution_id}`
+
+**Path params:** `deployment_id` (uuid), `execution_id` (string)
+**Query params:** none
+**Request body:** none
+
+**Response body (`200`, all fields)**
+```json
+{
+  "deployment_id": "3ea34379-1f72-4a33-9f6e-9e3ca88365b5",
+  "provider_data": {
+    "execution_id": "run-42",
+    "agent_id": "agent-123",
+    "thread_id": "thread-123",
+    "status": "completed",
+    "result": {
+      "output": "Here is your summary..."
+    },
+    "started_at": "2026-04-03T12:40:00Z",
+    "completed_at": "2026-04-03T12:40:05Z",
+    "failed_at": null,
+    "cancelled_at": null,
+    "last_error": null
+  }
+}
+```
+
+6. When `provider_data.status` is `completed`, read the flow output from `provider_data.result`.
