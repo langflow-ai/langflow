@@ -137,7 +137,8 @@ export function ContentBlockDisplay({
                       : rawTitle;
                   const isAgentStep =
                     content.header?.icon === "GitBranch" ||
-                    (typeof content.name === "string" && content.name.startsWith("Node "));
+                    (typeof content.name === "string" &&
+                      content.name.startsWith("Node "));
                   const toolLabel = isAgentStep ? "Node" : "Called tool";
                   const toolDuration =
                     toolElapsedTimes[toolKey] ?? content.duration ?? 0;
