@@ -120,6 +120,8 @@ To manage the tenant itself, use the IBM watsonx Orchestrate dashboard.
 
 After you deploy your flow to IBM watsonx Orchestrate, you can connect to it through the Langflow deployment execution endpoints.
 
+The standard Langflow endpoint is `/run`, but for flows deployed to IBM watsonx Orchestrate, use `POST /api/v1/deployments/{deployment_id}/executions` to start a run, and `GET /api/v1/deployments/{deployment_id}/executions/{execution_id}` to check its status.
+
 Prefix the following paths with your Langflow server URL, such as `http://localhost:7860`.
 
 1. In Langflow, click **Projects**, and then click **Deployments**.
