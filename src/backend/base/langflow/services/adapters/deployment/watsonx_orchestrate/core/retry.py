@@ -11,10 +11,10 @@ from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
-    DeploymentConflictError,
     InvalidContentError,
     InvalidDeploymentOperationError,
     InvalidDeploymentTypeError,
+    ResourceConflictError,
 )
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
@@ -104,7 +104,7 @@ def is_retryable_create_exception(exc: Exception) -> bool:
     return not isinstance(
         exc,
         (
-            DeploymentConflictError,
+            ResourceConflictError,
             InvalidContentError,
             InvalidDeploymentOperationError,
             InvalidDeploymentTypeError,

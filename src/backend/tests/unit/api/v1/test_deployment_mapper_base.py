@@ -21,7 +21,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
     DeploymentProviderAccountCreateRequest,
     DeploymentUpdateRequest,
-    ExecutionCreateRequest,
+    RunCreateRequest,
 )
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import (
@@ -293,7 +293,7 @@ async def test_base_mapper_resolve_deployment_update_rejects_invalid_provider_da
 @pytest.mark.asyncio
 async def test_base_mapper_resolve_execution_create_passthrough_when_slot_not_configured() -> None:
     mapper = BaseDeploymentMapper()
-    payload = ExecutionCreateRequest(
+    payload = RunCreateRequest(
         provider_data={"invocation_id": "inv-1"},
     )
 
@@ -310,7 +310,7 @@ async def test_base_mapper_resolve_execution_create_passthrough_when_slot_not_co
 @pytest.mark.asyncio
 async def test_base_mapper_resolve_execution_create_validates_provider_data_when_slot_configured() -> None:
     mapper = _TypedMapper()
-    payload = ExecutionCreateRequest(
+    payload = RunCreateRequest(
         provider_data={"invocation_id": "inv-1"},
     )
 
@@ -327,7 +327,7 @@ async def test_base_mapper_resolve_execution_create_validates_provider_data_when
 @pytest.mark.asyncio
 async def test_base_mapper_resolve_execution_create_rejects_invalid_provider_data_when_slot_configured() -> None:
     mapper = _TypedMapper()
-    payload = ExecutionCreateRequest(
+    payload = RunCreateRequest(
         provider_data={"invalid": "value"},
     )
 
@@ -584,7 +584,10 @@ def test_base_mapper_formats_conflict_detail_with_generic_fallback() -> None:
 
     detail = mapper.format_conflict_detail("provider conflict detail")
 
-    assert detail == "A resource with this name already exists in the provider. provider conflict detail"
+    assert (
+        detail
+        == "A resource conflict occurred in the deployment provider. The requested operation could not be completed."
+    )
 
 
 def test_base_mapper_shapes_deployment_update_result() -> None:

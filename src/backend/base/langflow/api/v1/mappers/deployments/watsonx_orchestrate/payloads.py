@@ -577,6 +577,25 @@ class WatsonxApiRenameToolOperation(BaseModel):
     tool_name: NormalizedStr = Field(min_length=1)
 
 
+class WatsonxApiExecutionInput(BaseModel):
+    """API-facing provider_data payload for POST deployment runs."""
+
+    model_config = {"extra": "forbid"}
+
+    input: str | None = None
+    message: dict[str, Any] | None = None
+    thread_id: str | None = None
+
+    @model_validator(mode="after")
+    def validate_input_or_message_exclusive(self) -> WatsonxApiExecutionInput:
+        has_input = self.input is not None
+        has_message = self.message is not None
+        if has_input == has_message:
+            msg = "provider_data must include exactly one of 'input' or 'message'."
+            raise ValueError(msg)
+        return self
+
+
 class _WatsonxApiAgentExecutionResultBase(BaseModel):
     """Shared fields for API-facing agent execution result payloads.
 
@@ -588,7 +607,7 @@ class _WatsonxApiAgentExecutionResultBase(BaseModel):
 
     model_config = {"extra": "allow"}
 
-    execution_id: str | None = None
+    id: str | None = None
     agent_id: str | None = None
     thread_id: str | None = None
     status: str | None = None
@@ -599,7 +618,7 @@ class _WatsonxApiAgentExecutionResultBase(BaseModel):
     cancelled_at: str | None = None
     last_error: str | None = None
 
-    @field_validator("execution_id", "agent_id", mode="before")
+    @field_validator("id", "agent_id", mode="before")
     @classmethod
     def normalize_optional_id(cls, value: Any) -> str | None:
         normalized = str(value or "").strip()

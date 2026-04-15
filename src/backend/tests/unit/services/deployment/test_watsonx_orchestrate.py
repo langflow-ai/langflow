@@ -12,13 +12,13 @@ from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.exceptions import (
     AuthorizationError,
     CredentialResolutionError,
-    DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
     DeploymentSupportError,
     InvalidContentError,
     InvalidDeploymentOperationError,
     OperationNotSupportedError,
+    ResourceConflictError,
     ResourceNotFoundError,
 )
 from lfx.services.adapters.deployment.schema import (
@@ -185,6 +185,9 @@ class FakeToolClient:
         if tool_name in self._existing_names:
             return [{"name": tool_name}]
         return []
+
+    def get_drafts_by_names(self, names: list[str]):
+        return [dict(tool) for tool in self._tools_by_id.values() if tool.get("name") in names]
 
     def update(self, tool_id: str, payload: dict):
         self.update_calls.append((tool_id, payload))
@@ -2015,7 +2018,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
     monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
 
-    with pytest.raises(DeploymentConflictError, match="already exists in the provider"):
+    with pytest.raises(ResourceConflictError, match="already exists in the provider") as exc_info:
         await service.update(
             user_id="user-1",
             deployment_id="dep-1",
@@ -2053,6 +2056,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
             ),
             db=object(),
         )
+    assert exc_info.value.resource == "connection"
 
 
 @pytest.mark.anyio
@@ -2078,7 +2082,7 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
     monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
 
-    with pytest.raises(DeploymentConflictError, match="already exists in the provider"):
+    with pytest.raises(ResourceConflictError, match="already exists in the provider") as exc_info:
         await service.create(
             user_id="user-1",
             payload=DeploymentCreate(
@@ -2120,6 +2124,7 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
             ),
             db=object(),
         )
+    assert exc_info.value.resource == "connection"
 
     assert captured["attempted_app_id"] == "cfg"
 
@@ -4227,6 +4232,152 @@ async def test_list_snapshots_snapshot_ids_trusts_verified_results_without_reval
     assert result.snapshots[0].provider_data == {"unexpected": "value"}
 
 
+def test_snapshot_list_params_snapshot_names_strips_whitespace():
+    params = SnapshotListParams(snapshot_names=["  my_tool  ", "other "])
+    assert params.snapshot_names == ["my_tool", "other"]
+
+
+def test_snapshot_list_params_snapshot_names_rejects_empty_strings():
+    with pytest.raises(ValidationError):
+        SnapshotListParams(snapshot_names=[""])
+
+
+def test_snapshot_list_params_snapshot_names_rejects_whitespace_only():
+    with pytest.raises(ValidationError):
+        SnapshotListParams(snapshot_names=["  "])
+
+
+def test_snapshot_list_params_snapshot_names_rejects_empty_list():
+    with pytest.raises(ValidationError):
+        SnapshotListParams(snapshot_names=[])
+
+
+def test_snapshot_list_params_snapshot_names_none_is_valid():
+    params = SnapshotListParams(snapshot_names=None)
+    assert params.snapshot_names is None
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_snapshot_names_returns_matching_tools(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient(
+            [
+                {"id": "tool-1", "name": "my_tool", "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}}},
+                {"id": "tool-2", "name": "other_tool"},
+            ]
+        ),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_snapshots(
+        user_id="user-1",
+        db=object(),
+        params=SnapshotListParams(snapshot_names=["my_tool"]),
+    )
+
+    assert len(result.snapshots) == 1
+    assert result.snapshots[0].id == "tool-1"
+    assert result.snapshots[0].name == "my_tool"
+    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_snapshot_names_returns_empty_when_no_match(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient(
+            [
+                {"id": "tool-1", "name": "existing_tool"},
+            ]
+        ),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_snapshots(
+        user_id="user-1",
+        db=object(),
+        params=SnapshotListParams(snapshot_names=["nonexistent_tool"]),
+    )
+
+    assert len(result.snapshots) == 0
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_snapshot_names_ignored_when_deployment_ids_present(monkeypatch):
+    """When deployment_ids present, snapshot_names should be ignored and deployment-scoped path used."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=FakeToolClient(
+            [
+                {"id": "tool-1", "name": "agent_tool", "binding": {"langflow": {"connections": {}}}},
+                {"id": "tool-2", "name": "my_tool"},
+            ]
+        ),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_snapshots(
+        user_id="user-1",
+        db=object(),
+        params=SnapshotListParams(deployment_ids=["dep-1"], snapshot_names=["my_tool"]),
+    )
+
+    # Should return agent's tools (deployment-scoped), not name-filtered results
+    assert len(result.snapshots) == 1
+    assert result.snapshots[0].id == "tool-1"
+    assert result.snapshots[0].name == "agent_tool"
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_snapshot_names_wraps_provider_error(monkeypatch):
+    """get_drafts_by_names failure is wrapped via raise_as_deployment_error."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_tool = FakeToolClient([])
+
+    def get_drafts_by_names_raises(names):  # noqa: ARG001
+        msg = "provider timeout"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(fake_tool, "get_drafts_by_names", get_drafts_by_names_raises)
+
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=fake_tool,
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(DeploymentError, match="listing"):
+        await service.list_snapshots(
+            user_id="user-1",
+            db=object(),
+            params=SnapshotListParams(snapshot_names=["my_tool"]),
+        )
+
+
 @pytest.mark.anyio
 async def test_verify_tools_by_ids_returns_only_connections_provider_data():
     fake_clients = SimpleNamespace(
@@ -4453,7 +4604,7 @@ def test_is_retryable_create_exception_retryable_status_codes():
 def test_is_retryable_create_exception_domain_exceptions_not_retryable():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import is_retryable_create_exception
 
-    assert is_retryable_create_exception(DeploymentConflictError()) is False
+    assert is_retryable_create_exception(ResourceConflictError()) is False
     assert is_retryable_create_exception(InvalidContentError()) is False
     assert is_retryable_create_exception(InvalidDeploymentOperationError()) is False
 
@@ -4831,6 +4982,40 @@ async def test_list_deployments_without_params(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_list_conflict_does_not_force_agent_resource_hint(monkeypatch):
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+
+    class FailingListAgentClient(FakeAgentClient):
+        def _get(self, path: str, params: dict | None = None):  # noqa: ARG002
+            if path == "/agents":
+                raise ClientAPIException(
+                    response=SimpleNamespace(status_code=409, text='{"detail":"resource already exists"}')
+                )
+            return {}
+
+    fake_agent = FailingListAgentClient({"id": "dep-1", "tools": []})
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_agent,
+            agent=fake_agent,
+        )
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(ResourceConflictError) as exc_info:
+        await service.list(user_id="user-1", db=object(), params=None)
+
+    assert exc_info.value.resource is None
+    assert exc_info.value.resource_name is None
+
+
+@pytest.mark.anyio
 async def test_list_types_returns_supported_types():
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     result = await service.list_types(user_id="user-1", db=object())
@@ -4867,6 +5052,8 @@ async def test_list_llms_returns_normalized_model_names(monkeypatch):
 
     assert result.provider_result == {
         "models": [
+            {"model_name": "groq/openai/gpt-oss-120b"},
+            {"model_name": "bedrock/openai.gpt-oss-120b-1:0"},
             {"model_name": "granite-3.1-8b"},
             {"model_name": "granite-3.3-8b"},
             {"model_name": "granite-3.1-8b"},
@@ -4875,7 +5062,7 @@ async def test_list_llms_returns_normalized_model_names(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_list_llms_invalid_payload_raises_invalid_content(monkeypatch):
+async def test_list_llms_invalid_payload_raises_deployment_error(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": []},
@@ -4893,7 +5080,7 @@ async def test_list_llms_invalid_payload_raises_invalid_content(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    with pytest.raises(InvalidContentError):
+    with pytest.raises(DeploymentError, match="listing deployment LLMs"):
         await service.list_llms(user_id="user-1", db=object())
 
 
@@ -5268,6 +5455,63 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
     assert len(created_calls) == 2
 
 
+@pytest.mark.anyio
+async def test_upload_wxo_flow_tool_maps_tool_conflict_with_structured_resource():
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    def mock_create_tool(payload: dict):  # noqa: ARG001
+        raise ClientAPIException(
+            response=SimpleNamespace(
+                status_code=409,
+                text='{"detail":"Tool with name \'Simple_Agent\' already exists for this tenant."}',
+            )
+        )
+
+    fake_clients = SimpleNamespace(
+        tool=SimpleNamespace(create=mock_create_tool),
+        upload_tool_artifact=lambda tool_id, files: {"id": tool_id},  # noqa: ARG005
+    )
+
+    with pytest.raises(ResourceConflictError) as exc_info:
+        await tools_module.upload_wxo_flow_tool(
+            clients=fake_clients,
+            tool_payload={"name": "Simple_Agent"},
+            artifact_bytes=b"artifact",
+        )
+
+    assert exc_info.value.resource == "tool"
+    assert exc_info.value.resource_name == "Simple_Agent"
+
+
+@pytest.mark.anyio
+async def test_create_agent_deployment_maps_agent_conflict_with_structured_resource():
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    def mock_create_agent(payload: dict):  # noqa: ARG001
+        raise ClientAPIException(
+            response=SimpleNamespace(
+                status_code=409,
+                text='{"detail":"Agent with name \'my_agent\' already exists for this tenant."}',
+            )
+        )
+
+    fake_clients = SimpleNamespace(agent=SimpleNamespace(create=mock_create_agent))
+
+    with pytest.raises(ResourceConflictError) as exc_info:
+        await create_core_module.create_agent_deployment(
+            clients=fake_clients,
+            tool_ids=["tool-1"],
+            agent_name="my_agent",
+            agent_display_name="My Agent",
+            deployment_name="my deployment",
+            description="desc",
+            llm=TEST_WXO_LLM,
+        )
+
+    assert exc_info.value.resource == "agent"
+    assert exc_info.value.resource_name == "my_agent"
+
+
 def test_extract_error_detail_json_string():
     from langflow.services.adapters.deployment.watsonx_orchestrate.utils import extract_error_detail
 
@@ -5396,11 +5640,13 @@ def test_raise_as_deployment_error_maps_conflict():
     resp = SimpleNamespace(status_code=500, text='{"detail":"resource already exists"}')
     exc = ClientAPIException(response=resp)
 
-    with pytest.raises(DeploymentConflictError, match="already exists"):
+    with pytest.raises(ResourceConflictError, match="already exists"):
         raise_as_deployment_error(
             exc,
             error_prefix=ErrorPrefix.UPDATE,
             log_msg="unexpected update conflict",
+            resource="agent",
+            resource_name="my-agent",
         )
 
 
@@ -5791,9 +6037,9 @@ def test_retry_rollback_uses_retryable_filter():
         )
 
     # Domain exceptions that are non-retryable
-    from lfx.services.adapters.deployment.exceptions import DeploymentConflictError, InvalidContentError
+    from lfx.services.adapters.deployment.exceptions import InvalidContentError, ResourceConflictError
 
-    assert not is_retryable_create_exception(DeploymentConflictError())
+    assert not is_retryable_create_exception(ResourceConflictError())
     assert not is_retryable_create_exception(InvalidContentError())
 
     # Generic exceptions are retryable (e.g. transient network errors)
@@ -5897,21 +6143,21 @@ def test_raise_for_status_separates_status_codes_from_string_heuristics():
     Now, the 404 status code check is standalone, and 'not found' string heuristic only
     fires as a fallback for unmapped status codes.
     """
-    from lfx.services.adapters.deployment.exceptions import ResourceNotFoundError, raise_for_status_and_detail
+    from lfx.services.adapters.deployment.exceptions import ResourceNotFoundError, raise_as_deployment_error
 
     # status_code=404 raises ResourceNotFoundError regardless of detail text
     with pytest.raises(ResourceNotFoundError):
-        raise_for_status_and_detail(status_code=404, detail="anything", message_prefix="test")
+        raise_as_deployment_error(status_code=404, detail="anything", message_prefix="test")
 
-    # status_code=409 raises DeploymentConflictError regardless of detail text
-    with pytest.raises(DeploymentConflictError):
-        raise_for_status_and_detail(status_code=409, detail="anything", message_prefix="test")
+    # status_code=409 raises ResourceConflictError regardless of detail text
+    with pytest.raises(ResourceConflictError):
+        raise_as_deployment_error(status_code=409, detail="anything", message_prefix="test")
 
     # String heuristics still work as fallback for unmapped/None status codes
     with pytest.raises(ResourceNotFoundError):
-        raise_for_status_and_detail(status_code=None, detail="agent not found", message_prefix="test")
-    with pytest.raises(DeploymentConflictError):
-        raise_for_status_and_detail(status_code=None, detail="resource already exists", message_prefix="test")
+        raise_as_deployment_error(status_code=None, detail="agent not found", message_prefix="test")
+    with pytest.raises(ResourceConflictError):
+        raise_as_deployment_error(status_code=None, detail="resource already exists", message_prefix="test")
 
 
 # ---------------------------------------------------------------------------
@@ -5921,7 +6167,7 @@ def test_raise_for_status_separates_status_codes_from_string_heuristics():
 
 @pytest.mark.anyio
 async def test_create_maps_409_conflict_to_deployment_conflict_error():
-    """Create raises DeploymentConflictError when the provider agent create returns a 409."""
+    """Create raises ResourceConflictError when the provider agent create returns a 409."""
     from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
@@ -5937,7 +6183,7 @@ async def test_create_maps_409_conflict_to_deployment_conflict_error():
     )
     _attach_provider_clients(service, clients)
 
-    with pytest.raises(DeploymentConflictError, match="already exist"):
+    with pytest.raises(ResourceConflictError, match="already exist"):
         await service.create(
             user_id="user-1",
             db=object(),
@@ -5950,6 +6196,51 @@ async def test_create_maps_409_conflict_to_deployment_conflict_error():
                 provider_data=_create_provider_spec(),
             ),
         )
+
+
+@pytest.mark.anyio
+async def test_create_tool_conflict_detail_is_not_misclassified_as_agent(monkeypatch):
+    """Service-layer catch does not carry resource hints — resource stays None.
+
+    This proves the conflict is not misclassified as 'agent'.  The inner-layer test
+    ``test_upload_wxo_flow_tool_maps_tool_conflict_with_structured_resource``
+    covers the path where ``resource='tool'`` is correctly attached.
+    """
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    _attach_provider_clients(service, FakeWXOClients())
+
+    async def mock_apply_provider_create_plan_with_rollback(**kwargs):  # noqa: ARG001
+        raise ClientAPIException(
+            response=SimpleNamespace(
+                status_code=409,
+                text='{"detail":"Tool with name \'Simple_Agent\' already exists for this tenant."}',
+            )
+        )
+
+    monkeypatch.setattr(
+        service_module,
+        "apply_provider_create_plan_with_rollback",
+        mock_apply_provider_create_plan_with_rollback,
+    )
+
+    with pytest.raises(ResourceConflictError) as exc_info:
+        await service.create(
+            user_id="user-1",
+            db=object(),
+            payload=DeploymentCreate(
+                spec=BaseDeploymentData(
+                    name="ahhahahaqwerg",
+                    description="desc",
+                    type=DeploymentType.AGENT,
+                ),
+                provider_data=_create_provider_spec(),
+            ),
+        )
+
+    assert exc_info.value.resource is None
+    assert exc_info.value.resource_name is None
 
 
 @pytest.mark.anyio
@@ -6265,7 +6556,9 @@ async def test_create_preserves_exception_chain_on_unexpected_error():
             ),
         )
 
-    assert exc_info.value.__cause__ is original_error
+    inner = exc_info.value.__cause__
+    assert isinstance(inner, DeploymentError)
+    assert inner.__cause__ is original_error
 
 
 @pytest.mark.anyio
@@ -6527,14 +6820,14 @@ def test_api_execution_create_schema_parses_all_explicit_fields():
     )
 
     data = {
-        "execution_id": "e-1",
+        "id": "e-1",
         "agent_id": "a-1",
         "status": "accepted",
         "result": None,
         "started_at": "2026-01-01T00:00:00Z",
     }
     parsed = WatsonxApiAgentExecutionCreateResultData.model_validate(data)
-    assert parsed.execution_id == "e-1"
+    assert parsed.id == "e-1"
     assert parsed.agent_id == "a-1"
     assert parsed.status == "accepted"
     assert parsed.started_at == "2026-01-01T00:00:00Z"
@@ -6547,7 +6840,7 @@ def test_api_execution_status_schema_parses_all_explicit_fields():
     )
 
     data = {
-        "execution_id": "e-1",
+        "id": "e-1",
         "agent_id": "a-1",
         "status": "failed",
         "result": None,
@@ -6556,7 +6849,7 @@ def test_api_execution_status_schema_parses_all_explicit_fields():
         "last_error": "something broke",
     }
     parsed = WatsonxApiAgentExecutionStatusResultData.model_validate(data)
-    assert parsed.execution_id == "e-1"
+    assert parsed.id == "e-1"
     assert parsed.agent_id == "a-1"
     assert parsed.status == "failed"
     assert parsed.failed_at == "2026-01-01T00:00:05Z"
@@ -6583,7 +6876,7 @@ def test_api_execution_schemas_omit_langflow_owned_fields():
 
     for schema in (WatsonxApiAgentExecutionCreateResultData, WatsonxApiAgentExecutionStatusResultData):
         assert "deployment_id" not in schema.model_fields
-        assert "execution_id" in schema.model_fields
+        assert "id" in schema.model_fields
         assert not hasattr(schema, "resolved_deployment_id")
 
 
@@ -6597,20 +6890,20 @@ def test_api_execution_schema_normalizes_id_fields():
     for schema in (WatsonxApiAgentExecutionCreateResultData, WatsonxApiAgentExecutionStatusResultData):
         parsed = schema.model_validate(
             {
-                "execution_id": "  e-1  ",
+                "id": "  e-1  ",
                 "agent_id": "  a-1  ",
             }
         )
-        assert parsed.execution_id == "e-1"
+        assert parsed.id == "e-1"
         assert parsed.agent_id == "a-1"
 
         parsed_blank = schema.model_validate(
             {
-                "execution_id": "  ",
+                "id": "  ",
                 "agent_id": "",
             }
         )
-        assert parsed_blank.execution_id is None
+        assert parsed_blank.id is None
         assert parsed_blank.agent_id is None
 
 
@@ -6639,12 +6932,12 @@ def test_shape_execution_create_result_maps_all_fields():
 
     response = mapper.shape_execution_create_result(adapter_result, deployment_id=deployment_id)
     assert response.deployment_id == deployment_id
-    assert response.provider_data["execution_id"] == "e-1"
+    assert response.provider_data["id"] == "e-1"
     assert response.provider_data["status"] == "accepted"
     assert response.provider_data["started_at"] == "2026-01-01T00:00:00Z"
     assert response.provider_data["agent_id"] == "agent-1"
     assert "deployment_id" not in response.provider_data
-    assert "run_id" not in response.provider_data
+    assert "execution_id" not in response.provider_data
 
 
 def test_shape_execution_status_result_maps_all_fields():
@@ -6668,12 +6961,12 @@ def test_shape_execution_status_result_maps_all_fields():
 
     response = mapper.shape_execution_status_result(adapter_result, deployment_id=deployment_id)
     assert response.deployment_id == deployment_id
-    assert response.provider_data["execution_id"] == "e-2"
+    assert response.provider_data["id"] == "e-2"
     assert response.provider_data["status"] == "completed"
     assert response.provider_data["result"] == {"output": "done"}
     assert response.provider_data["completed_at"] == "2026-01-01T00:01:00Z"
     assert "deployment_id" not in response.provider_data
-    assert "run_id" not in response.provider_data
+    assert "execution_id" not in response.provider_data
 
 
 def test_shape_execution_status_result_none_execution_id():
@@ -6696,7 +6989,7 @@ def test_shape_execution_status_result_none_execution_id():
         adapter_result,
         deployment_id=deployment_id,
     )
-    assert response.provider_data["execution_id"] is None
+    assert response.provider_data["id"] is None
     assert response.provider_data["status"] == "in_progress"
 
 
@@ -6722,6 +7015,7 @@ async def test_verify_credentials_success(monkeypatch):
         "get_authenticator",
         lambda **_kwargs: FakeAuthenticator(),
     )
+    monkeypatch.setattr(service_module, "fetch_models_adapter", lambda *_args, **_kwargs: {})
 
     svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
     payload = VerifyCredentials(
@@ -6758,6 +7052,43 @@ async def test_verify_credentials_invalid_key_raises(monkeypatch):
         provider_data={"api_key": "bad-key"},  # pragma: allowlist secret
     )
     with pytest.raises(AuthenticationError, match="Credential verification"):
+        await svc.verify_credentials(user_id="u1", payload=payload)
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_instance_probe_forbidden(monkeypatch):
+    """403 from wxO models probe maps to AuthorizationError (wrong instance for key)."""
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+    from lfx.services.adapters.deployment.exceptions import AuthorizationError
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+    from requests import Response
+
+    class FakeTokenManager:
+        def get_token(self):
+            return "fake-token"
+
+    class FakeAuthenticator:
+        token_manager = FakeTokenManager()
+
+    monkeypatch.setattr(
+        service_module,
+        "get_authenticator",
+        lambda **_kwargs: FakeAuthenticator(),
+    )
+
+    def _fail_fetch_models(*_args, **_kwargs):
+        response = Response()
+        response.status_code = 403
+        raise ClientAPIException(response=response)
+
+    monkeypatch.setattr(service_module, "fetch_models_adapter", _fail_fetch_models)
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data={"api_key": "valid-key"},  # pragma: allowlist secret
+    )
+    with pytest.raises(AuthorizationError, match="Credential verification"):
         await svc.verify_credentials(user_id="u1", payload=payload)
 
 

@@ -18,6 +18,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
+    SnapshotListParams,
     SnapshotListResult,
     VerifyCredentials,
 )
@@ -71,6 +72,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiDeploymentLlmListResultData,
     WatsonxApiDeploymentUpdatePayload,
     WatsonxApiDeploymentUpdateResultData,
+    WatsonxApiExecutionInput,
     WatsonxApiFlowArtifactProviderData,
     WatsonxApiProviderAccountCreate,
     WatsonxApiProviderAccountResponse,
@@ -93,8 +95,8 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentSnapshotListResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
-    ExecutionCreateResponse,
-    ExecutionStatusResponse,
+    RunCreateResponse,
+    RunStatusResponse,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
@@ -203,6 +205,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             adapter_model=WatsonxApiAgentExecutionStatusResultData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
+        execution_input=PayloadSlot(
+            adapter_model=WatsonxApiExecutionInput,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
         deployment_llm_list_result=PayloadSlot(
             adapter_model=WatsonxApiDeploymentLlmListResultData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
@@ -247,21 +253,42 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     ) -> str:
         return self._parse_and_check_url(provider_data).url
 
-    def format_conflict_detail(self, raw_message: str) -> str:
-        lower = raw_message.lower()
-        if "agent" in lower and ("already exists" in lower or "conflict" in lower):
+    def format_conflict_detail(
+        self,
+        raw_message: str,
+        *,
+        resource: str | None = None,
+        resource_name: str | None = None,
+    ) -> str:
+        normalized_resource_name = str(resource_name or "").strip() or None
+        if resource == "tool":
             return (
-                "An agent with this name already exists in the provider. "
-                "Please choose a different name or delete the existing agent first."
+                f"A tool with name '{normalized_resource_name}' already exists in the provider. "
+                "Please choose a different name."
+                if normalized_resource_name
+                else "A tool with this name already exists in the provider. Please choose a different name."
             )
-        if ("connection" in lower or "app_id" in lower) and ("already exists" in lower or "conflict" in lower):
+        if resource == "connection":
             return (
-                "A connection referenced in this request already exists in the provider. "
-                "Reference it as an existing connection instead of creating a new one."
+                f"A connection with app_id '{normalized_resource_name}' already exists in the provider. "
+                "Please choose a different name."
+                if normalized_resource_name
+                else "A connection referenced in this request already exists in the provider. "
+                "Please choose a different name."
             )
-        if "tool" in lower and ("already exists" in lower or "conflict" in lower):
-            return "A tool with this name already exists in the provider. Please choose a different name."
-        return super().format_conflict_detail(raw_message)
+        if resource == "agent":
+            return (
+                f"An agent with name '{normalized_resource_name}' already exists in the provider. "
+                "Please choose a different name."
+                if normalized_resource_name
+                else "An agent with this name already exists in the provider. Please choose a different name."
+            )
+
+        return super().format_conflict_detail(
+            raw_message,
+            resource=resource,
+            resource_name=resource_name,
+        )
 
     def _parse_and_check_url(
         self,
@@ -279,6 +306,16 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         check_provider_url_allowed(parsed.url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
         return parsed
 
+    async def resolve_execution_input(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
+        """Validate run provider_data and reject missing payloads at API boundary."""
+        _ = db
+        parsed: WatsonxApiExecutionInput = self._parse_api_payload_slot(
+            slot=self.api_payloads.execution_input,
+            slot_name="execution_input",
+            raw=raw,
+        )
+        return parsed.model_dump(mode="json", exclude_none=True)
+
     def resolve_credentials(
         self,
         *,
@@ -290,6 +327,22 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             raw=provider_data,
         )
         return parsed.model_dump()
+
+    async def resolve_snapshot_list_adapter_params(
+        self,
+        *,
+        deployment_resource_key: str | None,
+        snapshot_names: list[str] | None = None,
+        provider_params: dict[str, Any] | None,
+        db: AsyncSession,
+    ) -> SnapshotListParams:
+        normalized = [name for n in snapshot_names if (name := normalize_wxo_name(n))] if snapshot_names else None
+        return await super().resolve_snapshot_list_adapter_params(
+            deployment_resource_key=deployment_resource_key,
+            snapshot_names=normalized,
+            provider_params=provider_params,
+            db=db,
+        )
 
     def resolve_provider_account_create(
         self,
@@ -987,7 +1040,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         result: ExecutionCreateResult,
         *,
         deployment_id: UUID,
-    ) -> ExecutionCreateResponse:
+    ) -> RunCreateResponse:
         adapter_provider_result = self._parse_required_payload_slot(
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.execution_create_result,
             slot_name="execution_create_result",
@@ -995,7 +1048,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             operation="starting the execution",
         )
         api_provider_result = WatsonxApiAgentExecutionCreateResultData(
-            execution_id=adapter_provider_result.execution_id,
+            id=adapter_provider_result.execution_id,
             agent_id=adapter_provider_result.agent_id,
             thread_id=adapter_provider_result.thread_id,
             status=adapter_provider_result.status,
@@ -1006,7 +1059,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             cancelled_at=adapter_provider_result.cancelled_at,
             last_error=adapter_provider_result.last_error,
         )
-        return ExecutionCreateResponse(
+        return RunCreateResponse(
             deployment_id=deployment_id,
             provider_data=api_provider_result.model_dump(),
             # includes None intentionally, simply passes through
@@ -1018,7 +1071,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         result: ExecutionStatusResult,
         *,
         deployment_id: UUID,
-    ) -> ExecutionStatusResponse:
+    ) -> RunStatusResponse:
         adapter_provider_result = self._parse_required_payload_slot(
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.execution_status_result,
             slot_name="execution_status_result",
@@ -1026,7 +1079,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             operation="checking execution status",
         )
         api_provider_result = WatsonxApiAgentExecutionStatusResultData(
-            execution_id=adapter_provider_result.execution_id,
+            id=adapter_provider_result.execution_id,
             agent_id=adapter_provider_result.agent_id,
             thread_id=adapter_provider_result.thread_id,
             status=adapter_provider_result.status,
@@ -1037,7 +1090,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             cancelled_at=adapter_provider_result.cancelled_at,
             last_error=adapter_provider_result.last_error,
         )
-        return ExecutionStatusResponse(
+        return RunStatusResponse(
             deployment_id=deployment_id,
             provider_data=api_provider_result.model_dump(),
             # includes None intentionally, simply passes through

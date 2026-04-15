@@ -9,7 +9,7 @@ Two identifier domains coexist in these schemas:
   ``provider_id`` maps to ``deployment_provider_account.id``.
 
 * **Provider-owned (str)** -- ``reference_id``, ``config_id``,
-  ``execution_id``.
+  ``run_id``.
   Opaque values assigned or consumed by the external deployment provider.
   ``provider_key`` is Langflow-owned adapter vocabulary.
   Provider-specific metadata (for example URL and tenant/account identifiers)
@@ -121,6 +121,12 @@ FlowIdsQuery = Annotated[list[UUID] | None, AfterValidator(_validate_flow_ids)]
 ``None`` means no filter. Empty lists are rejected by validation.
 Max supported length is 1 today.
 """
+
+
+def _validate_detect_vars_request_ids(values: list[UUID]) -> list[UUID]:
+    """AfterValidator for DetectVarsRequest.flow_version_ids."""
+    return _validate_uuid_list(values, field_name="flow_version_ids")
+
 
 # ---------------------------------------------------------------------------
 # Provider sub-resource schemas
@@ -419,26 +425,26 @@ class DeploymentUpdateRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Execution sub-resource schemas
+# Run sub-resource schemas
 # ---------------------------------------------------------------------------
 
 
-class ExecutionCreateRequest(BaseModel):
+class RunCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     provider_data: dict[str, Any] | None = Field(
         default=None,
-        description="Provider-owned opaque execution input payload.",
+        description="Provider-owned opaque run input payload.",
     )
 
 
-class _ExecutionResponseBase(BaseModel):
-    """Shared fields for execution responses.
+class _RunResponseBase(BaseModel):
+    """Shared fields for run responses.
 
     Only Langflow-owned identifiers live at the top level.  All
-    provider-owned data (including the provider's ``execution_id``)
+    provider-owned data (including the provider's ``id``)
     is returned inside ``provider_data`` so that ownership boundaries
-    stay clear and a future Langflow-managed execution id won't
+    stay clear and a future Langflow-managed run id won't
     collide with provider terminology.
     """
 
@@ -446,25 +452,25 @@ class _ExecutionResponseBase(BaseModel):
     provider_data: dict[str, Any] | None = Field(
         default=None,
         description=(
-            "Provider-owned opaque execution result payload.  "
-            "Contains at least ``execution_id`` (the provider's opaque run identifier) "
+            "Provider-owned opaque run result payload.  "
+            "Contains at least ``id`` (the provider's opaque run identifier) "
             "when the provider has assigned one."
         ),
     )
 
 
-class ExecutionCreateResponse(_ExecutionResponseBase):
-    """Response returned when an execution is created.
+class RunCreateResponse(_RunResponseBase):
+    """Response returned when a run is created.
 
-    Intentionally distinct from ``ExecutionStatusResponse`` even though both
+    Intentionally distinct from ``RunStatusResponse`` even though both
     currently share the same shape, mirroring the service-layer separation.
     """
 
 
-class ExecutionStatusResponse(_ExecutionResponseBase):
-    """Response returned when querying an execution status.
+class RunStatusResponse(_RunResponseBase):
+    """Response returned when querying a run status.
 
-    Intentionally distinct from ``ExecutionCreateResponse`` even though both
+    Intentionally distinct from ``RunCreateResponse`` even though both
     currently share the same shape, mirroring the service-layer separation.
     """
 
@@ -499,27 +505,17 @@ class SnapshotUpdateResponse(BaseModel):
 class DetectVarsRequest(BaseModel):
     """Request body for detecting environment variables from flow version IDs."""
 
-    flow_version_ids: list[UUID] = Field(
+    flow_version_ids: Annotated[
+        list[UUID],
+        AfterValidator(_validate_detect_vars_request_ids),
+    ] = Field(
+        min_length=1,
         max_length=50,
         description="Flow version UUIDs to scan for global variable references.",
     )
 
 
-class DetectedEnvVar(BaseModel):
-    """A single detected environment variable reference."""
-
-    key: str = Field(description="The global variable name used as the env var key.")
-    global_variable_name: str | None = Field(
-        default=None,
-        description="The Langflow global variable name, if the field is linked to one.",
-    )
-
-
 class DetectVarsResponse(BaseModel):
-    """Response containing detected environment variable references."""
+    """Response containing detected global variable names."""
 
-    variables: list[DetectedEnvVar] = Field(default_factory=list)
-    unresolved_ids: list[UUID] = Field(
-        default_factory=list,
-        description="Flow version IDs that could not be found or accessed.",
-    )
+    variables: list[str] = Field(default_factory=list, description="Detected global variable names.")

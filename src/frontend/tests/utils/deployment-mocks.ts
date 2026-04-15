@@ -153,30 +153,44 @@ export const CONFIGS_WITH_CONNECTIONS_MOCK = {
   },
 };
 
-export const POST_EXECUTION_RESPONSE = {
+// Snapshot list response — used to check duplicate tool names on review step.
+export const SNAPSHOTS_EMPTY_MOCK = {
+  provider_data: { tools: [], page: 1, size: 50, total: 0 },
+};
+
+export const SNAPSHOTS_DUPLICATE_MOCK = {
+  provider_data: {
+    tools: [{ id: "tool-existing", name: "My_Flow", connections: {} }],
+    page: 1,
+    size: 50,
+    total: 1,
+  },
+};
+
+export const POST_RUN_RESPONSE = {
   deployment_id: "dep-1",
   provider_data: {
-    execution_id: "exec-1",
+    id: "exec-1",
     status: "running",
     thread_id: null,
     result: null,
   },
 };
 
-export const RUNNING_EXECUTION_RESPONSE = {
+export const RUNNING_RUN_RESPONSE = {
   deployment_id: "dep-1",
   provider_data: {
-    execution_id: "exec-1",
+    id: "exec-1",
     status: "running",
     result: null,
     thread_id: null,
   },
 };
 
-export const COMPLETED_EXECUTION_RESPONSE = {
+export const COMPLETED_RUN_RESPONSE = {
   deployment_id: "dep-1",
   provider_data: {
-    execution_id: "exec-1",
+    id: "exec-1",
     status: "completed",
     thread_id: "thread-1",
     result: {

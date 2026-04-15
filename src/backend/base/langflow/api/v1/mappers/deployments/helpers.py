@@ -11,8 +11,8 @@ from fastapi import HTTPException, Query, status
 from fastapi_pagination import Params
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
-    DeploymentConflictError,
     DeploymentServiceError,
+    ResourceConflictError,
     http_status_for_deployment_error,
 )
 from lfx.services.adapters.deployment.schema import (
@@ -151,7 +151,10 @@ async def build_flow_artifacts_from_flow_versions(
     )
     rows = list((await db.exec(statement)).all())
     if len(rows) < len(flow_version_ids):
-        msg = "One or more flow version ids are invalid."
+        msg = (
+            "One or more flow versions are invalid. "
+            "Please ensure the flows belong to the project containing the deployment."
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
 
     artifacts: list[tuple[UUID, int, UUID, BaseFlowArtifact]] = []
@@ -315,8 +318,12 @@ def handle_adapter_errors(*, mapper: BaseDeploymentMapper | None = None):
     except DeploymentServiceError as exc:
         http_status = http_status_for_deployment_error(exc)
         detail = exc.message
-        if isinstance(exc, DeploymentConflictError) and mapper is not None:
-            detail = mapper.format_conflict_detail(exc.message)
+        if isinstance(exc, ResourceConflictError) and mapper is not None:
+            detail = mapper.format_conflict_detail(
+                exc.message,
+                resource=exc.resource,
+                resource_name=exc.resource_name,
+            )
         logger.exception("Adapter error (status=%s): %s", http_status, detail)
         raise HTTPException(
             status_code=http_status,

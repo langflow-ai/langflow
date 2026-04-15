@@ -812,69 +812,9 @@ class TestSimpleRunFlowTask:
 class TestWebhookEventsStreamAuth:
     """Unit tests for webhook_events_stream authentication."""
 
-    async def test_calls_get_current_user_for_sse_for_authentication(self):
-        """Should call get_current_user_for_sse to validate authentication."""
-        from unittest.mock import AsyncMock, Mock, patch
-
-        from langflow.api.v1.endpoints import webhook_events_stream
-
-        user_id = "user-123"
-        flow = Mock()
-        flow.id = "test-flow-id"
-        flow.name = "Test Flow"
-        flow.user_id = user_id
-
-        request = Mock()
-        request.is_disconnected = AsyncMock(return_value=True)  # Disconnect immediately
-
-        mock_user = Mock()
-        mock_user.id = user_id
-
-        with (
-            patch("langflow.api.v1.endpoints.get_current_user_for_sse", new_callable=AsyncMock) as mock_auth,
-            patch("langflow.api.v1.endpoints.webhook_event_manager") as mock_manager,
-        ):
-            mock_auth.return_value = mock_user
-            mock_manager.subscribe = AsyncMock(return_value=asyncio.Queue())
-            mock_manager.unsubscribe = AsyncMock()
-
-            await webhook_events_stream(
-                flow_id_or_name="test-flow-id",
-                flow=flow,
-                request=request,
-            )
-
-            # Should call get_current_user_for_sse with request
-            mock_auth.assert_called_once_with(request)
-
-    async def test_raises_403_when_auth_fails(self):
-        """Should propagate 403 error when authentication fails."""
-        from unittest.mock import AsyncMock, Mock, patch
-
-        from fastapi import HTTPException
-        from langflow.api.v1.endpoints import webhook_events_stream
-
-        flow = Mock()
-        flow.id = "test-flow-id"
-
-        request = Mock()
-
-        with patch("langflow.api.v1.endpoints.get_current_user_for_sse", new_callable=AsyncMock) as mock_auth:
-            mock_auth.side_effect = HTTPException(status_code=403, detail="Missing or invalid credentials")
-
-            with pytest.raises(HTTPException) as exc_info:
-                await webhook_events_stream(
-                    flow_id_or_name="test-flow-id",
-                    flow=flow,
-                    request=request,
-                )
-
-            assert exc_info.value.status_code == 403
-            assert "Missing or invalid credentials" in exc_info.value.detail
-
     async def test_raises_403_when_user_does_not_own_flow(self):
         """Should raise 403 when authenticated user doesn't own the flow."""
-        from unittest.mock import AsyncMock, Mock, patch
+        from unittest.mock import Mock
 
         from fastapi import HTTPException
         from langflow.api.v1.endpoints import webhook_events_stream
@@ -888,15 +828,13 @@ class TestWebhookEventsStreamAuth:
 
         request = Mock()
 
-        with patch("langflow.api.v1.endpoints.get_current_user_for_sse", new_callable=AsyncMock) as mock_auth:
-            mock_auth.return_value = mock_user
+        with pytest.raises(HTTPException) as exc_info:
+            await webhook_events_stream(
+                flow_id_or_name="test-flow-id",
+                flow=flow,
+                user=mock_user,
+                request=request,
+            )
 
-            with pytest.raises(HTTPException) as exc_info:
-                await webhook_events_stream(
-                    flow_id_or_name="test-flow-id",
-                    flow=flow,
-                    request=request,
-                )
-
-            assert exc_info.value.status_code == 403
-            assert "Access denied" in exc_info.value.detail
+        assert exc_info.value.status_code == 403
+        assert "Access denied" in exc_info.value.detail
