@@ -14,6 +14,15 @@
       "calt" 1;
     font-family: Inter, system-ui, sans-serif;
   }
+
+}
+
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
 }
 
 @keyframes slideDown {
