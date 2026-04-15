@@ -1,11 +1,17 @@
 """Tests for FileDescriptionGeneratorComponent."""
 
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.components.files_ingestion.file_description_generator import FileDescriptionGeneratorComponent
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+
+
+def _wrap_results(results_list):
+    """Wrap a list of results in the expected subprocess output format."""
+    return json.dumps({"results": results_list, "failed": [], "total": len(results_list)})
 
 
 class TestFileDescriptionGeneratorComponent:
@@ -35,7 +41,6 @@ class TestFileDescriptionGeneratorComponent:
 
     def test_extract_file_paths_from_dataframe_column(self):
         """Test extracting file paths from DataFrame with file_path column."""
-        # Create a DataFrame with file_path column (simulating Read File output)
         file_dataframe = DataFrame(
             [
                 {"file_path": "/path/to/file1.csv", "text": "content1"},
@@ -48,24 +53,19 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        stdout_json = (
-            '[{"text": "desc1", "file_path": "/path/to/file1.csv"},'
-            ' {"text": "desc2", "file_path": "/path/to/file2.csv"}]'
-        )
-        mock_proc = self._make_mock_popen(stdout_json)
+        results = [
+            {"text": "desc1", "file_path": "/path/to/file1.csv"},
+            {"text": "desc2", "file_path": "/path/to/file2.csv"},
+        ]
+        mock_proc = self._make_mock_popen(_wrap_results(results))
 
-        # Mock the subprocess to avoid actual execution
         with (
             patch("subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
         ):
             result = self.component.generate_descriptions()
 
-        # Verify the subprocess was called
         assert mock_popen.called
-
-        # Verify stdin received the config with correct file paths
-        import json
 
         write_calls = mock_proc.stdin.write.call_args_list
         config = json.loads(write_calls[0][0][0])
@@ -73,7 +73,6 @@ class TestFileDescriptionGeneratorComponent:
         assert "/path/to/file1.csv" in config["file_paths"]
         assert "/path/to/file2.csv" in config["file_paths"]
 
-        # Verify output
         assert len(result) == 2
         assert all(isinstance(item, Data) for item in result)
         assert result[0].data["text"] == "desc1"
@@ -81,7 +80,6 @@ class TestFileDescriptionGeneratorComponent:
 
     def test_extract_file_paths_from_dataframe_attrs(self):
         """Test extracting file paths from DataFrame attrs (legacy support)."""
-        # Create a DataFrame with attrs (legacy approach)
         file_dataframe = DataFrame([{"text": "content"}])
         file_dataframe.attrs["source_file_path"] = "/path/to/legacy_file.csv"
 
@@ -90,16 +88,14 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        mock_proc = self._make_mock_popen('[{"text": "legacy desc", "file_path": "/path/to/legacy_file.csv"}]')
+        results = [{"text": "legacy desc", "file_path": "/path/to/legacy_file.csv"}]
+        mock_proc = self._make_mock_popen(_wrap_results(results))
 
         with (
             patch("subprocess.Popen", return_value=mock_proc),
             patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
         ):
             _result = self.component.generate_descriptions()
-
-        # Verify stdin received the config with correct file path
-        import json
 
         write_calls = mock_proc.stdin.write.call_args_list
         config = json.loads(write_calls[0][0][0])
@@ -116,10 +112,11 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        mock_proc = self._make_mock_popen(
-            '[{"text": "desc1", "file_path": "/path/to/data1.txt"},'
-            ' {"text": "desc2", "file_path": "/path/to/data2.txt"}]'
-        )
+        results = [
+            {"text": "desc1", "file_path": "/path/to/data1.txt"},
+            {"text": "desc2", "file_path": "/path/to/data2.txt"},
+        ]
+        mock_proc = self._make_mock_popen(_wrap_results(results))
 
         with (
             patch("subprocess.Popen", return_value=mock_proc),
@@ -127,14 +124,12 @@ class TestFileDescriptionGeneratorComponent:
         ):
             result = self.component.generate_descriptions()
 
-        # Verify output
         assert len(result) == 2
         assert result[0].data["file_path"] == "/path/to/data1.txt"
         assert result[1].data["file_path"] == "/path/to/data2.txt"
 
     def test_extract_unique_file_paths_from_dataframe(self):
         """Test that duplicate file paths in DataFrame are deduplicated."""
-        # Create a DataFrame with duplicate file paths
         file_dataframe = DataFrame(
             [
                 {"file_path": "/path/to/file1.csv", "text": "row1"},
@@ -148,19 +143,17 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        mock_proc = self._make_mock_popen(
-            '[{"text": "desc1", "file_path": "/path/to/file1.csv"},'
-            ' {"text": "desc2", "file_path": "/path/to/file2.csv"}]'
-        )
+        results = [
+            {"text": "desc1", "file_path": "/path/to/file1.csv"},
+            {"text": "desc2", "file_path": "/path/to/file2.csv"},
+        ]
+        mock_proc = self._make_mock_popen(_wrap_results(results))
 
         with (
             patch("subprocess.Popen", return_value=mock_proc),
             patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
         ):
             _result = self.component.generate_descriptions()
-
-        # Verify only unique file paths were processed
-        import json
 
         write_calls = mock_proc.stdin.write.call_args_list
         config = json.loads(write_calls[0][0][0])
@@ -204,19 +197,17 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        mock_proc = self._make_mock_popen(
-            '[{"text": "desc1", "file_path": "/path/to/file1.csv"},'
-            ' {"text": "desc2", "file_path": "/path/to/file2.txt"}]'
-        )
+        results = [
+            {"text": "desc1", "file_path": "/path/to/file1.csv"},
+            {"text": "desc2", "file_path": "/path/to/file2.txt"},
+        ]
+        mock_proc = self._make_mock_popen(_wrap_results(results))
 
         with (
             patch("subprocess.Popen", return_value=mock_proc),
             patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
         ):
             _result = self.component.generate_descriptions()
-
-        # Verify both file paths were processed
-        import json
 
         write_calls = mock_proc.stdin.write.call_args_list
         config = json.loads(write_calls[0][0][0])
@@ -273,19 +264,17 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        mock_proc = self._make_mock_popen(
-            '[{"text": "desc1", "file_path": "/path/to/file1.csv"},'
-            ' {"text": "desc3", "file_path": "/path/to/file3.csv"}]'
-        )
+        results = [
+            {"text": "desc1", "file_path": "/path/to/file1.csv"},
+            {"text": "desc3", "file_path": "/path/to/file3.csv"},
+        ]
+        mock_proc = self._make_mock_popen(_wrap_results(results))
 
         with (
             patch("subprocess.Popen", return_value=mock_proc),
             patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
         ):
             _result = self.component.generate_descriptions()
-
-        # Verify only non-NaN file paths were processed
-        import json
 
         write_calls = mock_proc.stdin.write.call_args_list
         config = json.loads(write_calls[0][0][0])
@@ -294,7 +283,6 @@ class TestFileDescriptionGeneratorComponent:
 
     def test_one_description_per_file(self):
         """Test that component generates exactly one description per unique file."""
-        # Simulate Read File output with 2 files
         file_dataframe = DataFrame(
             [
                 {"file_path": "/path/to/file1.csv", "text": "ratings,title,text..."},
@@ -307,12 +295,11 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        mock_proc = self._make_mock_popen(
-            '[{"text": "This file contains hotel ratings data",'
-            ' "file_path": "/path/to/file1.csv"},'
-            ' {"text": "This file contains listing information",'
-            ' "file_path": "/path/to/file2.csv"}]'
-        )
+        results = [
+            {"text": "This file contains hotel ratings data", "file_path": "/path/to/file1.csv"},
+            {"text": "This file contains listing information", "file_path": "/path/to/file2.csv"},
+        ]
+        mock_proc = self._make_mock_popen(_wrap_results(results))
 
         with (
             patch("subprocess.Popen", return_value=mock_proc),
@@ -320,12 +307,8 @@ class TestFileDescriptionGeneratorComponent:
         ):
             result = self.component.generate_descriptions()
 
-        # Verify exactly one description per file
         assert len(result) == 2
         assert result[0].data["file_path"] == "/path/to/file1.csv"
         assert result[0].data["text"] == "This file contains hotel ratings data"
         assert result[1].data["file_path"] == "/path/to/file2.csv"
         assert result[1].data["text"] == "This file contains listing information"
-
-
-# Made with Bob
