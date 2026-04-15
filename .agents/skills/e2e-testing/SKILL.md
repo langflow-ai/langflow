@@ -21,7 +21,7 @@ description: Write and review Playwright E2E tests for Langflow. Trigger when th
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Playwright | 1.57.0 | E2E test runner + browser automation |
+| Playwright | 1.59.1 | E2E test runner + browser automation |
 | Chromium | (bundled) | Default browser (Firefox/Safari disabled) |
 | Custom fixtures | `tests/fixtures.ts` | Auto-detects API errors and flow execution failures |
 
