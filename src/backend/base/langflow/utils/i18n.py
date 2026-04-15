@@ -86,29 +86,23 @@ def translate_starter_flows(flow_reads: list, locale: str) -> list:
 
 
 
-def translate_flow_notes(nodes: list[dict], flow_name: str, locale: str) -> list[dict]:
+def translate_flow_notes(nodes: list[dict], locale: str) -> list[dict]:
     """Return a copy of nodes with note node descriptions translated for locale.
 
-    For each noteNode, looks up template_notes.{flow_key}.{index} and substitutes
-    the translated markdown. Falls back to the original description if no translation exists.
-    Also stamps i18n_key onto each noteNode so the key travels with the node when
-    a user copies the template — at this point flow_name is still the original English name.
-    Never mutates the input list.
+    Reads i18n_key from node.data.node (baked in by bake_note_keys.py) and
+    substitutes the translated markdown. Nodes without i18n_key are passed through
+    unchanged. Never mutates the input list.
     """
     import copy as _copy
 
-    flow_key = _safe_flow_key(flow_name)
     result = []
-    note_index = 0
     for node in nodes:
         if node.get("type") == "noteNode":
-            node = _copy.deepcopy(node)
-            description = node.get("data", {}).get("node", {}).get("description", "")
-            key = f"template_notes.{flow_key}.{note_index}"
-            translated = translate(key, locale, description)
-            node["data"]["node"]["description"] = translated
-            node["data"]["node"]["i18n_key"] = key
-            note_index += 1
+            i18n_key = node.get("data", {}).get("node", {}).get("i18n_key")
+            if i18n_key:
+                node = _copy.deepcopy(node)
+                description = node["data"]["node"].get("description", "")
+                node["data"]["node"]["description"] = translate(i18n_key, locale, description)
         result.append(node)
     return result
 

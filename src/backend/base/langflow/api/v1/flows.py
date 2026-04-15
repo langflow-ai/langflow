@@ -535,8 +535,7 @@ async def read_basic_examples(
         flow_copy = flow.model_copy()
         if flow_copy.data and isinstance(flow_copy.data, dict):
             nodes = flow_copy.data.get("nodes", [])
-            original_name = getattr(flow_copy, "name_key", None) or flow_copy.name or ""
-            translated_nodes = translate_flow_notes(nodes, original_name, locale)
+            translated_nodes = translate_flow_notes(nodes, locale)
             flow_copy.data = {
                 **flow_copy.data,
                 "nodes": translated_nodes,

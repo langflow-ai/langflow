@@ -1119,7 +1119,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.hybrid_search_rag.0"
           },
           "type": "note"
         },

@@ -656,7 +656,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.pok_dex_agent.0"
           },
           "type": "note"
         },
@@ -683,7 +684,8 @@
             "description": "# 📖 README\nCollect research on Pokémon with a specialized **Agent** and the Pokédex API.\n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2.  Click **Playground** and ask about your favorite Pokémon.\nThe **Agent** queries the Pokedex API and returns a formatted entry.",
             "display_name": "",
             "documentation": "",
-            "template": {}
+            "template": {},
+            "i18n_key": "template_notes.pok_dex_agent.1"
           },
           "type": "note"
         },
@@ -712,7 +714,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.pok_dex_agent.2"
           },
           "type": "note"
         },

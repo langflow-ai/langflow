@@ -1469,7 +1469,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.price_deal_finder.0"
           },
           "type": "note"
         },
@@ -1495,7 +1496,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.price_deal_finder.1"
           },
           "type": "note"
         },
@@ -1520,7 +1522,8 @@
             "description": "# 📖 README\nThis flow searches and compares prices of a product on the web.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"iPhone 16 Pro 512 GB\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
             "display_name": "",
             "documentation": "",
-            "template": {}
+            "template": {},
+            "i18n_key": "template_notes.price_deal_finder.2"
           },
           "type": "note"
         },
@@ -1549,7 +1552,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.price_deal_finder.3"
           },
           "type": "note"
         },

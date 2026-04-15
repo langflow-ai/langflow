@@ -524,7 +524,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.basic_prompting.0"
           }
         },
         "dragging": false,
@@ -560,7 +561,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.basic_prompting.1"
           },
           "type": "note"
         },

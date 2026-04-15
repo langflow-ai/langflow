@@ -826,7 +826,8 @@
             "description": "# � README\nThis template connects the **Search Point** endpoint from [ScrapeGraphAI](https://scrapegraphai.com) to an **Agent** component.\n\n## Prerequisites\n\n* [OpenAI API key](https://platform.openai.com/docs/overview)\n* [ScrapeGraphAI API key](https://dashboard.scrapegraphai.com)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n\n2. Add your **ScrapeGraphAI API key** to the **ScrapeGraphSearchApi** component.\n\n3. Open the **Playground** and ask your Agent a question. The Agent uses ScrapeGraph as a tool to answer you.",
             "display_name": "",
             "documentation": "",
-            "template": {}
+            "template": {},
+            "i18n_key": "template_notes.search_agent.0"
           },
           "type": "note"
         },
@@ -855,7 +856,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.search_agent.1"
           },
           "type": "note"
         },
@@ -881,7 +883,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.search_agent.2"
           },
           "type": "note"
         },

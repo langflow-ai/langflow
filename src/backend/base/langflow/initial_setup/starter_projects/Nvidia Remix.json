@@ -2284,7 +2284,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "lime"
-            }
+            },
+            "i18n_key": "template_notes.nvidia_rtx_remix.0"
           },
           "type": "note"
         },

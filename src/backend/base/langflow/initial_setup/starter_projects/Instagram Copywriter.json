@@ -1588,7 +1588,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "amber"
-            }
+            },
+            "i18n_key": "template_notes.instagram_copywriter.0"
           },
           "type": "note"
         },

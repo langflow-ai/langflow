@@ -1979,7 +1979,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.youtube_analysis.0"
           },
           "type": "note"
         },

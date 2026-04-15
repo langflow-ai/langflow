@@ -128,7 +128,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.simple_agent.0"
           },
           "type": "note"
         },
@@ -154,7 +155,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.simple_agent.1"
           },
           "type": "note"
         },

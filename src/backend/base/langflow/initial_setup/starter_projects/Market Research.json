@@ -705,7 +705,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.market_research.0"
           },
           "type": "note"
         },

@@ -56,9 +56,8 @@ async def get_starter_projects(request: Request) -> list[GraphDumpResponse]:
         # Convert TypedDict GraphDump to Pydantic GraphDumpResponse
         results = []
         for item in raw_data:
-            flow_name = item.get("name") or ""
             nodes = item.get("data", {}).get("nodes", [])
-            translated_nodes = translate_flow_notes(nodes, flow_name, locale)
+            translated_nodes = translate_flow_notes(nodes, locale)
 
             # Create GraphData
             graph_data = GraphData(

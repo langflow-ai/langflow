@@ -124,7 +124,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.invoice_summarizer.0"
           },
           "type": "note"
         },
@@ -602,7 +603,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.invoice_summarizer.1"
           },
           "type": "note"
         },
@@ -628,7 +630,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.invoice_summarizer.2"
           },
           "type": "note"
         },
@@ -712,7 +715,7 @@
               }
             ],
             "pinned": false,
-            "score": 7.568328950209746e-6,
+            "score": 7.568328950209746e-06,
             "template": {
               "_type": "Component",
               "code": {

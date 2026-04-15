@@ -1653,7 +1653,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "amber"
-            }
+            },
+            "i18n_key": "template_notes.twitter_thread_generator.0"
           },
           "type": "note"
         },

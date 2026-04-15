@@ -66,7 +66,8 @@
             "description": "# 📖 README\nA stand-alone component handles the retrieval of ingested knowledge from existing knowledge bases. To retrieve knowledge:\n\n1. Select your knowledge base from the Knowledge Base dropdown. If you do not see it, choose \"Refresh List\".\n2. (Optional) Enter a Search Query to be performed against the knowledge base.\n\nNote that by default, 5 results are returned, which can be configured by clicking Controls at the top of the component.\n",
             "display_name": "",
             "documentation": "",
-            "template": {}
+            "template": {},
+            "i18n_key": "template_notes.knowledge_base.0"
           },
           "type": "note"
         },

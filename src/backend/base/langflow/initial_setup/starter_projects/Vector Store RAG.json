@@ -972,7 +972,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.vector_store_rag.0"
           },
           "type": "note"
         },
@@ -1009,7 +1010,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.vector_store_rag.1"
           },
           "type": "note"
         },
@@ -1326,7 +1328,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.vector_store_rag.2"
           },
           "type": "note"
         },
@@ -1363,7 +1366,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.vector_store_rag.3"
           },
           "type": "note"
         },

@@ -130,28 +130,34 @@ def collect_strings() -> dict[str, str]:
 
     print(f"Found {starter_count} starter project(s) in {STARTER_PROJECTS_DIR.name}/")
 
-    # Tier 4 — note node descriptions in starter projects
+    # Tier 4 — note node descriptions in starter projects (keys baked by bake_note_keys.py)
     note_count = 0
+    missing_keys: list[str] = []
     for project_file in sorted(STARTER_PROJECTS_DIR.glob("*.json")):
         try:
             with project_file.open(encoding="utf-8") as f:
                 project = json.load(f)
         except Exception:  # noqa: BLE001
             continue
-        name = project.get("name")
-        if not name or not isinstance(name, str):
-            continue
-        flow_key = _safe_key(name)
         nodes = project.get("data", {}).get("nodes", [])
-        note_index = 0
         for node in nodes:
-            if node.get("type") == "noteNode":
-                description = node.get("data", {}).get("node", {}).get("description", "")
-                if description and isinstance(description, str):
-                    flat[f"template_notes.{flow_key}.{note_index}"] = description
-                    note_count += 1
-                note_index += 1
+            if node.get("type") != "noteNode":
+                continue
+            node_data = node.get("data", {}).get("node", {})
+            i18n_key = node_data.get("i18n_key")
+            description = node_data.get("description", "")
+            if not i18n_key:
+                missing_keys.append(project_file.name)
+                continue
+            if description and isinstance(description, str):
+                flat[i18n_key] = description
+                note_count += 1
 
+    if missing_keys:
+        print(
+            f"WARNING: {len(missing_keys)} noteNode(s) are missing i18n_key. "
+            "Run scripts/gp/bake_note_keys.py to assign keys."
+        )
     print(f"Found {note_count} note node(s) across starter projects.")
 
     return dict(sorted(flat.items()))
