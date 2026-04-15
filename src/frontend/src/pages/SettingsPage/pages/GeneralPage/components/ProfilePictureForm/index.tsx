@@ -1,6 +1,5 @@
 import * as Form from "@radix-ui/react-form";
 import type { UseQueryResult } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import {
   type ProfilePicturesQueryResponse,
   useGetProfilePicturesQuery,
@@ -31,7 +30,6 @@ const ProfilePictureFormComponent = ({
   handleGetProfilePictures,
   userData,
 }: ProfilePictureFormComponentProps) => {
-  const { t } = useTranslation();
   const { isLoading, data, isFetching } = useGetProfilePicturesQuery();
 
   return (
@@ -43,9 +41,9 @@ const ProfilePictureFormComponent = ({
     >
       <Card x-chunk="dashboard-04-chunk-1">
         <CardHeader>
-          <CardTitle>{t("settings.profilePictureTitle")}</CardTitle>
+          <CardTitle>Profile Picture</CardTitle>
           <CardDescription>
-            {t("settings.profilePictureDescription")}
+            Choose the image that appears as your profile picture.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -69,7 +67,7 @@ const ProfilePictureFormComponent = ({
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
           <Form.Submit asChild>
-            <Button type="submit">{t("settings.saveButton")}</Button>
+            <Button type="submit">Save</Button>
           </Form.Submit>
         </CardFooter>
       </Card>

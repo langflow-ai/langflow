@@ -136,7 +136,6 @@ class OpenAIModelComponent(LCModelComponent):
         # Ensure all parameter values are the correct types
         if isinstance(parameters.get("api_key"), SecretStr):
             parameters["api_key"] = parameters["api_key"].get_secret_value()
-        parameters["stream_usage"] = True
         output = ChatOpenAI(**parameters)
         if self.json_mode:
             output = output.bind(response_format={"type": "json_object"})
@@ -153,18 +152,9 @@ class OpenAIModelComponent(LCModelComponent):
             str: The message from the exception.
         """
         try:
-            from openai import BadRequestError, NotFoundError
+            from openai import BadRequestError
         except ImportError:
             return None
-        if isinstance(e, NotFoundError):
-            body = getattr(e, "body", None) or {}
-            if isinstance(body, dict) and body.get("code") == "model_not_found":
-                return (
-                    f"Model '{self.model_name}' is not available for this OpenAI account. "
-                    "Your API tier may not have access yet — check "
-                    "https://platform.openai.com/settings/organization/limits "
-                    "or select a different model."
-                )
         if isinstance(e, BadRequestError):
             message = e.body.get("message")
             if message:

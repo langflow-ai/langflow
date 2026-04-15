@@ -1,5 +1,5 @@
 import type { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
-import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
+import type { AxiosRequestConfig, AxiosResponse } from "axios";
 import {
   customGetAppVersions,
   customGetLatestVersion,
@@ -19,9 +19,7 @@ const DISCORD_API_URL =
 
 export async function getRepoStars(owner: string, repo: string) {
   try {
-    const response = await axios.get(
-      `${GITHUB_API_URL}/repos/${owner}/${repo}`,
-    );
+    const response = await api.get(`${GITHUB_API_URL}/repos/${owner}/${repo}`);
     return response?.data.stargazers_count;
   } catch (error) {
     console.error("Error fetching repository data:", error);
@@ -31,7 +29,7 @@ export async function getRepoStars(owner: string, repo: string) {
 
 export async function getDiscordCount() {
   try {
-    const response = await axios.get(DISCORD_API_URL);
+    const response = await api.get(DISCORD_API_URL);
     return response?.data.approximate_member_count;
   } catch (error) {
     console.error("Error fetching repository data:", error);

@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { ICON_STROKE_WIDTH, SAVE_API_KEY_ALERT } from "@/constants/constants";
 import { useGetMessagesPollingMutation } from "@/controllers/API/queries/messages/use-get-messages-polling";
 import {
   useGetGlobalVariables,
@@ -40,7 +39,6 @@ export function VoiceAssistant({
   flowId,
   setShowAudioInput,
 }: VoiceAssistantProps) {
-  const { t } = useTranslation();
   const [recordingTime, setRecordingTime] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [_status, setStatus] = useState("");
@@ -253,7 +251,7 @@ export function VoiceAssistant({
         {
           onSuccess: () => {
             setSuccessData({
-              title: t("auth.saveApiKeySuccess"),
+              title: SAVE_API_KEY_ALERT,
             });
             setAddKey(!addKey);
             setIsEditingOpenAIKey(false);
@@ -273,7 +271,7 @@ export function VoiceAssistant({
       {
         onSuccess: () => {
           setSuccessData({
-            title: t("auth.saveApiKeySuccess"),
+            title: SAVE_API_KEY_ALERT,
           });
           setAddKey(!addKey);
         },

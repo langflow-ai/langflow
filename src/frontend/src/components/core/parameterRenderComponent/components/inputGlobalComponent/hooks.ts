@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import type { GlobalVariable } from "./types";
 
@@ -41,7 +41,6 @@ export const useInitialLoad = (
   disabled: boolean,
   loadFromDb: boolean,
   globalVariables: GlobalVariable[],
-  canValidateMissingVariable: boolean,
   valueExists: boolean,
   unavailableField: string | null,
   handleOnNewValue: (
@@ -55,18 +54,9 @@ export const useInitialLoad = (
   // Keep the latest handleOnNewValue reference
   handleOnNewValueRef.current = handleOnNewValue;
 
-  // Handle database loading when value doesn't exist.
-  // Guard on the settled query state so we don't clear values while the
-  // global variables query is still in flight, during background refetches,
-  // or after failed fetches.
+  // Handle database loading when value doesn't exist
   useEffect(() => {
-    if (
-      disabled ||
-      !loadFromDb ||
-      !canValidateMissingVariable ||
-      !globalVariables.length ||
-      valueExists
-    ) {
+    if (disabled || !loadFromDb || !globalVariables.length || valueExists) {
       return;
     }
 
@@ -74,13 +64,7 @@ export const useInitialLoad = (
       { value: "", load_from_db: false },
       { skipSnapshot: true },
     );
-  }, [
-    disabled,
-    loadFromDb,
-    canValidateMissingVariable,
-    globalVariables.length,
-    valueExists,
-  ]);
+  }, [disabled, loadFromDb, globalVariables.length, valueExists]);
 
   // Handle unavailable field initialization
   useEffect(() => {

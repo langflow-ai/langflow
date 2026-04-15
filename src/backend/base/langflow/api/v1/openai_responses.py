@@ -9,7 +9,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
 from lfx.schema.openai_responses_schemas import create_openai_error, create_openai_error_chunk
-from lfx.utils.flow_validation import CustomComponentValidationError
 
 from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.v1.endpoints import consume_and_yield, run_flow_generator, simple_run_flow
@@ -75,7 +74,7 @@ async def run_flow_for_openai_responses(
     context = {}
     if variables:
         context["request_variables"] = variables
-        await logger.adebug(f"Added request variables to context: {list(variables.keys())}")
+        await logger.adebug(f"Added request variables to context: {variables}")
 
     # Convert OpenAI request to SimplifiedAPIRequest
     # Note: We're moving away from tweaks to a context-based approach
@@ -89,7 +88,7 @@ async def run_flow_for_openai_responses(
 
     # Context will be passed separately to simple_run_flow
 
-    await logger.adebug(f"SimplifiedAPIRequest created with context keys: {list(context.keys())}")
+    await logger.adebug(f"SimplifiedAPIRequest created with context: {context}")
 
     # Use session_id as response_id for OpenAI compatibility
     response_id = session_id
@@ -620,6 +619,7 @@ async def create_response(
 
     await logger.adebug(f"All headers received: {list(http_request.headers.keys())}")
     await logger.adebug(f"Extracted global variables from headers: {list(variables.keys())}")
+    await logger.adebug(f"Variables dict: {variables}")
 
     # Validate tools parameter - error out if tools are provided
     if request.tools is not None:
@@ -654,21 +654,19 @@ async def create_response(
             variables=variables,
         )
 
-    except CustomComponentValidationError as exc:
-        error_response = create_openai_error(
-            message=str(exc),
-            type_="invalid_request_error",
-            code="custom_components_blocked",
-        )
-        return OpenAIErrorResponse(error=error_response["error"])
-
-    except ValueError as exc:
-        error_response = create_openai_error(
-            message=str(exc),
-            type_="invalid_request_error",
-            code="invalid_flow_request",
-        )
-        return OpenAIErrorResponse(error=error_response["error"])
+        # Log telemetry for successful completion
+        if not request.stream:  # Only log for non-streaming responses
+            end_time = time.perf_counter()
+            background_tasks.add_task(
+                telemetry_service.log_package_run,
+                RunPayload(
+                    run_is_webhook=False,
+                    run_seconds=int(end_time - start_time),
+                    run_success=True,
+                    run_error_message="",
+                    run_id=None,  # OpenAI endpoint doesn't use simple_run_flow
+                ),
+            )
 
     except Exception as exc:  # noqa: BLE001
         logger.error(f"Error processing OpenAI Responses request: {exc}")
@@ -691,19 +689,4 @@ async def create_response(
             type_="processing_error",
         )
         return OpenAIErrorResponse(error=error_response["error"])
-
-    # Log telemetry for successful completion
-    if not request.stream:  # Only log for non-streaming responses
-        end_time = time.perf_counter()
-        background_tasks.add_task(
-            telemetry_service.log_package_run,
-            RunPayload(
-                run_is_webhook=False,
-                run_seconds=int(end_time - start_time),
-                run_success=True,
-                run_error_message="",
-                run_id=None,  # OpenAI endpoint doesn't use simple_run_flow
-            ),
-        )
-
     return result

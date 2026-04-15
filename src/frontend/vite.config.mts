@@ -2,7 +2,6 @@ import react from "@vitejs/plugin-react-swc";
 import * as dotenv from "dotenv";
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
-import istanbul from "vite-plugin-istanbul";
 import svgr from "vite-plugin-svgr";
 import tsconfigPaths from "vite-tsconfig-paths";
 import {
@@ -58,16 +57,7 @@ export default defineConfig(({ mode }) => {
         envLangflow.LANGFLOW_MCP_COMPOSER_ENABLED ?? "true",
       ),
     },
-    plugins: [
-      react(),
-      svgr(),
-      tsconfigPaths(),
-      istanbul({
-        include: "src/**/*",
-        extension: [".ts", ".tsx", ".js", ".jsx"],
-        requireEnv: false,
-      }),
-    ],
+    plugins: [react(), svgr(), tsconfigPaths()],
     server: {
       port: port,
       proxy: {

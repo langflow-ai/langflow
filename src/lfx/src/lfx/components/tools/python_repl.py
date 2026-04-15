@@ -1,6 +1,7 @@
 import importlib
 
-from langchain_core.tools import StructuredTool, ToolException
+from langchain.tools import StructuredTool
+from langchain_core.tools import ToolException
 from langchain_experimental.utilities import PythonREPL
 from pydantic import BaseModel, Field
 

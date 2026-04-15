@@ -1,5 +1,4 @@
 import * as Form from "@radix-ui/react-form";
-import { useTranslation } from "react-i18next";
 import InputComponent from "../../../../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../../../../components/ui/button";
 import {
@@ -10,6 +9,12 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../../../components/ui/card";
+import {
+  CREATE_API_KEY,
+  INSERT_API_KEY,
+  INVALID_API_KEY,
+  NO_API_KEY,
+} from "../../../../../constants/constants";
 
 type StoreApiKeyFormComponentProps = {
   apikey: string;
@@ -27,7 +32,6 @@ const StoreApiKeyFormComponent = ({
   validApiKey,
   hasApiKey,
 }: StoreApiKeyFormComponentProps) => {
-  const { t } = useTranslation();
   return (
     <>
       <Form.Root
@@ -41,10 +45,10 @@ const StoreApiKeyFormComponent = ({
             <CardTitle>Store API Key</CardTitle>
             <CardDescription>
               {(hasApiKey && !validApiKey
-                ? t("store.invalidApiKey")
+                ? INVALID_API_KEY
                 : !hasApiKey
-                  ? t("store.noApiKey")
-                  : "") + t("store.insertApiKey")}
+                  ? NO_API_KEY
+                  : "") + INSERT_API_KEY}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -68,7 +72,7 @@ const StoreApiKeyFormComponent = ({
                 </Form.Field>
               </div>
               <span className="pr-1 text-xs text-muted-foreground">
-                {t("store.createApiKey")}{" "}
+                {CREATE_API_KEY}{" "}
                 <a
                   className="text-high-indigo underline"
                   href="https://langflow.store/"

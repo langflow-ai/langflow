@@ -25,7 +25,6 @@ from lfx.io import (
 )
 from lfx.log import logger
 from lfx.schema.data import Data
-from lfx.schema.dataframe import Table
 
 REQUEST_TIMEOUT = 60
 MAX_RETRIES = 5
@@ -281,7 +280,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         DropdownInput(
             name="auth_mode",
             display_name="Authentication Mode",
-            value="jwt",
+            value="basic",
             options=["basic", "jwt"],
             info=(
                 "Authentication method: 'basic' for username/password authentication, "
@@ -323,7 +322,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         BoolInput(
             name="bearer_prefix",
             display_name="Prefix 'Bearer '",
-            value=False,
+            value=True,
             show=False,
             advanced=True,
         ),
@@ -392,7 +391,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             return Data(data={})
 
         if isinstance(raw_query, dict):
-            query_body = copy.deepcopy(raw_query)
+            query_body = raw_query
         elif isinstance(raw_query, str):
             s = raw_query.strip()
 
@@ -414,39 +413,6 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         else:
             msg = f"Unsupported raw_search query type: {type(raw_query)!r}"
             raise TypeError(msg)
-
-        filter_obj = self._parse_filter_expression()
-        filter_clauses = self._coerce_filter_clauses(filter_obj)
-
-        if filter_clauses:
-            if "query" in query_body:
-                original_query = query_body["query"]
-                query_body["query"] = {
-                    "bool": {
-                        "must": [original_query],
-                        "filter": filter_clauses,
-                    }
-                }
-            else:
-                query_body["query"] = {
-                    "bool": {
-                        "must": [{"match_all": {}}],
-                        "filter": filter_clauses,
-                    }
-                }
-
-        if filter_obj:
-            # Apply limit if not already set in the raw query
-            if "size" not in query_body:
-                limit = self._resolve_limit(filter_obj, default_limit=None)
-                if limit is not None:
-                    query_body["size"] = limit
-
-            # Apply score_threshold / scoreThreshold as min_score if not already set
-            if "min_score" not in query_body:
-                score_threshold = self._resolve_score_threshold(filter_obj)
-                if score_threshold is not None:
-                    query_body["min_score"] = score_threshold
 
         client = self.build_client()
         logger.info(f"query: {query_body}")
@@ -1354,60 +1320,6 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 context_clauses.append({"terms": {field: values}})
         return context_clauses
 
-    def _parse_filter_expression(self) -> dict | None:
-        """Parse and validate optional filter_expression JSON.
-
-        Returns:
-            Parsed JSON object as a dict, or None when unset/blank.
-
-        Raises:
-            ValueError: If JSON is invalid or does not decode to an object.
-        """
-        filter_expression = getattr(self, "filter_expression", "")
-        if not isinstance(filter_expression, str) or not filter_expression.strip():
-            return None
-        try:
-            filter_obj = json.loads(filter_expression)
-        except json.JSONDecodeError as e:
-            msg = f"Invalid filter_expression JSON: {e}"
-            raise ValueError(msg) from e
-
-        if not isinstance(filter_obj, dict):
-            msg = "Invalid filter_expression JSON type: expected a JSON object."
-            raise TypeError(msg)
-        return filter_obj
-
-    def _resolve_limit(self, filter_obj: dict | None, default_limit: int | None) -> int | None:
-        """Resolve an integer result limit from filter settings."""
-        if not filter_obj:
-            return default_limit
-        raw_limit = filter_obj.get("limit", default_limit)
-        if raw_limit is None:
-            return None
-        if isinstance(raw_limit, bool):
-            msg = "Invalid filter_expression.limit: expected a positive integer."
-            raise TypeError(msg)
-        try:
-            limit = int(raw_limit)
-        except (TypeError, ValueError) as e:
-            msg = "Invalid filter_expression.limit: expected a positive integer."
-            raise ValueError(msg) from e
-        if limit <= 0:
-            msg = "Invalid filter_expression.limit: expected a positive integer."
-            raise ValueError(msg)
-        return limit
-
-    def _resolve_score_threshold(self, filter_obj: dict | None) -> float | None:
-        """Resolve optional positive min score from filter settings."""
-        if not filter_obj:
-            return None
-        score_threshold = filter_obj.get("score_threshold")
-        if score_threshold is None:
-            score_threshold = filter_obj.get("scoreThreshold")
-        if not isinstance(score_threshold, (int, float)) or score_threshold <= 0:
-            return None
-        return float(score_threshold)
-
     def _detect_available_models(self, client: OpenSearch, filter_clauses: list[dict] | None = None) -> list[str]:
         """Detect which embedding models have documents in the index.
 
@@ -1573,7 +1485,13 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         q = (query or "").strip()
 
         # Parse optional filter expression
-        filter_obj = self._parse_filter_expression()
+        filter_obj = None
+        if getattr(self, "filter_expression", "") and self.filter_expression.strip():
+            try:
+                filter_obj = json.loads(self.filter_expression)
+            except json.JSONDecodeError as e:
+                msg = f"Invalid filter_expression JSON: {e}"
+                raise ValueError(msg) from e
 
         if not self.embedding:
             msg = "Embedding is required to run hybrid search (KNN + keyword)."
@@ -1847,8 +1765,8 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         all_filters = [*filter_clauses, exists_any_embedding]
 
         # Get limit and score threshold
-        limit = self._resolve_limit(filter_obj, default_limit=self.number_of_results)
-        score_threshold = self._resolve_score_threshold(filter_obj)
+        limit = (filter_obj or {}).get("limit", self.number_of_results)
+        score_threshold = (filter_obj or {}).get("score_threshold", 0)
 
         # Determine the best aggregation field for filename based on index mapping
         filename_agg_field = self._get_filename_agg_field(index_properties)
@@ -1899,7 +1817,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             "size": limit,
         }
 
-        if score_threshold is not None:
+        if isinstance(score_threshold, (int, float)) and score_threshold > 0:
             body["min_score"] = score_threshold
 
         logger.info(
@@ -1982,17 +1900,17 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             for hit in hits
         ]
 
-    def search_documents(self) -> Table:
+    def search_documents(self) -> list[Data]:
         """Search documents and return results as Data objects.
 
         This is the main interface method that performs the multi-model search using the
-        configured search_query and returns results in Langflow's Table format.
+        configured search_query and returns results in Langflow's Data format.
 
         Always builds the vector store (triggering ingestion if needed), then performs
         search only if a query is provided.
 
         Returns:
-            Table: A table containing search results with text and metadata
+            List of Data objects containing search results with text and metadata
 
         Raises:
             Exception: If search operation fails
@@ -2011,9 +1929,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
 
             # Perform search with the provided query
             raw = self.search(search_query)
-            raw_list = [Data(text=hit["page_content"], **hit["metadata"]) for hit in raw]
-
-            return Table(data=raw_list)
+            return [Data(text=hit["page_content"], **hit["metadata"]) for hit in raw]
         except Exception as e:
             self.log(f"search_documents error: {e}")
             raise

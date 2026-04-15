@@ -1,4 +1,5 @@
-import urllib
+import urllib.request
+from urllib.parse import urlparse
 from xml.etree.ElementTree import Element
 
 from defusedxml.ElementTree import fromstring
@@ -120,7 +121,7 @@ class ArXivComponent(Component):
             url = self.build_query_url()
 
             # Validate URL scheme and host
-            parsed_url = urllib.parse.urlparse(url)
+            parsed_url = urlparse(url)
             if parsed_url.scheme not in {"http", "https"}:
                 error_msg = f"Invalid URL scheme: {parsed_url.scheme}"
                 raise ValueError(error_msg)

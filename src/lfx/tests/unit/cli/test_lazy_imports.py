@@ -41,18 +41,16 @@ class TestMainModuleLazyImports:
         assert callable(lfx.__main__.main)
 
     def test_serve_command_wrapper_exists(self):
-        """Test that serve command is registered on the app."""
-        from lfx.__main__ import app
+        """Test that serve_command_wrapper is defined."""
+        from lfx.__main__ import serve_command_wrapper
 
-        command_names = [c.name for c in app.registered_commands]
-        assert "serve" in command_names
+        assert callable(serve_command_wrapper)
 
     def test_run_command_wrapper_exists(self):
-        """Test that run command is registered on the app."""
-        from lfx.__main__ import app
+        """Test that run_command_wrapper is defined."""
+        from lfx.__main__ import run_command_wrapper
 
-        command_names = [c.name for c in app.registered_commands]
-        assert "run" in command_names
+        assert callable(run_command_wrapper)
 
 
 class TestRunCommandLazyImports:

@@ -36,7 +36,7 @@ class CalculatorToolComponent(LCToolComponent):
 
     def build_tool(self) -> Tool:
         try:
-            from langchain_core.tools import StructuredTool
+            from langchain.tools import StructuredTool
         except Exception:  # noqa: BLE001
             pytest.skip("langchain is not available")
 

@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,54 +36,53 @@ export const HelpDropdownView = ({
   openLink,
   urls,
 }: HelpDropdownViewProps) => {
-  const { t } = useTranslation();
   return (
     <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-          title={t("help.title")}
+          className="group flex items-center justify-center px-2 rounded-none"
+          title="Help"
           data-testid="canvas_controls_dropdown_help"
         >
           <IconComponent
             name="Circle-Help"
             aria-hidden="true"
-            className="text-muted-foreground group-hover:text-foreground !h-5 !w-5"
+            className="text-muted-foreground group-hover:text-primary !h-5 !w-5"
           />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         side="top"
-        align="center"
+        align="end"
         className="flex flex-col w-full"
       >
         <DropdownControlButton
           iconName="book-open"
           testId="canvas_controls_dropdown_docs"
-          label={t("help.docs")}
+          label="Docs"
           externalLink
           onClick={() => openLink(urls.docs)}
         />
         <DropdownControlButton
           iconName="keyboard"
           testId="canvas_controls_dropdown_shortcuts"
-          label={t("help.shortcuts")}
+          label="Shortcuts"
           onClick={() => navigateTo("/settings/shortcuts")}
         />
         <DropdownControlButton
           iconName="bug"
           testId="canvas_controls_dropdown_report_a_bug"
           externalLink
-          label={t("help.reportBug")}
+          label="Report a bug"
           onClick={() => openLink(urls.bugReport)}
         />
         <Separator />
         <DropdownControlButton
           iconName="download"
           testId="canvas_controls_dropdown_get_langflow_desktop"
-          label={t("help.getLangflowDesktop")}
+          label="Get Langflow Desktop"
           externalLink
           onClick={() => openLink(urls.desktop)}
         />
@@ -93,7 +91,7 @@ export const HelpDropdownView = ({
           testId="canvas_controls_dropdown_enable_smart_guides"
           onClick={onToggleHelperLines}
           toggleValue={helperLineEnabled}
-          label={t("help.enableSmartGuides")}
+          label="Enable smart guides"
           hasToogle={true}
         />
         {ENABLE_INSPECTION_PANEL && (
@@ -102,7 +100,7 @@ export const HelpDropdownView = ({
             testId="canvas_controls_dropdown_toggle_inspector"
             onClick={onToggleInspectionPanel}
             toggleValue={inspectionPanelVisible}
-            label={t("help.showInspectorPanel")}
+            label="Show Inspector Panel"
             hasToogle={true}
           />
         )}

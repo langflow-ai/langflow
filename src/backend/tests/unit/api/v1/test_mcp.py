@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
+from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.user import User
 
 # Mark all tests in this module as asyncio
@@ -14,11 +15,7 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture
 def mock_user():
     return User(
-        id=uuid4(),
-        username="testuser",
-        password="fake-hashed-password",  # noqa: S106
-        is_active=True,
-        is_superuser=False,
+        id=uuid4(), username="testuser", password=get_password_hash("testpassword"), is_active=True, is_superuser=False
     )
 
 
@@ -288,10 +285,7 @@ async def test_streamable_http_start_stop_lifecycle():
     manager_instance.run.return_value = _DummyRunContext(entered, exited)
 
     with (
-        patch(
-            "langflow.api.v1.mcp.StreamableHTTPSessionManager",
-            return_value=manager_instance,
-        ),
+        patch("langflow.api.v1.mcp.StreamableHTTPSessionManager", return_value=manager_instance),
         patch("langflow.api.v1.mcp.logger.adebug", new_callable=AsyncMock),
     ):
         streamable_http = StreamableHTTP()
@@ -312,10 +306,7 @@ async def test_streamable_http_start_failure_keeps_manager_unavailable():
     manager_instance.run.return_value = _FailingRunContext(failure)
 
     with (
-        patch(
-            "langflow.api.v1.mcp.StreamableHTTPSessionManager",
-            return_value=manager_instance,
-        ),
+        patch("langflow.api.v1.mcp.StreamableHTTPSessionManager", return_value=manager_instance),
         patch("langflow.api.v1.mcp.logger.adebug", new_callable=AsyncMock),
         patch("langflow.api.v1.mcp.logger.aexception", new_callable=AsyncMock),
     ):
@@ -337,10 +328,7 @@ async def test_streamable_http_start_failure_surfaces_exception_once():
 
     async_logger = AsyncMock()
     with (
-        patch(
-            "langflow.api.v1.mcp.StreamableHTTPSessionManager",
-            return_value=manager_instance,
-        ),
+        patch("langflow.api.v1.mcp.StreamableHTTPSessionManager", return_value=manager_instance),
         patch("langflow.api.v1.mcp.logger.aexception", new=async_logger),
     ):
         streamable_http = StreamableHTTP()

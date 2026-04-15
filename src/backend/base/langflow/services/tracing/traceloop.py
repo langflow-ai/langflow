@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from langchain_core.callbacks.base import BaseCallbackHandler
+    from langchain.callbacks.base import BaseCallbackHandler
     from opentelemetry.propagators.textmap import CarrierT
     from opentelemetry.trace import Span
 
@@ -99,8 +99,7 @@ class TraceloopTracer(BaseTracer):
 
     def _convert_to_traceloop_type(self, value):
         """Recursively converts a value to a Traceloop compatible type."""
-        from langchain_core.documents import Document
-        from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+        from langchain.schema import BaseMessage, Document, HumanMessage, SystemMessage
 
         from langflow.schema.message import Message
 

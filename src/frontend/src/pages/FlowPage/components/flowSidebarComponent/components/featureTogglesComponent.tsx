@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 
@@ -8,17 +7,16 @@ const FeatureToggles = ({
   showLegacy,
   setShowLegacy,
 }) => {
-  const { t } = useTranslation();
   const toggles = [
     {
-      label: t("sidebar.betaLabel"),
+      label: "Beta",
       checked: showBeta,
       onChange: setShowBeta,
       badgeVariant: "purpleStatic" as const,
       testId: "sidebar-beta-switch",
     },
     {
-      label: t("sidebar.legacyLabel"),
+      label: "Legacy",
       checked: showLegacy,
       onChange: setShowLegacy,
       badgeVariant: "secondaryStatic" as const,
@@ -32,7 +30,7 @@ const FeatureToggles = ({
         <div key={toggle.label} className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <span className="flex cursor-default gap-2 text-sm font-medium">
-              {t("sidebar.show")}
+              Show
               <Badge variant={toggle.badgeVariant} size="xq">
                 {toggle.label}
               </Badge>

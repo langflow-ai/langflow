@@ -25,7 +25,6 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useStoreStore } from "../../../../stores/storeStore";
-import { useUtilityStore } from "../../../../stores/utilityStore";
 import type { nodeToolbarPropsType } from "../../../../types/components";
 import type { FlowType } from "../../../../types/flow";
 import {
@@ -108,16 +107,11 @@ const NodeToolbarComponent = memo(
       Object.values(flow).includes(data.node?.display_name!),
     );
 
-    const allowCustomComponents = useUtilityStore(
-      (state) => state.allowCustomComponents,
-    );
-
     const nodeLength = useMemo(() => getNodeLength(data), [data]);
     const hasCode = useMemo(
       () => Object.keys(data.node!.template).includes("code"),
       [data.node],
     );
-    const canEditCode = hasCode && allowCustomComponents;
     const isGroup = useMemo(
       () => (data.node?.flow ? true : false),
       [data.node],
@@ -243,16 +237,9 @@ const NodeToolbarComponent = memo(
     const handleCodeModal = useCallback(() => {
       if (!hasCode) {
         setNoticeData({ title: `You can not access ${data.id} code` });
-        return;
-      }
-      if (!allowCustomComponents) {
-        setNoticeData({
-          title: `Custom component editing is disabled`,
-        });
-        return;
       }
       setOpenModal((state) => !state);
-    }, [hasCode, allowCustomComponents, data.id]);
+    }, [hasCode, data.id]);
 
     const saveComponent = useCallback(() => {
       if (isSaved) {
@@ -369,7 +356,7 @@ const NodeToolbarComponent = memo(
             FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
             break;
           case "code":
-            handleCodeModal();
+            setOpenModal(!openModal);
             break;
           case "advanced":
             setShowModalAdvanced(true);
@@ -499,12 +486,12 @@ const NodeToolbarComponent = memo(
     const renderToolbarButtons = useMemo(
       () => (
         <>
-          {canEditCode && (
+          {hasCode && (
             <ToolbarButton
               className={isCustomComponent ? "animate-pulse-pink" : ""}
               icon="Code"
               label="Code"
-              onClick={handleCodeModal}
+              onClick={() => setOpenModal(true)}
               shortcut={shortcuts.find((s) =>
                 s.name.toLowerCase().startsWith("code"),
               )}
@@ -601,10 +588,8 @@ const NodeToolbarComponent = memo(
         </>
       ),
       [
-        canEditCode,
-        isCustomComponent,
+        hasCode,
         nodeLength,
-        inspectionPanelVisible,
         hasToolMode,
         toolMode,
         data.id,
@@ -614,7 +599,6 @@ const NodeToolbarComponent = memo(
         shortcuts,
         frozen,
         handleSelectChange,
-        handleCodeModal,
       ],
     );
 

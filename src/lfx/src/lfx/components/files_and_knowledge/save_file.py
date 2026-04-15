@@ -25,16 +25,6 @@ def _get_storage_location_options():
     return [{"name": "Local", "icon": "hard-drive"}, *all_options]
 
 
-def _get_default_storage_location() -> list[dict[str, str]]:
-    """Return the default storage selection for the component template."""
-    return [_get_storage_location_options()[0]]
-
-
-def _is_default_storage(storage_name: str) -> bool:
-    """Check whether a storage type is the default selection."""
-    return _get_default_storage_location()[0]["name"] == storage_name
-
-
 class SaveToFileComponent(Component):
     display_name = "Write File"
     description = "Save data to local file, AWS S3, or Google Drive in the selected format."
@@ -71,7 +61,7 @@ class SaveToFileComponent(Component):
             options=_get_storage_location_options(),
             real_time_refresh=True,
             limit=1,
-            value=_get_default_storage_location(),
+            value=[{"name": "Local", "icon": "hard-drive"}],
             advanced=True,
         ),
         # Common inputs
@@ -88,7 +78,7 @@ class SaveToFileComponent(Component):
             display_name="File Name",
             info="Name file will be saved as (without extension).",
             required=True,
-            show=True,
+            show=False,
             tool_mode=True,
         ),
         BoolInput(
@@ -99,7 +89,7 @@ class SaveToFileComponent(Component):
                 "Not supported for cloud storage (AWS/Google Drive)."
             ),
             value=False,
-            show=_is_default_storage("Local"),
+            show=False,
         ),
         # Format inputs (dynamic based on storage location)
         DropdownInput(
@@ -108,7 +98,7 @@ class SaveToFileComponent(Component):
             options=list(dict.fromkeys(LOCAL_DATA_FORMAT_CHOICES + LOCAL_MESSAGE_FORMAT_CHOICES)),
             info="Select the file format for local storage.",
             value="json",
-            show=_is_default_storage("Local"),
+            show=False,
         ),
         DropdownInput(
             name="aws_format",
@@ -116,7 +106,7 @@ class SaveToFileComponent(Component):
             options=AWS_FORMAT_CHOICES,
             info="Select the file format for AWS S3 storage.",
             value="txt",
-            show=_is_default_storage("AWS"),
+            show=False,
         ),
         DropdownInput(
             name="gdrive_format",
@@ -124,54 +114,54 @@ class SaveToFileComponent(Component):
             options=GDRIVE_FORMAT_CHOICES,
             info="Select the file format for Google Drive storage.",
             value="txt",
-            show=_is_default_storage("Google Drive"),
+            show=False,
         ),
         # AWS S3 specific inputs
         SecretStrInput(
             name="aws_access_key_id",
             display_name="AWS Access Key ID",
             info="AWS Access key ID.",
-            show=_is_default_storage("AWS"),
-            advanced=not _is_default_storage("AWS"),
+            show=False,
+            advanced=True,
             required=True,
         ),
         SecretStrInput(
             name="aws_secret_access_key",
             display_name="AWS Secret Key",
             info="AWS Secret Key.",
-            show=_is_default_storage("AWS"),
-            advanced=not _is_default_storage("AWS"),
+            show=False,
+            advanced=True,
             required=True,
         ),
         StrInput(
             name="bucket_name",
             display_name="S3 Bucket Name",
             info="Enter the name of the S3 bucket.",
-            show=_is_default_storage("AWS"),
-            advanced=not _is_default_storage("AWS"),
+            show=False,
+            advanced=True,
             required=True,
         ),
         StrInput(
             name="aws_region",
             display_name="AWS Region",
             info="AWS region (e.g., us-east-1, eu-west-1).",
-            show=_is_default_storage("AWS"),
-            advanced=not _is_default_storage("AWS"),
+            show=False,
+            advanced=True,
         ),
         StrInput(
             name="s3_prefix",
             display_name="S3 Prefix",
             info="Prefix for all files in S3.",
-            show=_is_default_storage("AWS"),
-            advanced=not _is_default_storage("AWS"),
+            show=False,
+            advanced=True,
         ),
         # Google Drive specific inputs
         SecretStrInput(
             name="service_account_key",
             display_name="GCP Credentials Secret Key",
             info="Your Google Cloud Platform service account JSON key as a secret string (complete JSON content).",
-            show=_is_default_storage("Google Drive"),
-            advanced=not _is_default_storage("Google Drive"),
+            show=False,
+            advanced=True,
             required=True,
         ),
         StrInput(
@@ -182,8 +172,8 @@ class SaveToFileComponent(Component):
                 "The folder must be shared with the service account email."
             ),
             required=True,
-            show=_is_default_storage("Google Drive"),
-            advanced=not _is_default_storage("Google Drive"),
+            show=False,
+            advanced=True,
         ),
     ]
 

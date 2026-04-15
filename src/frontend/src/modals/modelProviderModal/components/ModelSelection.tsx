@@ -46,8 +46,6 @@ const ModelRow = ({
         checked={enabled}
         onCheckedChange={(checked) => onToggle(model.model_name, checked)}
         data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
-        aria-label={`${enabled ? "Disable" : "Enable"} ${model.model_name}`}
-        stopPropagation
       />
     )}
   </div>

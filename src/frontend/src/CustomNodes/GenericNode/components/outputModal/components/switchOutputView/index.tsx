@@ -45,12 +45,12 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
     (outputConfig.method === "to_toolkit" ||
       (outputConfig.types && outputConfig.types.includes("Tool")));
 
-  const results: OutputLogType | LogsLogType[] =
+  const results: OutputLogType | LogsLogType =
     (type === "Outputs"
       ? flowPoolNode?.data?.outputs?.[outputName]
       : flowPoolNode?.data?.logs?.[outputName]) ?? {};
-  const resultType = Array.isArray(results) ? undefined : results?.type;
-  let resultMessage = Array.isArray(results) ? {} : (results?.message ?? {});
+  const resultType = results?.type;
+  let resultMessage = results?.message ?? {};
   const RECORD_TYPES = ["array", "message"];
   const JSON_TYPES = ["data", "object"];
   if (resultMessage?.raw) {
@@ -161,9 +161,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
         <TextOutputView left={false} value={resultMessageMemoized} />
       </Case>
 
-      <Case
-        condition={RECORD_TYPES.includes(resultType ?? "") && !isToolOutput}
-      >
+      <Case condition={RECORD_TYPES.includes(resultType) && !isToolOutput}>
         <DataOutputComponent
           rows={
             Array.isArray(resultMessageMemoized)
@@ -182,7 +180,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
           columnMode="union"
         />
       </Case>
-      <Case condition={JSON_TYPES.includes(resultType ?? "") && !isToolOutput}>
+      <Case condition={JSON_TYPES.includes(resultType) && !isToolOutput}>
         <JsonOutputViewComponent
           nodeId={nodeId}
           outputName={outputName}

@@ -124,9 +124,7 @@ export default function IntComponent({
   };
 
   const handleInputChange = (event: React.FormEvent<HTMLInputElement>) => {
-    const raw = (event.target as HTMLInputElement).value;
-    if (raw === "") return; // Allow clearing the field (empty = no limit)
-    const inputValue = Number(raw);
+    const inputValue = Number((event.target as HTMLInputElement).value);
     if (Number.isFinite(inputValue) && inputValue < getMinValue()) {
       (event.target as HTMLInputElement).value = getMinValue().toString();
     }

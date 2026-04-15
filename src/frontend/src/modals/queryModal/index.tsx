@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { Textarea } from "../../components/ui/textarea";
-
+import {
+  EDIT_TEXT_PLACEHOLDER,
+  TEXT_DIALOG_TITLE,
+} from "../../constants/constants";
 import type { queryModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
@@ -16,7 +18,6 @@ export default function QueryModal({
   children,
   disabled,
 }: queryModalPropsType): JSX.Element {
-  const { t } = useTranslation();
   const [modalOpen, setModalOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
 
@@ -38,9 +39,7 @@ export default function QueryModal({
       <BaseModal.Header>
         <div className="flex w-full items-start gap-3">
           <div className="flex">
-            <span data-testid="modal-title">
-              {title ?? t("dialog.editText")}
-            </span>
+            <span data-testid="modal-title">{title ?? TEXT_DIALOG_TITLE}</span>
           </div>
         </div>
       </BaseModal.Header>
@@ -53,7 +52,7 @@ export default function QueryModal({
             onChange={(event) => {
               setInputValue(event.target.value);
             }}
-            placeholder={placeholder ?? t("input.editTextPlaceholder")}
+            placeholder={placeholder ?? EDIT_TEXT_PLACEHOLDER}
             onKeyDown={(e) => {
               handleKeyDown(e, value, "");
             }}

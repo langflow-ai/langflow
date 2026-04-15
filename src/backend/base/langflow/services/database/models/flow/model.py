@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 import emoji
 from emoji import purely_emoji
+from fastapi import HTTPException, status
 from lfx.log.logger import logger
 from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
 from sqlalchemy import Enum as SQLEnum
@@ -21,24 +22,6 @@ if TYPE_CHECKING:
     from langflow.services.database.models.user.model import User
 
 HEX_COLOR_LENGTH = 7
-
-_ENDPOINT_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
-
-
-def _validate_endpoint_name_value(v: str | None) -> str | None:
-    """Validate that an endpoint name contains only safe URL characters.
-
-    Raises ``ValueError`` on invalid input — callers at the HTTP layer
-    should catch and translate to an appropriate HTTP response.
-    """
-    if v is not None:
-        if not isinstance(v, str):
-            msg = "Endpoint name must be a string"
-            raise ValueError(msg)
-        if not _ENDPOINT_NAME_RE.match(v):
-            msg = "Endpoint name must contain only letters, numbers, hyphens, and underscores"
-            raise ValueError(msg)
-    return v
 
 
 class AccessTypeEnum(str, Enum):
@@ -87,7 +70,19 @@ class FlowBase(SQLModel):
     @field_validator("endpoint_name")
     @classmethod
     def validate_endpoint_name(cls, v):
-        return _validate_endpoint_name_value(v)
+        # Endpoint name must be a string containing only letters, numbers, hyphens, and underscores
+        if v is not None:
+            if not isinstance(v, str):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Endpoint name must be a string",
+                )
+            if not re.match(r"^[a-zA-Z0-9_-]+$", v):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Endpoint name must contain only letters, numbers, hyphens, and underscores",
+                )
+        return v
 
     @field_validator("icon_bg_color")
     @classmethod
@@ -127,7 +122,7 @@ class FlowBase(SQLModel):
 
         emoji_value = emoji.emojize(v, variant="emoji_type")
         if v == emoji_value:
-            logger.warning("Invalid emoji. %s is not a valid emoji.", v)
+            logger.warning(f"Invalid emoji. {v} is not a valid emoji.")
         icon = emoji_value
 
         if purely_emoji(icon):
@@ -219,11 +214,6 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
 
 
 class FlowCreate(FlowBase):
-    # Optional stable ID.  When present on upload, the flow is upserted
-    # (created with that ID, or updated if the ID already belongs to the
-    # current user).  Flows without an id get a generated UUID — backward
-    # compatible with all existing import paths.
-    id: UUID | None = None
     user_id: UUID | None = None
     folder_id: UUID | None = None
     fs_path: str | None = None
@@ -279,4 +269,16 @@ class FlowUpdate(SQLModel):
     @field_validator("endpoint_name")
     @classmethod
     def validate_endpoint_name(cls, v):
-        return _validate_endpoint_name_value(v)
+        # Endpoint name must be a string containing only letters, numbers, hyphens, and underscores
+        if v is not None:
+            if not isinstance(v, str):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Endpoint name must be a string",
+                )
+            if not re.match(r"^[a-zA-Z0-9_-]+$", v):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Endpoint name must contain only letters, numbers, hyphens, and underscores",
+                )
+        return v

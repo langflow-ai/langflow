@@ -2,11 +2,7 @@ import { useContext } from "react";
 import { AuthContext } from "@/contexts/authContext";
 import { BASE_URL_API } from "@/customization/config-constants";
 
-interface ProfileIconProps {
-  className?: string;
-}
-
-export function ProfileIcon({ className }: ProfileIconProps = {}) {
+export function ProfileIcon() {
   const { userData } = useContext(AuthContext);
 
   const profileImageUrl = `${BASE_URL_API}files/profile_pictures/${
@@ -16,8 +12,7 @@ export function ProfileIcon({ className }: ProfileIconProps = {}) {
   return (
     <img
       src={profileImageUrl}
-      alt="User"
-      className={className ?? "h-6 w-6 shrink-0 focus-visible:outline-0"}
+      className="h-6 w-6 shrink-0 focus-visible:outline-0"
     />
   );
 }

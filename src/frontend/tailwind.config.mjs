@@ -177,9 +177,6 @@ const config = {
         "success-foreground": "var(--success-foreground)",
         "accent-pink-foreground": "hsl(var(--accent-pink-foreground))",
         "accent-purple-foreground": "hsl(var(--accent-purple-foreground))",
-        "accent-purple-muted": "hsl(var(--accent-purple-muted))",
-        "accent-purple-muted-foreground":
-          "hsl(var(--accent-purple-muted-foreground))",
         "accent-red-foreground": "hsl(var(--accent-red-foreground))",
         filter: {
           foreground: "var(--filter-foreground)",
@@ -255,8 +252,6 @@ const config = {
         "accent-blue": {
           DEFAULT: "hsl(var(--accent-blue))",
           foreground: "hsl(var(--accent-blue-foreground))",
-          muted: "hsl(var(--accent-blue-muted))",
-          "muted-foreground": "hsl(var(--accent-blue-muted-foreground))",
         },
         "accent-pink": {
           DEFAULT: "hsl(var(--accent-pink))",

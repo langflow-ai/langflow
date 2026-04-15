@@ -3,6 +3,13 @@
 from __future__ import annotations
 
 import pytest
+
+try:
+    import agentics  # noqa: F401
+    import crewai  # noqa: F401
+except ImportError:
+    pytest.skip("agentics-py and crewai not installed", allow_module_level=True)
+
 from lfx.components.agentics.constants import (
     ERROR_MODEL_NOT_SELECTED,
     PROVIDER_IBM_WATSONX,
@@ -85,8 +92,7 @@ class TestUpdateProviderFieldsVisibility:
             "ollama_base_url": {"show": True},
         }
 
-        with pytest.warns(DeprecationWarning, match="update_provider_fields_visibility is deprecated"):
-            result = update_provider_fields_visibility(build_config, None, None)
+        result = update_provider_fields_visibility(build_config, None, None)
 
         assert result["base_url_ibm_watsonx"]["show"] is True
         assert result["base_url_ibm_watsonx"]["required"] is True
@@ -103,8 +109,7 @@ class TestUpdateProviderFieldsVisibility:
             "ollama_base_url": {"show": False},
         }
 
-        with pytest.warns(DeprecationWarning, match="update_provider_fields_visibility is deprecated"):
-            result = update_provider_fields_visibility(build_config, None, None)
+        result = update_provider_fields_visibility(build_config, None, None)
 
         assert result["base_url_ibm_watsonx"]["show"] is False
         assert result["base_url_ibm_watsonx"]["required"] is False
@@ -121,8 +126,7 @@ class TestUpdateProviderFieldsVisibility:
             "ollama_base_url": {"show": True},
         }
 
-        with pytest.warns(DeprecationWarning, match="update_provider_fields_visibility is deprecated"):
-            result = update_provider_fields_visibility(build_config, None, None)
+        result = update_provider_fields_visibility(build_config, None, None)
 
         assert result["base_url_ibm_watsonx"]["show"] is False
         assert result["project_id"]["show"] is False
@@ -136,8 +140,7 @@ class TestUpdateProviderFieldsVisibility:
             "project_id": {"show": True},
         }
 
-        with pytest.warns(DeprecationWarning, match="update_provider_fields_visibility is deprecated"):
-            result = update_provider_fields_visibility(build_config, None, None)
+        result = update_provider_fields_visibility(build_config, None, None)
 
         assert result["base_url_ibm_watsonx"]["show"] is True
         assert result["project_id"]["show"] is True
@@ -149,8 +152,7 @@ class TestUpdateProviderFieldsVisibility:
             "base_url_ibm_watsonx": {"show": True},
         }
 
-        with pytest.warns(DeprecationWarning, match="update_provider_fields_visibility is deprecated"):
-            result = update_provider_fields_visibility(build_config, None, None)
+        result = update_provider_fields_visibility(build_config, None, None)
 
         assert result["base_url_ibm_watsonx"]["show"] is True
 
@@ -163,8 +165,7 @@ class TestUpdateProviderFieldsVisibility:
         }
         field_value = [{"name": "new-model", "provider": PROVIDER_IBM_WATSONX}]
 
-        with pytest.warns(DeprecationWarning, match="update_provider_fields_visibility is deprecated"):
-            result = update_provider_fields_visibility(build_config, field_value, "model")
+        result = update_provider_fields_visibility(build_config, field_value, "model")
 
         assert result["base_url_ibm_watsonx"]["show"] is True
         assert result["project_id"]["show"] is True
@@ -175,8 +176,7 @@ class TestUpdateProviderFieldsVisibility:
             "model": {"value": [{"name": "model-1", "provider": PROVIDER_IBM_WATSONX}]},
         }
 
-        with pytest.warns(DeprecationWarning, match="update_provider_fields_visibility is deprecated"):
-            result = update_provider_fields_visibility(build_config, None, None)
+        result = update_provider_fields_visibility(build_config, None, None)
 
         assert "base_url_ibm_watsonx" not in result
         assert "project_id" not in result

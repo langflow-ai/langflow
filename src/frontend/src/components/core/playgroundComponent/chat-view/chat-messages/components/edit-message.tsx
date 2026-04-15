@@ -2,8 +2,8 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
-import { useTranslation } from "react-i18next";
 import CodeTabsComponent from "@/components/core/codeTabsComponent";
+import { EMPTY_OUTPUT_SEND_MESSAGE } from "@/constants/constants";
 import { preprocessChatMessage } from "@/utils/markdownUtils";
 import { cn } from "@/utils/utils";
 
@@ -25,7 +25,6 @@ export const MarkdownField = ({
   editedFlag,
   isAudioMessage,
 }: MarkdownFieldProps) => {
-  const { t } = useTranslation();
   // Process the chat message to handle <think> tags and clean up tables
   const processedChatMessage = preprocessChatMessage(chatMessage);
 
@@ -108,7 +107,7 @@ export const MarkdownField = ({
         }}
       >
         {isEmpty && !chat.stream_url
-          ? t("chat.emptyOutputSendMessage")
+          ? EMPTY_OUTPUT_SEND_MESSAGE
           : processedChatMessage}
       </Markdown>
       {editedFlag}

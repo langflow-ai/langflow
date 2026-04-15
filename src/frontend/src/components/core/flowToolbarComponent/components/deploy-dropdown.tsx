@@ -81,12 +81,10 @@ export default function PublishDropdown({
             });
           }
         },
-        onError: (e: any) => {
-          const detail =
-            e.response?.data?.detail || e.message || "Unknown error";
+        onError: (e) => {
           setErrorData({
             title: "Failed to save flow",
-            list: [detail],
+            list: [e.message],
           });
         },
       },

@@ -48,14 +48,13 @@ test(
       .dblclick();
 
     const folderInput = page.getByTestId("input-project");
-    await folderInput.waitFor({ state: "visible", timeout: 10000 });
     await folderInput.fill("test-folder-to-delete");
     await page.keyboard.press("Enter");
 
     // Wait for the folder to be renamed
     await page.getByText("test-folder-to-delete").last().waitFor({
       state: "visible",
-      timeout: 30000,
+      timeout: 10000,
     });
 
     // Verify the folder exists in the sidebar
@@ -66,9 +65,6 @@ test(
 
     // Delete the folder
     await folderBeforeDelete.hover();
-    await page
-      .getByTestId("more-options-button_test-folder-to-delete")
-      .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_test-folder-to-delete").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText("Delete").last().click();
@@ -126,14 +122,12 @@ test(
       .last()
       .dblclick();
 
-    const folderAlphaInput = page.getByTestId("input-project");
-    await folderAlphaInput.waitFor({ state: "visible", timeout: 10000 });
-    await folderAlphaInput.fill("folder-alpha");
+    await page.getByTestId("input-project").fill("folder-alpha");
     await page.keyboard.press("Enter");
 
     await page.getByText("folder-alpha").last().waitFor({
       state: "visible",
-      timeout: 30000,
+      timeout: 10000,
     });
 
     // Create second folder
@@ -151,14 +145,12 @@ test(
       .last()
       .dblclick();
 
-    const folderBetaInput = page.getByTestId("input-project");
-    await folderBetaInput.waitFor({ state: "visible", timeout: 10000 });
-    await folderBetaInput.fill("folder-beta");
+    await page.getByTestId("input-project").fill("folder-beta");
     await page.keyboard.press("Enter");
 
     await page.getByText("folder-beta").last().waitFor({
       state: "visible",
-      timeout: 30000,
+      timeout: 10000,
     });
 
     // Verify both folders exist
@@ -172,9 +164,6 @@ test(
     // Delete the first folder
     const folderAlpha = page.getByTestId("sidebar-nav-folder-alpha");
     await folderAlpha.hover();
-    await page
-      .getByTestId("more-options-button_folder-alpha")
-      .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_folder-alpha").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText("Delete").last().click();
@@ -203,9 +192,6 @@ test(
 
     // Clean up - delete the remaining folder
     await folderBeta.hover();
-    await page
-      .getByTestId("more-options-button_folder-beta")
-      .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_folder-beta").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText("Delete").last().click();
@@ -252,22 +238,17 @@ test(
       .last()
       .dblclick();
 
-    const folderOneInput = page.getByTestId("input-project");
-    await folderOneInput.waitFor({ state: "visible", timeout: 10000 });
-    await folderOneInput.fill("folder-one");
+    await page.getByTestId("input-project").fill("folder-one");
     await page.keyboard.press("Enter");
 
     await page.getByText("folder-one").last().waitFor({
       state: "visible",
-      timeout: 30000,
+      timeout: 10000,
     });
 
     // Delete the folder
     const folderOne = page.getByTestId("sidebar-nav-folder-one");
     await folderOne.hover();
-    await page
-      .getByTestId("more-options-button_folder-one")
-      .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_folder-one").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText("Delete").last().click();
@@ -296,15 +277,13 @@ test(
       .last()
       .dblclick();
 
-    const folderTwoInput = page.getByTestId("input-project");
-    await folderTwoInput.waitFor({ state: "visible", timeout: 10000 });
-    await folderTwoInput.fill("folder-two");
+    await page.getByTestId("input-project").fill("folder-two");
     await page.keyboard.press("Enter");
 
     // The new folder should be created successfully without any stale data issues
     await page.getByText("folder-two").last().waitFor({
       state: "visible",
-      timeout: 30000,
+      timeout: 10000,
     });
 
     const folderTwo = page.getByTestId("sidebar-nav-folder-two");
@@ -312,9 +291,6 @@ test(
 
     // Clean up
     await folderTwo.hover();
-    await page
-      .getByTestId("more-options-button_folder-two")
-      .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_folder-two").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText("Delete").last().click();
@@ -364,16 +340,13 @@ test(
         `more-options-button_${kebabName}`,
       );
 
-      // Wait for the button to appear after hover
-      try {
-        await moreOptionsButton.waitFor({ state: "visible", timeout: 5000 });
+      if (await moreOptionsButton.isVisible()) {
         await moreOptionsButton.click();
-      } catch {
+      } else {
         // Try with the original name format
         const altMoreOptions = page
           .locator(`[data-testid^="more-options-button_"]`)
           .first();
-        await altMoreOptions.waitFor({ state: "visible", timeout: 5000 });
         await altMoreOptions.click();
       }
 

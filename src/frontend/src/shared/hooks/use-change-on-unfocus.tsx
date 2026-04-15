@@ -6,7 +6,7 @@ interface UseChangeOnUnfocusProps<T> {
   onChange?: (value: T) => void;
   defaultValue: T;
   shouldChangeValue?: (value: T) => boolean;
-  nodeRef: RefObject<HTMLDivElement | null>;
+  nodeRef: RefObject<HTMLDivElement>;
   callback?: () => void;
   callbackEscape?: () => void;
 }

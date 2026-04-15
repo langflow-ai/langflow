@@ -280,7 +280,6 @@ class TestRefreshTokenSecurity:
         """Test that valid refresh tokens work correctly."""
         from uuid import uuid4
 
-        from langflow.services.auth.service import AuthService
         from langflow.services.auth.utils import create_refresh_token
 
         mock_db = AsyncMock()
@@ -289,14 +288,7 @@ class TestRefreshTokenSecurity:
         user_id = uuid4()
         mock_user.id = user_id
 
-        # Create a langflow AuthService instance (not lfx) with mocked settings
-        mock_settings_service = MagicMock()
-        auth_service = AuthService(mock_settings_service)
-
-        with (
-            patch("langflow.services.auth.utils._auth_service", return_value=auth_service),
-            patch("langflow.services.auth.service.jwt.decode") as mock_decode,
-        ):
+        with patch("langflow.services.auth.service.jwt.decode") as mock_decode:
             mock_decode.return_value = {"sub": str(user_id), "type": "refresh"}  # Correct type
 
             with patch("langflow.services.auth.utils.get_jwt_verification_key") as mock_verification_key:
@@ -305,7 +297,9 @@ class TestRefreshTokenSecurity:
                 with patch("langflow.services.auth.service.get_user_by_id", new_callable=AsyncMock) as mock_get_user:
                     mock_get_user.return_value = mock_user
 
-                    with patch.object(auth_service, "create_user_tokens", new_callable=AsyncMock) as mock_create_tokens:
+                    with patch(
+                        "langflow.services.auth.service.AuthService.create_user_tokens", new_callable=AsyncMock
+                    ) as mock_create_tokens:
                         expected_access = "new-access-token"
                         expected_refresh = "new-refresh-token"
                         mock_create_tokens.return_value = {
@@ -368,7 +362,6 @@ class TestCORSIntegration:
             mock_settings.settings.prometheus_enabled = False
             mock_settings.settings.mcp_server_enabled = False
             mock_settings.settings.sentry_dsn = None  # Disable Sentry
-            mock_settings.settings.root_path = ""
             mock_get_settings.return_value = mock_settings
 
             from langflow.main import create_app
@@ -417,7 +410,6 @@ class TestCORSIntegration:
             mock_settings.settings.prometheus_enabled = False
             mock_settings.settings.mcp_server_enabled = False
             mock_settings.settings.sentry_dsn = None  # Disable Sentry
-            mock_settings.settings.root_path = ""
             mock_get_settings.return_value = mock_settings
 
             from langflow.main import create_app

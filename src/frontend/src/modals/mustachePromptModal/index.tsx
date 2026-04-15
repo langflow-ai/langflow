@@ -1,6 +1,5 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
 import IconComponent from "../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../components/common/sanitizedHTMLWrapper";
@@ -8,7 +7,17 @@ import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
-import { MAX_WORDS_HIGHLIGHT } from "../../constants/constants";
+import {
+  BUG_ALERT,
+  PROMPT_ERROR_ALERT,
+  PROMPT_SUCCESS_ALERT,
+  TEMP_NOTICE_ALERT,
+} from "../../constants/alerts_constants";
+import {
+  EDIT_TEXT_PLACEHOLDER,
+  MAX_WORDS_HIGHLIGHT,
+  MUSTACHE_PROMPT_DIALOG_SUBTITLE,
+} from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { PromptModalType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
@@ -38,7 +47,6 @@ export default function MustachePromptModal({
   id = "",
   readonly = false,
 }: PromptModalType): JSX.Element {
-  const { t } = useTranslation();
   const [modalOpen, setModalOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
@@ -131,24 +139,24 @@ export default function MustachePromptModal({
             }
             if (!inputVariables || inputVariables.length === 0) {
               setNoticeData({
-                title: t("alerts.noTemplateVariables"),
+                title: TEMP_NOTICE_ALERT,
               });
             } else {
               setSuccessData({
-                title: t("success.promptReady"),
+                title: PROMPT_SUCCESS_ALERT,
               });
             }
           } else {
             setIsEdit(true);
             setErrorData({
-              title: t("errors.generic"),
+              title: BUG_ALERT,
             });
           }
         },
         onError: (error) => {
           setIsEdit(true);
           return setErrorData({
-            title: t("errors.prompt"),
+            title: PROMPT_ERROR_ALERT,
             list: [error.response.data.detail ?? ""],
           });
         },
@@ -198,7 +206,7 @@ export default function MustachePromptModal({
       <BaseModal.Trigger disable={disabled} asChild>
         {children}
       </BaseModal.Trigger>
-      <BaseModal.Header description={t("dialog.mustachePrompt")}>
+      <BaseModal.Header description={MUSTACHE_PROMPT_DIALOG_SUBTITLE}>
         <div className="flex w-full items-start gap-3">
           <div className="flex">
             <IconComponent
@@ -230,7 +238,7 @@ export default function MustachePromptModal({
                 setInputValue(event.target.value);
                 checkVariables(event.target.value);
               }}
-              placeholder={t("input.editTextPlaceholder")}
+              placeholder={EDIT_TEXT_PLACEHOLDER}
               onKeyDown={(e) => {
                 handleKeyDown(e, inputValue, "");
               }}

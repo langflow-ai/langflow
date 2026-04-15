@@ -1,5 +1,0 @@
-{
-    "version": "1.6.0",
-    "main_version": "1.6.0",
-    "package": "Langflow"
-}

@@ -1,14 +1,8 @@
 module.exports = {
   docs: [
     {
-      type: "html",
-      value: `<div class="sidebar-group-label">Build</div>`,
-      className: "sidebar-group-divider",
-    },
-    {
       type: "category",
       label: "Get started",
-      className: "sidebar-category-with-icon sidebar-icon-rocket",
       items: [
         {
           type: "doc",
@@ -40,7 +34,6 @@ module.exports = {
     {
       type: "category",
       label: "Flows",
-      className: "sidebar-category-with-icon sidebar-icon-workflow",
       items: [
         {
           type: "doc",
@@ -78,17 +71,11 @@ module.exports = {
           id: "Flows/concepts-flows-import",
           label: "Import and export flows"
         },
-        {
-          type: "doc",
-          id: "Flows/langflow-assistant",
-          label: "Build components with Langflow Assistant"
-        },
       ],
     },
     {
       type: "category",
       label: "Agents",
-      className: "sidebar-category-with-icon sidebar-icon-bot",
       items: [
         "Agents/agents",
         "Agents/agents-tools",
@@ -97,23 +84,15 @@ module.exports = {
     {
       type: "category",
       label: "Model Context Protocol (MCP)",
-      className: "sidebar-category-with-icon sidebar-icon-plug",
       items: [
         "Agents/mcp-client",
         "Agents/mcp-server",
-        "Agents/langflow-mcp-client",
         "Agents/mcp-component-astra",
       ],
     },
     {
-      type: "html",
-      value: `<div class="sidebar-group-label">Develop & Deploy</div>`,
-      className: "sidebar-group-divider",
-    },
-    {
       type: "category",
       label: "Develop",
-      className: "sidebar-category-with-icon sidebar-icon-code",
       items: [
         "Develop/api-keys-and-authentication",
         "Develop/jwt-authentication",
@@ -190,7 +169,6 @@ module.exports = {
     {
       type: "category",
       label: "Deploy",
-      className: "sidebar-category-with-icon sidebar-icon-cloud",
       items: [
         {
           type:"doc",
@@ -278,25 +256,14 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Deployment/deployment-block-custom-components",
-          label: "Block custom components",
-        },
-        {
-          type: "doc",
           id: "Deployment/security",
           label: "Security",
         },
       ],
     },
     {
-      type: "html",
-      value: `<div class="sidebar-group-label">Reference</div>`,
-      className: "sidebar-group-divider",
-    },
-    {
       type: "category",
       label: "Components reference",
-      className: "sidebar-category-with-icon sidebar-icon-blocks",
       items: [
         "Components/concepts-components",
         {
@@ -360,7 +327,6 @@ module.exports = {
               items: [
                 "Components/batch-run",
                 "Components/guardrails",
-                "Components/policies",
                 "Components/llm-selector",
                 "Components/smart-router",
                 "Components/smart-transform",
@@ -469,7 +435,6 @@ module.exports = {
     {
       type: "category",
       label: "API reference",
-      className: "sidebar-category-with-icon sidebar-icon-fileCode",
       items: [
         {
           type: "doc",
@@ -483,11 +448,6 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "API-Reference/flow-devops-sdk",
-          label: "Flow DevOps Toolkit SDK",
-        },
-        {
-          type: "doc",
           id: "API-Reference/api-flows-run",
           label: "Flow trigger endpoints",
         },
@@ -495,7 +455,11 @@ module.exports = {
           type: "category",
           label: "Developer API (Beta)",
           items: [
-            "API-Reference/workflows-api",
+            {
+              type: "doc",
+              id: "API-Reference/workflows-api",
+              label: "Workflow API (Beta)",
+            },
             {
               type: "link",
               label: "Workflow API specification (Beta)",
@@ -503,14 +467,46 @@ module.exports = {
             },
           ],
         },
-        "API-Reference/api-openai-responses",
-        "API-Reference/api-flows",
-        "API-Reference/api-files",
-        "API-Reference/api-projects",
-        "API-Reference/api-logs",
-        "API-Reference/api-monitor",
-        "API-Reference/api-build",
-        "API-Reference/api-users",
+        {
+          type: "doc",
+          id: "API-Reference/api-openai-responses",
+          label: "OpenAI Responses endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-flows",
+          label: "Flow management endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-files",
+          label: "Files endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-projects",
+          label: "Projects endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-logs",
+          label: "Logs endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-monitor",
+          label: "Monitor endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-build",
+          label: "Build endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-users",
+          label: "Users endpoints",
+        },
         {
           type: "link",
           label: "Langflow API specification",
@@ -519,14 +515,8 @@ module.exports = {
       ],
     },
     {
-      type: "html",
-      value: `<div class="sidebar-group-label">Community</div>`,
-      className: "sidebar-group-divider",
-    },
-    {
       type: "category",
       label: "Contribute",
-      className: "sidebar-category-with-icon sidebar-icon-gitPR",
       items: [
         "Contributing/contributing-community",
         "Contributing/contributing-how-to-contribute",
@@ -539,7 +529,6 @@ module.exports = {
     {
       type: "category",
       label: "Support",
-      className: "sidebar-category-with-icon sidebar-icon-helpCircle",
       items: [
         {
           type: "doc",
@@ -567,8 +556,8 @@ module.exports = {
       type: "html",
       className: "sidebar-ad",
       value: `
-        <a href="https://www.langflow.org/desktop" target="_blank" rel="noopener noreferrer" class="menu__link">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <a href="https://www.langflow.org/desktop" target="_blank" class="menu__link">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <g clip-path="url(#clip0_1645_37)">
               <path d="M12 17H20C21.1046 17 22 16.1046 22 15V13M12 17H4C2.89543 17 2 16.1046 2 15V5C2 3.89543 2.89543 3 4 3H10M12 17V21M8 21H12M12 21H16M11.75 10.2917H13.2083L16.125 7.375H17.5833L20.5 4.45833H21.9583M16.125 11.75H17.5833L20.5 8.83333H21.9583M11.75 5.91667H13.2083L16.125 3H17.5833" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </g>

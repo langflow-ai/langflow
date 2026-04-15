@@ -2,14 +2,14 @@ import re
 from typing import Any
 
 from lfx.base.models.unified_models import (
+    get_language_model_options,
     get_llm,
-    handle_model_input_update,
+    update_model_options_in_build_config,
 )
 from lfx.custom import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, ModelInput, MultilineInput, MultiselectInput, Output, SecretStrInput, SliderInput
 from lfx.schema import Data
-from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
 
 guardrail_descriptions = {
     "PII": (
@@ -51,7 +51,7 @@ class GuardrailsComponent(Component):
         SecretStrInput(
             name="api_key",
             display_name="API Key",
-            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
+            info="Model Provider API key",
             real_time_refresh=True,
             advanced=True,
         ),
@@ -130,7 +130,14 @@ class GuardrailsComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        return handle_model_input_update(self, build_config, field_value, field_name)
+        return update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+            field_value=field_value,
+        )
 
     def _pre_run_setup(self):
         """Reset validation state before each run."""
@@ -323,7 +330,6 @@ Now analyze the user input above and respond according to the instructions:"""
             # Use the LLM to check
             if hasattr(llm, "invoke"):
                 response = llm.invoke(prompt)
-                self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response))
                 result = response.content.strip() if hasattr(response, "content") else str(response).strip()
             else:
                 result = str(llm(prompt)).strip()

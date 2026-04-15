@@ -27,7 +27,7 @@ import {
   getLeftHandleId,
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
-import i18n from "../i18n";
+import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
 import { customDownloadNodeJson } from "@/customization/utils/custom-download-json";
 import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
 import useFlowStore from "@/stores/flowStore";
@@ -37,6 +37,7 @@ import {
   IS_MAC,
   LANGFLOW_SUPPORTED_TYPES,
   OUTPUT_TYPES,
+  SUCCESS_BUILD,
   specialCharsRegex,
 } from "../constants/constants";
 import { DESCRIPTIONS } from "../flow_constants";
@@ -197,40 +198,14 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
       // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
       const expectedTargetHandle = scapedJSONStringfy(id);
-      const targetHandlesMatchResult = handlesMatch(
-        expectedTargetHandle,
-        targetHandle,
-      );
       if (
-        (!targetHandlesMatchResult ||
+        (!handlesMatch(expectedTargetHandle, targetHandle) ||
           (targetNode.data.node?.tool_mode && isToolMode) ||
           isAdvanced) &&
         !isLoopInput
       ) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
         brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
-      } else if (
-        targetHandlesMatchResult &&
-        expectedTargetHandle !== targetHandle
-      ) {
-        // Handles match via migration but IDs differ — update edge to use current types
-        // so React Flow can find the DOM handle
-        const edgeInNewEdges = newEdges.find((e) => e.id === edge.id);
-        if (edgeInNewEdges) {
-          edgeInNewEdges.targetHandle = expectedTargetHandle;
-          if (edgeInNewEdges.data) {
-            edgeInNewEdges.data.targetHandle =
-              scapeJSONParse(expectedTargetHandle);
-          }
-          // Update edge ID to reflect new handles
-          edgeInNewEdges.id =
-            "reactflow__edge-" +
-            edgeInNewEdges.source +
-            (edgeInNewEdges.sourceHandle ?? "") +
-            "-" +
-            edgeInNewEdges.target +
-            expectedTargetHandle;
-        }
       }
     }
     if (sourceHandle) {
@@ -238,26 +213,18 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const name = parsedSourceHandle.name;
 
       if (sourceNode.type == "genericNode") {
-        // For components with group_outputs, each output has its own handle,
-        // so we must NOT use selected_output (which would match the wrong output).
-        // Only use selected_output for single-output dropdown components.
-        const hasGroupOutputs = sourceNode.data.node!.outputs?.some(
-          (o) => o.group_outputs,
-        );
-        const outputBySelectedOutput = hasGroupOutputs
-          ? undefined
-          : sourceNode.data.node!.outputs?.find(
-              (output) => output.name === sourceNode.data.selected_output,
-            );
-        const outputByFallback = sourceNode.data.node!.outputs?.find(
-          (output) =>
-            (output.selected ||
-              (sourceNode.data.node!.outputs?.filter(
-                (output) => !output.group_outputs,
-              )?.length ?? 0) <= 1) &&
-            output.name === name,
-        );
-        const output = outputBySelectedOutput ?? outputByFallback;
+        const output =
+          sourceNode.data.node!.outputs?.find(
+            (output) => output.name === sourceNode.data.selected_output,
+          ) ??
+          sourceNode.data.node!.outputs?.find(
+            (output) =>
+              (output.selected ||
+                (sourceNode.data.node!.outputs?.filter(
+                  (output) => !output.group_outputs,
+                )?.length ?? 0) <= 1) &&
+              output.name === name,
+          );
 
         if (output) {
           const outputTypes =
@@ -274,34 +241,12 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           const hasAllowsLoop = output?.allows_loop === true;
           // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
           const expectedSourceHandle = scapedJSONStringfy(id);
-          const sourceMatchResult = handlesMatch(
-            expectedSourceHandle,
-            sourceHandle,
-          );
-          if (!sourceMatchResult && !hasAllowsLoop) {
+          if (
+            !handlesMatch(expectedSourceHandle, sourceHandle) &&
+            !hasAllowsLoop
+          ) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
             brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
-          } else if (
-            sourceMatchResult &&
-            expectedSourceHandle !== sourceHandle
-          ) {
-            // Handles match via migration but IDs differ — update edge to use current types
-            const edgeInNewEdges = newEdges.find((e) => e.id === edge.id);
-            if (edgeInNewEdges) {
-              edgeInNewEdges.sourceHandle = expectedSourceHandle;
-              if (edgeInNewEdges.data) {
-                edgeInNewEdges.data.sourceHandle =
-                  scapeJSONParse(expectedSourceHandle);
-              }
-              // Update edge ID to reflect new handles
-              edgeInNewEdges.id =
-                "reactflow__edge-" +
-                edgeInNewEdges.source +
-                expectedSourceHandle +
-                "-" +
-                edgeInNewEdges.target +
-                (edgeInNewEdges.targetHandle ?? "");
-            }
           }
         } else {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -787,7 +732,7 @@ export function validateEdge(
 
   const loop = hasLoop(e, nodes, edges);
   if (targetHandleObject.output_types && !loop) {
-    return [i18n.t("errors.incompleteLoop")];
+    return [INCOMPLETE_LOOP_ERROR_ALERT];
   }
   return [];
 }
@@ -2031,7 +1976,7 @@ export function getGroupStatus(
   flow: FlowType,
   ssData: { [key: string]: { valid: boolean; params: string } },
 ) {
-  let status = { valid: true, params: i18n.t("flow.buildSuccess") };
+  let status = { valid: true, params: SUCCESS_BUILD };
   const { nodes } = flow.data!;
   const ids = nodes.map((n: AllNodeType) => n.data.id);
   ids.forEach((id) => {
@@ -2127,52 +2072,14 @@ export function typesGenerator(data: APIObjectType) {
     }, {});
 }
 
-const getTemplateAliases = (
-  componentKey: string,
-  component: Record<string, any>,
-): string[] => {
-  const aliases = [componentKey, component?.name, component?.display_name];
-  const legacyAliases: Record<string, string[]> = {
-    ParserComponent: ["parser"],
-    "Prompt Template": ["Prompt"],
-  };
-  const componentType = component?.template?._type;
-
-  aliases.push(...(legacyAliases[componentKey] ?? []));
-
-  if (
-    typeof componentType === "string" &&
-    componentType.endsWith("Component")
-  ) {
-    aliases.push(componentType.replace(/Component$/, ""));
-  }
-
-  return Array.from(new Set(aliases.filter(Boolean)));
-};
-
 export function templatesGenerator(data: APIObjectType) {
-  const templates = Object.entries(data).reduce<Record<string, APIClassType>>(
-    (acc, [, kind]) => {
-      Object.entries(kind).forEach(([componentKey, component]) => {
-        //prevent wrong overwriting of the component template by a group of the same type
-        if (!(component as APIClassType).flow) {
-          acc[componentKey] = cloneDeep(component as APIClassType);
-        }
-      });
-      return acc;
-    },
-    {},
-  );
-
-  for (const [componentKey, component] of Object.entries(templates)) {
-    for (const alias of getTemplateAliases(componentKey, component)) {
-      if (!(alias in templates)) {
-        templates[alias] = component;
-      }
-    }
-  }
-
-  return templates;
+  return Object.keys(data).reduce((acc, curr) => {
+    Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
+      //prevent wrong overwriting of the component template by a group of the same type
+      if (!data[curr][c].flow) acc[c] = data[curr][c];
+    });
+    return acc;
+  }, {});
 }
 
 /**

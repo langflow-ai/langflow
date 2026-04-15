@@ -6,15 +6,17 @@ from collections.abc import Callable  # noqa: TC003 - required at runtime for dy
 from typing import Any
 
 from lfx.base.models.unified_models import (
+    apply_provider_variable_config_to_build_config,
+    get_language_model_options,
     get_llm,
-    handle_model_input_update,
+    get_provider_for_model_name,
+    update_model_options_in_build_config,
 )
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, IntInput, ModelInput, MultilineInput, Output, SecretStrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-from lfx.schema.token_usage import extract_usage_from_message
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 TEXT_TRANSFORM_PROMPT = (
@@ -65,7 +67,7 @@ class LambdaFilterComponent(Component):
         SecretStrInput(
             name="api_key",
             display_name="API Key",
-            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
+            info="Model Provider API key",
             real_time_refresh=True,
             advanced=True,
         ),
@@ -116,7 +118,27 @@ class LambdaFilterComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        return handle_model_input_update(self, build_config, field_value, field_name)
+        build_config = update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+            field_value=field_value,
+        )
+
+        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
+        provider = ""
+        if isinstance(current_model_value, list) and current_model_value:
+            selected_model = current_model_value[0]
+            provider = (selected_model.get("provider") or "").strip()
+            if not provider and selected_model.get("name"):
+                provider = get_provider_for_model_name(str(selected_model["name"]))
+
+        if provider:
+            build_config = apply_provider_variable_config_to_build_config(build_config, provider)
+
+        return build_config
 
     def get_data_structure(self, data):
         """Extract the structure of data, replacing values with their types."""
@@ -252,7 +274,6 @@ class LambdaFilterComponent(Component):
 
         llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
         response = await llm.ainvoke(prompt)
-        self._token_usage = extract_usage_from_message(response)
         response_text = response.content if hasattr(response, "content") else str(response)
 
         fn = self._parse_lambda_from_response(response_text)

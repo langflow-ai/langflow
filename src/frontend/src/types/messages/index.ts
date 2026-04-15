@@ -1,4 +1,4 @@
-import type { ContentBlock, UsageType } from "../chat";
+import type { ContentBlock } from "../chat";
 
 type Message = {
   flow_id: string;
@@ -28,7 +28,6 @@ type Message = {
     allow_markdown?: boolean;
     positive_feedback?: boolean | null;
     build_duration?: number | null;
-    usage?: UsageType | null;
     [key: string]: unknown;
   };
   content_blocks?: ContentBlock[];

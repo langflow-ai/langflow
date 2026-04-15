@@ -1,6 +1,5 @@
 import { ExternalLink } from "lucide-react";
 import { FaDiscord, FaGithub } from "react-icons/fa";
-import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import logoDarkPng from "@/assets/logo_dark.png";
 import logoLightPng from "@/assets/logo_light.png";
@@ -16,6 +15,17 @@ import { useFolderStore } from "@/stores/foldersStore";
 import { formatNumber } from "@/utils/utils";
 import useFileDrop from "../hooks/use-on-file-drop";
 
+const EMPTY_PAGE_TITLE = "Welcome to Langflow";
+const EMPTY_PAGE_DESCRIPTION = "Your new favorite way to ship Agents";
+const EMPTY_PAGE_GITHUB_DESCRIPTION =
+  "Follow development, star the repo, and shape the future.";
+const EMPTY_PAGE_DISCORD_DESCRIPTION =
+  "Join builders, ask questions, and show off your agents";
+const EMPTY_PAGE_DRAG_AND_DROP_TEXT =
+  "Already have a flow? Drag and drop to upload.";
+const EMPTY_PAGE_FOLDER_DESCRIPTION = "Empty folder";
+const EMPTY_PAGE_CREATE_FIRST_FLOW_BUTTON_TEXT = "Create first flow";
+
 const EXTERNAL_LINK_ICON_CLASS =
   "absolute right-6 top-[35px] h-4 w-4 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100";
 
@@ -24,7 +34,6 @@ export const EmptyPageCommunity = ({
 }: {
   setOpenModal: (open: boolean) => void;
 }) => {
-  const { t } = useTranslation();
   const handleFileDrop = useFileDrop(undefined);
   const folders = useFolderStore((state) => state.folders);
   const userData = useAuthStore(useShallow((state) => state.userData));
@@ -52,7 +61,7 @@ export const EmptyPageCommunity = ({
   return (
     <DotBackgroundDemo>
       <CardsWrapComponent
-        dragMessage={t("home.dragFlowsOrComponents")}
+        dragMessage={`Drop your flows or components here`}
         onFileDrop={handleFileDrop}
       >
         <div className="m-0 h-full w-full bg-background p-0">
@@ -78,7 +87,7 @@ export const EmptyPageCommunity = ({
                 data-testid="mainpage_title"
                 className="z-50 text-center font-chivo text-2xl font-medium text-foreground"
               >
-                {t("page.welcomeTitle")}
+                {EMPTY_PAGE_TITLE}
               </span>
 
               <span
@@ -86,8 +95,8 @@ export const EmptyPageCommunity = ({
                 className="z-50 text-center text-base text-secondary-foreground"
               >
                 {folders?.length > 1
-                  ? t("page.emptyFolder")
-                  : t("page.welcomeDescription")}
+                  ? EMPTY_PAGE_FOLDER_DESCRIPTION
+                  : EMPTY_PAGE_DESCRIPTION}
               </span>
             </div>
 
@@ -114,7 +123,7 @@ export const EmptyPageCommunity = ({
                     </div>
                     <div>
                       <span className="text-base text-secondary-foreground">
-                        {t("page.githubDescription")}
+                        {EMPTY_PAGE_GITHUB_DESCRIPTION}
                       </span>
                     </div>
                   </div>
@@ -144,7 +153,7 @@ export const EmptyPageCommunity = ({
                     </div>
                     <div>
                       <span className="text-base text-secondary-foreground">
-                        {t("page.discordDescription")}
+                        {EMPTY_PAGE_DISCORD_DESCRIPTION}
                       </span>
                     </div>
                   </div>
@@ -164,7 +173,7 @@ export const EmptyPageCommunity = ({
                   aria-hidden="true"
                   className="h-4 w-4"
                 />
-                <span>{t("page.createFirstFlow")}</span>
+                <span>{EMPTY_PAGE_CREATE_FIRST_FLOW_BUTTON_TEXT}</span>
               </Button>
             </div>
           </div>
@@ -173,7 +182,7 @@ export const EmptyPageCommunity = ({
           data-testid="empty_page_drag_and_drop_text"
           className="absolute bottom-5 left-0 right-0 mt-4 cursor-default text-center text-xxs text-muted-foreground"
         >
-          {t("page.dragAndDropText")}
+          {EMPTY_PAGE_DRAG_AND_DROP_TEXT}
         </p>
       </CardsWrapComponent>
     </DotBackgroundDemo>

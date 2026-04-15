@@ -3,7 +3,6 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
-  disableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
@@ -19,9 +18,6 @@ test(
     });
 
     await page.getByTestId("blank-flow").click();
-
-    await disableInspectPanel(page);
-
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 3000,
     });
@@ -52,7 +48,7 @@ test(
     expect(await page.getByTestId("icon-ListFilter").first()).toBeVisible();
 
     await page
-      .getByTestId("sidebar-filter-reset")
+      .getByTestId("icon-X")
       .first()
       .hover()
       .then(async () => {
@@ -141,7 +137,7 @@ test(
 
     await expect(page.getByTestId("processingJSON Operations")).toBeVisible();
 
-    await page.getByTestId("sidebar-filter-reset").first().click();
+    await page.getByTestId("icon-X").first().click();
 
     await expect(page.getByTestId("data_sourceAPI Request")).not.toBeVisible();
     await expect(page.getByTestId("datastaxAstra DB")).not.toBeVisible();

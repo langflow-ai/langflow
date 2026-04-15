@@ -33,8 +33,13 @@ test("user must be able outdated message on error", async ({ page }) => {
 
   await page.getByTestId("list-card").first().click();
 
-  // Verify the outdated components banner appears on the canvas
-  await expect(page.getByText("Updates are available for 5")).toBeVisible({
-    timeout: 30000,
-  });
+  await page
+    .getByTestId("popover-anchor-input-api_key")
+    .fill("this is a test to crash");
+
+  await page.getByTestId("button_run_chat output").click();
+
+  await expect(
+    page.getByText("there are outdated components in the flow"),
+  ).toBeVisible({ timeout: 30000 });
 });

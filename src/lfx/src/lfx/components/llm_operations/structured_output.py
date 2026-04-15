@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field, create_model
 from trustcall import create_extractor
 
-from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.models.chat_result import get_chat_result
 from lfx.base.models.unified_models import (
+    get_language_model_options,
     get_llm,
-    handle_model_input_update,
+    update_model_options_in_build_config,
 )
 from lfx.custom.custom_component.component import Component
 from lfx.helpers.base_model import build_model_from_schema
@@ -41,7 +41,7 @@ class StructuredOutputComponent(Component):
         SecretStrInput(
             name="api_key",
             display_name="API Key",
-            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
+            info="Model Provider API key",
             real_time_refresh=True,
             advanced=True,
         ),
@@ -79,7 +79,7 @@ class StructuredOutputComponent(Component):
             display_name="Output Schema",
             info="Define the structure and data types for the model's output.",
             required=True,
-            # TODO: remove default value
+            # TODO: remove deault value
             table_schema=[
                 {
                     "name": "name",
@@ -141,7 +141,14 @@ class StructuredOutputComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        return handle_model_input_update(self, build_config, field_value, field_name)
+        return update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+            field_value=field_value,
+        )
 
     def build_structured_output_base(self):
         schema_name = self.schema_name or "OutputModel"
@@ -167,21 +174,16 @@ class StructuredOutputComponent(Component):
                 ),
             ),
         )
-        # Tracing config with token usage handler injected into the callbacks chain.
-        # get_chat_result() reads "get_langchain_callbacks" as a callable, so we wrap
-        # the list in a lambda to match its expected interface.
-        token_handler = TokenUsageCallbackHandler()
-        base_callbacks = self.get_langchain_callbacks()
+        # Tracing config
         config_dict = {
-            "display_name": self.display_name,
-            "get_project_name": self.get_project_name,
-            "get_langchain_callbacks": lambda: [*base_callbacks, token_handler],
+            "run_name": self.display_name,
+            "project_name": self.get_project_name(),
+            "callbacks": self.get_langchain_callbacks(),
         }
         # Generate structured output using Trustcall first, then fallback to Langchain if it fails
         result = self._extract_output_with_trustcall(llm, output_model, config_dict)
         if result is None:
             result = self._extract_output_with_langchain(llm, output_model, config_dict)
-        self._token_usage = token_handler.get_usage()
 
         # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure
         # Handle non-dict responses (shouldn't happen with trustcall, but defensive)

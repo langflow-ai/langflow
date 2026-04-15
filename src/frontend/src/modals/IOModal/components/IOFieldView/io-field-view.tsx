@@ -1,6 +1,5 @@
 import { cloneDeep } from "lodash";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import useHandleNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import CustomIOFileInput from "@/customization/components/custom-file-input";
 import type { AllNodeType } from "@/types/flow";
@@ -10,6 +9,7 @@ import DataOutputComponent from "../../../../components/core/dataOutputComponent
 import InputListComponent from "../../../../components/core/parameterRenderComponent/components/inputListComponent";
 import PdfViewer from "../../../../components/core/pdfViewer";
 import { Textarea } from "../../../../components/ui/textarea";
+import { PDFViewConstant } from "../../../../constants/constants";
 import {
   InputOutput,
   IOInputTypes,
@@ -33,7 +33,6 @@ export default function IOFieldView({
   fieldId,
   left,
 }: IOFieldViewProps): JSX.Element | undefined {
-  const { t } = useTranslation();
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const flowPool = useFlowStore((state) => state.flowPool);
@@ -178,7 +177,7 @@ export default function IOFieldView({
             return <TextOutputView left={left} value={textOutputValue} />;
           case IOOutputTypes.PDF:
             return left ? (
-              <div>{t("output.pdfView")}</div>
+              <div>{PDFViewConstant}</div>
             ) : (
               <PdfViewer pdf={flowPoolNode?.params ?? ""} />
             );

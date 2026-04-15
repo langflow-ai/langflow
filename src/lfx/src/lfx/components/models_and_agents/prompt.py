@@ -35,7 +35,6 @@ class PromptComponent(Component):
             display_name="Tool Placeholder",
             tool_mode=True,
             advanced=True,
-            show=False,
             info="A placeholder input for tool mode.",
         ),
     ]

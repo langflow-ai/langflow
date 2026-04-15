@@ -5,7 +5,6 @@ import type {
   ValueFormatterParams,
 } from "ag-grid-community";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 
 import Dropdown from "@/components/core/dropdownComponent";
 import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVariableModal";
@@ -24,7 +23,6 @@ import { Button } from "../../../../components/ui/button";
 import useAlertStore from "../../../../stores/alertStore";
 
 export default function GlobalVariablesPage() {
-  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openModal, setOpenModal] = useState(false);
   const initialData = useRef<GlobalVariable | undefined>(undefined);
@@ -50,12 +48,12 @@ export default function GlobalVariablesPage() {
   // Column Definitions: Defines the columns to be displayed.
   const colDefs: ColDef[] = [
     {
-      headerName: t("globalVars.columnVariableName"),
+      headerName: "Variable Name",
       field: "name",
       flex: 2,
     }, //This column will be twice as wide as the others
     {
-      headerName: t("globalVars.columnType"),
+      headerName: "Type",
       field: "type",
       cellRenderer: BadgeRenderer,
       cellEditor: DropdownEditor,
@@ -76,7 +74,7 @@ export default function GlobalVariablesPage() {
       },
     },
     {
-      headerName: t("globalVars.columnApplyToFields"),
+      headerName: "Apply To Fields",
       field: "default_fields",
       valueFormatter: (params) => {
         return params.value?.join(", ") ?? "";
@@ -135,11 +133,9 @@ export default function GlobalVariablesPage() {
           `${variable.name}: ${variable.validation_error || "Invalid API key"}`,
       );
       setErrorData({
-        title: t("globalVars.invalidCredentialsTitle"),
+        title: "Invalid Provider Credentials Detected",
         list: [
-          t("globalVars.invalidCredentialsHidden", {
-            count: invalidProviderVars.length,
-          }),
+          `${invalidProviderVars.length} provider credential(s) with invalid keys have been hidden from the list.`,
           ...errorMessages,
         ],
       });
@@ -154,8 +150,8 @@ export default function GlobalVariablesPage() {
         {
           onError: () => {
             setErrorData({
-              title: t("globalVars.errorDeletingVariable"),
-              list: [t("globalVars.errorIdNotFound", { name: row })],
+              title: `Error deleting variable`,
+              list: [`ID not found for variable: ${row}`],
             });
           },
         },
@@ -176,21 +172,21 @@ export default function GlobalVariablesPage() {
             className="flex items-center text-lg font-semibold tracking-tight"
             data-testid="settings_menu_header"
           >
-            {t("globalVars.pageTitle")}
+            Global Variables
             <ForwardedIconComponent
               name="Globe"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            {t("globalVars.pageDescription")}
+            Manage global variables and assign them to fields.
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
           <GlobalVariableModal asChild>
             <Button data-testid="api-key-button-store" variant="primary">
               <IconComponent name="Plus" className="w-4" />
-              {t("globalVars.addNew")}
+              Add New
             </Button>
           </GlobalVariableModal>
         </div>
@@ -199,7 +195,7 @@ export default function GlobalVariablesPage() {
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
           key={"globalVariables"}
-          overlayNoRowsTemplate={t("globalVars.noDataAvailable")}
+          overlayNoRowsTemplate="No data available"
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
           }}

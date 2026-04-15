@@ -1,6 +1,5 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
 import IconComponent from "../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../components/common/sanitizedHTMLWrapper";
@@ -9,6 +8,13 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import {
+  BUG_ALERT,
+  PROMPT_ERROR_ALERT,
+  PROMPT_SUCCESS_ALERT,
+  TEMP_NOTICE_ALERT,
+} from "../../constants/alerts_constants";
+import {
+  EDIT_TEXT_PLACEHOLDER,
   INVALID_CHARACTERS,
   MAX_WORDS_HIGHLIGHT,
   regexHighlight,
@@ -31,7 +37,6 @@ export default function PromptModal({
   id = "",
   readonly = false,
 }: PromptModalType): JSX.Element {
-  const { t } = useTranslation();
   const [modalOpen, setModalOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
@@ -158,24 +163,24 @@ export default function PromptModal({
             }
             if (!inputVariables || inputVariables.length === 0) {
               setNoticeData({
-                title: t("alerts.noTemplateVariables"),
+                title: TEMP_NOTICE_ALERT,
               });
             } else {
               setSuccessData({
-                title: t("success.promptReady"),
+                title: PROMPT_SUCCESS_ALERT,
               });
             }
           } else {
             setIsEdit(true);
             setErrorData({
-              title: t("errors.generic"),
+              title: BUG_ALERT,
             });
           }
         },
         onError: (error) => {
           setIsEdit(true);
           return setErrorData({
-            title: t("errors.prompt"),
+            title: PROMPT_ERROR_ALERT,
             list: [error.response.data.detail ?? ""],
           });
         },
@@ -234,7 +239,7 @@ export default function PromptModal({
               aria-hidden="true"
             />
             <span className="pl-2" data-testid="modal-title">
-              {t("modal.prompt.title")}
+              Edit Prompt
             </span>
           </div>
         </div>
@@ -257,7 +262,7 @@ export default function PromptModal({
                 setInputValue(event.target.value);
                 checkVariables(event.target.value);
               }}
-              placeholder={t("input.editTextPlaceholder")}
+              placeholder={EDIT_TEXT_PLACEHOLDER}
               onKeyDown={(e) => {
                 handleKeyDown(e, inputValue, "");
               }}
@@ -287,7 +292,7 @@ export default function PromptModal({
                     className="flex h-4 w-4 text-primary"
                   />
                   <span className="text-md font-semibold text-primary">
-                    {t("modal.prompt.promptVariables")}
+                    Prompt Variables:
                   </span>
 
                   {Array.from(wordsHighlight).map((word, index) => (
@@ -315,7 +320,8 @@ export default function PromptModal({
                 </div>
               </div>
               <span className="mt-2 text-xs text-muted-foreground">
-                {t("modal.prompt.variablesHint")}
+                Prompt variables can be created with any chosen name inside
+                curly brackets, e.g. {"{variable_name}"}
               </span>
             </div>
           </div>
@@ -328,7 +334,7 @@ export default function PromptModal({
             }}
             type="submit"
           >
-            {t("modal.prompt.checkAndSave")}
+            Check & Save
           </Button>
         </div>
       </BaseModal.Footer>

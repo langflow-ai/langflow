@@ -1,5 +1,6 @@
 import importlib
 import signal
+import sys
 import traceback
 from contextlib import suppress
 from functools import lru_cache
@@ -223,10 +224,6 @@ def _get_cached_converter(
     return DocumentConverter(format_options=format_options)
 
 
-class _ShutdownRequestedError(Exception):
-    """Raised by check_shutdown() to unwind the docling_worker call stack."""
-
-
 def docling_worker(
     *,
     file_paths: list[str],
@@ -255,24 +252,22 @@ def docling_worker(
         logger.debug(f"Docling worker received {signal_name}, initiating graceful shutdown...")
         shutdown_requested = True
 
-        # Send shutdown notification to parent thread
+        # Send shutdown notification to parent process
         with suppress(Exception):
             queue.put({"error": f"Worker interrupted by {signal_name}", "shutdown": True})
 
-        # NOTE: Do NOT call sys.exit() here. This function runs in a thread
-        # (not a subprocess), so sys.exit() would raise SystemExit which can
-        # crash the host process in single-worker setups. Instead, just set
-        # the flag and let check_shutdown() terminate the worker loop.
+        # Exit gracefully
+        sys.exit(0)
 
     def check_shutdown() -> None:
-        """Check if shutdown was requested and raise to unwind if so."""
+        """Check if shutdown was requested and exit if so."""
         if shutdown_requested:
             logger.info("Shutdown requested, exiting worker...")
 
             with suppress(Exception):
                 queue.put({"error": "Worker shutdown requested", "shutdown": True})
 
-            raise _ShutdownRequestedError
+            sys.exit(0)
 
     # Register signal handlers early
     try:
@@ -447,9 +442,6 @@ def docling_worker(
         logger.info(f"Successfully processed {len([d for d in processed_data if d])} files")
         queue.put(processed_data)
 
-    except _ShutdownRequestedError:
-        logger.info("Docling worker stopped by shutdown request")
-        return
     except KeyboardInterrupt:
         logger.warning("KeyboardInterrupt during processing, exiting gracefully...")
         queue.put({"error": "Worker interrupted during processing", "shutdown": True})

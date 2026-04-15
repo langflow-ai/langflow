@@ -2,22 +2,6 @@
 title: Workflow API (Beta)
 slug: /workflow-api
 ---
-import CodeSnippet from '@site/src/components/CodeSnippet';
-import exampleWorkflowsApiExampleSynchronousRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-synchronous-request.sh';
-import exampleWorkflowsApiExampleAsynchronousRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-asynchronous-request.sh';
-import exampleWorkflowsApiExampleRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-request.sh';
-import exampleWorkflowsApiExampleRequest2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-request-2.sh';
-import examplePythonWorkflowsApiExampleSynchronousRequest from '!!raw-loader!@site/docs/API-Reference/python-examples/workflows-api/example-synchronous-request.py';
-import examplePythonWorkflowsApiExampleAsynchronousRequest from '!!raw-loader!@site/docs/API-Reference/python-examples/workflows-api/example-asynchronous-request.py';
-import examplePythonWorkflowsApiExampleRequest from '!!raw-loader!@site/docs/API-Reference/python-examples/workflows-api/example-request.py';
-import examplePythonWorkflowsApiExampleRequest2 from '!!raw-loader!@site/docs/API-Reference/python-examples/workflows-api/example-request-2.py';
-import exampleJavascriptWorkflowsApiExampleSynchronousRequest from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-synchronous-request.js';
-import exampleJavascriptWorkflowsApiExampleAsynchronousRequest from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-asynchronous-request.js';
-import exampleJavascriptWorkflowsApiExampleRequest from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-request.js';
-import exampleJavascriptWorkflowsApiExampleRequest2 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-request-2.js';
-
-
-
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -54,17 +38,82 @@ Execute a workflow synchronously and receive complete results immediately:
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonWorkflowsApiExampleSynchronousRequest} language="python" />
+```python
+import requests
+
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflows"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": LANGFLOW_API_KEY
+}
+
+payload = {
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": False,
+    "inputs": {
+        "ChatInput-abc.input_type": "chat",
+        "ChatInput-abc.input_value": "what is 2+2",
+        "ChatInput-abc.session_id": "session-123"
+    }
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())
+```
 
 </TabItem>
-<TabItem value="JavaScript" label="JavaScript">
+<TabItem value="TypeScript" label="TypeScript">
 
-<CodeSnippet source={exampleJavascriptWorkflowsApiExampleSynchronousRequest} language="javascript" />
+```typescript
+import axios from 'axios';
+
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows`;
+
+const payload = {
+  flow_id: "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+  background: false,
+  inputs: {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "what is 2+2",
+    "ChatInput-abc.session_id": "session-123"
+  }
+};
+
+const runWorkflow = async () => {
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': LANGFLOW_API_KEY
+      }
+    });
+    console.log(response.data);
+  } catch (error) {
+    console.error('Error triggering workflow:', error);
+  }
+};
+
+runWorkflow();
+```
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleWorkflowsApiExampleSynchronousRequest} language="bash" />
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v2/workflows" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": false,
+    "inputs": {
+      "ChatInput-abc.input_type": "chat",
+      "ChatInput-abc.input_value": "what is 2+2",
+      "ChatInput-abc.session_id": "session-123"
+    }
+  }'
+```
 
 </TabItem>
 </Tabs>
@@ -84,17 +133,85 @@ The asynchronous request contains `stream` parameter, but streaming is not yet s
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonWorkflowsApiExampleAsynchronousRequest} language="python" />
+```python
+import requests
+
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflows"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": LANGFLOW_API_KEY
+}
+
+payload = {
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": True,
+    "stream": False,
+    "inputs": {
+        "ChatInput-abc.input_type": "chat",
+        "ChatInput-abc.input_value": "Process this in the background",
+        "ChatInput-abc.session_id": "session-456"
+    }
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())  # Returns job_id immediately
+```
 
 </TabItem>
-<TabItem value="JavaScript" label="JavaScript">
+<TabItem value="TypeScript" label="TypeScript">
 
-<CodeSnippet source={exampleJavascriptWorkflowsApiExampleAsynchronousRequest} language="javascript" />
+```typescript
+import axios from 'axios';
+
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows`;
+
+const payload = {
+  flow_id: "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+  background: true,
+  stream: false,
+  inputs: {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "Process this in the background",
+    "ChatInput-abc.session_id": "session-456"
+  }
+};
+
+const runWorkflow = async () => {
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': LANGFLOW_API_KEY
+      }
+    });
+    console.log(response.data);  // Returns job_id immediately
+  } catch (error) {
+    console.error('Error triggering workflow:', error);
+  }
+};
+
+runWorkflow();
+```
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleWorkflowsApiExampleAsynchronousRequest} language="bash" />
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v2/workflows" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": true,
+    "stream": false,
+    "inputs": {
+      "ChatInput-abc.input_type": "chat",
+      "ChatInput-abc.input_value": "Process this in the background",
+      "ChatInput-abc.session_id": "session-456"
+    }
+  }'
+```
 
 </TabItem>
 </Tabs>
@@ -169,17 +286,60 @@ The response includes an `outputs` field containing component-level results. Eac
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonWorkflowsApiExampleRequest} language="python" />
+```python
+import requests
+
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflows"
+params = {
+    "job_id": "job_id_1234567890"
+}
+headers = {
+    "accept": "application/json",
+    "x-api-key": LANGFLOW_API_KEY
+}
+
+response = requests.get(url, params=params, headers=headers)
+print(response.json())
+```
 
 </TabItem>
-<TabItem value="JavaScript" label="JavaScript">
+<TabItem value="TypeScript" label="TypeScript">
 
-<CodeSnippet source={exampleJavascriptWorkflowsApiExampleRequest} language="javascript" />
+```typescript
+import axios from 'axios';
+
+const jobId = 'job_id_1234567890';
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows`;
+
+const getWorkflowStatus = async () => {
+  try {
+    const response = await axios.get(url, {
+      params: {
+        job_id: jobId
+      },
+      headers: {
+        'accept': 'application/json',
+        'x-api-key': LANGFLOW_API_KEY
+      }
+    });
+    console.log(response.data);
+  } catch (error) {
+    console.error('Error getting workflow status:', error);
+  }
+};
+
+getWorkflowStatus();
+```
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleWorkflowsApiExampleRequest} language="bash" />
+```bash
+curl -X GET \
+  "$LANGFLOW_SERVER_URL/api/v2/workflows?job_id=job_id_1234567890" \
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
+```
 
 </TabItem>
 </Tabs>
@@ -244,17 +404,63 @@ The response includes a `status` field that indicates the current state of the w
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonWorkflowsApiExampleRequest2} language="python" />
+```python
+import requests
+
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflows/stop"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": LANGFLOW_API_KEY
+}
+payload = {
+    "job_id": "job_id_1234567890"
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())
+```
 
 </TabItem>
-<TabItem value="JavaScript" label="JavaScript">
+<TabItem value="TypeScript" label="TypeScript">
 
-<CodeSnippet source={exampleJavascriptWorkflowsApiExampleRequest2} language="javascript" />
+```typescript
+import axios from 'axios';
+
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows/stop`;
+
+const payload = {
+  job_id: "job_id_1234567890"
+};
+
+const stopWorkflow = async () => {
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': LANGFLOW_API_KEY
+      }
+    });
+    console.log(response.data);
+  } catch (error) {
+    console.error('Error stopping workflow:', error);
+  }
+};
+
+stopWorkflow();
+```
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleWorkflowsApiExampleRequest2} language="bash" />
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v2/workflows/stop" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "job_id": "job_id_1234567890"
+  }'
+```
 
 </TabItem>
 </Tabs>

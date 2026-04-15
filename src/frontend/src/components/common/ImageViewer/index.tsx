@@ -1,13 +1,15 @@
 import { saveAs } from "file-saver";
 import OpenSeadragon from "openseadragon";
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import {
+  IMGViewErrorMSG,
+  IMGViewErrorTitle,
+} from "../../../constants/constants";
 import useAlertStore from "../../../stores/alertStore";
 import { Separator } from "../../ui/separator";
 import ForwardedIconComponent from "../genericIconComponent";
 
 export default function ImageViewer({ image }: { image: string }) {
-  const { t } = useTranslation();
   const viewerRef = useRef(null);
   const [_errorDownloading, _setErrordownloading] = useState(false);
   const setErrorList = useAlertStore((state) => state.setErrorData);
@@ -85,11 +87,11 @@ export default function ImageViewer({ image }: { image: string }) {
     <div className="align-center flex h-full w-full flex-col justify-center gap-5 rounded-md border border-border bg-muted">
       <div className="align-center flex justify-center gap-2">
         <ForwardedIconComponent name="Image" />
-        {t("output.imgTitle")}
+        {IMGViewErrorTitle}
       </div>
       <div className="align-center flex justify-center">
         <div className="langflow-chat-desc align-center flex justify-center">
-          <div className="langflow-chat-desc-span">{t("output.imgError")}</div>
+          <div className="langflow-chat-desc-span">{IMGViewErrorMSG}</div>
         </div>
       </div>
     </div>

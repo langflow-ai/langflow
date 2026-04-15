@@ -1,9 +1,9 @@
 """Agentics components for Langflow - LLM-powered data transformation and generation.
 
 This module provides components that leverage the Agentics framework for:
-- Semantic data transformation (aMap)
-- Data aggregation and summarization (aReduce)
-- Synthetic data generation (aGenerate)
+- Semantic data transformation (SemanticMap)
+- Data aggregation and summarization (SemanticAggregator)
+- Synthetic data generation (SyntheticDataGenerator)
 """
 
 from __future__ import annotations
@@ -13,20 +13,20 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from .agenerate_component import AgenerateComponent
-    from .amap_component import AMapComponent
-    from .areduce_component import AreduceComponent
+    from .semantic_aggregator import SemanticAggregator
+    from .semantic_map import SemanticMap
+    from .synthetic_data_generator import SyntheticDataGenerator
 
 _dynamic_imports = {
-    "AgenerateComponent": "agenerate_component",
-    "AMapComponent": "amap_component",
-    "AreduceComponent": "areduce_component",
+    "SemanticAggregator": "semantic_aggregator",
+    "SemanticMap": "semantic_map",
+    "SyntheticDataGenerator": "synthetic_data_generator",
 }
 
 __all__ = [
-    "AMapComponent",
-    "AgenerateComponent",
-    "AreduceComponent",
+    "SemanticAggregator",
+    "SemanticMap",
+    "SyntheticDataGenerator",
 ]
 
 

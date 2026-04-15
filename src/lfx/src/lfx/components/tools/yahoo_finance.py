@@ -2,7 +2,8 @@ import ast
 import pprint
 from enum import Enum
 
-from langchain_core.tools import StructuredTool, ToolException
+from langchain.tools import StructuredTool
+from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent

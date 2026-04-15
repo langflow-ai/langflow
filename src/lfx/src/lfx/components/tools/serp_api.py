@@ -1,7 +1,8 @@
 from typing import Any
 
+from langchain.tools import StructuredTool
 from langchain_community.utilities.serpapi import SerpAPIWrapper
-from langchain_core.tools import StructuredTool, ToolException
+from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent

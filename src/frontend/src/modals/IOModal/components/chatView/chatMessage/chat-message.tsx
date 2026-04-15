@@ -1,7 +1,6 @@
 import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
-import MessageMetadata from "@/components/common/messageMetadataComponent";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
@@ -13,7 +12,7 @@ import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/common/sanitizedHTMLWrapper";
-import { useTranslation } from "react-i18next";
+import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
 import useAlertStore from "../../../../../stores/alertStore";
 import type { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
@@ -30,7 +29,6 @@ export default function ChatMessage({
   closeChat,
   playgroundPage,
 }: chatMessagePropsType): JSX.Element {
-  const { t } = useTranslation();
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const [streamUrl, setStreamUrl] = useState(chat.stream_url);
@@ -70,7 +68,7 @@ export default function ChatMessage({
           setChatMessage((prev) => prev + parsedData.chunk);
         }
       };
-      eventSource.current.onerror = (event: Event & { data?: string }) => {
+      eventSource.current.onerror = (event: any) => {
         setIsStreaming(false);
         eventSource.current?.close();
         setStreamUrl(undefined);
@@ -269,7 +267,7 @@ export default function ChatMessage({
             <div>
               <div
                 className={cn(
-                  "flex w-full items-baseline gap-3 pb-2 text-sm font-semibold",
+                  "flex max-w-full items-baseline gap-3 truncate pb-2 text-sm font-semibold",
                 )}
                 style={
                   chat.properties?.text_color
@@ -295,13 +293,6 @@ export default function ChatMessage({
                   <div className="text-mmd font-normal text-muted-foreground">
                     {chat.properties?.source.source}
                   </div>
-                )}
-                {!chat.isSend && (
-                  <MessageMetadata
-                    duration={chat.properties?.build_duration}
-                    usage={chat.properties?.usage}
-                    timestamp={chat.timestamp}
-                  />
                 )}
               </div>
             </div>
@@ -404,7 +395,7 @@ export default function ChatMessage({
                         )}
                         data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                       >
-                        {isEmpty ? t("input.noInputMessage") : decodedMessage}
+                        {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
                         {editedFlag}
                       </div>
                     </>
@@ -421,7 +412,7 @@ export default function ChatMessage({
             )}
           </div>
           {!editMessage && (
-            <div className="invisible absolute bottom-full right-0 group-hover:visible">
+            <div className="invisible absolute -top-4 right-0 group-hover:visible">
               <div>
                 <EditMessageButton
                   onCopy={() => {

@@ -19,28 +19,27 @@ import {
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
   COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
-import { api } from "@/controllers/API/api";
-import { getURL } from "@/controllers/API/helpers/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
-import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
-
-import { useFlowEvents } from "@/hooks/flows/use-flow-events";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
-import { useTranslation } from "react-i18next";
+import {
+  INVALID_SELECTION_ERROR_ALERT,
+  UPLOAD_ALERT_LIST,
+  UPLOAD_ERROR_ALERT,
+  WRONG_FILE_ERROR_ALERT,
+} from "../../../../constants/alerts_constants";
 import ExportModal from "../../../../modals/exportModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -52,7 +51,6 @@ import type { APIClassType } from "../../../../types/api";
 import type {
   AllNodeType,
   EdgeType,
-  FlowType,
   NoteNodeType,
 } from "../../../../types/flow";
 import {
@@ -69,7 +67,6 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import FlowBuildingComponent from "../flowBuildingComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
-import { CanvasBadge } from "./components/CanvasBanner";
 import HelperLines from "./components/helper-lines";
 import VersionPreviewOverlay from "./components/VersionPreviewOverlay";
 import {
@@ -92,10 +89,8 @@ export default function Page({
   view?: boolean;
   setIsLoading: (isLoading: boolean) => void;
 }): JSX.Element {
-  const { t } = useTranslation();
   const uploadFlow = useUploadFlow();
   const autoSaveFlow = useAutoSaveFlow();
-
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
@@ -149,141 +144,6 @@ export default function Page({
     useState<OnSelectionChangeParams | null>(null);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
-  const { isAgentWorking, events, lastSettledAt, clearEvents } = useFlowEvents(
-    currentFlowId || undefined,
-  );
-  const effectiveLocked = isLocked || isAgentWorking;
-
-  // Keep banner mounted during exit animation, preserve last text
-  const [bannerVisible, setBannerVisible] = useState(false);
-  const bannerVisibleRef = useRef(false);
-  const [bannerExiting, setBannerExiting] = useState(false);
-  const [bannerText, setBannerText] = useState(
-    "Agent is working on this flow...",
-  );
-
-  // Update banner text while active (not during exit)
-  useEffect(() => {
-    if (isAgentWorking && events.length > 0) {
-      const last = events[events.length - 1];
-      if (last.summary) {
-        setBannerText(`Agent: ${last.summary}`);
-      }
-    }
-  }, [isAgentWorking, events]);
-
-  useEffect(() => {
-    if (isAgentWorking) {
-      setBannerExiting(false);
-      setBannerVisible(true);
-      bannerVisibleRef.current = true;
-    } else if (bannerVisibleRef.current) {
-      // bannerText is already frozen - don't update it during exit
-      setBannerExiting(true);
-      const timer = setTimeout(() => {
-        setBannerVisible(false);
-        bannerVisibleRef.current = false;
-        setBannerExiting(false);
-        setBannerText("Agent is working on this flow...");
-      }, 350);
-      return () => clearTimeout(timer);
-    }
-  }, [isAgentWorking]);
-  const applyFlowToCanvas = useApplyFlowToCanvas();
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const prevSettledRef = useRef<number | null>(null);
-
-  const eventsRef = useRef(events);
-  eventsRef.current = events;
-
-  useEffect(() => {
-    if (
-      lastSettledAt &&
-      lastSettledAt !== prevSettledRef.current &&
-      currentFlowId
-    ) {
-      prevSettledRef.current = lastSettledAt;
-      const targetFlowId = currentFlowId;
-
-      // Capture events before clearing
-      const settleEvents = [...eventsRef.current];
-      clearEvents();
-
-      const controller = new AbortController();
-
-      api
-        .get<FlowType>(`${getURL("FLOWS")}/${targetFlowId}`, {
-          signal: controller.signal,
-        })
-        .then((response) => {
-          // Verify we're still on the same flow
-          if (useFlowsManagerStore.getState().currentFlowId !== targetFlowId) {
-            return;
-          }
-
-          applyFlowToCanvas(response.data);
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              reactFlowInstance?.fitView({
-                padding: { left: "20px", right: "20px", top: "80px" },
-              });
-            });
-          });
-
-          const nonSettleEvents = settleEvents.filter(
-            (e) => e.type !== "flow_settled",
-          );
-          if (nonSettleEvents.length > 0) {
-            const counts: Record<string, number> = {};
-            for (const e of nonSettleEvents) {
-              const key =
-                {
-                  component_added: "added",
-                  component_removed: "removed",
-                  component_configured: "configured",
-                  connection_added: "connected",
-                  connection_removed: "disconnected",
-                  flow_updated: "updated",
-                }[e.type] || "changed";
-              counts[key] = (counts[key] || 0) + 1;
-            }
-            const parts = Object.entries(counts).map(([action, count]) => {
-              const isConnection =
-                action === "connected" || action === "disconnected";
-              const base = isConnection ? "connection" : "component";
-              const noun = count === 1 ? base : `${base}s`;
-              return `${action} ${count} ${noun}`;
-            });
-            setSuccessData({
-              title: `Agent ${parts.join(", ")}`,
-            });
-          }
-        })
-        .catch((error) => {
-          if (error?.name === "CanceledError") return;
-          const isNetwork = error?.response || error?.request;
-          console.error(
-            "[FlowPage] Failed to reload flow after agent changes:",
-            error,
-          );
-          setErrorData({
-            title: isNetwork
-              ? "Network error reloading flow after agent changes. Try refreshing."
-              : "Error applying agent changes to canvas. Try refreshing.",
-          });
-        });
-
-      return () => controller.abort();
-    }
-  }, [
-    lastSettledAt,
-    currentFlowId,
-    applyFlowToCanvas,
-    setSuccessData,
-    setErrorData,
-    clearEvents,
-  ]);
-
   useEffect(() => {
     if (currentFlowId !== "") {
       isEmptyFlow.current = nodes.length === 0;
@@ -327,7 +187,7 @@ export default function Page({
       ]);
     } else {
       setErrorData({
-        title: t("errors.invalidSelection"),
+        title: INVALID_SELECTION_ERROR_ALERT,
         list: validateSelection(lastSelection!, edgesState),
       });
     }
@@ -361,7 +221,7 @@ export default function Page({
   }, [autoSaveFlow]);
 
   function handleUndo(e: KeyboardEvent) {
-    if (isPreviewActive || effectiveLocked) return;
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -370,7 +230,7 @@ export default function Page({
   }
 
   function handleRedo(e: KeyboardEvent) {
-    if (isPreviewActive || effectiveLocked) return;
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -379,7 +239,7 @@ export default function Page({
   }
 
   function handleGroup(e: KeyboardEvent) {
-    if (isPreviewActive || effectiveLocked) return;
+    if (isPreviewActive) return;
     if (selectionMenuVisible) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -388,7 +248,7 @@ export default function Page({
   }
 
   function handleDuplicate(e: KeyboardEvent) {
-    if (isPreviewActive || effectiveLocked) return;
+    if (isPreviewActive) return;
     e.preventDefault();
     e.stopPropagation();
     (e as unknown as Event).stopImmediatePropagation();
@@ -425,7 +285,7 @@ export default function Page({
   }
 
   function handleCut(e: KeyboardEvent) {
-    if (isPreviewActive || effectiveLocked) return;
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -436,7 +296,7 @@ export default function Page({
   }
 
   function handlePaste(e: KeyboardEvent) {
-    if (isPreviewActive || effectiveLocked) return;
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -455,7 +315,7 @@ export default function Page({
 
   function handleDelete(e: KeyboardEvent) {
     if (isPreviewActive) return;
-    if (effectiveLocked) return;
+    if (isLocked) return;
     if (!isWrappedWithClass(e, "nodelete") && lastSelection) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -647,7 +507,7 @@ export default function Page({
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-      if (effectiveLocked) return;
+      if (isLocked) return;
       const grabbingElement =
         document.getElementsByClassName("cursor-grabbing");
       if (grabbingElement.length > 0) {
@@ -680,14 +540,14 @@ export default function Page({
           position: position,
         }).catch((error) => {
           setErrorData({
-            title: t("errors.upload"),
+            title: UPLOAD_ERROR_ALERT,
             list: [(error as Error).message],
           });
         });
       } else {
         setErrorData({
-          title: t("errors.wrongFileType"),
-          list: [t("errors.uploadJsonOnly")],
+          title: WRONG_FILE_ERROR_ALERT,
+          list: [UPLOAD_ALERT_LIST],
         });
       }
     },
@@ -751,7 +611,7 @@ export default function Page({
   const onNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: AllNodeType) => {
       event.preventDefault();
-      if (effectiveLocked) return;
+      if (isLocked) return;
 
       // Set the right-clicked node ID to show its dropdown menu
       setRightClickedNodeId(node.id);
@@ -764,7 +624,7 @@ export default function Page({
         }));
       });
     },
-    [effectiveLocked, setRightClickedNodeId, setNodes],
+    [isLocked, setRightClickedNodeId, setNodes],
   );
 
   const onPaneClick = useCallback(
@@ -821,7 +681,7 @@ export default function Page({
   );
 
   const handleEdgeClick = (event, edge) => {
-    if (effectiveLocked) {
+    if (isLocked) {
       event.preventDefault();
       event.stopPropagation();
       return;
@@ -834,7 +694,7 @@ export default function Page({
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (effectiveLocked) {
+    if (isLocked) {
       e.preventDefault();
       e.stopPropagation();
     }
@@ -933,7 +793,6 @@ export default function Page({
                   setIsAddingNote={setIsAddingNote}
                   shadowBoxWidth={shadowBoxWidth}
                   shadowBoxHeight={shadowBoxHeight}
-                  isAgentWorking={isAgentWorking}
                 />
                 {!isPreviewActive && <FlowToolbar />}
                 {inspectionPanelVisible && (
@@ -953,27 +812,23 @@ export default function Page({
               edges={edges}
               onNodesChange={onNodesChangeWithHelperLines}
               onEdgesChange={onEdgesChange}
-              onConnect={
-                effectiveLocked || isPreviewActive ? undefined : onConnectMod
-              }
+              onConnect={isLocked || isPreviewActive ? undefined : onConnectMod}
               disableKeyboardA11y={true}
-              nodesFocusable={!effectiveLocked && !isPreviewActive}
-              edgesFocusable={!effectiveLocked && !isPreviewActive}
-              nodesDraggable={!isPreviewActive && !effectiveLocked}
-              nodesConnectable={!isPreviewActive && !effectiveLocked}
-              elementsSelectable={!isPreviewActive && !effectiveLocked}
+              nodesFocusable={!isLocked && !isPreviewActive}
+              edgesFocusable={!isLocked && !isPreviewActive}
+              nodesDraggable={!isPreviewActive}
+              nodesConnectable={!isPreviewActive}
+              elementsSelectable={!isPreviewActive}
               onInit={setReactFlowInstance}
               nodeTypes={nodeTypes}
               onReconnect={
-                effectiveLocked || isPreviewActive ? undefined : onEdgeUpdate
+                isLocked || isPreviewActive ? undefined : onEdgeUpdate
               }
               onReconnectStart={
-                effectiveLocked || isPreviewActive
-                  ? undefined
-                  : onEdgeUpdateStart
+                isLocked || isPreviewActive ? undefined : onEdgeUpdateStart
               }
               onReconnectEnd={
-                effectiveLocked || isPreviewActive ? undefined : onEdgeUpdateEnd
+                isLocked || isPreviewActive ? undefined : onEdgeUpdateEnd
               }
               onNodeDrag={isPreviewActive ? undefined : onNodeDrag}
               onNodeDragStart={isPreviewActive ? undefined : onNodeDragStart}
@@ -994,7 +849,7 @@ export default function Page({
               fitView={isEmptyFlow.current ? false : true}
               fitViewOptions={fitViewOptions}
               className="theme-attribution"
-              tabIndex={effectiveLocked ? -1 : undefined}
+              tabIndex={isLocked ? -1 : undefined}
               minZoom={MIN_ZOOM}
               maxZoom={MAX_ZOOM}
               zoomOnScroll={!view}
@@ -1008,31 +863,11 @@ export default function Page({
               onKeyDown={handleKeyDown}
               onNodeContextMenu={onNodeContextMenu}
             >
+              <FlowBuildingComponent />
               <UpdateAllComponents />
               <MemoizedBackground />
               {helperLineEnabled && <HelperLines helperLines={helperLines} />}
             </ReactFlow>
-            <FlowBuildingComponent />
-            {bannerVisible && (
-              <div
-                className={`pointer-events-none absolute inset-0 z-50 ${bannerExiting ? "agent-badge-exit" : "agent-badge-enter"}`}
-              >
-                <CanvasBadge>
-                  <ForwardedIconComponent
-                    name="Loader2"
-                    className="h-4 w-4 animate-spin"
-                  />
-                  <span
-                    key={bannerExiting ? "exit" : bannerText}
-                    className={
-                      bannerExiting ? "text-sm" : "agent-text-enter text-sm"
-                    }
-                  >
-                    {bannerText}
-                  </span>
-                </CanvasBadge>
-              </div>
-            )}
             {isPreviewActive && <VersionPreviewOverlay />}
           </div>
           <div

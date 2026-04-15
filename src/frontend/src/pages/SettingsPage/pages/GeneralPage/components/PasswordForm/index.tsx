@@ -1,5 +1,4 @@
 import * as Form from "@radix-ui/react-form";
-import { useTranslation } from "react-i18next";
 import InputComponent from "../../../../../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../../../../../components/ui/button";
 import {
@@ -27,7 +26,6 @@ const PasswordFormComponent = ({
   handleInput,
   handlePatchPassword,
 }: PasswordFormComponentProps) => {
-  const { t } = useTranslation();
   return (
     <>
       <Form.Root
@@ -38,9 +36,9 @@ const PasswordFormComponent = ({
       >
         <Card x-chunk="dashboard-04-chunk-2">
           <CardHeader>
-            <CardTitle>{t("settings.passwordTitle")}</CardTitle>
+            <CardTitle>Password</CardTitle>
             <CardDescription>
-              {t("settings.passwordDescription")}
+              Type your new password and confirm it.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -54,11 +52,11 @@ const PasswordFormComponent = ({
                   value={password}
                   isForm
                   password={true}
-                  placeholder={t("settings.passwordPlaceholder")}
+                  placeholder="Password"
                   className="w-full"
                 />
                 <Form.Message match="valueMissing" className="field-invalid">
-                  {t("settings.passwordRequired")}
+                  Please enter your password
                 </Form.Message>
               </Form.Field>
               <Form.Field name="cnfPassword" className="w-full">
@@ -72,19 +70,19 @@ const PasswordFormComponent = ({
                   value={cnfPassword}
                   isForm
                   password={true}
-                  placeholder={t("settings.confirmPasswordPlaceholder")}
+                  placeholder="Confirm Password"
                   className="w-full"
                 />
 
                 <Form.Message className="field-invalid" match="valueMissing">
-                  {t("settings.confirmPasswordRequired")}
+                  Please confirm your password
                 </Form.Message>
               </Form.Field>
             </div>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
             <Form.Submit asChild>
-              <Button type="submit">{t("settings.saveButton")}</Button>
+              <Button type="submit">Save</Button>
             </Form.Submit>
           </CardFooter>
         </Card>

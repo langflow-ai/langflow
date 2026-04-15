@@ -1,29 +1,21 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import toml  # type: ignore[import-untyped]
 
 from lfx.base.models.unified_models import (
-    get_llm,
-    handle_model_input_update,
+    get_language_model_options,
+    get_model_class,
+    update_model_options_in_build_config,
 )
-from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.custom.custom_component.component import Component
-from lfx.io import (
-    BoolInput,
-    DataFrameInput,
-    DropdownInput,
-    MessageTextInput,
-    ModelInput,
-    MultilineInput,
-    Output,
-    SecretStrInput,
-    StrInput,
-)
+from lfx.io import BoolInput, DataFrameInput, MessageTextInput, ModelInput, MultilineInput, Output, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
-from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
+
+if TYPE_CHECKING:
+    from langchain_core.runnables import Runnable
 
 
 class BatchRunComponent(Component):
@@ -43,25 +35,9 @@ class BatchRunComponent(Component):
         SecretStrInput(
             name="api_key",
             display_name="API Key",
-            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
+            info="Model Provider API key",
             real_time_refresh=True,
             advanced=True,
-        ),
-        DropdownInput(
-            name="base_url_ibm_watsonx",
-            display_name="watsonx API Endpoint",
-            info="The base URL of the API (IBM watsonx.ai only)",
-            options=IBM_WATSONX_URLS,
-            value=IBM_WATSONX_URLS[0],
-            show=False,
-            real_time_refresh=True,
-        ),
-        StrInput(
-            name="project_id",
-            display_name="watsonx Project ID",
-            info="The project ID associated with the foundation model (IBM watsonx.ai only)",
-            show=False,
-            required=False,
         ),
         MultilineInput(
             name="system_message",
@@ -114,7 +90,14 @@ class BatchRunComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        return handle_model_input_update(self, build_config, field_value, field_name)
+        return update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+            field_value=field_value,
+        )
 
     def _format_row_as_toml(self, row: dict[str, Any]) -> str:
         """Convert a dictionary (row) into a TOML-formatted string."""
@@ -154,13 +137,37 @@ class BatchRunComponent(Component):
         """Process each row in df[column_name] with the language model asynchronously."""
         # Check if model is already an instance (for testing) or needs to be instantiated
         if isinstance(self.model, list):
-            model = get_llm(
-                model=self.model,
-                user_id=self.user_id,
-                api_key=self.api_key,
-                watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
-                watsonx_project_id=getattr(self, "project_id", None),
-            )
+            # Extract model configuration
+            model_selection = self.model[0]
+            model_name = model_selection.get("name")
+            provider = model_selection.get("provider")
+            metadata = model_selection.get("metadata", {})
+
+            # Get model class and parameters from metadata
+            model_class_name = metadata.get("model_class")
+            if not model_class_name:
+                msg = f"No model class defined for {model_name}"
+                raise ValueError(msg)
+            model_class = get_model_class(model_class_name)
+
+            api_key_param = metadata.get("api_key_param", "api_key")
+            model_name_param = metadata.get("model_name_param", "model")
+
+            # Get API key from global variables
+            from lfx.base.models.unified_models import get_api_key_for_provider
+
+            api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
+
+            if not api_key and provider != "Ollama":
+                msg = f"{provider} API key is required. Please configure it globally."
+                raise ValueError(msg)
+
+            # Instantiate the model
+            kwargs = {
+                model_name_param: model_name,
+                api_key_param: api_key,
+            }
+            model: Runnable = model_class(**kwargs)
         else:
             # Model is already an instance (typically in tests)
             model = self.model
@@ -232,9 +239,7 @@ class BatchRunComponent(Component):
             for idx, (original_row, response) in enumerate(
                 zip(df.to_dict(orient="records"), responses_with_idx, strict=False)
             ):
-                response_msg = response[1]
-                self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response_msg))
-                response_text = response_msg.content if hasattr(response_msg, "content") else str(response_msg)
+                response_text = response[1].content if hasattr(response[1], "content") else str(response[1])
                 row = self._create_base_row(
                     cast("dict[str, Any]", original_row), model_response=response_text, batch_index=idx
                 )

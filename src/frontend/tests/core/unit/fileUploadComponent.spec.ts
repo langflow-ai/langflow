@@ -4,11 +4,10 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { ensureFileSelected } from "../../utils/ensure-checkbox-checked";
 import { generateRandomFilename } from "../../utils/generate-filename";
 import {
-  disableInspectPanel,
-  enableInspectPanel,
+  closeAdvancedOptions,
+  openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
 // Run tests in this file serially to avoid database conflicts with shared file state
@@ -37,8 +36,6 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-
-    await disableInspectPanel(page);
 
     await addLegacyComponents(page);
 
@@ -95,7 +92,9 @@ test(
         timeout: 5000,
       });
 
-      await ensureFileSelected(page);
+      await expect(
+        page.getByTestId(`checkbox-${sourceFileName}`).last(),
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
 
       // Create DataTransfer object and file
       const dataTransfer = await page.evaluateHandle((jsonFileName) => {
@@ -129,16 +128,16 @@ test(
 
       await expect(
         page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
+      ).toHaveAttribute("data-state", "checked", { timeout: 1000 });
 
       // Test checkbox
 
       await expect(
         page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
+      ).toHaveAttribute("data-state", "checked");
       await expect(
         page.getByTestId(`checkbox-${jsonFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
+      ).toHaveAttribute("data-state", "checked");
       await page.getByTestId(`checkbox-${sourceFileName}`).last().click();
       await page.getByTestId(`checkbox-${jsonFileName}`).last().click();
 
@@ -239,10 +238,10 @@ test(
 
       await expect(
         page.getByTestId(`checkbox-${renamedTxtFile}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
+      ).toHaveAttribute("data-state", "checked");
       await expect(
         page.getByTestId(`checkbox-${renamedJsonFile}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
+      ).toHaveAttribute("data-state", "checked");
 
       await page.getByTestId("select-files-modal-button").click();
 
@@ -341,7 +340,7 @@ test(
         dataTransfer,
       });
       await expect(page.getByText(`${newTxtFile}.txt`).last()).toBeVisible({
-        timeout: 10000,
+        timeout: 1000,
       });
 
       await expect(
@@ -435,8 +434,6 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-
-    await disableInspectPanel(page);
 
     await addLegacyComponents(page);
 
@@ -818,8 +815,6 @@ test(
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
 
-    await disableInspectPanel(page);
-
     await addLegacyComponents(page);
 
     // Add Read File Component
@@ -840,12 +835,15 @@ test(
     await page.mouse.up();
     await page.mouse.down();
 
-    await adjustScreenView(page);
-    await enableInspectPanel(page);
-    await page.getByTestId("title-Read File").click();
-    await page.getByTestId("edit-fields-button").click();
+    await openAdvancedOptions(page);
+
+    await openAdvancedOptions(page);
+
     await page.getByTestId("showfile_path").click();
-    await page.getByTestId("edit-fields-button").click();
+
+    await closeAdvancedOptions(page);
+
+    await adjustScreenView(page);
 
     // Upload Files
     await page.getByTestId("button_open_file_management").click();
@@ -872,14 +870,12 @@ test(
     await expect(page.getByText("Files uploaded successfully")).toBeVisible();
     await page.getByTestId("select-files-modal-button").click();
 
-    await adjustScreenView(page, { numberOfZoomOut: 2 });
+    await adjustScreenView(page);
 
     await page.getByTestId(`remove-file-button-${file2}`).click();
 
     await page.getByTestId("dropdown-output-file").click();
-    await page
-      .getByTestId("dropdown-item-output-file-file path")
-      .click({ force: true });
+    await page.getByTestId("dropdown-item-output-file-file path").click();
     await page.getByTestId("button_run_read file").click();
     await expect(page.getByText("Built successfully")).toBeVisible({
       timeout: 30000,

@@ -1,11 +1,14 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import { cloneDeep, debounce } from "lodash";
-import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
-import i18n from "../../i18n";
+import {
+  ERROR_UPDATING_COMPONENT,
+  SAVE_DEBOUNCE_TIME,
+  TITLE_ERROR_UPDATING_COMPONENT,
+} from "@/constants/constants";
 import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
 import { updateHiddenOutputs } from "./update-hidden-outputs";
 
-// Map to store debounced functions for each node ID + parameter combination
+// Map to store debounced functions for each node ID
 const debouncedFunctions = new Map<string, ReturnType<typeof debounce>>();
 
 export const mutateTemplate = async (
@@ -24,12 +27,10 @@ export const mutateTemplate = async (
   toolMode?: boolean,
   isRefresh?: boolean,
 ) => {
-  // Different parameters must debounce independently to avoid one field's
-  // refresh cancelling another's during concurrent mount calls.
-  const debounceKey = parameterName ? `${nodeId}-${parameterName}` : nodeId;
-  if (!debouncedFunctions.has(debounceKey)) {
+  // Get or create a debounced function for this node ID
+  if (!debouncedFunctions.has(nodeId)) {
     debouncedFunctions.set(
-      debounceKey,
+      nodeId,
       debounce(
         async (
           newValue,
@@ -76,11 +77,8 @@ export const mutateTemplate = async (
           } catch (e) {
             const error = e as ResponseErrorDetailAPI;
             setErrorData({
-              title: i18n.t("input.titleErrorUpdatingComponent"),
-              list: [
-                error.response?.data?.detail ||
-                  i18n.t("input.errorUpdatingComponent"),
-              ],
+              title: TITLE_ERROR_UPDATING_COMPONENT,
+              list: [error.response?.data?.detail || ERROR_UPDATING_COMPONENT],
             });
           }
         },
@@ -89,7 +87,8 @@ export const mutateTemplate = async (
     );
   }
 
-  debouncedFunctions.get(debounceKey)?.(
+  // Call the debounced function for this specific node
+  debouncedFunctions.get(nodeId)?.(
     newValue,
     node,
     setNodeClass,

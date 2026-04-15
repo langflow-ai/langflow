@@ -3,7 +3,6 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
-import type { NodeDataType } from "@/types/flow";
 import { nodeColorsName } from "@/utils/styleUtils";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
@@ -25,7 +24,6 @@ const BASE_HANDLE_STYLES = {
 
 const HandleContent = memo(function HandleContent({
   isNullHandle,
-  isMuted,
   handleColor,
   accentForegroundColorName,
   isHovered,
@@ -37,7 +35,6 @@ const HandleContent = memo(function HandleContent({
   nodeId,
 }: {
   isNullHandle: boolean;
-  isMuted: boolean;
   handleColor: string;
   accentForegroundColorName: string;
   isHovered: boolean;
@@ -100,7 +97,7 @@ const HandleContent = memo(function HandleContent({
 
   const getNeonShadow = useCallback(
     (color: string, isActive: boolean) => {
-      if (isNullHandle || isMuted) return "none";
+      if (isNullHandle) return "none";
       if (!isActive) return `0 0 0 3px ${color}`;
       return [
         "0 0 0 1px hsl(var(--border))",
@@ -113,29 +110,27 @@ const HandleContent = memo(function HandleContent({
         `0 0 20px ${color}`,
       ].join(", ");
     },
-    [isNullHandle, isMuted],
+    [isNullHandle],
   );
 
   const contentStyle = useMemo(
     () => ({
       background: isNullHandle ? "hsl(var(--border))" : handleColor,
-      width: isMuted && !isNullHandle ? "6px" : "10px",
-      height: isMuted && !isNullHandle ? "6px" : "10px",
+      width: "10px",
+      height: "10px",
       transition: "all 0.2s",
-      opacity: isMuted && !isNullHandle ? 0 : 1,
       boxShadow: getNeonShadow(
         accentForegroundColorName,
         isHovered || openHandle,
       ),
       animation:
-        (isHovered || openHandle) && !isNullHandle && !isMuted
+        (isHovered || openHandle) && !isNullHandle
           ? `pulseNeon-${nodeId} 1.1s ease-in-out infinite`
           : "none",
       border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
     }),
     [
       isNullHandle,
-      isMuted,
       handleColor,
       getNeonShadow,
       accentForegroundColorName,
@@ -191,18 +186,6 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 
   const edges = useFlowStore((state) => state.edges);
 
-  // Check if this node is in "connect other models" mode
-  const isInConnectionMode = useFlowStore(
-    useCallback(
-      (state) => {
-        if (id?.type !== "model" || !left) return false;
-        const node = state.nodes.find((n) => n.id === nodeId);
-        return (node?.data as NodeDataType)?._connectionMode === true;
-      },
-      [nodeId, id?.type, left],
-    ),
-  );
-
   const {
     setHandleDragging,
     setFilterType,
@@ -251,7 +234,6 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     filterPresent,
     currentFilter,
     isNullHandle,
-    isMuted,
     handleColor,
     accentForegroundColorName,
   } = useMemo(() => {
@@ -294,18 +276,8 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     const outputType = connectedEdge?.data?.sourceHandle?.output_types?.[0];
     const connectedColor = (outputType && nodeColorsName[outputType]) || "gray";
 
-    // Model handles that initiated connection mode on this node should not be nulled
-    const isOwnModelConnectionMode =
-      id?.type === "model" && left && filterType?.target === nodeId;
-
     const isNullHandle =
-      filterPresent &&
-      !(
-        openHandle ||
-        ownDraggingHandle ||
-        ownFilterHandle ||
-        isOwnModelConnectionMode
-      );
+      filterPresent && !(openHandle || ownDraggingHandle || ownFilterHandle);
 
     // Create a Set from colorName to remove duplicates
     const colorNameSet = new Set(colorName || []);
@@ -353,10 +325,6 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           color: handleColorName,
         };
 
-    const isModelType = id?.type === "model";
-    const isMuted =
-      isModelType && !connectedEdge && !filterPresent && !isInConnectionMode;
-
     return {
       sameNode: sameDraggingNode || sameFilterNode,
       ownHandle: ownDraggingHandle || ownFilterHandle,
@@ -366,7 +334,6 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       filterPresent,
       currentFilter,
       isNullHandle,
-      isMuted,
       handleColor,
     };
   }, [
@@ -380,8 +347,6 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     colorName,
     tooltipTitle,
     edges,
-    id,
-    isInConnectionMode,
   ]);
 
   const handleMouseDown = useCallback(
@@ -476,7 +441,6 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
         >
           <HandleContent
             isNullHandle={isNullHandle ?? false}
-            isMuted={isMuted ?? false}
             handleColor={handleColor}
             accentForegroundColorName={accentForegroundColorName}
             isHovered={isHovered}

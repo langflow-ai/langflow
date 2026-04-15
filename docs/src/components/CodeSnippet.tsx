@@ -15,10 +15,10 @@ const CH_THEME_VARS: React.CSSProperties = {
 type CodeSnippetProps = {
   /** Raw file content (e.g. from !!raw-loader!...) */
   source: string;
-  /** Start line (1-based, inclusive). Defaults to full file. */
-  startLine?: number;
-  /** End line (1-based, inclusive). Defaults to full file. */
-  endLine?: number;
+  /** Start line (1-based, inclusive) */
+  startLine: number;
+  /** End line (1-based, inclusive) */
+  endLine: number;
   language: string;
   title?: string;
   showLineNumbers?: boolean;
@@ -37,19 +37,17 @@ function copyToClipboard(text: string): void {
  */
 export default function CodeSnippet({
   source,
-  startLine: requestedStartLine,
-  endLine: requestedEndLine,
+  startLine,
+  endLine,
   language,
   title,
   showLineNumbers = true,
 }: CodeSnippetProps): React.ReactElement {
-  const { slice, startLine, endLine } = useMemo(() => {
+  const { slice } = useMemo(() => {
     const lines = source.split("\n");
-    const startLine = Math.max(1, requestedStartLine ?? 1);
-    const endLine = Math.max(startLine, requestedEndLine ?? lines.length);
     const slice = lines.slice(startLine - 1, endLine).join("\n");
-    return { slice, startLine, endLine };
-  }, [source, requestedStartLine, requestedEndLine]);
+    return { slice };
+  }, [source, startLine, endLine]);
 
   const [highlighted, setHighlighted] = useState<LighterResult | null>(null);
   useEffect(() => {
@@ -151,6 +149,7 @@ export default function CodeSnippet({
           title="Copy code"
           className="ch-code-button"
           onClick={onCopy}
+          style={{ position: "absolute", top: "10px", right: "10px" }}
         >
           {copied ? (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="1.1em" height="1.1em">

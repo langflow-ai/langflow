@@ -1,10 +1,13 @@
-import i18n from "../../../../i18n";
+import {
+  DEFAULT_PLACEHOLDER,
+  RECEIVING_INPUT_VALUE,
+} from "@/constants/constants";
 
 export const getPlaceholder = (
   disabled: boolean,
-  returnMessage: string = i18n.t("input.placeholder"),
+  returnMessage: string = DEFAULT_PLACEHOLDER,
 ) => {
-  if (disabled) return i18n.t("component.receivingInput");
+  if (disabled) return RECEIVING_INPUT_VALUE;
 
-  return returnMessage || i18n.t("input.placeholder");
+  return returnMessage || DEFAULT_PLACEHOLDER;
 };

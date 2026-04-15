@@ -1,6 +1,5 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
-import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import useFlowStore from "@/stores/flowStore";
 import type { useMutationFunctionType } from "@/types/api";
 import type { Message } from "@/types/messages";
@@ -29,8 +28,7 @@ export const useUpdateMessage: useMutationFunctionType<
     if (message.files && typeof message.files === "string") {
       message.files = JSON.parse(message.files);
     }
-    if (isPlayground && !isAuthenticatedPlayground() && flowId) {
-      // Anonymous/auto-login: update in sessionStorage
+    if (isPlayground && flowId) {
       const messages = JSON.parse(sessionStorage.getItem(flowId) || "");
       const messageIndex = messages.findIndex(
         (m: Message) => m.id === message.id,

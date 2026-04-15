@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
@@ -20,7 +19,6 @@ export const HeaderButtons = ({
   isPending: boolean;
   addNewFolder: () => void;
 }) => {
-  const { t } = useTranslation();
   const userData = useAuthStore((state) => state.userData);
   const hideGettingStartedProgress = useUtilityStore(
     (state) => state.hideGettingStartedProgress,
@@ -81,9 +79,7 @@ export const HeaderButtons = ({
           <IconComponent name="PanelLeftClose" className="h-4 w-4" />
         </SidebarTrigger>
 
-        <div className="flex-1 text-sm font-medium">
-          {t("sidebar.projects")}
-        </div>
+        <div className="flex-1 text-sm font-medium">Projects</div>
         <div className="flex items-center gap-1">
           <UploadFolderButton
             onClick={handleUploadFlowsToFolder}

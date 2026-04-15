@@ -5,9 +5,10 @@ import {
   findLastBotMessage,
   updateMessageProperties,
 } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
-import i18n from "../i18n";
+import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import { POLLING_MESSAGES } from "@/constants/constants";
-import { performStreamingRequest } from "@/controllers/API/api";
+import { api, performStreamingRequest } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
 import {
   customBuildUrl,
   customCancelBuildUrl,
@@ -15,13 +16,10 @@ import {
 } from "@/customization/utils/custom-buildUtils";
 import { customPollBuildEvents } from "@/customization/utils/custom-poll-build-events";
 import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
-import { transformBuildErrorMessages } from "@/customization/utils/custom-build-error-transform";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
-import { persistMessageProperties } from "@/controllers/API/helpers/persist-message-properties";
 import useFlowStore from "../stores/flowStore";
-import { useMessagesStore } from "../stores/messagesStore";
 import type { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import type { VertexLayerElementType } from "../types/zustand/flow";
@@ -122,7 +120,7 @@ export async function updateVerticesOrder(
     } catch (error: any) {
       logFlowLoad("Error getting vertices order:", error);
       setErrorData({
-        title: i18n.t("errors.missedFields"),
+        title: MISSED_ERROR_ALERT,
         list: [error.response?.data?.detail ?? "Unknown Error"],
       });
       useFlowStore.getState().setIsBuilding(false);
@@ -341,16 +339,7 @@ export async function buildFlowVertices({
       if (buildResponse.status === 404) {
         throw new Error("Flow not found");
       }
-      let errorDetail = "Error starting build process";
-      try {
-        const errorData = await buildResponse.json();
-        if (errorData.detail) {
-          errorDetail = errorData.detail;
-        }
-      } catch (parseError) {
-        console.debug("Could not parse error response body:", parseError);
-      }
-      throw new Error(errorDetail);
+      throw new Error("Error starting build process");
     }
 
     const { job_id } = await buildResponse.json();
@@ -481,11 +470,9 @@ export function processEndVertexEvent(
         },
       );
       onBuildError &&
-        onBuildError(
-          "Error Building Component",
-          transformBuildErrorMessages(errorMessages),
-          [{ id: buildData.id }],
-        );
+        onBuildError("Error Building Component", errorMessages, [
+          { id: buildData.id },
+        ]);
       onBuildUpdate(buildData, BuildStatus.ERROR, "");
       buildResults.push(false);
       return false;
@@ -505,55 +492,23 @@ export function processEndVertexEvent(
 
     const found = findLastBotMessage();
     if (found && !found.message.properties?.build_duration) {
-      const updatedProperties = {
-        ...found.message.properties,
-        build_duration: segmentDurationMs,
-      };
-
-      // Update React Query cache
       updateMessageProperties(found.message.id!, found.queryKey, {
         build_duration: segmentDurationMs,
       });
-
-      // Update Zustand store (for shareable playground ChatMessage)
-      const storeMsg = useMessagesStore
-        .getState()
-        .messages.find((m) => m.id === found.message.id);
-      if (storeMsg) {
-        useMessagesStore.getState().updateMessage({
-          ...storeMsg,
+      api
+        .put(`${getURL("MESSAGES")}/${found.message.id}`, {
+          ...found.message,
           properties: {
-            ...storeMsg.properties,
+            ...found.message.properties,
             build_duration: segmentDurationMs,
           },
-        });
-      }
-
-      // Persist to DB (routes to correct endpoint automatically)
-      persistMessageProperties(found.message.id!, {
-        ...found.message,
-        properties: updatedProperties,
-      });
-    } else if (!found) {
-      // Fallback: find last bot message in Zustand store (shareable playground)
-      const storeMessages = useMessagesStore.getState().messages;
-      for (let i = storeMessages.length - 1; i >= 0; i--) {
-        const msg = storeMessages[i];
-        if (msg.sender === "Machine" && !msg.properties?.build_duration) {
-          const updatedProperties = {
-            ...msg.properties,
-            build_duration: segmentDurationMs,
-          };
-          useMessagesStore.getState().updateMessage({
-            ...msg,
-            properties: updatedProperties,
+        })
+        .catch((err: unknown) => {
+          console.warn("Failed to persist build_duration", {
+            messageId: found.message.id,
+            error: err instanceof Error ? err.message : String(err),
           });
-          if (msg.id) {
-            persistMessageProperties(msg.id, { properties: updatedProperties });
-          }
-          break;
-        }
-      }
+        });
     }
 
     flowState.setBuildStartTime(Date.now());
@@ -674,7 +629,7 @@ export async function processBatchedEvents(
  * @param {(lock: boolean) => void} [callbacks.setLockChat] - Callback to lock/unlock chat.
  * @returns {Promise<boolean>} Promise that resolves to true if the event was handled successfully.
  */
-export async function onEvent(
+async function onEvent(
   type: string,
   data: any,
   buildResults: boolean[],
@@ -786,13 +741,20 @@ export async function onEvent(
           updateMessageProperties(found.message.id!, found.queryKey, {
             build_duration: durationMs,
           });
-          persistMessageProperties(found.message.id!, {
-            ...found.message,
-            properties: {
-              ...found.message.properties,
-              build_duration: durationMs,
-            },
-          });
+          api
+            .put(`${getURL("MESSAGES")}/${found.message.id}`, {
+              ...found.message,
+              properties: {
+                ...found.message.properties,
+                build_duration: durationMs,
+              },
+            })
+            .catch((err: unknown) => {
+              console.warn("Failed to persist build_duration", {
+                messageId: found.message.id,
+                error: err instanceof Error ? err.message : String(err),
+              });
+            });
         }
       }
       onBuildComplete && onBuildComplete(allNodesValid);
@@ -809,30 +771,9 @@ export async function onEvent(
       buildResults.push(false);
       return true;
     }
-    case "build_end": {
-      if (!data?.id) {
-        console.error("[buildUtils] Received build_end event without id", data);
-        break;
-      }
+    case "build_end":
       useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
       break;
-    }
-    case "log": {
-      const { component_id, output, name, message, type: logType } = data ?? {};
-      if (!component_id || !output) {
-        console.error(
-          "[buildUtils] Received malformed log event; missing component_id or output",
-          data,
-        );
-        break;
-      }
-      useFlowStore.getState().appendLogToFlowPool(component_id, output, {
-        name,
-        message,
-        type: logType,
-      });
-      break;
-    }
     default:
       return true;
   }
@@ -1017,7 +958,7 @@ async function buildVertex({
         });
         onBuildError!(
           "Error Building Component",
-          transformBuildErrorMessages(errorMessages.flat()),
+          errorMessages,
           verticesIds.map((id) => ({ id })),
         );
         stopBuild();
@@ -1039,7 +980,7 @@ async function buildVertex({
     }
     onBuildError!(
       "Error Building Component",
-      transformBuildErrorMessages(errorMessage),
+      errorMessage,
       verticesIds.map((id) => ({ id })),
     );
     buildResults.push(false);

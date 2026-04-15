@@ -1,16 +1,15 @@
-import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { SimpleSidebarTrigger } from "@/components/ui/simple-sidebar";
+import { PLAYGROUND_BUTTON_NAME } from "@/constants/constants";
 
 interface PlaygroundButtonProps {
   hasIO: boolean;
 }
 
-const ButtonLabel = () => {
-  const { t } = useTranslation();
-  return <span className="font-normal text-mmd">{t("misc.playground")}</span>;
-};
+const ButtonLabel = () => (
+  <span className="font-normal text-mmd">{PLAYGROUND_BUTTON_NAME}</span>
+);
 
 const DisabledButton = () => (
   <div

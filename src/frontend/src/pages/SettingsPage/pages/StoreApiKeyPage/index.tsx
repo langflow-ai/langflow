@@ -1,5 +1,4 @@
 import { useContext, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { CONTROL_PATCH_USER_STATE } from "@/constants/constants";
@@ -12,7 +11,6 @@ import useScrollToElement from "../hooks/use-scroll-to-element";
 import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
 
 const StoreApiKeyPage = () => {
-  const { t } = useTranslation();
   const { scrollId } = useParams();
   const [inputState, setInputState] = useState(CONTROL_PATCH_USER_STATE);
   const { storeApiKey } = useContext(AuthContext);
@@ -31,7 +29,7 @@ const StoreApiKeyPage = () => {
 
   const { mutate: addApiKey } = usePostAddApiKey({
     onSuccess: () => {
-      setSuccessData({ title: t("storeApiKey.saveSuccess") });
+      setSuccessData({ title: "API key saved successfully" });
       setHasApiKey(true);
       setValidApiKey(true);
       setLoadingApiKey(false);
@@ -39,7 +37,7 @@ const StoreApiKeyPage = () => {
     },
     onError: (error) => {
       setErrorData({
-        title: t("storeApiKey.saveError"),
+        title: "API key save error",
         list: [(error as any)?.response?.data?.detail],
       });
       setHasApiKey(false);
@@ -67,14 +65,14 @@ const StoreApiKeyPage = () => {
             className="flex items-center text-lg font-semibold tracking-tight"
             data-testid="settings_menu_header"
           >
-            {t("storeApiKey.title")}
+            Langflow Store
             <ForwardedIconComponent
               name="Store"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            {t("storeApiKey.description")}
+            Manage access to the Langflow Store.
           </p>
         </div>
       </div>

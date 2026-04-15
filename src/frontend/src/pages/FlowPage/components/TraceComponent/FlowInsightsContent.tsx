@@ -1,6 +1,5 @@
 import type { CellClickedEvent } from "ag-grid-community";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import PaginatorComponent from "@/components/common/paginatorComponent";
@@ -22,6 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DEFAULT_TABLE_ALERT_MSG,
+  DEFAULT_TABLE_ALERT_TITLE,
+} from "@/constants/constants";
 import { useGetTracesQuery } from "@/controllers/API/queries/traces";
 import { TraceListItem } from "@/controllers/API/queries/traces/types";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -43,7 +46,6 @@ export function FlowInsightsContent({
   refreshOnMount?: boolean;
   showFlowActivityHeader?: boolean;
 }): JSX.Element {
-  const { t } = useTranslation();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -179,8 +181,8 @@ export function FlowInsightsContent({
               name="AlertCircle"
               className="h-5 w-5 text-primary"
             />
-            <AlertTitle>{t("table.noDataTitle")}</AlertTitle>
-            <AlertDescription>{t("table.noDataMessage")}</AlertDescription>
+            <AlertTitle>{DEFAULT_TABLE_ALERT_TITLE}</AlertTitle>
+            <AlertDescription>{DEFAULT_TABLE_ALERT_MSG}</AlertDescription>
           </Alert>
         </div>
       );

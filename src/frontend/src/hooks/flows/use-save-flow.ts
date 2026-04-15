@@ -94,13 +94,7 @@ const useSaveFlow = () => {
                       return flow;
                     }),
                   );
-                  // Only update useFlowStore.currentFlow when on the flow page.
-                  // When saving from the list page (e.g., renaming via settings modal),
-                  // setting this would leave stale unprocessed flow data in the store,
-                  // causing a crash when the user later navigates to the flow page.
-                  if (useFlowStore.getState().onFlowPage) {
-                    setCurrentFlow(updatedFlow);
-                  }
+                  setCurrentFlow(updatedFlow);
                   resolve();
                 } else {
                   setErrorData({
@@ -110,12 +104,10 @@ const useSaveFlow = () => {
                   reject(new Error("Flows variable undefined"));
                 }
               },
-              onError: (e: any) => {
-                const detail =
-                  e.response?.data?.detail || e.message || "Unknown error";
+              onError: (e) => {
                 setErrorData({
                   title: "Failed to save flow",
-                  list: [detail],
+                  list: [e.message],
                 });
                 setSaveLoading(false);
                 reject(e);

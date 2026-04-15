@@ -162,9 +162,7 @@ function NodeOutputField({
     () => ({
       displayOutputPreview:
         !!flowPool[flowPoolId] &&
-        (logHasMessage(flowPoolNode?.data, internalOutputName) ||
-          (flowPoolNode?.data?.logs?.[internalOutputName ?? ""]?.length ?? 0) >
-            0),
+        logHasMessage(flowPoolNode?.data, internalOutputName),
       unknownOutput: logTypeIsUnknown(flowPoolNode?.data, internalOutputName),
       errorOutput: logTypeIsError(flowPoolNode?.data, internalOutputName),
     }),
@@ -172,17 +170,10 @@ function NodeOutputField({
   );
 
   const emptyOutput = useMemo(() => {
-    const hasLogs =
-      (flowPoolNode?.data?.logs?.[internalOutputName ?? ""]?.length ?? 0) > 0;
-    if (hasLogs) return false;
-    return Object.keys(flowPoolNode?.data?.outputs ?? {}).every(
+    return Object.keys(flowPoolNode?.data?.outputs ?? {})?.every(
       (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
     );
-  }, [
-    flowPoolNode?.data?.outputs,
-    flowPoolNode?.data?.logs,
-    internalOutputName,
-  ]);
+  }, [flowPoolNode?.data?.outputs]);
 
   const disabledOutput = useMemo(
     () => edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)),

@@ -1,5 +1,4 @@
 import useFlowStore from "@/stores/flowStore";
-import DeployButton from "./deploy-button";
 import PublishDropdown from "./deploy-dropdown";
 import PlaygroundButton from "./playground-button";
 
@@ -20,7 +19,6 @@ const FlowToolbarOptions = ({
         openApiModal={openApiModal}
         setOpenApiModal={setOpenApiModal}
       />
-      <DeployButton />
     </div>
   );
 };

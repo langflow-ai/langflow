@@ -2,6 +2,7 @@ import ast
 import json
 from typing import TYPE_CHECKING, Any
 
+import jq
 from json_repair import repair_json
 
 from lfx.custom import Component
@@ -274,11 +275,7 @@ class DataOperationsComponent(Component):
     def json_query(self) -> Data:
         import json
 
-        try:
-            import jq
-        except ImportError:
-            msg = "jq is required for JQ Expression. Install with: pip install jq"
-            raise ImportError(msg) from None
+        import jq
 
         if not self.query or not self.query.strip():
             msg = "JSON Query is required and cannot be blank."
@@ -537,12 +534,6 @@ class DataOperationsComponent(Component):
         return build_config
 
     def json_path(self) -> Data:
-        try:
-            import jq
-        except ImportError:
-            msg = "jq is required for Path Selection. Install with: pip install jq"
-            raise ImportError(msg) from None
-
         try:
             if not self.data or not self.selected_key:
                 msg = "Missing input data or selected key."

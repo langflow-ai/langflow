@@ -3,7 +3,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_serializer, model_validator
 
-from lfx.schema.properties import Usage
 from lfx.schema.schema import OutputValue, StreamURL
 from lfx.serialization.serialization import serialize
 from lfx.utils.schemas import ChatOutputResponse, ContainsEnumMeta
@@ -20,7 +19,6 @@ class ResultData(BaseModel):
     component_display_name: str | None = None
     component_id: str | None = None
     used_frozen_result: bool | None = False
-    token_usage: Usage | None = None
 
     @field_serializer("results")
     def serialize_results(self, value):

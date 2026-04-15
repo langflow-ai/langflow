@@ -55,7 +55,6 @@ const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     hideTitle?: boolean;
     closeButtonClassName?: string;
-    overlayClassName?: string;
   }
 >(
   (
@@ -64,7 +63,6 @@ const DialogContent = React.forwardRef<
       children,
       hideTitle = false,
       closeButtonClassName,
-      overlayClassName,
       onOpenAutoFocus,
       ...props
     },
@@ -81,7 +79,7 @@ const DialogContent = React.forwardRef<
 
     return (
       <DialogPortal>
-        <DialogOverlay className={overlayClassName} />
+        <DialogOverlay />
         <DialogPrimitive.Content
           ref={ref}
           className={cn(

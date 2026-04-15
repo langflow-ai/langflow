@@ -1,8 +1,6 @@
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
-import { useUtilityStore } from "@/stores/utilityStore";
 import { clearHandlesFromAdvancedFields } from "@/utils/reactflowUtils";
-import { useTranslation } from "react-i18next";
 import "ace-builds/src-noconflict/ace";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/ext-searchbox";
@@ -16,6 +14,17 @@ import type ReactAce from "react-ace/lib/ace";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import {
+  BUG_ALERT,
+  CODE_ERROR_ALERT,
+  CODE_SUCCESS_ALERT,
+  FUNC_ERROR_ALERT,
+  IMPORT_ERROR_ALERT,
+} from "../../constants/alerts_constants";
+import {
+  CODE_PROMPT_DIALOG_SUBTITLE,
+  EDIT_CODE_TITLE,
+} from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import type { CodeErrorDataTypeAPI } from "../../types/api";
@@ -34,14 +43,7 @@ export default function CodeAreaModal({
   open: myOpen,
   setOpen: mySetOpen,
   componentId,
-  size = "x-large",
 }: codeAreaModalPropsType): JSX.Element {
-  const { t } = useTranslation();
-  const allowCustomComponents = useUtilityStore(
-    (state) => state.allowCustomComponents,
-  );
-  const isBlocked = !allowCustomComponents;
-
   const [code, setCode] = useState(value);
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
@@ -78,33 +80,33 @@ export default function CodeAreaModal({
             const funcErrors = apiReturn.function.errors;
             if (funcErrors.length === 0 && importsErrors.length === 0) {
               setSuccessData({
-                title: t("success.codeReady"),
+                title: CODE_SUCCESS_ALERT,
               });
               setOpen(false);
               setValue(code);
             } else {
               if (funcErrors.length !== 0) {
                 setErrorData({
-                  title: t("errors.function"),
+                  title: FUNC_ERROR_ALERT,
                   list: funcErrors,
                 });
               }
               if (importsErrors.length !== 0) {
                 setErrorData({
-                  title: t("errors.imports"),
+                  title: IMPORT_ERROR_ALERT,
                   list: importsErrors,
                 });
               }
             }
           } else {
             setErrorData({
-              title: t("errors.generic"),
+              title: BUG_ALERT,
             });
           }
         },
         onError: (error) => {
           setErrorData({
-            title: t("errors.code"),
+            title: CODE_ERROR_ALERT,
             list: [error.response.data.detail],
           });
         },
@@ -204,11 +206,11 @@ export default function CodeAreaModal({
       }}
       open={open}
       setOpen={setOpen}
-      size={size as "x-large" | "large" | "medium" | "small"}
+      size="x-large"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
-      <BaseModal.Header description={t("dialog.codePrompt")}>
-        <span className="pr-2"> {t("input.editCodeTitle")} </span>
+      <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
+        <span className="pr-2"> {EDIT_CODE_TITLE} </span>
         <IconComponent
           name="prompts"
           className="h-6 w-6 pl-1 text-primary"
@@ -226,7 +228,7 @@ export default function CodeAreaModal({
           <div className="h-full w-full">
             <AceEditor
               ref={codeRef}
-              readOnly={readonly || isBlocked}
+              readOnly={readonly}
               value={code}
               mode="python"
               setOptions={{ fontFamily: "monospace" }}
@@ -239,9 +241,7 @@ export default function CodeAreaModal({
               theme={dark ? "monokai" : "github"}
               name="CodeEditor"
               onChange={(value) => {
-                if (!isBlocked) {
-                  setCode(value);
-                }
+                setCode(value);
               }}
               className="h-full min-w-full rounded-lg border-[1px] border-border custom-scroll"
             />
@@ -267,27 +267,16 @@ export default function CodeAreaModal({
             </div>
           </div>
           <div className="flex h-fit w-full justify-end">
-            {readonly ? (
-              <Button
-                className="mt-3"
-                onClick={() => setOpen(false)}
-                type="button"
-                data-testid="codeModalOkBtn"
-              >
-                Done
-              </Button>
-            ) : (
-              <Button
-                className="mt-3"
-                onClick={processCode}
-                type="submit"
-                id="checkAndSaveBtn"
-                disabled={isBlocked}
-                data-testid="checkAndSaveBtn"
-              >
-                Check & Save
-              </Button>
-            )}
+            <Button
+              className="mt-3"
+              onClick={processCode}
+              type="submit"
+              id="checkAndSaveBtn"
+              disabled={readonly}
+              data-testid="checkAndSaveBtn"
+            >
+              Check & Save
+            </Button>
           </div>
         </div>
         <ConfirmationModal

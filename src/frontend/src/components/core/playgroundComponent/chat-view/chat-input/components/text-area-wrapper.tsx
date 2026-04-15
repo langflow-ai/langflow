@@ -15,7 +15,7 @@ interface TextAreaWrapperProps {
   noInput: boolean;
   chatValue: string;
   CHAT_INPUT_PLACEHOLDER: string;
-  inputRef: React.RefObject<HTMLTextAreaElement | null>;
+  inputRef: React.RefObject<HTMLTextAreaElement>;
   files: FilePreviewType[];
   isDragging: boolean;
 }

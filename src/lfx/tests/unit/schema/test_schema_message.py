@@ -142,11 +142,9 @@ def test_message_with_invalid_image_path():
     file_path = "test_flow/non_existent.png"
     message = Message(text="Invalid image", sender=MESSAGE_SENDER_USER, files=[file_path])
 
-    # Missing images are skipped during conversion (no exception), leaving only the text content.
-    lc_message = message.to_lc_message()
-    assert isinstance(lc_message, HumanMessage)
-    assert isinstance(lc_message.content, list)
-    assert lc_message.content == [{"type": "text", "text": "Invalid image"}]
+    # When files don't exist and can't be found in cache, it should raise FileNotFoundError
+    with pytest.raises(FileNotFoundError, match="Image file not found"):
+        message.to_lc_message()
 
     # The invalid file path is still stored in the message
     assert message.files == [file_path]

@@ -1,6 +1,5 @@
 from .exceptions import (
     FlowVersionConflictError,
-    FlowVersionDeployedError,
     FlowVersionError,
     FlowVersionNotFoundError,
     FlowVersionSerializationError,
@@ -11,7 +10,6 @@ __all__ = [
     "FlowVersion",
     "FlowVersionConflictError",
     "FlowVersionCreate",
-    "FlowVersionDeployedError",
     "FlowVersionError",
     "FlowVersionListResponse",
     "FlowVersionNotFoundError",

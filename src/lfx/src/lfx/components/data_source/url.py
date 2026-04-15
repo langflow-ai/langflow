@@ -15,7 +15,6 @@ from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.utils.request_utils import get_user_agent
-from lfx.utils.ssrf_protection import SSRFProtectionError, validate_url_for_ssrf
 
 # Constants
 DEFAULT_TIMEOUT = 30
@@ -64,7 +63,7 @@ class URLComponent(Component):
             tool_mode=True,
             placeholder="Enter a URL...",
             list_add_label="Add URL",
-            input_types=["Message"],
+            input_types=[],
         ),
         SliderInput(
             name="max_depth",
@@ -227,7 +226,7 @@ class URLComponent(Component):
             str: The normalized URL
 
         Raises:
-            ValueError: If the URL is invalid or blocked by SSRF protection
+            ValueError: If the URL is invalid
         """
         url = url.strip()
         if not url.startswith(("http://", "https://")):
@@ -236,15 +235,6 @@ class URLComponent(Component):
         if not self.validate_url(url):
             msg = f"Invalid URL: {url}"
             raise ValueError(msg)
-
-        # SSRF Protection: Validate URL to prevent access to internal resources
-        # Blocks requests to private IPs, localhost, and cloud metadata endpoints
-        # when LANGFLOW_SSRF_PROTECTION_ENABLED=true
-        try:
-            validate_url_for_ssrf(url, warn_only=False)
-        except SSRFProtectionError as e:
-            msg = f"SSRF Protection: {e}"
-            raise ValueError(msg) from e
 
         return url
 

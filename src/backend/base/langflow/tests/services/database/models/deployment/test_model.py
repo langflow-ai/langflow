@@ -48,8 +48,6 @@ class TestDeploymentRead:
             "project_id",
             "deployment_provider_account_id",
             "name",
-            "description",
-            "deployment_type",
             "created_at",
             "updated_at",
         }

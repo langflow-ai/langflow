@@ -90,7 +90,7 @@ AI:
 
     //connection 1
     await page
-      .getByTestId("handle-memory-shownode-messages-right")
+      .getByTestId("handle-memory-shownode-message-right")
       .first()
       .click();
 
