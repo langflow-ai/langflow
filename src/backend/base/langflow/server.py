@@ -1,6 +1,10 @@
 import asyncio
+import gc
 import logging
 import signal
+import threading
+from collections.abc import Callable
+from typing import Any
 
 from gunicorn import glogging
 from gunicorn.app.base import BaseApplication
@@ -62,12 +66,14 @@ class Logger(glogging.Logger):
 
 
 class LangflowApplication(BaseApplication):
-    def __init__(self, app, options=None) -> None:
+    def __init__(self, app_factory: Callable[[], Any], options=None) -> None:
         self.options = options or {}
 
         self.options["worker_class"] = "langflow.server.LangflowUvicornWorker"
         self.options["logger_class"] = Logger
-        self.application = app
+        self.options["pre_fork"] = self.pre_fork
+        self._app_factory = app_factory
+        self.application = None
         super().__init__()
 
     def load_config(self) -> None:
@@ -75,5 +81,35 @@ class LangflowApplication(BaseApplication):
         for key, value in config.items():
             self.cfg.set(key.lower(), value)
 
+    @staticmethod
+    def pre_fork(server, _worker) -> None:
+        """Inspect the master process before forking a worker."""
+        non_main_threads = [thread for thread in threading.enumerate() if thread is not threading.main_thread()]
+        if non_main_threads:
+            thread_names = [thread.name for thread in non_main_threads if thread.is_alive()]
+            if thread_names:
+                server.log.warning("Ghost threads found before fork (these will be dead in workers): %s", thread_names)
+
+        try:
+            import psutil
+
+            connections = psutil.Process().net_connections(kind="tcp")
+            ghost_connections = [conn for conn in connections if conn.status != "LISTEN"]
+            if ghost_connections:
+                details = [(conn.laddr, conn.raddr, conn.status) for conn in ghost_connections]
+                server.log.warning(
+                    "Ghost TCP connections found before fork (these will be dead in workers): %s",
+                    details,
+                )
+        except ImportError:
+            pass
+        except Exception as exc:  # noqa: BLE001
+            server.log.warning("Failed to inspect TCP connections before fork: %s", exc)
+
+        gc.collect()
+        gc.freeze()
+
     def load(self):
+        if self.application is None:
+            self.application = self._app_factory()
         return self.application

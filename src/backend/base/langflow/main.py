@@ -146,6 +146,47 @@ def warn_about_future_cors_changes(settings):
         )
 
 
+def configure_prometheus_settings(settings) -> None:
+    """Apply Prometheus settings overrides from environment variables."""
+    if not (prometheus_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT")):
+        return
+
+    prometheus_port = int(prometheus_port_str)
+    if 0 < prometheus_port < MAX_PORT:
+        logger.debug(f"Prometheus server port configured as {prometheus_port}.")
+        settings.prometheus_enabled = True
+        settings.prometheus_port = prometheus_port
+        return
+
+    msg = f"Invalid port number {prometheus_port_str}"
+    raise ValueError(msg)
+
+
+async def initialize_worker_observability() -> None:
+    """Initialize observability integrations inside each worker process."""
+    settings = get_settings_service().settings
+
+    if settings.sentry_dsn:
+        import sentry_sdk
+
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+            profiles_sample_rate=settings.sentry_profiles_sample_rate,
+        )
+        await logger.adebug("Sentry SDK initialized in worker process")
+
+    if settings.prometheus_enabled:
+        try:
+            from prometheus_client import start_http_server
+
+            start_http_server(settings.prometheus_port)
+        except OSError as exc:
+            await logger.awarning(f"Prometheus metrics server did not start in this worker: {exc!s}")
+        else:
+            await logger.adebug(f"Prometheus metrics server started on port {settings.prometheus_port}")
+
+
 def get_lifespan(*, fix_migration=False, version=None):
     initialize_settings_service()
     telemetry_service = get_telemetry_service()
@@ -168,6 +209,8 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         try:
             start_time = asyncio.get_event_loop().time()
+
+            await initialize_worker_observability()
 
             await logger.adebug("Initializing services")
             await initialize_services(fix_migration=fix_migration)
@@ -446,6 +489,7 @@ def create_app():
     )
 
     setup_sentry(app)
+    configure_prometheus_settings(settings)
 
     # Warn about future CORS changes
     warn_about_future_cors_changes(settings)
@@ -532,22 +576,6 @@ def create_app():
 
         return await call_next(request)
 
-    if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
-        # set here for create_app() entry point
-        prome_port = int(prome_port_str)
-        if prome_port > 0 or prome_port < MAX_PORT:
-            logger.debug(f"Starting Prometheus server on port {prome_port}...")
-            settings.prometheus_enabled = True
-            settings.prometheus_port = prome_port
-        else:
-            msg = f"Invalid port number {prome_port_str}"
-            raise ValueError(msg)
-
-    if settings.prometheus_enabled:
-        from prometheus_client import start_http_server
-
-        start_http_server(settings.prometheus_port)
-
     if settings.mcp_server_enabled:
         from langflow.api.v1 import mcp_router
 
@@ -587,14 +615,10 @@ def create_app():
 def setup_sentry(app: FastAPI) -> None:
     settings = get_settings_service().settings
     if settings.sentry_dsn:
-        import sentry_sdk
         from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
-        sentry_sdk.init(
-            dsn=settings.sentry_dsn,
-            traces_sample_rate=settings.sentry_traces_sample_rate,
-            profiles_sample_rate=settings.sentry_profiles_sample_rate,
-        )
+        # Defer sentry_sdk.init() to the worker lifespan so background transport
+        # threads and connections are created after fork.
         app.add_middleware(SentryAsgiMiddleware)
 
 
