@@ -15,7 +15,7 @@ import { MarkdownField } from "../edit-message";
 
 // Mock react-markdown to avoid ESM module issues in Jest
 jest.mock("react-markdown", () => {
-  return function MockMarkdown({ children }: any) {
+  return function MockMarkdown({ children }: { children?: React.ReactNode }) {
     // Simple mock that just renders the children
     return <div data-testid="markdown-content">{children}</div>;
   };
@@ -41,7 +41,7 @@ jest.mock("@/components/core/codeTabsComponent", () => {
 
 // Mock utility functions
 jest.mock("@/utils/utils", () => ({
-  cn: (...classes: any[]) => classes.filter(Boolean).join(" "),
+  cn: (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" "),
 }));
 
 // Mock translation hook
