@@ -50,7 +50,7 @@ dependencies = [
     "setuptools>=80.0.0,<81.0.0",
     "wheel>=0.46.2,<1.0.0",
     "mcp>=1.17.0,<2.0.0",
-    "OpenDsStar==1.0.20; python_version >= '3.11'",
+    "OpenDsStar==1.0.21; python_version >= '3.11'",
 ]
 
 [project.scripts]
