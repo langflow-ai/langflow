@@ -642,7 +642,6 @@ describe("EditableToolName sub-component", () => {
     const updated = updater(new Map([["flow-1", "Some Name"]]));
     expect(updated.has("flow-1")).toBe(false);
   });
-
 });
 
 // ---------------------------------------------------------------------------

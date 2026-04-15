@@ -117,9 +117,7 @@ describe("Sorting", () => {
     renderList();
     // CheckboxSelectItem renders a <label> with the connection name inside.
     // "Staging API" (isNew=true) should come before the others.
-    const allNames = screen
-      .getAllByText(/API|Env/)
-      .map((el) => el.textContent);
+    const allNames = screen.getAllByText(/API|Env/).map((el) => el.textContent);
     const stagingIndex = allNames.findIndex((t) => t?.includes("Staging API"));
     const prodIndex = allNames.findIndex((t) => t?.includes("Production API"));
     expect(stagingIndex).toBeLessThan(prodIndex);

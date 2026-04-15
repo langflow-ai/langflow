@@ -60,10 +60,7 @@ function renderRow(deploymentId = "dep-1", colSpan = 6) {
   return render(
     <table>
       <tbody>
-        <DeploymentExpandedRow
-          deploymentId={deploymentId}
-          colSpan={colSpan}
-        />
+        <DeploymentExpandedRow deploymentId={deploymentId} colSpan={colSpan} />
       </tbody>
     </table>,
   );
@@ -156,5 +153,4 @@ describe("DeploymentExpandedRow", () => {
     renderRow();
     expect(screen.getByText("Untitled")).toBeInTheDocument();
   });
-
 });

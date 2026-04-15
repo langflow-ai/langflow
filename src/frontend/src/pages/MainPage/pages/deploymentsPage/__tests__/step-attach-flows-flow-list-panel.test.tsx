@@ -156,9 +156,7 @@ describe("Connection names", () => {
     const selectedVersionByFlow = new Map([
       ["f1", { versionId: "v1", versionTag: "v1.0" }],
     ]);
-    const attachedConnectionByFlow = new Map([
-      ["f1", ["conn-1", "conn-2"]],
-    ]);
+    const attachedConnectionByFlow = new Map([["f1", ["conn-1", "conn-2"]]]);
     renderPanel({ selectedVersionByFlow, attachedConnectionByFlow });
     expect(
       screen.getByText("Prod Connection, Dev Connection"),
@@ -237,12 +235,8 @@ describe("Undo button", () => {
     const removedFlowIds = new Set(["f1"]);
     renderPanel({ selectedVersionByFlow, removedFlowIds });
 
-    expect(
-      screen.getByTestId("undo-remove-flow-f1"),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByTestId("undo-remove-flow-f2"),
-    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("undo-remove-flow-f1")).toBeInTheDocument();
+    expect(screen.queryByTestId("undo-remove-flow-f2")).not.toBeInTheDocument();
   });
 
   it("undo button not visible when onUndoRemoveFlow is not provided", () => {
@@ -256,9 +250,7 @@ describe("Undo button", () => {
       onUndoRemoveFlow: undefined,
     });
 
-    expect(
-      screen.queryByTestId("undo-remove-flow-f1"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("undo-remove-flow-f1")).not.toBeInTheDocument();
   });
 });
 

@@ -60,9 +60,7 @@ export const FlowListPanel = memo(function FlowListPanel({
                 selectedFlowId === flow.id ? "bg-muted" : "hover:bg-muted/60",
               )}
             >
-              <div
-                className="flex min-w-0 flex-1 items-center gap-3 text-left"
-              >
+              <div className="flex min-w-0 flex-1 items-center gap-3 text-left">
                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
                   <ForwardedIconComponent
                     name={flow.icon ?? "Workflow"}

@@ -48,7 +48,10 @@ const mockDeployment: Deployment = {
 function renderEditHook(
   overrides?: Partial<{
     editingDeployment: Deployment;
-    selectedVersionByFlow: Map<string, { versionId: string; versionTag: string }>;
+    selectedVersionByFlow: Map<
+      string,
+      { versionId: string; versionTag: string }
+    >;
     initialLlm: string;
     initialToolNameByFlow: Map<string, string>;
     initialConnectionsByFlow: Map<string, string[]>;
@@ -551,9 +554,7 @@ describe("buildDeploymentUpdatePayload", () => {
     expect(newFlowEntry!.tool_name).toBe("New Tool");
 
     // Updated flow entry (flow-1: connections swapped, name changed)
-    const flow1Entry = upsertFlows.find(
-      (f) => f.flow_version_id === "ver-1",
-    );
+    const flow1Entry = upsertFlows.find((f) => f.flow_version_id === "ver-1");
     expect(flow1Entry).toBeDefined();
     expect(flow1Entry!.tool_name).toBe("renamed_tool");
     expect(flow1Entry!.add_app_ids).toEqual(["app-new-1"]);
@@ -563,9 +564,7 @@ describe("buildDeploymentUpdatePayload", () => {
   it("includes description change when description differs from initial", () => {
     const { result } = renderEditHook();
 
-    act(() =>
-      result.current.setDeploymentDescription("Brand new description"),
-    );
+    act(() => result.current.setDeploymentDescription("Brand new description"));
 
     const payload = result.current.buildDeploymentUpdatePayload();
     expect(payload.description).toBe("Brand new description");

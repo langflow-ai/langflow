@@ -118,15 +118,21 @@ describe("Rendering version items", () => {
   it("renders version items with dates", () => {
     renderPanel();
     // The component uses toLocaleDateString("en-US", { year, month: "long", day }) format
-    const dateOpts: Intl.DateTimeFormatOptions = { year: "numeric", month: "long", day: "numeric" };
-    const v1Date = new Date("2025-01-10T08:00:00Z").toLocaleDateString("en-US", dateOpts);
-    const v2Date = new Date("2025-03-15T12:00:00Z").toLocaleDateString("en-US", dateOpts);
-    expect(screen.getByTestId("version-item-v1").textContent).toContain(
-      v1Date,
+    const dateOpts: Intl.DateTimeFormatOptions = {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    };
+    const v1Date = new Date("2025-01-10T08:00:00Z").toLocaleDateString(
+      "en-US",
+      dateOpts,
     );
-    expect(screen.getByTestId("version-item-v2").textContent).toContain(
-      v2Date,
+    const v2Date = new Date("2025-03-15T12:00:00Z").toLocaleDateString(
+      "en-US",
+      dateOpts,
     );
+    expect(screen.getByTestId("version-item-v1").textContent).toContain(v1Date);
+    expect(screen.getByTestId("version-item-v2").textContent).toContain(v2Date);
   });
 });
 

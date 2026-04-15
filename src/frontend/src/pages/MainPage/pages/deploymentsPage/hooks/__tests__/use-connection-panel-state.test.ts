@@ -364,9 +364,7 @@ describe("useConnectionPanelState", () => {
         const { result } = renderHook(() => useConnectionPanelState(params));
 
         act(() => {
-          result.current.setNewConnectionName(
-            "  My Cool Connection! (v2)  ",
-          );
+          result.current.setNewConnectionName("  My Cool Connection! (v2)  ");
         });
         act(() => {
           result.current.handleCreateConnection();
@@ -425,7 +423,6 @@ describe("useConnectionPanelState", () => {
         const updater = params.setConnections.mock.calls[0][0];
         expect(updater([])[0].id).toBe("");
       });
-
     });
 
     it("tracks globalVar keys in the created connection", () => {
@@ -853,10 +850,7 @@ describe("useConnectionPanelState", () => {
   describe("initConnectionsForFlow", () => {
     it("loads pre-existing selections from attachedConnectionByFlow", () => {
       const params = baseParams();
-      params.attachedConnectionByFlow.set("flow-1", [
-        "conn-a",
-        "conn-b",
-      ]);
+      params.attachedConnectionByFlow.set("flow-1", ["conn-a", "conn-b"]);
       params.connections = [
         makeConnection({ id: "conn-a" }),
         makeConnection({ id: "conn-b" }),
@@ -1000,7 +994,9 @@ describe("useConnectionPanelState", () => {
   // -------------------------------------------------------------------------
   describe("updateDetectedEnvVars", () => {
     it("populates env var rows using each name as both key and global var value", () => {
-      const { result } = renderHook(() => useConnectionPanelState(baseParams()));
+      const { result } = renderHook(() =>
+        useConnectionPanelState(baseParams()),
+      );
 
       act(() => {
         result.current.updateDetectedEnvVars(["OPENAI_API_KEY", "DB_PASS"]);
@@ -1019,7 +1015,9 @@ describe("useConnectionPanelState", () => {
     });
 
     it("sets detectedVarCount to the number of detected variables", () => {
-      const { result } = renderHook(() => useConnectionPanelState(baseParams()));
+      const { result } = renderHook(() =>
+        useConnectionPanelState(baseParams()),
+      );
 
       act(() => {
         result.current.updateDetectedEnvVars(["A", "B", "C"]);
@@ -1029,7 +1027,9 @@ describe("useConnectionPanelState", () => {
     });
 
     it("resets to a single empty row when given an empty array", () => {
-      const { result } = renderHook(() => useConnectionPanelState(baseParams()));
+      const { result } = renderHook(() =>
+        useConnectionPanelState(baseParams()),
+      );
 
       act(() => {
         result.current.updateDetectedEnvVars(["X"]);
@@ -1048,7 +1048,9 @@ describe("useConnectionPanelState", () => {
     });
 
     it("assigns unique ids to each generated env var row", () => {
-      const { result } = renderHook(() => useConnectionPanelState(baseParams()));
+      const { result } = renderHook(() =>
+        useConnectionPanelState(baseParams()),
+      );
 
       act(() => {
         result.current.updateDetectedEnvVars(["A", "B"]);

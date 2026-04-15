@@ -345,8 +345,8 @@ describe("usePatchDeployment", () => {
     expect(sentBody.provider_data.connections).toHaveLength(1);
     expect(sentBody.provider_data.upsert_flows).toHaveLength(1);
     expect(sentBody.provider_data.remove_flows).toEqual(["fv-removed"]);
-    expect(
-      sentBody.provider_data.connections[0].credentials[0].source,
-    ).toBe("variable");
+    expect(sentBody.provider_data.connections[0].credentials[0].source).toBe(
+      "variable",
+    );
   });
 });
