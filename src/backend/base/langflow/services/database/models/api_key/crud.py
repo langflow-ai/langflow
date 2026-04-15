@@ -1,12 +1,14 @@
 import binascii
 import datetime
+import hashlib
 import os
 import secrets
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cryptography.fernet import InvalidToken
-from sqlmodel import select, update
+from lfx.log.logger import logger
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth import utils as auth_utils
@@ -18,13 +20,16 @@ if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar
 
 
+def hash_api_key(api_key: str) -> str:
+    """One-way SHA-256 hash of a plaintext API key for indexed lookup."""
+    return hashlib.sha256(api_key.encode()).hexdigest()
+
+
 async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]:
     """Get all API keys for a user with decrypted values."""
-    settings_service = get_settings_service()
     query: SelectOfScalar = select(ApiKey).where(ApiKey.user_id == user_id)
     api_key_objects = (await session.exec(query)).all()
 
-    fernet = auth_utils.get_fernet(settings_service)
     api_keys = []
     for api_key_obj in api_key_objects:
         data = api_key_obj.model_dump()
@@ -32,9 +37,11 @@ async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]
         api_key = data.get("api_key")
         if api_key:
             try:
-                actual_key = auth_utils.decrypt_api_key(api_key, settings_service=settings_service, fernet_obj=fernet)
+                actual_key = auth_utils.decrypt_api_key(api_key)
             except (ValueError, TypeError, InvalidToken, UnicodeDecodeError, AttributeError, binascii.Error):
-                # Fallback to stored value for legacy entries
+                actual_key = api_key
+            # decrypt_api_key returns "" on failure; fall back to stored value
+            if not actual_key:
                 actual_key = api_key
         else:
             actual_key = api_key
@@ -49,12 +56,11 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
 
-    settings_service = get_settings_service()
-
-    stored_api_key = auth_utils.encrypt_api_key(generated_api_key, settings_service=settings_service)
+    stored_api_key = auth_utils.encrypt_api_key(generated_api_key)
 
     api_key = ApiKey(
         api_key=stored_api_key,
+        api_key_hash=hash_api_key(generated_api_key),
         name=api_key_create.name,
         user_id=user_id,
         created_at=api_key_create.created_at or datetime.datetime.now(datetime.timezone.utc),
@@ -99,41 +105,64 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
 
 
 async def _check_key_from_db(session: AsyncSession, api_key: str, settings_service) -> User | None:
-    """Validate API key against the database."""
-    query = select(ApiKey.id, ApiKey.api_key, ApiKey.user_id)
-    rows = (await session.exec(query)).all()  # list of tuples (id, api_key, user_id)
+    """Validate API key against the database.
 
-    if not rows:
+    Uses hash-based O(1) lookup first. Falls back to decrypt-and-compare
+    for legacy keys that don't have a hash yet, and backfills the hash on match.
+    """
+    if not api_key:
         return None
 
-    fernet = auth_utils.get_fernet(settings_service)
+    incoming_hash = hash_api_key(api_key)
 
-    for api_key_id, stored_value, user_id in rows:
+    # Fast path: O(1) indexed lookup by hash
+    query = select(ApiKey).where(ApiKey.api_key_hash == incoming_hash)
+    matches = (await session.exec(query)).all()
+
+    if len(matches) == 1:
+        api_key_obj = matches[0]
+        if settings_service.settings.disable_track_apikey_usage is not True:
+            api_key_obj.total_uses += 1
+            api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
+            session.add(api_key_obj)
+            await session.flush()
+        return await session.get(User, api_key_obj.user_id)
+
+    if len(matches) > 1:
+        key_ids = [str(m.id) for m in matches]
+        logger.error(
+            "Data integrity violation: %d API keys share hash %s (key IDs: %s). Refusing to authenticate.",
+            len(matches),
+            incoming_hash[:12] + "...",
+            ", ".join(key_ids),
+        )
+        return None
+
+    # Slow path: legacy keys without hash (plaintext from 1.6.x or encrypted without hash)
+    query = select(ApiKey).where(ApiKey.api_key_hash.is_(None))  # type: ignore[union-attr]
+    legacy_keys = (await session.exec(query)).all()
+
+    for api_key_obj in legacy_keys:
+        stored_value = api_key_obj.api_key
         if stored_value is None:
             continue
 
+        # decrypt_api_key returns "" on failure (never raises for decryption errors)
         if stored_value == api_key:
             matched = True
         else:
-            try:
-                candidate = auth_utils.decrypt_api_key(
-                    stored_value, settings_service=settings_service, fernet_obj=fernet
-                )
-            except (ValueError, TypeError, InvalidToken):
-                candidate = stored_value
+            candidate = auth_utils.decrypt_api_key(stored_value)
             matched = candidate == api_key
 
         if matched:
+            # Backfill hash for future O(1) lookups
+            api_key_obj.api_key_hash = incoming_hash
             if settings_service.settings.disable_track_apikey_usage is not True:
-                await session.exec(
-                    update(ApiKey)
-                    .where(ApiKey.id == api_key_id)
-                    .values(
-                        total_uses=ApiKey.total_uses + 1,
-                        last_used_at=datetime.datetime.now(datetime.timezone.utc),
-                    )
-                )
-            return await session.get(User, user_id)
+                api_key_obj.total_uses += 1
+                api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
+            session.add(api_key_obj)
+            await session.flush()
+            return await session.get(User, api_key_obj.user_id)
 
     return None
 

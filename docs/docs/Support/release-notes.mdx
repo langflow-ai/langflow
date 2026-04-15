@@ -47,6 +47,70 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.9.x
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### New features and enhancements
+
+- Langflow MCP client for Bob (IBM) and Claude Code
+
+    The **Settings** page now includes <Icon name="Terminal" aria-hidden="true"/> **Langflow MCP Client**, with instructions to connect **Bob (IBM)** and **Claude Code** to your Langflow instance.
+    For more information, see [Langflow MCP client for coding agents](../Agents/langflow-mcp-client.mdx).
+
+- MCP Tools: register servers first, and then add from the MCP sidebar
+
+    **MCP Tools** is no longer added from the **Agents** component list. Register each MCP server under **Settings** > **MCP Servers**, or from the flow editor <McpIcon /> **MCP** sidebar.
+    Each saved server appears as a unique **MCP Tools** component that can be dragged to the canvas.
+    For more information, see [Use Langflow as an MCP client](/mcp-client#use-the-mcp-tools-component).
+
+- Flow DevOps Toolkit SDK
+
+    Use the Flow DevOps Toolkit SDK to manage local and remote flows with Git-style terminal commands.
+    For more information, see the [Langflow Flow DevOps Toolkit SDK](../API-Reference/flow-devops-sdk.mdx).
+
+- Renamed `Data` and `DataFrame` types
+
+    The `Data` object is now named `JSON`, and the `DataFrame` object is now named `Table`.
+    Flows using `Data` or `DataFrame` are backwards compatible.
+    For more information, see [Langflow data types](/data-types).
+
+- Renamed **Data Operations** and **DataFrame Operations** components
+
+    The **Data Operations** component is now the [**JSON Operations** component](/data-operations), and the **DataFrame Operations** component is now the [**Table Operations** component](/dataframe-operations).
+
+- Flow version history in the visual editor
+
+    You can now save point-in-time versions of a flow from **Version History**, preview saved versions in read-only mode, and restore an earlier version to your working draft.
+    For more information, see [Build flows](../Flows/concepts-flows.mdx#save-and-restore-flow-versions).
+
+- Enabled tool calling for Gemini 3 preview models
+
+    Tool calling is enabled for the following Google Gemini 3 preview models:
+    `gemini-3.1-pro-preview`, `gemini-3-pro-preview`, `gemini-3-flash-preview`, and `gemini-3-pro-image-preview`.
+
+- Build components with **Langflow Assistant**
+
+    **Langflow Assistant** is an in-app virtual assistant that can create components from natural language prompts directly within the Langflow workspace.
+    For more information, see [Langflow Assistant](../Flows/langflow-assistant.mdx).
+
+- Vulnerability reporting now uses HackerOne
+
+    Security reports should now be filed through [IBM's HackerOne program](https://hackerone.com/ibm).
+    Please do not report security vulnerabilities through public GitHub issues or GitHub security advisories.
+    For the full policy and what to include in a report, see the [Langflow Security Policy](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md).
+
+- Disable custom components
+
+    Set `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` to disable custom components and in-editor editing of component code.
+    For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx).
+
+- **Policies** component (beta)
+
+    The **Policies** component uses [ToolGuard](https://github.com/AgentToolkit/toolguard) to generate guard code from natural-language business policies and apply it to agent tools.
+    For more information, see [Policies (Beta)](../Components/policies.mdx).
+
 ## 1.8.x
 
 Highlights of this release include the following changes.
@@ -119,12 +183,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information, see [Upgrade the Langflow Docker image](/deployment-docker#upgrade-the-langflow-docker-image).
 
--   Disabled tool calling for Gemini 3 preview models
+- Disabled tool calling for Gemini 3 preview models
 
     Tool calling is temporarily disabled for the following Google Gemini 3 preview models:
     `gemini-3.1-pro-preview`, `gemini-3-pro-preview`, `gemini-3-flash-preview`, and `gemini-3-pro-image-preview`.
-    
--   Docling installation behavior differs between Desktop and OSS
+
+- Docling installation behavior differs between Desktop and OSS
 
     In Langflow 1.8.0, Docling behavior depends on how Langflow is installed.
 

@@ -36,7 +36,7 @@ const config = {
       tagName: "link",
       attributes: {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Sora:wght@550;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Sora:wght@550;600&display=swap",
       },
     },
     ...(isProduction
@@ -110,6 +110,22 @@ const config = {
           routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
+          // Versioning configuration
+          lastVersion: "1.9.0",
+          versions: {
+            current: {
+              label: "1.10.x (Next)",
+              path: "next",
+            },
+            "1.9.0": {
+              label: "1.9.x",
+              path: "",
+            },
+            "1.8.0": {
+              label: "1.8.x",
+              path: "1.8.0",
+            },
+          },
           beforeDefaultRemarkPlugins: [
             [
               remarkCodeHike,
@@ -420,13 +436,17 @@ const config = {
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       navbar: {
-        hideOnScroll: true,
+        hideOnScroll: false,
         logo: {
           alt: "Langflow",
           src: "img/lf-docs-light.svg",
           srcDark: "img/lf-docs-dark.svg",
         },
         items: [
+          {
+            type: 'docsVersionDropdown',
+            position: 'left',
+          },
           // right
           {
             position: "right",
@@ -434,6 +454,7 @@ const config = {
             className: "header-github-link",
             target: "_blank",
             rel: null,
+            "aria-label": "GitHub",
             'data-event': 'UI Interaction',
             'data-action': 'clicked',
             'data-channel': 'docs',
@@ -447,6 +468,7 @@ const config = {
             className: "header-twitter-link",
             target: "_blank",
             rel: null,
+            "aria-label": "Twitter",
             'data-event': 'UI Interaction',
             'data-action': 'clicked',
             'data-channel': 'docs',
@@ -460,6 +482,7 @@ const config = {
             className: "header-discord-link",
             target: "_blank",
             rel: null,
+            "aria-label": "Discord",
             'data-event': 'UI Interaction',
             'data-action': 'clicked',
             'data-channel': 'docs',
@@ -490,7 +513,7 @@ const config = {
       docs: {
         sidebar: {
           hideable: false,
-          autoCollapseCategories: true,
+          autoCollapseCategories: false,
         },
       },
       footer: {

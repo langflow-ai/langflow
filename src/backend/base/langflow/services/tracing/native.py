@@ -29,7 +29,7 @@ from langflow.services.tracing.span_sorting import (
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_classic.callbacks.base import BaseCallbackHandler
     from lfx.graph.vertex.base import Vertex
 
     from langflow.services.tracing.schema import Log

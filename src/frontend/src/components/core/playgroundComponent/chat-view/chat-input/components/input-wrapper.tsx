@@ -1,4 +1,4 @@
-import { ENABLE_VOICE_ASSISTANT } from "@/customization/feature-flags";
+import { ENABLE_FILES_ON_PLAYGROUND } from "@/customization/feature-flags";
 import type { FilePreviewType } from "@/types/components";
 import FilePreviewDisplay from "../../utils/file-preview-display";
 import type { AudioRecordingState } from "../hooks/use-audio-recording";
@@ -13,7 +13,7 @@ interface InputWrapperProps {
   send: () => void;
   noInput: boolean;
   chatValue: string;
-  inputRef: React.RefObject<HTMLTextAreaElement>;
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
   files: FilePreviewType[];
   isDragging: boolean;
   handleDeleteFile: (file: FilePreviewType) => void;
@@ -66,6 +66,23 @@ const InputWrapper = ({
     e.stopPropagation();
     e.preventDefault();
   };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    // Don't handle keyboard events that originate from the textarea
+    if (target.closest("textarea")) {
+      return;
+    }
+    if (e.key !== "Enter" && e.key !== " ") {
+      return;
+    }
+    e.preventDefault();
+    inputRef.current?.focus();
+    inputRef.current?.setSelectionRange(
+      inputRef.current.value.length,
+      inputRef.current.value.length,
+    );
+  };
   return (
     <div className="flex w-full flex-col">
       {/* Input container */}
@@ -74,6 +91,10 @@ const InputWrapper = ({
         className="flex w-full flex-col rounded-md border border-input bg-muted p-3 cursor-text hover:border-muted-foreground focus-within:border-primary"
         onClick={onClick}
         onMouseDown={onMouseDown}
+        onKeyDown={onKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-label="Focus chat input"
       >
         {/* Text input area */}
         <div className="w-full">
@@ -112,12 +133,14 @@ const InputWrapper = ({
         {/* Buttons row */}
         <div className="flex items-center justify-between w-full pt-3">
           <div className="flex-shrink-0">
-            <UploadFileButton
-              isBuilding={isBuilding}
-              fileInputRef={fileInputRef}
-              handleFileChange={handleFileChange}
-              handleButtonClick={handleButtonClick}
-            />
+            {ENABLE_FILES_ON_PLAYGROUND && (
+              <UploadFileButton
+                isBuilding={isBuilding}
+                fileInputRef={fileInputRef}
+                handleFileChange={handleFileChange}
+                handleButtonClick={handleButtonClick}
+              />
+            )}
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">

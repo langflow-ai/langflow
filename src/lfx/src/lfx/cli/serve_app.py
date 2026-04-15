@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field
 
 from lfx.cli.common import execute_graph_with_capture, extract_result_data, get_api_key
 from lfx.log.logger import logger
+from lfx.utils.flow_validation import validate_flow_for_current_settings
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable
@@ -419,6 +420,7 @@ def create_multi_serve_app(
             request: RunRequest,
         ) -> RunResponse:
             try:
+                validate_flow_for_current_settings(graph)
                 graph_copy = deepcopy(graph)
                 results, logs = await execute_graph_with_capture(graph_copy, request.input_value)
                 result_data = extract_result_data(results, logs)
@@ -485,6 +487,8 @@ def create_multi_serve_app(
         ) -> StreamingResponse:
             """Stream the execution of the flow with real-time events."""
             try:
+                validate_flow_for_current_settings(graph)
+
                 # Import here to avoid potential circular imports
                 from lfx.events.event_manager import create_stream_tokens_event_manager
 
