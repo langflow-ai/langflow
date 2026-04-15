@@ -228,10 +228,13 @@ async def _deduplicate_endpoint_name(
     if fail_on_conflict:
         raise HTTPException(status_code=409, detail="Endpoint name must be unique")
 
+    escaped_endpoint_name = (
+        endpoint_name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    )
     flows = (
         await session.exec(
             select(Flow)
-            .where(Flow.endpoint_name.like(f"{endpoint_name}-%"))  # type: ignore[union-attr]
+            .where(Flow.endpoint_name.like(f"{escaped_endpoint_name}-%", escape="\\"))  # type: ignore[union-attr]
             .where(Flow.user_id == user_id)
         )
     ).all()
