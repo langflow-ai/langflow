@@ -1,3 +1,4 @@
+import re
 import warnings
 from typing import Annotated, cast
 from uuid import UUID
@@ -77,14 +78,10 @@ async def create_project(
             )
             if project_results:
                 project_names = [project.name for project in project_results]
-                project_numbers = []
-                for name in project_names:
-                    if "(" not in name:
-                        continue
-                    try:
-                        project_numbers.append(int(name.split("(")[-1].split(")")[0]))
-                    except ValueError:
-                        continue
+                duplicate_pattern = re.compile(rf"^{re.escape(new_project.name)} \((\d+)\)$")
+                project_numbers = [
+                    int(match.group(1)) for name in project_names if (match := duplicate_pattern.match(name))
+                ]
                 if project_numbers:
                     new_project.name = f"{new_project.name} ({max(project_numbers) + 1})"
                 else:

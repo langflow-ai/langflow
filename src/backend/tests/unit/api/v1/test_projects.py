@@ -63,6 +63,32 @@ async def test_create_project_duplicate_name_escapes_like_wildcards(client: Asyn
     assert response.json()["name"] == "proj_% (1)"
 
 
+async def test_create_project_duplicate_name_ignores_non_duplicate_parenthetical_suffixes(
+    client: AsyncClient, logged_in_headers, basic_case
+):
+    response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    response = await client.post(
+        "api/v1/projects/",
+        json={**basic_case, "name": f"{basic_case['name']} backup (7)"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+
+    response = await client.post(
+        "api/v1/projects/",
+        json={**basic_case, "name": f"{basic_case['name']} (draft)"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+
+    duplicate_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+
+    assert duplicate_response.status_code == status.HTTP_201_CREATED
+    assert duplicate_response.json()["name"] == f"{basic_case['name']} (1)"
+
+
 async def test_read_projects(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/projects/", headers=logged_in_headers)
     result = response.json()
