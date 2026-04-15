@@ -160,7 +160,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.28"
+                    "version": "1.2.29"
                   },
                   {
                     "name": "pydantic",
@@ -392,7 +392,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.28"
+                    "version": "1.2.29"
                   },
                   {
                     "name": "pydantic",
@@ -1301,7 +1301,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.28"
+                    "version": "1.2.29"
                   }
                 ],
                 "total_dependencies": 3

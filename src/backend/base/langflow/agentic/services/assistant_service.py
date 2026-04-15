@@ -417,8 +417,10 @@ async def execute_flow_with_validation_streaming(
                 continue
 
             if validation.is_valid:
-                # Runtime validation: try to actually instantiate the component
-                runtime_error = validate_component_runtime(code, user_id=user_id)
+                # Runtime validation: instantiate AND execute the component's output
+                # methods so pydantic-schema bugs (e.g. Data(data=[list])) are caught
+                # before the component is handed to the user.
+                runtime_error = await validate_component_runtime(code, user_id=user_id)
                 if runtime_error:
                     logger.warning(f"Runtime validation failed (attempt {attempt}): {runtime_error}")
                     validation = type(validation)(
