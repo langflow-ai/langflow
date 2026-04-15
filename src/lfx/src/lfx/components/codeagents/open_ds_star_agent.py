@@ -972,8 +972,7 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
         code_timeout = getattr(self, "code_timeout", 60)
 
         logger.info(
-            "OpenDsStarAgent - Creating agent with model=%s, max_steps=%s,"
-            " code_mode=%s, system_prompt length=%d",
+            "OpenDsStarAgent - Creating agent with model=%s, max_steps=%s, code_mode=%s, system_prompt length=%d",
             self.llm,
             max_iterations,
             code_mode,
