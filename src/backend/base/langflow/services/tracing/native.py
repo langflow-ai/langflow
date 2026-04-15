@@ -20,16 +20,19 @@ from typing_extensions import override
 from langflow.serialization.serialization import serialize
 from langflow.services.database.models.traces.model import SpanStatus, SpanType
 from langflow.services.tracing.base import BaseTracer
+from langflow.services.tracing.span_sorting import (
+    LANGFLOW_SPAN_NAMESPACE,
+    resolve_span_uuids,
+    topological_sort_spans,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_classic.callbacks.base import BaseCallbackHandler
     from lfx.graph.vertex.base import Vertex
 
     from langflow.services.tracing.schema import Log
-
-LANGFLOW_SPAN_NAMESPACE = UUID("a3e1c2d4-5b6f-7890-abcd-ef1234567890")
 
 TYPE_MAP = {
     "chain": SpanType.CHAIN,
@@ -268,14 +271,12 @@ class NativeTracer(BaseTracer):
     async def _flush_to_database(self, error: Exception | None = None) -> None:
         """Persist the completed trace and all its spans in a single DB session to minimise round-trips."""
         try:
-            from uuid import UUID as UUID_
-
             from lfx.services.deps import session_scope
 
             from langflow.services.database.models.traces.model import SpanTable, TraceTable
 
             try:
-                flow_uuid = UUID_(self.flow_id)
+                flow_uuid = UUID(self.flow_id)
             except (ValueError, TypeError):
                 # Deterministic fallback so malformed flow_ids don't silently discard trace data.
                 flow_uuid = uuid5(LANGFLOW_SPAN_NAMESPACE, f"invalid-flow-id:{self.flow_id}")
@@ -320,25 +321,13 @@ class NativeTracer(BaseTracer):
                 )
                 await session.merge(trace)
 
-                for span_data in self.completed_spans:
-                    try:
-                        span_uuid = UUID_(span_data["id"])
-                    except (ValueError, TypeError):
-                        # Span IDs from LangChain callbacks are strings, not UUIDs — derive
-                        # a stable UUID so the same span always maps to the same DB row.
-                        span_uuid = uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{span_data['id']}")
+                # Pre-compute UUIDs and topologically sort so parents are inserted
+                # before children — required by PostgreSQL's immediate FK enforcement
+                # on span.parent_span_id → span.id.
+                resolved = resolve_span_uuids(self.completed_spans, self.trace_id)
+                resolved = topological_sort_spans(resolved)
 
-                    parent_uuid = None
-                    if span_data.get("parent_span_id"):
-                        parent_id = span_data["parent_span_id"]
-                        if isinstance(parent_id, UUID_):
-                            parent_uuid = parent_id
-                        else:
-                            try:
-                                parent_uuid = UUID_(str(parent_id))
-                            except (ValueError, TypeError):
-                                parent_uuid = uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{parent_id}")
-
+                for span_data, span_uuid, parent_uuid in resolved:
                     span = SpanTable(
                         id=span_uuid,
                         trace_id=self.trace_id,

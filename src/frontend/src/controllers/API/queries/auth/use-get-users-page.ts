@@ -7,6 +7,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 interface getUsersQueryParams {
   skip: number;
   limit: number;
+  search?: string;
 }
 
 export const useGetUsers: useMutationFunctionType<any, getUsersQueryParams> = (
@@ -17,10 +18,13 @@ export const useGetUsers: useMutationFunctionType<any, getUsersQueryParams> = (
   async function getUsers({
     skip,
     limit,
+    search,
   }: getUsersQueryParams): Promise<Array<Users>> {
-    const res = await api.get(
-      `${getURL("USERS")}/?skip=${skip}&limit=${limit}`,
-    );
+    let url = `${getURL("USERS")}/?skip=${skip}&limit=${limit}`;
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+    const res = await api.get(url);
     if (res.status === 200) {
       return res.data;
     }

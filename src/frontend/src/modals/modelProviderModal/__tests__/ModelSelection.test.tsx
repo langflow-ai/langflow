@@ -147,6 +147,29 @@ describe("ModelSelection", () => {
 
       expect(onModelToggle).toHaveBeenCalledWith("gpt-4", expect.any(Boolean));
     });
+
+    it("should not bubble toggle clicks to parent containers", async () => {
+      const onModelToggle = jest.fn();
+      const onParentClick = jest.fn();
+      const user = userEvent.setup();
+
+      render(
+        <div onClick={onParentClick}>
+          <ModelSelection {...defaultProps} onModelToggle={onModelToggle} />
+        </div>,
+      );
+
+      const toggle = screen.getByTestId(
+        "embeddings-toggle-text-embedding-ada-002",
+      );
+      await user.click(toggle);
+
+      expect(onModelToggle).toHaveBeenCalledWith(
+        "text-embedding-ada-002",
+        expect.any(Boolean),
+      );
+      expect(onParentClick).not.toHaveBeenCalled();
+    });
   });
 
   describe("Empty States", () => {

@@ -71,6 +71,7 @@ env:
   # This path is used for caching across workflows
   PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
   PLAYWRIGHT_VERSION: "1.57.0"
+  LANGFLOW_FEATURE_WXO_DEPLOYMENTS: "true"
 
 jobs:
   determine-test-suite:
@@ -365,6 +366,16 @@ jobs:
           name: blob-report-${{ runner.os }}-${{ matrix.shardIndex }}
           path: src/frontend/blob-report
           retention-days: 1
+          overwrite: true
+
+      - name: Upload Playwright Coverage Artifact
+        if: always() && hashFiles('src/frontend/coverage/playwright/**') != ''
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-coverage-${{ matrix.shardIndex }}
+          path: src/frontend/coverage/playwright
+          retention-days: 7
+          overwrite: true
 
       - name: Cleanup UV Cache
         run: uv cache prune --ci

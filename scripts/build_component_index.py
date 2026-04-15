@@ -179,7 +179,7 @@ def main():
     # Pretty-print for readable git diffs and resolvable merge conflicts
     print(f"\nWriting formatted index to {output_path}")
     json_bytes = orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
-    output_path.write_text(json_bytes.decode("utf-8"), encoding="utf-8")
+    output_path.write_text(json_bytes.decode("utf-8") + "\n", encoding="utf-8")
 
     print("\nIndex successfully written!")
     print(f"  Version: {index['version']}")

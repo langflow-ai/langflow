@@ -29,6 +29,7 @@ RUN apt-get update \
 # Copy only backend source (excludes frontend)
 COPY ./src/backend ./src/backend
 COPY ./src/lfx ./src/lfx
+COPY ./src/sdk ./src/sdk
 
 # Create venv and install langflow-base with dependencies
 # Using uv pip instead of uv sync to avoid workspace complexities
@@ -37,12 +38,12 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install ./src/lfx "./src/backend/base[complete,postgresql]"
+    uv pip install ./src/sdk ./src/lfx "./src/backend/base[complete,postgresql]"
 
 ################################
 # RUNTIME
 ################################
-FROM python:3.12.12-slim-trixie AS runtime
+FROM python:3.12.13-slim-trixie AS runtime
 
 # Install minimal runtime dependencies
 RUN apt-get update \
@@ -63,12 +64,11 @@ RUN ARCH=$(dpkg --print-architecture) \
        elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
     && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
-                    | grep -oP "node-v\K[0-9]+\.[0-9]+\.[0-9]+(?=-linux-${NODE_ARCH}\.tar\.xz)" \
+                    | sed -nE "s/.*node-v([0-9]+\.[0-9]+\.[0-9]+)-linux-${NODE_ARCH}\.tar\.xz.*/\1/p" \
                     | head -1) \
+    && if [ -z "$NODE_VERSION" ]; then echo "ERROR: Could not determine Node.js version" && exit 1; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
-    | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@latest \
-    && npm cache clean --force
+    | tar -xJ -C /usr/local --strip-components=1
 
 # Create non-root user
 RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user

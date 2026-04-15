@@ -834,6 +834,28 @@ class MCPComposerService(Service):
         """
         return None if (value is None or value == "") else value
 
+    @classmethod
+    def _normalize_oauth_callback_aliases(cls, auth_config: dict[str, Any] | None) -> dict[str, Any]:
+        """Normalize OAuth callback aliases to a canonical full callback URL value.
+
+        `oauth_callback_url` is the canonical field name in Langflow. For compatibility,
+        we also accept `oauth_callback_path` and mirror the effective value to both keys so
+        comparisons and subprocess env var mapping stay consistent.
+        """
+        if not auth_config:
+            return {}
+
+        normalized_auth_config = dict(auth_config)
+        callback_url = cls._normalize_config_value(normalized_auth_config.get("oauth_callback_url"))
+        callback_path = cls._normalize_config_value(normalized_auth_config.get("oauth_callback_path"))
+        effective_callback = callback_url or callback_path
+
+        if effective_callback is not None:
+            normalized_auth_config["oauth_callback_url"] = effective_callback
+            normalized_auth_config["oauth_callback_path"] = effective_callback
+
+        return normalized_auth_config
+
     def _has_auth_config_changed(self, existing_auth: dict[str, Any] | None, new_auth: dict[str, Any] | None) -> bool:
         """Check if auth configuration has changed in a way that requires restart."""
         if not existing_auth and not new_auth:
@@ -841,6 +863,9 @@ class MCPComposerService(Service):
 
         if not existing_auth or not new_auth:
             return True
+
+        existing_auth = self._normalize_oauth_callback_aliases(existing_auth)
+        new_auth = self._normalize_oauth_callback_aliases(new_auth)
 
         auth_type = new_auth.get("auth_type", "")
 
@@ -1288,11 +1313,14 @@ class MCPComposerService(Service):
                 # Map auth config to environment variables for OAuth
                 # Note: oauth_host and oauth_port are passed both via --host/--port CLI args
                 # (for server binding) and as environment variables (for OAuth flow)
+                # Note: mcp-composer expects the env var name OAUTH_CALLBACK_PATH, but the value
+                # is still the full callback URL used as the OAuth redirect_uri. Support legacy
+                # oauth_callback_path input for backwards compatibility.
                 oauth_env_mapping = {
                     "oauth_host": "OAUTH_HOST",
                     "oauth_port": "OAUTH_PORT",
                     "oauth_server_url": "OAUTH_SERVER_URL",
-                    "oauth_callback_url": "OAUTH_CALLBACK_URL",
+                    "oauth_callback_path": "OAUTH_CALLBACK_PATH",
                     "oauth_client_id": "OAUTH_CLIENT_ID",
                     "oauth_client_secret": "OAUTH_CLIENT_SECRET",  # pragma: allowlist secret
                     "oauth_auth_url": "OAUTH_AUTH_URL",
@@ -1301,16 +1329,12 @@ class MCPComposerService(Service):
                     "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE",
                 }
 
-                # Backwards compatibility: if oauth_callback_url not set, try oauth_callback_path
-                if ("oauth_callback_url" not in auth_config or not auth_config.get("oauth_callback_url")) and (
-                    "oauth_callback_path" in auth_config and auth_config.get("oauth_callback_path")
-                ):
-                    auth_config["oauth_callback_url"] = auth_config["oauth_callback_path"]
+                normalized_auth_config = self._normalize_oauth_callback_aliases(auth_config)
 
                 # Add environment variables as command line arguments
                 # Only set non-empty values to avoid Pydantic validation errors
                 for config_key, env_key in oauth_env_mapping.items():
-                    value = auth_config.get(config_key)
+                    value = normalized_auth_config.get(config_key)
                     if value is not None and str(value).strip():
                         cmd.extend(["--env", env_key, str(value)])
 

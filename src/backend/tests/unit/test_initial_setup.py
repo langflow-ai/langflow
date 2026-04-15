@@ -7,6 +7,7 @@ from copy import deepcopy
 from datetime import datetime
 from pathlib import Path as SyncPath
 from unittest.mock import AsyncMock, patch
+from urllib.parse import urlparse
 
 import pytest
 from anyio import Path
@@ -257,7 +258,8 @@ async def test_detect_github_url(url, expected):
         assert result == expected
 
         # Verify the API call was only made for GitHub repo URLs
-        if "github.com" in url and not any(x in url for x in ["/tree/", "/releases/", "/commit/"]):
+        parsed = urlparse(url)
+        if parsed.hostname == "github.com" and not any(x in url for x in ["/tree/", "/releases/", "/commit/"]):
             mock_get.assert_called_once()
         else:
             mock_get.assert_not_called()
@@ -515,3 +517,274 @@ async def test_copy_profile_pictures_handles_missing_config_dir():
 
         with pytest.raises(ValueError, match="Config dir is not set"):
             await copy_profile_pictures()
+
+
+def test_update_projects_handles_components_without_metadata():
+    """Test that components without metadata are handled gracefully."""
+    all_types_dict = {
+        "agents": {
+            "Agent": {
+                "template": {
+                    "code": {"value": "test code"},
+                    "_type": "Component",
+                },
+                "display_name": "Agent",
+                # No metadata field at all
+            }
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Agent",
+                    "node": {
+                        "template": {
+                            "code": {"value": "old code"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    # Should not raise an error
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    assert updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"] == "test code"
+
+
+def test_update_projects_resolves_prompt_via_component_type_alias():
+    """Test that legacy Prompt nodes resolve via the explicit legacy alias.
+
+    Prompt Template is keyed as "Prompt Template" in the component dictionary,
+    but starter projects may still reference the legacy "Prompt" type.
+    """
+    all_types_dict = {
+        "models_and_agents": {
+            "Prompt Template": {
+                "template": {
+                    "code": {"value": "new_prompt_code_v2"},
+                    "_type": "Component",
+                },
+                "display_name": "Prompt Template",
+            }
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Prompt",  # Old type name, doesn't match key "Prompt Template"
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_prompt_code_v1"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "new_prompt_code_v2", (
+        f"Expected code to be updated to 'new_prompt_code_v2' but got '{updated_code}'. "
+        "The legacy 'Prompt' type should resolve to 'Prompt Template'."
+    )
+
+
+def test_update_projects_direct_key_takes_precedence_over_alias():
+    """Test that a direct key match is preferred over the derived alias."""
+    all_types_dict = {
+        "category": {
+            "Prompt": {
+                "template": {
+                    "code": {"value": "direct_match_code"},
+                    "_type": "Component",
+                },
+                "display_name": "Prompt",
+            },
+            "Prompt Template": {
+                "template": {
+                    "code": {"value": "renamed_code"},
+                    "_type": "Component",
+                },
+                "display_name": "Prompt Template",
+            },
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Prompt",
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_code"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "direct_match_code", (
+        "Direct key match ('Prompt') should take precedence over the derived alias to 'Prompt Template'"
+    )
+
+
+def test_update_projects_resolves_url_via_component_type_alias():
+    """Test that legacy URL nodes resolve via the component class alias."""
+    all_types_dict = {
+        "tools": {
+            "URLComponent": {
+                "template": {
+                    "code": {"value": "new_url_code_v2"},
+                    "_type": "URLComponent",
+                },
+                "display_name": "URL",
+            }
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "URL",
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_url_code_v1"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "new_url_code_v2"
+
+
+def test_update_projects_resolves_parser_via_component_type_alias():
+    """Test that legacy lowercase parser nodes resolve via the explicit alias."""
+    all_types_dict = {
+        "processing": {
+            "ParserComponent": {
+                "template": {
+                    "code": {"value": "new_parser_code_v2"},
+                    "_type": "Component",
+                },
+                "display_name": "Parser",
+            }
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "parser",
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_parser_code_v1"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "new_parser_code_v2"
+
+
+# ==================== Update Project File Tests ====================
+
+
+async def test_update_project_file_success():
+    """Test that update_project_file successfully writes to a writable path."""
+    from langflow.initial_setup.setup import update_project_file
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_path = Path(temp_dir) / "test_project.json"
+        project = {"name": "Test Project", "data": {"old": "data"}}
+        updated_data = {"new": "data"}
+
+        await update_project_file(project_path, project, updated_data)
+
+        # Verify the file was written
+        assert await project_path.exists()
+        content = await project_path.read_text(encoding="utf-8")
+        import orjson
+
+        written_project = orjson.loads(content)
+        assert written_project["data"] == updated_data
+        assert written_project["name"] == "Test Project"
+
+
+async def test_update_project_file_readonly_filesystem():
+    """Test that update_project_file handles read-only filesystem gracefully."""
+    from langflow.initial_setup.setup import update_project_file
+
+    project_path = Path("/nonexistent/readonly/path/test_project.json")
+    project = {"name": "Test Project", "data": {"old": "data"}}
+    updated_data = {"new": "data"}
+
+    # This should NOT raise an exception - it should handle the error gracefully
+    await update_project_file(project_path, project, updated_data)
+
+    # Verify the project dict was still updated (in-memory)
+    assert project["data"] == updated_data
+
+
+async def test_update_project_file_permission_denied():
+    """Test that update_project_file handles permission denied gracefully."""
+    from langflow.initial_setup.setup import update_project_file
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_path = Path(temp_dir) / "test_project.json"
+        project = {"name": "Test Project", "data": {"old": "data"}}
+        updated_data = {"new": "data"}
+
+        # Mock aiofiles.open to raise OSError (permission denied)
+        with patch("langflow.initial_setup.setup.aiofiles.open") as mock_open:
+            mock_open.side_effect = OSError(13, "Permission denied")
+
+            # Should not raise
+            await update_project_file(project_path, project, updated_data)
+
+            # Verify the project dict was still updated (in-memory)
+            assert project["data"] == updated_data
+
+
+async def test_update_project_file_logs_debug_on_oserror():
+    """Test that update_project_file logs a debug message on OSError."""
+    from langflow.initial_setup.setup import update_project_file
+
+    project_path = Path("/nonexistent/readonly/path/test_project.json")
+    project = {"name": "Test Project", "data": {"old": "data"}}
+    updated_data = {"new": "data"}
+
+    with patch("langflow.initial_setup.setup.logger") as mock_logger:
+        mock_logger.adebug = AsyncMock()
+        await update_project_file(project_path, project, updated_data)
+        # Verify debug log was called (either success or error path)
+        assert mock_logger.adebug.called
