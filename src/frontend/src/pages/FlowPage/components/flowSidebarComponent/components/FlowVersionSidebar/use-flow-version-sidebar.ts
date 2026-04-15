@@ -160,6 +160,7 @@ export function useFlowVersionSidebar(flowId: string) {
         processedPreview.edges,
         tag,
         selectedId,
+        selectedEntryFull?.description ?? null,
       );
     } else if (selectedId === CURRENT_DRAFT_ID || processedPreview?.error) {
       setPreview(
@@ -173,6 +174,7 @@ export function useFlowVersionSidebar(flowId: string) {
     processedPreview,
     selectedId,
     selectedEntryFull?.version_tag,
+    selectedEntryFull?.description,
     setPreview,
   ]);
 
