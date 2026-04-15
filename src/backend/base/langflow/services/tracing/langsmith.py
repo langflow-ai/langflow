@@ -25,7 +25,9 @@ if TYPE_CHECKING:
 
 
 class LangSmithTracer(BaseTracer):
-    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
+    def __init__(
+        self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID, session_id: str | None = None
+    ):
         try:
             self._ready = self.setup_langsmith()
             if not self._ready:
@@ -34,6 +36,7 @@ class LangSmithTracer(BaseTracer):
             self.trace_type = trace_type
             self.project_name = project_name
             self.trace_id = trace_id
+            self.session_id = session_id
             from langsmith import get_current_run_tree
             from langsmith.run_helpers import trace
 
@@ -41,6 +44,9 @@ class LangSmithTracer(BaseTracer):
             self._children: dict[str, RunTree] = {}
             self._children_traces: dict[str, trace] = {}
             self._child_link: dict[str, str] = {}
+            metadata = {}
+            if self.session_id:
+                metadata["thread_id"] = self.session_id
             parent = get_current_run_tree()
             if parent is not None and (parent.id == trace_id or parent.name == trace_name):
                 # duplicate init of LangSmithTracer with same trace_id\\trace_name, using current run tree
@@ -52,6 +58,7 @@ class LangSmithTracer(BaseTracer):
                     run_type=self.get_run_type(self.trace_type),
                     run_id=self.trace_id if parent is None else None,
                     parent=parent,
+                    metadata=metadata or None,
                 )
                 self._run_tree = self._trace.__enter__()
             self._run_tree.add_event({"name": "Start", "time": datetime.now(timezone.utc).isoformat()})
