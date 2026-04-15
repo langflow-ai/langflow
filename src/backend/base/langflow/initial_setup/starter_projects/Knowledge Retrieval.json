@@ -9,7 +9,7 @@
             "id": "KnowledgeBase-kgwih",
             "name": "retrieve_data",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
@@ -17,7 +17,9 @@
             "id": "ChatOutput-OG4M9",
             "inputTypes": [
               "Data",
+              "JSON",
               "DataFrame",
+              "Table",
               "Message"
             ],
             "type": "other"
@@ -25,9 +27,9 @@
         },
         "id": "xy-edge__KnowledgeBase-kgwih{œdataTypeœ:œKnowledgeBaseœ,œidœ:œKnowledgeBase-kgwihœ,œnameœ:œretrieve_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-OG4M9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-OG4M9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "source": "KnowledgeBase-kgwih",
-        "sourceHandle": "{œdataTypeœ: œKnowledgeBaseœ, œidœ: œKnowledgeBase-kgwihœ, œnameœ: œretrieve_dataœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œKnowledgeBaseœ, œidœ: œKnowledgeBase-kgwihœ, œnameœ: œretrieve_dataœ, œoutput_typesœ: [œTableœ]}",
         "target": "ChatOutput-OG4M9",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-OG4M9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-OG4M9œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
@@ -383,7 +385,9 @@
                 "info": "Message to be passed as output.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "DataFrame",
+                  "Table",
                   "Message"
                 ],
                 "list": false,
@@ -552,7 +556,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "lfx",
@@ -560,7 +564,7 @@
                   },
                   {
                     "name": "langchain_openai",
-                    "version": "1.1.12"
+                    "version": "1.1.13"
                   },
                   {
                     "name": "langchain_huggingface",
@@ -568,7 +572,7 @@
                   },
                   {
                     "name": "langchain_cohere",
-                    "version": "0.5.0"
+                    "version": "0.5.1"
                   },
                   {
                     "name": "langchain_google_genai",
@@ -597,10 +601,10 @@
                 "group_outputs": false,
                 "method": "retrieve_data",
                 "name": "retrieve_data",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }
