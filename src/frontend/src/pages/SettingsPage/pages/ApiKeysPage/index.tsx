@@ -75,7 +75,7 @@ export default function ApiKeysPage() {
     }
   }
 
-  const columnDefs = getColumnDefs();
+  const columnDefs = getColumnDefs(t);
 
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
