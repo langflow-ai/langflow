@@ -18,6 +18,21 @@ class TestFileDescriptionGeneratorComponent:
         self.mock_llm = MagicMock()
         self.component.llm = self.mock_llm
 
+    @staticmethod
+    def _make_mock_popen(stdout_data, returncode=0, stderr_data=""):
+        """Create a mock Popen that simulates subprocess behavior."""
+        import io
+
+        mock_proc = MagicMock()
+        mock_proc.stdin = MagicMock()
+        mock_proc.stdout = io.StringIO(stdout_data)
+        mock_proc.stderr = io.StringIO(stderr_data)
+        mock_proc.returncode = returncode
+        mock_proc.pid = 12345
+        mock_proc.poll = MagicMock(return_value=returncode)
+        mock_proc.wait = MagicMock(return_value=returncode)
+        return mock_proc
+
     def test_extract_file_paths_from_dataframe_column(self):
         """Test extracting file paths from DataFrame with file_path column."""
         # Create a DataFrame with file_path column (simulating Read File output)
@@ -31,24 +46,26 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        # Mock the subprocess to avoid actual execution
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(
-                returncode=0,
-                stdout=(
-                    '[{"text": "desc1", "file_path": "/path/to/file1.csv"},'
-                    ' {"text": "desc2", "file_path": "/path/to/file2.csv"}]'
-                ),
-                stderr="",
-            )
+        stdout_json = (
+            '[{"text": "desc1", "file_path": "/path/to/file1.csv"},'
+            ' {"text": "desc2", "file_path": "/path/to/file2.csv"}]'
+        )
+        mock_proc = self._make_mock_popen(stdout_json)
 
-            with patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}):
+        # Mock the subprocess to avoid actual execution
+        with (
+            patch("subprocess.Popen", return_value=mock_proc) as mock_popen,
+            patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
+        ):
                 result = self.component.generate_descriptions()
 
-        # Verify the subprocess was called with correct file paths
-        call_args = mock_run.call_args
+        # Verify the subprocess was called
+        assert mock_popen.called
+
+        # Verify stdin received the config with correct file paths
         import json
-        config = json.loads(call_args[1]["input"])
+        write_calls = mock_proc.stdin.write.call_args_list
+        config = json.loads(write_calls[0][0][0])
         assert len(config["file_paths"]) == 2
         assert "/path/to/file1.csv" in config["file_paths"]
         assert "/path/to/file2.csv" in config["file_paths"]
@@ -70,20 +87,20 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(
-                returncode=0,
-                stdout='[{"text": "legacy desc", "file_path": "/path/to/legacy_file.csv"}]',
-                stderr="",
-            )
+        mock_proc = self._make_mock_popen(
+            '[{"text": "legacy desc", "file_path": "/path/to/legacy_file.csv"}]'
+        )
 
-            with patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}):
+        with (
+            patch("subprocess.Popen", return_value=mock_proc),
+            patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
+        ):
                 _result = self.component.generate_descriptions()
 
-        # Verify the subprocess was called with correct file path
-        call_args = mock_run.call_args
+        # Verify stdin received the config with correct file path
         import json
-        config = json.loads(call_args[1]["input"])
+        write_calls = mock_proc.stdin.write.call_args_list
+        config = json.loads(write_calls[0][0][0])
         assert len(config["file_paths"]) == 1
         assert "/path/to/legacy_file.csv" in config["file_paths"]
 
@@ -97,17 +114,15 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(
-                returncode=0,
-                stdout=(
-                    '[{"text": "desc1", "file_path": "/path/to/data1.txt"},'
-                    ' {"text": "desc2", "file_path": "/path/to/data2.txt"}]'
-                ),
-                stderr="",
-            )
+        mock_proc = self._make_mock_popen(
+            '[{"text": "desc1", "file_path": "/path/to/data1.txt"},'
+            ' {"text": "desc2", "file_path": "/path/to/data2.txt"}]'
+        )
 
-            with patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}):
+        with (
+            patch("subprocess.Popen", return_value=mock_proc),
+            patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
+        ):
                 result = self.component.generate_descriptions()
 
         # Verify output
@@ -129,23 +144,21 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(
-                returncode=0,
-                stdout=(
-                    '[{"text": "desc1", "file_path": "/path/to/file1.csv"},'
-                    ' {"text": "desc2", "file_path": "/path/to/file2.csv"}]'
-                ),
-                stderr="",
-            )
+        mock_proc = self._make_mock_popen(
+            '[{"text": "desc1", "file_path": "/path/to/file1.csv"},'
+            ' {"text": "desc2", "file_path": "/path/to/file2.csv"}]'
+        )
 
-            with patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}):
+        with (
+            patch("subprocess.Popen", return_value=mock_proc),
+            patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
+        ):
                 _result = self.component.generate_descriptions()
 
         # Verify only unique file paths were processed
-        call_args = mock_run.call_args
         import json
-        config = json.loads(call_args[1]["input"])
+        write_calls = mock_proc.stdin.write.call_args_list
+        config = json.loads(write_calls[0][0][0])
         assert len(config["file_paths"]) == 2
 
     def test_empty_dataframe_returns_empty_list(self):
@@ -186,23 +199,21 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(
-                returncode=0,
-                stdout=(
-                    '[{"text": "desc1", "file_path": "/path/to/file1.csv"},'
-                    ' {"text": "desc2", "file_path": "/path/to/file2.txt"}]'
-                ),
-                stderr="",
-            )
+        mock_proc = self._make_mock_popen(
+            '[{"text": "desc1", "file_path": "/path/to/file1.csv"},'
+            ' {"text": "desc2", "file_path": "/path/to/file2.txt"}]'
+        )
 
-            with patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}):
+        with (
+            patch("subprocess.Popen", return_value=mock_proc),
+            patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
+        ):
                 _result = self.component.generate_descriptions()
 
         # Verify both file paths were processed
-        call_args = mock_run.call_args
         import json
-        config = json.loads(call_args[1]["input"])
+        write_calls = mock_proc.stdin.write.call_args_list
+        config = json.loads(write_calls[0][0][0])
         assert len(config["file_paths"]) == 2
 
     def test_subprocess_failure_raises_error(self):
@@ -214,18 +225,14 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(
-                returncode=1,
-                stdout="",
-                stderr="Error: Something went wrong",
-            )
+        mock_proc = self._make_mock_popen("", returncode=1, stderr_data="Error: Something went wrong")
 
-            with (
-                patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
-                pytest.raises(RuntimeError, match="Ingestion subprocess failed"),
-            ):
-                self.component.generate_descriptions()
+        with (
+            patch("subprocess.Popen", return_value=mock_proc),
+            patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
+            pytest.raises(RuntimeError, match="Ingestion subprocess failed"),
+        ):
+            self.component.generate_descriptions()
 
     def test_invalid_json_output_raises_error(self):
         """Test that invalid JSON from subprocess raises RuntimeError."""
@@ -236,18 +243,14 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(
-                returncode=0,
-                stdout="not valid json",
-                stderr="",
-            )
+        mock_proc = self._make_mock_popen("not valid json")
 
-            with (
-                patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
-                pytest.raises(RuntimeError, match="Invalid JSON from subprocess"),
-            ):
-                self.component.generate_descriptions()
+        with (
+            patch("subprocess.Popen", return_value=mock_proc),
+            patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
+            pytest.raises(RuntimeError, match="Invalid JSON from subprocess"),
+        ):
+            self.component.generate_descriptions()
 
     def test_dataframe_with_nan_file_paths(self):
         """Test that NaN values in file_path column are filtered out."""
@@ -262,23 +265,21 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(
-                returncode=0,
-                stdout=(
-                    '[{"text": "desc1", "file_path": "/path/to/file1.csv"},'
-                    ' {"text": "desc3", "file_path": "/path/to/file3.csv"}]'
-                ),
-                stderr="",
-            )
+        mock_proc = self._make_mock_popen(
+            '[{"text": "desc1", "file_path": "/path/to/file1.csv"},'
+            ' {"text": "desc3", "file_path": "/path/to/file3.csv"}]'
+        )
 
-            with patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}):
+        with (
+            patch("subprocess.Popen", return_value=mock_proc),
+            patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
+        ):
                 _result = self.component.generate_descriptions()
 
         # Verify only non-NaN file paths were processed
-        call_args = mock_run.call_args
         import json
-        config = json.loads(call_args[1]["input"])
+        write_calls = mock_proc.stdin.write.call_args_list
+        config = json.loads(write_calls[0][0][0])
         assert len(config["file_paths"]) == 2
         assert None not in config["file_paths"]
 
@@ -295,20 +296,17 @@ class TestFileDescriptionGeneratorComponent:
         self.component.embedding_model = "test-model"
         self.component.batch_size = 8
 
-        with patch("subprocess.run") as mock_run:
-            # Simulate subprocess returning one description per file
-            mock_run.return_value = MagicMock(
-                returncode=0,
-                stdout=(
-                    '[{"text": "This file contains hotel ratings data",'
-                    ' "file_path": "/path/to/file1.csv"},'
-                    ' {"text": "This file contains listing information",'
-                    ' "file_path": "/path/to/file2.csv"}]'
-                ),
-                stderr="",
-            )
+        mock_proc = self._make_mock_popen(
+            '[{"text": "This file contains hotel ratings data",'
+            ' "file_path": "/path/to/file1.csv"},'
+            ' {"text": "This file contains listing information",'
+            ' "file_path": "/path/to/file2.csv"}]'
+        )
 
-            with patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}):
+        with (
+            patch("subprocess.Popen", return_value=mock_proc),
+            patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
+        ):
                 result = self.component.generate_descriptions()
 
         # Verify exactly one description per file
