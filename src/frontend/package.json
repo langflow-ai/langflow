@@ -153,7 +153,7 @@
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
     "@modelcontextprotocol/server-everything": "^2026.1.14",
-    "@playwright/test": "^1.57.0",
+    "@playwright/test": "^1.59.1",
     "@storybook/addon-docs": "^10.1.0",
     "@storybook/addon-links": "^10.1.0",
     "@storybook/react": "^10.1.0",
