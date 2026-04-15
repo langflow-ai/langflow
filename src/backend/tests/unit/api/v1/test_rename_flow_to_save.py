@@ -159,3 +159,31 @@ async def test_duplicate_flow_name_regex_patterns(client: AsyncClient, logged_in
     response2 = await client.post("api/v1/flows/", json=base_flow, headers=logged_in_headers)
     assert response2.status_code == status.HTTP_201_CREATED
     assert response2.json()["name"] == "Flow (.*) [test] (1)"
+
+
+@pytest.mark.asyncio
+async def test_duplicate_flow_name_escapes_like_wildcards(client: AsyncClient, logged_in_headers):
+    """Test that SQL LIKE wildcards in flow names do not affect numbering."""
+    unrelated_flow = {
+        "name": "flow_a (7)",
+        "description": "Test flow description",
+        "data": {},
+        "is_component": False,
+    }
+    wildcard_flow = {
+        "name": "flow_%",
+        "description": "Test flow description",
+        "data": {},
+        "is_component": False,
+    }
+
+    response = await client.post("api/v1/flows/", json=unrelated_flow, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    response = await client.post("api/v1/flows/", json=wildcard_flow, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["name"] == "flow_%"
+
+    response = await client.post("api/v1/flows/", json=wildcard_flow, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["name"] == "flow_% (1)"
