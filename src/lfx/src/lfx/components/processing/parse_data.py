@@ -19,7 +19,7 @@ class ParseDataComponent(Component):
     inputs = [
         DataInput(
             name="data",
-            display_name="Data",
+            display_name="JSON",
             info="The data to convert to text.",
             is_list=True,
             required=True,
@@ -43,7 +43,7 @@ class ParseDataComponent(Component):
             method="parse_data",
         ),
         Output(
-            display_name="Data List",
+            display_name="JSON List",
             name="data_list",
             info="Data as a list of new Data, each having `text` formatted by Template",
             method="parse_data_as_list",

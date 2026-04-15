@@ -89,8 +89,8 @@ class TestStripDynamicFields:
                 [
                     "Model",
                     {
-                        "AstraAssistantManager": {
-                            "display_name": "Astra Assistant Manager",
+                        "ExampleComponent": {
+                            "display_name": "Example Component",
                             "template": {
                                 "model_name": {
                                     "value": {"data": {"timestamp": "2025-12-18 20:55:52 UTC"}},
@@ -105,7 +105,7 @@ class TestStripDynamicFields:
         result = strip_dynamic_fields_func(data)
         assert result["version"] == "1.7.0"
         assert result["metadata"]["num_modules"] == 95
-        model_value = result["entries"][0][1]["AstraAssistantManager"]["template"]["model_name"]["value"]["data"]
+        model_value = result["entries"][0][1]["ExampleComponent"]["template"]["model_name"]["value"]["data"]
         assert "timestamp" not in model_value
         assert result["entries"][0][0] == "Model"
 

@@ -22,7 +22,7 @@ describe("NodeToolbar Minimal Condition Logic", () => {
       }
       // Would show notice in real component
       console.log(
-        "Minimization only available for components with one handle or fewer.",
+        "Minimization is only available for components with one active connection or fewer.",
       );
     }, [isMinimal, showNode, setShowNode]);
 
@@ -186,7 +186,7 @@ describe("NodeToolbar Minimal Condition Logic", () => {
 
       expect(mockSetShowNode).not.toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalledWith(
-        "Minimization only available for components with one handle or fewer.",
+        "Minimization is only available for components with one active connection or fewer.",
       );
 
       consoleSpy.mockRestore();

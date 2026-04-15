@@ -22,9 +22,15 @@ from lfx.custom.utils import (
 )
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
+from lfx.interface.components import component_cache
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 from lfx.services.settings.service import SettingsService
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    code_hash_matches_any_template,
+    get_component_hash_lookups_for_validation,
+)
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
@@ -32,6 +38,7 @@ from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
     CustomComponentResponse,
+    PublicConfigResponse,
     RunResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
@@ -49,13 +56,13 @@ from langflow.services.auth.utils import (
     api_key_security,
     get_current_active_user,
     get_current_user_for_sse,
-    get_webhook_user,
+    get_optional_user,
 )
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import get_auth_service, get_session_service, get_settings_service, get_telemetry_service
 from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
@@ -380,7 +387,7 @@ async def run_flow_generator(
         )
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()
-    except (ValueError, InvalidChatInputError, SerializationError) as e:
+    except Exception as e:  # noqa: BLE001 - Catch ALL exceptions to ensure errors are propagated in streaming
         await logger.aerror(f"Error running flow: {e}")
         event_manager.on_error(data={"error": str(e)})
     finally:
@@ -521,6 +528,8 @@ async def _run_flow_internal(
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        if isinstance(exc, CustomComponentValidationError):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         if "not found" in str(exc):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
@@ -600,7 +609,9 @@ async def simplified_run_flow(
     )
 
 
-@router.post("/run/session/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
+@router.post(
+    "/run/session/{flow_id_or_name}", response_model=None, response_model_exclude_none=True, include_in_schema=False
+)
 async def simplified_run_flow_session(
     *,
     background_tasks: BackgroundTasks,
@@ -666,10 +677,11 @@ async def simplified_run_flow_session(
     )
 
 
-@router.get("/webhook-events/{flow_id_or_name}")
+@router.get("/webhook-events/{flow_id_or_name}", include_in_schema=False)
 async def webhook_events_stream(
     flow_id_or_name: str,  # noqa: ARG001 - Used by get_flow_by_id_or_endpoint_name dependency
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
+    user: Annotated[User | UserRead, Depends(get_current_user_for_sse)],
     request: Request,
 ):
     """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
@@ -680,9 +692,6 @@ async def webhook_events_stream(
     Authentication: Requires user to be logged in (via cookie) or provide API key.
     The user must own the flow to subscribe to its events.
     """
-    # Authenticate user via cookie or API key
-    user = await get_current_user_for_sse(request)
-
     # Verify user owns the flow
     if str(flow.user_id) != str(user.id):
         raise HTTPException(
@@ -752,7 +761,7 @@ async def webhook_run_flow(
     error_msg = ""
 
     # Get the appropriate user for webhook execution based on auth settings
-    webhook_user = await get_webhook_user(flow_id_or_name, request)
+    webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
 
     try:
         data = await request.body()
@@ -916,6 +925,8 @@ async def experimental_run_flow(
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
             graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
+        except CustomComponentValidationError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
@@ -937,10 +948,12 @@ async def experimental_run_flow(
 @router.post(
     "/predict/{_flow_id}",
     dependencies=[Depends(api_key_security)],
+    include_in_schema=False,
 )
 @router.post(
     "/process/{_flow_id}",
     dependencies=[Depends(api_key_security)],
+    include_in_schema=False,
 )
 async def process(_flow_id) -> None:
     """Endpoint to process an input with a given flow_id."""
@@ -954,7 +967,7 @@ async def process(_flow_id) -> None:
     )
 
 
-@router.get("/task/{_task_id}", deprecated=True)
+@router.get("/task/{_task_id}", deprecated=True, include_in_schema=False)
 async def get_task_status(_task_id: str) -> TaskStatusResponse:
     """Get the status of a task by ID (Deprecated).
 
@@ -970,6 +983,7 @@ async def get_task_status(_task_id: str) -> TaskStatusResponse:
     "/upload/{flow_id}",
     status_code=HTTPStatus.CREATED,
     deprecated=True,
+    include_in_schema=False,
 )
 async def create_upload_file(
     file: UploadFile,
@@ -985,7 +999,7 @@ async def create_upload_file(
 
         return UploadFileResponse(
             flow_id=flow_id_str,
-            file_path=file_path,
+            file_path=file_path.as_posix(),
         )
     except Exception as exc:
         await logger.aexception("Error saving file")
@@ -998,11 +1012,30 @@ async def get_version():
     return get_version_info()
 
 
-@router.post("/custom_component", status_code=HTTPStatus.OK)
+@router.post("/custom_component", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
 ) -> CustomComponentResponse:
+    settings_service = get_settings_service()
+    if not settings_service.settings.allow_custom_components:
+        # Lazily compute hash lookups if they haven't been built yet
+        # (e.g. during startup before the cache is fully populated).
+        get_component_hash_lookups_for_validation()
+        all_known = component_cache.all_known_hashes
+        if all_known is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Component templates are still initializing. Please try again in a few seconds.",
+            )
+        # Allow updating to a known server template (core component update),
+        # but block truly custom code.
+        if not code_hash_matches_any_template(raw_code.code, all_known):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Custom component creation is disabled",
+            )
+
     component = Component(_code=raw_code.code)
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
@@ -1020,7 +1053,7 @@ async def custom_component(
     return CustomComponentResponse(data=built_frontend_node, type=type_)
 
 
-@router.post("/custom_component/update", status_code=HTTPStatus.OK)
+@router.post("/custom_component/update", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,
@@ -1035,6 +1068,21 @@ async def custom_component_update(
         HTTPException: If an error occurs during component building or updating.
         SerializationError: If serialization of the updated component node fails.
     """
+    settings_service = get_settings_service()
+    if not settings_service.settings.allow_custom_components:
+        get_component_hash_lookups_for_validation()
+        all_known = component_cache.all_known_hashes
+        if all_known is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Component templates are still initializing. Please try again in a few seconds.",
+            )
+        if not code_hash_matches_any_template(code_request.code, all_known):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Custom component creation is disabled",
+            )
+
     try:
         component = Component(_code=code_request.code)
         component_node, cc_instance = build_custom_component_template(
@@ -1060,7 +1108,21 @@ async def custom_component_update(
                 if isinstance(field_dict, dict) and field_dict.get("load_from_db") and field_dict.get("value")
             ]
             if isinstance(cc_instance, Component):
-                params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
+                # ``fallback_to_env_vars=True`` so a missing variable (e.g. an
+                # imported flow referencing ``ANTHROPIC_API_KEY`` when the
+                # current user hasn't configured one) degrades to ``None``
+                # instead of raising.  This endpoint only refreshes form
+                # metadata — it does not execute the component — so we don't
+                # need the real credential here.  The runtime build path still
+                # calls ``update_params_with_load_from_db_fields`` with its own
+                # fallback setting, so this change doesn't relax execution-time
+                # requirements.
+                params = await update_params_with_load_from_db_fields(
+                    cc_instance,
+                    params,
+                    load_from_db_fields,
+                    fallback_to_env_vars=True,
+                )
                 cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
         await update_component_build_config(
@@ -1089,20 +1151,31 @@ async def custom_component_update(
         raise SerializationError.from_exception(exc, data=component_node) from exc
 
 
-@router.get("/config", dependencies=[Depends(get_current_active_user)])
-async def get_config() -> ConfigResponse:
-    """Retrieve the current application configuration settings.
+@router.get("/config")
+async def get_config(
+    user: Annotated[User | None, Depends(get_optional_user)] = None,
+) -> ConfigResponse | PublicConfigResponse:
+    """Retrieve application configuration settings.
 
-    Requires authentication to prevent exposure of sensitive configuration details.
+    Returns different configuration based on authentication status:
+    - Authenticated users: Full ConfigResponse with all settings
+    - Unauthenticated users: PublicConfigResponse with limited, safe-to-expose settings
+
+    Args:
+        user: The authenticated user, or None if unauthenticated.
 
     Returns:
-        ConfigResponse: The configuration settings of the application.
+        ConfigResponse | PublicConfigResponse: Configuration settings appropriate for the user's auth status.
 
     Raises:
         HTTPException: If an error occurs while retrieving the configuration.
     """
     try:
         settings_service: SettingsService = get_settings_service()
+
+        if user is None:
+            return PublicConfigResponse.from_settings(settings_service.settings)
+
         return ConfigResponse.from_settings(settings_service.settings, settings_service.auth_settings)
 
     except Exception as exc:

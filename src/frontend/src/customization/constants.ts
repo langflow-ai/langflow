@@ -33,11 +33,6 @@ export const customDefaultShortcuts = [
     shortcut: "mod+d",
   },
   {
-    display_name: "Component Share",
-    name: "Component Share",
-    shortcut: "mod+shift+s",
-  },
-  {
     display_name: "Docs",
     name: "Docs",
     shortcut: "mod+shift+d",
@@ -136,6 +131,11 @@ export const customDefaultShortcuts = [
     display_name: "Toggle Sidebar",
     name: "Toggle Sidebar",
     shortcut: "mod+b",
+  },
+  {
+    display_name: "AI Assistant",
+    name: "AI Assistant",
+    shortcut: "a",
   },
 ];
 export const customCodeTabsClass = {

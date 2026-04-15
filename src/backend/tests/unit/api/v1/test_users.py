@@ -129,3 +129,123 @@ async def test_delete_user(client: AsyncClient, logged_in_headers_super_user):
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, dict), "The result must be a dictionary"
     assert "detail" in result, "The result must have an 'detail' key"
+
+
+async def test_patch_user_self_deactivation_forbidden(client: AsyncClient, logged_in_headers, active_user):
+    """Test that a user cannot deactivate their own account."""
+    user_id = str(active_user.id)
+    response = await client.patch(
+        f"api/v1/users/{user_id}",
+        json={"is_active": False},
+        headers=logged_in_headers,
+    )
+    result = response.json()
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "can't deactivate your own user account" in result["detail"]
+
+
+async def test_patch_user_self_deactivation_forbidden_superuser(
+    client: AsyncClient, logged_in_headers_super_user, active_super_user
+):
+    """Test that even a superuser cannot deactivate their own account."""
+    user_id = str(active_super_user.id)
+    response = await client.patch(
+        f"api/v1/users/{user_id}",
+        json={"is_active": False},
+        headers=logged_in_headers_super_user,
+    )
+    result = response.json()
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "can't deactivate your own user account" in result["detail"]
+
+
+async def test_read_all_users_search(client: AsyncClient, logged_in_headers_super_user):
+    """Test that the search parameter filters users by username across all pages."""
+    # Create several users with distinct usernames
+    usernames = ["alice_search", "bob_search", "charlie_search"]
+    created_ids = []
+    for username in usernames:
+        response = await client.post(
+            "api/v1/users/",
+            json={"username": username, "password": "password123"},
+            headers=logged_in_headers_super_user,
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        created_ids.append(response.json()["id"])
+
+    # Search for "alice" — should return exactly one match
+    response = await client.get(
+        "api/v1/users/?search=alice",
+        headers=logged_in_headers_super_user,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["total_count"] == 1
+    assert result["users"][0]["username"] == "alice_search"
+
+    # Search for "_search" — should match all three created users
+    response = await client.get(
+        "api/v1/users/?search=_search",
+        headers=logged_in_headers_super_user,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["total_count"] == 3
+    returned_usernames = {u["username"] for u in result["users"]}
+    assert returned_usernames == set(usernames)
+
+    # Search for a non-existent username — should return zero results
+    response = await client.get(
+        "api/v1/users/?search=nonexistentuser",
+        headers=logged_in_headers_super_user,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["total_count"] == 0
+    assert result["users"] == []
+
+    # Search is case-insensitive
+    response = await client.get(
+        "api/v1/users/?search=ALICE",
+        headers=logged_in_headers_super_user,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["total_count"] == 1
+    assert result["users"][0]["username"] == "alice_search"
+
+    # Search combined with pagination: limit=1 should return 1 user but total_count=3
+    response = await client.get(
+        "api/v1/users/?search=_search&limit=1",
+        headers=logged_in_headers_super_user,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["total_count"] == 3
+    assert len(result["users"]) == 1
+
+    # Clean up
+    for user_id in created_ids:
+        await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
+
+
+async def test_patch_user_deactivate_other_user_allowed(client: AsyncClient, logged_in_headers_super_user):
+    """Test that a superuser can deactivate another user's account."""
+    # Create a new user
+    basic_case = {"username": "user_to_deactivate", "password": "password123"}
+    create_response = await client.post("api/v1/users/", json=basic_case, headers=logged_in_headers_super_user)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    user_id = create_response.json()["id"]
+
+    # Deactivate the other user
+    response = await client.patch(
+        f"api/v1/users/{user_id}",
+        json={"is_active": False},
+        headers=logged_in_headers_super_user,
+    )
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert result["is_active"] is False

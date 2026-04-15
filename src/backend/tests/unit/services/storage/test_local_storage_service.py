@@ -361,3 +361,28 @@ class TestLocalStorageServiceEdgeCases:
         # Verify all files were saved
         listed = await local_storage_service.list_files(flow_id)
         assert len(listed) == 10
+
+    async def test_concurrent_write_then_read(self, local_storage_service):
+        """Regression test for SystemError(11, 'Resource temporarily unavailable').
+
+        Under concurrent execution, aiofile/caio would leak kernel AIO contexts
+        causing EAGAIN after ~150-200 runs. This test verifies that writing a file
+        and immediately reading it back works reliably under concurrency with the
+        aiofiles backend. See https://github.com/langflow-ai/langflow/issues/12414
+        """
+        flow_id = "concurrent_rw_flow"
+        num_files = 50
+
+        async def write_then_read(i: int) -> None:
+            file_name = f"file_{i}.bin"
+            data = f"payload-{i}".encode()
+            await local_storage_service.save_file(flow_id, file_name, data)
+            retrieved = await local_storage_service.get_file(flow_id, file_name)
+            assert retrieved == data, f"file_{i} content mismatch"
+
+        async with anyio.create_task_group() as tg:
+            for i in range(num_files):
+                tg.start_soon(write_then_read, i)
+
+        listed = await local_storage_service.list_files(flow_id)
+        assert len(listed) == num_files

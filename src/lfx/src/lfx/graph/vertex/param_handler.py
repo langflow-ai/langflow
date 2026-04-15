@@ -18,6 +18,21 @@ if TYPE_CHECKING:
     from lfx.graph.vertex.base import Vertex
 
 
+def _coerce_str_value(v: Any) -> str:
+    """Coerce a value to string for str-typed fields, handling Message/Data/dict objects."""
+    if isinstance(v, str):
+        return unescape_string(v)
+    if isinstance(v, Data):
+        return unescape_string(v.get_text())
+    if isinstance(v, dict):
+        # Serialized Message or Data -- extract text from nested structure
+        data = v.get("data")
+        nested_text = data.get("text", "") if isinstance(data, dict) else ""
+        text = v.get("text", nested_text)
+        return unescape_string(text) if isinstance(text, str) else str(v)
+    return str(v)
+
+
 class ParameterHandler:
     """Handles parameter processing for vertices."""
 
@@ -191,7 +206,22 @@ class ParameterHandler:
             params = self._handle_other_direct_types(field_name, field, val, params)
 
         if field.get("load_from_db"):
-            load_from_db_fields.append(field_name)
+            # Skip load_from_db if the field itself has an incoming edge
+            has_incoming_edge = self.vertex.get_incoming_edge_by_target_param(field_name) is not None
+            # Skip credential fields when the model field has an incoming edge,
+            # because the connected model component provides its own credentials
+            is_secret = field.get("_input_type") == "SecretStrInput" or field.get("password")
+            model_has_edge = (
+                is_secret
+                and "model" in self.template_dict
+                and self.vertex.get_incoming_edge_by_target_param("model") is not None
+            )
+            # Skip credential fields when the node is in "Connect other models" mode
+            # (user chose to wire an external model instead of the built-in provider)
+            model_field = self.template_dict.get("model", {})
+            in_connection_mode = is_secret and model_field.get("_connection_mode", False)
+            if not has_incoming_edge and not model_has_edge and not in_connection_mode:
+                load_from_db_fields.append(field_name)
 
         return params, load_from_db_fields
 
@@ -266,8 +296,23 @@ class ParameterHandler:
         """Handle dictionary field type."""
         match val:
             case list():
-                params[field_name] = {k: v for item in val for k, v in item.items()}
+                # Convert list of {"key": k, "value": v} pairs to a flat dict.
+                # e.g. [{"key": "h1", "value": "v1"}, {"key": "h2", "value": "v2"}] -> {"h1": "v1", "h2": "v2"}
+                if val and all(isinstance(item, dict) and "key" in item and "value" in item for item in val):
+                    params[field_name] = {item["key"]: item["value"] for item in val}
+                else:
+                    # Merge generic list of dicts into a single dict.
+                    # e.g. [{"a": 1}, {"b": 2}] -> {"a": 1, "b": 2}
+                    params[field_name] = {k: v for item in val for k, v in item.items()}
             case dict():
+                params[field_name] = val
+            case _:
+                logger.warning(
+                    "Unexpected type %s for dict field '%s'; expected list or dict, got %r",
+                    type(val).__name__,
+                    field_name,
+                    val,
+                )
                 params[field_name] = val
         return params
 
@@ -292,7 +337,7 @@ class ParameterHandler:
             case "str":
                 match val:
                     case list():
-                        params[field_name] = [unescape_string(v) for v in val]
+                        params[field_name] = [_coerce_str_value(v) for v in val]
                     case str():
                         params[field_name] = unescape_string(val)
                     case Data():

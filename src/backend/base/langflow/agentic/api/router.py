@@ -8,10 +8,12 @@ import uuid
 from dataclasses import dataclass
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from lfx.base.models.unified_models import (
+    get_all_variables_for_provider,
     get_model_provider_variable_mapping,
+    get_provider_required_variable_keys,
     get_unified_models_detailed,
 )
 from lfx.log.logger import logger
@@ -19,22 +21,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from langflow.agentic.api.schemas import AssistantRequest
 from langflow.agentic.services.assistant_service import (
-    LANGFLOW_ASSISTANT_FLOW,
-    MAX_VALIDATION_RETRIES,
     execute_flow_with_validation,
     execute_flow_with_validation_streaming,
 )
 from langflow.agentic.services.flow_executor import execute_flow_file
+from langflow.agentic.services.flow_types import (
+    LANGFLOW_ASSISTANT_FLOW,
+    MAX_VALIDATION_RETRIES,
+)
 from langflow.agentic.services.provider_service import (
-    DEFAULT_MODELS,
     PREFERRED_PROVIDERS,
-    check_api_key,
+    get_default_model,
     get_enabled_providers_for_user,
 )
 from langflow.api.utils.core import CurrentActiveUser, DbSession
-from langflow.services.deps import get_variable_service
 
-router = APIRouter(prefix="/agentic", tags=["Agentic"])
+router = APIRouter(prefix="/agentic", tags=["Agentic"], include_in_schema=False)
 
 
 @dataclass(frozen=True)
@@ -87,27 +89,33 @@ async def _resolve_assistant_context(
     if not api_key_name:
         raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
 
-    model_name = request.model_name or DEFAULT_MODELS.get(provider) or ""
+    model_name = request.model_name or get_default_model(provider) or ""
 
-    variable_service = get_variable_service()
-    api_key = await check_api_key(variable_service, user_id, api_key_name, session)
+    # Get all configured variables for the provider
+    provider_vars = get_all_variables_for_provider(user_id, provider)
 
-    if not api_key:
+    # Validate all required variables are present
+    required_keys = get_provider_required_variable_keys(provider)
+    missing_keys = [key for key in required_keys if not provider_vars.get(key)]
+
+    if missing_keys:
         raise HTTPException(
             status_code=400,
             detail=(
-                f"{api_key_name} is required for the Langflow Assistant with {provider}. "
-                "Please configure it in Settings > Model Providers."
+                f"Missing required configuration for {provider}: {', '.join(missing_keys)}. "
+                "Please configure these in Settings > Model Providers."
             ),
         )
 
     global_vars: dict[str, str] = {
         "USER_ID": str(user_id),
         "FLOW_ID": request.flow_id,
-        api_key_name: api_key,
         "MODEL_NAME": model_name,
         "PROVIDER": provider,
     }
+
+    # Inject all provider variables into the global context
+    global_vars.update(provider_vars)
 
     session_id = request.session_id or str(uuid.uuid4())
     max_retries = request.max_retries if request.max_retries is not None else MAX_VALIDATION_RETRIES
@@ -123,14 +131,8 @@ async def _resolve_assistant_context(
 
 
 @router.post("/execute/{flow_name}")
-async def execute_named_flow(
-    flow_name: str,
-    request: AssistantRequest,
-    current_user: CurrentActiveUser,
-    session: DbSession,
-) -> dict:
+async def execute_named_flow(flow_name: str, request: AssistantRequest, current_user: CurrentActiveUser) -> dict:
     """Execute a named flow from the flows directory."""
-    variable_service = get_variable_service()
     user_id = current_user.id
 
     global_vars = {
@@ -144,10 +146,11 @@ async def execute_named_flow(
         global_vars["FIELD_NAME"] = request.field_name
 
     try:
-        openai_key = await variable_service.get_variable(user_id, "OPENAI_API_KEY", "", session)
-        global_vars["OPENAI_API_KEY"] = openai_key
+        # Check for OpenAI variables (required for some assistant features)
+        openai_vars = get_all_variables_for_provider(user_id, "OpenAI")
+        global_vars.update(openai_vars)
     except (ValueError, HTTPException):
-        logger.debug("OPENAI_API_KEY not configured, continuing without it")
+        logger.debug("OpenAI variables not configured, continuing without them")
 
     flow_filename = f"{flow_name}.json"
     # Generate unique session_id per request to isolate memory
@@ -205,7 +208,7 @@ async def check_assistant_config(
                         }
                     )
 
-            default_model = DEFAULT_MODELS.get(provider_name)
+            default_model = get_default_model(provider_name)
             if not default_model and model_list:
                 default_model = model_list[0]["name"]
 
@@ -273,6 +276,7 @@ async def assist(
 @router.post("/assist/stream")
 async def assist_stream(
     request: AssistantRequest,
+    http_request: Request,
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> StreamingResponse:
@@ -290,6 +294,7 @@ async def assist_stream(
             provider=ctx.provider,
             model_name=ctx.model_name,
             api_key_var=ctx.api_key_name,
+            is_disconnected=http_request.is_disconnected,
         ),
         media_type="text/event-stream",
         headers={

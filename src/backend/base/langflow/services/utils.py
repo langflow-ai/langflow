@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+from importlib import import_module
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
 from sqlmodel import col, select
 
-from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.base import ExternalAsyncBaseCacheService
 from langflow.services.cache.factory import CacheServiceFactory
 from langflow.services.database.models.transactions.model import TransactionTable
@@ -17,7 +18,7 @@ from langflow.services.database.models.vertex_builds.model import VertexBuildTab
 from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
 
-from .deps import get_db_service, get_service, get_settings_service, session_scope
+from .deps import get_auth_service, get_db_service, get_service, get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from lfx.services.settings.manager import SettingsService
@@ -31,12 +32,13 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
     result = await session.exec(stmt)
     user = result.first()
 
+    auth = get_auth_service()
     if user and user.is_superuser:
         return None  # Superuser already exists
 
     if user and is_default:
         if user.is_superuser:
-            if verify_password(password, user.password):
+            if auth.verify_password(password, user.password):
                 return None
             # Superuser exists but password is incorrect
             # which means that the user has changed the
@@ -54,7 +56,7 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
         return None
 
     if user:
-        if verify_password(password, user.password):
+        if auth.verify_password(password, user.password):
             msg = "User with superuser credentials exists but is not a superuser."
             raise ValueError(msg)
         msg = "Incorrect superuser credentials"
@@ -64,7 +66,7 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
         logger.debug("Creating default superuser.")
     else:
         logger.debug("Creating superuser.")
-    return await create_super_user(username, password, db=session)
+    return await auth.create_super_user(username, password, db=session)
 
 
 async def setup_superuser(settings_service: SettingsService, session: AsyncSession) -> None:
@@ -221,12 +223,14 @@ def register_all_service_factories() -> None:
     """Register all available service factories with the service manager."""
     # Import all service factories
     from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
 
     service_manager = get_service_manager()
     from lfx.services.mcp_composer import factory as mcp_composer_factory
     from lfx.services.settings import factory as settings_factory
 
     from langflow.services.auth import factory as auth_factory
+    from langflow.services.auth.service import AuthService
     from langflow.services.cache import factory as cache_factory
     from langflow.services.chat import factory as chat_factory
     from langflow.services.database import factory as database_factory
@@ -258,15 +262,60 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(task_factory.TaskServiceFactory())
     service_manager.register_factory(store_factory.StoreServiceFactory())
     service_manager.register_factory(shared_component_cache_factory.SharedComponentCacheServiceFactory())
+    # Override LFX's no-op auth service with Langflow's full JWT implementation
+    service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
     service_manager.register_factory(auth_factory.AuthServiceFactory())
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())
     service_manager.set_factory_registered()
 
 
+def register_builtin_adapters() -> None:
+    """Import built-in adapter modules so ``@register_adapter`` decorators fire.
+
+    Mirrors ``register_all_service_factories()`` for the adapter registry system.
+    Each import triggers the ``@register_adapter`` decorator at module scope,
+    registering the adapter class on the AdapterRegistry singleton.
+
+    TODO: Watsonx risks are documented here because registration is runtime-optional:
+    missing ``ibm_*`` modules should skip adapter registration, but broad
+    ``ModuleNotFoundError`` handling can also hide internal import regressions.
+    Future deployment API routing must treat "provider exists but adapter is not
+    registered in this runtime" as an explicit, deterministic error path.
+    Keep direct adapter imports limited to guarded paths and maintain CI
+    coverage that confirms Watsonx tests run (not skip) in eligible environments.
+    """
+    if not FEATURE_FLAGS.wxo_deployments:
+        logger.debug("Skipping deployment adapter registration: wxo_deployments feature flag disabled")
+        return
+
+    try:
+        import_module("langflow.services.adapters.deployment.watsonx_orchestrate")
+    except ModuleNotFoundError as exc:
+        logger.info("Skipping Watsonx Orchestrate adapter registration: %s", exc)
+
+
+def register_builtin_deployment_mappers() -> None:
+    """Import built-in deployment mapper modules so registration side effects fire."""
+    if not FEATURE_FLAGS.wxo_deployments:
+        logger.debug("Skipping deployment mapper registration: wxo_deployments feature flag disabled")
+        return
+
+    try:
+        import_module("langflow.api.v1.mappers.deployments.watsonx_orchestrate")
+    except ModuleNotFoundError as exc:
+        logger.info("Skipping Watsonx Orchestrate deployment mapper registration: %s", exc)
+
+
 async def initialize_services(*, fix_migration: bool = False) -> None:
     """Initialize all the services needed."""
+    from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
+
+    configure_windows_postgres_event_loop(source="initialize_services")
+
     # Register all service factories first
     register_all_service_factories()
+    register_builtin_adapters()
+    register_builtin_deployment_mappers()
 
     cache_service = get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
     # Test external cache connection

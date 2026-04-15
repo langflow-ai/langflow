@@ -11,7 +11,7 @@ from langflow.services.auth.utils import get_current_active_user
 from langflow.services.deps import get_telemetry_service
 from langflow.services.telemetry.schema import EmailPayload
 
-router = APIRouter(tags=["Registration API"], prefix="/registration")
+router = APIRouter(tags=["Registration API"], prefix="/registration", include_in_schema=False)
 
 
 # Data model for registration

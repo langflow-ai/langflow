@@ -1,8 +1,9 @@
 /**
  * Jest test for the cleanEdges function from utils/reactflowUtils.ts
  *
- * Tests the ModelInput type handling fix where input_types defaults to ["LanguageModel"]
- * when empty for model type fields.
+ * Tests the ModelInput type handling fix where input_types defaults based on model_type:
+ * - "embedding" -> ["Embeddings"]
+ * - "language" (default) -> ["LanguageModel"]
  */
 
 import { cloneDeep } from "lodash";
@@ -16,8 +17,25 @@ const scapeJSONParse = (str: string) => {
   }
 };
 
+const customStringify = (obj: any): string => {
+  if (typeof obj === "undefined") return "null";
+  if (obj === null || typeof obj !== "object") {
+    if (obj instanceof Date) return `"${obj.toISOString()}"`;
+    return JSON.stringify(obj);
+  }
+  if (Array.isArray(obj)) {
+    const arrayItems = obj.map((item) => customStringify(item)).join(",");
+    return `[${arrayItems}]`;
+  }
+  const keys = Object.keys(obj).sort();
+  const keyValuePairs = keys.map(
+    (key) => `"${key}":${customStringify(obj[key])}`,
+  );
+  return `{${keyValuePairs.join(",")}}`;
+};
+
 const scapedJSONStringfy = (obj: unknown) => {
-  return JSON.stringify(obj).replace(/"/g, "œ");
+  return customStringify(obj).replace(/"/g, "œ");
 };
 
 // Define minimal types needed for testing
@@ -154,13 +172,19 @@ function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
       const templateFieldType = template[field!]?.type;
       const rawInputTypes = template[field!]?.input_types;
-      // For ModelInput types, default to ["LanguageModel"] when input_types is empty
+      const modelType = (template[field!] as { model_type?: string })
+        ?.model_type;
+      // For ModelInput types, default based on model_type:
+      // - "embedding" -> ["Embeddings"]
+      // - "language" (default) -> ["LanguageModel"]
       const isModelType = templateFieldType === "model";
+      const defaultModelInputType =
+        modelType === "embedding" ? "Embeddings" : "LanguageModel";
       const inputTypes =
         rawInputTypes && rawInputTypes.length > 0
           ? rawInputTypes
           : isModelType
-            ? ["LanguageModel"]
+            ? [defaultModelInputType]
             : rawInputTypes;
       const hasProxy = template[field!]?.proxy;
       const isToolMode = template[field!]?.tool_mode;
@@ -222,18 +246,24 @@ function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const name = parsedSourceHandle.name;
 
       if (sourceNode.type === "genericNode") {
-        const output =
-          sourceNode.data.node.outputs?.find(
-            (o) => o.name === sourceNode.data.selected_output,
-          ) ??
-          sourceNode.data.node.outputs?.find(
-            (o) =>
-              (o.selected ||
-                (sourceNode.data.node.outputs?.filter(
-                  (out) => !out.group_outputs,
-                )?.length ?? 0) <= 1) &&
-              o.name === name,
-          );
+        // For components with group_outputs, each output has its own handle,
+        // so we must NOT use selected_output (which would match the wrong output).
+        const hasGroupOutputs = sourceNode.data.node.outputs?.some(
+          (o) => o.group_outputs,
+        );
+        const outputBySelectedOutput = hasGroupOutputs
+          ? undefined
+          : sourceNode.data.node.outputs?.find(
+              (o) => o.name === sourceNode.data.selected_output,
+            );
+        const outputByFallback = sourceNode.data.node.outputs?.find(
+          (o) =>
+            (o.selected ||
+              (sourceNode.data.node.outputs?.filter((out) => !out.group_outputs)
+                ?.length ?? 0) <= 1) &&
+            o.name === name,
+        );
+        const output = outputBySelectedOutput ?? outputByFallback;
 
         if (output) {
           const outputTypes =
@@ -483,6 +513,165 @@ describe("cleanEdges", () => {
       // Edge should be removed because non-model types don't get the default
       expect(result3.edges.length).toBe(0);
       expect(result3.brokenEdges.length).toBe(1);
+    });
+
+    it("should preserve edge when EmbeddingModel has empty input_types and edge expects Embeddings (LE-278)", () => {
+      // This tests the fix for embedding model input type (LE-278)
+      const sourceNode: AllNodeType = {
+        id: "EmbeddingModelComponent-123",
+        type: "genericNode",
+        data: {
+          id: "EmbeddingModelComponent-123",
+          type: "EmbeddingModelComponent",
+          selected_output: "embeddings",
+          node: {
+            display_name: "Embedding Model",
+            template: {},
+            outputs: [
+              {
+                name: "embeddings",
+                display_name: "Embedding Model",
+                types: ["Embeddings"],
+                selected: "Embeddings",
+              },
+            ],
+          },
+        },
+      };
+
+      const targetNode: AllNodeType = {
+        id: "VectorStore-456",
+        type: "genericNode",
+        data: {
+          id: "VectorStore-456",
+          type: "VectorStore",
+          node: {
+            display_name: "Vector Store",
+            template: {
+              model: {
+                type: "model",
+                model_type: "embedding", // This is the key field for embedding models
+                input_types: [], // Empty input_types - should default to ["Embeddings"]
+                display_name: "Embedding Model",
+              },
+            },
+            outputs: [],
+          },
+        },
+      };
+
+      const targetHandleWithEmbeddings = scapedJSONStringfy({
+        type: "model",
+        fieldName: "model",
+        id: "VectorStore-456",
+        inputTypes: ["Embeddings"],
+      });
+
+      const sourceHandleStr = scapedJSONStringfy({
+        id: "EmbeddingModelComponent-123",
+        name: "embeddings",
+        output_types: ["Embeddings"],
+        dataType: "EmbeddingModelComponent",
+      });
+
+      const edge: EdgeType = {
+        id: "edge-1",
+        source: "EmbeddingModelComponent-123",
+        target: "VectorStore-456",
+        sourceHandle: sourceHandleStr,
+        targetHandle: targetHandleWithEmbeddings,
+      };
+
+      const result = cleanEdges([sourceNode, targetNode], [edge]);
+
+      // Edge should be preserved because cleanEdges now defaults to ["Embeddings"] for embedding model_type
+      expect(result.edges.length).toBe(1);
+      expect(result.brokenEdges.length).toBe(0);
+    });
+  });
+
+  describe("group_outputs edge preservation", () => {
+    it("should preserve edge from non-selected output when component has group_outputs", () => {
+      // Bug: When a component has group_outputs: true and selected_output is set to one output,
+      // cleanEdges incorrectly uses selected_output to look up ALL edges, causing edges
+      // from non-selected outputs to be removed (name mismatch).
+      const sourceNode: AllNodeType = {
+        id: "AgentSplit-1",
+        type: "genericNode",
+        data: {
+          id: "AgentSplit-1",
+          type: "AgentWithSplitOutputs",
+          selected_output: "progress_output",
+          node: {
+            display_name: "Agent with Split Outputs",
+            template: {},
+            outputs: [
+              {
+                name: "progress_output",
+                types: ["Message"],
+                selected: "Message",
+                group_outputs: true,
+              },
+              {
+                name: "result_output",
+                types: ["Message"],
+                selected: "Message",
+                group_outputs: true,
+              },
+            ],
+          },
+        },
+      };
+
+      const targetNode: AllNodeType = {
+        id: "TypeConvert-1",
+        type: "genericNode",
+        data: {
+          id: "TypeConvert-1",
+          type: "TypeConverterComponent",
+          node: {
+            display_name: "Type Convert",
+            template: {
+              input_value: {
+                type: "other",
+                input_types: ["Message"],
+              },
+            },
+            outputs: [],
+          },
+        },
+      };
+
+      // Edge connects result_output (NOT the selected_output) to Type Convert
+      const sourceHandleStr = scapedJSONStringfy({
+        dataType: "AgentWithSplitOutputs",
+        id: "AgentSplit-1",
+        name: "result_output",
+        output_types: ["Message"],
+      });
+
+      const targetHandleStr = scapedJSONStringfy({
+        fieldName: "input_value",
+        id: "TypeConvert-1",
+        inputTypes: ["Message"],
+        type: "other",
+      });
+
+      const edge: EdgeType = {
+        id: "edge-result-to-convert",
+        source: "AgentSplit-1",
+        target: "TypeConvert-1",
+        sourceHandle: sourceHandleStr,
+        targetHandle: targetHandleStr,
+      };
+
+      const result = cleanEdges([sourceNode, targetNode], [edge]);
+
+      // Edge MUST be preserved — the bug was that selected_output: "progress_output"
+      // caused cleanEdges to look up "progress_output" instead of "result_output",
+      // resulting in a name mismatch and edge removal
+      expect(result.edges.length).toBe(1);
+      expect(result.brokenEdges.length).toBe(0);
     });
   });
 

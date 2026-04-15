@@ -1,0 +1,82 @@
+"""Constants, enums, and configuration values for the Watsonx Orchestrate adapter."""
+
+from __future__ import annotations
+
+import os
+import re
+from enum import Enum
+
+from lfx.services.adapters.deployment.schema import DeploymentType
+
+from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
+
+SUPPORTED_ADAPTER_DEPLOYMENT_TYPES: frozenset[DeploymentType] = frozenset({DeploymentType.AGENT})
+CREATE_MAX_RETRIES = 3
+UPDATE_MAX_RETRIES = 3
+ROLLBACK_MAX_RETRIES = 5
+RETRY_INITIAL_DELAY_SECONDS = 0.5
+WXO_SANITIZE_RE = re.compile(r"[^a-zA-Z0-9_]")
+WXO_TRANSLATE = str.maketrans({" ": "_", "-": "_"})
+
+ERROR_PREFIX = "An error occurred while"
+ERROR_SUFFIX_IN = "in Watsonx Orchestrate."
+
+# The IAM endpoints below generate
+# authentication tokens for production
+# wxO environments and are documented publicly:
+# Documentation: https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-generating-jwt-aws
+IBM_IAM_MCSP_PRODUCTION_URL = "https://iam.platform.saas.ibm.com"
+# Documentation: https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-generating-access-token-cloud
+IBM_IAM_PRODUCTION_URL = "https://iam.cloud.ibm.com"
+# Non-production wxO environments use different
+# IAM URLs, which are not documented publicly
+# and must not be used publicly in plain text.
+
+
+class WxOAuthURL(str, Enum):
+    """IAM token endpoint URLs used to authenticate against Watsonx Orchestrate.
+
+    Non-production wxO environments use a different IAM URL than
+    production environments. These cannot be exposed in plain text so
+    environment variables are surfaced instead.
+    Set ``IBM_IAM_MCSP_DEV_URL_OVERRIDE`` for AWS wxO environments,
+    ``IBM_IAM_DEV_URL_OVERRIDE`` for IBM Cloud.
+    When unset, the production URLs are used
+    ("https://iam.platform.saas.ibm.com" and "https://iam.cloud.ibm.com" respectively).
+
+    Please note:
+    - The stated environment variables are solely for
+    internal testing and development purposes,
+    and must be left unset when shipping Langflow
+    for general availability.
+    - The IAM URLs cannot be changed during runtime,
+    and Langflow does not dynamically resolve the IAM URL based on
+    the environment of a given wxO tenant. It simply uses the
+    default production IAM URLs, or the environment variable
+    overrides if set.
+    """
+
+    MCSP = os.getenv("IBM_IAM_MCSP_DEV_URL_OVERRIDE", "").strip() or IBM_IAM_MCSP_PRODUCTION_URL
+    IBM_IAM = os.getenv("IBM_IAM_DEV_URL_OVERRIDE", "").strip() or IBM_IAM_PRODUCTION_URL
+
+
+class ErrorPrefix(str, Enum):
+    CREATE = f"{ERROR_PREFIX} creating a deployment {ERROR_SUFFIX_IN}"
+    LIST = f"{ERROR_PREFIX} listing deployments {ERROR_SUFFIX_IN}"
+    GET = f"{ERROR_PREFIX} getting a deployment {ERROR_SUFFIX_IN}"
+    UPDATE = f"{ERROR_PREFIX} updating a deployment {ERROR_SUFFIX_IN}"
+    REDEPLOY = f"{ERROR_PREFIX} redeploying a deployment {ERROR_SUFFIX_IN}"
+    CLONE = f"{ERROR_PREFIX} cloning a deployment {ERROR_SUFFIX_IN}"
+    DELETE = f"{ERROR_PREFIX} deleting a deployment {ERROR_SUFFIX_IN}"
+    HEALTH = f"{ERROR_PREFIX} getting a deployment health {ERROR_SUFFIX_IN}"
+    CREATE_CONFIG = f"{ERROR_PREFIX} creating a deployment config {ERROR_SUFFIX_IN}"
+    LIST_CONFIGS = f"{ERROR_PREFIX} listing deployment configs {ERROR_SUFFIX_IN}"
+    GET_CONFIG = f"{ERROR_PREFIX} getting a deployment config {ERROR_SUFFIX_IN}"
+    UPDATE_CONFIG = f"{ERROR_PREFIX} updating a deployment config {ERROR_SUFFIX_IN}"
+    DELETE_CONFIG = f"{ERROR_PREFIX} deleting a deployment config {ERROR_SUFFIX_IN}"
+    LIST_LLMS = f"{ERROR_PREFIX} listing deployment LLMs {ERROR_SUFFIX_IN}"
+    CREATE_EXECUTION = f"{ERROR_PREFIX} creating a deployment execution {ERROR_SUFFIX_IN}"
+    GET_EXECUTION = f"{ERROR_PREFIX} getting a deployment execution {ERROR_SUFFIX_IN}"
+
+
+WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY = DeploymentProviderKey.WATSONX_ORCHESTRATE.value

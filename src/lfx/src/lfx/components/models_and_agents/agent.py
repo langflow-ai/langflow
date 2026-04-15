@@ -16,9 +16,10 @@ from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.unified_models import (
     get_language_model_options,
     get_llm,
-    update_model_options_in_build_config,
+    handle_model_input_update,
 )
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
+from lfx.components.agentics.helpers.model_config import validate_model_selection
 from lfx.components.helpers import CurrentDateComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit
@@ -59,7 +60,7 @@ class AgentComponent(ToolCallingAgentComponent):
         SecretStrInput(
             name="api_key",
             display_name="API Key",
-            info="Model Provider API key",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
             real_time_refresh=True,
             advanced=True,
         ),
@@ -69,6 +70,7 @@ class AgentComponent(ToolCallingAgentComponent):
             info="The base URL of the API (IBM watsonx.ai only)",
             options=IBM_WATSONX_URLS,
             value=IBM_WATSONX_URLS[0],
+            combobox=True,
             show=False,
             real_time_refresh=True,
         ),
@@ -184,21 +186,73 @@ class AgentComponent(ToolCallingAgentComponent):
         Output(name="response", display_name="Response", method="message_response"),
     ]
 
+    def _resolve_selected_model(self):
+        """Resolve the selected model, including legacy agent_llm/model_name inputs."""
+        try:
+            from langchain_core.language_models import BaseLanguageModel
+
+            if isinstance(self.model, BaseLanguageModel):
+                return self.model
+        except ImportError:
+            pass
+
+        if isinstance(self.model, list) and self.model:
+            return self.model
+
+        legacy_provider = getattr(self, "agent_llm", None)
+        legacy_model_name = getattr(self, "model_name", None)
+        if not legacy_provider or not legacy_model_name:
+            return self.model
+
+        options = get_language_model_options(user_id=self.user_id)
+        for option in options:
+            if option.get("provider") == legacy_provider and option.get("name") == legacy_model_name:
+                return [option]
+
+        return [
+            {
+                "name": legacy_model_name,
+                "provider": legacy_provider,
+                "metadata": {},
+            }
+        ]
+
+    def _get_max_tokens_value(self):
+        """Return the user-supplied max_tokens or None when unset/zero."""
+        val = getattr(self, "max_tokens", None)
+        if val in {"", 0}:
+            return None
+        return val
+
+    def _get_llm(self):
+        """Override parent to include max_tokens from the Agent's input field."""
+        return get_llm(
+            model=self.model,
+            user_id=self.user_id,
+            api_key=getattr(self, "api_key", None),
+            max_tokens=self._get_max_tokens_value(),
+            watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
+            watsonx_project_id=getattr(self, "project_id", None),
+        )
+
     async def get_agent_requirements(self):
         """Get the agent requirements for the agent."""
         from langchain_core.tools import StructuredTool
 
-        max_tokens_val = getattr(self, "max_tokens", None)
-        if max_tokens_val in {"", 0}:
-            max_tokens_val = None
-        llm_model = get_llm(
-            model=self.model,
-            user_id=self.user_id,
-            api_key=self.api_key,
-            max_tokens=max_tokens_val,
-            watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
-            watsonx_project_id=getattr(self, "project_id", None),
-        )
+        selected_model = self._resolve_selected_model()
+        try:
+            from langchain_core.language_models import BaseLanguageModel
+
+            is_connected_model = isinstance(selected_model, BaseLanguageModel)
+        except ImportError:
+            is_connected_model = False
+
+        if not is_connected_model:
+            validate_model_selection(selected_model)
+
+        # Ensure _get_llm() uses the resolved model (e.g. from legacy agent_llm/model_name)
+        self.model = selected_model
+        llm_model = self._get_llm()
         if llm_model is None:
             msg = "No language model selected. Please choose a model to proceed."
             raise ValueError(msg)
@@ -467,39 +521,18 @@ class AgentComponent(ToolCallingAgentComponent):
     ) -> dotdict:
         # Update model options with caching (for all field changes)
         # Agents require tool calling, so filter for only tool-calling capable models
-        def get_tool_calling_model_options(user_id=None):
-            return get_language_model_options(user_id=user_id, tool_calling=True)
-
-        build_config = update_model_options_in_build_config(
+        build_config = handle_model_input_update(
             component=self,
             build_config=dict(build_config),
-            cache_key_prefix="language_model_options_tool_calling",
-            get_options_func=get_tool_calling_model_options,
-            field_name=field_name,
             field_value=field_value,
+            field_name=field_name,
+            cache_key_prefix="language_model_options_tool_calling",
+            get_options_func=lambda user_id=None: get_language_model_options(user_id=user_id, tool_calling=True),
         )
         build_config = dotdict(build_config)
 
-        # Iterate over all providers in the MODEL_PROVIDERS_DICT
         if field_name == "model":
-            # Update input types for all fields
             build_config = self.update_input_types(build_config)
-
-            # Show/hide provider-specific fields based on selected model
-            # Get current model value - from field_value if model is being changed, otherwise from build_config
-            current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
-            if isinstance(current_model_value, list) and len(current_model_value) > 0:
-                selected_model = current_model_value[0]
-                provider = selected_model.get("provider", "")
-
-                # Show/hide watsonx fields
-                is_watsonx = provider == "IBM WatsonX"
-                if "base_url_ibm_watsonx" in build_config:
-                    build_config["base_url_ibm_watsonx"]["show"] = is_watsonx
-                    build_config["base_url_ibm_watsonx"]["required"] = is_watsonx
-                if "project_id" in build_config:
-                    build_config["project_id"]["show"] = is_watsonx
-                    build_config["project_id"]["required"] = is_watsonx
 
             # Validate required keys
             default_keys = [

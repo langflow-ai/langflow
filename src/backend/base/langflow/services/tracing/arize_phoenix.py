@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_core.callbacks.base import BaseCallbackHandler
     from lfx.graph.vertex.base import Vertex
     from opentelemetry.propagators.textmap import CarrierT
     from opentelemetry.util.types import AttributeValue

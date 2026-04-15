@@ -1,28 +1,33 @@
-import contextlib
+import asyncio
 import json
+from collections import defaultdict
 from io import BytesIO
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.base.mcp.util import update_tools
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v2.files import (
     MCP_SERVERS_FILE,
-    delete_file,
     download_file,
     edit_file_name,
     get_file_by_name,
     get_mcp_file,
     upload_user_file,
 )
+from langflow.api.v2.schemas import MCPServerConfig
 from langflow.logging import logger
 from langflow.services.deps import get_settings_service, get_shared_component_cache_service, get_storage_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["MCP"], prefix="/mcp")
+
+# Per-user locks to serialize update_server() calls and prevent lost updates
+# from the non-atomic read-modify-write cycle on the MCP config file.
+_update_server_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
 
 async def upload_server_config(
@@ -73,12 +78,18 @@ async def get_server_list(
             return_content=True,
         )
     except (FileNotFoundError, HTTPException):
-        # Storage file missing - DB entry may be stale. Remove it and recreate.
         if server_config_file:
-            with contextlib.suppress(Exception):
-                await delete_file(server_config_file.id, current_user, session, storage_service)
+            # DB record exists but storage file is missing — likely a transient state
+            # during a concurrent update_server() write cycle. Return empty config
+            # WITHOUT persisting to avoid permanently wiping existing servers.
+            logger.warning(
+                "MCP config file missing from storage for user %s (transient). "
+                "Returning empty config without persisting.",
+                current_user.id,
+            )
+            return {"mcpServers": {}}
 
-        # Create a fresh empty config
+        # No DB record and no storage file — genuinely first-time use. Create empty config.
         await upload_server_config(
             {"mcpServers": {}},
             current_user,
@@ -163,9 +174,6 @@ async def get_servers(
 
                 from langflow.services.auth import utils as auth_utils
                 from langflow.services.database.models.variable.model import Variable
-                from langflow.services.deps import get_settings_service
-
-                settings_service = get_settings_service()
 
                 # Load variables directly from database and decrypt ALL types (including CREDENTIAL)
                 stmt = select(Variable).where(Variable.user_id == current_user.id)
@@ -177,9 +185,7 @@ async def get_servers(
                         # Prior to v1.8, both Generic and Credential variables were encrypted.
                         # As such, must attempt to decrypt both types to ensure backwards-compatibility.
                         try:
-                            decrypted_value = auth_utils.decrypt_api_key(
-                                variable.value, settings_service=settings_service
-                            )
+                            decrypted_value = auth_utils.decrypt_api_key(variable.value)
                             request_variables[variable.name] = decrypted_value
                         except Exception as e:  # noqa: BLE001
                             await logger.aerror(
@@ -275,56 +281,51 @@ async def update_server(
     check_existing: bool = False,
     delete: bool = False,
 ):
-    server_list = await get_server_list(current_user, session, storage_service, settings_service)
+    async with _update_server_locks[str(current_user.id)]:
+        server_list = await get_server_list(current_user, session, storage_service, settings_service)
 
-    # Validate server name
-    if check_existing and server_name in server_list["mcpServers"]:
-        raise HTTPException(status_code=500, detail="Server already exists.")
+        # Validate server name
+        if check_existing and server_name in server_list["mcpServers"]:
+            raise HTTPException(status_code=500, detail="Server already exists.")
 
-    # Handle the delete case
-    if delete:
-        if server_name in server_list["mcpServers"]:
-            del server_list["mcpServers"][server_name]
+        # Handle the delete case
+        if delete:
+            if server_name in server_list["mcpServers"]:
+                del server_list["mcpServers"][server_name]
+            else:
+                raise HTTPException(status_code=500, detail="Server not found.")
         else:
-            raise HTTPException(status_code=500, detail="Server not found.")
-    else:
-        server_list["mcpServers"][server_name] = server_config
+            server_list["mcpServers"][server_name] = server_config
 
-    # Remove the existing file
-    mcp_file = await get_mcp_file(current_user)
-    server_config_file = await get_file_by_name(mcp_file, current_user, session)
+        # Upload the updated server configuration
+        # (upload_user_file handles replacing the existing MCP file atomically)
+        await upload_server_config(
+            server_list, current_user, session, storage_service=storage_service, settings_service=settings_service
+        )
 
-    # Now we are ready to delete it and reprocess
-    if server_config_file:
-        await delete_file(server_config_file.id, current_user, session, storage_service)
+        shared_component_cache_service = get_shared_component_cache_service()
+        # Clear the servers cache
+        servers = safe_cache_get(shared_component_cache_service, "servers", {})
+        if isinstance(servers, dict):
+            if server_name in servers:
+                del servers[server_name]
+            safe_cache_set(shared_component_cache_service, "servers", servers)
 
-    # Upload the updated server configuration
-    await upload_server_config(
-        server_list, current_user, session, storage_service=storage_service, settings_service=settings_service
-    )
-
-    shared_component_cache_service = get_shared_component_cache_service()
-    # Clear the servers cache
-    servers = safe_cache_get(shared_component_cache_service, "servers", {})
-    if isinstance(servers, dict):
-        if server_name in servers:
-            del servers[server_name]
-        safe_cache_set(shared_component_cache_service, "servers", servers)
-
-    return await get_server(
-        server_name,
-        current_user,
-        session,
-        storage_service,
-        settings_service,
-        server_list=server_list,
-    )
+        return await get_server(
+            server_name,
+            current_user,
+            session,
+            storage_service,
+            settings_service,
+            server_list=server_list,
+        )
 
 
 @router.post("/servers/{server_name}")
 async def add_server(
     server_name: str,
-    server_config: dict,
+    *,
+    server_config: Annotated[MCPServerConfig, Body()],
     current_user: CurrentActiveUser,
     session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
@@ -332,7 +333,7 @@ async def add_server(
 ):
     return await update_server(
         server_name,
-        server_config,
+        server_config.model_dump(exclude_unset=True),
         current_user,
         session,
         storage_service,
@@ -344,7 +345,8 @@ async def add_server(
 @router.patch("/servers/{server_name}")
 async def update_server_endpoint(
     server_name: str,
-    server_config: dict,
+    *,
+    server_config: Annotated[MCPServerConfig, Body()],
     current_user: CurrentActiveUser,
     session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
@@ -352,7 +354,7 @@ async def update_server_endpoint(
 ):
     return await update_server(
         server_name,
-        server_config,
+        server_config.model_dump(exclude_unset=True),
         current_user,
         session,
         storage_service,
