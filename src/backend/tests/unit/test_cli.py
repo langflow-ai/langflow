@@ -1,11 +1,11 @@
 import socket
 import threading
 import time
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import typer
-from langflow.__main__ import _create_superuser, app, get_number_of_workers
+from langflow.__main__ import _create_superuser, api_key_banner, app, get_number_of_workers
 from lfx.services import deps
 
 
@@ -145,6 +145,101 @@ class TestSuperuserCommand:
                 await _create_superuser("newuser", "newpass", "invalid-token")
 
             assert exc_info.value.exit_code == 1
+
+
+class TestApiKeyBanner:
+    """Tests for api_key_banner clipboard fallback (headless environments)."""
+
+    def _make_key(self, value: str = "sk-test-1234"):
+        mock = MagicMock()
+        mock.api_key = value
+        return mock
+
+    def test_clipboard_available_copies_key(self):
+        """When pyperclip works, key is copied and clipboard hint is shown."""
+        key = self._make_key()
+        with (
+            patch("pyperclip.copy") as mock_copy,
+            patch("langflow.__main__.Console") as mock_console_cls,
+        ):
+            mock_console = MagicMock()
+            mock_console_cls.return_value = mock_console
+
+            api_key_banner(key)
+
+            mock_copy.assert_called_once_with(key.api_key)
+            printed = mock_console.print.call_args[0][0]
+            assert "clipboard" in str(printed).lower()
+            assert key.api_key in str(printed)
+
+    def test_clipboard_unavailable_still_prints_key(self):
+        """When pyperclip raises (headless/Docker), key is still displayed on stdout."""
+        key = self._make_key()
+        with (
+            patch("pyperclip.copy", side_effect=Exception("No clipboard mechanism")),
+            patch("langflow.__main__.Console") as mock_console_cls,
+        ):
+            mock_console = MagicMock()
+            mock_console_cls.return_value = mock_console
+
+            # Must NOT raise
+            api_key_banner(key)
+
+            mock_console.print.assert_called_once()
+            printed = mock_console.print.call_args[0][0]
+            assert key.api_key in str(printed)
+
+    def test_clipboard_unavailable_shows_fallback_hint(self):
+        """When clipboard is unavailable, hint text must not mention clipboard."""
+        key = self._make_key()
+        with (
+            patch("pyperclip.copy", side_effect=Exception("No clipboard mechanism")),
+            patch("langflow.__main__.Console") as mock_console_cls,
+        ):
+            mock_console = MagicMock()
+            mock_console_cls.return_value = mock_console
+
+            api_key_banner(key)
+
+            printed = str(mock_console.print.call_args[0][0])
+            assert "clipboard" not in printed.lower()
+            assert "securely" in printed.lower()
+
+    def test_unicode_error_fallback_with_clipboard(self):
+        """On UnicodeEncodeError, logger fallback includes clipboard message when available."""
+        key = self._make_key()
+        with (
+            patch("pyperclip.copy"),
+            patch("langflow.__main__.Console") as mock_console_cls,
+            patch("langflow.__main__.logger") as mock_logger,
+        ):
+            mock_console = MagicMock()
+            mock_console.print.side_effect = UnicodeEncodeError("utf-8", b"", 0, 1, "reason")
+            mock_console_cls.return_value = mock_console
+
+            api_key_banner(key)
+
+            logged_messages = " ".join(str(c) for c in mock_logger.info.call_args_list)
+            assert key.api_key in logged_messages
+            assert "clipboard" in logged_messages.lower()
+
+    def test_unicode_error_fallback_without_clipboard(self):
+        """On UnicodeEncodeError, logger fallback omits clipboard message when unavailable."""
+        key = self._make_key()
+        with (
+            patch("pyperclip.copy", side_effect=Exception("No clipboard mechanism")),
+            patch("langflow.__main__.Console") as mock_console_cls,
+            patch("langflow.__main__.logger") as mock_logger,
+        ):
+            mock_console = MagicMock()
+            mock_console.print.side_effect = UnicodeEncodeError("utf-8", b"", 0, 1, "reason")
+            mock_console_cls.return_value = mock_console
+
+            api_key_banner(key)
+
+            logged_messages = " ".join(str(c) for c in mock_logger.info.call_args_list)
+            assert key.api_key in logged_messages
+            assert "clipboard" not in logged_messages.lower()
 
 
 def test_get_number_of_workers():
