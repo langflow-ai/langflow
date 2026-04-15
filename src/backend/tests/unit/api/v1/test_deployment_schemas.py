@@ -489,12 +489,12 @@ class TestDeploymentConfigListResponsePagination:
 # ---------------------------------------------------------------------------
 
 
-class TestExecutionCreateRequest:
+class TestRunCreateRequest:
     def test_rejects_extra_fields(self):
-        from langflow.api.v1.schemas.deployments import ExecutionCreateRequest
+        from langflow.api.v1.schemas.deployments import RunCreateRequest
 
         with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
-            ExecutionCreateRequest(provider_data={"input": "x"}, unknown_field="y")
+            RunCreateRequest(provider_data={"input": "x"}, unknown_field="y")
 
 
 # ---------------------------------------------------------------------------
@@ -502,12 +502,12 @@ class TestExecutionCreateRequest:
 # ---------------------------------------------------------------------------
 
 
-class TestExecutionCreateResponse:
+class TestRunCreateResponse:
     def test_required_deployment_id(self):
-        from langflow.api.v1.schemas.deployments import ExecutionCreateResponse
+        from langflow.api.v1.schemas.deployments import RunCreateResponse
 
         with pytest.raises(ValidationError, match="deployment_id"):
-            ExecutionCreateResponse()
+            RunCreateResponse()
 
 
 # ---------------------------------------------------------------------------
