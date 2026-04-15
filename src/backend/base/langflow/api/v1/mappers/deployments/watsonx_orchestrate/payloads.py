@@ -17,6 +17,8 @@ from pydantic import (
 )
 
 from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
+from langflow.api.v1.schemas.deployments import ValidatedUrl
+from langflow.services.database.models.deployment_provider_account.utils import validate_provider_url
 
 WatsonxApiLlmName = Annotated[
     str,
@@ -35,6 +37,49 @@ NormalizedStr = Annotated[
         min_length=1,
     ),
 ]
+
+
+class WatsonxApiProviderAccountCreate(BaseModel):
+    """WXO provider-account provider_data contract at API boundary.
+
+    This schema is owned by the WXO mapper and parsed once to validate the
+    provider-account provider_data payload before URL policy checks, credential
+    verification payload shaping, and DB field extraction.
+    """
+
+    model_config = {"extra": "forbid"}
+
+    url: ValidatedUrl
+    tenant_id: Annotated[str | None, StringConstraints(strip_whitespace=True, min_length=1)] = None
+    api_key: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class WatsonxApiProviderAccountUpdate(BaseModel):
+    """WXO mutable provider-account fields for update requests.
+
+    Only credential rotation is supported after create. URL and tenant are
+    immutable and therefore intentionally absent from this schema.
+    """
+
+    model_config = {"extra": "forbid"}
+
+    api_key: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class WatsonxApiProviderAccountResponse(BaseModel):
+    """WXO provider-account provider_data contract for API responses."""
+
+    model_config = {"extra": "forbid"}
+
+    url: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    tenant_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+    @field_validator("url")
+    @classmethod
+    def validate_url_without_rewriting(cls, value: str) -> str:
+        # Validate URL policy but preserve stored representation.
+        validate_provider_url(value, field_name="url")
+        return value
 
 
 class WatsonxApiFlowArtifactProviderData(CreateFlowArtifactProviderData):
@@ -509,25 +554,17 @@ class WatsonxApiSnapshotListProviderData(BaseModel):
 
 
 class WatsonxApiDeploymentFlowVersionItemData(BaseModel):
-    """API-facing provider_data contract for deployment flow-version list items."""
+    """API-facing provider_data contract for deployment flow-version list items.
+
+    ``tool_name`` is required (non-empty) because wxO snapshots always carry a
+    name.  Missing or blank names indicate corrupt provider data and the mapper
+    intentionally rejects them with a 500 so the issue surfaces immediately.
+    """
 
     model_config = {"extra": "forbid"}
 
-    app_ids: list[str] = Field(default_factory=list)
-    tool_name: str | None = None
-
-    @field_validator("app_ids", mode="before")
-    @classmethod
-    def normalize_app_ids(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        return [str(app_id).strip() for app_id in value if str(app_id).strip()]
-
-    @field_validator("tool_name", mode="before")
-    @classmethod
-    def normalize_optional_tool_name(cls, value: Any) -> str | None:
-        normalized = str(value or "").strip()
-        return normalized or None
+    app_ids: list[NormalizedStr] = Field(default_factory=list)
+    tool_name: NormalizedStr
 
 
 class WatsonxApiRenameToolOperation(BaseModel):
@@ -538,6 +575,25 @@ class WatsonxApiRenameToolOperation(BaseModel):
     op: Literal["rename_tool"]
     flow_version_id: str = Field(min_length=1)
     tool_name: NormalizedStr = Field(min_length=1)
+
+
+class WatsonxApiExecutionInput(BaseModel):
+    """API-facing provider_data payload for POST deployment runs."""
+
+    model_config = {"extra": "forbid"}
+
+    input: str | None = None
+    message: dict[str, Any] | None = None
+    thread_id: str | None = None
+
+    @model_validator(mode="after")
+    def validate_input_or_message_exclusive(self) -> WatsonxApiExecutionInput:
+        has_input = self.input is not None
+        has_message = self.message is not None
+        if has_input == has_message:
+            msg = "provider_data must include exactly one of 'input' or 'message'."
+            raise ValueError(msg)
+        return self
 
 
 class _WatsonxApiAgentExecutionResultBase(BaseModel):
@@ -551,7 +607,7 @@ class _WatsonxApiAgentExecutionResultBase(BaseModel):
 
     model_config = {"extra": "allow"}
 
-    execution_id: str | None = None
+    id: str | None = None
     agent_id: str | None = None
     thread_id: str | None = None
     status: str | None = None
@@ -562,7 +618,7 @@ class _WatsonxApiAgentExecutionResultBase(BaseModel):
     cancelled_at: str | None = None
     last_error: str | None = None
 
-    @field_validator("execution_id", "agent_id", mode="before")
+    @field_validator("id", "agent_id", mode="before")
     @classmethod
     def normalize_optional_id(cls, value: Any) -> str | None:
         normalized = str(value or "").strip()

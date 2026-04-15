@@ -183,3 +183,34 @@ class TestPathValidation:
 
         # Resolved path should start with resolved base
         assert str(resolved).startswith(str(resolved_base))
+
+    @pytest.mark.asyncio
+    async def test_rejects_symlink_to_prefix_collision_sibling(self, tmp_path):
+        """Regression for CWE-22: symlink resolving to a sibling dir that is a prefix match.
+
+        If base_dir is /tmp/flows/<uuid>, a symlink inside it that resolves to
+        /tmp/flows/<uuid>-evil/stolen.json must be rejected. Without the trailing
+        separator in the startswith check, the old code would accept it.
+        """
+        from uuid import UUID
+
+        mock_service = MagicMock(spec=StorageService)
+        mock_service.data_dir = anyio.Path(tmp_path)
+
+        user_id = UUID("00000000-0000-0000-0000-000000000001")
+        base_dir = tmp_path / "flows" / str(user_id)
+        base_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create a sibling directory whose name is a prefix-match of base_dir
+        evil_dir = tmp_path / "flows" / (str(user_id) + "-evil")
+        evil_dir.mkdir(parents=True, exist_ok=True)
+        evil_file = evil_dir / "stolen.json"
+        evil_file.write_text("stolen")
+
+        # Symlink inside user's dir that points to the evil sibling file
+        symlink = base_dir / "link"
+        symlink.symlink_to(evil_file)
+
+        with pytest.raises(HTTPException) as exc_info:
+            _get_safe_flow_path("link", user_id, mock_service)
+        assert exc_info.value.status_code == 400

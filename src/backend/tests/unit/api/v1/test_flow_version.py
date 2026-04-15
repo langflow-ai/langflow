@@ -1433,3 +1433,22 @@ async def test_get_single_version_sync_prunes_stale_attachment(client: AsyncClie
         resp = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json()["is_deployed"] is False
+
+
+async def test_get_flow_version_entries_by_ids_rejects_oversized_batch():
+    from unittest.mock import AsyncMock
+    from uuid import uuid4
+
+    from langflow.services.database.models.flow_version.crud import get_flow_version_entries_by_ids
+
+    session = AsyncMock()
+    version_ids = [uuid4() for _ in range(51)]
+
+    with pytest.raises(ValueError, match="version_ids supports at most 50 values"):
+        await get_flow_version_entries_by_ids(
+            session=session,
+            version_ids=version_ids,
+            user_id=uuid4(),
+        )
+
+    session.exec.assert_not_called()

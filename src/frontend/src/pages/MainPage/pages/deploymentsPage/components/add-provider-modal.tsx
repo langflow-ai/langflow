@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -53,8 +54,10 @@ export default function AddProviderModal({
       await createProviderAccount({
         name: credentials.name.trim(),
         provider_key: credentials.provider_key,
-        url: credentials.url.trim(),
-        provider_data: { api_key: credentials.api_key.trim() },
+        provider_data: {
+          url: credentials.url.trim(),
+          api_key: credentials.api_key.trim(),
+        },
       });
       setCredentials(EMPTY_CREDENTIALS);
       setOpen(false);
@@ -71,17 +74,43 @@ export default function AddProviderModal({
         <DialogTitle data-testid="add-provider-modal-title">
           Add Environment
         </DialogTitle>
-        <DialogDescription>
-          Configure your watsonx Orchestrate credentials below.
+        <DialogDescription className="sr-only">
+          Add a new watsonx Orchestrate environment.
         </DialogDescription>
 
         <div className="flex flex-col gap-4 pt-2">
-          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">
-            <ForwardedIconComponent
-              name="Bot"
-              className="h-8 w-8 text-foreground"
-            />
-            <span className="text-sm font-medium">watsonx Orchestrate</span>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">
+              <ForwardedIconComponent
+                name="WatsonxOrchestrate"
+                className="h-8 w-8 text-foreground"
+              />
+              <span className="text-sm font-medium">watsonx Orchestrate</span>
+              <Badge variant="purpleStatic" size="xq" className="shrink-0">
+                Beta
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Configure your watsonx Orchestrate credentials below. New to wxO?{" "}
+              <a
+                href="https://www.ibm.com/products/watsonx-orchestrate#pricing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:underline"
+              >
+                Sign up for watsonx Orchestrate
+              </a>
+              . Already have an account?{" "}
+              <a
+                href="https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:underline"
+              >
+                Find your credentials
+              </a>
+              .
+            </p>
           </div>
 
           <ProviderCredentialsForm

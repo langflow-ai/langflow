@@ -3,7 +3,7 @@
   "info": {
     "title": "Langflow V2 Workflow API",
     "description": "Filtered API for Langflow V2 workflow operations (3 endpoints)",
-    "version": "1.8.0"
+    "version": "1.9.0"
   },
   "paths": {
     "/api/v2/workflows": {

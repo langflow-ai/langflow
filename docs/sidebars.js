@@ -78,6 +78,11 @@ module.exports = {
           id: "Flows/concepts-flows-import",
           label: "Import and export flows"
         },
+        {
+          type: "doc",
+          id: "Flows/langflow-assistant",
+          label: "Build components with Langflow Assistant"
+        },
       ],
     },
     {
@@ -96,6 +101,7 @@ module.exports = {
       items: [
         "Agents/mcp-client",
         "Agents/mcp-server",
+        "Agents/langflow-mcp-client",
         "Agents/mcp-component-astra",
       ],
     },
@@ -354,6 +360,7 @@ module.exports = {
               items: [
                 "Components/batch-run",
                 "Components/guardrails",
+                "Components/policies",
                 "Components/llm-selector",
                 "Components/smart-router",
                 "Components/smart-transform",
@@ -464,10 +471,26 @@ module.exports = {
       label: "API reference",
       className: "sidebar-category-with-icon sidebar-icon-fileCode",
       items: [
-        "API-Reference/api-reference-api-examples",
-        "API-Reference/typescript-client",
-        "API-Reference/flow-devops-sdk",
-        "API-Reference/api-flows-run",
+        {
+          type: "doc",
+          id: "API-Reference/api-reference-api-examples",
+          label: "Get started with the Langflow API",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/typescript-client",
+          label: "Use the TypeScript client"
+        },
+        {
+          type: "doc",
+          id: "API-Reference/flow-devops-sdk",
+          label: "Flow DevOps Toolkit SDK",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-flows-run",
+          label: "Flow trigger endpoints",
+        },
         {
           type: "category",
           label: "Developer API (Beta)",

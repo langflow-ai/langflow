@@ -6,6 +6,7 @@ import contextvars
 import copy
 import json
 import queue
+import sys
 import threading
 import traceback
 import uuid
@@ -690,7 +691,15 @@ class Graph:
         context = contextvars.copy_context()
 
         async def async_end_traces_func():
-            await asyncio.create_task(self.end_all_traces(outputs, error), context=context)
+            coro = self.end_all_traces(outputs, error)
+            if sys.version_info >= (3, 11):
+                await asyncio.create_task(coro, context=context)
+            else:
+                # Python 3.10's asyncio.create_task does not accept context=.
+                # Invoke create_task inside the captured context so the new
+                # Task copies it as its current context.
+                task = context.run(asyncio.create_task, coro)
+                await task
 
         return async_end_traces_func
 
