@@ -115,7 +115,10 @@ export const FlowListPanel = memo(function FlowListPanel({
                   data-testid={`detach-flow-${flow.id}`}
                   className="flex-shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   title="Detach flow"
-                  onClick={() => onRemoveFlow(flow.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveFlow(flow.id);
+                  }}
                 >
                   <ForwardedIconComponent name="X" className="h-3.5 w-3.5" />
                 </button>
