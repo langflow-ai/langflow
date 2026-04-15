@@ -15,6 +15,7 @@ from __future__ import annotations
 import copy
 import json
 import re
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -22,19 +23,28 @@ _LOCALES_DIR = Path(__file__).parent.parent / "locales"
 
 # { "en": { "components.ChatInput.display_name": "Chat Input", ... }, "fr": {...} }
 _translations: dict[str, dict[str, str]] = {}
+_translations_lock = threading.Lock()
 
 
 def _load_translations() -> None:
-    """Load all *.json files from the locales directory into memory."""
-    if not _LOCALES_DIR.exists():
-        return
-    for path in _LOCALES_DIR.glob("*.json"):
-        locale_code = path.stem  # "en", "fr", "zh-Hans", etc.
-        try:
-            with path.open(encoding="utf-8") as f:
-                _translations[locale_code] = json.load(f)
-        except (OSError, json.JSONDecodeError):
-            pass
+    """Load all *.json files from the locales directory into memory.
+
+    Uses double-checked locking: the fast path (already loaded) skips the lock,
+    the slow path (first load) acquires it and re-checks to avoid duplicate work
+    from concurrent callers at cold start.
+    """
+    with _translations_lock:
+        if _translations:
+            return
+        if not _LOCALES_DIR.exists():
+            return
+        for path in _LOCALES_DIR.glob("*.json"):
+            locale_code = path.stem  # "en", "fr", "zh-Hans", etc.
+            try:
+                with path.open(encoding="utf-8") as f:
+                    _translations[locale_code] = json.load(f)
+            except (OSError, json.JSONDecodeError):
+                pass
 
 
 def translate(key: str, locale: str, default: str) -> str:
@@ -49,11 +59,11 @@ def translate(key: str, locale: str, default: str) -> str:
         _load_translations()
 
     result = _translations.get(locale, {}).get(key)
-    if result:
+    if result is not None:
         return result
 
     result = _translations.get("en", {}).get(key)
-    if result:
+    if result is not None:
         return result
 
     return default
