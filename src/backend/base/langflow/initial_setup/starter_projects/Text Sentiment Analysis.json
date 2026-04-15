@@ -774,7 +774,7 @@
             "display_name": "",
             "documentation": "",
             "template": {},
-            "i18n_key": "template_notes.text_sentiment_analysis.0"
+            "i18n_key": "template_notes.text_sentiment_analysis.07dc31be"
           },
           "type": "note"
         },
@@ -1368,7 +1368,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.text_sentiment_analysis.1"
+            "i18n_key": "template_notes.text_sentiment_analysis.cd87cff6"
           },
           "type": "note"
         },
@@ -1398,7 +1398,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.text_sentiment_analysis.2"
+            "i18n_key": "template_notes.text_sentiment_analysis.cd87cff6"
           },
           "type": "note"
         },
@@ -1428,7 +1428,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.text_sentiment_analysis.3"
+            "i18n_key": "template_notes.text_sentiment_analysis.cd87cff6"
           },
           "type": "note"
         },

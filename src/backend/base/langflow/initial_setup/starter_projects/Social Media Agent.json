@@ -593,7 +593,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.social_media_agent.0"
+            "i18n_key": "template_notes.social_media_agent.15789e48"
           },
           "type": "note"
         },
@@ -620,7 +620,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.social_media_agent.1"
+            "i18n_key": "template_notes.social_media_agent.15789e48"
           },
           "type": "note"
         },
@@ -650,7 +650,7 @@
             "template": {
               "backgroundColor": "amber"
             },
-            "i18n_key": "template_notes.social_media_agent.2"
+            "i18n_key": "template_notes.social_media_agent.501213ba"
           },
           "type": "note"
         },
@@ -1237,7 +1237,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.social_media_agent.3"
+            "i18n_key": "template_notes.social_media_agent.cd87cff6"
           },
           "type": "note"
         },

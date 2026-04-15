@@ -973,7 +973,7 @@
             "template": {
               "backgroundColor": "neutral"
             },
-            "i18n_key": "template_notes.vector_store_rag.0"
+            "i18n_key": "template_notes.vector_store_rag.f8f85922"
           },
           "type": "note"
         },
@@ -1011,7 +1011,7 @@
             "template": {
               "backgroundColor": "neutral"
             },
-            "i18n_key": "template_notes.vector_store_rag.1"
+            "i18n_key": "template_notes.vector_store_rag.e0f1d4b1"
           },
           "type": "note"
         },
@@ -1329,7 +1329,7 @@
             "template": {
               "backgroundColor": "neutral"
             },
-            "i18n_key": "template_notes.vector_store_rag.2"
+            "i18n_key": "template_notes.vector_store_rag.e69c13bd"
           },
           "type": "note"
         },
@@ -1367,7 +1367,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.vector_store_rag.3"
+            "i18n_key": "template_notes.vector_store_rag.ec099fc5"
           },
           "type": "note"
         },

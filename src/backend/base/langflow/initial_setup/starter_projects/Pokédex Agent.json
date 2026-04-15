@@ -657,7 +657,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.pok_dex_agent.0"
+            "i18n_key": "template_notes.pok_dex_agent.5ee09434"
           },
           "type": "note"
         },
@@ -685,7 +685,7 @@
             "display_name": "",
             "documentation": "",
             "template": {},
-            "i18n_key": "template_notes.pok_dex_agent.1"
+            "i18n_key": "template_notes.pok_dex_agent.e977aa45"
           },
           "type": "note"
         },
@@ -715,7 +715,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.pok_dex_agent.2"
+            "i18n_key": "template_notes.pok_dex_agent.cd87cff6"
           },
           "type": "note"
         },

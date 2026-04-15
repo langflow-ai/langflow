@@ -1470,7 +1470,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.price_deal_finder.0"
+            "i18n_key": "template_notes.price_deal_finder.cd87cff6"
           },
           "type": "note"
         },
@@ -1497,7 +1497,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.price_deal_finder.1"
+            "i18n_key": "template_notes.price_deal_finder.128b41fe"
           },
           "type": "note"
         },
@@ -1523,7 +1523,7 @@
             "display_name": "",
             "documentation": "",
             "template": {},
-            "i18n_key": "template_notes.price_deal_finder.2"
+            "i18n_key": "template_notes.price_deal_finder.8d99099b"
           },
           "type": "note"
         },
@@ -1553,7 +1553,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.price_deal_finder.3"
+            "i18n_key": "template_notes.price_deal_finder.71f0e5f4"
           },
           "type": "note"
         },

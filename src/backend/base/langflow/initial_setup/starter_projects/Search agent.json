@@ -827,7 +827,7 @@
             "display_name": "",
             "documentation": "",
             "template": {},
-            "i18n_key": "template_notes.search_agent.0"
+            "i18n_key": "template_notes.search_agent.c93b5067"
           },
           "type": "note"
         },
@@ -857,7 +857,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.search_agent.1"
+            "i18n_key": "template_notes.search_agent.cd87cff6"
           },
           "type": "note"
         },
@@ -884,7 +884,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.search_agent.2"
+            "i18n_key": "template_notes.search_agent.dd9e880e"
           },
           "type": "note"
         },

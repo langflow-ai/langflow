@@ -590,7 +590,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.portfolio_website_code_generator.0"
+            "i18n_key": "template_notes.portfolio_website_code_generator.b008c1ce"
           },
           "type": "note"
         },
@@ -618,7 +618,7 @@
             "display_name": "",
             "documentation": "",
             "template": {},
-            "i18n_key": "template_notes.portfolio_website_code_generator.1"
+            "i18n_key": "template_notes.portfolio_website_code_generator.4f048927"
           },
           "type": "note"
         },
@@ -648,7 +648,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.portfolio_website_code_generator.2"
+            "i18n_key": "template_notes.portfolio_website_code_generator.5c287e01"
           },
           "type": "note"
         },
@@ -678,7 +678,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.portfolio_website_code_generator.3"
+            "i18n_key": "template_notes.portfolio_website_code_generator.e5de3e32"
           },
           "type": "note"
         },
@@ -2284,7 +2284,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.portfolio_website_code_generator.4"
+            "i18n_key": "template_notes.portfolio_website_code_generator.cd87cff6"
           },
           "type": "note"
         },

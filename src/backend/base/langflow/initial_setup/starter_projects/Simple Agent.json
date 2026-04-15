@@ -129,7 +129,7 @@
             "template": {
               "backgroundColor": "neutral"
             },
-            "i18n_key": "template_notes.simple_agent.0"
+            "i18n_key": "template_notes.simple_agent.89c2ae6b"
           },
           "type": "note"
         },
@@ -156,7 +156,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.simple_agent.1"
+            "i18n_key": "template_notes.simple_agent.cd87cff6"
           },
           "type": "note"
         },

@@ -403,7 +403,7 @@
             "display_name": "",
             "documentation": "",
             "template": {},
-            "i18n_key": "template_notes.seo_keyword_generator.0"
+            "i18n_key": "template_notes.seo_keyword_generator.7c12d397"
           },
           "type": "note"
         },
@@ -883,7 +883,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.seo_keyword_generator.1"
+            "i18n_key": "template_notes.seo_keyword_generator.cd87cff6"
           },
           "type": "note"
         },

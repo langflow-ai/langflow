@@ -133,7 +133,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.news_aggregator.0"
+            "i18n_key": "template_notes.news_aggregator.cd87cff6"
           },
           "type": "note"
         },
@@ -160,7 +160,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.news_aggregator.1"
+            "i18n_key": "template_notes.news_aggregator.c93afbb2"
           },
           "type": "note"
         },
@@ -838,7 +838,7 @@
             "template": {
               "backgroundColor": "amber"
             },
-            "i18n_key": "template_notes.news_aggregator.2"
+            "i18n_key": "template_notes.news_aggregator.85a46aa0"
           },
           "type": "note"
         },

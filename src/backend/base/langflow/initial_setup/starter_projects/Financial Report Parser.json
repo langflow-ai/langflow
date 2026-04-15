@@ -669,7 +669,7 @@
             "template": {
               "backgroundColor": "transparent"
             },
-            "i18n_key": "template_notes.financial_report_parser.0"
+            "i18n_key": "template_notes.financial_report_parser.cd87cff6"
           },
           "type": "note"
         },
@@ -697,7 +697,7 @@
             "display_name": "",
             "documentation": "",
             "template": {},
-            "i18n_key": "template_notes.financial_report_parser.1"
+            "i18n_key": "template_notes.financial_report_parser.210fb161"
           },
           "type": "note"
         },
