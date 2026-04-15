@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import hashlib
 import json
 import re
@@ -18,7 +17,7 @@ from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
 
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
-from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
+from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
 from lfx.io import (
@@ -26,6 +25,7 @@ from lfx.io import (
     DropdownInput,
     HandleInput,
     IntInput,
+    ModelInput,
     Output,
     SecretStrInput,
     StrInput,
@@ -35,19 +35,12 @@ from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 from lfx.services.deps import (
     get_settings_service,
-    get_variable_service,
     session_scope,
 )
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
-
-HUGGINGFACE_MODEL_NAMES = [
-    "sentence-transformers/all-MiniLM-L6-v2",
-    "sentence-transformers/all-mpnet-base-v2",
-]
-COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
 
 _KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
 
@@ -94,7 +87,6 @@ class KnowledgeIngestionComponent(Component):
                         "field_order": [
                             "01_new_kb_name",
                             "02_embedding_model",
-                            "03_api_key",
                         ],
                         "template": {
                             "01_new_kb_name": StrInput(
@@ -103,22 +95,15 @@ class KnowledgeIngestionComponent(Component):
                                 info="Name of the new knowledge to create.",
                                 required=True,
                             ),
-                            "02_embedding_model": DropdownInput(
+                            "02_embedding_model": ModelInput(
                                 name="embedding_model",
-                                display_name="Choose Embedding",
-                                info="Select the embedding model to use for this knowledge base.",
+                                display_name="Choose Embedding Model",
+                                info=(
+                                    "Select the embedding model to use for this knowledge base. "
+                                    "Langflow uses the configured credentials for that model provider."
+                                ),
                                 required=True,
-                                options=OPENAI_EMBEDDING_MODEL_NAMES + HUGGINGFACE_MODEL_NAMES + COHERE_MODEL_NAMES,
-                                options_metadata=[{"icon": "OpenAI"} for _ in OPENAI_EMBEDDING_MODEL_NAMES]
-                                + [{"icon": "HuggingFace"} for _ in HUGGINGFACE_MODEL_NAMES]
-                                + [{"icon": "Cohere"} for _ in COHERE_MODEL_NAMES],
-                            ),
-                            "03_api_key": SecretStrInput(
-                                name="api_key",
-                                display_name="API Key",
-                                info="Provider API key for embedding model",
-                                required=True,
-                                load_from_db=False,
+                                model_type="embedding",
                             ),
                         },
                     },
@@ -143,9 +128,10 @@ class KnowledgeIngestionComponent(Component):
             display_name="Input",
             info=(
                 "Table with all original columns (already chunked / processed). "
-                "Accepts Data or DataFrame. If Data is provided, it is converted to a DataFrame automatically."
+                "Accepts Message, Data, or DataFrame. If Message or Data is provided, "
+                "it is converted to a DataFrame automatically."
             ),
-            input_types=["Data", "DataFrame"],
+            input_types=["Message", "Data", "JSON", "DataFrame", "Table"],
             required=True,
         ),
         TableInput(
@@ -196,7 +182,7 @@ class KnowledgeIngestionComponent(Component):
         SecretStrInput(
             name="api_key",
             display_name="Embedding Provider API Key",
-            info="API key for the embedding provider to generate embeddings.",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
             advanced=True,
             required=False,
         ),
@@ -217,6 +203,23 @@ class KnowledgeIngestionComponent(Component):
         """Return the root directory for knowledge bases."""
         return _get_knowledge_bases_root_path()
 
+    @staticmethod
+    def _scalar_notna(value) -> bool:
+        """Check if a value is not NA, safely handling arrays and sequences.
+
+        ``pd.notna`` returns an array when given an array-like input, which
+        cannot be used directly in a boolean context.  This helper collapses the
+        result to a single scalar ``bool``.
+        """
+        result = pd.notna(value)
+        # If result is array-like (numpy array, list, etc.), treat non-empty arrays as "present"
+        if hasattr(result, "__iter__") and not isinstance(result, str):
+            import numpy as np
+
+            arr = np.asarray(result)
+            return arr.size > 0 and arr.all()
+        return bool(result)
+
     def _validate_column_config(self, df_source: pd.DataFrame) -> list[dict[str, Any]]:
         """Validate column configuration using Structured Output patterns."""
         if not self.column_config:
@@ -236,60 +239,21 @@ class KnowledgeIngestionComponent(Component):
 
         return config_list
 
-    def _get_embedding_provider(self, embedding_model: str) -> str:
-        """Get embedding provider by matching model name to lists."""
-        if embedding_model in OPENAI_EMBEDDING_MODEL_NAMES:
-            return "OpenAI"
-        if embedding_model in HUGGINGFACE_MODEL_NAMES:
-            return "HuggingFace"
-        if embedding_model in COHERE_MODEL_NAMES:
-            return "Cohere"
-        return "Custom"
+    def _build_embedding_metadata(
+        self,
+        model_selection: list[dict[str, Any]],
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Build embedding model metadata from a model selection dict.
 
-    def _build_embeddings(self, embedding_model: str, api_key: str):
-        """Build embedding model using provider patterns."""
-        # Get provider by matching model name to lists
-        provider = self._get_embedding_provider(embedding_model)
-
-        # Validate provider and model
-        if provider == "OpenAI":
-            from langchain_openai import OpenAIEmbeddings
-
-            if not api_key:
-                msg = "OpenAI API key is required when using OpenAI provider"
-                raise ValueError(msg)
-            return OpenAIEmbeddings(
-                model=embedding_model,
-                api_key=api_key,
-                chunk_size=self.chunk_size,
-            )
-        if provider == "HuggingFace":
-            from langchain_huggingface import HuggingFaceEmbeddings
-
-            return HuggingFaceEmbeddings(
-                model=embedding_model,
-            )
-        if provider == "Cohere":
-            from langchain_cohere import CohereEmbeddings
-
-            if not api_key:
-                msg = "Cohere API key is required when using Cohere provider"
-                raise ValueError(msg)
-            return CohereEmbeddings(
-                model=embedding_model,
-                cohere_api_key=api_key,
-            )
-        if provider == "Custom":
-            # For custom embedding models, we would need additional configuration
-            msg = "Custom embedding models not yet supported"
-            raise NotImplementedError(msg)
-        msg = f"Unknown provider: {provider}"
-        raise ValueError(msg)
-
-    def _build_embedding_metadata(self, embedding_model, api_key) -> dict[str, Any]:
-        """Build embedding model metadata."""
-        # Get provider by matching model name to lists
-        embedding_provider = self._get_embedding_provider(embedding_model)
+        Args:
+            model_selection: Model selection list from ModelInput
+                (e.g. [{'name': ..., 'provider': ..., 'metadata': ...}])
+            api_key: Optional runtime API key override.
+        """
+        model_dict = model_selection[0] if isinstance(model_selection, list) else model_selection
+        embedding_model = model_dict.get("name", "")
+        embedding_provider = model_dict.get("provider", "Unknown")
 
         api_key_to_save = None
         if api_key and hasattr(api_key, "get_secret_value"):
@@ -308,17 +272,46 @@ class KnowledgeIngestionComponent(Component):
         return {
             "embedding_provider": embedding_provider,
             "embedding_model": embedding_model,
+            "model_selection": model_dict,  # Store full selection for get_embeddings() reconstruction
             "api_key": encrypted_api_key,
             "api_key_used": bool(api_key),
             "chunk_size": self.chunk_size,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
-    def _save_embedding_metadata(self, kb_path: Path, embedding_model: str, api_key: str) -> None:
+    def _save_embedding_metadata(
+        self,
+        kb_path: Path,
+        model_selection: list[dict[str, Any]],
+        api_key: str | None = None,
+    ) -> None:
         """Save embedding model metadata."""
-        embedding_metadata = self._build_embedding_metadata(embedding_model, api_key)
+        embedding_metadata = self._build_embedding_metadata(model_selection, api_key)
         metadata_path = kb_path / "embedding_metadata.json"
         metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
+
+    def _update_metadata_metrics(self, kb_path: Path, chroma: Chroma) -> None:
+        """Update embedding_metadata.json with accurate chunk/word/character counts.
+
+        This ensures the Knowledge Base modal displays correct stats after
+        component-based ingestion, matching the behavior of API-based ingestion.
+        Delegates to KBAnalysisHelper.update_text_metrics to avoid duplicating
+        the batched metrics counting logic.
+        """
+        import chromadb.errors
+        from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBStorageHelper
+
+        metadata_path = kb_path / "embedding_metadata.json"
+        if not metadata_path.exists():
+            return
+
+        try:
+            metadata = json.loads(metadata_path.read_text())
+            KBAnalysisHelper.update_text_metrics(kb_path, metadata, chroma)
+            metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
+            metadata_path.write_text(json.dumps(metadata, indent=2))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
+            self.log(f"Warning: Could not update metadata metrics: {e}")
 
     def _save_kb_files(
         self,
@@ -375,44 +368,41 @@ class KnowledgeIngestionComponent(Component):
         self,
         df_source: pd.DataFrame,
         config_list: list[dict[str, Any]],
-        embedding_model: str,
-        api_key: str,
-    ) -> None:
-        """Create vector store following Local DB component pattern."""
-        try:
-            # Set up vector store directory
-            vector_store_dir = await self._kb_path()
-            if not vector_store_dir:
-                msg = "Knowledge base path is not set. Please create a new knowledge base first."
-                raise ValueError(msg)
-            vector_store_dir.mkdir(parents=True, exist_ok=True)
+        embedding_function,
+    ) -> Chroma:
+        """Create vector store following Local DB component pattern.
 
-            # Create embeddings model
-            embedding_function = self._build_embeddings(embedding_model, api_key)
+        Returns the Chroma instance so callers can use it for metrics updates.
+        """
+        # Set up vector store directory
+        vector_store_dir = await self._kb_path()
+        if not vector_store_dir:
+            msg = "Knowledge base path is not set. Please create a new knowledge base first."
+            raise ValueError(msg)
+        vector_store_dir.mkdir(parents=True, exist_ok=True)
 
-            # Convert DataFrame to Data objects (following Local DB pattern)
-            data_objects = await self._convert_df_to_data_objects(df_source, config_list)
+        # Convert DataFrame to Data objects (following Local DB pattern)
+        data_objects = await self._convert_df_to_data_objects(df_source, config_list)
 
-            # Create vector store
-            chroma = Chroma(
-                persist_directory=str(vector_store_dir),
-                embedding_function=embedding_function,
-                collection_name=self.knowledge_base,
-            )
+        # Create vector store
+        chroma = Chroma(
+            persist_directory=str(vector_store_dir),
+            embedding_function=embedding_function,
+            collection_name=self.knowledge_base,
+        )
 
-            # Convert Data objects to LangChain Documents
-            documents = []
-            for data_obj in data_objects:
-                doc = data_obj.to_lc_document()
-                documents.append(doc)
+        # Convert Data objects to LangChain Documents
+        documents = []
+        for data_obj in data_objects:
+            doc = data_obj.to_lc_document()
+            documents.append(doc)
 
-            # Add documents to vector store
-            if documents:
-                chroma.add_documents(documents)
-                self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
+        # Add documents to vector store
+        if documents:
+            chroma.add_documents(documents)
+            self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
 
-        except (OSError, ValueError, RuntimeError) as e:
-            self.log(f"Error creating vector store: {e}")
+        return chroma
 
     async def _convert_df_to_data_objects(
         self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]
@@ -452,7 +442,7 @@ class KnowledgeIngestionComponent(Component):
         # Convert each row to a Data object
         for _, row in df_source.iterrows():
             # Build content text from identifier columns using list comprehension
-            identifier_parts = [str(row[col]) for col in content_cols if col in row and pd.notna(row[col])]
+            identifier_parts = [str(row[col]) for col in content_cols if col in row and self._scalar_notna(row[col])]
 
             # Join all parts into a single string
             page_content = " ".join(identifier_parts)
@@ -464,12 +454,14 @@ class KnowledgeIngestionComponent(Component):
 
             # Add identifier columns if they exist
             if identifier_cols:
-                identifier_parts = [str(row[col]) for col in identifier_cols if col in row and pd.notna(row[col])]
+                identifier_parts = [
+                    str(row[col]) for col in identifier_cols if col in row and self._scalar_notna(row[col])
+                ]
                 page_content = " ".join(identifier_parts)
 
             # Add metadata columns as simple key-value pairs
             for col in df_source.columns:
-                if col not in content_cols and col in row and pd.notna(row[col]):
+                if col not in content_cols and col in row and self._scalar_notna(row[col]):
                     # Convert to simple types for Chroma metadata
                     value = row[col]
                     data_dict[col] = str(value)  # Convert complex types to string
@@ -560,31 +552,98 @@ class KnowledgeIngestionComponent(Component):
                 msg = "Knowledge base path is not set. Please create a new knowledge base first."
                 raise ValueError(msg)
             metadata_path = kb_path / "embedding_metadata.json"
+            api_key = None
+            model_selection = None
 
-            # If the API key is not provided, try to read it from the metadata file
+            # Read stored metadata
             if metadata_path.exists():
                 settings_service = get_settings_service()
-                metadata = json.loads(metadata_path.read_text())
-                embedding_model = metadata.get("embedding_model")
-                try:
-                    api_key = decrypt_api_key(metadata["api_key"], settings_service)
-                except (InvalidToken, TypeError, ValueError) as e:
-                    self.log(f"Could not decrypt API key. Please provide it manually. Error: {e}")
+                stored_metadata = json.loads(metadata_path.read_text())
 
-            # Check if a custom API key was provided, update metadata if so
+                # Prefer stored model_selection dict (new format)
+                model_selection = stored_metadata.get("model_selection")
+                if model_selection:
+                    model_selection = [model_selection] if isinstance(model_selection, dict) else model_selection
+                else:
+                    # Backward compat: reconstruct from old string-based metadata
+                    embedding_model_name = stored_metadata.get("embedding_model")
+                    embedding_provider = stored_metadata.get("embedding_provider", "Unknown")
+                    if embedding_model_name:
+                        # Look up full model info from available options
+                        try:
+                            all_options = get_embedding_model_options(user_id=self.user_id)
+                            match = next(
+                                (o for o in all_options if o.get("name") == embedding_model_name),
+                                None,
+                            )
+                            if match:
+                                model_selection = [match]
+                            else:
+                                self.log(
+                                    f"Embedding model '{embedding_model_name}' (provider: {embedding_provider}) "
+                                    "from stored metadata is no longer available in the model registry. "
+                                    "Please re-create this knowledge base with a supported embedding model."
+                                )
+                                msg = (
+                                    f"Embedding model '{embedding_model_name}' is no longer recognized. "
+                                    "The knowledge base was created with an older format and the model "
+                                    "is not available in the current registry. "
+                                    "Please re-create the knowledge base with a supported embedding model."
+                                )
+                                raise ValueError(msg)
+                        except ValueError:
+                            raise
+                        except Exception:  # noqa: BLE001
+                            self.log(
+                                f"Failed to look up embedding model '{embedding_model_name}' in registry. "
+                                "Please re-create this knowledge base with a supported embedding model."
+                            )
+                            msg = (
+                                f"Could not look up embedding model '{embedding_model_name}' "
+                                f"(provider: {embedding_provider}). "
+                                "Please re-create the knowledge base with a supported embedding model."
+                            )
+                            raise ValueError(msg)  # noqa: B904
+
+                # Decrypt stored API key
+                encrypted_key = stored_metadata.get("api_key")
+                if encrypted_key:
+                    try:
+                        api_key = decrypt_api_key(encrypted_key, settings_service)
+                    except (InvalidToken, TypeError, ValueError) as e:
+                        self.log(f"Could not decrypt API key. Please provide it manually. Error: {e}")
+
+            # Check if a custom API key was provided
             if self.api_key:
                 api_key = self.api_key
-                self._save_embedding_metadata(
-                    kb_path=kb_path,
-                    embedding_model=embedding_model,
-                    api_key=api_key,
-                )
+                if model_selection:
+                    self._save_embedding_metadata(
+                        kb_path=kb_path,
+                        model_selection=model_selection,
+                        api_key=api_key,
+                    )
+
+            if not model_selection:
+                msg = "No embedding model configuration found. Please create the knowledge base first."
+                raise ValueError(msg)
+
+            # Build the embedding function via the shared utility
+            embedding_function = get_embeddings(
+                model=model_selection,
+                user_id=self.user_id,
+                api_key=api_key,
+                chunk_size=self.chunk_size,
+            )
 
             # Create vector store following Local DB component pattern
-            await self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)
+            chroma = await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
 
             # Save KB files (using File Component storage patterns)
             self._save_kb_files(kb_path, config_list)
+
+            # Update embedding_metadata.json with accurate text metrics
+            # so the KB modal and API show correct chunks/words/characters
+            self._update_metadata_metrics(kb_path, chroma)
 
             # Build metadata response
             meta: dict[str, Any] = {
@@ -606,25 +665,6 @@ class KnowledgeIngestionComponent(Component):
             msg = f"Error during KB ingestion: {e}"
             raise RuntimeError(msg) from e
 
-    async def _get_api_key_variable(self, field_value: dict[str, Any]):
-        async with session_scope() as db:
-            if not self.user_id:
-                msg = "User ID is required for fetching global variables."
-                raise ValueError(msg)
-            current_user = await get_user_by_id(db, self.user_id)
-            if not current_user:
-                msg = f"User with ID {self.user_id} not found."
-                raise ValueError(msg)
-            variable_service = get_variable_service()
-
-            # Process the api_key field variable
-            return await variable_service.get_variable(
-                user_id=current_user.id,
-                name=field_value["03_api_key"],
-                field="",
-                session=db,
-            )
-
     async def update_build_config(
         self,
         build_config,
@@ -634,6 +674,23 @@ class KnowledgeIngestionComponent(Component):
         """Update build configuration based on provider selection."""
         # Check if we're in Astra cloud environment and raise an error if we are.
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
+
+        # Populate the dialog's embedding model options so the ModelInput renders correctly
+        try:
+            dialog_template = (
+                build_config["knowledge_base"]
+                .get("dialog_inputs", {})
+                .get("fields", {})
+                .get("data", {})
+                .get("node", {})
+                .get("template", {})
+            )
+            if "02_embedding_model" in dialog_template:
+                embedding_options = get_embedding_model_options(user_id=self.user_id)
+                dialog_template["02_embedding_model"]["options"] = embedding_options
+        except Exception:  # noqa: BLE001
+            self.log("Failed to populate embedding model options in dialog")
+
         # Create a new knowledge base
         if field_name == "knowledge_base":
             async with session_scope() as db:
@@ -651,20 +708,18 @@ class KnowledgeIngestionComponent(Component):
                     msg = f"Invalid knowledge base name: {field_value['01_new_kb_name']}"
                     raise ValueError(msg)
 
-                api_key = field_value.get("03_api_key", None)
-                with contextlib.suppress(Exception):
-                    # If the API key is a variable, resolve it
-                    api_key = await self._get_api_key_variable(field_value)
+                # The model selection comes from ModelInput as a list of dicts
+                model_selection = field_value["02_embedding_model"]
+                if isinstance(model_selection, dict):
+                    model_selection = [model_selection]
 
-                # Make sure api_key is a string
-                if not isinstance(api_key, str):
-                    msg = "API key must be a string."
-                    raise ValueError(msg)
+                # Build and validate the embedding model via the shared utility
+                embed_model = get_embeddings(
+                    model=model_selection,
+                    user_id=self.user_id,
+                )
 
-                # We need to test the API Key one time against the embedding model
-                embed_model = self._build_embeddings(embedding_model=field_value["02_embedding_model"], api_key=api_key)
-
-                # Try to generate a dummy embedding to validate the API key without blocking the event loop
+                # Try to generate a dummy embedding to validate without blocking the event loop
                 try:
                     await asyncio.wait_for(
                         asyncio.to_thread(embed_model.embed_query, "test"),
@@ -685,8 +740,7 @@ class KnowledgeIngestionComponent(Component):
                 build_config["knowledge_base"]["value"] = field_value["01_new_kb_name"]
                 self._save_embedding_metadata(
                     kb_path=kb_path,
-                    embedding_model=field_value["02_embedding_model"],
-                    api_key=api_key,
+                    model_selection=model_selection,
                 )
 
             # Update the knowledge base options dynamically

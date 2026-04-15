@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { McpAutoInstallContent } from "../McpAutoInstallContent";
 import { autoInstallers } from "../../utils/mcpServerUtils";
+import { McpAutoInstallContent } from "../McpAutoInstallContent";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   ForwardedIconComponent: ({ name }: { name: string }) => <span>{name}</span>,

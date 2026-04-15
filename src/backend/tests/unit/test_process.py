@@ -310,6 +310,159 @@ async def test_load_langchain_object_with_cached_session(basic_graph_data):
 #     assert graph1 == graph2
 
 
+def test_tweak_no_node_id_boolean():
+    """Test that boolean tweaks at root level are applied to all matching nodes."""
+    graph_data = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "enabled": {"value": True, "type": "bool"},
+                                "param1": {"value": "hello", "type": "str"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "enabled": {"value": True, "type": "bool"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    tweaks = {"enabled": False}
+    expected_result = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "enabled": {"value": False, "type": "bool"},
+                                "param1": {"value": "hello", "type": "str"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "enabled": {"value": False, "type": "bool"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    result = process_tweaks(graph_data, tweaks)
+    assert result == expected_result
+
+
+def test_tweak_no_node_id_numeric():
+    """Test that numeric tweaks at root level are applied to all matching nodes."""
+    graph_data = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 1.0, "type": "float"},
+                                "max_tokens": {"value": 100, "type": "int"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 1.0, "type": "float"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    tweaks = {"temperature": 0.7, "max_tokens": 256}
+    expected_result = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 0.7, "type": "float"},
+                                "max_tokens": {"value": 256, "type": "int"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 0.7, "type": "float"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    result = process_tweaks(graph_data, tweaks)
+    assert result == expected_result
+
+
+def test_tweaks_schema_accepts_bool():
+    """Tweaks model must accept boolean root-level values without coercion."""
+    from lfx.schema.graph import Tweaks
+
+    tweaks = Tweaks(root={"stream": False, "enabled": True})
+    assert tweaks.root["stream"] is False
+    assert tweaks.root["enabled"] is True
+    # Verify bool is preserved and not coerced to int
+    assert isinstance(tweaks.root["stream"], bool)
+    assert isinstance(tweaks.root["enabled"], bool)
+
+
+def test_tweaks_schema_accepts_numerics():
+    """Tweaks model must accept int and float root-level values."""
+    from lfx.schema.graph import Tweaks
+
+    tweaks = Tweaks(root={"temperature": 0.7, "max_tokens": 256})
+    assert tweaks.root["temperature"] == 0.7
+    assert tweaks.root["max_tokens"] == 256
+
+
+def test_tweaks_schema_rejects_invalid():
+    """Tweaks model should still reject unsupported value types."""
+    import pytest
+    from lfx.schema.graph import Tweaks
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        Tweaks(root={"param": [1, 2, 3]})
+
+
 def test_apply_tweaks_code_override_prevention():
     """Test that code tweaks are prevented and logged as warning."""
     from unittest.mock import patch
@@ -473,3 +626,115 @@ def test_apply_tweaks_field_type_extraction():
     # Verify both fields were modified
     assert node["data"]["node"]["template"]["param_no_type"]["value"] == "new_value_1"
     assert node["data"]["node"]["template"]["param_with_type"]["value"] == "new_value_2"
+
+
+def test_apply_tweaks_dict_field_type():
+    """Test that dict field types (e.g. DictInput headers) set the value directly.
+
+    Previously, passing a dict tweak for a 'dict' field type would iterate over
+    the dict keys and set them as top-level template properties instead of setting
+    the field's value. This caused headers passed via tweaks to be ignored.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    # Create a node with a dict field type (like MCP Tools headers)
+    node = {
+        "id": "MCPTools-322Z0",
+        "data": {
+            "node": {
+                "template": {
+                    "headers": {
+                        "value": [
+                            {"key": "header1", "value": "default1"},
+                            {"key": "header2", "value": "default2"},
+                        ],
+                        "type": "dict",
+                    },
+                }
+            }
+        },
+    }
+
+    # Tweak headers with a plain dict (as sent via API tweaks)
+    node_tweaks = {
+        "headers": {"header1": "override1", "header2": "override2", "header3": "new3"},
+    }
+
+    apply_tweaks(node, node_tweaks)
+
+    # Verify the dict was set directly as the value, not spread as template properties
+    assert node["data"]["node"]["template"]["headers"]["value"] == {
+        "header1": "override1",
+        "header2": "override2",
+        "header3": "new3",
+    }
+    # Ensure the tweak keys were NOT set as top-level template field properties
+    assert "header1" not in node["data"]["node"]["template"]["headers"]
+    assert "header2" not in node["data"]["node"]["template"]["headers"]
+    assert "header3" not in node["data"]["node"]["template"]["headers"]
+
+
+def test_apply_tweaks_dict_field_overwrites_list_default():
+    """Test that a dict tweak fully replaces a list-format default value on a dict field."""
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "node1",
+        "data": {
+            "node": {
+                "template": {
+                    "headers": {
+                        "value": [{"key": "old", "value": "old_val"}],
+                        "type": "dict",
+                    },
+                }
+            }
+        },
+    }
+
+    apply_tweaks(node, {"headers": {"new_key": "new_val"}})
+
+    # The dict tweak should fully replace the old list value
+    assert node["data"]["node"]["template"]["headers"]["value"] == {"new_key": "new_val"}
+
+
+def test_apply_tweaks_dict_field_value_wrapped_list():
+    """Test that dict field tweaks wrapped in {"value": [...]} are unwrapped correctly.
+
+    When users pass tweaks in the template-format style (e.g. from UI exports),
+    the list of key-value pairs is wrapped in a "value" key. The tweak should
+    unwrap this and set the inner list as the field's value.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "MCPTools-svrRq",
+        "data": {
+            "node": {
+                "template": {
+                    "headers": {
+                        "value": [],
+                        "type": "dict",
+                    },
+                }
+            }
+        },
+    }
+
+    # Tweak using the template-format wrapper: {"value": [list of key-value pairs]}
+    node_tweaks = {
+        "headers": {
+            "value": [
+                {"key": "header1", "value": "gabriel1"},
+                {"key": "header2", "value": "gabriel2"},
+            ]
+        },
+    }
+
+    apply_tweaks(node, node_tweaks)
+
+    # The inner list should be unwrapped and set as the field's value
+    assert node["data"]["node"]["template"]["headers"]["value"] == [
+        {"key": "header1", "value": "gabriel1"},
+        {"key": "header2", "value": "gabriel2"},
+    ]

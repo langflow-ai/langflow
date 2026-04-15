@@ -29,7 +29,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             display_name="Model",
             info="The name of the model to use.",
             options=GOOGLE_GENERATIVE_AI_MODELS,
-            value="gemini-1.5-pro",
+            value="gemini-2.5-flash",
             refresh_button=True,
             combobox=True,
         ),

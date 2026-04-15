@@ -1,11 +1,11 @@
 import json
 from typing import Any
 
-import requests
 from langchain_ibm import ChatWatsonx
 from pydantic.v1 import SecretStr
 
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.model_utils import get_watsonx_llm_models
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
@@ -14,6 +14,8 @@ from lfx.schema.dotdict import dotdict
 
 
 class WatsonxAIComponent(LCModelComponent):
+    """LFX component for IBM watsonx.ai text/chat generation."""
+
     display_name = "IBM watsonx.ai"
     description = "Generate text using IBM watsonx.ai foundation models."
     icon = "WatsonxAI"
@@ -28,6 +30,7 @@ class WatsonxAIComponent(LCModelComponent):
         "https://au-syd.ml.cloud.ibm.com",
         "https://jp-tok.ml.cloud.ibm.com",
         "https://ca-tor.ml.cloud.ibm.com",
+        "https://ap-south-1.aws.wxai.ibm.com",
     ]
     inputs = [
         *LCModelComponent.get_base_inputs(),
@@ -42,9 +45,15 @@ class WatsonxAIComponent(LCModelComponent):
         ),
         StrInput(
             name="project_id",
-            display_name="watsonx Project ID",
-            required=True,
-            info="The project ID or deployment space ID that is associated with the foundation model.",
+            display_name="watsonx Project_ID",
+            required=False,
+            info="The project ID associated with the foundation model.",
+        ),
+        StrInput(
+            name="space_id",
+            display_name="watsonx Space_ID",
+            required=False,
+            info="The deployment space ID associated with the foundation model.",
         ),
         SecretStrInput(
             name="api_key",
@@ -142,18 +151,11 @@ class WatsonxAIComponent(LCModelComponent):
 
     @staticmethod
     def fetch_models(base_url: str) -> list[str]:
-        """Fetch available models from the watsonx.ai API."""
-        try:
-            endpoint = f"{base_url}/ml/v1/foundation_model_specs"
-            params = {"version": "2024-09-16", "filters": "function_text_chat,!lifecycle_withdrawn"}
-            response = requests.get(endpoint, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            models = [model["model_id"] for model in data.get("resources", [])]
-            return sorted(models)
-        except Exception:  # noqa: BLE001
-            logger.exception("Error fetching models. Using default models.")
-            return WatsonxAIComponent._default_models
+        """Fetch available models from the watsonx.ai API.
+
+        Uses centralized model fetching from model_utils.
+        """
+        return get_watsonx_llm_models(base_url, default_models=WatsonxAIComponent._default_models)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         """Update model options when URL or API key changes."""
@@ -161,15 +163,13 @@ class WatsonxAIComponent(LCModelComponent):
             try:
                 models = self.fetch_models(base_url=field_value)
                 build_config["model_name"]["options"] = models
-                if build_config["model_name"]["value"]:
-                    build_config["model_name"]["value"] = models[0]
+                if build_config["model_name"].get("value") not in models:
+                    build_config["model_name"]["value"] = models[0] if models else None
                 info_message = f"Updated model options: {len(models)} models found in {field_value}"
                 logger.info(info_message)
             except Exception:  # noqa: BLE001
                 logger.exception("Error updating model options.")
-        if field_name == "model_name" and field_value and field_value in WatsonxAIComponent._urls:
-            build_config["model_name"]["options"] = self.fetch_models(base_url=field_value)
-            build_config["model_name"]["value"] = ""
+
         return build_config
 
     def build_model(self) -> LanguageModel:
@@ -203,10 +203,15 @@ class WatsonxAIComponent(LCModelComponent):
         if isinstance(api_key_value, SecretStr):
             api_key_value = api_key_value.get_secret_value()
 
+        if bool(self.space_id) == bool(self.project_id):
+            msg = "Exactly one of Project_ID or Space_ID must be selected"
+            raise ValueError(msg)
+
         return ChatWatsonx(
             apikey=api_key_value,
             url=self.base_url,
             project_id=self.project_id,
+            space_id=self.space_id,
             model_id=self.model_name,
             params=chat_params,
             streaming=self.stream,

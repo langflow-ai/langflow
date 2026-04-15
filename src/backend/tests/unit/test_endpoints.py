@@ -7,8 +7,14 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 from langflow.services.database.models.flow.model import FlowCreate
+from langflow.services.deps import get_settings_service
 from lfx.custom.directory_reader.directory_reader import DirectoryReader
 from lfx.services.settings.base import BASE_COMPONENTS_PATH
+
+
+@pytest.fixture(autouse=True)
+def allow_custom_components_by_default(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "true")
 
 
 async def run_post(client, flow_id, headers, post_data):
@@ -282,6 +288,18 @@ async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
     ids = [_id.split("-")[0] for _id in response.json()["ids"]]
 
     assert set(ids) == {"ChatInput"}
+
+
+async def test_get_vertices_blocks_custom_components_when_disabled(
+    client, added_flow_webhook_test, logged_in_headers, monkeypatch
+):
+    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", False)
+
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+
+    assert response.status_code == 400
+    assert "outdated components must be updated before running" in response.json()["detail"]
 
 
 async def test_build_vertex_invalid_flow_id(client, logged_in_headers):
@@ -870,3 +888,87 @@ async def test_user_can_access_multiple_own_flows(
     # Cleanup
     await client.delete(f"api/v1/flows/{flow1_id}", headers=logged_in_headers)
     await client.delete(f"api/v1/flows/{flow2_id}", headers=logged_in_headers)
+
+
+# ============================================================================
+# OpenAI Responses API Tests
+# ============================================================================
+
+
+async def test_openai_responses_invalid_flow_id(client: AsyncClient, created_api_key):
+    """Test that OpenAI Responses endpoint returns error for invalid flow ID."""
+    headers = {"x-api-key": created_api_key.api_key}
+    payload = {
+        "model": "invalid-flow-id",
+        "input": "Hello",
+        "stream": False,
+    }
+
+    response = await client.post("/api/v1/responses", json=payload, headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK  # Returns 200 with error in body
+    json_response = response.json()
+    assert "error" in json_response
+    assert json_response["error"]["type"] == "invalid_request_error"
+    assert json_response["error"]["code"] == "flow_not_found"
+
+
+async def test_openai_responses_tools_not_supported(client: AsyncClient, simple_api_test, created_api_key):
+    """Test that OpenAI Responses endpoint returns error when tools parameter is provided."""
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "model": flow_id,
+        "input": "Hello",
+        "stream": False,
+        "tools": [{"type": "function", "function": {"name": "test"}}],
+    }
+
+    response = await client.post("/api/v1/responses", json=payload, headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK  # Returns 200 with error in body
+    json_response = response.json()
+    assert "error" in json_response
+    assert json_response["error"]["type"] == "invalid_request_error"
+    assert json_response["error"]["code"] == "tools_not_supported"
+
+
+async def test_openai_responses_nonexistent_flow_uuid(client: AsyncClient, created_api_key):
+    """Test that OpenAI Responses endpoint returns error for nonexistent flow UUID."""
+    headers = {"x-api-key": created_api_key.api_key}
+    nonexistent_flow_id = str(uuid4())
+    payload = {
+        "model": nonexistent_flow_id,
+        "input": "Hello",
+        "stream": False,
+    }
+
+    response = await client.post("/api/v1/responses", json=payload, headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK  # Returns 200 with error in body
+    json_response = response.json()
+    assert "error" in json_response
+    assert json_response["error"]["type"] == "invalid_request_error"
+    assert "not found" in json_response["error"]["message"].lower()
+
+
+async def test_openai_responses_response_schema_has_usage_field(client: AsyncClient, simple_api_test, created_api_key):
+    """Test that OpenAI Responses response schema includes usage field (even if None)."""
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "model": flow_id,
+        "input": "Hello",
+        "stream": False,
+    }
+
+    response = await client.post("/api/v1/responses", json=payload, headers=headers)
+
+    # simple_api_test may not have ChatInput/ChatOutput, so it might error
+    # But if it succeeds, the response should have usage field
+    json_response = response.json()
+    if "error" not in json_response:
+        # If no error, verify response structure includes usage
+        assert "id" in json_response
+        assert "output" in json_response
+        assert "usage" in json_response  # usage field should always be present (can be None)

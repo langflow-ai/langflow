@@ -2,25 +2,29 @@
 
 from __future__ import annotations
 
+import threading
 from contextlib import asynccontextmanager, suppress
-from http import HTTPStatus
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from fastapi import HTTPException
-from sqlalchemy.exc import InvalidRequestError
 
 from lfx.log.logger import logger
+from lfx.services.config_discovery import resolve_config_dir
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+    from pathlib import Path
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from lfx.services.adapters.registry import AdapterRegistry
     from lfx.services.interfaces import (
+        AuthServiceProtocol,
         CacheServiceProtocol,
         ChatServiceProtocol,
         DatabaseServiceProtocol,
+        DeploymentServiceProtocol,
         SettingsServiceProtocol,
         StorageServiceProtocol,
         TracingServiceProtocol,
@@ -130,6 +134,63 @@ def get_transaction_service() -> TransactionServiceProtocol | None:
     return get_service(ServiceType.TRANSACTION_SERVICE)
 
 
+def get_auth_service() -> AuthServiceProtocol | None:
+    """Retrieves the auth service instance.
+
+    Returns the pluggable auth service (minimal LFX or full Langflow when configured).
+    """
+    from lfx.services.schema import ServiceType
+
+    return get_service(ServiceType.AUTH_SERVICE)
+
+
+def _get_deployment_registry() -> AdapterRegistry[DeploymentServiceProtocol]:
+    """Retrieve the deployment adapter registry singleton.
+
+    Discovery still needs to be triggered separately via
+    ``registry.discover(config_dir=...)``.
+    """
+    from lfx.services.adapters.registry import get_adapter_registry
+    from lfx.services.adapters.schema import AdapterType
+
+    return cast(
+        "AdapterRegistry[DeploymentServiceProtocol]",
+        get_adapter_registry(adapter_type=AdapterType.DEPLOYMENT),
+    )
+
+
+_deployment_discovery_lock = threading.Lock()
+
+
+def get_deployment_adapter(
+    adapter_key: str,
+) -> DeploymentServiceProtocol | None:
+    """Resolve a singleton deployment adapter instance by key.
+
+    Args:
+        adapter_key: Deployment adapter registry key (for example ``"local"``).
+    """
+    registry = _get_deployment_registry()
+    if not registry.is_discovered:
+        with _deployment_discovery_lock:
+            # Double-check after acquiring lock to avoid redundant discovery.
+            if not registry.is_discovered:
+                registry.discover(config_dir=_resolve_adapter_config_dir())
+    instance = registry.get_instance(adapter_key, factory=lambda adapter_class: adapter_class())
+    if instance is None:
+        logger.warning(
+            f"No deployment adapter found for key='{adapter_key}'. "
+            f"Available keys: {registry.list_keys()}. "
+            f"Check your lfx.toml or adapter registration."
+        )
+    return instance
+
+
+def _resolve_adapter_config_dir() -> Path:
+    """Resolve config directory for adapter discovery."""
+    return resolve_config_dir(None, settings_service=get_settings_service())
+
+
 async def get_session():
     msg = "get_session is deprecated, use session_scope instead"
     logger.warning(msg)
@@ -161,21 +222,24 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
             await session.commit()
+        except HTTPException:
+            # HTTPExceptions are control flow in FastAPI (returning 4xx/5xx responses),
+            # not actual errors. Don't log them - FastAPI's exception handlers will
+            # take care of the HTTP response. Just rollback any uncommitted changes.
+            if session.is_active:
+                from sqlalchemy.exc import InvalidRequestError
+
+                with suppress(InvalidRequestError):
+                    await session.rollback()
+            raise
         except Exception as e:
-            # Log at appropriate level based on error type
-            if isinstance(e, HTTPException):
-                if HTTPStatus.BAD_REQUEST.value <= e.status_code < HTTPStatus.INTERNAL_SERVER_ERROR.value:
-                    # Client errors (4xx) - log at info level
-                    await logger.ainfo(f"Client error during session scope: {e.status_code}: {e.detail}")
-                else:
-                    # Server errors (5xx) or other - log at error level
-                    await logger.aexception("An error occurred during the session scope.", exception=e)
-            else:
-                # Non-HTTP exceptions - log at error level
-                await logger.aexception("An error occurred during the session scope.", exception=e)
+            # Actual application/database errors - log at error level
+            await logger.aexception("An error occurred during the session scope.", exception=e)
 
             # Only rollback if session is still in a valid state
             if session.is_active:
+                from sqlalchemy.exc import InvalidRequestError
+
                 with suppress(InvalidRequestError):
                     # Session was already rolled back by SQLAlchemy
                     await session.rollback()

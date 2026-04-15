@@ -1,63 +1,32 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { PLAYGROUND_BUTTON_NAME } from "@/constants/constants";
-import { CustomIOModal } from "@/customization/components/custom-new-modal";
-import { ENABLE_PUBLISH } from "@/customization/feature-flags";
+import { SimpleSidebarTrigger } from "@/components/ui/simple-sidebar";
 
 interface PlaygroundButtonProps {
   hasIO: boolean;
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  canvasOpen: boolean;
 }
 
-const PlayIcon = () => (
-  <ForwardedIconComponent
-    name="Play"
-    className="h-4 w-4 transition-all"
-    strokeWidth={ENABLE_PUBLISH ? 2 : 1.5}
-  />
-);
-
-const ButtonLabel = () => (
-  <span className="hidden md:block">{PLAYGROUND_BUTTON_NAME}</span>
-);
-
-const ActiveButton = () => (
-  <div
-    data-testid="playground-btn-flow-io"
-    className="playground-btn-flow-toolbar hover:bg-accent"
-  >
-    <PlayIcon />
-    <ButtonLabel />
-  </div>
-);
+const ButtonLabel = () => {
+  const { t } = useTranslation();
+  return <span className="font-normal text-mmd">{t("misc.playground")}</span>;
+};
 
 const DisabledButton = () => (
   <div
-    className="playground-btn-flow-toolbar cursor-not-allowed text-muted-foreground duration-150"
+    className="relative inline-flex h-8 w-[7.2rem] items-center justify-start gap-1.5 rounded px-2 text-sm font-normal cursor-not-allowed text-muted-foreground"
     data-testid="playground-btn-flow"
   >
-    <PlayIcon />
+    <ForwardedIconComponent name="Play" className="h-4 w-4" />
     <ButtonLabel />
   </div>
 );
 
-const PlaygroundButton = ({
-  hasIO,
-  open,
-  setOpen,
-  canvasOpen,
-}: PlaygroundButtonProps) => {
+const PlaygroundButton = ({ hasIO }: PlaygroundButtonProps) => {
   return hasIO ? (
-    <CustomIOModal
-      open={open}
-      setOpen={setOpen}
-      disable={!hasIO}
-      canvasOpen={canvasOpen}
-    >
-      <ActiveButton />
-    </CustomIOModal>
+    <SimpleSidebarTrigger>
+      <ButtonLabel />
+    </SimpleSidebarTrigger>
   ) : (
     <ShadTooltip content="Add a Chat Input or Chat Output to use the playground">
       <div>

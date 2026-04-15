@@ -11,6 +11,9 @@ def initialize_services():
     service_manager = get_service_manager()
     service_manager.register_factory(SettingsServiceFactory())
 
+    # Ensure built-in pluggable services are registered (decorator runs on import).
+    # This allows LFX to use minimal auth/telemetry/tracing/variable when no config overrides.
+
     # Note: We don't create the service immediately,
     # it will be created on first use via get_settings_service()
 

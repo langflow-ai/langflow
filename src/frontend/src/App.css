@@ -17,6 +17,16 @@ body {
   -webkit-user-select: none; /* Safari */
   -moz-user-select: none; /* Firefox */
   -ms-user-select: none;
+
+  /* Safari-only fix for playground padding */
+  @media not all and (min-resolution: 0.001dpcm) {
+    @supports (-webkit-appearance: none) {
+      .playground-messages-wrapper {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+    }
+  }
 }
 
 .react-flow__node {
@@ -162,6 +172,15 @@ body {
 }
 .react-flow__controls-button svg {
   fill: none !important;
+}
+.react-flow__controls,
+.react-flow__panel.bottom-center-panel {
+  overflow: visible !important;
+}
+
+/* Reset grab cursor on canvas when a Radix dropdown/popover is open */
+body:has([data-radix-popper-content-wrapper]) .react-flow__pane {
+  cursor: default !important;
 }
 
 .react-flow__edge .react-flow__edge-path {

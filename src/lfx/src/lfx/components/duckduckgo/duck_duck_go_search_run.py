@@ -42,7 +42,7 @@ class DuckDuckGoSearchComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
+        Output(display_name="Table", name="dataframe", method="fetch_content_dataframe"),
     ]
 
     def _build_wrapper(self) -> DuckDuckGoSearchRun:

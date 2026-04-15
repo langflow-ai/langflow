@@ -33,7 +33,7 @@ class WebhookEventManager:
     but triggered by external webhook calls.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the event manager with empty listeners."""
         self._listeners: dict[str, set[asyncio.Queue]] = defaultdict(set)
         self._vertex_start_times: dict[str, dict[str, float]] = defaultdict(dict)

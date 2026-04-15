@@ -3,7 +3,7 @@ from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from aiofile import async_open
+import aiofiles
 from dotenv import dotenv_values
 
 from lfx.graph.schema import RunOutputs
@@ -15,6 +15,7 @@ from lfx.load.utils import replace_tweaks_with_env
 from lfx.log.logger import configure
 from lfx.processing.process import process_tweaks, run_graph
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.flow_validation import CustomComponentValidationError, ensure_component_hash_lookups_loaded
 from lfx.utils.util import update_settings
 
 
@@ -56,7 +57,7 @@ async def aload_flow_from_json(
 
     # override env variables with .env file
     if env_file and tweaks is not None:
-        async with async_open(Path(env_file), encoding="utf-8") as f:
+        async with aiofiles.open(Path(env_file), encoding="utf-8") as f:
             content = await f.read()
             env_vars = dotenv_values(stream=StringIO(content))
         tweaks = replace_tweaks_with_env(tweaks=tweaks, env_vars=env_vars)
@@ -65,7 +66,7 @@ async def aload_flow_from_json(
     await update_settings(cache=cache)
 
     if isinstance(flow, str | Path):
-        async with async_open(Path(flow), encoding="utf-8") as f:
+        async with aiofiles.open(Path(flow), encoding="utf-8") as f:
             content = await f.read()
             flow_graph = json.loads(content)
     # If input is a dictionary, assume it's a JSON object
@@ -78,6 +79,17 @@ async def aload_flow_from_json(
     graph_data = flow_graph["data"]
     if tweaks is not None:
         graph_data = process_tweaks(graph_data, tweaks)
+
+    try:
+        await ensure_component_hash_lookups_loaded()
+    except CustomComponentValidationError:
+        raise
+    except Exception as exc:
+        msg = (
+            "Failed to load component templates for validation. "
+            "Ensure the server is fully initialized before loading flows."
+        )
+        raise CustomComponentValidationError(msg) from exc
 
     from lfx.graph.graph.base import Graph
 

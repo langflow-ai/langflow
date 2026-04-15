@@ -25,9 +25,14 @@ from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
 
+from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
 from langflow.services.database import models
+from langflow.services.database.constants import (
+    MIN_POSTGRESQL_MAJOR_VERSION,
+    POSTGRESQL_VERSION_REQUIRED_MESSAGE,
+)
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
@@ -36,6 +41,50 @@ from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
+
+
+class UnsupportedPostgreSQLVersionError(Exception):
+    """Raised when the PostgreSQL version is below the minimum required."""
+
+
+_PG_VERSION_QUERY = sa.text("SELECT current_setting('server_version_num'), current_setting('server_version')")
+
+
+def _check_version_row(version_num_str: str, version_str: str) -> None:
+    """Raise ``UnsupportedPostgreSQLVersionError`` when the version is too old."""
+    if int(version_num_str) < MIN_POSTGRESQL_MAJOR_VERSION * 10000:
+        msg = f"Running PostgreSQL {version_str}. {POSTGRESQL_VERSION_REQUIRED_MESSAGE}"
+        logger.error(msg)
+        raise UnsupportedPostgreSQLVersionError(msg)
+
+
+def check_postgresql_version_sync(database_url: str) -> None:
+    """Pre-flight check: verify PostgreSQL >= 15 using a synchronous connection.
+
+    Call this *before* starting uvicorn/gunicorn so a version mismatch
+    results in a clean ``sys.exit(1)`` rather than a messy lifespan failure.
+    Silently returns when the URL is not PostgreSQL.
+    """
+    if not database_url.startswith(("postgresql", "postgres")):
+        return
+
+    from sqlalchemy import create_engine
+
+    # Normalise the async URL to a sync-compatible one.
+    url = database_url
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url.split("://", 1)[1]
+    # Strip async driver suffixes so create_engine picks the default sync driver.
+    for async_driver in ("+asyncpg", "+aiosqlite"):
+        url = url.replace(async_driver, "")
+
+    engine = create_engine(url)
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(_PG_VERSION_QUERY).fetchone()
+            _check_version_row(*row)
+    finally:
+        engine.dispose()
 
 
 class DatabaseService(Service):
@@ -48,6 +97,9 @@ class DatabaseService(Service):
             msg = "No database URL provided"
             raise ValueError(msg)
         self.database_url: str = settings_service.settings.database_url
+
+        configure_windows_postgres_event_loop(source="database_service")
+
         self._sanitize_database_url()
 
         # This file is in langflow.services.database.manager.py
@@ -221,6 +273,23 @@ class DatabaseService(Service):
             # Provides efficient session creation and proper connection pooling
             async with self.async_session_maker() as session:
                 yield session
+
+    async def ensure_postgresql_version(self) -> None:
+        """If the database is PostgreSQL, ensure it is version 15 or higher.
+
+        Langflow's schema uses UNIQUE NULLS DISTINCT, which is only supported in PostgreSQL 15+.
+        Logs the message and raises UnsupportedPostgreSQLVersionError if the version is too old.
+        """
+        if not self.database_url.startswith(("postgresql", "postgres")):
+            return
+        if self.settings_service.settings.use_noop_database:
+            return
+        async with session_scope() as session:
+            result = await session.execute(_PG_VERSION_QUERY)
+            version_num_str, version_str = result.fetchone()
+        # Raise AFTER session_scope exits so session_scope doesn't log a
+        # noisy "An error occurred during the session scope." traceback.
+        _check_version_row(version_num_str, version_str)
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""

@@ -23,7 +23,7 @@ test(
 
     await page.getByTestId("sidebar-custom-component-button").click();
 
-    await expect(page.getByTestId("code-button-modal")).toBeVisible({
+    await expect(page.getByTestId("code-button-modal").last()).toBeVisible({
       timeout: 3000,
     });
 
