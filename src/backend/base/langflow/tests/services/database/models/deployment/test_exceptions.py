@@ -5,6 +5,7 @@ from langflow.services.database.models.deployment.exceptions import (
     DeploymentGuardError,
     get_friendly_guard_detail,
     parse_deployment_guard_error,
+    raise_if_deployment_guard_error_or_skip,
 )
 
 
@@ -158,3 +159,29 @@ def test_deployment_guard_error_supports_manual_technical_and_code() -> None:
         err.detail == "This flow cannot be deleted because it has deployed versions. "
         "Please remove its versions from deployments first."
     )
+
+
+def test_raise_if_deployment_guard_error_or_skip_raises_first_guard_in_chain() -> None:
+    guard_error = DeploymentGuardError(
+        code="PROJECT_HAS_DEPLOYMENTS",
+        technical_detail="DELETE project blocked: dependent deployments exist.",
+        detail=get_friendly_guard_detail("PROJECT_HAS_DEPLOYMENTS"),
+    )
+    wrapped_error: _OuterWrapperError | None = None
+    try:
+        try:
+            raise guard_error
+        except DeploymentGuardError as inner:
+            msg = "wrapped guard"
+            raise _OuterWrapperError(msg) from inner
+    except _OuterWrapperError as wrapped:
+        wrapped_error = wrapped
+        with pytest.raises(DeploymentGuardError) as raised:
+            raise_if_deployment_guard_error_or_skip(wrapped)
+
+    assert raised.value is guard_error
+    assert raised.value.__cause__ is wrapped_error
+
+
+def test_raise_if_deployment_guard_error_or_skip_is_noop_when_guard_absent() -> None:
+    raise_if_deployment_guard_error_or_skip(Exception("not a guard error"))

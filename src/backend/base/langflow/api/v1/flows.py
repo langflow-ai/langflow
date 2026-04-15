@@ -40,7 +40,10 @@ from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.cache.service import ThreadingInMemoryCache
-from langflow.services.database.models.deployment.exceptions import DeploymentGuardError, parse_deployment_guard_error
+from langflow.services.database.models.deployment.exceptions import (
+    DeploymentGuardError,
+    raise_if_deployment_guard_error_or_skip,
+)
 from langflow.services.database.models.flow.model import (
     AccessTypeEnum,
     Flow,
@@ -253,9 +256,7 @@ async def update_flow(
     except HTTPException:
         raise
     except Exception as e:
-        guard_error = parse_deployment_guard_error(e)
-        if guard_error:
-            raise guard_error from e
+        raise_if_deployment_guard_error_or_skip(e)
         raise _handle_unique_constraint_error(e) from e
 
 
@@ -335,9 +336,7 @@ async def upsert_flow(
     except HTTPException:
         raise
     except Exception as e:
-        guard_error = parse_deployment_guard_error(e)
-        if guard_error:
-            raise guard_error from e
+        raise_if_deployment_guard_error_or_skip(e)
         raise _handle_unique_constraint_error(e, status_code=409) from e
 
 

@@ -13,7 +13,10 @@ from sqlalchemy import delete
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.deployment.exceptions import DeploymentGuardError, parse_deployment_guard_error
+from langflow.services.database.models.deployment.exceptions import (
+    DeploymentGuardError,
+    raise_if_deployment_guard_error_or_skip,
+)
 from langflow.services.database.models.deployment.guards import check_flow_has_deployed_versions
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
@@ -114,9 +117,7 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
     except DeploymentGuardError:
         raise
     except Exception as e:
-        guard_error = parse_deployment_guard_error(e)
-        if guard_error:
-            raise guard_error from e
+        raise_if_deployment_guard_error_or_skip(e)
         msg = f"Unable to cascade delete flow: {flow_id}"
         raise RuntimeError(msg, e) from e
 

@@ -71,3 +71,9 @@ def parse_deployment_guard_error(exc: BaseException) -> DeploymentGuardError | N
         current = current.__cause__ or current.__context__
 
     return None
+
+
+def raise_if_deployment_guard_error_or_skip(exc: BaseException) -> None:
+    """Raise chained ``DeploymentGuardError`` when present; otherwise do nothing."""
+    if guard_error := parse_deployment_guard_error(exc):
+        raise guard_error from exc

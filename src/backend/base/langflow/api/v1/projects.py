@@ -34,7 +34,7 @@ from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.database.models.deployment.exceptions import (
     DeploymentGuardError,
     get_friendly_guard_detail,
-    parse_deployment_guard_error,
+    raise_if_deployment_guard_error_or_skip,
 )
 from langflow.services.database.models.deployment.guards import check_project_has_deployments
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
@@ -188,9 +188,7 @@ async def create_project(
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
         raise
     except Exception as e:
-        guard_error = parse_deployment_guard_error(e)
-        if guard_error:
-            raise guard_error from e
+        raise_if_deployment_guard_error_or_skip(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return folder_read
@@ -431,9 +429,7 @@ async def update_project(
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
         raise
     except Exception as e:
-        guard_error = parse_deployment_guard_error(e)
-        if guard_error:
-            raise guard_error from e
+        raise_if_deployment_guard_error_or_skip(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return folder_read
@@ -497,9 +493,7 @@ async def delete_project(
             ) from exc
         raise
     except Exception as e:
-        guard_error = parse_deployment_guard_error(e)
-        if guard_error:
-            raise guard_error from e
+        raise_if_deployment_guard_error_or_skip(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
