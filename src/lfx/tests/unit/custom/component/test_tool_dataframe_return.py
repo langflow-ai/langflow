@@ -7,7 +7,6 @@ This allows agents like OpenDsStar to use the DataFrame natively with
 """
 
 import pandas as pd
-
 from lfx.base.tools.component_tool import ComponentToolkit
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import MessageTextInput
@@ -51,9 +50,7 @@ def test_tool_returns_dataframe_not_list():
 
     result = table_tool.invoke({"query": "test"})
 
-    assert isinstance(result, pd.DataFrame), (
-        f"Expected pandas DataFrame, got {type(result).__name__}: {result!r}"
-    )
+    assert isinstance(result, pd.DataFrame), f"Expected pandas DataFrame, got {type(result).__name__}: {result!r}"
     assert list(result.columns) == ["col1", "col2"]
     assert len(result) == 3
     assert result["col1"].tolist() == [1, 2, 3]

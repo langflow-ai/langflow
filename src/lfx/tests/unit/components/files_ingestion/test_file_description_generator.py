@@ -2,9 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-import pandas as pd
 import pytest
-
 from lfx.components.files_ingestion.file_description_generator import FileDescriptionGeneratorComponent
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
@@ -23,10 +21,12 @@ class TestFileDescriptionGeneratorComponent:
     def test_extract_file_paths_from_dataframe_column(self):
         """Test extracting file paths from DataFrame with file_path column."""
         # Create a DataFrame with file_path column (simulating Read File output)
-        df = DataFrame([
-            {"file_path": "/path/to/file1.csv", "text": "content1"},
-            {"file_path": "/path/to/file2.csv", "text": "content2"},
-        ])
+        df = DataFrame(
+            [
+                {"file_path": "/path/to/file1.csv", "text": "content1"},
+                {"file_path": "/path/to/file2.csv", "text": "content2"},
+            ]
+        )
 
         self.component.file_data = [df]
         self.component.cache_dir = "./test_cache"
@@ -47,6 +47,7 @@ class TestFileDescriptionGeneratorComponent:
         # Verify the subprocess was called with correct file paths
         call_args = mock_run.call_args
         import json
+
         config = json.loads(call_args[1]["input"])
         assert len(config["file_paths"]) == 2
         assert "/path/to/file1.csv" in config["file_paths"]
@@ -82,6 +83,7 @@ class TestFileDescriptionGeneratorComponent:
         # Verify the subprocess was called with correct file path
         call_args = mock_run.call_args
         import json
+
         config = json.loads(call_args[1]["input"])
         assert len(config["file_paths"]) == 1
         assert "/path/to/legacy_file.csv" in config["file_paths"]
@@ -114,11 +116,13 @@ class TestFileDescriptionGeneratorComponent:
     def test_extract_unique_file_paths_from_dataframe(self):
         """Test that duplicate file paths in DataFrame are deduplicated."""
         # Create a DataFrame with duplicate file paths
-        df = DataFrame([
-            {"file_path": "/path/to/file1.csv", "text": "row1"},
-            {"file_path": "/path/to/file1.csv", "text": "row2"},
-            {"file_path": "/path/to/file2.csv", "text": "row3"},
-        ])
+        df = DataFrame(
+            [
+                {"file_path": "/path/to/file1.csv", "text": "row1"},
+                {"file_path": "/path/to/file1.csv", "text": "row2"},
+                {"file_path": "/path/to/file2.csv", "text": "row3"},
+            ]
+        )
 
         self.component.file_data = [df]
         self.component.cache_dir = "./test_cache"
@@ -138,6 +142,7 @@ class TestFileDescriptionGeneratorComponent:
         # Verify only unique file paths were processed
         call_args = mock_run.call_args
         import json
+
         config = json.loads(call_args[1]["input"])
         assert len(config["file_paths"]) == 2
 
@@ -192,6 +197,7 @@ class TestFileDescriptionGeneratorComponent:
         # Verify both file paths were processed
         call_args = mock_run.call_args
         import json
+
         config = json.loads(call_args[1]["input"])
         assert len(config["file_paths"]) == 2
 
@@ -237,11 +243,13 @@ class TestFileDescriptionGeneratorComponent:
 
     def test_dataframe_with_nan_file_paths(self):
         """Test that NaN values in file_path column are filtered out."""
-        df = DataFrame([
-            {"file_path": "/path/to/file1.csv", "text": "content1"},
-            {"file_path": None, "text": "content2"},
-            {"file_path": "/path/to/file3.csv", "text": "content3"},
-        ])
+        df = DataFrame(
+            [
+                {"file_path": "/path/to/file1.csv", "text": "content1"},
+                {"file_path": None, "text": "content2"},
+                {"file_path": "/path/to/file3.csv", "text": "content3"},
+            ]
+        )
 
         self.component.file_data = [df]
         self.component.cache_dir = "./test_cache"
@@ -261,6 +269,7 @@ class TestFileDescriptionGeneratorComponent:
         # Verify only non-NaN file paths were processed
         call_args = mock_run.call_args
         import json
+
         config = json.loads(call_args[1]["input"])
         assert len(config["file_paths"]) == 2
         assert None not in config["file_paths"]
@@ -268,10 +277,12 @@ class TestFileDescriptionGeneratorComponent:
     def test_one_description_per_file(self):
         """Test that component generates exactly one description per unique file."""
         # Simulate Read File output with 2 files
-        df = DataFrame([
-            {"file_path": "/path/to/file1.csv", "text": "ratings,title,text..."},
-            {"file_path": "/path/to/file2.csv", "text": "listing_id,name,host_id..."},
-        ])
+        df = DataFrame(
+            [
+                {"file_path": "/path/to/file1.csv", "text": "ratings,title,text..."},
+                {"file_path": "/path/to/file2.csv", "text": "listing_id,name,host_id..."},
+            ]
+        )
 
         self.component.file_data = [df]
         self.component.cache_dir = "./test_cache"
@@ -295,5 +306,6 @@ class TestFileDescriptionGeneratorComponent:
         assert result[0].data["text"] == "This file contains hotel ratings data"
         assert result[1].data["file_path"] == "/path/to/file2.csv"
         assert result[1].data["text"] == "This file contains listing information"
+
 
 # Made with Bob

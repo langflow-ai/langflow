@@ -28,11 +28,7 @@ class CodeActAgentSmolagentsRunnable(Runnable):
         self.agent = agent
         self.start_time = None
 
-    def invoke(
-        self,
-        input: dict[str, Any] | str,
-        config: RunnableConfig | None = None
-    ) -> dict[str, Any]:
+    def invoke(self, input: dict[str, Any] | str, config: RunnableConfig | None = None) -> dict[str, Any]:
         """Invoke the CodeActAgentSmolagents synchronously.
 
         Args:
@@ -116,6 +112,7 @@ class CodeActAgentSmolagentsRunnable(Runnable):
 
         # Stream from the agent (wrapped in async)
         import asyncio
+
         for event in self.agent.stream_invoke(query, config=config):
             yield event
             # Allow other async tasks to run
@@ -364,7 +361,9 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
                     summary_output.append(f"Step: {step_idx}")
 
                 if event.get("code"):
-                    summary_output.append("Code generated" if node_name.lower().startswith("code_generation") else "Code present")
+                    summary_output.append(
+                        "Code generated" if node_name.lower().startswith("code_generation") else "Code present"
+                    )
                 if event.get("logs"):
                     summary_output.append("Execution logs")
                 if event.get("error"):
@@ -594,10 +593,12 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
                 # Debugging info
                 import os
                 import sys
+
                 print("DEBUG: sys.path:", sys.path)
                 print("DEBUG: CWD:", os.getcwd())
                 try:
                     import agents
+
                     print("DEBUG: found agents module at:", agents.__file__)
                 except ImportError:
                     print("DEBUG: could not import agents module")
@@ -675,7 +676,9 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
             model=llm_model,
             temperature=0.0,  # Fixed for now, could be made configurable
             tools=tools,
-            system_prompt=system_prompt if system_prompt else "You are a helpful assistant that can execute code to solve tasks.",
+            system_prompt=system_prompt
+            if system_prompt
+            else "You are a helpful assistant that can execute code to solve tasks.",
             max_steps=max_iterations,
             code_timeout=code_timeout,
         )
