@@ -12,10 +12,10 @@ export type FilePreviewDisplayProps = {
   /**
    * File can be:
    * - Browser File object (for input context)
-   * - Server file path object { path: string; type: string; name: string }
+   * - Server file path object { path: string; type?: string; name?: string;}
    * - Server file path string
    */
-  file: File | { path: string; type: string; name: string } | string;
+  file: File | { path: string; type?: string; name?: string } | string;
   /**
    * Loading state (for input context when file is being processed)
    */
@@ -60,10 +60,10 @@ export default function FilePreviewDisplay({
   const previewUrl = getFilePreviewUrl(file);
   const fileInfo = extractFileInfo(file);
 
-  // Reset error state when file changes
+  // Reset error state when preview URL changes
   useEffect(() => {
     setImageError(false);
-  }, [file]);
+  }, [previewUrl]);
 
   // Cleanup blob URLs for File objects
   useEffect(() => {

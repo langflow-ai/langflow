@@ -1,6 +1,6 @@
 {
   "name": "langflow",
-  "version": "1.8.4",
+  "version": "1.9.0",
   "private": true,
   "engines": {
     "node": ">=20.19.0"
@@ -9,7 +9,17 @@
     "tar": "^7.5.7",
     "tar-fs": ">=2.1.4",
     "glob": "^11.1.0",
-    "test-exclude": "^7.0.0"
+    "test-exclude": "^7.0.0",
+    "picomatch": ">=4.0.4",
+    "jest-util": {
+      "picomatch": ">=4.0.4"
+    },
+    "jest-message-util": {
+      "picomatch": ">=4.0.4"
+    },
+    "playwright": "^1.59.1",
+    "brace-expansion": ">=5.0.5",
+    "handlebars": ">=4.7.9"
   },
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
@@ -46,7 +56,7 @@
     "ag-grid-community": "^32.3.9",
     "ag-grid-react": "^32.3.9",
     "ansi-to-html": "^0.7.2",
-    "axios": "^1.7.4",
+    "axios": "^1.15.0",
     "base64-js": "^1.5.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
@@ -60,7 +70,8 @@
     "file-saver": "^2.0.5",
     "framer-motion": "^11.2.10",
     "fuse.js": "^7.0.0",
-    "lodash": "^4.17.23",
+    "i18next": "^25.8.18",
+    "lodash": "^4.18.0",
     "lucide-react": "^0.575.0",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.48",
@@ -69,7 +80,7 @@
     "openseadragon": "^4.1.1",
     "p-debounce": "^4.0.0",
     "pako": "^2.1.0",
-    "playwright": "^1.57.0",
+    "playwright": "^1.59.1",
     "pretty-ms": "^9.1.0",
     "react": "^19.2.1",
     "react-ace": "^14.0.1",
@@ -78,6 +89,7 @@
     "react-error-boundary": "^4.0.13",
     "react-hook-form": "^7.52.0",
     "react-hotkeys-hook": "^4.5.0",
+    "react-i18next": "^16.5.8",
     "react-icons": "^5.2.1",
     "react-markdown": "^9.1.0",
     "react-pdf": "^9.0.0",
@@ -97,8 +109,6 @@
     "use-stick-to-bottom": "^1.1.1",
     "uuid": "^10.0.0",
     "vanilla-jsoneditor": "^2.3.3",
-    "vite-plugin-svgr": "^4.2.0",
-    "vite-tsconfig-paths": "^6.0.3",
     "web-vitals": "^4.1.1",
     "whatwg-fetch": "^3.6.20",
     "zod": "^3.23.8",
@@ -156,8 +166,8 @@
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.5.2",
     "@types/jest": "^29.5.12",
-    "@types/lodash": "4.17.5",
-    "@types/node": "^20.14.2",
+    "@types/lodash": "^4.17.5",
+    "@types/node": "^25.5.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@types/sortablejs": "^1.15.8",
@@ -167,6 +177,7 @@
     "jest": "^30.0.3",
     "jest-environment-jsdom": "^30.0.2",
     "jest-junit": "^16.0.0",
+    "nyc": "^18.0.0",
     "postcss": "^8.4.38",
     "storybook": "^10.1.0",
     "tailwindcss": "^3.4.4",
@@ -174,6 +185,9 @@
     "ts-jest": "^29.4.0",
     "typescript": "^5.4.5",
     "ua-parser-js": "^1.0.38",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vite-plugin-istanbul": "^8.0.0",
+    "vite-plugin-svgr": "^4.5.0",
+    "vite-tsconfig-paths": "^6.1.0"
   }
 }

@@ -69,9 +69,14 @@ class TestModelInputValueNormalization:
         assert model_input.value is None
 
     def test_empty_string_handled(self):
-        """Empty string should be handled gracefully."""
+        """Empty string should be normalized to None (no model selected)."""
         model_input = ModelInput(name="test_model", value="")
-        assert model_input.value == ""
+        assert model_input.value is None
+
+    def test_empty_list_handled(self):
+        """Empty list should be normalized to None (no model selected)."""
+        model_input = ModelInput(name="test_model", value=[])
+        assert model_input.value is None
 
 
 class TestUnifiedModelsDefaults:

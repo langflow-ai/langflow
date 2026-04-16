@@ -1,18 +1,19 @@
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { forwardRef, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "../../components/common/genericIconComponent";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "../../components/ui/popover";
-import { ZERO_NOTIFICATIONS } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import type { AlertDropdownType } from "../../types/alerts";
 import SingleAlert from "./components/singleAlertComponent";
 
 const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
   function AlertDropdown({ children, notificationRef, onClose }, ref) {
+    const { t } = useTranslation();
     const notificationList = useAlertStore((state) => state.notificationList);
     const clearNotificationList = useAlertStore(
       (state) => state.clearNotificationList,
@@ -82,7 +83,7 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
               ))
             ) : (
               <div className="flex h-full w-full items-center justify-center pb-16 text-ring">
-                {ZERO_NOTIFICATIONS}
+                {t("nav.notifications")}
               </div>
             )}
           </div>

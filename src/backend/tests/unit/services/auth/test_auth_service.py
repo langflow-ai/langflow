@@ -126,6 +126,113 @@ def test_encrypt_and_decrypt_api_key_roundtrip(auth_service: AuthService):
     assert decrypted == api_key
 
 
+def test_add_padding_no_extra_chars_when_divisible_by_4():
+    """add_base64_padding must not add characters when length is already a multiple of 4."""
+    from langflow.services.auth.utils import add_base64_padding
+
+    assert add_base64_padding("ABCD") == "ABCD"
+    assert add_base64_padding("ABCDEFGH") == "ABCDEFGH"
+    assert add_base64_padding("A" * 44) == "A" * 44
+
+
+def test_add_padding_pads_correctly():
+    """add_base64_padding must add the right number of = characters."""
+    from langflow.services.auth.utils import add_base64_padding
+
+    assert add_base64_padding("ABC") == "ABC="
+    assert add_base64_padding("AB") == "AB=="
+    assert add_base64_padding("A") == "A==="
+
+
+def test_encrypt_decrypt_roundtrip_with_standard_key(tmp_path):
+    """secrets.token_urlsafe(32) produces a 43-char key that must always work."""
+    import secrets
+
+    raw_key = secrets.token_urlsafe(32)  # always 43 chars
+    assert len(raw_key) == 43
+
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path))
+    settings.SECRET_KEY = SecretStr(raw_key)
+    settings_service = SimpleNamespace(
+        auth_settings=settings,
+        settings=SimpleNamespace(config_dir=str(tmp_path)),
+    )
+    svc = AuthService(settings_service)
+
+    encrypted = svc.encrypt_api_key("sk-test-key-12345")  # pragma: allowlist secret
+    assert svc.decrypt_api_key(encrypted) == "sk-test-key-12345"  # pragma: allowlist secret
+
+
+def test_encrypt_decrypt_roundtrip_with_base64_encoded_32_byte_key(tmp_path):
+    """A base64url-encoded 32-byte key (44 chars) must work after padding fix."""
+    import base64
+    import os
+
+    raw_key = base64.urlsafe_b64encode(os.urandom(32)).decode()  # 44 chars with padding
+    assert len(raw_key) == 44
+
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path))
+    settings.SECRET_KEY = SecretStr(raw_key)
+    settings_service = SimpleNamespace(
+        auth_settings=settings,
+        settings=SimpleNamespace(config_dir=str(tmp_path)),
+    )
+    svc = AuthService(settings_service)
+
+    encrypted = svc.encrypt_api_key("sk-test-key-12345")  # pragma: allowlist secret
+    assert svc.decrypt_api_key(encrypted) == "sk-test-key-12345"  # pragma: allowlist secret
+
+
+def test_encrypt_decrypt_roundtrip_with_short_key(tmp_path):
+    """Keys shorter than 32 chars use the random.seed path and must work."""
+    raw_key = "short-key"
+
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path))
+    settings.SECRET_KEY = SecretStr(raw_key)
+    settings_service = SimpleNamespace(
+        auth_settings=settings,
+        settings=SimpleNamespace(config_dir=str(tmp_path)),
+    )
+    svc = AuthService(settings_service)
+
+    encrypted = svc.encrypt_api_key("sk-test-key-12345")  # pragma: allowlist secret
+    assert svc.decrypt_api_key(encrypted) == "sk-test-key-12345"  # pragma: allowlist secret
+
+
+def test_decrypt_api_key_returns_empty_on_undecryptable_token(auth_service: AuthService):
+    """Decryption of an invalid Fernet token must return empty string, not raise."""
+    bad_token = "gAAAAABinvalidtokendata"  # noqa: S105  # pragma: allowlist secret
+    result = auth_service.decrypt_api_key(bad_token)
+    assert result == ""
+
+
+def test_decrypt_api_key_returns_plaintext_as_is(auth_service: AuthService):
+    """Plaintext keys (not starting with gAAAAA) must be returned as-is."""
+    plaintext = "sk-some-plaintext-key"  # pragma: allowlist secret
+    assert auth_service.decrypt_api_key(plaintext) == plaintext
+
+
+def test_decrypt_api_key_returns_empty_for_invalid_input(auth_service: AuthService):
+    """Empty or non-string input must return empty string."""
+    assert auth_service.decrypt_api_key("") == ""
+
+
+def test_ensure_fernet_key_with_44_char_key():
+    """ensure_fernet_key must handle 44-char keys (len % 4 == 0) correctly."""
+    import base64
+    import os
+
+    from cryptography.fernet import Fernet
+    from langflow.services.auth.utils import ensure_fernet_key
+
+    raw_key = base64.urlsafe_b64encode(os.urandom(32)).decode()  # 44 chars, len % 4 == 0
+    assert len(raw_key) == 44
+
+    fernet = Fernet(ensure_fernet_key(raw_key))
+    encrypted = fernet.encrypt(b"test-value")
+    assert fernet.decrypt(encrypted) == b"test-value"
+
+
 def test_password_helpers_roundtrip(auth_service: AuthService):
     password = "Str0ngP@ssword"  # noqa: S105  # pragma: allowlist secret
 

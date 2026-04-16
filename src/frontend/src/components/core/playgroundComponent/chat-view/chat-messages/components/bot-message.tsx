@@ -3,6 +3,7 @@ import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import IconComponent, {
   ForwardedIconComponent,
 } from "@/components/common/genericIconComponent";
+import MessageMetadata from "@/components/common/messageMetadataComponent";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
@@ -151,20 +152,30 @@ export const BotMessage = memo(
               )}
 
               <div className="flex w-full flex-col min-w-0">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-0.5">
+                <span className="text-sm font-medium text-foreground mb-1">
+                  {chat.sender_name ?? "AI"}
+                </span>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   {!thinkingActive && displayTime > 0 && (
                     <ForwardedIconComponent
                       name="Check"
-                      className="h-4 w-4 text-accent-emerald-foreground"
+                      className="h-4 w-4 text-emerald-400"
                     />
                   )}
-                  <span>
+                  <span className="w-full flex justify-between">
                     {thinkingActive && displayTime > 0 ? (
                       <span>Running... {formatSeconds(displayTime)}</span>
                     ) : !thinkingActive && displayTime > 0 ? (
-                      <span className="text-muted-foreground">
-                        Finished in {formatSeconds(displayTime)}
-                      </span>
+                      <>
+                        <span className="text-muted-foreground">
+                          Finished in
+                        </span>
+                        <MessageMetadata
+                          duration={displayTime}
+                          usage={chat.properties?.usage}
+                          timestamp={chat.timestamp}
+                        />
+                      </>
                     ) : null}
                   </span>
                 </div>
@@ -234,7 +245,7 @@ export const BotMessage = memo(
             </div>
 
             {!editMessage && (
-              <div className="invisible absolute -top-4 right-0 group-hover:visible">
+              <div className="invisible absolute bottom-full right-0 group-hover:visible">
                 <EditMessageButton
                   onCopy={() => navigator.clipboard.writeText(chatMessage)}
                   onEdit={() => setEditMessage(true)}

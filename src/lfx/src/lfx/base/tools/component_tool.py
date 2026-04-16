@@ -10,6 +10,7 @@ from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.serialization.serialization import serialize
@@ -83,23 +84,42 @@ def _patch_send_message_decorator(component, func):
     return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
 
-def _build_output_function(component: Component, output_method: Callable, event_manager: EventManager | None = None):
+def _build_output_function(
+    component: Component,
+    output_method: Callable,
+    event_manager: EventManager | None = None,
+    output_name: str = TOOL_OUTPUT_NAME,
+):
     method_name = output_method.__name__
 
     def output_function(*args, **kwargs):
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
-        local_method = getattr(comp, method_name)
+        local_method = getattr(comp, method_name, output_method)
+        build_started = False
+        result = None
         try:
             if event_manager:
                 event_manager.on_build_start(data={"id": comp.get_id()})
+                build_started = True
+            comp.set_event_manager(event_manager)
+            comp.set_current_output(output_name)
             comp.set(*args, **kwargs)
             result = local_method()
-            if event_manager:
-                event_manager.on_build_end(data={"id": comp.get_id()})
         except Exception as e:
-            raise ToolException(e) from e
+            logger.error(
+                "Component %s failed during tool mode execution: %s",
+                comp.get_id(),
+                e,
+                exc_info=True,
+            )
+            raise ToolException(str(e)) from e
+        finally:
+            comp.set_current_output("")
+            comp.set_event_manager(None)
+            if build_started and event_manager:
+                event_manager.on_build_end(data={"id": comp.get_id()})
 
         if isinstance(result, Message):
             return result.get_text()
@@ -112,7 +132,10 @@ def _build_output_function(component: Component, output_method: Callable, event_
 
 
 def _build_output_async_function(
-    component: Component, output_method: Callable, event_manager: EventManager | None = None
+    component: Component,
+    output_method: Callable,
+    event_manager: EventManager | None = None,
+    output_name: str = TOOL_OUTPUT_NAME,
 ):
     method_name = output_method.__name__
 
@@ -120,16 +143,30 @@ def _build_output_async_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
-        local_method = getattr(comp, method_name)
+        local_method = getattr(comp, method_name, output_method)
+        build_started = False
+        result = None
         try:
             if event_manager:
-                await asyncio.to_thread(event_manager.on_build_start, data={"id": comp.get_id()})
+                event_manager.on_build_start(data={"id": comp.get_id()})
+                build_started = True
+            comp.set_event_manager(event_manager)
+            comp.set_current_output(output_name)
             comp.set(*args, **kwargs)
             result = await local_method()
-            if event_manager:
-                await asyncio.to_thread(event_manager.on_build_end, data={"id": comp.get_id()})
         except Exception as e:
-            raise ToolException(e) from e
+            logger.error(
+                "Component %s failed during tool mode execution: %s",
+                comp.get_id(),
+                e,
+                exc_info=True,
+            )
+            raise ToolException(str(e)) from e
+        finally:
+            comp.set_current_output("")
+            comp.set_event_manager(None)
+            if build_started and event_manager:
+                event_manager.on_build_end(data={"id": comp.get_id()})
         if isinstance(result, Message):
             return result.get_text()
         if isinstance(result, Data):
@@ -238,7 +275,9 @@ class ComponentToolkit:
                     StructuredTool(
                         name=formatted_name,
                         description=build_description(self.component),
-                        coroutine=_build_output_async_function(self.component, output_method, event_manager),
+                        coroutine=_build_output_async_function(
+                            self.component, output_method, event_manager, TOOL_OUTPUT_NAME
+                        ),
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
@@ -254,7 +293,7 @@ class ComponentToolkit:
                     StructuredTool(
                         name=formatted_name,
                         description=build_description(self.component),
-                        func=_build_output_function(self.component, output_method, event_manager),
+                        func=_build_output_function(self.component, output_method, event_manager, TOOL_OUTPUT_NAME),
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
@@ -270,19 +309,13 @@ class ComponentToolkit:
             tool.name = _format_tool_name(str(tool_name)) or tool.name
             tool.description = tool_description or tool.description
             tool.tags = [tool.name]
-        elif flow_mode_inputs and (tool_name or tool_description):
+        elif (tool_name or tool_description) and (flow_mode_inputs or len(tools) > 1):
             for tool in tools:
                 tool.name = _format_tool_name(str(tool_name) + "_" + str(tool.name)) or tool.name
                 tool.description = (
                     str(tool_description) + " Output details: " + str(tool.description)
                 ) or tool.description
                 tool.tags = [tool.name]
-        elif tool_name or tool_description:
-            msg = (
-                "When passing a tool name or description, there must be only one tool, "
-                f"but {len(tools)} tools were found."
-            )
-            raise ValueError(msg)
         return tools
 
     def get_tools_metadata_dictionary(self) -> dict:

@@ -4,15 +4,20 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.adapters.deployment.schema import DEPLOYMENT_DESCRIPTION_MAX_LENGTH
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select
 
 from langflow.services.database.models.deployment.model import Deployment
+from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    FlowVersionDeploymentAttachment,
+)
 from langflow.services.database.utils import parse_uuid
 
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from lfx.services.adapters.deployment.schema import DeploymentType
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -25,6 +30,14 @@ def _strip_or_raise(value: str, field_name: str) -> str:
     return stripped
 
 
+def _validate_description_max_length(description: str | None) -> str | None:
+    """Reject descriptions that exceed the deployment max length."""
+    if description is not None and len(description) > DEPLOYMENT_DESCRIPTION_MAX_LENGTH:
+        msg = f"description must be at most {DEPLOYMENT_DESCRIPTION_MAX_LENGTH} characters"
+        raise ValueError(msg)
+    return description
+
+
 async def create_deployment(
     db: AsyncSession,
     *,
@@ -33,11 +46,12 @@ async def create_deployment(
     deployment_provider_account_id: UUID,
     resource_key: str,
     name: str,
+    deployment_type: DeploymentType,
+    description: str | None = None,
 ) -> Deployment:
-    # The Deployment model has its own field validators, but pre-checking here
-    # gives clearer errors and avoids constructing the object.
     resource_key_s = _strip_or_raise(resource_key, "resource_key")
     name_s = _strip_or_raise(name, "name")
+    description_s = _validate_description_max_length(description)
 
     row = Deployment(
         user_id=user_id,
@@ -45,6 +59,8 @@ async def create_deployment(
         deployment_provider_account_id=deployment_provider_account_id,
         resource_key=resource_key_s,
         name=name_s,
+        deployment_type=deployment_type,
+        description=description_s,
     )
     db.add(row)
     try:
@@ -56,6 +72,21 @@ async def create_deployment(
         raise ValueError(msg) from exc
     await db.refresh(row)
     return row
+
+
+async def deployment_name_exists(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_provider_account_id: UUID,
+    name: str,
+) -> bool:
+    stmt = select(Deployment.id).where(
+        Deployment.user_id == user_id,
+        Deployment.deployment_provider_account_id == deployment_provider_account_id,
+        Deployment.name == name.strip(),
+    )
+    return (await db.exec(stmt)).first() is not None
 
 
 async def get_deployment_by_resource_key(
@@ -87,17 +118,26 @@ async def get_deployment(
     return (await db.exec(stmt)).first()
 
 
+_UNSET = object()
+
+
 async def update_deployment(
     db: AsyncSession,
     *,
     deployment: Deployment,
     name: str | None = None,
     project_id: UUID | None = None,
+    deployment_type: DeploymentType | object = _UNSET,
+    description: str | None | object = _UNSET,
 ) -> Deployment:
     if name is not None:
         deployment.name = _strip_or_raise(name, "name")
     if project_id is not None:
         deployment.project_id = project_id
+    if deployment_type is not _UNSET:
+        deployment.deployment_type = deployment_type  # type: ignore[assignment]
+    if description is not _UNSET:
+        deployment.description = _validate_description_max_length(description)  # type: ignore[assignment]
     deployment.updated_at = datetime.now(timezone.utc)
     db.add(deployment)
     try:
@@ -118,7 +158,15 @@ async def list_deployments_page(
     deployment_provider_account_id: UUID,
     offset: int,
     limit: int,
-) -> list[Deployment]:
+    flow_version_ids: list[UUID] | None = None,
+    project_id: UUID | None = None,
+) -> list[tuple[Deployment, int, list[tuple[UUID, str | None]]]]:
+    """Return a page of deployments with attachment counts and matched attachments.
+
+    The third tuple element contains ``(flow_version_id, provider_snapshot_id)``
+    pairs for attachments that matched the ``flow_version_ids`` filter (empty
+    list when no filter is active).
+    """
     if offset < 0:
         msg = "offset must be greater than or equal to 0"
         raise ValueError(msg)
@@ -126,17 +174,77 @@ async def list_deployments_page(
         msg = "limit must be greater than 0"
         raise ValueError(msg)
 
+    attachment_counts_subquery = (
+        select(
+            col(FlowVersionDeploymentAttachment.deployment_id).label("deployment_id"),
+            func.count(func.distinct(FlowVersionDeploymentAttachment.flow_version_id)).label("attached_count"),
+        )
+        .where(FlowVersionDeploymentAttachment.user_id == user_id)
+        .group_by(FlowVersionDeploymentAttachment.deployment_id)
+        .subquery()
+    )
     stmt = (
-        select(Deployment)
+        select(
+            Deployment,
+            func.coalesce(attachment_counts_subquery.c.attached_count, 0).label("attached_count"),
+        )
+        .outerjoin(attachment_counts_subquery, attachment_counts_subquery.c.deployment_id == Deployment.id)
         .where(
             Deployment.user_id == user_id,
             Deployment.deployment_provider_account_id == deployment_provider_account_id,
         )
-        .order_by(col(Deployment.created_at).desc(), col(Deployment.id).desc())
-        .offset(offset)
-        .limit(limit)
     )
-    return list((await db.exec(stmt)).all())
+    if project_id is not None:
+        stmt = stmt.where(Deployment.project_id == project_id)
+    if flow_version_ids:
+        matched_deployments_subquery = (
+            select(FlowVersionDeploymentAttachment.deployment_id)
+            .where(
+                FlowVersionDeploymentAttachment.user_id == user_id,
+                col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
+            )
+            .group_by(FlowVersionDeploymentAttachment.deployment_id)
+            .subquery()
+        )
+        stmt = stmt.join(
+            matched_deployments_subquery,
+            matched_deployments_subquery.c.deployment_id == Deployment.id,
+        )
+    stmt = stmt.order_by(col(Deployment.created_at).desc(), col(Deployment.id).desc()).offset(offset).limit(limit)
+    rows = (await db.exec(stmt)).all()
+    deployment_rows = [(deployment, int(attached_count or 0)) for deployment, attached_count in rows]
+    if not flow_version_ids or not deployment_rows:
+        return [(deployment, attached_count, []) for deployment, attached_count in deployment_rows]
+
+    deployment_ids = [deployment.id for deployment, _ in deployment_rows]
+    matched_rows = (
+        await db.exec(
+            select(
+                FlowVersionDeploymentAttachment.deployment_id,
+                FlowVersionDeploymentAttachment.flow_version_id,
+                FlowVersionDeploymentAttachment.provider_snapshot_id,
+            ).where(
+                FlowVersionDeploymentAttachment.user_id == user_id,
+                col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+                col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
+            )
+        )
+    ).all()
+    matched_by_deployment: dict[UUID, list[tuple[UUID, str | None]]] = {}
+    for deployment_id, flow_version_id, provider_snapshot_id in matched_rows:
+        entries = matched_by_deployment.setdefault(deployment_id, [])
+        pair = (flow_version_id, provider_snapshot_id)
+        if pair not in entries:
+            entries.append(pair)
+
+    return [
+        (
+            deployment,
+            attached_count,
+            matched_by_deployment.get(deployment.id, []),
+        )
+        for deployment, attached_count in deployment_rows
+    ]
 
 
 async def count_deployments_by_provider(
@@ -144,12 +252,30 @@ async def count_deployments_by_provider(
     *,
     user_id: UUID,
     deployment_provider_account_id: UUID,
+    flow_version_ids: list[UUID] | None = None,
+    project_id: UUID | None = None,
 ) -> int:
     stmt = select(func.count(Deployment.id)).where(
         Deployment.user_id == user_id,
         Deployment.deployment_provider_account_id == deployment_provider_account_id,
     )
-    return int((await db.exec(stmt)).one())
+    if project_id is not None:
+        stmt = stmt.where(Deployment.project_id == project_id)
+    if flow_version_ids:
+        matched_deployments_subquery = (
+            select(FlowVersionDeploymentAttachment.deployment_id)
+            .where(
+                FlowVersionDeploymentAttachment.user_id == user_id,
+                col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
+            )
+            .group_by(FlowVersionDeploymentAttachment.deployment_id)
+            .subquery()
+        )
+        stmt = stmt.join(
+            matched_deployments_subquery,
+            matched_deployments_subquery.c.deployment_id == Deployment.id,
+        )
+    return int((await db.exec(stmt)).one() or 0)
 
 
 async def delete_deployment_by_resource_key(

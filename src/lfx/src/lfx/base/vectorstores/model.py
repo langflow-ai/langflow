@@ -60,7 +60,7 @@ class LCVectorStoreComponent(Component):
         HandleInput(
             name="ingest_data",
             display_name="Ingest Data",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "DataFrame", "Table"],
             is_list=True,
         ),
         QueryInput(

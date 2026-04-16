@@ -8,7 +8,8 @@
     "start": "docusaurus start",
     "build": "docusaurus build",
     "deploy": "docusaurus deploy",
-    "serve": "docusaurus serve"
+    "serve": "docusaurus serve",
+    "docs:version": "docusaurus docs:version"
   },
   "dependencies": {
     "@code-hike/mdx": "^0.9.0",
@@ -53,18 +54,19 @@
     "node": "22.22.0"
   },
   "overrides": {
-    "lodash": "4.17.21",
+    "lodash": "4.18.0",
+    "fast-xml-parser": "4.5.4",
     "openapi-to-postmanv2": {
-      "lodash": "4.17.21"
+      "lodash": "4.18.0"
     },
     "postman-collection": {
-      "lodash": "4.17.21"
+      "lodash": "4.18.0"
     },
     "json-schema-resolve-allof": {
-      "lodash": "4.17.21"
+      "lodash": "4.18.0"
     },
     "json-refs": {
-      "lodash": "4.17.21"
+      "lodash": "4.18.0"
     }
   }
 }

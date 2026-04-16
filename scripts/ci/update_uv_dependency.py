@@ -21,7 +21,7 @@ def update_uv_dep(base_version: str) -> None:
     # Also handles both langflow-base and langflow-base-nightly names
     # Captures extras in group 3 to preserve them in the replacement
     pattern = re.compile(
-        r'(dependencies\s*=\s*\[\s*\n\s*)("langflow-base(?:-nightly)?((?:\[[^\]]+\])?)(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")'
+        r'(dependencies\s*=\s*\[\s*\n\s*)("langflow-base(?:-nightly)?((?:\[[^\]]+\])?)(?:~=|==|>=)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")'
     )
 
     # Check if the pattern is found

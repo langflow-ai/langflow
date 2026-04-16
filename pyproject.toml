@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.8.4"
+version = "1.9.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,31 +17,21 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]~=0.8.4",
+    "langflow-base[complete]>=0.9.0",
 ]
 
 
 [dependency-groups]
 dev = [
     "pytest-instafail>=0.5.0",
-    "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
-    "mypy>=1.11.0",
     "ruff~=0.13.1",
     "httpx>=0.28.1",
     "pytest>=8.2.0",
-    "types-requests>=2.32.0",
-    "requests>=2.32.0",
+    "requests>=2.33.0",
     "pytest-cov>=5.0.0",
-    "pandas-stubs>=2.1.4.231227",
-    "types-pillow>=10.2.0.20240213",
-    "types-pyyaml>=6.0.12.8",
-    "types-python-jose>=3.3.4.8",
-    "types-passlib>=1.7.7.13",
     "pytest-mock>=3.14.0",
     "pytest-xdist>=3.6.0",
-    "types-pywin32>=306.0.0.4",
-    "types-google-cloud-ndb>=2.2.0.0",
     "pytest-sugar>=1.0.0",
     "respx>=0.21.1",
     "pytest-asyncio>=0.23.0",
@@ -51,7 +41,6 @@ dev = [
     "dictdiffer>=0.9.0",
     "pytest-split>=0.9.0",
     "pytest-flakefinder>=1.1.0",
-    "types-markdown>=3.7.0.20240822",
     "packaging>=24.1,<25.0",
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
@@ -62,16 +51,14 @@ dev = [
     "locust~=2.40.5",
     "pytest-rerunfailures>=15.0",
     "scrapegraph-py>=1.10.2",
-    "pydantic-ai>=0.0.19",
     'elevenlabs==1.58.1; python_version == "3.12"',
     'elevenlabs>=1.52.0; python_version != "3.12"',
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
-    "types-cachetools>=5.5.0.20240820",
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
     "mcp-server-fetch>=2025.1.17",
-    "onnxruntime>=1.20,<=1.23" # >=1.24 does not support Python 3.10
+    "onnxruntime>=1.20,<1.24" # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
 ]
 
 [[tool.uv.index]]
@@ -83,6 +70,7 @@ explicit = true
 langflow-base = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
+langflow-sdk = { workspace = true }
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
 
@@ -91,6 +79,7 @@ members = [
     "src/backend/base",
     ".",
     "src/lfx",
+    "src/sdk",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -108,8 +97,9 @@ docling = [
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
     # CPU-only PyTorch required for docling features
     # Loose version ranges intentionally used to avoid conflicts with transitive dependencies (e.g., altk)
-    "torch>=2.0.0",
-    "torchvision>=0.15.0",
+    # Updated to 2.6.0+ to address CVE: RCE vulnerability in torch.load() with weights_only=True
+    "torch>=2.6.0",
+    "torchvision>=0.21.0",  # torchvision 0.21+ is compatible with PyTorch 2.6+
 ]
 
 audio = [
@@ -133,12 +123,8 @@ clickhouse-connect = [
 ]
 
 nv-ingest = [
-    # NOTE: These must be removed in order to run `uv lock --upgrade` or `uv sync --upgrade`
-    # due to incompatibility with <3.12 and how uv handles lockfile creation.
-    # If upgrading, ensure `uv lock` and `uv sync` are run after upgrade with these,
-    # and that afterward, the lockfile contains nv-ingest.
-    "nv-ingest-api==25.6.2,<26.0.0 ; python_version >= '3.12'",
-    "nv-ingest-client==25.6.3,<26.0.0 ; python_version >= '3.12'",
+    "nv-ingest-api>=26.1.0,<27.0.0 ; python_version >= '3.12'",
+    "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'",
 ]
 
 postgresql = [
@@ -150,6 +136,19 @@ postgresql = [
 override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
+    # z3-solver 4.15.7 dropped Linux wheels, pin until codeflash is removed
+    "z3-solver<4.15.7",
+    # Security: Force upgraded versions to prevent transitive deps from pulling older vulnerable versions
+    "orjson>=3.11.6",
+    "gunicorn>=25.3.0",
+    "pypdf>=6.10.0",  # Force pypdf 6.10+ to prevent vulnerable 6.6.x versions
+    "nltk>=3.9.4",
+    "Markdown>=3.8.0",
+    "dynaconf>=3.2.13",
+    "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
+    "aiohttp>=3.13.4",
+    "litellm>=1.83.0",
+    "playwright>=1.58.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
 ]
 
 [project.scripts]
@@ -178,7 +177,8 @@ markers = [
     "benchmark",
     "unit: Unit tests",
     "integration: Integration tests",
-    "slow: Slow-running tests"
+    "slow: Slow-running tests",
+    "security: Security regression tests (IDOR, auth, access control)"
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
@@ -207,7 +207,12 @@ directory = "coverage"
 
 [tool.ruff]
 target-version = "py310"
-exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*", "src/lfx/src/lfx/_assets/component_index.json"]
+exclude = [
+    "src/backend/base/langflow/alembic/*",
+    "src/frontend/tests/assets/*",
+    "src/lfx/src/lfx/_assets/component_index.json",
+    "docs/**/API-Reference/python-examples/**",
+]
 line-length = 120
 
 [tool.ruff.lint]
@@ -250,6 +255,13 @@ external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
+"scripts/gp/tests/*" = [
+    "D1",      # Missing docstrings
+    "PLR2004", # Magic value comparisons
+    "S101",    # Use of assert (required for pytest)
+    "TRY003",  # Long exception messages
+    "EM101",   # String literals in exceptions
+]
 "src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]
 "src/backend/base/langflow/custom/__init__.py" = [
     "I001",  # Import order affects initialization - must import custom module first
@@ -327,6 +339,46 @@ external = ["RUF027"]
 "src/lfx/src/lfx/inputs/input_mixin.py" = [
     "S105",  # False positive: PASSWORD is a type constant
 ]
+"src/lfx/src/lfx/__main__.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_setup_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_authoring_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_running_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_remote_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/backend/base/langflow/api/utils/*" = [
+    "TCH",  # Imports are used at runtime (FastAPI deps, SQLAlchemy queries, model constructors)
+]
+"src/sdk/src/langflow_sdk/_http.py" = [
+    "TCH",  # httpx is used at runtime (response object methods)
+]
+"src/sdk/src/langflow_sdk/environments.py" = [
+    "TRY003", # Contextual error messages are necessary here
+    "EM102",  # f-string messages assigned before raise where possible
+]
+"src/sdk/tests/*" = [
+    "S101",   # assert is the standard pytest assertion style
+    "INP001", # Not a package namespace issue in tests
+    "TC003",  # pytest fixture type hints are evaluated at runtime
+]
 "src/lfx/src/lfx/schema/table.py" = [
     "S105",  # False positive: PASSWORD is a formatter type
 ]
@@ -388,14 +440,6 @@ external = ["RUF027"]
 
 [tool.ruff.lint.flake8-builtins]
 builtins-allowed-modules = [ "io", "logging", "socket"]
-
-[tool.mypy]
-plugins = ["pydantic.mypy"]
-follow_imports = "skip"
-disable_error_code = ["type-var"]
-namespace_packages = true
-mypy_path = "langflow"
-ignore_missing_imports = true
 
 [build-system]
 requires = ["hatchling"]

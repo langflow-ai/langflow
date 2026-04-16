@@ -28,6 +28,8 @@ jobs:
           cache-dependency-path: ./docs/package-lock.json
 
       - name: Validate Branch Names
+        env:
+          BRANCH_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           # Check if branch names contain invalid characters. Only alphanumeric, _, -, ., and / are allowed.
           validate_branch_name() {
@@ -37,10 +39,12 @@ jobs:
                   exit 1
               fi
           }
-          validate_branch_name "${{ github.event.pull_request.head.ref }}"
+          validate_branch_name "$BRANCH_REF"
 
       - name: Extract Branch Names
         id: extract_branch
+        env:
+          BRANCH_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           # Extract and transform branch names
           extract_branch() {
@@ -56,7 +60,7 @@ jobs:
           }
 
           # Transform branch names in form of `refs/heads/main` to `main`
-          draft_branch=$(extract_branch "${{ github.event.pull_request.head.ref }}")
+          draft_branch=$(extract_branch "$BRANCH_REF")
 
           # Replace / with - in the draft branch name to use as a directory name
           draft_directory=$(echo "$draft_branch" | tr / -)
