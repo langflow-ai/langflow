@@ -169,15 +169,24 @@ def get_lifespan(*, fix_migration=False, version=None):
             start_time = asyncio.get_event_loop().time()
 
             if get_settings_service().settings.sentry_dsn:
-                import sentry_sdk
-
-                sentry_settings = get_settings_service().settings
-                sentry_sdk.init(
-                    dsn=sentry_settings.sentry_dsn,
-                    traces_sample_rate=sentry_settings.sentry_traces_sample_rate,
-                    profiles_sample_rate=sentry_settings.sentry_profiles_sample_rate,
-                )
-                await logger.adebug("Sentry SDK initialized in worker")
+                try:
+                    import sentry_sdk
+                except ImportError:
+                    await logger.awarning(
+                        "LANGFLOW_SENTRY_DSN is set but sentry-sdk is not installed; "
+                        "Sentry will not be initialized. Install it with: pip install sentry-sdk"
+                    )
+                else:
+                    try:
+                        sentry_settings = get_settings_service().settings
+                        sentry_sdk.init(
+                            dsn=sentry_settings.sentry_dsn,
+                            traces_sample_rate=sentry_settings.sentry_traces_sample_rate,
+                            profiles_sample_rate=sentry_settings.sentry_profiles_sample_rate,
+                        )
+                        await logger.adebug("Sentry SDK initialized in worker")
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"Failed to initialize Sentry SDK (check LANGFLOW_SENTRY_DSN): {e}")
 
             await logger.adebug("Initializing services")
             await initialize_services(fix_migration=fix_migration)
@@ -605,7 +614,17 @@ def create_app():
 def setup_sentry(app: FastAPI) -> None:
     settings = get_settings_service().settings
     if settings.sentry_dsn:
-        from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+        try:
+            from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+        except ImportError:
+            logger.warning(
+                "LANGFLOW_SENTRY_DSN is set but sentry-sdk is not installed; "
+                "SentryAsgiMiddleware will not be added. Install it with: pip install sentry-sdk"
+            )
+            return
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Failed to import SentryAsgiMiddleware: {e}")
+            return
 
         # Defer sentry_sdk.init to the worker lifespan to avoid ghosts across forks
         app.add_middleware(SentryAsgiMiddleware)
