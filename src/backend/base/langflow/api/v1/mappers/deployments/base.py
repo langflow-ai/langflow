@@ -230,6 +230,13 @@ class BaseDeploymentMapper:
     ) -> dict[str, Any] | None:
         return self._validate_slot(self.api_payloads.deployment_list_params, raw)
 
+    def resolve_load_from_provider_deployment_list_params(self) -> dict[str, Any] | None:
+        """Return provider_params for provider-backed deployment listing.
+
+        Default behavior applies no provider-specific filters.
+        """
+        return None
+
     async def resolve_config_list_params(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
         return self._validate_slot(self.api_payloads.config_list_params, raw)
 
