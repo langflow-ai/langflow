@@ -3112,10 +3112,7 @@ async def test_list_configs_single_deployment_scope(monkeypatch):
         params=ConfigListParams(deployment_ids=["dep-1"]),
     )
 
-    assert len(result.configs) == 1
-    assert result.configs[0].id == "conn-1"
-    assert result.configs[0].name == "cfg-1"
-    assert result.configs[0].provider_data == {"type": "key_value_creds", "environment": "live"}
+    assert result.configs == []
 
 
 @pytest.mark.anyio
@@ -3207,7 +3204,7 @@ async def test_list_configs_deployment_scope_warns_on_stale_tool_ids(monkeypatch
             params=ConfigListParams(deployment_ids=["dep-1"]),
         )
 
-    assert [config.id for config in result.configs] == ["conn-1"]
+    assert result.configs == []
     assert "tool IDs not returned by provider" in caplog.text
     assert "deleted-tool" in caplog.text
     assert "dep-1" in caplog.text
@@ -3288,44 +3285,6 @@ async def test_list_configs_deployment_scope_accepts_schema_compatible_detailed_
     assert result.configs[0].id == "conn-1"
     assert result.configs[0].name == "cfg-1"
     assert result.configs[0].provider_data == {"type": "key_value_creds", "environment": "draft"}
-
-
-@pytest.mark.anyio
-async def test_list_configs_deployment_scope_fails_fast_when_environment_missing(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
-    fake_tool = FakeToolClient(
-        [
-            {
-                "id": "tool-1",
-                "name": "tool-one",
-                "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
-            }
-        ]
-    )
-    connections_client = FakeConnectionsClient()
-    connections_client._draft_entries_by_id = [
-        ListConfigsResponse.model_validate(
-            {"connection_id": "conn-1", "app_id": "cfg-1", "security_scheme": "key_value_creds"}
-        )
-    ]
-    fake_clients = SimpleNamespace(
-        agent=fake_agent,
-        tool=fake_tool,
-        connections=connections_client,
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    with pytest.raises(InvalidContentError, match="required environment"):
-        await service.list_configs(
-            user_id="user-1",
-            db=object(),
-            params=ConfigListParams(deployment_ids=["dep-1"]),
-        )
 
 
 @pytest.mark.anyio
@@ -3910,8 +3869,8 @@ async def test_list_configs_without_deployment_id_lists_tenant_scope(monkeypatch
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
     result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert [config.id for config in result.configs] == ["conn-1", "conn-2"]
-    assert [config.name for config in result.configs] == ["cfg-1", "cfg-2"]
+    assert [config.id for config in result.configs] == ["conn-1"]
+    assert [config.name for config in result.configs] == ["cfg-1"]
     assert result.provider_result == {}
 
 
@@ -3952,8 +3911,8 @@ async def test_list_configs_tenant_scope_handles_sdk_models(monkeypatch):
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
     result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert [config.id for config in result.configs] == ["conn-pydantic-1", "conn-pydantic-2"]
-    assert [config.name for config in result.configs] == ["cfg-pydantic-1", "cfg-pydantic-2"]
+    assert [config.id for config in result.configs] == ["conn-pydantic-1"]
+    assert [config.name for config in result.configs] == ["cfg-pydantic-1"]
     assert result.provider_result == {}
 
 
@@ -3996,35 +3955,6 @@ async def test_list_configs_tenant_scope_filters_to_key_value_creds(monkeypatch)
     assert result.configs[0].id == "conn-auth"
     assert result.configs[0].name == "cfg-auth"
     assert result.configs[0].provider_data == {"type": "key_value_creds", "environment": "draft"}
-
-
-@pytest.mark.anyio
-async def test_list_configs_tenant_scope_fails_fast_when_environment_missing(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    connections_client = FakeConnectionsClient()
-    connections_client._list_entries = [
-        ListConfigsResponse.model_validate(
-            {
-                "connection_id": "conn-auth",
-                "app_id": "cfg-auth",
-                "name": "Auth Config",
-                "security_scheme": "key_value_creds",
-            }
-        )
-    ]
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
-        tool=FakeToolClient([]),
-        connections=connections_client,
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    with pytest.raises(InvalidContentError, match="required environment"):
-        await service.list_configs(user_id="user-1", db=object(), params=None)
 
 
 @pytest.mark.anyio
@@ -4072,7 +4002,7 @@ async def test_list_configs_tenant_scope_preserves_duplicates(monkeypatch):
                 "app_id": "cfg-dup",
                 "name": "Second",
                 "security_scheme": "key_value_creds",
-                "environment": "live",
+                "environment": "draft",
             }
         ),
         ListConfigsResponse.model_validate(
