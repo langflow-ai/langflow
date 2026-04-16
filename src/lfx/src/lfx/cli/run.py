@@ -9,6 +9,12 @@ from asyncer import syncify
 
 from lfx.run.base import RunError, run_flow
 
+# Cold-start benchmark hook. No-op when LFX_BENCHMARK_CHECKPOINTS is unset.
+# See src/lfx/src/lfx/_bench.py and MEAS-03 in .planning/phases/01-measurement-foundation/.
+from lfx._bench import checkpoint, dump
+
+checkpoint("after-imports")
+
 # Verbosity level constants
 VERBOSITY_DETAILED = 2
 VERBOSITY_FULL = 3
@@ -126,6 +132,7 @@ async def run(
     verbosity = 3 if verbose_full else (2 if verbose_detailed else (1 if verbose else 0))
 
     try:
+        checkpoint("before-run-flow")
         result = await run_flow(
             script_path=script_path,
             input_value=input_value,
@@ -140,6 +147,7 @@ async def run(
             timing=timing,
             global_variables=None,
         )
+        checkpoint("after-run-flow")
 
         # Output based on format
         if output_format in {"text", "message", "result"}:
@@ -147,6 +155,7 @@ async def run(
         else:
             indent = 2 if verbosity > 0 else None
             typer.echo(json.dumps(result, indent=indent))
+        dump()
 
     except RunError as e:
         error_response = {
@@ -159,4 +168,5 @@ async def run(
         else:
             error_response["exception_message"] = str(e)
         typer.echo(json.dumps(error_response))
+        dump()
         raise typer.Exit(1) from e
