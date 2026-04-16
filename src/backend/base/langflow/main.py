@@ -148,7 +148,6 @@ def warn_about_future_cors_changes(settings):
 
 def get_lifespan(*, fix_migration=False, version=None):
     initialize_settings_service()
-    telemetry_service = get_telemetry_service()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -222,6 +221,8 @@ def get_lifespan(*, fix_migration=False, version=None):
             temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
             get_settings_service().settings.components_path.extend(bundles_components_paths)
             await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            telemetry_service = get_telemetry_service()
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Caching types")
