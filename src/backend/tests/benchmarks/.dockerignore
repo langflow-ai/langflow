@@ -1,0 +1,47 @@
+# Measurement-image .dockerignore (PRIMARILY documentation).
+#
+# IMPORTANT: Docker honors the .dockerignore at the BUILD CONTEXT root, not the
+# one next to the Dockerfile. This file documents the exclusions the measurement
+# image needs; plan 06's CI workflow wires one of:
+#   1. symlink this file to the repo root, OR
+#   2. merge these entries into an existing root-level .dockerignore, OR
+#   3. invoke docker build with --build-context benchmarks=src/backend/tests/benchmarks
+# The chosen strategy is recorded in plan 06's SUMMARY.
+
+# VCS, tool caches, locally-excluded planning tree
+.git
+.github
+.vscode
+.idea
+.planning
+
+# Frontend (not needed for backend/lfx cold-start measurement)
+src/frontend
+src/backend/base/langflow/frontend
+
+# Local venvs and Python byte-compile artifacts (image builds its own venv)
+.venv
+**/.venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+
+# Node and docs artifacts
+node_modules
+docs/node_modules
+docs/.docusaurus
+docs/build
+
+# Benchmark output (test-run artifacts; keep placeholder)
+src/backend/tests/benchmarks/reports/**
+!src/backend/tests/benchmarks/reports/.gitkeep
+
+# Pytest and coverage artifacts
+.pytest_cache
+.coverage
+coverage/
+
+# OS and editor droppings
+.DS_Store
+*.swp
+*.swo
