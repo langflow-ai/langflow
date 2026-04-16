@@ -24,14 +24,12 @@ if TYPE_CHECKING:  # avoid paying the import cost when the mock is NOT enabled
 _FIXED_CONTENT = "Benchmark-fixed response."
 
 
-def _build_fixed_response() -> "_ChatResult":
+def _build_fixed_response() -> _ChatResult:
     """Construct the ChatResult lazily. Import langchain_core only when we patch."""
     from langchain_core.messages import AIMessage
     from langchain_core.outputs import ChatGeneration, ChatResult
 
-    return ChatResult(
-        generations=[ChatGeneration(message=AIMessage(content=_FIXED_CONTENT))]
-    )
+    return ChatResult(generations=[ChatGeneration(message=AIMessage(content=_FIXED_CONTENT))])
 
 
 def _mock_generate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ARG001
@@ -67,3 +65,10 @@ def install_if_enabled() -> bool:
         install_mock()
         return True
     return False
+
+
+# Auto-install on module import so the JSON-fixture code path can trigger the mock via the
+# LFX_BENCHMARK_BOOTSTRAP_MODULE hook in lfx/_bench.py. No-op when LFX_BENCHMARK_MOCK_LLM is unset.
+# Kept at module scope (not inside a function) so a single import is enough; this is what the
+# benchmark driver relies on since the JSON fixture path does not execute any fixture Python code.
+install_if_enabled()

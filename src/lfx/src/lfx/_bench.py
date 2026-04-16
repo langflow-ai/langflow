@@ -36,6 +36,43 @@ if _ENABLED:
     # to the degree Python lets us observe it).
     _CHECKPOINTS.append(("process-start", time.perf_counter()))
 
+    # Optional bootstrap hook (plan 01-05 Task 5a). The benchmark harness uses
+    # JSON fixtures for MEAS-03 six-checkpoint coverage; JSON fixtures do NOT
+    # execute any fixture-level Python (e.g., mock-LLM installation). To let
+    # callers hook module-level initialization (mocks, tracing shims, etc.) on
+    # top of `lfx run <fixture>.json`, we honor two env vars:
+    #   - LFX_BENCHMARK_BOOTSTRAP_MODULE: dotted import path (e.g. "pkg.mod").
+    #   - LFX_BENCHMARK_BOOTSTRAP_PATH: absolute filesystem path to a .py file.
+    # Stdlib-only, gated on the benchmark env vars, zero cost when unset. This
+    # is a generic hook; `lfx` does NOT import any specific bootstrap module by
+    # name. The path form is preferred when the bootstrap module lives in a
+    # package that is not on sys.path or whose dotted name collides with a
+    # third-party package (common with "tests" in site-packages).
+    _bootstrap_mod = os.environ.get("LFX_BENCHMARK_BOOTSTRAP_MODULE")
+    _bootstrap_path = os.environ.get("LFX_BENCHMARK_BOOTSTRAP_PATH")
+    if _bootstrap_mod or _bootstrap_path:
+        try:
+            import importlib
+
+            if _bootstrap_path:
+                import importlib.util
+
+                _spec = importlib.util.spec_from_file_location("_lfx_bench_bootstrap", _bootstrap_path)
+                if _spec is None or _spec.loader is None:
+                    msg = f"cannot build import spec from {_bootstrap_path!r}"
+                    raise ImportError(msg)
+                _mod = importlib.util.module_from_spec(_spec)
+                _spec.loader.exec_module(_mod)
+            else:
+                importlib.import_module(_bootstrap_mod)
+        except Exception as _exc:  # noqa: BLE001
+            # Do not let a broken bootstrap crash the benchmarked process; the driver
+            # detects missing mocks downstream (401 error, etc.). Surface on stderr.
+            import sys as _sys
+
+            _which = _bootstrap_path or _bootstrap_mod
+            _sys.stderr.write(f"LFX_BENCHMARK_BOOTSTRAP={_which!r} import failed: {_exc!r}\n")
+
 
 def checkpoint(name: str) -> None:
     """Record a named checkpoint. No-op when LFX_BENCHMARK_CHECKPOINTS is unset.
@@ -65,4 +102,4 @@ def dump() -> None:
     tmp = target.with_suffix(target.suffix + ".tmp")
     payload = json.dumps([[name, ts] for name, ts in _CHECKPOINTS])
     tmp.write_text(payload, encoding="utf-8")
-    os.replace(tmp, target)
+    tmp.replace(target)
