@@ -1,4 +1,5 @@
 import { memo, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -48,22 +49,25 @@ const MemoizedApiKeyButton = memo(
     apiKey,
     isGeneratingApiKey,
     generateApiKey,
-  }: MemoizedApiKeyButtonProps) => (
-    <Button
-      unstyled
-      className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
-      disabled={apiKey !== ""}
-      loading={isGeneratingApiKey}
-      onClick={generateApiKey}
-    >
-      <ForwardedIconComponent
-        name="Key"
-        className="h-4 w-4"
-        aria-hidden="true"
-      />
-      <span>{apiKey === "" ? "Generate API key" : "API key generated"}</span>
-    </Button>
-  ),
+  }: MemoizedApiKeyButtonProps) => {
+    const { t } = useTranslation();
+    return (
+      <Button
+        unstyled
+        className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
+        disabled={apiKey !== ""}
+        loading={isGeneratingApiKey}
+        onClick={generateApiKey}
+      >
+        <ForwardedIconComponent
+          name="Key"
+          className="h-4 w-4"
+          aria-hidden="true"
+        />
+        <span>{apiKey === "" ? t("mcpJson.generateApiKey") : t("mcpJson.apiKeyGenerated")}</span>
+      </Button>
+    );
+  },
 );
 MemoizedApiKeyButton.displayName = "MemoizedApiKeyButton";
 
@@ -122,7 +126,9 @@ export const McpJsonContent = ({
   apiKey,
   isGeneratingApiKey,
   generateApiKey,
-}: McpJsonContentProps) => (
+}: McpJsonContentProps) => {
+  const { t } = useTranslation();
+  return (
   <>
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex-1">
@@ -143,7 +149,7 @@ export const McpJsonContent = ({
       </div>
       <div className="flex flex-col gap-2">
         <span className="text-[13px] font-medium text-muted-foreground">
-          Transport
+          {t("mcpJson.transport")}
         </span>
         <Tabs
           value={selectedTransport}
@@ -177,16 +183,17 @@ export const McpJsonContent = ({
       </SyntaxHighlighter>
     </div>
     <div className="px-2 text-mmd text-muted-foreground">
-      Add this config to your client of choice. Need help? See the{" "}
+      {t("mcpJson.addConfigHint")}{" "}
       <a
         href="https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions"
         target="_blank"
         rel="noreferrer"
         className="text-accent-pink-foreground"
       >
-        setup guide
+        {t("mcpJson.setupGuide")}
       </a>
       .
     </div>
   </>
-);
+  );
+};
