@@ -59,7 +59,7 @@ key-decisions:
   - "Switch pyinstrument flag from --timer coarse (does not exist in 5.1.2) to --use-timing-thread (equivalent container-slowdown mitigation for Pitfall 2)."
   - "Emit flamegraph.pl + json from importtime-convert instead of the plan's `speedscope` (not supported in 1.1.0). flamegraph.pl is universally compatible with flame-graph tooling."
   - "Commit local macOS baseline as non-authoritative smoke-only (D-10 / Pitfall 3); authoritative numbers ship via plan 06 CI run on Linux."
-  - "langflow_run_http_ready scenario times out on macOS+podman; the `Application startup complete.` marker is suppressed by langflow's loguru config on this stack. Linux CI (plan 06) will confirm the marker's behavior there."
+  - "langflow_run_http_ready scenario times out on macOS+podman; the `Application startup complete.` marker is suppressed by langflow's structlog processor pipeline on this stack. (Earlier note in this file said loguru — that is wrong; langflow uses structlog.) Linux CI (plan 06) will confirm the marker's behavior there."
 
 patterns-established:
   - "Bootstrap hook in lfx._bench: a generic importlib escape hatch for JSON-fixture runs. Both dotted-module and path variants to tolerate import-path collisions (e.g., third-party `tests` packages in site-packages shadowing `src/backend/tests`)."
@@ -204,7 +204,7 @@ Rationale: CONTEXT.md D-10 and RESEARCH.md Pitfall 3 both mandate that authorita
 - **Issue:** `scenarios/langflow_run.py`'s command was `["python", "-m", "..."]`; inside the container only `uv run python` sees langflow and lfx. Supervisor would fail on first import.
 - **Fix:** Switch to `["uv", "run", "python", "-m", "..."]`.
 - **Files modified:** `src/backend/tests/benchmarks/scenarios/langflow_run.py`
-- **Verification:** The supervisor imported cleanly and booted langflow inside the container (the later timeout is a separate Mac/loguru issue, see Known Limitations).
+- **Verification:** The supervisor imported cleanly and booted langflow inside the container (the later timeout is a separate Mac/structlog issue, see Known Limitations).
 - **Committed in:** `db777cf7c1`
 
 **6. [Rule 3 - Blocker] `reports/` directory had no .gitignore**
@@ -236,7 +236,7 @@ Rationale: CONTEXT.md D-10 and RESEARCH.md Pitfall 3 both mandate that authorita
 
 ### Known Limitations (macOS smoke only)
 
-**langflow_run_http_ready marker not observed on macOS+podman.** The scenario runs but the supervisor's literal marker `Application startup complete.` does not appear in the container's combined stdout/stderr even after >20 minutes of server runtime. Langflow configures loguru and does not route uvicorn's INFO log through it; the "banner line" (`🟢 Open Langflow → http://localhost:7860`) IS printed, but the plan's contract locks the ready marker to the uvicorn phrasing. Plan 06's Linux CI run will determine whether uvicorn's log flows through on Linux (it may on some configurations); if not, plan 06 Task 1 can relax the marker to a more robust substring.
+**langflow_run_http_ready marker not observed on macOS+podman.** The scenario runs but the supervisor's literal marker `Application startup complete.` does not appear in the container's combined stdout/stderr even after >20 minutes of server runtime. Langflow configures its logging via **structlog** (NOT loguru — the original note in this summary was wrong), and the structlog processor pipeline does not route uvicorn's INFO log through to stdout in a way this supervisor observes; the "banner line" (`🟢 Open Langflow → http://localhost:7860`) IS printed, but the plan's contract locks the ready marker to the uvicorn phrasing. Plan 06's Linux CI run will determine whether uvicorn's log flows through on Linux (it may on some configurations); if not, plan 06 Task 1 can relax the marker to a more robust substring such as the banner line.
 
 **Total deviations:** 8 auto-fixed (5 Rule 1 bugs from plan-vs-reality tool-version drift, 1 Rule 2 missing timeout override, 1 Rule 3 missing gitignore, 1 pre-existing lint).
 
@@ -333,7 +333,7 @@ None - no external service configuration required for this plan. Plan 06 will su
 - **Thresholds file:** `src/backend/tests/benchmarks/thresholds.json` (committed by plan 06 Task 1 from the Linux CI snapshot; schema includes top-level `measurement_mode: "bytecode_compile_delta"` and `allowed_regression_pct: 15`).
 - **Regression comment:** `src/backend/tests/benchmarks/reports/regression_comment.md` written by `--verify` on failure; consumed by plan 06's `gh pr comment --body-file` step. File is NOT written on pass, so plan 06's CI step MUST `if [ -f ... ]; then`-guard the comment.
 - **`measurement_mode` field:** Both thresholds.json and baseline-*.json carry `measurement_mode: "bytecode_compile_delta"`. Plan 06's diff-mode check (future phase) can swap modes; the driver logs a stderr WARNING on mismatch but does NOT fail.
-- **Langflow supervisor marker:** Plan 06 should verify on Linux whether `Application startup complete.` appears in langflow output. If not, plan 06 Task N may relax the `READY_MARKER` in `_langflow_supervisor.py`. The loguru routing is the root cause; a fallback of `Open Langflow -> http://localhost:` would reliably fire on any stack where the banner prints.
+- **Langflow supervisor marker:** Plan 06 should verify on Linux whether `Application startup complete.` appears in langflow output. If not, plan 06 Task N may relax the `READY_MARKER` in `_langflow_supervisor.py`. The root cause is langflow's **structlog** processor pipeline (NOT loguru — the original note in this summary was wrong); a fallback of `Open Langflow -> http://localhost:` would reliably fire on any stack where the banner prints.
 - **Authoritative baseline:** ship from plan 06 CI's GHA runner, not from macOS. `.planning/benchmarks/baseline-2026-04-16.{md,json}` here is smoke-only (local-only via .planning/ git-exclude) and not comparable to CI numbers.
 
 ## Next Phase Readiness
