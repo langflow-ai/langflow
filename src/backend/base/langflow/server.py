@@ -123,7 +123,10 @@ class LangflowApplication(BaseApplication):
         except Exception as e:  # noqa: BLE001
             server.log.warning("Failed to inspect TCP connections before fork: %s", e)
 
-        gc.collect()
+        try:
+            gc.collect()
+        except Exception as e:  # noqa: BLE001
+            server.log.warning("gc.collect() raised during pre-fork hook: %s", e)
         gc.freeze()
 
     def load_config(self) -> None:

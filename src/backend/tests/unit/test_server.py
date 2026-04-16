@@ -178,3 +178,21 @@ def test_pre_fork_always_runs_gc(fake_server):
 
     mock_collect.assert_called_once()
     mock_freeze.assert_called_once()
+
+
+def test_pre_fork_handles_gc_collect_exception(fake_server):
+    """pre_fork must not crash if gc.collect() raises, and must still call gc.freeze()."""
+    with (
+        patch("threading.enumerate", return_value=[threading.main_thread()]),
+        patch("psutil.Process") as mock_proc,
+        patch.object(gc, "collect", side_effect=RuntimeError("bad finalizer")),
+        patch.object(gc, "freeze") as mock_freeze,
+    ):
+        mock_proc.return_value.net_connections.return_value = []
+        # Must not raise
+        LangflowApplication.pre_fork(fake_server, None)
+
+    warning = _find_warning(fake_server.log, "gc.collect() raised")
+    assert warning is not None, "Expected a warning when gc.collect() raises"
+    assert "bad finalizer" in str(warning.args[1])
+    mock_freeze.assert_called_once()
