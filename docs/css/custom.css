@@ -71,12 +71,12 @@ html[data-theme="light"] .navbar__logo {
 
 /* Sidebar - flush with left edge, internal padding only */
 .theme-doc-sidebar-container {
-  padding-top: 0.75rem;
   margin-left: 0;
   border-right: none !important;
 }
 
 .theme-doc-sidebar-container nav.menu {
+  padding-top: 0.75rem;
   padding-left: 1rem;
   padding-right: 0.75rem;
 }
