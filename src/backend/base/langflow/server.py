@@ -71,14 +71,40 @@ class LangflowApplication(BaseApplication):
         self.application = app
         super().__init__()
 
-    @staticmethod
-    def pre_fork(server, _worker):
+    # Thread name prefixes that are known to be benign before fork.
+    # BatchSpanProcessor (OTel), Prometheus scrape threads, and loguru's
+    # async queue worker are all safe to ignore here - they never survive
+    # into workers and produce no side-effects when the fd is inherited.
+    _BENIGN_THREAD_PREFIXES = (
+        "OTel",  # OpenTelemetry SDK (BatchSpanProcessor, etc.)
+        "opentelemetry",  # alternate OTel naming
+        "prometheus",  # Prometheus client background threads
+        "loguru",  # loguru enqueue=True worker
+        "asyncio",  # event-loop helper threads (Python internals)
+        "ThreadPoolExecutor",  # stdlib executor - harmless in parent
+        "concurrent.futures",  # same pool, different prefix
+    )
+
+    @classmethod
+    def _is_benign_thread(cls, thread) -> bool:
+        return any(thread.name.startswith(prefix) for prefix in cls._BENIGN_THREAD_PREFIXES)
+
+    @classmethod
+    def pre_fork(cls, server, _worker):
         import gc
+        import os
         import threading
 
-        non_main_threads = [t for t in threading.enumerate() if t.is_alive() and t is not threading.main_thread()]
-        if non_main_threads:
-            names = [t.name for t in non_main_threads]
+        all_non_main = [t for t in threading.enumerate() if t.is_alive() and t is not threading.main_thread()]
+        debug_mode = os.environ.get("LANGFLOW_DEBUG_FORK_GHOSTS", "").lower() in ("1", "true", "yes")
+
+        if debug_mode and all_non_main:
+            names = [t.name for t in all_non_main]
+            server.log.debug("All non-main threads before fork (debug): %s", names)
+
+        suspicious = [t for t in all_non_main if not cls._is_benign_thread(t)]
+        if suspicious:
+            names = [t.name for t in suspicious]
             server.log.warning("Ghost threads found before fork (these will be dead in workers): %s", names)
 
         try:

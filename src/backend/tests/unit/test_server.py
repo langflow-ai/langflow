@@ -65,6 +65,22 @@ def test_pre_fork_warns_for_non_main_threads(fake_server):
     assert "ghost-worker" in warning.args[1]
 
 
+def test_pre_fork_no_thread_warning_for_benign_threads(fake_server):
+    """pre_fork should not emit a thread warning for threads with known benign prefixes."""
+    mock_thread = MagicMock()
+    mock_thread.is_alive.return_value = True
+    mock_thread.name = "loguru-worker-1"
+
+    with (
+        patch("threading.enumerate", return_value=[threading.main_thread(), mock_thread]),
+        patch("psutil.Process") as mock_proc,
+    ):
+        mock_proc.return_value.net_connections.return_value = []
+        LangflowApplication.pre_fork(fake_server, None)
+
+    assert _find_warning(fake_server.log, "Ghost threads") is None
+
+
 def test_pre_fork_no_thread_warning_when_only_main_thread(fake_server):
     """pre_fork should not emit a thread warning when only the main thread is alive."""
     with (
