@@ -27,19 +27,25 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_NO_CACHE=1 \
+    UV_NO_SYNC=1 \
+    UV_NO_DEFAULT_GROUPS=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Dependency layer. COPY only pyproject + uv.lock files needed for resolution.
-COPY pyproject.toml uv.lock /app/
-COPY src/lfx/pyproject.toml /app/src/lfx/
-COPY src/backend/base/pyproject.toml /app/src/backend/base/
-COPY src/sdk/pyproject.toml /app/src/sdk/
+# Dependency layer. COPY pyproject + uv.lock + README.md files needed for resolution.
+# Each workspace member's README.md is referenced by its pyproject.toml (readme = "README.md"),
+# so hatchling's editable-build metadata introspection requires them present at uv sync time.
+COPY pyproject.toml uv.lock README.md /app/
+COPY src/lfx/pyproject.toml src/lfx/README.md /app/src/lfx/
+COPY src/backend/base/pyproject.toml src/backend/base/README.md /app/src/backend/base/
+COPY src/sdk/pyproject.toml src/sdk/README.md /app/src/sdk/
 
 # Resolve + install deps only (not workspace members). D-09 forbids whole-extra or whole-group sync.
-RUN uv sync --frozen --no-install-project --group benchmarks
+# --no-default-groups skips the dev group (which pulls heavy toolchain deps like crosshair-tool
+# requiring gcc); --group benchmarks picks up the measurement tooling only.
+RUN uv sync --frozen --no-install-project --no-default-groups --group benchmarks
 
 # Source layer. COPY actual source AFTER deps so source-only changes hit only this layer.
 COPY src/lfx /app/src/lfx
@@ -48,7 +54,7 @@ COPY src/sdk /app/src/sdk
 COPY src/backend/tests/benchmarks /app/src/backend/tests/benchmarks
 
 # Install workspace members into the managed venv at /app/.venv.
-RUN uv sync --frozen --group benchmarks
+RUN uv sync --frozen --no-default-groups --group benchmarks
 
 # Variant selector. Default is lean; CI flips BENCH_VARIANT=prebaked for the second image.
 ARG BENCH_VARIANT=lean
