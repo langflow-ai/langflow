@@ -557,7 +557,7 @@ def create_app():
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
-        if prome_port > 0 or prome_port < MAX_PORT:
+        if prome_port > 0 and prome_port < MAX_PORT:
             logger.debug(f"Prometheus server port configured as {prome_port}...")
             settings.prometheus_enabled = True
             settings.prometheus_port = prome_port
