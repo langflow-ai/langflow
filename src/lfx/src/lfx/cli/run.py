@@ -7,13 +7,23 @@ from pathlib import Path
 import typer
 from asyncer import syncify
 
-from lfx.run.base import RunError, run_flow
-
 # Cold-start benchmark hook. No-op when LFX_BENCHMARK_CHECKPOINTS is unset.
 # See src/lfx/src/lfx/_bench.py and MEAS-03 in .planning/phases/01-measurement-foundation/.
+from lfx._bench import _ENABLED as _BENCH_ENABLED
 from lfx._bench import checkpoint, dump
+from lfx.run.base import RunError, run_flow
 
 checkpoint("after-imports")
+
+# MEAS-03 landmark trigger (D-03a, plan 01-05). The `lfx run` path does NOT transitively
+# import `lfx.services.initialize` during normal flow loading, so its module-level
+# `initialize_services()` (and the landmark checkpoint that follows it) would never fire.
+# Gated on the benchmark env var so production runs pay ZERO import cost; under measurement
+# this triggers the module body and therefore records `after-initialize-services`.
+# The landmarks themselves live at their true call sites in `lfx/services/initialize.py`
+# and `lfx/load/load.py` per D-03a.
+if _BENCH_ENABLED:
+    import lfx.services.initialize  # noqa: F401
 
 # Verbosity level constants
 VERBOSITY_DETAILED = 2
