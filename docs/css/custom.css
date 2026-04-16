@@ -759,54 +759,16 @@ html[data-theme="light"] .sidebar-group-label {
   background-color: currentColor;
 }
 
-/* Sidebar Ad Styles — raised “card” treatment (inset from nav, shadow, rounded) */
+/* Sidebar Ad — <li> is only spacing; card styles live on the <a> inside */
 .sidebar-ad {
   margin-left: 0.5rem;
   margin-right: 0.75rem;
   margin-top: auto;
-  margin-bottom: 0.75rem;
-  padding: 0;
-  border-radius: var(--ifm-global-radius);
-  border: 1px solid var(--ifm-color-emphasis-300);
-  position: relative;
-  overflow: hidden;
-  transition:
-    box-shadow 0.18s ease,
-    border-color 0.18s ease;
-}
-
-[data-theme="dark"] .sidebar-ad {
-  background-color: var(--ifm-card-background-color, #232328);
-  border-color: var(--ifm-card-border-color, #303038);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.04) inset,
-    0 4px 6px rgba(0, 0, 0, 0.25),
-    0 12px 28px rgba(0, 0, 0, 0.45);
-}
-
-[data-theme="light"] .sidebar-ad {
-  background-color: var(--ifm-background-surface-color);
-  border-color: var(--ifm-color-emphasis-200);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.8) inset,
-    0 4px 12px rgba(15, 23, 42, 0.08),
-    0 12px 28px rgba(15, 23, 42, 0.06);
-}
-
-[data-theme="dark"] .sidebar-ad:hover {
-  border-color: var(--ifm-color-emphasis-400);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.06) inset,
-    0 6px 10px rgba(0, 0, 0, 0.3),
-    0 16px 36px rgba(0, 0, 0, 0.5);
-}
-
-[data-theme="light"] .sidebar-ad:hover {
-  border-color: var(--ifm-color-emphasis-300);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 6px 16px rgba(15, 23, 42, 0.1),
-    0 16px 36px rgba(15, 23, 42, 0.08);
+  padding-top: 1rem;   /* transparent gap above the card */
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 1rem;
+  list-style: none;
 }
 
 .sidebar-ad a.menu__link {
@@ -817,15 +779,49 @@ html[data-theme="light"] .sidebar-group-label {
   padding: 0.65rem 0.75rem;
   font-family: var(--ifm-font-family-base);
   text-decoration: none !important;
-  border-radius: calc(var(--ifm-global-radius) - 1px);
+  border-radius: var(--ifm-global-radius);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  position: relative;
+  overflow: hidden;
+  transition:
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
 }
 
-.sidebar-ad a.menu__link:hover {
+[data-theme=”dark”] .sidebar-ad a.menu__link {
+  background-color: var(--ifm-card-background-color, #232328);
+  border-color: var(--ifm-card-border-color, #303038);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 4px 6px rgba(0, 0, 0, 0.25),
+    0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme=”light”] .sidebar-ad a.menu__link {
+  background-color: var(--ifm-background-surface-color);
+  border-color: var(--ifm-color-emphasis-200);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 4px 12px rgba(15, 23, 42, 0.08),
+    0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+[data-theme=”dark”] .sidebar-ad a.menu__link:hover {
   background: rgba(255, 255, 255, 0.04);
+  border-color: var(--ifm-color-emphasis-400);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 6px 10px rgba(0, 0, 0, 0.3),
+    0 16px 36px rgba(0, 0, 0, 0.5);
 }
 
-[data-theme="light"] .sidebar-ad a.menu__link:hover {
+[data-theme=”light”] .sidebar-ad a.menu__link:hover {
   background: var(--ifm-hover-overlay);
+  border-color: var(--ifm-color-emphasis-300);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 6px 16px rgba(15, 23, 42, 0.1),
+    0 16px 36px rgba(15, 23, 42, 0.08);
 }
 
 .sidebar-ad a.menu__link svg {
