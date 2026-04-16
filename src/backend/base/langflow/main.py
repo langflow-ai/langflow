@@ -222,8 +222,20 @@ def get_lifespan(*, fix_migration=False, version=None):
                     await logger.adebug(
                         f"Started Prometheus server on port {get_settings_service().settings.prometheus_port}"
                     )
-                except Exception as e:  # noqa: BLE001
-                    await logger.awarning(f"Failed to start Prometheus server (may be running in another worker): {e}")
+                except ImportError:
+                    await logger.aerror(
+                        "prometheus_client is not installed. Install it with: pip install prometheus-client"
+                    )
+                except OSError as e:
+                    import errno
+
+                    if e.errno == errno.EADDRINUSE:
+                        await logger.adebug(
+                            f"Prometheus port {get_settings_service().settings.prometheus_port} already in use "
+                            "(may be running in another worker)"
+                        )
+                    else:
+                        await logger.awarning(f"Failed to start Prometheus server: {e}")
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading bundles")
