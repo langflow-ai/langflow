@@ -119,7 +119,7 @@ class LangflowApplication(BaseApplication):
                     details,
                 )
         except ImportError:
-            pass
+            server.log.debug("psutil not installed; skipping ghost TCP connection check")
         except Exception as e:  # noqa: BLE001
             server.log.warning("Failed to inspect TCP connections before fork: %s", e)
 
