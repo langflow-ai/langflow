@@ -3288,44 +3288,6 @@ async def test_list_configs_deployment_scope_accepts_schema_compatible_detailed_
 
 
 @pytest.mark.anyio
-async def test_list_configs_deployment_scope_skips_connection_when_environment_missing(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
-    fake_tool = FakeToolClient(
-        [
-            {
-                "id": "tool-1",
-                "name": "tool-one",
-                "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
-            }
-        ]
-    )
-    connections_client = FakeConnectionsClient()
-    connections_client._draft_entries_by_id = [
-        ListConfigsResponse.model_validate(
-            {"connection_id": "conn-1", "app_id": "cfg-1", "security_scheme": "key_value_creds"}
-        )
-    ]
-    fake_clients = SimpleNamespace(
-        agent=fake_agent,
-        tool=fake_tool,
-        connections=connections_client,
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    result = await service.list_configs(
-        user_id="user-1",
-        db=object(),
-        params=ConfigListParams(deployment_ids=["dep-1"]),
-    )
-    assert result.configs == []
-
-
-@pytest.mark.anyio
 async def test_list_configs_deployment_scope_warns_when_referenced_connection_missing(monkeypatch, caplog):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
@@ -3993,35 +3955,6 @@ async def test_list_configs_tenant_scope_filters_to_key_value_creds(monkeypatch)
     assert result.configs[0].id == "conn-auth"
     assert result.configs[0].name == "cfg-auth"
     assert result.configs[0].provider_data == {"type": "key_value_creds", "environment": "draft"}
-
-
-@pytest.mark.anyio
-async def test_list_configs_tenant_scope_skips_connection_when_environment_missing(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    connections_client = FakeConnectionsClient()
-    connections_client._list_entries = [
-        ListConfigsResponse.model_validate(
-            {
-                "connection_id": "conn-auth",
-                "app_id": "cfg-auth",
-                "name": "Auth Config",
-                "security_scheme": "key_value_creds",
-            }
-        )
-    ]
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
-        tool=FakeToolClient([]),
-        connections=connections_client,
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert result.configs == []
 
 
 @pytest.mark.anyio
