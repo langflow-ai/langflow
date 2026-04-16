@@ -58,6 +58,15 @@ dev = [
     "mcp-server-fetch>=2025.1.17",
     "onnxruntime>=1.20,<1.24" # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
 ]
+benchmarks = [
+    # Cold-start measurement tooling. Installed only when `uv sync --group benchmarks`.
+    # Never a runtime dep of lfx or langflow (preserves the "no runtime deps in lfx" rule).
+    "pyinstrument>=5.1.2",
+    "importtime-convert>=1.1.0",
+    # importtime-waterfall latest on PyPI is 1.0.0; RESEARCH.md §Standard Stack lists
+    # 2.0.0 but that release is not available. Floor at 1.0.0 so the group resolves.
+    "importtime-waterfall>=1.0.0",
+]
 
 [[tool.uv.index]]
 name = "pytorch-cpu"
