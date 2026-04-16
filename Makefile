@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax bench-local bench-docker bench-snapshot
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax bench-local bench-docker bench-snapshot bench-verify-synthetic
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -71,6 +71,19 @@ bench-snapshot: ## one-shot: capture baseline on release-1.9.0 and overwrite thr
 	@echo "$(GREEN)bench-snapshot:$(NC) capturing authoritative baseline + writing thresholds.json"
 	@echo "$(YELLOW)  This MUST run on the release-1.9.0 branch on a Linux GHA runner for authoritative numbers.$(NC)"
 	@uv run python -m src.backend.tests.benchmarks.snapshot || { echo "$(RED)snapshot.py not yet implemented. Land plan 05 of phase 01-measurement-foundation first.$(NC)" ; exit 1; }
+
+bench-verify-synthetic: ## MEAS-08 D-18: prove the CI gate trips on a synthetic 300ms regression
+	@echo "$(YELLOW)bench-verify-synthetic:$(NC) injecting 300ms synthetic regression into lfx/_bench.py"
+	@cp src/lfx/src/lfx/_bench.py src/lfx/src/lfx/_bench.py.orig.bak
+	@trap 'mv src/lfx/src/lfx/_bench.py.orig.bak src/lfx/src/lfx/_bench.py 2>/dev/null || true' EXIT HUP INT TERM ; \
+	  { printf 'import time\ntime.sleep(0.3)\n' && cat src/lfx/src/lfx/_bench.py.orig.bak ; } > src/lfx/src/lfx/_bench.py ; \
+	  $(DOCKER) build --build-arg BENCH_VARIANT=lean -t benchmarks-lean -f src/backend/tests/benchmarks/Dockerfile . >/dev/null ; \
+	  if uv run python -m src.backend.tests.benchmarks.driver --mode docker --verify --scenarios lfx_bare --skip-build --output-dir /tmp/bench_synth ; then \
+	    echo "$(RED)FAIL:$(NC) driver exited 0 despite 300ms synthetic regression. Gate is NOT wired correctly." ; \
+	    exit 1 ; \
+	  else \
+	    echo "$(GREEN)PASS:$(NC) driver exited non-zero on synthetic regression. Gate is wired correctly." ; \
+	  fi
 
 help: ## show basic help message with common commands
 	@echo ''
