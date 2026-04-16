@@ -1,0 +1,149 @@
+name: Cold Start Benchmark
+
+# Label-gated cold-start regression gate (Phase 1 / MEAS-08; D-14, D-16, D-17).
+# Runs only when:
+#   1. A PR carries the `run-benchmarks` label.
+#   2. A commit is pushed to a branch matching `cold-start/**`.
+#   3. A maintainer triggers the workflow manually via workflow_dispatch.
+#
+# Regression policy (D-16): hard-fail the job AND post a bot comment on the PR
+# containing the numbers diff sourced from reports/regression_comment.md.
+# The `benchmarks:override` label is recorded in the workflow summary but does
+# NOT bypass the failure; branch-protection governs whether a failing check
+# can be merged.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "verify: run gate against thresholds.json. snapshot: capture new baseline."
+        required: false
+        default: verify
+        type: choice
+        options:
+          - verify
+          - snapshot
+      ref:
+        description: "Git ref to checkout (branch, tag, or commit SHA)."
+        required: false
+        default: ""
+        type: string
+  pull_request:
+    types: [opened, labeled, synchronize, reopened]
+  push:
+    branches:
+      - "cold-start/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  benchmark:
+    name: "Cold Start Benchmark"
+    # Pitfall 9: the `on.pull_request.types` includes `labeled`, but this job-level
+    # `if:` guard ensures only the `run-benchmarks` label triggers an actual run.
+    if: >-
+      contains(github.event.pull_request.labels.*.name, 'run-benchmarks') ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: Install hyperfine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y hyperfine
+
+      - name: Install benchmark dependencies
+        run: |
+          uv sync --group benchmarks
+
+      - name: Build benchmarks-lean image
+        run: |
+          docker build \
+            --build-arg BENCH_VARIANT=lean \
+            -t benchmarks-lean \
+            -f src/backend/tests/benchmarks/Dockerfile \
+            .
+
+      - name: Run harness
+        id: bench
+        env:
+          CONTAINER_CMD: docker
+        run: |
+          mode="${{ github.event.inputs.mode || 'verify' }}"
+          echo "Running harness in mode: $mode"
+          if [ "$mode" = "snapshot" ]; then
+            uv run python -m src.backend.tests.benchmarks.snapshot
+          else
+            uv run python -m src.backend.tests.benchmarks.driver \
+              --mode docker \
+              --verify \
+              --output-dir src/backend/tests/benchmarks/reports \
+              --skip-build
+          fi
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: cold-start-benchmark-reports
+          path: src/backend/tests/benchmarks/reports/
+          if-no-files-found: warn
+
+      - name: Post regression comment on failure
+        if: failure() && github.event.pull_request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f src/backend/tests/benchmarks/reports/regression_comment.md ]; then
+            gh pr comment "${{ github.event.pull_request.number }}" \
+              --body-file src/backend/tests/benchmarks/reports/regression_comment.md
+          else
+            echo "No regression_comment.md produced by driver. Inspect the harness step logs above."
+          fi
+
+      - name: Record override label usage
+        if: always() && contains(github.event.pull_request.labels.*.name, 'benchmarks:override')
+        run: |
+          {
+            echo "## benchmarks:override applied"
+            echo ""
+            echo "PR #${{ github.event.pull_request.number }} carries the \`benchmarks:override\` label."
+            echo "Actor: ${{ github.actor }}"
+            echo "Event: ${{ github.event_name }}"
+            echo ""
+            echo "The override does NOT bypass the workflow's failure status; it is recorded here for audit."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Snapshot commit note
+        if: success() && github.event.inputs.mode == 'snapshot'
+        run: |
+          {
+            echo "## Snapshot run complete"
+            echo ""
+            echo "The driver overwrote src/backend/tests/benchmarks/thresholds.json with fresh numbers."
+            echo "Download the \`cold-start-benchmark-reports\` artifact and commit the updated thresholds.json"
+            echo "plus the baseline md/json files manually in a PR titled something like"
+            echo "\`docs(bench): capture release-1.9.0 baseline thresholds\`."
+            echo ""
+            echo "Per Pitfall 11 this snapshot is authoritative only because it ran on the GHA Linux runner."
+          } >> "$GITHUB_STEP_SUMMARY"
