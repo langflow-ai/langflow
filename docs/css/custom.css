@@ -86,6 +86,19 @@ html[data-theme="light"] .navbar__logo {
   border-right: none !important;
 }
 
+/* Fix sidebar and TOC column heights — prevent shrinking during scroll */
+@media (min-width: 997px) {
+  [class*="sidebarViewport"] {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow-y: auto;
+  }
+
+  [class*="tableOfContents"] {
+    max-height: calc(100vh - var(--ifm-navbar-height) - 2rem) !important;
+  }
+}
+
 /* Content area - breathing room */
 [class*="docMainContainer"] {
   padding-left: 3rem;
@@ -1083,14 +1096,15 @@ html[data-theme="light"] .sidebar-group-label {
   color: var(--ifm-color-primary);
 }
 
-/* Ativo — rosa */
+/* Ativo — rosa, bold simulado via text-shadow para não causar reflow */
 .table-of-contents__link--active {
   color: var(--ifm-color-primary) !important;
-  font-weight: 600;
+  text-shadow: 0 0 0.4px var(--ifm-color-primary);
 }
 
 [data-theme="dark"] .table-of-contents__link--active {
   color: hsla(329, 55%, 68%, 1) !important;
+  text-shadow: 0 0 0.4px hsla(329, 55%, 68%, 1);
 }
 
 [data-theme="dark"] .table-of-contents {
