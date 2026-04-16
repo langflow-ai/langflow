@@ -610,3 +610,122 @@ class TestIDX01LazyLock:
         snapshot = await _capture_parity_snapshot(fixture)
         expected = json.loads(expected_path.read_text())
         assert snapshot == expected, f"parity drift detected.\n  got: {snapshot}\n  expected: {expected}"
+
+
+@pytest.mark.asyncio
+class TestIDX02SemaphoreCap:
+    """Phase 2 / IDX-02: Semaphore(16) cap on _load_components_dynamically.
+
+    **Test-wiring rationale (per reviewer Blocker 2):** these tests call
+    ``_load_components_dynamically`` DIRECTLY rather than going through
+    ``get_and_cache_all_types_dict``. The public entry point routes through
+    ``_load_production_mode`` -> ``_load_from_index_or_cache``, which
+    short-circuits on the shipped built-in ``_assets/component_index.json`` and
+    never enters the semaphore-capped function. Per-type counts from that path
+    come from the STATIC shipped index -- identical across rebuilds by
+    construction, not by correctness. Direct invocation is the only way to
+    exercise the actual function that owns the semaphore.
+    """
+
+    async def test_component_count_stable_across_rebuilds(self, monkeypatch):
+        """Baseline + 5 direct rebuilds of _load_components_dynamically: per-top-level counts must match exactly.
+
+        No tolerance per D-09 -- pitfall 9 is specifically about components
+        being silently dropped under thread-pool pressure, and any tolerance
+        would hide that. The lfx-only test venv lacks optional integrations
+        (toolguard, langchain_openai) that the real pkgutil.walk_packages call
+        transitively imports; this test therefore monkey-patches
+        ``pkgutil.walk_packages`` to yield a synthetic module list of 200
+        modules across 10 top-levels and stubs ``_process_single_module`` to
+        return deterministic per-top-level results. With ~200 modules and a
+        Semaphore(16) cap, the gather/merge path under test is exercised
+        exactly as it would be in production, and any drop-under-pressure
+        regression (pitfall 9) surfaces as per-top-level count drift across
+        the 5 rebuilds.
+        """
+        import lfx.interface.components as ci
+
+        # 10 synthetic top-level component categories, 20 modules each = 200 modules total
+        # (> 16 Semaphore cap, so the bounded helper actually throttles).
+        top_levels = [f"cat{i:02d}" for i in range(10)]
+        module_names = [f"lfx.components.{top_level}.comp_{idx:02d}" for top_level in top_levels for idx in range(20)]
+
+        def fake_walk_packages(*_args, **_kwargs):
+            # pkgutil.walk_packages yields (module_finder, name, ispkg) tuples.
+            for modname in module_names:
+                yield (None, modname, False)
+
+        def fake_process_single_module(modname: str):
+            # Extract top-level from 'lfx.components.<top_level>.<modname>'.
+            parts = modname.split(".")
+            top_level = parts[2]
+            comp_name = parts[3]
+            return (top_level, {comp_name: {"template": {}, "display_name": comp_name}})
+
+        monkeypatch.setattr(ci.pkgutil, "walk_packages", fake_walk_packages)
+        monkeypatch.setattr(ci, "_process_single_module", fake_process_single_module)
+
+        async def build_snapshot() -> dict[str, int]:
+            # Call _load_components_dynamically DIRECTLY -- this exercises the
+            # actual semaphore-capped gather. Do NOT use
+            # get_and_cache_all_types_dict here: the shipped built-in index
+            # short-circuits the fallback and the semaphore path is never
+            # entered.
+            modules_dict = await ci._load_components_dynamically(target_modules=None)
+            # Per top-level component count. No tolerance per D-09.
+            return {top_level: len(components) for top_level, components in modules_dict.items()}
+
+        baseline = await build_snapshot()
+        assert baseline, (
+            "baseline snapshot is empty -- aborting (probable test setup error; "
+            "_load_components_dynamically returned no modules)"
+        )
+        # Sanity: we expect the synthetic fixture to produce 10 categories * 20 each.
+        assert len(baseline) == 10, f"expected 10 top-levels, got {len(baseline)}: {baseline}"
+        assert all(v == 20 for v in baseline.values()), f"expected 20 components per top-level, got: {baseline}"
+
+        for attempt in range(5):
+            rebuilt = await build_snapshot()
+            diff = {k: baseline[k] - rebuilt.get(k, 0) for k in baseline if baseline[k] != rebuilt.get(k, 0)}
+            assert rebuilt == baseline, (
+                f"rebuild {attempt} diverged from baseline.\n"
+                f"  baseline: {baseline}\n"
+                f"  rebuilt:  {rebuilt}\n"
+                f"  diff (baseline - rebuilt): {diff}"
+            )
+
+    async def test_parity_five_types(self):
+        """Deep end-to-end parity against pre-change snapshot on the 5-type fixture.
+
+        The fixture wires ChatInput -> Prompt -> OpenAIModel -> ChatOutput
+        through a mock-LLM path, exercising multiple distinct component types
+        end-to-end. The snapshot is byte-identical pre- and post-semaphore
+        because the semaphore only governs cache-build time, not flow
+        execution.
+
+        Skips gracefully when ``langchain_openai`` is absent (lfx-only test
+        venv): the OpenAIModel component cannot be instantiated without the
+        import, and the mock LLM hook in _parity_helpers also returns False in
+        that case. When run in a venv that DOES have langchain_openai (e.g.
+        the monorepo root venv), the snapshot is byte-identical pre/post
+        semaphore changes because the semaphore only affects cache-build time.
+        """
+        try:
+            import langchain_openai  # noqa: F401
+        except ModuleNotFoundError:
+            pytest.skip(
+                "langchain_openai not available in this environment (lfx-only test venv); "
+                "five_types.json flow requires OpenAIModel instantiation. Run from the "
+                "monorepo root venv to exercise this parity test."
+            )
+
+        fixture = _PARITY_FIXTURES_DIR / "five_types.json"
+        expected_path = _PARITY_FIXTURES_DIR / "five_types.snapshot.json"
+        assert fixture.exists(), f"missing synthetic fixture: {fixture}"
+        assert expected_path.exists(), (
+            f"missing pre-change snapshot: {expected_path}. "
+            "Generate it on release-1.9.0 tip before the semaphore changes land."
+        )
+        snapshot = await _capture_parity_snapshot(fixture)
+        expected = json.loads(expected_path.read_text())
+        assert snapshot == expected, f"parity drift detected.\n  got: {snapshot}\n  expected: {expected}"
