@@ -7,7 +7,6 @@ import { CommandItem } from "../../../../ui/command";
 import GlobalVariableModal from "../../../GlobalVariableModal/GlobalVariableModal";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputGlobalComponentType, InputProps } from "../../types";
-import { looksLikeVariableName } from "../../../../../utils/reactflowUtils";
 import InputComponent from "../inputComponent";
 import {
   useGlobalVariableValue,
@@ -30,7 +29,12 @@ export default function InputGlobalComponent({
   hasRefreshButton = false,
   showParameter = true,
 }: InputProps<string, InputGlobalComponentType>): JSX.Element | null {
-  const { data: globalVariables } = useGetGlobalVariables();
+  const {
+    data: globalVariables,
+    isFetchedAfterMount: isGlobalVariablesFetchedAfterMount,
+    isFetching: isGlobalVariablesFetching,
+    isSuccess: isGlobalVariablesFetchSuccessful,
+  } = useGetGlobalVariables();
 
   // // Safely cast the data to our typed interface
   const typedGlobalVariables: GlobalVariable[] = globalVariables ?? [];
@@ -44,25 +48,46 @@ export default function InputGlobalComponent({
     typedGlobalVariables,
   );
   const unavailableField = useUnavailableField(display_name, currentValue);
+  const canValidateMissingVariable =
+    isGlobalVariablesFetchSuccessful &&
+    !isGlobalVariablesFetching &&
+    isGlobalVariablesFetchedAfterMount;
 
   useInitialLoad(
     isDisabled,
     loadFromDb,
     typedGlobalVariables,
+    canValidateMissingVariable,
     valueExists,
     unavailableField,
     handleOnNewValue,
   );
 
-  // Clean up when selected variable no longer exists
+  // Clean up when selected variable no longer exists.
+  // Only validate against a successful, settled query result for this mount.
+  // This avoids clearing values during the initial fetch, during background
+  // refetches against cached data, or after failed requests.
   useEffect(() => {
-    if (loadFromDb && currentValue && !valueExists && !isDisabled) {
+    if (
+      canValidateMissingVariable &&
+      loadFromDb &&
+      currentValue &&
+      !valueExists &&
+      !isDisabled
+    ) {
       handleOnNewValue(
         { value: "", load_from_db: false },
         { skipSnapshot: true },
       );
     }
-  }, [loadFromDb, currentValue, valueExists, isDisabled, handleOnNewValue]);
+  }, [
+    canValidateMissingVariable,
+    loadFromDb,
+    currentValue,
+    valueExists,
+    isDisabled,
+    handleOnNewValue,
+  ]);
 
   // Create handlers object for better organization
   const handlers: GlobalVariableHandlers = {
@@ -117,19 +142,16 @@ export default function InputGlobalComponent({
 
   let variableOptions = typedGlobalVariables.map((variable) => variable.name);
 
-  const isEnvVarName =
-    password && currentValue && looksLikeVariableName(currentValue);
   if (
-    (loadFromDb &&
-      currentValue &&
-      !valueExists &&
-      !variableOptions.includes(currentValue)) ||
-    (isEnvVarName && !variableOptions.includes(currentValue))
+    loadFromDb &&
+    currentValue &&
+    !valueExists &&
+    !variableOptions.includes(currentValue)
   ) {
     variableOptions = [...variableOptions, currentValue];
   }
 
-  const selectedOption = loadFromDb || isEnvVarName ? currentValue : "";
+  const selectedOption = loadFromDb ? currentValue : "";
 
   if (!showParameter) {
     return null;

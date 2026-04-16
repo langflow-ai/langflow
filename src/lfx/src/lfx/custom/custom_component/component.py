@@ -35,7 +35,8 @@ from lfx.schema.artifact import get_artifact_type, post_process_raw
 from lfx.schema.data import Data
 from lfx.schema.log import Log
 from lfx.schema.message import ErrorMessage, Message
-from lfx.schema.properties import Source
+from lfx.schema.properties import Source, Usage
+from lfx.schema.token_usage import accumulate_usage, extract_usage_from_chunk
 from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
@@ -135,6 +136,7 @@ class Component(CustomComponent):
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
         self._event_manager: EventManager | None = None
+        self._token_usage: Usage | None = None
         self._state_model = None
         self._telemetry_input_values: dict[str, Any] | None = None
 
@@ -220,6 +222,10 @@ class Component(CustomComponent):
 
     def get_output_logs(self) -> dict[str, Any]:
         return self._output_logs
+
+    def get_logs(self) -> list[Log]:
+        """Return the current list of logs for this component."""
+        return self._logs
 
     def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
         source_dict = {}
@@ -346,6 +352,9 @@ class Component(CustomComponent):
     def set_event_manager(self, event_manager: EventManager | None = None) -> None:
         self._event_manager = event_manager
 
+    def set_current_output(self, output_name: str) -> None:
+        self._current_output = output_name
+
     def reset_all_output_values(self) -> None:
         """Reset all output values to UNDEFINED."""
         if isinstance(self._outputs_map, dict):
@@ -380,12 +389,34 @@ class Component(CustomComponent):
             return memo[id(self)]
         # Shallow-copy config/inputs: they may contain non-picklable services
         # (e.g. _tracing_service holds ServiceManager with threading.RLock).
-        kwargs = dict(self.__config)
-        kwargs["inputs"] = dict(self.__inputs)
+        # use the mangled names to access the private attributes
+        config = getattr(self, "_Component__config", {})
+        inputs_raw = getattr(self, "_Component__inputs", {})
+
+        kwargs = dict(config)
+        kwargs["inputs"] = dict(inputs_raw)
         new_component = type(self)(**kwargs)
         new_component._code = self._code
         new_component._outputs_map = self._outputs_map
-        new_component._inputs = deepcopy(self._inputs, memo)
+
+        # Safe deepcopy of inputs
+        new_inputs = {}
+        for k, v in self._inputs.items():
+            try:
+                # Attempt to deepcopy the entire input object
+                new_inputs[k] = deepcopy(v, memo)
+            except Exception:  # noqa: BLE001
+                # If deepcopy fails (e.g. due to RLock), handle the value carefully
+                # Pydantic's model_copy(deep=False) creates a shallow copy
+                input_copy = v.model_copy()
+                try:
+                    input_copy.value = deepcopy(v.value, memo)
+                except Exception:  # noqa: BLE001
+                    # Keep the original value (shallow copy) if it can't be deepcopied
+                    input_copy.value = v.value
+                new_inputs[k] = input_copy
+
+        new_component._inputs = new_inputs
         new_component._edges = self._edges
         new_component._components = self._components
         new_component._parameters = dict(self._parameters)
@@ -843,7 +874,8 @@ class Component(CustomComponent):
         # if value is a list of components, we need to process each component
         # Note this update make sure it is not a list str | int | float | bool | type(None)
         if isinstance(value, list) and not any(
-            isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool) for val in value
+            isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool | dict)
+            for val in value
         ):
             for val in value:
                 self._process_connection_or_parameter(key, val)
@@ -988,7 +1020,10 @@ class Component(CustomComponent):
 
     def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
-        return_type = get_type_hints(method).get("return")
+        try:
+            return_type = get_type_hints(method).get("return")
+        except TypeError:
+            return []
         if return_type is None:
             return []
         extracted_return_types = self._extract_return_type(return_type)
@@ -1298,6 +1333,11 @@ class Component(CustomComponent):
             return (
                 self.status if self.status is not None else "No text available"
             )  # Provide a default message if .text_key is missing
+        # IMPORTANT: keep this before the generic `hasattr(result, "data")` branch.
+        # pandas objects expose a `.data` attribute, but for DataFrame/Series we must
+        # preserve the object rather than returning its underlying array/manager.
+        if isinstance(result, pd.DataFrame | pd.Series):
+            return result
         if hasattr(result, "data"):
             return result.data
         if hasattr(result, "model_dump"):
@@ -1700,9 +1740,7 @@ class Component(CustomComponent):
                         stored_message.properties.state = "complete"
                     # Set usage data if captured from streaming
                     if usage_data:
-                        from lfx.schema.properties import Usage
-
-                        stored_message.properties.usage = Usage(**usage_data)
+                        stored_message.properties.usage = usage_data
                     stored_message = await self._update_stored_message(stored_message)
                     # Send a final add_message event with state="complete" and usage data
                     # This is needed for OpenAI Responses API to capture usage in streaming mode
@@ -1789,11 +1827,11 @@ class Component(CustomComponent):
         message_table = message_tables[0]
         return await Message.create(**message_table.model_dump())
 
-    async def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> tuple[str, dict | None]:
+    async def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> tuple[str, Usage | None]:
         """Stream message content from an iterator and capture usage metadata.
 
         Returns:
-            tuple: (complete_message_text, usage_data_dict_or_none)
+            tuple: (complete_message_text, Usage_or_none)
         """
         if not isinstance(iterator, AsyncIterator | Iterator):
             msg = "The message must be an iterator or an async iterator."
@@ -1810,35 +1848,14 @@ class Component(CustomComponent):
         try:
             complete_message = ""
             first_chunk = True
-            usage_data = None
+            usage_data: Usage | None = None
             for chunk in iterator:
                 complete_message = await self._process_chunk(
                     chunk.content, complete_message, message_id, message, first_chunk=first_chunk
                 )
                 first_chunk = False
-                # Capture usage metadata from chunks (usually on the last chunk)
-                if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                    usage_data = {
-                        "input_tokens": getattr(chunk.usage_metadata, "input_tokens", None),
-                        "output_tokens": getattr(chunk.usage_metadata, "output_tokens", None),
-                        "total_tokens": getattr(chunk.usage_metadata, "total_tokens", None),
-                    }
-                elif hasattr(chunk, "response_metadata") and chunk.response_metadata:
-                    metadata = chunk.response_metadata
-                    if "token_usage" in metadata:
-                        usage_data = {
-                            "input_tokens": metadata["token_usage"].get("prompt_tokens"),
-                            "output_tokens": metadata["token_usage"].get("completion_tokens"),
-                            "total_tokens": metadata["token_usage"].get("total_tokens"),
-                        }
-                    elif "usage" in metadata:
-                        usage_data = {
-                            "input_tokens": metadata["usage"].get("input_tokens"),
-                            "output_tokens": metadata["usage"].get("output_tokens"),
-                            "total_tokens": None,
-                        }
-                        if usage_data["input_tokens"] and usage_data["output_tokens"]:
-                            usage_data["total_tokens"] = usage_data["input_tokens"] + usage_data["output_tokens"]
+                chunk_usage = extract_usage_from_chunk(chunk)
+                usage_data = accumulate_usage(usage_data, chunk_usage)
         except Exception as e:
             raise StreamingError(cause=e, source=message.properties.source) from e
         else:
@@ -1846,49 +1863,18 @@ class Component(CustomComponent):
 
     async def _handle_async_iterator(
         self, iterator: AsyncIterator, message_id: str, message: Message
-    ) -> tuple[str, dict | None]:
+    ) -> tuple[str, Usage | None]:
         complete_message = ""
         first_chunk = True
-        usage_data = None
+        usage_data: Usage | None = None
         async for chunk in iterator:
             complete_message = await self._process_chunk(
                 chunk.content, complete_message, message_id, message, first_chunk=first_chunk
             )
             first_chunk = False
-            if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                usage_data = self._extract_usage_metadata(chunk.usage_metadata)
-            elif hasattr(chunk, "response_metadata") and chunk.response_metadata:
-                metadata = chunk.response_metadata
-                if "token_usage" in metadata:
-                    usage_data = {
-                        "input_tokens": metadata["token_usage"].get("prompt_tokens"),
-                        "output_tokens": metadata["token_usage"].get("completion_tokens"),
-                        "total_tokens": metadata["token_usage"].get("total_tokens"),
-                    }
-                elif "usage" in metadata:
-                    usage_data = {
-                        "input_tokens": metadata["usage"].get("input_tokens"),
-                        "output_tokens": metadata["usage"].get("output_tokens"),
-                        "total_tokens": None,
-                    }
-                    if usage_data["input_tokens"] and usage_data["output_tokens"]:
-                        usage_data["total_tokens"] = usage_data["input_tokens"] + usage_data["output_tokens"]
+            chunk_usage = extract_usage_from_chunk(chunk)
+            usage_data = accumulate_usage(usage_data, chunk_usage)
         return complete_message, usage_data
-
-    @staticmethod
-    def _extract_usage_metadata(um) -> dict:
-        """Extract usage from usage_metadata, handling both dict (TypedDict) and object forms."""
-        if isinstance(um, dict):
-            return {
-                "input_tokens": um.get("input_tokens"),
-                "output_tokens": um.get("output_tokens"),
-                "total_tokens": um.get("total_tokens"),
-            }
-        return {
-            "input_tokens": getattr(um, "input_tokens", None),
-            "output_tokens": getattr(um, "output_tokens", None),
-            "total_tokens": getattr(um, "total_tokens", None),
-        }
 
     async def _process_chunk(
         self, chunk: str, complete_message: str, message_id: str, message: Message, *, first_chunk: bool = False

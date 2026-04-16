@@ -1,8 +1,47 @@
+import importlib
+import sys
+
 import pytest
 from lfx.components.processing.data_operations import DataOperationsComponent
 from lfx.schema import Data
 
 from tests.base import ComponentTestBaseWithoutClient
+
+
+def test_should_import_module_when_jq_not_installed(monkeypatch):
+    """Module must be importable even when jq is not installed (e.g. on Windows).
+
+    The jq library is a C extension not available on Windows. The module-level
+    import was removed so that update_build_config and non-jq operations work
+    on all platforms. jq is only imported lazily inside json_query/json_path.
+    """
+    # Remove jq from sys.modules and block re-import
+    monkeypatch.delitem(sys.modules, "jq", raising=False)
+    real_import = __import__
+
+    def mock_import(name, *args, **kwargs):
+        if name == "jq":
+            msg = "No module named 'jq'"
+            raise ModuleNotFoundError(msg)
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.__import__", mock_import)
+
+    # Force reimport of the module
+    monkeypatch.delitem(sys.modules, "lfx.components.processing.data_operations", raising=False)
+
+    # This must NOT raise ModuleNotFoundError
+    mod = importlib.import_module("lfx.components.processing.data_operations")
+    component_cls = mod.DataOperationsComponent
+
+    # Non-jq operations must work
+    component = component_cls(
+        data=Data(data={"key1": "value1", "key2": "value2"}),
+        operations=[{"name": "Select Keys"}],
+        select_keys_input=["key1"],
+    )
+    result = component.as_data()
+    assert "key1" in result.data
 
 
 class TestDataOperationsComponent(ComponentTestBaseWithoutClient):

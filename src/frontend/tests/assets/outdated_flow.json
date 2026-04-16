@@ -523,7 +523,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "sk-dummy-api-key"
               },
               "code": {
                 "advanced": true,

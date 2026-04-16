@@ -1,0 +1,53 @@
+[project]
+name = "langflow-sdk"
+version = "0.1.0"
+description = "Python SDK for the Langflow REST API"
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+license = "MIT"
+keywords = ["langflow", "sdk", "ai", "workflow"]
+
+dependencies = [
+    "httpx[http2]>=0.24.0,<1.0.0",
+    "pydantic>=2.0.0,<3.0.0",
+    "pydantic-settings>=2.10.1,<3.0.0",
+    "tomli>=2.2.1,<3.0.0",
+    "typing-extensions>=4.14.0,<5.0.0",
+]
+
+[project.optional-dependencies]
+testing = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.26.0",
+]
+
+[project.entry-points."pytest11"]
+langflow = "langflow_sdk.testing"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/langflow_sdk"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --tb=short --strict-markers --disable-warnings --color=yes"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests (require a live Langflow instance)",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=7.0.0",
+    "respx>=0.21.0",
+    "ruff>=0.9.10",
+]

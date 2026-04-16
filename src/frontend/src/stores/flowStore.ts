@@ -9,8 +9,7 @@ import {
 import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
-import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
-import { BROKEN_EDGES_WARNING } from "@/constants/constants";
+import i18n from "../i18n";
 import {
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_INSPECTION_PANEL,
@@ -60,6 +59,58 @@ import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables"
 import { filterSingletonComponent } from "./helpers/filter-singleton-component";
 import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
+import { useUtilityStore } from "./utilityStore";
+
+// Tracks in-progress node update operations (e.g. validateComponentCode calls).
+// buildFlow awaits these so "Run" doesn't race against a pending "Update".
+const pendingNodeUpdates = new Map<
+  string,
+  { promise: Promise<void>; resolve: () => void }
+>();
+
+export function registerNodeUpdate(nodeId: string): void {
+  // If there's already a pending update for this node, leave it
+  if (pendingNodeUpdates.has(nodeId)) return;
+  let resolveRef: () => void;
+  const promise = new Promise<void>((r) => {
+    resolveRef = r;
+  });
+  pendingNodeUpdates.set(nodeId, { promise, resolve: resolveRef! });
+}
+
+export function completeNodeUpdate(nodeId: string): void {
+  const entry = pendingNodeUpdates.get(nodeId);
+  if (entry) {
+    entry.resolve();
+    pendingNodeUpdates.delete(nodeId);
+  }
+}
+
+export async function waitForNodeUpdates(
+  timeoutMs: number = 10_000,
+): Promise<void> {
+  if (pendingNodeUpdates.size === 0) return;
+  const pendingIds = Array.from(pendingNodeUpdates.keys());
+  const promises = Array.from(pendingNodeUpdates.values()).map(
+    (e) => e.promise,
+  );
+  let timedOut = false;
+  await Promise.race([
+    Promise.all(promises),
+    new Promise<void>((resolve) =>
+      setTimeout(() => {
+        timedOut = true;
+        resolve();
+      }, timeoutMs),
+    ),
+  ]);
+  if (timedOut) {
+    console.warn(
+      `waitForNodeUpdates timed out after ${timeoutMs}ms. ` +
+        `${pendingNodeUpdates.size} updates still pending: ${pendingIds.join(", ")}`,
+    );
+  }
+}
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
@@ -95,15 +146,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateComponentsToUpdate: (nodes) => {
     const outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
+    const allowCustomComponents =
+      useUtilityStore.getState().allowCustomComponents;
     nodes.forEach((node) => {
       if (node.type === "genericNode") {
-        const codeValidity = checkCodeValidity(node.data, templates);
-        if (codeValidity && codeValidity.outdated)
+        const codeValidity = checkCodeValidity(
+          node.data,
+          templates,
+          allowCustomComponents,
+        );
+        if (codeValidity && (codeValidity.outdated || codeValidity.blocked))
           outdatedNodes.push({
             id: node.id,
             icon: node.data.node?.icon,
             display_name: node.data.node?.display_name,
             outdated: codeValidity.outdated,
+            blocked: codeValidity.blocked,
             breakingChange: codeValidity.breakingChange,
             userEdited: codeValidity.userEdited,
           });
@@ -182,6 +240,51 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     };
     get().setFlowPool(newFlowPool);
   },
+  appendLogToFlowPool: (
+    nodeId: string,
+    outputName: string,
+    log: LogsLogType,
+  ) => {
+    const prevPool = get().flowPool;
+    const prevEntries = prevPool[nodeId];
+    if (!prevEntries || prevEntries.length === 0) {
+      const newEntry: VertexBuildTypeAPI = {
+        id: nodeId,
+        inactivated_vertices: null,
+        next_vertices_ids: [],
+        top_level_vertices: [],
+        valid: true,
+        data: {
+          results: {},
+          outputs: {},
+          logs: { [outputName]: [log] },
+          messages: [],
+        },
+        timestamp: new Date().toISOString(),
+        params: null,
+        messages: [],
+        artifacts: null,
+      };
+      get().setFlowPool({ ...prevPool, [nodeId]: [newEntry] });
+    } else {
+      const latest = prevEntries[prevEntries.length - 1];
+      const existingLogs: LogsLogType[] = latest.data.logs[outputName] ?? [];
+      const updatedEntry: VertexBuildTypeAPI = {
+        ...latest,
+        data: {
+          ...latest.data,
+          logs: {
+            ...latest.data.logs,
+            [outputName]: [...existingLogs, log],
+          },
+        },
+      };
+      get().setFlowPool({
+        ...prevPool,
+        [nodeId]: [...prevEntries.slice(0, -1), updatedEntry],
+      });
+    }
+  },
   getNodePosition: (nodeId: string) => {
     const node = get().nodes.find((node) => node.id === nodeId);
     return node?.position || { x: 0, y: 0 };
@@ -225,7 +328,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     if (brokenEdges.length > 0) {
       useAlertStore.getState().setErrorData({
-        title: BROKEN_EDGES_WARNING,
+        title: i18n.t("flow.brokenEdgesWarning"),
         list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
       });
     }
@@ -759,7 +862,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     errors = errors.concat(errorsObjs.flatMap((obj) => obj.errors));
     if (errors.length > 0) {
       setErrorData({
-        title: MISSED_ERROR_ALERT,
+        title: i18n.t("errors.missedFields"),
         list: errors,
       });
       const ids = errorsObjs.flatMap((obj) => obj.id);
@@ -767,6 +870,56 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       get().setIsBuilding(false);
       throw new Error("Invalid components");
+    }
+
+    // Wait for any in-progress component updates (e.g. user clicked "Update"
+    // then immediately clicked "Run") before checking outdated state.
+    await waitForNodeUpdates();
+
+    // Block build when custom components are disabled and there are outdated components
+    // Recalculate from current nodes to avoid stale componentsToUpdate
+    // (setNode does not trigger updateComponentsToUpdate, only setNodes does)
+    get().updateComponentsToUpdate(get().nodes);
+    const allowCustomComponents =
+      useUtilityStore.getState().allowCustomComponents;
+    if (!allowCustomComponents && get().componentsToUpdate.length > 0) {
+      const blockedComponents = get().componentsToUpdate.filter(
+        (component) => component.blocked,
+      );
+      const outdatedComponents = get().componentsToUpdate.filter(
+        (component) => component.outdated,
+      );
+      const errorList: string[] = [];
+
+      if (blockedComponents.length > 0) {
+        errorList.push(
+          `The following custom components cannot run while custom components are disabled: ${blockedComponents
+            .map((component) => component.display_name ?? component.id)
+            .join(", ")}`,
+        );
+      }
+
+      if (outdatedComponents.length > 0) {
+        errorList.push(
+          `The following components are outdated and must be updated: ${outdatedComponents
+            .map((component) => component.display_name ?? component.id)
+            .join(", ")}`,
+        );
+      }
+
+      setErrorData({
+        title:
+          blockedComponents.length > 0
+            ? "Custom components are blocked while custom components are disabled"
+            : "Outdated components must be updated before building",
+        list: errorList,
+      });
+      get().setIsBuilding(false);
+      throw new Error(
+        blockedComponents.length > 0
+          ? "Custom components are blocked while custom components are disabled"
+          : "Outdated components must be updated",
+      );
     }
 
     function validateSubgraph() {}
@@ -902,10 +1055,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             ?.map((element) => element.id)
             .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
-        if (get().componentsToUpdate.length > 0)
+        const isCustomComponentBlocked = list.some((msg) =>
+          msg.toLowerCase().includes("custom components are not allowed"),
+        );
+        if (!isCustomComponentBlocked && get().componentsToUpdate.length > 0)
           setErrorData({
             title:
-              "There are outdated components in the flow. The error could be related to them.",
+              "There are blocked or outdated components in the flow. The error could be related to them.",
           });
         get().updateEdgesRunningByNodes(
           get().nodes.map((n) => n.id),
@@ -1177,5 +1333,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ stopNodeId: nodeId });
   },
 }));
+
+export function recomputeComponentsToUpdateIfNeeded(): void {
+  const { nodes, updateComponentsToUpdate } = useFlowStore.getState();
+  if (nodes.length > 0) {
+    updateComponentsToUpdate(nodes);
+  }
+}
 
 export default useFlowStore;

@@ -92,6 +92,20 @@ export const usePostUploadFileV2: useMutationFunctionType<
           },
         },
       );
+
+      // Replace the optimistic "temp" entry with the actual server data so
+      // that file.path in the cache matches the path returned to callers
+      // (via handleUpload → internalSelectedFiles). Without this, there is
+      // a race window where the optimistic path (just the filename) differs
+      // from the server path (user_id/filename), causing checkboxes to
+      // appear unchecked until the background refetch completes.
+      queryClient.setQueryData(["useGetFilesV2"], (old: any) => {
+        if (!Array.isArray(old)) return [response.data];
+        return old.map((file: any) =>
+          file?.id === "temp" ? { ...response.data } : file,
+        );
+      });
+
       return response.data;
     } catch (e) {
       queryClient.setQueryData(["useGetFilesV2"], (old: FileType[]) => {

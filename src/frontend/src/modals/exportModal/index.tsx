@@ -1,16 +1,11 @@
 import { forwardRef, type ReactNode, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
 import type { FlowType } from "@/types/flow";
 import IconComponent from "../../components/common/genericIconComponent";
 import EditFlowSettings from "../../components/core/editFlowSettingsComponent";
 import { Checkbox } from "../../components/ui/checkbox";
-import { API_WARNING_NOTICE_ALERT } from "../../constants/alerts_constants";
-import {
-  ALERT_SAVE_WITH_API,
-  EXPORT_DIALOG_SUBTITLE,
-  SAVE_WITH_API_CHECKBOX,
-} from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
@@ -26,6 +21,7 @@ const ExportModal = forwardRef(
     },
     ref,
   ): JSX.Element => {
+    const { t } = useTranslation();
     const version = useDarkStore((state) => state.version);
     const setSuccessData = useAlertStore((state) => state.setSuccessData);
     const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -74,7 +70,7 @@ const ExportModal = forwardRef(
               await downloadFlow(flowToExport, name!, description);
 
               setNoticeData({
-                title: API_WARNING_NOTICE_ALERT,
+                title: t("alerts.criticalDataWarning"),
               });
               setOpen(false);
               track("Flow Exported", { flowId: currentFlow!.id });
@@ -101,7 +97,7 @@ const ExportModal = forwardRef(
         }}
       >
         <BaseModal.Trigger asChild>{props.children ?? <></>}</BaseModal.Trigger>
-        <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
+        <BaseModal.Header description={t("dialog.export")}>
           <span className="pr-2">Export</span>
           <IconComponent
             name="Download"
@@ -127,11 +123,11 @@ const ExportModal = forwardRef(
               }}
             />
             <label htmlFor="terms" className="export-modal-save-api text-sm">
-              {SAVE_WITH_API_CHECKBOX}
+              {t("misc.saveWithApiCheckbox")}
             </label>
           </div>
           <span className="mt-1 text-xs text-destructive">
-            {ALERT_SAVE_WITH_API}
+            {t("misc.alertSaveWithApi")}
           </span>
         </BaseModal.Content>
 

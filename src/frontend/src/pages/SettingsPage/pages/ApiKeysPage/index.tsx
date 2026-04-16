@@ -1,11 +1,6 @@
 import type { SelectionChangedEvent } from "ag-grid-community";
 import { useContext, useEffect, useState } from "react";
-import {
-  DEL_KEY_ERROR_ALERT,
-  DEL_KEY_ERROR_ALERT_PLURAL,
-  DEL_KEY_SUCCESS_ALERT,
-  DEL_KEY_SUCCESS_ALERT_PLURAL,
-} from "@/constants/alerts_constants";
+import { useTranslation } from "react-i18next";
 import {
   type IApiKeysDataArray,
   useDeleteApiKey,
@@ -18,6 +13,7 @@ import ApiKeyHeaderComponent from "./components/ApiKeyHeader";
 import { getColumnDefs } from "./helpers/column-defs";
 
 export default function ApiKeysPage() {
+  const { t } = useTranslation();
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -61,16 +57,16 @@ export default function ApiKeysPage() {
             setSuccessData({
               title:
                 selectedRows.length === 1
-                  ? DEL_KEY_SUCCESS_ALERT
-                  : DEL_KEY_SUCCESS_ALERT_PLURAL,
+                  ? t("success.keyDeleted")
+                  : t("success.keysDeleted"),
             });
           },
           onError: (error) => {
             setErrorData({
               title:
                 selectedRows.length === 1
-                  ? DEL_KEY_ERROR_ALERT
-                  : DEL_KEY_ERROR_ALERT_PLURAL,
+                  ? t("errors.deleteKey")
+                  : t("errors.deleteKeys"),
               list: [error?.response?.data?.detail],
             });
           },
@@ -93,7 +89,7 @@ export default function ApiKeysPage() {
         <TableComponent
           key={"apiKeys"}
           onDelete={handleDeleteApi}
-          overlayNoRowsTemplate="No data available"
+          overlayNoRowsTemplate={t("settings.noDataAvailable")}
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
           }}

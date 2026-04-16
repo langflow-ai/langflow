@@ -75,15 +75,15 @@ async def start_flow_build(
 
     Args:
         flow_id: The flow ID used for tracking, sessions, and messages.
-        background_tasks: FastAPI background tasks handler.
+        background_tasks: FastAPI background tasks for async operations.
         inputs: Optional input values for the flow.
         data: Optional flow data request.
         files: Optional list of file paths.
-        stop_component_id: Optional component ID to stop the build at.
-        start_component_id: Optional component ID to start the build from.
-        log_builds: Whether to log builds.
-        current_user: The current authenticated user.
-        queue_service: The job queue service.
+        stop_component_id: Optional component ID to stop at.
+        start_component_id: Optional component ID to start from.
+        log_builds: Whether to log build events.
+        current_user: The currently authenticated user.
+        queue_service: The job queue service instance.
         flow_name: Optional flow name override.
         source_flow_id: If provided, the actual flow ID to load from DB.
             Used by public flows where flow_id is a virtual UUID for session isolation
@@ -522,6 +522,7 @@ async def generate_flow_events(
         error_message = ErrorMessage(
             flow_id=flow_id,
             exception=e,
+            session_id=inputs.session,
         )
         event_manager.on_error(data=error_message.data)
         raise
