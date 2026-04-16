@@ -208,6 +208,11 @@ def _get_cache_path() -> Path:
 def _save_generated_index(modules_dict: dict) -> None:
     """Save a dynamically generated component index to cache for future use.
 
+    IDX-04: stamps the cache with the lfx package version (not langflow),
+    so lfx-only deployments do not invalidate the cache on every restart.
+    IDX-05: writes atomically via tmp file in same directory + os.replace so
+    concurrent workers never see a torn file.
+
     Args:
         modules_dict: Dictionary of components by category
     """
@@ -221,14 +226,23 @@ def _save_generated_index(modules_dict: dict) -> None:
         num_modules = len(modules_dict)
         num_components = sum(len(components) for components in modules_dict.values())
 
-        # Get version
-        from importlib.metadata import version
+        # IDX-04: stamp with lfx version, not langflow. Mirror the read-time
+        # PackageNotFoundError fallback at lines ~178-186 so workspace/editable
+        # installs (no dist-info) do not crash the save path.
+        from importlib.metadata import PackageNotFoundError, version
 
-        langflow_version = version("langflow")
+        try:
+            lfx_version = version("lfx")
+        except PackageNotFoundError:
+            logger.debug(
+                "Could not determine installed lfx version (no package metadata); "
+                "stamping generated index with 'unknown'"
+            )
+            lfx_version = "unknown"
 
         # Build index structure
         index = {
-            "version": langflow_version,
+            "version": lfx_version,
             "metadata": {
                 "num_modules": num_modules,
                 "num_components": num_components,
@@ -240,9 +254,16 @@ def _save_generated_index(modules_dict: dict) -> None:
         payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
         index["sha256"] = hashlib.sha256(payload).hexdigest()
 
-        # Write to cache
+        # IDX-05: atomic write via temp file in the SAME directory as the target,
+        # then atomic rename via Path.replace (a thin wrapper around os.replace,
+        # atomic on POSIX and on Windows since Python 3.3). Temp file must live
+        # on the same filesystem as the target to avoid cross-device-link errors
+        # in containers where $TMPDIR is tmpfs and the cache dir is a persistent
+        # volume (pitfall 4). Matches the pattern used in src/lfx/src/lfx/_bench.py.
         json_bytes = orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
-        cache_path.write_bytes(json_bytes)
+        tmp_path = cache_path.with_suffix(cache_path.suffix + ".tmp")
+        tmp_path.write_bytes(json_bytes)
+        tmp_path.replace(cache_path)
 
         logger.debug(f"Saved generated component index to cache: {cache_path}")
     except Exception as e:  # noqa: BLE001
