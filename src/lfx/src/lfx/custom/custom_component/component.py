@@ -1537,7 +1537,9 @@ class Component(CustomComponent):
                 self.tools_metadata = tool_data
             else:
                 # Merge: preserve user-editable fields from old metadata,
-                # update code-derived fields (args) from new tool data
+                # update code-derived fields (args) from new tool data.
+                # For description: only preserve if the user actually edited it
+                # (detected by comparing description to display_description).
                 old_by_tag = {}
                 for item in self.tools_metadata:
                     tags = item.get("tags", [])
@@ -1549,8 +1551,11 @@ class Component(CustomComponent):
                     if old:
                         item["status"] = old.get("status", True)
                         item["name"] = old.get("name", item["name"])
-                        item["description"] = old.get("description", item["description"])
-                        item["display_description"] = old.get("display_description", item["display_description"])
+                        # Preserve description only if user customized it
+                        old_desc = old.get("description", "")
+                        old_display = old.get("display_description", "")
+                        if old_desc and old_desc != old_display:
+                            item["description"] = old_desc
                 self.tools_metadata = tool_data
         else:
             # If enabled tools are set, update status based on them
