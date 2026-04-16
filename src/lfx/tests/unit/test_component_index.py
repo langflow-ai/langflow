@@ -1,8 +1,11 @@
 """Unit tests for component index system."""
 
+import asyncio
 import hashlib
+import json
+import threading
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import orjson
 import pytest
@@ -12,6 +15,14 @@ from lfx.interface.components import (
     _read_component_index,
     _save_generated_index,
     import_langflow_components,
+)
+
+from tests.unit._parity_helpers import (
+    _PARITY_FIXTURES_DIR,
+    _capture_parity_snapshot,
+    _fake_settings_service,
+    _install_mock_llm,
+    _reset_component_cache_singleton,
 )
 
 
@@ -443,3 +454,159 @@ class TestImportLangflowComponents:
         # Should return empty dict, not raise
         assert "components" in result
         assert len(result["components"]) == 0
+
+
+# =====================================================================
+# Phase 2 parity test scaffolding (IDX-01 plan lands this; later plans reuse)
+# =====================================================================
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _install_mock_llm_for_parity_tests():
+    """Install the Phase 1 BaseChatOpenAI mock once per test module. Idempotent.
+
+    Returns False on lfx-only test envs that lack langchain_openai (e.g. the
+    monorepo lfx-only venv this test module runs in). The smallest.json parity
+    fixture does not invoke an LLM, so the False return is benign here; later
+    plans that add LLM-bearing parity fixtures rely on this hook when run in
+    environments where langchain_openai IS installed.
+    """
+    _install_mock_llm()
+
+
+@pytest.mark.asyncio
+class TestIDX01LazyLock:
+    """Phase 2 / IDX-01: lazy asyncio.Lock property on ComponentCache.
+
+    Covers:
+      * Concurrent callers in a single event loop -- loader runs exactly once.
+      * Multi-thread multi-event-loop callers -- no crashes, no deadlocks.
+      * Deep end-to-end parity on the synthetic smallest.json fixture.
+    """
+
+    async def test_cache_built_once_asyncio(self, monkeypatch):
+        """Single event loop, 10 concurrent callers -> loader runs exactly once.
+
+        Critical test wiring: the shipped built-in ``_assets/component_index.json``
+        short-circuits ``_load_production_mode`` before ``_load_components_dynamically``
+        is ever reached (``_load_from_index_or_cache`` returns a populated dict plus an
+        index_source). This test force-returns ``({}, "")`` from
+        ``_load_from_index_or_cache`` so the fallback path fires, which is the only
+        place ``_load_components_dynamically`` is called. Without this monkeypatch, the
+        counter below stays at 0 and the assertion would pass for the wrong reason.
+
+        ``_load_components_dynamically`` itself is replaced by a counting stub (no call
+        to the real loader) because the real loader walks every installed lfx component
+        package, which in this repo pulls in optional integrations (toolguard) that are
+        not installed in the lfx-only test venv. D-08 permits monkey-patching the loader
+        with a counter; it does not require the real loader to execute.
+        """
+        from lfx.interface import components as ci
+
+        _reset_component_cache_singleton(monkeypatch)
+
+        # Force the dynamic-load fallback path so the counter monkey-patch is exercised;
+        # otherwise the shipped built-in index short-circuits _load_components_dynamically.
+        fallback_mock = AsyncMock(return_value=({}, ""))
+        monkeypatch.setattr(ci, "_load_from_index_or_cache", fallback_mock)
+
+        call_count = 0
+
+        async def counting_loader(*_args, **_kwargs):
+            nonlocal call_count
+            call_count += 1
+            # Widen the race window so unguarded code is caught reliably.
+            await asyncio.sleep(0.01)
+            return {}
+
+        monkeypatch.setattr(ci, "_load_components_dynamically", counting_loader)
+
+        settings = _fake_settings_service()
+        await asyncio.gather(*[ci.get_and_cache_all_types_dict(settings) for _ in range(10)])
+
+        # Sanity check: the forced-fallback path WAS entered (otherwise call_count == 1
+        # is a false positive caused by the shipped-index short-circuit).
+        assert fallback_mock.await_count > 0, (
+            "_load_from_index_or_cache was not called -- test wiring error; the counter "
+            "monkey-patch would be dead code without an active fallback path."
+        )
+        assert call_count == 1, (
+            f"expected _load_components_dynamically to run once, got {call_count} (lock did not prevent race)"
+        )
+
+    def test_cache_built_once_threading(self, monkeypatch):
+        """Ten threads, each with its OWN event loop via asyncio.run.
+
+        Purpose per research Code Examples section IDX-01: each thread's event loop
+        creates its own asyncio.Lock, so the per-thread counter would be 1 but the
+        cross-thread aggregate would be 10. This test asserts "no crashes / no
+        deadlocks" under multi-loop conditions, NOT an exact call_count. Guards
+        future gunicorn / uvicorn thread-worker configurations.
+
+        Each thread resets the singleton's ``_lock`` and ``all_types_dict`` to None
+        inside its own worker, immediately before invoking ``asyncio.run``. This
+        matches the research doc's "each thread creates its own Lock via lazy-property
+        on first access in that thread's loop" contract. In production today, the
+        singleton lives inside a single event loop, so the cross-loop reuse scenario
+        is purely a test-time concern guarded by this per-thread reset.
+
+        Also forces the dynamic-load fallback the same way as the async test so the
+        fallback path is actually entered; without that, each thread's load short-
+        circuits on the shipped built-in index and the test becomes trivial. The
+        loader is stubbed (not wrapped around the real loader) for the same reason
+        as the async test: real component enumeration brings in optional integrations
+        that are not installed in the lfx-only test venv.
+        """
+        from lfx.interface import components as ci
+
+        _reset_component_cache_singleton(monkeypatch)
+
+        # Force the dynamic-load fallback path (see async-test rationale above).
+        async def _empty_load_from_index_or_cache(*_args, **_kwargs):
+            return ({}, "")
+
+        monkeypatch.setattr(ci, "_load_from_index_or_cache", _empty_load_from_index_or_cache)
+
+        # Stub loader: threads share the singleton so we cannot drive real component
+        # enumeration safely here. Stub also dodges optional-integration ImportErrors.
+        async def _stub_loader(*_args, **_kwargs):
+            return {}
+
+        monkeypatch.setattr(ci, "_load_components_dynamically", _stub_loader)
+
+        errors: list[BaseException] = []
+
+        def worker():
+            try:
+                # Reset lock + dict per thread so each thread's event loop creates
+                # its own asyncio.Lock on first access, rather than reusing an instance
+                # bound to a different event loop. This is the multi-event-loop contract
+                # the threading test is asserting on -- see 02-RESEARCH.md T-02-01-03.
+                ci.component_cache.all_types_dict = None
+                ci.component_cache._lock = None
+                asyncio.run(ci.get_and_cache_all_types_dict(_fake_settings_service()))
+            except BaseException as exc:
+                errors.append(exc)
+
+        threads = [threading.Thread(target=worker) for _ in range(10)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=60.0)
+
+        assert not errors, f"threads raised: {errors!r}"
+        for t in threads:
+            assert not t.is_alive(), "thread did not complete within 60s (possible deadlock)"
+
+    async def test_parity_smallest(self):
+        """Deep end-to-end parity against pre-change snapshot."""
+        fixture = _PARITY_FIXTURES_DIR / "smallest.json"
+        expected_path = _PARITY_FIXTURES_DIR / "smallest.snapshot.json"
+        assert fixture.exists(), f"missing synthetic fixture: {fixture}"
+        assert expected_path.exists(), (
+            f"missing pre-change snapshot: {expected_path}. "
+            "Run the snapshot-generation step before the lock changes land."
+        )
+        snapshot = await _capture_parity_snapshot(fixture)
+        expected = json.loads(expected_path.read_text())
+        assert snapshot == expected, f"parity drift detected.\n  got: {snapshot}\n  expected: {expected}"
