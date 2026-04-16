@@ -217,6 +217,15 @@ class SaveToFileComponent(Component):
             updated_options = _get_storage_location_options()
             build_config["storage_location"]["options"] = updated_options
 
+        # When tool_mode is toggled, hide storage-specific format dropdowns
+        # (the agent uses the unified file_format input instead)
+        if field_name == "tool_mode":
+            format_fields = ["local_format", "aws_format", "gdrive_format"]
+            for f_name in format_fields:
+                if f_name in build_config:
+                    build_config[f_name]["show"] = not bool(field_value)
+            return build_config
+
         if field_name != "storage_location":
             return build_config
 
