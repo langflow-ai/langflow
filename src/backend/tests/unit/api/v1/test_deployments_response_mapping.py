@@ -18,16 +18,16 @@ from lfx.services.adapters.deployment.schema import (
 
 
 def _make_deployment_row(**overrides):
-    defaults = dict(
-        id=uuid4(),
-        deployment_provider_account_id=uuid4(),
-        name="db-deployment-name",
-        description="db-description",
-        deployment_type=DeploymentType.AGENT,
-        resource_key="provider-deployment-id",
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
-    )
+    defaults = {
+        "id": uuid4(),
+        "deployment_provider_account_id": uuid4(),
+        "name": "db-deployment-name",
+        "description": "db-description",
+        "deployment_type": DeploymentType.AGENT,
+        "resource_key": "provider-deployment-id",
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    }
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
 
