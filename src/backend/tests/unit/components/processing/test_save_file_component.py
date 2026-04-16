@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import pandas as pd
 import pytest
 from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
 from lfx.schema import Data, DataFrame, Message
@@ -495,3 +496,79 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         """Test that storage_location is in advanced controls."""
         storage_input = next(i for i in component_class.inputs if i.name == "storage_location")
         assert storage_input.advanced is True
+
+    def test_get_input_type_raw_pandas_dataframe(self, component_class):
+        """Test that a raw pandas DataFrame is auto-wrapped into Langflow DataFrame."""
+        component = component_class()
+        raw_df = pd.DataFrame([{"a": 1, "b": 2}])
+        component.set_attributes({"input": raw_df, "file_name": "test", "file_format": "csv"})
+        assert component._get_input_type() == "DataFrame"
+        assert type(component.input) is DataFrame
+
+    def test_get_input_type_string_json_array(self, component_class):
+        """Test that a JSON array string is coerced into a DataFrame."""
+        component = component_class()
+        json_str = '[{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]'
+        component.set_attributes({"input": json_str, "file_name": "test", "file_format": "csv"})
+        assert component._get_input_type() == "DataFrame"
+        assert type(component.input) is DataFrame
+
+    def test_get_input_type_string_json_object(self, component_class):
+        """Test that a single JSON object string is coerced into a DataFrame."""
+        component = component_class()
+        json_str = '{"name": "Alice", "age": 30}'
+        component.set_attributes({"input": json_str, "file_name": "test", "file_format": "csv"})
+        assert component._get_input_type() == "DataFrame"
+        assert type(component.input) is DataFrame
+
+    def test_get_input_type_string_plain_text(self, component_class):
+        """Test that plain text is coerced into a Message."""
+        component = component_class()
+        component.set_attributes({"input": "Hello world", "file_name": "test", "file_format": "txt"})
+        assert component._get_input_type() == "Message"
+        assert type(component.input) is Message
+
+    def test_file_format_overrides_storage_format(self, component_class):
+        """Test that tool-mode file_format overrides the storage-specific format."""
+        component = component_class()
+        df = DataFrame([{"a": 1}])
+        component.set_attributes(
+            {
+                "input": df,
+                "file_name": "test",
+                "local_format": "json",
+                "file_format": "csv",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
+        assert component._get_file_format_for_location("Local") == "csv"
+
+    def test_file_format_empty_falls_back_to_storage_format(self, component_class):
+        """Test that empty file_format falls back to the storage-specific format."""
+        component = component_class()
+        df = DataFrame([{"a": 1}])
+        component.set_attributes(
+            {
+                "input": df,
+                "file_name": "test",
+                "local_format": "json",
+                "file_format": "",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
+        assert component._get_file_format_for_location("Local") == "json"
+
+    def test_input_has_tool_mode(self, component_class):
+        """Test that the input field has tool_mode enabled."""
+        input_field = next(i for i in component_class.inputs if i.name == "input")
+        assert getattr(input_field, "tool_mode", False) is True
+
+    def test_file_format_has_tool_mode(self, component_class):
+        """Test that the file_format field has tool_mode enabled."""
+        format_field = next(i for i in component_class.inputs if i.name == "file_format")
+        assert getattr(format_field, "tool_mode", False) is True
+
+    def test_file_format_hidden_in_ui(self, component_class):
+        """Test that file_format is hidden in the flow UI."""
+        format_field = next(i for i in component_class.inputs if i.name == "file_format")
+        assert format_field.show is False

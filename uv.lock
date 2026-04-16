@@ -7565,7 +7565,7 @@ requires-dist = [
     { name = "numexpr", marker = "extra == 'numexpr'", specifier = "==2.10.2" },
     { name = "onnxruntime", specifier = ">=1.20,<1.24" },
     { name = "openai", marker = "extra == 'openai'", specifier = ">=1.68.2,<3.0.0" },
-    { name = "opendsstar", marker = "python_full_version >= '3.11'", specifier = "==1.0.22" },
+    { name = "opendsstar", marker = "python_full_version >= '3.11'", specifier = "==1.0.24" },
     { name = "openinference-instrumentation-langchain", marker = "extra == 'openinference'", specifier = ">=0.1.29" },
     { name = "openlayer", marker = "extra == 'openlayer'", specifier = ">=0.9.0,<1.0.0" },
     { name = "opensearch-py", marker = "extra == 'opensearch'", specifier = "==2.8.0" },
@@ -7965,7 +7965,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=1.17.0,<2.0.0" },
     { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
     { name = "networkx", specifier = ">=3.4.2,<4.0.0" },
-    { name = "opendsstar", marker = "python_full_version >= '3.11'", specifier = "==1.0.22" },
+    { name = "opendsstar", marker = "python_full_version >= '3.11'", specifier = "==1.0.24" },
     { name = "orjson", specifier = ">=3.11.6,<4.0.0" },
     { name = "pandas", specifier = ">=2.0.0,<3.0.0" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
@@ -9720,7 +9720,7 @@ wheels = [
 
 [[package]]
 name = "opendsstar"
-version = "1.0.22"
+version = "1.0.24"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "datasets", marker = "python_full_version >= '3.11'" },
@@ -9752,9 +9752,9 @@ dependencies = [
     { name = "smolagents", marker = "python_full_version >= '3.11'" },
     { name = "tqdm", version = "4.67.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bf/da/6f3fb7f386c9f6bcc72817a6a726ae782f59484d701764b05781c2656afc/opendsstar-1.0.22.tar.gz", hash = "sha256:c6ae82c0e73da664b140a79ed19f684a50fc08f97f928bf7874c1571844120ee", size = 199452, upload-time = "2026-04-16T07:35:37.304Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ce/83/5181cc032f39f2d164ffe5b959d4d5c22652abbca6a8ab56f48c2d628b15/opendsstar-1.0.24.tar.gz", hash = "sha256:3e7b9ab2f2859dbdd8be0c0e8d0374ca55b870b2cbf4aaea23ff4de3ce1ba87c", size = 200098, upload-time = "2026-04-16T10:00:51.169Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/fc/b49db5e976bb966c3ac96937de227f1c458e9f2bbe4612b8aaa80dbfd798/opendsstar-1.0.22-py3-none-any.whl", hash = "sha256:aea50dc2a902d5cc52d1a506d8f3d93bc192e46c6a952fe87168f98ca5c29b03", size = 260083, upload-time = "2026-04-16T07:35:35.708Z" },
+    { url = "https://files.pythonhosted.org/packages/98/2f/2266d1f3f5214bed9d7b851e8b81f789f0fed781986be4733cbe2d090b64/opendsstar-1.0.24-py3-none-any.whl", hash = "sha256:5496f5f528a8707e0b8b513d3998db9075f03355452bc4dfe6713d9494d7780d", size = 260718, upload-time = "2026-04-16T10:00:49.297Z" },
 ]
 
 [[package]]

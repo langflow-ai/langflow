@@ -10,7 +10,8 @@ from fastapi.encoders import jsonable_encoder
 
 from lfx.custom import Component
 from lfx.inputs import SortableListInput
-from lfx.io import BoolInput, DropdownInput, HandleInput, SecretStrInput, StrInput
+from lfx.inputs.inputs import DataFrameInput
+from lfx.io import BoolInput, DropdownInput, SecretStrInput, StrInput
 from lfx.schema import Data, DataFrame, Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 from lfx.template.field.base import Output
@@ -37,7 +38,14 @@ def _is_default_storage(storage_name: str) -> bool:
 
 class SaveToFileComponent(Component):
     display_name = "Write File"
-    description = "Save data to local file, AWS S3, or Google Drive in the selected format."
+    description = (
+        "Save data to a file. "
+        "Arguments: 'input' — the content to save (pass a DataFrame directly, or a JSON string "
+        "for tabular data, or plain text for messages); "
+        "'file_name' — the name to save as, without extension (e.g. 'report'); "
+        "'file_format' — output format: 'csv', 'json', 'txt', 'excel', 'markdown' (optional). "
+        "Returns a confirmation with the file path or URL."
+    )
     documentation: str = "https://docs.langflow.org/write-file"
     icon = "file-text"
     name = "SaveToFile"
@@ -75,20 +83,32 @@ class SaveToFileComponent(Component):
             advanced=True,
         ),
         # Common inputs
-        HandleInput(
+        DataFrameInput(
             name="input",
             display_name="File Content",
-            info="The input to save.",
-            dynamic=True,
+            info=(
+                "The content to save. Accepts a DataFrame, Data, or Message object directly. "
+                'Can also accept a JSON string (e.g. \'[{"col1": "val1"}]\') which will be '
+                "parsed into a DataFrame, or plain text which will be saved as a Message."
+            ),
             input_types=["Data", "JSON", "DataFrame", "Table", "Message"],
             required=True,
+            tool_mode=True,
         ),
         StrInput(
             name="file_name",
             display_name="File Name",
-            info="Name file will be saved as (without extension).",
+            info="File name without extension (e.g. 'report'). Extension is added automatically.",
             required=True,
             show=True,
+            tool_mode=True,
+        ),
+        StrInput(
+            name="file_format",
+            display_name="File Format (Tool)",
+            info="Output format: 'csv', 'json', 'txt', 'excel', 'markdown'. Overrides pre-configured format.",
+            required=False,
+            show=False,
             tool_mode=True,
         ),
         BoolInput(
@@ -304,8 +324,34 @@ class SaveToFileComponent(Component):
             return "Message"
         if type(self.input) is Data:
             return "Data"
+        # When invoked by a code agent (e.g. OpenDsStar), the input may be a raw
+        # pandas DataFrame rather than Langflow's DataFrame wrapper.
+        if isinstance(self.input, pd.DataFrame):
+            self.input = DataFrame(self.input)
+            return "DataFrame"
+        # When invoked as a tool, the agent passes a string. Try to parse it as
+        # tabular JSON (list of objects) → DataFrame, otherwise wrap as Message.
+        if isinstance(self.input, str):
+            self.input = self._coerce_string_input(self.input)
+            return self._get_input_type()
         msg = f"Unsupported input type: {type(self.input)}"
         raise ValueError(msg)
+
+    def _coerce_string_input(self, value: str) -> DataFrame | Message:
+        """Convert a raw string (from agent tool call) into a DataFrame or Message.
+
+        Tries to parse as JSON first — a list of objects or a single object becomes
+        a DataFrame. Anything else is wrapped in a Message.
+        """
+        try:
+            parsed = json.loads(value)
+            if isinstance(parsed, list) and parsed and isinstance(parsed[0], dict):
+                return DataFrame(pd.DataFrame(parsed))
+            if isinstance(parsed, dict):
+                return DataFrame(pd.DataFrame([parsed]))
+        except (json.JSONDecodeError, ValueError):
+            pass
+        return Message(text=value)
 
     def _get_default_format(self) -> str:
         """Return the default file format based on input type."""
@@ -527,7 +573,13 @@ class SaveToFileComponent(Component):
         return ""
 
     def _get_file_format_for_location(self, location: str) -> str:
-        """Get the appropriate file format based on storage location."""
+        """Get the appropriate file format based on storage location.
+
+        If the agent set file_format via tool mode, that takes priority.
+        """
+        agent_format = getattr(self, "file_format", None)
+        if agent_format:
+            return agent_format
         if location == "Local":
             return getattr(self, "local_format", None) or self._get_default_format()
         if location == "AWS":
