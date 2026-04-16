@@ -42,6 +42,23 @@ class ComponentCache:
         # None means "not yet loaded" (fail-closed); {} means "loaded, no components found".
         self.type_to_current_hash: dict[str, set[str]] | None = None
         self.all_known_hashes: set[str] | None = None
+        # IDX-01: lazily created on first access inside a running event loop.
+        # Constructing asyncio.Lock() at import time raises RuntimeError on Python 3.13/3.14
+        # because the singleton ComponentCache() below runs at module import. See
+        # .planning/phases/02-component-index-and-correctness-fixes/02-RESEARCH.md Pitfall 1.
+        self._lock: asyncio.Lock | None = None
+
+    @property
+    def lock(self) -> asyncio.Lock:
+        """Return the asyncio.Lock, creating it lazily on first access.
+
+        Must be called from inside a running event loop (asyncio.Lock() constructor
+        requires a running loop on Python 3.13+). The singleton is instantiated at
+        module import, which is why this property exists (IDX-01).
+        """
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
 
 
 # Singleton instance
@@ -643,24 +660,27 @@ async def get_and_cache_all_types_dict(
         telemetry_service: Optional telemetry service for tracking component loading metrics
     """
     if component_cache.all_types_dict is None:
-        await logger.adebug("Building components cache")
+        async with component_cache.lock:
+            # Double-check: another task may have populated while we awaited the lock (IDX-01).
+            if component_cache.all_types_dict is None:
+                await logger.adebug("Building components cache")
 
-        langflow_components = await import_langflow_components(settings_service, telemetry_service)
-        custom_components_dict = await _determine_loading_strategy(settings_service)
+                langflow_components = await import_langflow_components(settings_service, telemetry_service)
+                custom_components_dict = await _determine_loading_strategy(settings_service)
 
-        # Flatten custom dict if it has a "components" wrapper
-        custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
+                # Flatten custom dict if it has a "components" wrapper
+                custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
 
-        # Merge built-in and custom components (no wrapper at cache level)
-        component_cache.all_types_dict = {
-            **langflow_components["components"],
-            **custom_flat,
-        }
-        component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
-        await logger.adebug(f"Loaded {component_count} components")
+                # Merge built-in and custom components (no wrapper at cache level)
+                component_cache.all_types_dict = {
+                    **langflow_components["components"],
+                    **custom_flat,
+                }
+                component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
+                await logger.adebug(f"Loaded {component_count} components")
 
-        # Precompute code hash lookups for fast flow validation
-        _build_code_hash_lookups(component_cache)
+                # Precompute code hash lookups for fast flow validation
+                _build_code_hash_lookups(component_cache)
 
     return component_cache.all_types_dict
 
