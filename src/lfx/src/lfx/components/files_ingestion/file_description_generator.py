@@ -288,7 +288,23 @@ class FileDescriptionGeneratorComponent(Component):
                         else:
                             stdout_chunks.append(chunk)
                 else:
-                    time.sleep(0.5)
+                    # Drain pipes to prevent deadlock when select() is unavailable.
+                    # Without draining, the subprocess can block if stdout/stderr
+                    # exceed the 64KB pipe buffer.
+                    chunk = proc.stdout.read(4096)
+                    if chunk:
+                        stdout_chunks.append(chunk)
+                    chunk = proc.stderr.read(4096)
+                    if chunk:
+                        stderr_buf += chunk
+                        while "\n" in stderr_buf:
+                            line, stderr_buf = stderr_buf.split("\n", 1)
+                            line = line.strip()
+                            if line:
+                                _dbg(f"[subprocess] {line}")
+                                self.log(line)
+                                stderr_lines.append(line)
+                    time.sleep(0.1)
 
             # Read any remaining data after process exits
             remaining_stderr = proc.stderr.read()

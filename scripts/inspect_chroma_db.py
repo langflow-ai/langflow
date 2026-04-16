@@ -1,6 +1,6 @@
 """Script to inspect ChromaDB database contents.
 
-Displays statistics and document values (truncated to 200 chars).
+Displays statistics and document values (truncated to 2000 chars).
 
 Usage:
     python scripts/inspect_chroma_db.py /path/to/chroma/db

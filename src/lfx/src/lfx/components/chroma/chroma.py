@@ -124,8 +124,10 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             from chromadb.errors import ChromaError
 
             if isinstance(e, ChromaError):
-                if not persist_directory:
+                if not persist_directory and client is None:
                     msg = "Chroma DB failed to initialize. Please set a 'Persist Directory' path (e.g., './chroma_db')."
+                elif not persist_directory:
+                    msg = f"Chroma DB failed to initialize in server mode: {e}."
                 else:
                     msg = (
                         f"Chroma DB failed at '{persist_directory}': {e}. "

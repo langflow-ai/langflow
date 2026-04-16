@@ -271,7 +271,7 @@ class OpenDsStarAgentRunnable(Runnable):
         """Wrap a synchronous generator to make it async."""
         import asyncio
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         while True:
             try:
@@ -472,8 +472,6 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             logger.info("Starting direct trajectory streaming")
 
             # Get the actual OpenDsStarAgent from the runnable wrapper
-            from typing import cast
-
             actual_agent = cast("Any", agent).agent if hasattr(agent, "agent") else agent
             exec_logger = logging.getLogger(__name__)
 

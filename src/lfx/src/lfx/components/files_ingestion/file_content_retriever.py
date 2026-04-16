@@ -333,9 +333,9 @@ class FileContentRetrieverComponent(Component):
         if has_persistent:
             text_map, dataframe_map = self._load_persistent_maps()
 
-        # Merge new input data (skip paths already loaded from disk)
-        existing_paths = {*text_map, *dataframe_map}
-        new_text, new_df = self._build_maps_from_input(skip_paths=existing_paths)
+        # Merge new input data — new input overwrites persisted entries for the same path
+        # so that updated files are never served stale from the cache.
+        new_text, new_df = self._build_maps_from_input()
         text_map.update(new_text)
         dataframe_map.update(new_df)
 
@@ -423,7 +423,7 @@ class FileContentRetrieverComponent(Component):
             raise ValueError(msg)
 
         logger.info(f"FileContentRetriever: Successfully retrieved content for '{query}' ({len(content)} chars)")
-        return Message(text=content)
+        return Message(text=content, file_path=query)
 
     def retrieve_content_as_dataframe(self, file_path: str = "") -> DataFrame:
         """Retrieve file content as a DataFrame for tabular data files.

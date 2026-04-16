@@ -459,8 +459,11 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
 
         except Exception as e:
             error_msg = str(e)
-            # Suppress spurious 30-second timeout errors - these are false positives
-            # The code actually completes successfully but smolagents reports a timeout
+            # Suppress spurious 30-second timeout errors from smolagents' LocalPythonInterpreter.
+            # The smolagents executor enforces a default 30s timeout per code cell, but the
+            # code may have already produced valid output before the timeout fires.  When our
+            # code_timeout setting is higher (user-configurable, default 30s), the real work
+            # completes fine and this exception is a false positive.
             if "exceeded the maximum execution time of 30 seconds" in error_msg.lower():
                 logger.warning("Ignoring spurious 30-second timeout error - code executed successfully")
                 # Complete the message successfully without error
@@ -589,34 +592,13 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
             ValueError: If no language model is connected
         """
         try:
-            # Import from the installed OpenDsStar package
-            try:
-                from OpenDsStar.agents.codeact_smolagents.codeact_agent_smolagents import CodeActAgentSmolagents
-            except ImportError:
-                # Debugging info
-                import sys
-                from pathlib import Path
-
-                logger.debug("DEBUG: sys.path: %s", sys.path)
-                logger.debug("DEBUG: CWD: %s", Path.cwd())
-                try:
-                    import agents
-
-                    logger.debug("DEBUG: found agents module at: %s", agents.__file__)
-                except ImportError:
-                    logger.debug("DEBUG: could not import agents module")
-
-                # Retry or re-raise
-                from agents.codeact_smolagents.codeact_agent_smolagents import CodeActAgentSmolagents
-
+            from OpenDsStar.agents.codeact_smolagents.codeact_agent_smolagents import CodeActAgentSmolagents
         except ImportError as e:
-            # Provide helpful error message
             error_msg = (
                 f"Cannot import CodeActAgentSmolagents. Please ensure OpenDsStar is properly installed.\n"
                 f"Run: uv pip install -e /path/to/OpenDsStar\n"
                 f"Error: {e}"
             )
-            # Re-raise to show the error in the UI
             raise ImportError(error_msg) from e
 
         # Validate that LLM is connected

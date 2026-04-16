@@ -212,6 +212,18 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
 
     def test_retrieve_content_unsupported_input_type(self, component_class):
         """Test that unsupported input types are skipped gracefully."""
+        component = component_class()
+        component.set_attributes(
+            {
+                "file_data": [
+                    "not a Data or DataFrame",
+                    Data(text="valid content", data={"file_path": "file.txt"}),
+                ],
+            }
+        )
+        result = component.retrieve_content(file_path="file.txt")
+
+        assert result.text == "valid content"
 
     def test_file_maps_cached_across_calls(self, component_class):
         """Test that file maps are built once and reused across multiple calls."""
@@ -257,19 +269,6 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         component.retrieve_content(file_path="data.csv")
         assert id(component._cached_text_map) == cached_text_map_id2
         assert id(component._cached_dataframe_map) == cached_dataframe_map_id2
-
-        component = component_class()
-        component.set_attributes(
-            {
-                "file_data": [
-                    "not a Data or DataFrame",
-                    Data(text="valid content", data={"file_path": "file.txt"}),
-                ],
-            }
-        )
-        result = component.retrieve_content(file_path="file.txt")
-
-        assert result.text == "valid content"
 
     # ========== retrieve_content_as_dataframe Tests ==========
 
@@ -749,7 +748,7 @@ class TestFileContentRetrieverPersistence:
             }
         )
         result = c2.retrieve_content(file_path="/file.txt")
-        assert result.text == "original"  # Should keep the persisted version
+        assert result.text == "updated"  # New input overwrites persisted data to avoid stale cache
 
     def test_persistent_adds_new_files(self, component_class, tmp_path):
         """Test that new files are added when input includes both old and new files."""

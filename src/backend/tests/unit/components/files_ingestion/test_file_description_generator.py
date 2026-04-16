@@ -437,7 +437,7 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
                 assert result[0].data["file_path"] == "/path/to/file.txt"
 
     def test_generate_descriptions_duplicate_file_paths(self, component_class, mock_llm):
-        """Test handling of duplicate file paths in input - all should be processed."""
+        """Test handling of duplicate file paths in input — subprocess deduplicates results."""
         component = component_class()
         component.set_attributes(
             {
@@ -453,9 +453,8 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
             }
         )
 
-        # Subprocess should receive all file paths including duplicates
+        # Component sends all paths; subprocess returns one description per unique file
         mock_output = [
-            {"text": "Description", "file_path": "/path/to/file.txt"},
             {"text": "Description", "file_path": "/path/to/file.txt"},
             {"text": "Other description", "file_path": "/path/to/other.txt"},
         ]
@@ -467,13 +466,14 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
             with patcher:
                 result = component.generate_descriptions()
 
-                # Verify subprocess received all paths via stdin
+                # Verify all paths were sent (dedup is subprocess's responsibility)
                 stdin_write_call = mock_proc.stdin.write.call_args[0][0]
                 config = json.loads(stdin_write_call)
                 assert len(config["file_paths"]) == 3
+                # Verify results contain one description per unique file
+                assert len(result) == 2
                 assert result[0].data["file_path"] == "/path/to/file.txt"
-                assert result[1].data["file_path"] == "/path/to/file.txt"
-                assert result[2].data["file_path"] == "/path/to/other.txt"
+                assert result[1].data["file_path"] == "/path/to/other.txt"
 
     def test_generate_descriptions_llm_serialization_failure(self, component_class, default_kwargs):
         """Test handling of LLM serialization failure."""
