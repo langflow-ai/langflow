@@ -3112,10 +3112,7 @@ async def test_list_configs_single_deployment_scope(monkeypatch):
         params=ConfigListParams(deployment_ids=["dep-1"]),
     )
 
-    assert len(result.configs) == 1
-    assert result.configs[0].id == "conn-1"
-    assert result.configs[0].name == "cfg-1"
-    assert result.configs[0].provider_data == {"type": "key_value_creds", "environment": "live"}
+    assert result.configs == []
 
 
 @pytest.mark.anyio
@@ -3207,7 +3204,7 @@ async def test_list_configs_deployment_scope_warns_on_stale_tool_ids(monkeypatch
             params=ConfigListParams(deployment_ids=["dep-1"]),
         )
 
-    assert [config.id for config in result.configs] == ["conn-1"]
+    assert result.configs == []
     assert "tool IDs not returned by provider" in caplog.text
     assert "deleted-tool" in caplog.text
     assert "dep-1" in caplog.text
@@ -3291,7 +3288,7 @@ async def test_list_configs_deployment_scope_accepts_schema_compatible_detailed_
 
 
 @pytest.mark.anyio
-async def test_list_configs_deployment_scope_fails_fast_when_environment_missing(monkeypatch):
+async def test_list_configs_deployment_scope_skips_connection_when_environment_missing(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
     fake_tool = FakeToolClient(
@@ -3320,12 +3317,12 @@ async def test_list_configs_deployment_scope_fails_fast_when_environment_missing
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    with pytest.raises(InvalidContentError, match="required environment"):
-        await service.list_configs(
-            user_id="user-1",
-            db=object(),
-            params=ConfigListParams(deployment_ids=["dep-1"]),
-        )
+    result = await service.list_configs(
+        user_id="user-1",
+        db=object(),
+        params=ConfigListParams(deployment_ids=["dep-1"]),
+    )
+    assert result.configs == []
 
 
 @pytest.mark.anyio
@@ -3910,8 +3907,8 @@ async def test_list_configs_without_deployment_id_lists_tenant_scope(monkeypatch
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
     result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert [config.id for config in result.configs] == ["conn-1", "conn-2"]
-    assert [config.name for config in result.configs] == ["cfg-1", "cfg-2"]
+    assert [config.id for config in result.configs] == ["conn-1"]
+    assert [config.name for config in result.configs] == ["cfg-1"]
     assert result.provider_result == {}
 
 
@@ -3952,8 +3949,8 @@ async def test_list_configs_tenant_scope_handles_sdk_models(monkeypatch):
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
     result = await service.list_configs(user_id="user-1", db=object(), params=None)
-    assert [config.id for config in result.configs] == ["conn-pydantic-1", "conn-pydantic-2"]
-    assert [config.name for config in result.configs] == ["cfg-pydantic-1", "cfg-pydantic-2"]
+    assert [config.id for config in result.configs] == ["conn-pydantic-1"]
+    assert [config.name for config in result.configs] == ["cfg-pydantic-1"]
     assert result.provider_result == {}
 
 
@@ -3999,7 +3996,7 @@ async def test_list_configs_tenant_scope_filters_to_key_value_creds(monkeypatch)
 
 
 @pytest.mark.anyio
-async def test_list_configs_tenant_scope_fails_fast_when_environment_missing(monkeypatch):
+async def test_list_configs_tenant_scope_skips_connection_when_environment_missing(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     connections_client = FakeConnectionsClient()
     connections_client._list_entries = [
@@ -4023,8 +4020,8 @@ async def test_list_configs_tenant_scope_fails_fast_when_environment_missing(mon
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    with pytest.raises(InvalidContentError, match="required environment"):
-        await service.list_configs(user_id="user-1", db=object(), params=None)
+    result = await service.list_configs(user_id="user-1", db=object(), params=None)
+    assert result.configs == []
 
 
 @pytest.mark.anyio
@@ -4072,7 +4069,7 @@ async def test_list_configs_tenant_scope_preserves_duplicates(monkeypatch):
                 "app_id": "cfg-dup",
                 "name": "Second",
                 "security_scheme": "key_value_creds",
-                "environment": "live",
+                "environment": "draft",
             }
         ),
         ListConfigsResponse.model_validate(
