@@ -1,6 +1,5 @@
 import { memo, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/utils/utils";
 import type { ConnectionItem } from "../types";
@@ -85,19 +84,10 @@ export const ConnectionSearchList = memo(function ConnectionSearchList({
               onChange={() => onToggleConnection(conn.id)}
               data-testid={`connection-item-${conn.id}`}
             >
-              <div className="flex min-w-0 flex-1 items-center gap-1.5">
+              <div className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium leading-tight">
                   {conn.name}
                 </span>
-                {conn.environment && (
-                  <Badge
-                    variant="secondaryStatic"
-                    size="tag"
-                    className="bg-border text-muted-foreground"
-                  >
-                    {conn.environment}
-                  </Badge>
-                )}
               </div>
             </CheckboxSelectItem>
           ))}
