@@ -36,7 +36,6 @@ from langflow.api.v1.mappers.deployments.sync import (
     fetch_provider_resource_keys,
     sync_attachment_snapshot_ids,
 )
-from langflow.api.v1.mappers.deployments.util import require_non_empty
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
     DeploymentUpdateRequest,
@@ -70,6 +69,7 @@ from langflow.services.database.models.flow_version_deployment_attachment.crud i
     update_deployment_attachment_provider_snapshot_id,
 )
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.utils import require_non_empty
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

@@ -29,7 +29,7 @@ async def create_default_folder_if_it_doesnt_exist(session: AsyncSession, user_i
                 await session.exec(
                     select(Flow.id, Flow.folder_id).where(
                         and_(
-                            Flow.folder_id is None,
+                            Flow.folder_id.is_(None),
                             Flow.user_id == user_id,
                         )
                     ),

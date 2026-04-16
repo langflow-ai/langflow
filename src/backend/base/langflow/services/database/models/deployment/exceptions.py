@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from lfx.log.logger import logger
+
 _GUARD_FRIENDLY_DETAILS: dict[str, str] = {
     "FLOW_HAS_DEPLOYED_VERSIONS": (
         "This flow cannot be deleted because it has deployed versions. "
@@ -76,4 +78,5 @@ def parse_deployment_guard_error(exc: BaseException) -> DeploymentGuardError | N
 def raise_if_deployment_guard_error_or_skip(exc: BaseException) -> None:
     """Raise chained ``DeploymentGuardError`` when present; otherwise do nothing."""
     if guard_error := parse_deployment_guard_error(exc):
-        raise guard_error from exc
+        logger.error("Deployment guard error: %s (error code: %s)", guard_error.technical_detail, guard_error.code)
+        raise guard_error

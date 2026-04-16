@@ -45,6 +45,22 @@ class DeploymentProviderIDContext:
 
 @contextmanager
 def deployment_provider_scope(provider_id: UUID):
-    """Set deployment provider context for a scoped adapter call."""
-    with DeploymentProviderIDContext.scope(DeploymentAdapterContext(provider_id=provider_id)):
+    """Set deployment provider context for a scoped adapter call.
+
+    Owns the lifetime of adapter-level per-scope state so sequential/nested
+    scopes cannot poison each other. Today that state is the WxO client
+    ownership assertion, composed in directly.
+
+    Multi-adapter extension: when a second adapter is added, accept
+    ``provider_key`` here and dispatch to the matching adapter's scope
+    (if/else on ``provider_key``, or a keyed registry — either works).
+    """
+    from langflow.services.adapters.deployment.watsonx_orchestrate.client import (
+        provider_clients_memoization_scope,
+    )
+
+    with (
+        DeploymentProviderIDContext.scope(DeploymentAdapterContext(provider_id=provider_id)),
+        provider_clients_memoization_scope(),
+    ):
         yield

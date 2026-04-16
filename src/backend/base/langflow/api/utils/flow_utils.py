@@ -114,7 +114,8 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
             await session.exec(delete(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)))
             await session.exec(delete(TraceTable).where(col(TraceTable.id).in_(trace_ids)))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
-    except DeploymentGuardError:
+    except DeploymentGuardError as e:
+        await logger.aerror("Deployment guard error: %s (error code: %s)", e.technical_detail, e.code)
         raise
     except Exception as e:
         raise_if_deployment_guard_error_or_skip(e)

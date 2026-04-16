@@ -50,8 +50,7 @@ from langflow.services.database.models.flow_version_deployment_attachment.schema
     DeploymentAttachmentKey,
     DeploymentAttachmentKeyBatch,
 )
-
-from .util import require_non_empty
+from langflow.services.database.utils import require_non_empty
 
 if TYPE_CHECKING:
     from langflow.api.utils import DbSession
@@ -236,6 +235,13 @@ async def _sync_deployments_and_attachments_by_provider(
                     db=db,
                     resource_keys=[deployment.resource_key for deployment in deployments],
                 )
+            await logger.adebug(
+                "Provider resource key sync ok (%s): provider=%s, local_deployments=%d, provider_known=%d",
+                stale_scope_label,
+                provider_account_id,
+                len(deployments),
+                len(known_resource_keys),
+            )
 
             surviving: list[Deployment] = []
             for deployment in deployments:
