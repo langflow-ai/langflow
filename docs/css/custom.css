@@ -139,6 +139,26 @@ html[data-theme="light"] .navbar__logo {
   margin: 0 auto;
 }
 
+@media (min-width: 1600px) {
+  .main-wrapper {
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .menu__link {
+    font-size: 0.9375rem !important; /* 15px */
+    padding: 0.35rem var(--ifm-menu-link-padding-horizontal);
+  }
+
+  .menu__list .menu__list .menu__link {
+    font-size: 0.9rem !important;
+  }
+
+  .sidebar-group-label {
+    font-size: 0.75rem !important;
+  }
+}
+
 .theme-doc-sidebar-item-category.menu__list-item:not(:first-child) {
   margin-top: 0.5rem !important;
 }
