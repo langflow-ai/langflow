@@ -1,8 +1,8 @@
 """add ondelete cascade to span fks
 
-Revision ID: 7d14939e144e
-Revises: 0e6138e7a0c2
-Create Date: 2026-04-16 12:31:04.228447
+Revision ID: e205cdf2b74b
+Revises: d306e5c17c41
+Create Date: 2026-04-16 13:10:51.407006
 
 Phase: EXPAND
 
@@ -17,8 +17,8 @@ from langflow.utils import migration
 
 
 # revision identifiers, used by Alembic.
-revision: str = '7d14939e144e'
-down_revision: Union[str, None] = '0e6138e7a0c2'
+revision: str = 'e205cdf2b74b'
+down_revision: Union[str, None] = 'd306e5c17c41'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
