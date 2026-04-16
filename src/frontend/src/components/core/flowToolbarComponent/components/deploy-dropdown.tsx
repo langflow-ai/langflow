@@ -198,7 +198,7 @@ export default function PublishDropdown({
                         </CustomLink>
                       ) : (
                         <span className={cn(!isPublished && "opacity-50")}>
-                          Shareable Playground
+                          {t("misc.shareablePlayground")}
                         </span>
                       )}
                     </div>
