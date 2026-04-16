@@ -27,6 +27,10 @@ MIN_MODULE_PARTS = 2
 MIN_MODULE_PARTS_WITH_FILENAME = 4  # Minimum parts needed to have a module filename (lfx.components.type.filename)
 EXPECTED_RESULT_LENGTH = 2  # Expected length of the tuple returned by _process_single_module
 
+# IDX-02: cap concurrent module scans so the thread pool is not exhausted
+# (prevents silent component drops under high concurrency; see pitfall 9 in 02-RESEARCH.md).
+_MODULE_SCAN_CONCURRENCY = 16
+
 
 # Create a class to manage component cache instead of using globals
 class ComponentCache:
@@ -397,8 +401,16 @@ async def _load_components_dynamically(
     if not module_names:
         return modules_dict
 
-    # Create tasks for parallel module processing
-    tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
+    # IDX-02: bound concurrent scans with a semaphore so the thread pool is not exhausted
+    # under high module-count workloads. Pattern: wrap each asyncio.to_thread in an
+    # async helper that acquires the semaphore. See 02-RESEARCH.md Pattern 2 / Pitfall 2.
+    semaphore = asyncio.Semaphore(_MODULE_SCAN_CONCURRENCY)
+
+    async def _bounded(modname: str):
+        async with semaphore:
+            return await asyncio.to_thread(_process_single_module, modname)
+
+    tasks = [_bounded(modname) for modname in module_names]
 
     # Wait for all modules to be processed
     try:
