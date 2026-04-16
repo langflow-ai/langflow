@@ -489,7 +489,7 @@ def create_app():
         ContentSizeLimitMiddleware,
     )
 
-    setup_sentry(app)
+    add_sentry_middleware(app)
 
     # Warn about future CORS changes
     warn_about_future_cors_changes(settings)
@@ -623,7 +623,13 @@ def create_app():
     return app
 
 
-def setup_sentry(app: FastAPI) -> None:
+def add_sentry_middleware(app: FastAPI) -> None:
+    """Attach SentryAsgiMiddleware to the app.
+
+    Only the ASGI middleware is registered here so it is available at request time.
+    The actual ``sentry_sdk.init()`` call is deferred to the worker lifespan
+    (see ``get_lifespan``) to avoid ghost transactions across pre-fork workers.
+    """
     settings = get_settings_service().settings
     if settings.sentry_dsn:
         try:
@@ -638,7 +644,6 @@ def setup_sentry(app: FastAPI) -> None:
             logger.warning(f"Failed to import SentryAsgiMiddleware: {e}")
             return
 
-        # Defer sentry_sdk.init to the worker lifespan to avoid ghosts across forks
         app.add_middleware(SentryAsgiMiddleware)
 
 
