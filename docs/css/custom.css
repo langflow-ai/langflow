@@ -109,6 +109,11 @@ html[data-theme="light"] .navbar__logo {
   max-width: 800px;
 }
 
+/* Prev/Next nav matches content width */
+.pagination-nav {
+  max-width: 800px;
+}
+
 /*
  * Inline Lucide icons in body copy (<Icon /> in MDX).
  * Default lucide-react size is 24px, which reads huge next to Geist body text.
