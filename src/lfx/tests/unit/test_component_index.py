@@ -122,18 +122,18 @@ class TestParseDevMode:
 class TestReadComponentIndex:
     """Tests for _read_component_index() function."""
 
-    def test_read_index_file_not_found(self):
+    async def test_read_index_file_not_found(self):
         """Test reading index when file doesn't exist."""
         mock_path = Mock()
         mock_path.exists.return_value = False
 
         with patch("lfx.interface.components.Path") as mock_path_class:
             mock_path_class.return_value = mock_path
-            result = _read_component_index()
+            result = await _read_component_index()
 
         assert result is None
 
-    def test_read_index_valid(self, tmp_path):
+    async def test_read_index_valid(self, tmp_path):
         """Test reading valid index file."""
         # Create valid index
         index = {
@@ -160,14 +160,14 @@ class TestReadComponentIndex:
                 orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
             )
 
-            result = _read_component_index()
+            result = await _read_component_index()
 
         assert result is not None
         assert result["version"] == "0.1.12"
         assert "entries" in result
         assert result["sha256"] == index["sha256"]
 
-    def test_read_index_invalid_sha256(self, tmp_path):
+    async def test_read_index_invalid_sha256(self, tmp_path):
         """Test reading index with invalid SHA256."""
         # Create index with bad hash
         index = {
@@ -189,11 +189,11 @@ class TestReadComponentIndex:
             (tmp_path / "lfx" / "_assets").mkdir(parents=True)
             (tmp_path / "lfx" / "_assets" / "component_index.json").write_bytes(orjson.dumps(index))
 
-            result = _read_component_index()
+            result = await _read_component_index()
 
         assert result is None
 
-    def test_read_index_version_mismatch(self, tmp_path):
+    async def test_read_index_version_mismatch(self, tmp_path):
         """Test reading index with mismatched version."""
         index = {
             "version": "0.1.11",
@@ -214,11 +214,11 @@ class TestReadComponentIndex:
                 orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
             )
 
-            result = _read_component_index()
+            result = await _read_component_index()
 
         assert result is None
 
-    def test_read_index_package_not_found(self, tmp_path):
+    async def test_read_index_package_not_found(self, tmp_path):
         """Test reading index when lfx package metadata is unavailable (e.g. Docker workspace install)."""
         from importlib.metadata import PackageNotFoundError
 
@@ -241,14 +241,14 @@ class TestReadComponentIndex:
                 orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
             )
 
-            result = _read_component_index()
+            result = await _read_component_index()
 
         # Should succeed - version check skipped when metadata unavailable
         assert result is not None
         assert result["version"] == "0.4.0"
         assert "entries" in result
 
-    def test_read_index_custom_path_file(self, tmp_path):
+    async def test_read_index_custom_path_file(self, tmp_path):
         """Test reading index from custom file path."""
         index = {
             "version": "0.1.12",
@@ -262,12 +262,12 @@ class TestReadComponentIndex:
 
         with patch("importlib.metadata.version") as mock_version:
             mock_version.return_value = "0.1.12"
-            result = _read_component_index(str(custom_file))
+            result = await _read_component_index(str(custom_file))
 
         assert result is not None
         assert result["version"] == "0.1.12"
 
-    def test_read_index_custom_path_url(self):
+    async def test_read_index_custom_path_url(self):
         """Test reading index from URL."""
         index = {
             "version": "0.1.12",
@@ -283,7 +283,7 @@ class TestReadComponentIndex:
             patch("httpx.get", return_value=mock_response),
             patch("importlib.metadata.version", return_value="0.1.12"),
         ):
-            result = _read_component_index("https://example.com/index.json")
+            result = await _read_component_index("https://example.com/index.json")
 
         assert result is not None
         assert result["version"] == "0.1.12"
@@ -374,12 +374,12 @@ class TestImportLangflowComponents:
         payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
         index["sha256"] = hashlib.sha256(payload).hexdigest()
 
+        # _read_component_index is async (IDX-03); patch with AsyncMock so the
+        # awaited return value is the index dict, not a coroutine.
         with (
-            patch("lfx.interface.components._read_component_index") as mock_read,
+            patch("lfx.interface.components._read_component_index", new=AsyncMock(return_value=index)),
             patch("importlib.metadata.version", return_value="0.1.12"),
         ):
-            mock_read.return_value = index
-
             result = await import_langflow_components()
 
         assert "components" in result
@@ -392,14 +392,14 @@ class TestImportLangflowComponents:
         cache_file = tmp_path / "component_index.json"
         monkeypatch.setattr("lfx.interface.components._get_cache_path", lambda: cache_file)
 
+        # _read_component_index is async (IDX-03); AsyncMock returns None when awaited.
         with (
-            patch("lfx.interface.components._read_component_index") as mock_read,
+            patch("lfx.interface.components._read_component_index", new=AsyncMock(return_value=None)),
             patch("lfx.interface.components._process_single_module") as mock_process,
             patch("lfx.interface.components.pkgutil.walk_packages") as mock_walk,
             patch("importlib.metadata.version", return_value="0.1.12"),
         ):
             # Simulate missing built-in index and cache
-            mock_read.return_value = None
             mock_process.return_value = ("category1", {"comp1": {"template": {}}})
             mock_walk.return_value = [(None, "lfx.components.category1", False)]
 
@@ -425,12 +425,13 @@ class TestImportLangflowComponents:
         mock_settings = Mock()
         mock_settings.settings.components_index_path = str(custom_file)
 
+        # _read_component_index is async (IDX-03); AsyncMock awaits to the index dict.
+        # ``with patch(..., new=AsyncMock(...)) as mock_read`` binds the AsyncMock to
+        # mock_read so we can still assert_called_with(...) after the awaited call.
         with (
-            patch("lfx.interface.components._read_component_index") as mock_read,
+            patch("lfx.interface.components._read_component_index", new=AsyncMock(return_value=index)) as mock_read,
             patch("importlib.metadata.version", return_value="0.1.12"),
         ):
-            mock_read.return_value = index
-
             result = await import_langflow_components(mock_settings)
 
         assert "components" in result
@@ -792,7 +793,8 @@ class TestIDX04IDX05WriteSide:
         saved = orjson.loads(cache_file.read_bytes())
         assert saved["version"] == "unknown", f"expected 'unknown', got {saved['version']!r}"
 
-    def test_round_trip_lfx_only_env(self, tmp_path, monkeypatch, caplog):
+    @pytest.mark.asyncio
+    async def test_round_trip_lfx_only_env(self, tmp_path, monkeypatch, caplog):
         """Save then read in this lfx-only env: no version-mismatch log, entries match.
 
         This is the key IDX-04 validation. Before the fix, the cache was stamped
@@ -801,6 +803,11 @@ class TestIDX04IDX05WriteSide:
         ``_read_component_index`` silently rejected every cache on the version
         check. With the fix, ``version('lfx')`` matches at read time and the
         round-trip succeeds.
+
+        Converted to async in IDX-03 (plan 02-05): ``_read_component_index`` is
+        now ``async def`` and must be awaited. The enclosing ``TestIDX04IDX05WriteSide``
+        remains a sync class for truly-sync tests; only this method opts in to
+        ``@pytest.mark.asyncio``.
         """
         import logging
 
@@ -816,7 +823,7 @@ class TestIDX04IDX05WriteSide:
 
         caplog.clear()
         with caplog.at_level(logging.DEBUG, logger="lfx.interface.components"):
-            result = _read_component_index(str(cache_file))
+            result = await _read_component_index(str(cache_file))
 
         assert result is not None, (
             "round-trip failed: _read_component_index returned None "
@@ -899,4 +906,109 @@ class TestIDX04IDX05WriteSideParity:
         expected = json.loads(expected_path.read_text())
         assert snapshot == expected, (
             f"IDX-04/IDX-05 changes caused parity drift.\n  got: {snapshot}\n  expected: {expected}"
+        )
+
+
+@pytest.mark.asyncio
+class TestIDX03ReadPath:
+    """Phase 2 / IDX-03: async _read_component_index with asyncio.to_thread-wrapped read_bytes.
+
+    The refactor converts ``_read_component_index`` from sync to async and wraps
+    both ``index_path.read_bytes()`` call sites in ``await asyncio.to_thread(...)``
+    so the event loop is not blocked during the ~50ms read of the shipped 5.7MB
+    ``_assets/component_index.json`` built-in index (and arbitrary time for user
+    cache files). See .planning/phases/02-component-index-and-correctness-fixes/02-RESEARCH.md
+    Pitfall 3 for the full rationale.
+    """
+
+    def test_is_coroutine_function(self):
+        """_read_component_index must be an async def (IDX-03 refactor)."""
+        import inspect as _inspect
+
+        from lfx.interface import components as ci
+
+        assert _inspect.iscoroutinefunction(ci._read_component_index), (
+            "_read_component_index should be async def after IDX-03 refactor"
+        )
+
+    async def test_read_does_not_block_event_loop(self, tmp_path):
+        """While _read_component_index runs, a concurrent task still makes progress.
+
+        Proof: write a valid index file, kick off ``_read_component_index`` plus a
+        'ticker' task that yields to the loop and counts ticks. Assert the ticker
+        increments during the read (non-zero, not stuck at 0). With to_thread
+        off-loading the disk read, the ticker WILL advance; with a sync read_bytes
+        blocking the loop, ticker_count stays at 0.
+
+        Threshold is intentionally loose (``> 0``): even a perfectly-wrapped
+        ``asyncio.to_thread`` will not always yield many ticker increments on
+        very fast reads (tmpfs-backed test filesystems complete in microseconds).
+        One interleaved tick is the minimum provable "not fully blocked" signal.
+        """
+        from lfx.interface.components import _read_component_index
+
+        # Build a valid index that passes SHA + version check so the async path runs to completion.
+        big_entries = [[f"cat{i}", {f"comp{j}": {"template": {}} for j in range(20)}] for i in range(20)]
+        index = {
+            "version": "0.1.12",
+            "metadata": {"num_modules": 20, "num_components": 400},
+            "entries": big_entries,
+        }
+        payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
+        index["sha256"] = hashlib.sha256(payload).hexdigest()
+
+        big_path = tmp_path / "big_index.json"
+        big_path.write_bytes(orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2))
+
+        # Patch version lookup so the version check inside _read_component_index passes
+        with patch("importlib.metadata.version", return_value="0.1.12"):
+            ticker_count = 0
+            ticker_stop = False
+
+            async def ticker():
+                nonlocal ticker_count
+                while not ticker_stop:
+                    ticker_count += 1
+                    await asyncio.sleep(0)
+
+            ticker_task = asyncio.create_task(ticker())
+            try:
+                result = await _read_component_index(str(big_path))
+            finally:
+                ticker_stop = True
+                await ticker_task
+
+        assert result is not None, "_read_component_index returned None despite valid index"
+        # With to_thread off-loading the read, the ticker WILL increment during the read.
+        # A value of 0 means the event loop was blocked the whole time (the bug we are fixing).
+        assert ticker_count > 0, "event loop appears blocked during read_bytes; asyncio.to_thread wrap may be missing"
+
+    async def test_parity_smallest_after_async_refactor(self):
+        """Parity guard: smallest.json still produces the pre-change snapshot."""
+        fixture = _PARITY_FIXTURES_DIR / "smallest.json"
+        expected_path = _PARITY_FIXTURES_DIR / "smallest.snapshot.json"
+        assert fixture.exists(), f"missing synthetic fixture: {fixture}"
+        assert expected_path.exists(), f"missing pre-change snapshot: {expected_path}"
+        snapshot = await _capture_parity_snapshot(fixture)
+        expected = json.loads(expected_path.read_text())
+        assert snapshot == expected, (
+            f"IDX-03 async refactor caused parity drift.\n  got: {snapshot}\n  expected: {expected}"
+        )
+
+    async def test_parity_five_types_after_async_refactor(self):
+        """Parity guard on the 5-type fixture as well (may skip on lfx-only env)."""
+        fixture = _PARITY_FIXTURES_DIR / "five_types.json"
+        expected_path = _PARITY_FIXTURES_DIR / "five_types.snapshot.json"
+        if not fixture.exists() or not expected_path.exists():
+            pytest.skip("five_types.json / snapshot from plan 02-02 not landed; skipping")
+        try:
+            snapshot = await _capture_parity_snapshot(fixture)
+        except Exception as exc:
+            # five_types.json instantiates an OpenAIModel component which requires
+            # langchain_openai; the lfx-only venv lacks this dep. Skip cleanly,
+            # matching TestIDX02SemaphoreCap::test_parity_five_types behaviour.
+            pytest.skip(f"five_types.json flow requires optional deps not available here: {exc}")
+        expected = json.loads(expected_path.read_text())
+        assert snapshot == expected, (
+            f"IDX-03 async refactor caused parity drift on five_types.json.\n  got: {snapshot}\n  expected: {expected}"
         )
