@@ -5216,6 +5216,75 @@ async def test_get_provider_clients_rejects_mixed_provider_contexts(monkeypatch)
 
 
 @pytest.mark.anyio
+async def test_deployment_provider_scope_reuses_clients_within_scope(monkeypatch):
+    resolve_calls = 0
+
+    async def mock_resolve_wxo_client_credentials(*, user_id, db, provider_id):  # noqa: ARG001
+        nonlocal resolve_calls
+        resolve_calls += 1
+        return WxOCredentials(
+            instance_url="https://api.region-foobar.cloud.ibm.com/",
+            authenticator=object(),
+        )
+
+    monkeypatch.setattr(client_module, "resolve_wxo_client_credentials", mock_resolve_wxo_client_credentials)
+    client_module.clear_provider_clients_request_context()
+
+    with deployment_context_module.deployment_provider_scope(UUID(int=1)):
+        first = await client_module.get_provider_clients(user_id="user-1", db=object())
+        second = await client_module.get_provider_clients(user_id="user-1", db=object())
+
+    assert first is second
+    assert resolve_calls == 1
+
+
+@pytest.mark.anyio
+async def test_deployment_provider_scope_resets_wxo_context_between_provider_scopes(monkeypatch):
+    resolve_calls = 0
+
+    async def mock_resolve_wxo_client_credentials(*, user_id, db, provider_id):  # noqa: ARG001
+        nonlocal resolve_calls
+        resolve_calls += 1
+        return WxOCredentials(
+            instance_url="https://api.region-foobar.cloud.ibm.com/",
+            authenticator=object(),
+        )
+
+    monkeypatch.setattr(client_module, "resolve_wxo_client_credentials", mock_resolve_wxo_client_credentials)
+    client_module.clear_provider_clients_request_context()
+
+    with deployment_context_module.deployment_provider_scope(UUID(int=1)):
+        await client_module.get_provider_clients(user_id="user-1", db=object())
+    with deployment_context_module.deployment_provider_scope(UUID(int=2)):
+        await client_module.get_provider_clients(user_id="user-1", db=object())
+
+    assert resolve_calls == 2
+
+
+@pytest.mark.anyio
+async def test_deployment_provider_scope_rejects_mixed_users_within_same_scope(monkeypatch):
+    resolve_calls = 0
+
+    async def mock_resolve_wxo_client_credentials(*, user_id, db, provider_id):  # noqa: ARG001
+        nonlocal resolve_calls
+        resolve_calls += 1
+        return WxOCredentials(
+            instance_url="https://api.region-foobar.cloud.ibm.com/",
+            authenticator=object(),
+        )
+
+    monkeypatch.setattr(client_module, "resolve_wxo_client_credentials", mock_resolve_wxo_client_credentials)
+    client_module.clear_provider_clients_request_context()
+
+    with deployment_context_module.deployment_provider_scope(UUID(int=1)):
+        await client_module.get_provider_clients(user_id="user-1", db=object())
+        with pytest.raises(CredentialResolutionError, match="different deployment provider context"):
+            await client_module.get_provider_clients(user_id="user-2", db=object())
+
+    assert resolve_calls == 1
+
+
+@pytest.mark.anyio
 async def test_resolve_wxo_client_credentials_reads_provider_url_from_account(monkeypatch):
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 
