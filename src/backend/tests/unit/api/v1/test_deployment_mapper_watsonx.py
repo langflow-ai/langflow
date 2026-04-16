@@ -86,6 +86,71 @@ def test_watsonx_mapper_is_registered() -> None:
     assert mapper.api_payloads.snapshot_list_result is not None
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "provider_data",
+    [
+        {"input": "hello"},
+        {"message": {"role": "user", "content": "hello"}},
+        {"input": "hello", "thread_id": "thread-1"},
+    ],
+)
+async def test_watsonx_mapper_execution_input_accepts_supported_request_shapes(provider_data: dict) -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    resolved = await mapper.resolve_execution_input(provider_data, db=_FakeDb([]))
+    assert resolved == provider_data
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_execution_input_rejects_agent_id_override_field() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    with pytest.raises(HTTPException) as exc_info:
+        await mapper.resolve_execution_input(
+            {"input": "hello", "agent_id": "agent-1"},
+            db=_FakeDb([]),
+        )
+    assert exc_info.value.status_code == 422
+    assert "agent_id" in str(exc_info.value.detail)
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_execution_input_rejects_unknown_fields() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    with pytest.raises(HTTPException) as exc_info:
+        await mapper.resolve_execution_input(
+            {"input": "hello", "llm_params": {"temperature": 0.2}},
+            db=_FakeDb([]),
+        )
+    assert exc_info.value.status_code == 422
+    assert "llm_params" in str(exc_info.value.detail)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "provider_data",
+    [
+        {},
+        {"thread_id": "thread-only"},
+        {"input": "hello", "message": {"role": "user", "content": "hello"}},
+    ],
+)
+async def test_watsonx_mapper_execution_input_requires_exactly_one_input_source(provider_data: dict) -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    with pytest.raises(HTTPException) as exc_info:
+        await mapper.resolve_execution_input(provider_data, db=_FakeDb([]))
+    assert exc_info.value.status_code == 422
+    assert "exactly one of 'input' or 'message'" in str(exc_info.value.detail)
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_execution_input_rejects_none_provider_data() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    with pytest.raises(HTTPException) as exc_info:
+        await mapper.resolve_execution_input(None, db=_FakeDb([]))
+    assert exc_info.value.status_code == 422
+    assert "Missing provider_data" in str(exc_info.value.detail)
+
+
 def test_watsonx_mapper_provider_list_entry_rejects_non_dict_provider_data() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     item = SimpleNamespace(
@@ -221,13 +286,11 @@ def test_watsonx_mapper_formats_conflict_detail_fallback_without_structured_enti
         ("tool", "A tool with this name already exists in the provider. Please choose a different name."),
         (
             "connection",
-            "A connection referenced in this request already exists in the provider. "
-            "Reference it as an existing connection instead of creating a new one.",
+            "A connection referenced in this request already exists in the provider. Please choose a different name.",
         ),
         (
             "agent",
-            "An agent with this name already exists in the provider. "
-            "Please choose a different name or delete the existing agent first.",
+            "An agent with this name already exists in the provider. Please choose a different name.",
         ),
     ],
 )
@@ -247,14 +310,12 @@ def test_watsonx_mapper_formats_conflict_detail_from_structured_resource(resourc
         (
             "connection",
             "cfg",
-            "A connection with app_id 'cfg' already exists in the provider. "
-            "Reference it as an existing connection instead of creating a new one.",
+            "A connection with app_id 'cfg' already exists in the provider. Please choose a different name.",
         ),
         (
             "agent",
             "My_Agent",
-            "An agent with name 'My_Agent' already exists in the provider. "
-            "Please choose a different name or delete the existing agent first.",
+            "An agent with name 'My_Agent' already exists in the provider. Please choose a different name.",
         ),
     ],
 )

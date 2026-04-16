@@ -4,6 +4,9 @@ All tests use synthetic registries (plain dicts) — no lfx component loading,
 no I/O, no network.
 """
 
+import json
+from pathlib import Path
+
 import pytest
 from lfx.graph.flow_builder import (
     add_component,
@@ -330,6 +333,49 @@ class TestConnect:
         edge = add_connection(flow, r1["id"], "message", r2["id"], "input_value")
         assert edge["animated"] is False
         assert edge["selected"] is False
+
+    def test_add_connection_is_idempotent(self):
+        """Repeating add_connection for the same pair must not duplicate the edge.
+
+        Regression for LE-866: connecting components via batch (or after the
+        edge was already created in the UI) appended a second edge with the
+        same connection, double-wiring the flow at runtime.
+        """
+        flow = _fresh_flow()
+        r1 = add_component(flow, "ChatInput", REGISTRY)
+        r2 = add_component(flow, "ChatOutput", REGISTRY)
+        first = add_connection(flow, r1["id"], "message", r2["id"], "input_value")
+        second = add_connection(flow, r1["id"], "message", r2["id"], "input_value")
+        assert len(flow["data"]["edges"]) == 1
+        assert first is second  # returns the existing edge dict
+
+    def test_add_connection_dedupes_against_ui_saved_edges(self):
+        """Re-adding connections to a real UI-saved flow must not grow the edge list.
+
+        Regression for LE-866 against an actual UI-exported fixture. UI-saved
+        edges from older Langflow versions use the `xy-edge__` id prefix
+        instead of `reactflow__edge-`, so dedup must be structural (source,
+        target, handle name, handle fieldName) rather than by edge id.
+        """
+        fixture = Path(__file__).parent.parent / "data" / "MemoryChatbotNoLLM.json"
+        flow = json.loads(fixture.read_text())
+        original_count = len(flow["data"]["edges"])
+        assert original_count > 0, "fixture should have edges to test against"
+
+        # Replay every existing connection through add_connection — exactly what
+        # batch -> connect_components does when called for an already-wired pair.
+        for conn in list_connections(flow):
+            add_connection(
+                flow,
+                conn["source_id"],
+                conn["source_output"],
+                conn["target_id"],
+                conn["target_input"],
+                source_types=conn["source_types"],
+                target_types=conn["target_types"],
+            )
+
+        assert len(flow["data"]["edges"]) == original_count
 
     def test_remove_connection(self):
         flow = _fresh_flow()

@@ -42,7 +42,12 @@ export default function DeploymentStepper() {
             >
               {step.number}
             </div>
-            <span className="whitespace-nowrap text-xs text-muted-foreground">
+            <span
+              className={cn(
+                "whitespace-nowrap text-xs text-foreground",
+                currentStep >= step.number && "font-medium",
+              )}
+            >
               {step.label}
             </span>
           </div>
