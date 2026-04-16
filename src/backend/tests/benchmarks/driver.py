@@ -390,6 +390,11 @@ def run_pyinstrument(scenario: Scenario, *, output_dir: Path) -> Path | None:
     # Map the scenario's command into a pyinstrument-wrapped invocation. For lfx scenarios the
     # first two tokens are `uv run`, then `lfx run <fixture> --format text`; we replace `lfx run`
     # with `pyinstrument ... -m lfx run` so pyinstrument profiles the Python process.
+    #
+    # Pitfall 2 (RESEARCH.md) originally called for `--timer coarse`. pyinstrument 5.x does not
+    # expose that flag; the equivalent container-slowdown mitigation is `--use-timing-thread`,
+    # which decouples the sampler from gettimeofday. See:
+    #   https://pyinstrument.readthedocs.io/en/latest/reference.html#command-line-reference
     cmd_argv = scenario.command
     profile_cmd: list[str]
     if cmd_argv[:2] == ["uv", "run"] and cmd_argv[2:4] == ["lfx", "run"]:
@@ -398,8 +403,7 @@ def run_pyinstrument(scenario: Scenario, *, output_dir: Path) -> Path | None:
             "uv",
             "run",
             "pyinstrument",
-            "--timer",
-            "coarse",
+            "--use-timing-thread",
             "--renderer",
             "html",
             "--outfile",
@@ -414,8 +418,7 @@ def run_pyinstrument(scenario: Scenario, *, output_dir: Path) -> Path | None:
             "uv",
             "run",
             "pyinstrument",
-            "--timer",
-            "coarse",
+            "--use-timing-thread",
             "--renderer",
             "html",
             "--outfile",
@@ -451,7 +454,9 @@ def run_importtime(scenario: Scenario, *, output_dir: Path) -> Path | None:
     log_path = output_dir / f"{scenario.name}.importtime.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    sh_cmd = f"python -X importtime -c 'import lfx' 2> /out/{scenario.name}.importtime.log"
+    # `python` on PATH in the image is the system python and does NOT have lfx installed;
+    # `uv run python` activates the /app/.venv where lfx lives. Use uv run here for both.
+    sh_cmd = f"uv run python -X importtime -c 'import lfx' 2> /out/{scenario.name}.importtime.log"
     cmd = [
         CONTAINER_CMD,
         "run",
@@ -470,25 +475,32 @@ def run_importtime(scenario: Scenario, *, output_dir: Path) -> Path | None:
         return None
 
     # Convert via importtime-convert. Best-effort: if the converter is missing, skip conversion.
+    # The binary lives in .venv/bin/, so `uv run importtime-convert` is the resolution path
+    # when it isn't on PATH. importtime-convert 1.1.0 only supports --output-format {flamegraph.pl, json};
+    # RESEARCH.md called for a "speedscope" format that isn't available in this release. We emit
+    # flamegraph.pl (compatible with standard flame-graph tooling) and json.
     converter = shutil.which("importtime-convert")
-    if converter is None:
-        sys.stderr.write(
-            "importtime-convert not on PATH; skipping speedscope + JSON conversion. "
-            "Install via `uv sync --group benchmarks`.\n"
-        )
-        return log_path
+    converter_cmd: list[str]
+    if converter is not None:
+        converter_cmd = [converter]
+    else:
+        uv = shutil.which("uv")
+        if uv is None:
+            sys.stderr.write("Neither importtime-convert nor uv found on PATH; skipping conversion.\n")
+            return log_path
+        converter_cmd = [uv, "run", "importtime-convert"]
 
-    for fmt, suffix in (("speedscope", "speedscope.json"), ("json", "importtime.json")):
+    for fmt, suffix in (("flamegraph.pl", "flamegraph.txt"), ("json", "importtime.json")):
         out = output_dir / f"{scenario.name}.{suffix}"
         with log_path.open("rb") as inp, out.open("wb") as outp:
             rc2 = subprocess.run(  # noqa: S603
-                [converter, "--format", fmt],
+                [*converter_cmd, "--output-format", fmt],
                 stdin=inp,
                 stdout=outp,
                 check=False,
             )
         if rc2.returncode != 0:
-            sys.stderr.write(f"importtime-convert --format {fmt} failed for {scenario.name!r}\n")
+            sys.stderr.write(f"importtime-convert --output-format {fmt} failed for {scenario.name!r}\n")
     return log_path
 
 
@@ -927,9 +939,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--thresholds-path", default=str(DEFAULT_THRESHOLDS_PATH))
     args = parser.parse_args(argv)
 
-    output_dir = Path(args.output_dir)
+    # Container bind mounts (`-v <path>:/out`) require absolute paths; relative paths
+    # like `reports/` get interpreted as named volumes by podman and fail with a name-
+    # validation error. Resolve here so every downstream consumer sees an absolute path.
+    output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
-    baseline_dir = Path(args.baseline_dir)
+    baseline_dir = Path(args.baseline_dir).resolve()
 
     names = None
     if args.scenarios:

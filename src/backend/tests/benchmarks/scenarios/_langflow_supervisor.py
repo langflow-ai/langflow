@@ -16,13 +16,16 @@ Exit codes:
 
 from __future__ import annotations
 
+import os
 import signal
 import subprocess
 import sys
 import time
 
 READY_MARKER = "Application startup complete."
-STARTUP_TIMEOUT_SEC = 60.0
+# 60s is sufficient on Linux CI (typical cold boot is 30-40s). macOS/podman runs with an
+# emulated VM need more headroom; `LANGFLOW_BENCH_STARTUP_TIMEOUT` overrides at invocation time.
+STARTUP_TIMEOUT_SEC = float(os.environ.get("LANGFLOW_BENCH_STARTUP_TIMEOUT", "180"))
 
 
 def main() -> int:

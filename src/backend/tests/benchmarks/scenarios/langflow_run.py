@@ -17,7 +17,9 @@ SCENARIO = Scenario(
     # Uses the bytecode-compiled image so the langflow_run number reflects production-style
     # boot (langflow images always set UV_COMPILE_BYTECODE=1).
     variant="prebaked",
-    command=["python", "-m", "src.backend.tests.benchmarks.scenarios._langflow_supervisor"],
+    # `python` in the container image is the system interpreter without lfx or langflow
+    # on sys.path; `uv run python` activates /app/.venv where both packages live.
+    command=["uv", "run", "python", "-m", "src.backend.tests.benchmarks.scenarios._langflow_supervisor"],
     env={
         "LANGFLOW_SUPERUSER": "admin",
         "LANGFLOW_SUPERUSER_PASSWORD": "bench-pass-not-a-real-secret",  # pragma: allowlist secret
