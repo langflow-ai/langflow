@@ -105,7 +105,7 @@ def _parse_dev_mode() -> tuple[bool, list[str] | None]:
     return (False, None)
 
 
-def _read_component_index(custom_path: str | None = None) -> dict | None:
+async def _read_component_index(custom_path: str | None = None) -> dict | None:
     """Read and validate the prebuilt component index.
 
     Args:
@@ -125,7 +125,10 @@ def _read_component_index(custom_path: str | None = None) -> dict | None:
                 import httpx
 
                 try:
-                    response = httpx.get(custom_path, timeout=10.0)
+                    # Out of scope for IDX-03: URL fetch path (see CONCERNS.md §1.7; tracked for a later phase).
+                    # The sync call is only reached when the user explicitly points components_index_path
+                    # at an http(s) URL; the 5.7MB built-in read path (the common case) is now async.
+                    response = httpx.get(custom_path, timeout=10.0)  # noqa: ASYNC210
                     response.raise_for_status()
                     blob = orjson.loads(response.content)
                 except httpx.HTTPError as e:
@@ -141,7 +144,8 @@ def _read_component_index(custom_path: str | None = None) -> dict | None:
                     logger.warning(f"Custom component index not found at {custom_path}")
                     return None
                 try:
-                    blob = orjson.loads(index_path.read_bytes())
+                    # IDX-03: do not block the event loop during disk read (custom user cache path).
+                    blob = orjson.loads(await asyncio.to_thread(index_path.read_bytes))
                 except orjson.JSONDecodeError as e:
                     logger.warning(f"Component index at {custom_path} is corrupted or invalid JSON: {e}")
                     return None
@@ -154,7 +158,8 @@ def _read_component_index(custom_path: str | None = None) -> dict | None:
                 return None
 
             try:
-                blob = orjson.loads(index_path.read_bytes())
+                # IDX-03: do not block the event loop during disk read (built-in 5.7MB file).
+                blob = orjson.loads(await asyncio.to_thread(index_path.read_bytes))
             except orjson.JSONDecodeError as e:
                 logger.warning(f"Built-in component index is corrupted or invalid JSON: {e}")
                 return None
@@ -335,7 +340,7 @@ async def _load_from_index_or_cache(
         custom_index_path = settings_service.settings.components_index_path
         await logger.adebug(f"Using custom component index: {custom_index_path}")
 
-    index = _read_component_index(custom_index_path)
+    index = await _read_component_index(custom_index_path)
     if index and "entries" in index:
         source = custom_index_path or "built-in index"
         await logger.adebug(f"Loading components from {source}")
@@ -358,7 +363,7 @@ async def _load_from_index_or_cache(
     else:
         if cache_path.exists():
             await logger.adebug(f"Attempting to load from cache: {cache_path}")
-            index = _read_component_index(str(cache_path))
+            index = await _read_component_index(str(cache_path))
             if index and "entries" in index:
                 await logger.adebug("Loading components from cached index")
                 for top_level, components in index["entries"]:
