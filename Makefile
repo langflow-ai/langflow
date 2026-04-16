@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax bench-local bench-docker bench-snapshot
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -40,6 +40,37 @@ check_tools:
 	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
 	@echo "$(GREEN)All required tools are installed.$(NC)"
+
+######################
+# BENCHMARKS (Phase 1: cold-start measurement)
+######################
+
+# See src/backend/tests/benchmarks/README.md and
+# .planning/phases/01-measurement-foundation/01-CONTEXT.md (D-10, D-15) for rationale.
+#
+# - bench-local:    fast iteration against dev venv; NOT comparable to CI or baseline.
+# - bench-docker:   authoritative; runs inside python:3.13-slim with fresh container per measurement.
+# - bench-snapshot: one-shot; writes .planning/benchmarks/baseline-YYYY-MM-DD.md
+#                   AND overwrites src/backend/tests/benchmarks/thresholds.json.
+#
+# These targets delegate to src/backend/tests/benchmarks/driver.py, which is created
+# in plan 05 of this phase. Until that plan lands, invocation will error with a clear
+# "driver not implemented yet" message instead of silently succeeding.
+
+bench-local: ## run cold-start harness against dev venv (fast iteration; NOT authoritative)
+	@echo "$(YELLOW)bench-local:$(NC) running harness against dev venv (no cold-cache prep)"
+	@echo "$(YELLOW)  NOTE:$(NC) these numbers are NOT comparable to CI or the committed baseline."
+	@uv run python -m src.backend.tests.benchmarks.driver --mode local || { echo "$(RED)driver.py not yet implemented. Land plan 05 of phase 01-measurement-foundation first.$(NC)" ; exit 1; }
+
+bench-docker: ## run cold-start harness inside python:3.13-slim (authoritative)
+	@echo "$(GREEN)bench-docker:$(NC) building measurement image and running harness"
+	@command -v $(DOCKER) >/dev/null 2>&1 || { echo >&2 "$(RED)$(DOCKER) is not installed. Aborting.$(NC)"; exit 1; }
+	@uv run python -m src.backend.tests.benchmarks.driver --mode docker || { echo "$(RED)driver.py not yet implemented. Land plan 05 of phase 01-measurement-foundation first.$(NC)" ; exit 1; }
+
+bench-snapshot: ## one-shot: capture baseline on release-1.9.0 and overwrite thresholds.json
+	@echo "$(GREEN)bench-snapshot:$(NC) capturing authoritative baseline + writing thresholds.json"
+	@echo "$(YELLOW)  This MUST run on the release-1.9.0 branch on a Linux GHA runner for authoritative numbers.$(NC)"
+	@uv run python -m src.backend.tests.benchmarks.snapshot || { echo "$(RED)snapshot.py not yet implemented. Land plan 05 of phase 01-measurement-foundation first.$(NC)" ; exit 1; }
 
 help: ## show basic help message with common commands
 	@echo ''
