@@ -729,3 +729,174 @@ class TestIDX02SemaphoreCap:
         snapshot = await _capture_parity_snapshot(fixture)
         expected = json.loads(expected_path.read_text())
         assert snapshot == expected, f"parity drift detected.\n  got: {snapshot}\n  expected: {expected}"
+
+
+class TestIDX04IDX05WriteSide:
+    """Phase 2 / IDX-04 + IDX-05: version('lfx') stamp + atomic write via Path.replace.
+
+    IDX-04 stamps the cache with ``version("lfx")`` (was ``version("langflow")``);
+    IDX-05 writes atomically via a temp file in the SAME directory as the target,
+    then ``Path.replace`` (a thin wrapper around ``os.replace``, atomic on POSIX
+    and on Windows since Python 3.3). Landed together per CONTEXT.md D-10 because
+    both touch ``_save_generated_index`` and share the write-then-read round-trip
+    assertion.
+    """
+
+    def test_stamp_is_lfx_version(self, tmp_path, monkeypatch):
+        """Cache is stamped with version('lfx'), never version('langflow').
+
+        Runs in the lfx-only test venv (enforced by ``src/lfx/tests/conftest.py``),
+        so ``version('lfx')`` returns the real installed lfx version; a stray
+        ``version('langflow')`` call would raise PackageNotFoundError and the
+        outer try/except in ``_save_generated_index`` would log-and-swallow,
+        producing no cache file at all -- this test would then fail on
+        ``cache_file.exists()``.
+        """
+        from importlib.metadata import version as _real_version
+
+        cache_file = tmp_path / "component_index.json"
+        monkeypatch.setattr("lfx.interface.components._get_cache_path", lambda: cache_file)
+
+        _save_generated_index({"cat": {"comp1": {"template": {}}}})
+
+        assert cache_file.exists(), (
+            "cache file was not written -- _save_generated_index likely crashed on version lookup "
+            "(lfx-only test venv means version('langflow') would raise PackageNotFoundError)"
+        )
+        saved = orjson.loads(cache_file.read_bytes())
+        lfx_installed = _real_version("lfx")
+        assert saved["version"] == lfx_installed, (
+            f"expected stamp == lfx installed version {lfx_installed!r}, got {saved['version']!r}"
+        )
+
+    def test_package_not_found_fallback(self, tmp_path, monkeypatch):
+        """When version('lfx') raises PackageNotFoundError, stamp falls back to 'unknown'."""
+        from importlib.metadata import PackageNotFoundError
+
+        cache_file = tmp_path / "component_index.json"
+        monkeypatch.setattr("lfx.interface.components._get_cache_path", lambda: cache_file)
+
+        def _raise(*_args, **_kwargs):
+            msg = "lfx"
+            raise PackageNotFoundError(msg)
+
+        # _save_generated_index does ``from importlib.metadata import ... version`` inside
+        # its try block, which looks up ``version`` on the importlib.metadata module at call
+        # time. Patching the source attribute is sufficient; matches the existing
+        # TestSaveGeneratedIndex::test_save_generated_index pattern on line 316.
+        monkeypatch.setattr("importlib.metadata.version", _raise)
+
+        _save_generated_index({"cat": {"comp1": {"template": {}}}})
+
+        assert cache_file.exists(), "cache file should be written with 'unknown' fallback stamp"
+        saved = orjson.loads(cache_file.read_bytes())
+        assert saved["version"] == "unknown", f"expected 'unknown', got {saved['version']!r}"
+
+    def test_round_trip_lfx_only_env(self, tmp_path, monkeypatch, caplog):
+        """Save then read in this lfx-only env: no version-mismatch log, entries match.
+
+        This is the key IDX-04 validation. Before the fix, the cache was stamped
+        with ``version('langflow')``, which raised PackageNotFoundError in lfx-only
+        environments -- effectively meaning the cache never rolled forward and
+        ``_read_component_index`` silently rejected every cache on the version
+        check. With the fix, ``version('lfx')`` matches at read time and the
+        round-trip succeeds.
+        """
+        import logging
+
+        cache_file = tmp_path / "component_index.json"
+        monkeypatch.setattr("lfx.interface.components._get_cache_path", lambda: cache_file)
+
+        original = {
+            "cat1": {"compA": {"template": {}, "display_name": "A"}},
+            "cat2": {"compB": {"template": {}, "display_name": "B"}},
+        }
+        _save_generated_index(original)
+        assert cache_file.exists(), "save step failed to produce cache file"
+
+        caplog.clear()
+        with caplog.at_level(logging.DEBUG, logger="lfx.interface.components"):
+            result = _read_component_index(str(cache_file))
+
+        assert result is not None, (
+            "round-trip failed: _read_component_index returned None "
+            "(likely version-mismatch rejection -- IDX-04 not wired correctly)"
+        )
+        assert "version mismatch" not in caplog.text.lower(), (
+            f"unexpected version-mismatch log on round-trip: {caplog.text}"
+        )
+        # Entries match what we wrote (filter_disabled_components is NOT applied
+        # at the _read_component_index layer, so the raw entries round-trip cleanly).
+        entries = dict(result["entries"])
+        assert entries == original, f"round-trip entries drift: {entries} != {original}"
+
+    def test_atomic_write_uses_same_directory_tmp_and_rename(self, tmp_path, monkeypatch):
+        """Tmp file lives in same directory as target; Path.replace performs the rename.
+
+        The production code uses ``tmp_path.replace(cache_path)`` (Path.replace is
+        a thin wrapper around os.replace; satisfies the ruff PTH105 rule while
+        preserving the atomic-rename semantics that IDX-05 requires). We capture
+        calls by wrapping ``pathlib.Path.replace`` at the class level, since the
+        method is bound on the Path instance.
+        """
+        import pathlib
+
+        cache_file = tmp_path / "component_index.json"
+        monkeypatch.setattr("lfx.interface.components._get_cache_path", lambda: cache_file)
+
+        captured: dict = {}
+        real_replace = pathlib.Path.replace
+
+        def _capture_replace(self_path, target):
+            # self_path is the Path instance .replace was called on (the tmp file);
+            # target is the destination path.
+            captured["src"] = str(self_path)
+            captured["dst"] = str(target)
+            captured["src_exists_at_replace"] = Path(self_path).exists()
+            captured["src_parent"] = str(Path(self_path).parent)
+            captured["dst_parent"] = str(Path(target).parent)
+            return real_replace(self_path, target)
+
+        monkeypatch.setattr(pathlib.Path, "replace", _capture_replace)
+
+        _save_generated_index({"cat": {"comp": {"template": {}}}})
+
+        assert "src" in captured, "Path.replace was not called -- atomic write not wired"
+        assert captured["src"].endswith(".tmp"), f"tmp file should end in .tmp, got {captured['src']!r}"
+        assert captured["dst"].endswith("component_index.json"), (
+            f"destination should be component_index.json, got {captured['dst']!r}"
+        )
+        assert captured["src_parent"] == captured["dst_parent"], (
+            f"tmp and dst must share parent dir (same filesystem) to avoid cross-device-link "
+            f"errors in containers; got src_parent={captured['src_parent']!r} "
+            f"dst_parent={captured['dst_parent']!r}"
+        )
+        assert captured["src_exists_at_replace"], "tmp file should exist at the moment Path.replace is invoked"
+        assert cache_file.exists(), "final cache file should exist after Path.replace"
+        # And the .tmp sibling should NOT be left behind after a successful rename.
+        leftover = cache_file.with_suffix(cache_file.suffix + ".tmp")
+        assert not leftover.exists(), f"leftover .tmp file after successful write: {leftover}"
+
+
+@pytest.mark.asyncio
+class TestIDX04IDX05WriteSideParity:
+    """Deep parity guard for the IDX-04 + IDX-05 write-side changes."""
+
+    async def test_parity_smallest_after_write_change(self):
+        """smallest.json snapshot must match byte-identically after IDX-04/IDX-05.
+
+        Reuses the shared parity scaffolding from plan 02-01
+        (_PARITY_FIXTURES_DIR, _capture_parity_snapshot). The write-side change
+        only affects cache-persistence, not flow execution, so this snapshot
+        should be byte-identical to the pre-change snapshot captured on
+        HEAD=03bb575b59.
+        """
+        fixture = _PARITY_FIXTURES_DIR / "smallest.json"
+        expected_path = _PARITY_FIXTURES_DIR / "smallest.snapshot.json"
+        assert fixture.exists(), f"missing synthetic fixture: {fixture}"
+        assert expected_path.exists(), f"missing pre-change snapshot: {expected_path}"
+        snapshot = await _capture_parity_snapshot(fixture)
+        expected = json.loads(expected_path.read_text())
+        assert snapshot == expected, (
+            f"IDX-04/IDX-05 changes caused parity drift.\n  got: {snapshot}\n  expected: {expected}"
+        )
