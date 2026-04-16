@@ -428,6 +428,7 @@ const config = {
       };
     },
   ],
+  clientModules: [require.resolve("./src/clientModules/tocProgress.js")],
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({

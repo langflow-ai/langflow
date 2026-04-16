@@ -69,15 +69,15 @@ html[data-theme="light"] .navbar__logo {
   padding: 0.5rem 1.5rem;
 }
 
-/* Sidebar - padded from left edge  */
+/* Sidebar - flush with left edge, internal padding only */
 .theme-doc-sidebar-container {
   padding-top: 0.75rem;
-  margin-left: 0.75rem;
+  margin-left: 0;
   border-right: none !important;
 }
 
 .theme-doc-sidebar-container nav.menu {
-  padding-left: 0.75rem;
+  padding-left: 1rem;
   padding-right: 0.75rem;
 }
 
@@ -120,9 +120,9 @@ html[data-theme="light"] .navbar__logo {
   vertical-align: middle;
 }
 
-/* Overall layout - more centered feel */
+/* Overall layout - constrain width but keep left-anchored so sidebar hugs the edge */
 .main-wrapper {
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
 }
 
@@ -573,33 +573,32 @@ body {
 
 /* ========================================
 
-/* Sidebar font size - smaller, more compact */
+/* Sidebar font size */
 .menu__link {
-  /* Slightly larger + tighter vertical rhythm */
-  font-size: 0.825rem; /* ~13.2px */
-  padding: 0.25rem var(--ifm-menu-link-padding-horizontal);
-  line-height: 1.35;
+  font-size: 0.875rem; /* 14px — readable without feeling heavy */
+  padding: 0.3rem var(--ifm-menu-link-padding-horizontal);
+  line-height: 1.4;
 }
 
 [data-theme="dark"] .menu__link {
-  color: #8a8a92;
+  color: #ababb5; /* lifted from #8a8a92 — noticeably more legible */
 }
 
 [data-theme="dark"] .menu__link:hover {
-  color: #b8b8c0;
-  background: rgba(255, 255, 255, 0.03);
+  color: #d0d0d8;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 [data-theme="dark"] .menu__link--active:not(.menu__link--sublist) {
   color: var(--ifm-color-primary);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.04);
 }
 
-/* Subcategory items even smaller */
+/* Subcategory items — slightly smaller than top-level, but still readable */
 .menu__list .menu__list .menu__link {
-  font-size: 0.8125rem;
-  padding-top: 0.2rem;
-  padding-bottom: 0.2rem;
+  font-size: 0.85rem; /* 13.6px */
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
 }
 
 /* Sidebar Group Dividers (Langfuse-style section headers) */
@@ -615,23 +614,24 @@ body {
 }
 
 .sidebar-group-label {
-  font-size: 0.625rem; /* 10px */
+  font-size: 0.6875rem; /* 11px — one notch up from 10px, still compact */
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.09em;
   color: var(--ifm-color-emphasis-500);
   padding: 0.25rem var(--ifm-menu-link-padding-horizontal);
   opacity: 0.6;
 }
 
-/* Light theme: increase contrast for sidebar section labels ("BUILD", etc) */
+/* Light theme */
 html[data-theme="light"] .sidebar-group-label {
   color: #2f2f35 !important;
   opacity: 1 !important;
 }
 
+/* Dark theme — readable but still clearly a label, not a nav item */
 [data-theme="dark"] .sidebar-group-label {
-  color: #c7c7d0 !important;
+  color: #8a8a9a !important;
   opacity: 1 !important;
 }
 
@@ -1047,7 +1047,7 @@ html[data-theme="light"] .sidebar-group-label {
 }
 
 [data-theme="dark"] .theme-doc-sidebar-item-category > .menu__list-item-collapsible > .menu__link {
-  color: #9a9aa2; /* Slightly brighter than items but still muted */
+  color: #c0c0ca; /* Category headers: clearly brighter than items */
 }
 
 /* ========================================
@@ -1055,23 +1055,46 @@ html[data-theme="light"] .sidebar-group-label {
    ======================================== */
 
 .table-of-contents {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   border-left: 1px solid var(--ifm-color-emphasis-200);
 }
 
+/* Não visitado — branco/claro */
 .table-of-contents__link {
-  color: #4b4b55;
-  transition: color 0.15s ease;
+  color: #2f2f38;
+  transition: color 0.2s ease;
 }
 
 [data-theme="dark"] .table-of-contents__link {
-  color: #b8b8c0;
+  color: #e0e0e8;
 }
 
-.table-of-contents__link:hover,
-.table-of-contents__link--active {
+/* Já passou — cinza muted */
+.table-of-contents__link--passed {
+  color: #9090a0;
+}
+
+[data-theme="dark"] .table-of-contents__link--passed {
+  color: #8a8a9a;
+}
+
+/* Hover */
+.table-of-contents__link:hover {
   color: var(--ifm-color-primary);
-  font-weight: 500;
+}
+
+/* Ativo — rosa */
+.table-of-contents__link--active {
+  color: var(--ifm-color-primary) !important;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .table-of-contents__link--active {
+  color: hsla(329, 55%, 68%, 1) !important;
+}
+
+[data-theme="dark"] .table-of-contents {
+  border-left-color: #2c2c32;
 }
 
 /* ========================================
@@ -1415,4 +1438,60 @@ html[data-theme="light"] .sidebar-group-label {
 [data-theme="dark"] .lf-callout--note {
   background: rgba(168, 85, 247, 0.08);
   border-color: rgba(168, 85, 247, 0.2);
+}
+
+/* ========================================
+   Redocusaurus / API Reference Pages
+   ======================================== */
+
+/* Remove Redoc's built-in left gutter so it aligns with the rest of the layout */
+.redocusaurus .menu-content {
+  padding-left: 0 !important;
+}
+
+/* Match sidebar font to site font */
+.redocusaurus .menu-content,
+.redocusaurus [class*="SidebarDivider"],
+.redocusaurus [class*="ApiItemName"] {
+  font-family: var(--ifm-font-family-base) !important;
+}
+
+/* Light theme Redoc sidebar */
+[data-theme="light"] .redocusaurus .menu-content {
+  background: var(--ifm-background-color) !important;
+  border-right: none !important;
+}
+
+/* Dark theme Redoc sidebar */
+[data-theme="dark"] .redocusaurus .menu-content {
+  background: #111 !important;
+  border-right: none !important;
+}
+
+[data-theme="dark"] .redocusaurus {
+  background: #111 !important;
+}
+
+/* Redoc operation panels */
+[data-theme="dark"] .redocusaurus [class*="OperationTitle"],
+[data-theme="dark"] .redocusaurus [class*="operation-type"] {
+  color: #cdcdd4;
+}
+
+/* Redoc search input */
+.redocusaurus input[type="search"] {
+  border-radius: 8px;
+  font-family: var(--ifm-font-family-base);
+}
+
+[data-theme="dark"] .redocusaurus input[type="search"] {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: #303038;
+  color: #c6c6d1;
+}
+
+/* Redoc code samples */
+[data-theme="dark"] .redocusaurus [class*="CodeSample"] pre {
+  background: #161618 !important;
+  border: 1px solid #303038;
 }
