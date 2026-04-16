@@ -220,6 +220,16 @@ def warn_if_expected_ids_missing(
         )
 
 
+def _should_include_connection(
+    connection: ListConfigsResponse,
+) -> bool:
+    """Return True if the connection is a key-value connection in draft mode, otherwise False."""
+    return (
+        connection.security_scheme == ConnectionSecurityScheme.KEY_VALUE
+        and connection.environment == ConnectionEnvironment.DRAFT
+    )
+
+
 def _build_tenant_scope_config_items(
     *,
     raw_connections: list[ListConfigsResponse] | None,
@@ -230,20 +240,15 @@ def _build_tenant_scope_config_items(
         if not isinstance(connection, ListConfigsResponse):
             msg = f"wxO list_configs returned an unexpected connection entry type: {type(connection).__name__}."
             raise InvalidContentError(message=msg)
-        config_id = connection.connection_id
-        config_name = connection.app_id
-        config_type = connection.security_scheme
-        if config_type != "key_value_creds":
+        if not _should_include_connection(connection):
             continue
-        raw_env = getattr(connection, "environment", None)
-        environment = raw_env if isinstance(raw_env, str) else None
         configs.append(
             build_config_list_item(
                 config_item_data_slot=config_item_data_slot,
-                connection_id=config_id,
-                app_id=config_name,
-                config_type=config_type,
-                environment=environment,
+                connection_id=connection.connection_id,
+                app_id=connection.app_id,
+                config_type=connection.security_scheme,
+                environment=connection.environment,
             )
         )
     return configs
@@ -265,7 +270,7 @@ def _collect_tool_connection_ids(
 
 def _build_deployment_scope_config_items(
     *,
-    detailed_connections: list[object],
+    detailed_connections: list[ListConfigsResponse],
     config_item_data_slot: PayloadSlot[WatsonxConfigItemProviderData],
 ) -> tuple[list[ConfigListItem], set[object]]:
     configs: list[ConfigListItem] = []
@@ -273,18 +278,16 @@ def _build_deployment_scope_config_items(
     for connection in detailed_connections:
         connection_id = connection.connection_id
         resolved_connection_ids.add(connection_id)
-        config_type = getattr(connection, "security_scheme", None)
-        if config_type != "key_value_creds":
+
+        if not _should_include_connection(connection):
             continue
-        raw_env = getattr(connection, "environment", None)
-        environment = raw_env if isinstance(raw_env, str) else None
         configs.append(
             build_config_list_item(
                 config_item_data_slot=config_item_data_slot,
                 connection_id=connection_id,
-                app_id=getattr(connection, "app_id", None),
-                config_type=config_type,
-                environment=environment,
+                app_id=connection.app_id,
+                config_type=connection.security_scheme,
+                environment=connection.environment,
             )
         )
     return configs, resolved_connection_ids
