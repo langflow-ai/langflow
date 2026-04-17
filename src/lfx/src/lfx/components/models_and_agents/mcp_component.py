@@ -229,34 +229,35 @@ class MCPToolsComponent(ComponentWithCache):
 
         try:
             # Try to fetch from database first to ensure we have the latest config
-            # This ensures database updates (like editing a server) take effect
+            # This ensures database updates (like editing a server) take effect.
+            # When running in LFX standalone mode the full Langflow package and
+            # database may not be available — in that case we skip the DB lookup
+            # and fall back to the config embedded in the flow (server_config_from_value).
+            server_config_from_db = None
             try:
                 from langflow.api.v2.mcp import get_server
                 from langflow.services.database.models.user.crud import get_user_by_id
 
                 from lfx.services.deps import get_settings_service
-            except ImportError as e:
-                msg = (
-                    "Langflow MCP server functionality is not available. "
-                    "This feature requires the full Langflow installation."
+            except ImportError:
+                await logger.adebug(
+                    "Langflow package not available; using MCP server config from flow value (LFX standalone mode)."
                 )
-                raise ImportError(msg) from e
+            else:
+                async with session_scope() as db:
+                    if not self.user_id:
+                        msg = "User ID is required for fetching MCP tools."
+                        raise ValueError(msg)
+                    current_user = await get_user_by_id(db, self.user_id)
 
-            server_config_from_db = None
-            async with session_scope() as db:
-                if not self.user_id:
-                    msg = "User ID is required for fetching MCP tools."
-                    raise ValueError(msg)
-                current_user = await get_user_by_id(db, self.user_id)
-
-                # Try to get server config from DB/API
-                server_config_from_db = await get_server(
-                    server_name,
-                    current_user,
-                    db,
-                    storage_service=get_storage_service(),
-                    settings_service=get_settings_service(),
-                )
+                    # Try to get server config from DB/API
+                    server_config_from_db = await get_server(
+                        server_name,
+                        current_user,
+                        db,
+                        storage_service=get_storage_service(),
+                        settings_service=get_settings_service(),
+                    )
 
             # Resolve config with proper precedence: DB takes priority, falls back to value
             server_config = resolve_mcp_config(

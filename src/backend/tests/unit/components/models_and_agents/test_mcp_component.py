@@ -733,6 +733,52 @@ class TestMCPComponentConfigPriority:
 
             # Connect should be called with API-provided config as fallback
 
+    @pytest.mark.asyncio
+    async def test_lfx_standalone_falls_back_to_value_config(self, component):
+        """Test LFX standalone mode falls back to value config when Langflow is unavailable.
+
+        Regression test: when lfx is run without the full Langflow package installed
+        (e.g., serving a flow via `lfx`), importing `langflow.api.v2.mcp` raises
+        ImportError. The component must gracefully fall back to the server config
+        embedded in the flow JSON (server_config_from_value) rather than failing.
+        """
+        import builtins
+
+        value_config = {
+            "command": "uvx mcp-server-from-value",
+            "args": ["--standalone"],
+        }
+        component.mcp_server = {"name": "standalone_server", "config": value_config}
+        component._user_id = "test_user_123"
+
+        real_import = builtins.__import__
+
+        def fake_import(name, import_globals=None, import_locals=None, fromlist=(), level=0):
+            if name == "langflow.api.v2.mcp" or name.startswith("langflow.services.database"):
+                msg = f"No module named {name!r}"
+                raise ImportError(msg)
+            return real_import(name, import_globals, import_locals, fromlist, level)
+
+        with (
+            patch("builtins.__import__", side_effect=fake_import),
+            patch("lfx.components.models_and_agents.mcp_component.update_tools") as mock_update_tools,
+        ):
+            mock_update_tools.return_value = (None, [], {})
+
+            # Must not raise — should fall back to value config
+            _tools, server_info = await component.update_tool_list()
+
+            # update_tools should have been called with the value config as a fallback
+            mock_update_tools.assert_called_once()
+            call_kwargs = mock_update_tools.call_args.kwargs
+            assert call_kwargs["server_name"] == "standalone_server"
+            assert call_kwargs["server_config"]["command"] == "uvx mcp-server-from-value"
+            assert call_kwargs["server_config"]["args"] == ["--standalone"]
+
+            # server_info should echo the resolved value config
+            assert server_info["name"] == "standalone_server"
+            assert server_info["config"]["command"] == "uvx mcp-server-from-value"
+
 
 # ============================================================================
 # Tests for resolve_mcp_config pure function
