@@ -56,11 +56,11 @@ def deployment_provider_scope(provider_id: UUID):
     (if/else on ``provider_key``, or a keyed registry — either works).
     """
     from langflow.services.adapters.deployment.watsonx_orchestrate.client import (
-        provider_clients_memoization_scope,
+        wxo_scope,
     )
 
     with (
         DeploymentProviderIDContext.scope(DeploymentAdapterContext(provider_id=provider_id)),
-        provider_clients_memoization_scope(),
+        wxo_scope(),
     ):
         yield

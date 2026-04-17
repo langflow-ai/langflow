@@ -8,7 +8,7 @@ This module uses request/execution-context memoization for provider clients:
   `WxOClient` instance and skip repeated DB/decryption work.
 
 Important behavior notes:
-- Memoization is execution-context scoped (not cross-request/global state).
+- ContextVar state is execution-context scoped (not cross-request/global state).
 - The context stores a single `(key, client)` entry because deployment routing enforces one
   provider context per request path.
 - If a different `(provider_id, user_id)` is requested in the same context, resolution fails.
@@ -74,7 +74,7 @@ class WxOProviderClientsRequestContext:
     def push_null_boundary(cls) -> Token[WxOProviderClientsContext | None]:
         """Push a fresh ``None`` slot and return a Token for ``reset_current``.
 
-        Used by ``provider_clients_memoization_scope`` to bound the ownership
+        Used by ``wxo_scope`` to bound the ownership
         assertion to one ``deployment_provider_scope`` entry.
         """
         return cls._current.set(None)
@@ -93,7 +93,7 @@ def clear_provider_clients_request_context() -> None:
 
 
 @contextmanager
-def provider_clients_memoization_scope() -> Iterator[None]:
+def wxo_scope() -> Iterator[None]:
     """Bind the WxO client ownership assertion lifetime to the enclosing provider scope.
 
     Pushes a fresh ``None`` slot on entry and restores the prior value on exit
