@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import signal
+from collections.abc import Callable
+from typing import Any
 
 from gunicorn import glogging
 from gunicorn.app.base import BaseApplication
@@ -62,13 +64,14 @@ class Logger(glogging.Logger):
 
 
 class LangflowApplication(BaseApplication):
-    def __init__(self, app, options=None) -> None:
+    def __init__(self, app_factory: Callable[[], Any], options=None) -> None:
         self.options = options or {}
 
         self.options["worker_class"] = "langflow.server.LangflowUvicornWorker"
         self.options["logger_class"] = Logger
         self.options["pre_fork"] = self.pre_fork
-        self.application = app
+        self._app_factory = app_factory
+        self.application = None
         super().__init__()
 
     # Thread name prefixes that are known to be benign before fork.
@@ -135,4 +138,6 @@ class LangflowApplication(BaseApplication):
             self.cfg.set(key.lower(), value)
 
     def load(self):
+        if self.application is None:
+            self.application = self._app_factory()
         return self.application
