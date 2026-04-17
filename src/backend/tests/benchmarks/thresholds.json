@@ -1,15 +1,16 @@
 {
   "schema_version": 1,
   "measurement_mode": "bytecode_compile_delta",
-  "captured_on": "PLACEHOLDER",
-  "captured_ref": "PLACEHOLDER. Run `gh workflow run cold-start-benchmark.yml -f mode=snapshot` on release-1.9.0 to populate.",
-  "captured_runner": "PLACEHOLDER",
-  "python_version": "PLACEHOLDER",
+  "captured_on": "2026-04-17",
+  "captured_ref": "cold-start-improvements-v2 @ 55b023733c (build 24541900208)",
+  "captured_runner": "ubuntu-latest (GitHub Actions)",
+  "python_version": "3.13",
   "allowed_regression_pct": 15,
-  "_note": "mean_ms=0 is a sentinel. Any real measurement will regress against this, which is intentional. The first workflow run on release-1.9.0 MUST be invoked via workflow_dispatch with mode=snapshot to overwrite this file with real numbers captured on the GHA Linux runner. measurement_mode encodes the comparison semantics (bytecode_compile_delta per D-11a); Phase 6 may change this when re-snapshotting. See .planning/phases/01-measurement-foundation/ Pitfall 11.",
+  "_note": "Captured on Linux CI via run-benchmark-snapshot label trigger (build 24541900208). langflow_run_http_ready remains sentinel: the structlog processor pipeline swallows uvicorn's 'Application startup complete.' marker, so the supervisor times out. Fix deferred to Phase 4/5 when langflow lifespan work touches logging. measurement_mode is bytecode_compile_delta per D-11a.",
   "scenarios": {
-    "lfx_bare": {"mean_ms": 0, "stddev_ms": 0, "runs": 0},
-    "lfx_with_flow": {"mean_ms": 0, "stddev_ms": 0, "runs": 0},
+    "lfx_bare": {"mean_ms": 17824.74, "stddev_ms": 117.42, "runs": 10},
+    "lfx_with_flow": {"mean_ms": 18920.72, "stddev_ms": 125.59, "runs": 10},
+    "lfx_with_flow_prebaked": {"mean_ms": 9520.37, "stddev_ms": 75.60, "runs": 10},
     "langflow_run_http_ready": {"mean_ms": 0, "stddev_ms": 0, "runs": 0}
   }
 }
