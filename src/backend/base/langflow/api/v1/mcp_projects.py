@@ -101,14 +101,25 @@ async def verify_project_auth(
     if project.auth_settings:
         auth_settings = AuthSettings(**project.auth_settings)
 
-    if (not auth_settings and not settings_service.auth_settings.AUTO_LOGIN) or (
-        auth_settings and auth_settings.auth_type == "apikey"
-    ):
+    project_auth_type = auth_settings.auth_type if auth_settings else None
+    requires_api_key = (not auth_settings and not settings_service.auth_settings.AUTO_LOGIN) or (
+        project_auth_type in {"apikey", "oauth"}
+    )
+
+    if requires_api_key:
         api_key = query_param or header_param
         if not api_key:
+            if project_auth_type == "oauth":
+                detail = (
+                    "This project is configured for OAuth authentication. Direct access to the MCP transport "
+                    "endpoint is not permitted; connect through the configured MCP Composer OAuth endpoint, "
+                    "or provide a valid x-api-key header for backend access."
+                )
+            else:
+                detail = "API key required for this project. Provide x-api-key header or query parameter."
             raise HTTPException(
                 status_code=401,
-                detail="API key required for this project. Provide x-api-key header or query parameter.",
+                detail=detail,
             )
 
         # Validate the API key

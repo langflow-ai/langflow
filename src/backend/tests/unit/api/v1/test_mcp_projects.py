@@ -262,6 +262,114 @@ async def test_handle_project_streamable_messages_success(
     mock_streamable_http_manager.handle_request.assert_called_once()
 
 
+async def _set_project_auth_type(project_id, auth_type: str) -> None:
+    """Persist an auth_settings value for the given project."""
+    from langflow.services.auth.mcp_encryption import encrypt_auth_settings
+
+    async with session_scope() as session:
+        project = await session.get(Folder, project_id)
+        assert project is not None
+        project.auth_settings = encrypt_auth_settings({"auth_type": auth_type})
+        session.add(project)
+
+
+async def test_streamable_rejects_unauthenticated_oauth_project(
+    client: AsyncClient,
+    user_test_project,
+    mock_streamable_http_manager,
+    enable_mcp_composer,
+):
+    """OAuth-configured projects must reject direct unauthenticated /streamable access."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(user_test_project.id, "oauth")
+
+    response = await client.post(
+        f"api/v1/mcp/project/{user_test_project.id}/streamable",
+        json={"type": "test", "content": "message"},
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "OAuth" in response.json()["detail"]
+    mock_streamable_http_manager.handle_request.assert_not_called()
+
+
+async def test_streamable_rejects_unauthenticated_oauth_project_trailing_slash(
+    client: AsyncClient,
+    user_test_project,
+    mock_streamable_http_manager,
+    enable_mcp_composer,
+):
+    """Trailing-slash variant of /streamable should also enforce OAuth auth."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(user_test_project.id, "oauth")
+
+    response = await client.post(
+        f"api/v1/mcp/project/{user_test_project.id}/streamable/",
+        json={"type": "test", "content": "message"},
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    mock_streamable_http_manager.handle_request.assert_not_called()
+
+
+async def test_sse_rejects_unauthenticated_oauth_project(
+    client: AsyncClient,
+    user_test_project,
+    mock_sse_transport,
+    enable_mcp_composer,
+):
+    """OAuth-configured projects must reject direct unauthenticated SSE access."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(user_test_project.id, "oauth")
+
+    response = await client.get(f"api/v1/mcp/project/{user_test_project.id}/sse")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    mock_sse_transport.connect_sse.assert_not_called()
+
+
+async def test_streamable_oauth_project_accepts_valid_api_key(
+    client: AsyncClient,
+    user_test_project,
+    created_api_key,
+    mock_streamable_http_manager,
+    enable_mcp_composer,
+):
+    """Valid API keys must still be accepted for OAuth-configured projects."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(user_test_project.id, "oauth")
+
+    response = await client.post(
+        f"api/v1/mcp/project/{user_test_project.id}/streamable",
+        headers={"x-api-key": created_api_key.api_key},
+        json={"type": "test", "content": "message"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    mock_streamable_http_manager.handle_request.assert_called_once()
+
+
+async def test_streamable_oauth_project_rejects_invalid_api_key(
+    client: AsyncClient,
+    user_test_project,
+    mock_streamable_http_manager,
+    enable_mcp_composer,
+):
+    """Invalid API keys must be rejected for OAuth-configured projects."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(user_test_project.id, "oauth")
+
+    response = await client.post(
+        f"api/v1/mcp/project/{user_test_project.id}/streamable",
+        headers={"x-api-key": "not-a-real-api-key"},
+        json={"type": "test", "content": "message"},
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json()["detail"] == "Invalid API key"
+    mock_streamable_http_manager.handle_request.assert_not_called()
+
+
 async def test_handle_project_messages_success(
     client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers
 ):
