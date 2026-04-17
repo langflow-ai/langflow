@@ -82,7 +82,7 @@ export const usePatchMCPServer: useMutationFunctionType<
         queryKey: ["useGetMCPServers"],
       });
       queryClient.invalidateQueries({
-        queryKey: ["useGetMCPServer", data.name],
+        queryKey: ["useGetMCPServer", variables.name],
       });
       options?.onSuccess?.(data, variables, context);
     },

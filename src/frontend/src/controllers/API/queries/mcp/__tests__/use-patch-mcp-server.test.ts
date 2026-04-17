@@ -83,7 +83,7 @@ describe("usePatchMCPServer", () => {
       queryKey: ["useGetMCPServers"],
     });
     expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["useGetMCPServer", undefined],
+      queryKey: ["useGetMCPServer", "my-server"],
     });
   });
 });
