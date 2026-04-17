@@ -63,7 +63,9 @@ export default function ProvidersTable({
               </TableCell>
               <TableCell>
                 <span className="max-w-[300px] truncate text-sm text-muted-foreground">
-                  {provider.url}
+                  {typeof provider.provider_data?.url === "string"
+                    ? provider.provider_data.url
+                    : "—"}
                 </span>
               </TableCell>
               <TableCell>

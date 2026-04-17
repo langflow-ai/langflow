@@ -3,15 +3,17 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
 import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
-import { ENABLE_DEPLOYMENTS, ENABLE_MCP } from "@/customization/feature-flags";
+import { ENABLE_MCP } from "@/customization/feature-flags";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 
 import type { FlowTabType } from "../../types";
@@ -77,7 +79,9 @@ const HeaderComponent = ({
     setDebouncedSearch(e.target.value);
   };
 
-  const isDeploymentsEnabled = ENABLE_DEPLOYMENTS;
+  const isDeploymentsEnabled = useUtilityStore(
+    (s) => s.featureFlags.wxo_deployments === true,
+  );
 
   // Determine which tabs to show based on feature flags
   const tabTypes = [
@@ -148,10 +152,24 @@ const HeaderComponent = ({
                     : "border-border text-muted-foreground hover:text-foreground"
                 } text-nowrap px-2 pb-2 pt-1 text-mmd`}
               >
-                <div className={flowType === type ? "-mb-px" : ""}>
+                <div
+                  className={cn(
+                    "flex items-center gap-1.5",
+                    flowType === type && "-mb-px",
+                  )}
+                >
                   {type === "mcp"
                     ? t("mainPage.mcpServer")
                     : type.charAt(0).toUpperCase() + type.slice(1)}
+                  {type === "deployments" && (
+                    <Badge
+                      variant="purpleStatic"
+                      size="xq"
+                      className="h-auto shrink-0 rounded px-1 py-px text-[11px] leading-none text-accent-purple-foreground"
+                    >
+                      Beta
+                    </Badge>
+                  )}
                 </div>
               </Button>
             ))}

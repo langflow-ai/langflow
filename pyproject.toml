@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.9.0"
+version = "1.10.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]~=0.9.0",
+    "langflow-base[complete]>=0.10.0",
 ]
 
 
@@ -45,6 +45,8 @@ dev = [
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
     "blockbuster>=1.5.20,<1.6",
+    "types-aiofiles>=24.1.0.20240626",
+    "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
     "locust~=2.40.5",
     "pytest-rerunfailures>=15.0",
@@ -139,12 +141,14 @@ override-dependencies = [
     # Security: Force upgraded versions to prevent transitive deps from pulling older vulnerable versions
     "orjson>=3.11.6",
     "gunicorn>=25.3.0",
-    "pypdf>=6.9.0",  # Force pypdf 6.9+ to prevent vulnerable 6.6.x versions
+    "pypdf>=6.10.0",  # Force pypdf 6.10+ to prevent vulnerable 6.6.x versions
     "nltk>=3.9.4",
     "Markdown>=3.8.0",
     "dynaconf>=3.2.13",
-    "pillow>=12.0.0",  # Force Pillow 12+ to prevent CVE-vulnerable 11.x versions
+    "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
     "aiohttp>=3.13.4",
+    "litellm>=1.83.0",
+    "playwright>=1.58.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
 ]
 
 [project.scripts]
@@ -207,7 +211,7 @@ exclude = [
     "src/backend/base/langflow/alembic/*",
     "src/frontend/tests/assets/*",
     "src/lfx/src/lfx/_assets/component_index.json",
-    "docs/docs/API-Reference/python-examples/**",
+    "docs/**/API-Reference/python-examples/**",
 ]
 line-length = 120
 

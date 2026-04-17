@@ -161,10 +161,13 @@ describe("SidebarSegmentedNav", () => {
 
     NAV_ITEMS.forEach((item) => {
       const tooltips = screen.getAllByTestId("tooltip");
+      // Mirror the t(key) mock: return translation if it exists, otherwise fall back to the key itself
+      const expectedContent =
+        (enTranslations[item.tooltip as keyof typeof enTranslations] as
+          | string
+          | undefined) ?? item.tooltip;
       const itemTooltip = tooltips.find(
-        (tooltip) =>
-          tooltip.getAttribute("data-content") ===
-          enTranslations[item.tooltip as keyof typeof enTranslations],
+        (tooltip) => tooltip.getAttribute("data-content") === expectedContent,
       );
       expect(itemTooltip).toBeInTheDocument();
       expect(itemTooltip).toHaveAttribute("data-side", "right");

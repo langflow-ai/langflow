@@ -25,6 +25,7 @@ from langflow.services.database.models.flow_version_deployment_attachment.model 
 from langflow.services.deps import get_settings_service
 
 MAX_VERSION_RETRIES = 3
+MAX_VERSION_ID_FILTER_SIZE = 50
 
 
 async def get_next_version_number(session: AsyncSession, flow_id: UUID) -> int:
@@ -214,6 +215,30 @@ async def get_flow_version_entry(
 ) -> FlowVersion | None:
     result = await session.exec(select(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.user_id == user_id))
     return result.first()
+
+
+async def get_flow_version_entries_by_ids(
+    session: AsyncSession,
+    version_ids: list[UUID],
+    user_id: UUID,
+) -> dict[UUID, FlowVersion]:
+    """Get flow-version entries for a user using a single query.
+
+    Returns a mapping of ``version_id -> FlowVersion`` for all found ids.
+    Missing ids are omitted from the returned mapping.
+    """
+    if not version_ids:
+        return {}
+    if len(version_ids) > MAX_VERSION_ID_FILTER_SIZE:
+        msg = f"version_ids supports at most {MAX_VERSION_ID_FILTER_SIZE} values."
+        raise ValueError(msg)
+
+    stmt = select(FlowVersion).where(
+        col(FlowVersion.id).in_(version_ids),
+        FlowVersion.user_id == user_id,
+    )
+    rows = (await session.exec(stmt)).all()
+    return {row.id: row for row in rows}
 
 
 async def get_flow_version_entry_or_raise(
