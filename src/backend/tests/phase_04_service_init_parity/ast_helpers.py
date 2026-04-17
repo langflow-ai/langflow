@@ -80,11 +80,16 @@ def extract_gather_task_names(call: ast.Call) -> list[str]:
 
     For ``asyncio.gather(foo(), bar.baz())`` returns ``["foo", "baz"]``.
 
-    Gotcha (Pattern 2 / 04-PATTERNS.md): when Phase 4's SVC-02 work lands, each
-    gather argument is wrapped via ``_safe_step("name", foo())``. The real task
-    callable is ``arg.args[1]``, not ``_safe_step`` itself. This helper unwraps
-    one level so the D-10 review-table enforcement test sees the actual task
-    names.
+    Two levels of unwrapping are applied so the D-10 review-table enforcement
+    test sees the *actual* task names regardless of the transport wrapper used:
+
+    1. ``_safe_step("name", real_call())`` -> look at ``arg.args[1]``. Phase 4
+       Pattern 2 wraps every gather argument this way for per-task exception
+       isolation (see 04-PATTERNS.md).
+    2. ``asyncio.to_thread(fn, ...)`` -> return ``fn``'s name. Sync callables
+       like ``setup_llm_caching`` are wrapped in ``asyncio.to_thread`` so they
+       don't block the event loop while sibling coroutines run. The transport
+       is bookkeeping; the *task identity* is the function being scheduled.
     """
     names: list[str] = []
     for arg in call.args:
@@ -93,9 +98,19 @@ def extract_gather_task_names(call: ast.Call) -> list[str]:
         callee = _extract_callee_name(arg)
         # Unwrap _safe_step("name", real_call()) one level deeper.
         if callee == "_safe_step" and len(arg.args) >= 2 and isinstance(arg.args[1], ast.Call):
-            inner = _extract_callee_name(arg.args[1])
-            if inner is not None:
-                names.append(inner)
+            inner_call = arg.args[1]
+            inner_name = _extract_callee_name(inner_call)
+            # Further unwrap asyncio.to_thread(fn, ...) -> fn's name.
+            if inner_name == "to_thread" and inner_call.args:
+                first = inner_call.args[0]
+                if isinstance(first, ast.Name):
+                    names.append(first.id)
+                    continue
+                if isinstance(first, ast.Attribute):
+                    names.append(first.attr)
+                    continue
+            if inner_name is not None:
+                names.append(inner_name)
             continue
         if callee is not None:
             names.append(callee)
