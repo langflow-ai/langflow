@@ -1298,16 +1298,29 @@ export function recomputeComponentsToUpdateIfNeeded(): void {
   }
 }
 
+/** Normalize a component key: strip spaces, lowercase. Mirrors backend normalize_component_key(). */
+function normalizeComponentKey(name: string): string {
+  return name.replace(/\s+/g, "").toLowerCase();
+}
+
 export function syncNodeTranslations(): void {
   const { nodes } = useFlowStore.getState();
   if (nodes.length === 0) return;
 
   const { data: typesData, types } = useTypesStore.getState();
 
+  // Build normalized lookup: normalize(registryKey) → registryKey
+  // This lets us find "Prompt Template" in the registry when nodeType is "PromptTemplate".
+  const normalizedToRegistryKey: Record<string, string> = {};
+  for (const category of Object.values(typesData)) {
+    for (const registryKey of Object.keys(category as Record<string, unknown>)) {
+      normalizedToRegistryKey[normalizeComponentKey(registryKey)] = registryKey;
+    }
+  }
+
   let noteIndex = 0;
   const updatedNodes = nodes.map((node) => {
     const nodeType = node.data.type;
-    const category = types[nodeType];
 
     // Skip note nodes — translations are handled by useGetNoteTranslationsQuery
     if (node.type === "noteNode") {
@@ -1315,10 +1328,20 @@ export function syncNodeTranslations(): void {
       return node;
     }
 
-    // Skip custom/group nodes not in the types catalog
-    if (!category || !typesData[category]?.[nodeType]) return node;
+    // Resolve category: try exact match first, then normalized match
+    const category =
+      types[nodeType] ?? types[normalizedToRegistryKey[normalizeComponentKey(nodeType)] ?? ""];
 
-    const freshDef = typesData[category][nodeType];
+    // Resolve registry key: exact match first, then normalized match
+    const registryKey =
+      typesData[category]?.[nodeType] !== undefined
+        ? nodeType
+        : (normalizedToRegistryKey[normalizeComponentKey(nodeType)] ?? nodeType);
+
+    // Skip custom/group nodes not in the types catalog
+    if (!category || !typesData[category]?.[registryKey]) return node;
+
+    const freshDef = typesData[category][registryKey];
 
     // Update input field display_names
     const updatedTemplate = { ...node.data.node!.template };

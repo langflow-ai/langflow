@@ -4,11 +4,16 @@ Walks the lfx.components package, reads class-level display_name/description
 and field-level display_names directly from component class definitions
 (no running server needed), and writes a flat GP-compatible JSON file.
 
-Output format (flat dot-notation, same as frontend en.json):
-    "components.ChatInput.display_name": "Chat Input"
-    "components.ChatInput.description": "Get chat inputs from the Playground."
-    "components.ChatInput.inputs.input_value.display_name": "Input Text"
-    "components.ChatInput.outputs.message.display_name": "Chat Message"
+Output format — hybrid key: human-readable path + content-hash suffix:
+    "components.chatinput.display_name.a1b2c3d4": "Chat Input"
+    "components.chatinput.description.f9e8d7c6": "Get chat inputs from the Playground."
+    "components.chatinput.inputs.input_value.display_name.12345678": "Input Text"
+    "components.chatinput.outputs.message.display_name.abcdef01": "Chat Message"
+
+The norm_name is the component registry key lowercased with spaces removed.
+The 8-char suffix is SHA-256(english_value)[:8].  When an English string
+changes, its hash changes, the old key is orphaned, and GP issues a fresh
+translation for the new key on the next upload/download cycle.
 
 Usage:
     # From repo root with the backend virtualenv active:
@@ -21,6 +26,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib
 import json
 import pkgutil
@@ -34,6 +40,24 @@ STARTER_PROJECTS_DIR = Path(__file__).parent.parent.parent / "src/backend/base/l
 
 def _safe_key(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
+
+
+def _normalize_component_key(name: str) -> str:
+    """Normalize component name: remove spaces and lowercase.
+
+    Keeps the key prefix stable across renames like "PromptTemplate" → "Prompt Template".
+    """
+    return name.replace(" ", "").lower()
+
+
+def _content_hash(english: str) -> str:
+    """Return first 8 hex chars of SHA-256(english) — used as the key suffix."""
+    return hashlib.sha256(english.encode()).hexdigest()[:8]
+
+
+def _component_field_key(norm_name: str, field_path: str, english: str) -> str:
+    """Build locale key: components.{norm_name}.{field_path}.{sha256[:8]}"""
+    return f"components.{norm_name}.{field_path}.{_content_hash(english)}"
 
 
 def collect_strings() -> dict[str, str]:
@@ -80,11 +104,13 @@ def collect_strings() -> dict[str, str]:
                 continue
             seen_names.add(component_key)
 
+            norm_key = _normalize_component_key(component_key)
+
             # Tier 1 — component-level
-            flat[f"components.{component_key}.display_name"] = display_name
+            flat[_component_field_key(norm_key, "display_name", display_name)] = display_name
             description = getattr(cls, "description", "") or ""
             if isinstance(description, str) and description:
-                flat[f"components.{component_key}.description"] = description
+                flat[_component_field_key(norm_key, "description", description)] = description
 
             # Tier 2 — input field display_names, info, and placeholder
             for inp in getattr(cls, "inputs", []) or []:
@@ -94,11 +120,11 @@ def collect_strings() -> dict[str, str]:
                 field_placeholder = getattr(inp, "placeholder", None)
                 if isinstance(field_name, str) and field_name:
                     if isinstance(field_display, str) and field_display:
-                        flat[f"components.{component_key}.inputs.{field_name}.display_name"] = field_display
+                        flat[_component_field_key(norm_key, f"inputs.{field_name}.display_name", field_display)] = field_display
                     if isinstance(field_info, str) and field_info:
-                        flat[f"components.{component_key}.inputs.{field_name}.info"] = field_info
+                        flat[_component_field_key(norm_key, f"inputs.{field_name}.info", field_info)] = field_info
                     if isinstance(field_placeholder, str) and field_placeholder:
-                        flat[f"components.{component_key}.inputs.{field_name}.placeholder"] = field_placeholder
+                        flat[_component_field_key(norm_key, f"inputs.{field_name}.placeholder", field_placeholder)] = field_placeholder
 
             # Tier 2 — output display_names and info
             for out in getattr(cls, "outputs", []) or []:
@@ -107,9 +133,9 @@ def collect_strings() -> dict[str, str]:
                 out_info = getattr(out, "info", None)
                 if isinstance(out_name, str) and out_name:
                     if isinstance(out_display, str) and out_display:
-                        flat[f"components.{component_key}.outputs.{out_name}.display_name"] = out_display
+                        flat[_component_field_key(norm_key, f"outputs.{out_name}.display_name", out_display)] = out_display
                     if isinstance(out_info, str) and out_info:
-                        flat[f"components.{component_key}.outputs.{out_name}.info"] = out_info
+                        flat[_component_field_key(norm_key, f"outputs.{out_name}.info", out_info)] = out_info
 
     # Tier 3 — starter project names & descriptions (auto-discovered from JSON files)
     starter_count = 0

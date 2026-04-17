@@ -20,20 +20,27 @@ from gp_client import BASE_URL, GP_INSTANCE, TARGET_LANGS, get_headers, list_bun
 
 DEFAULT_SOURCE = Path(__file__).parent.parent.parent / "src/backend/base/langflow/locales/en.json"
 GP_BACKEND_BUNDLE = os.getenv("GP_BACKEND_BUNDLE", "langflow-backend")
-REQUEST_TIMEOUT = 30
+REQUEST_TIMEOUT = 60
+CHUNK_SIZE = 500
 
 
-def upload_backend_strings(strings: dict, lang: str = "en") -> dict:
+def upload_backend_strings(strings: dict, lang: str = "en") -> None:
+    """Upload strings in chunks to avoid server read timeouts on large payloads."""
     url = f"{BASE_URL}/{GP_INSTANCE}/v2/bundles/{GP_BACKEND_BUNDLE}/{lang}"
-    response = requests.put(
-        url,
-        headers=get_headers(url, "PUT", strings),
-        json=strings,
-        verify=False,  # noqa: S501
-        timeout=REQUEST_TIMEOUT,
-    )
-    response.raise_for_status()
-    return response.json()
+    items = list(strings.items())
+    total_chunks = (len(items) + CHUNK_SIZE - 1) // CHUNK_SIZE
+    for i in range(0, len(items), CHUNK_SIZE):
+        chunk = dict(items[i : i + CHUNK_SIZE])
+        chunk_num = i // CHUNK_SIZE + 1
+        print(f"  Uploading chunk {chunk_num}/{total_chunks} ({len(chunk)} strings)...")
+        response = requests.put(
+            url,
+            headers=get_headers(url, "PUT", chunk),
+            json=chunk,
+            verify=False,  # noqa: S501
+            timeout=REQUEST_TIMEOUT,
+        )
+        response.raise_for_status()
 
 
 def create_backend_bundle(source_lang: str = "en") -> dict:
@@ -71,9 +78,9 @@ def main() -> None:
     else:
         print(f"Bundle '{GP_BACKEND_BUNDLE}' already exists, skipping creation.")
 
-    print(f"Uploading strings to GP bundle '{GP_BACKEND_BUNDLE}'...")
-    result = upload_backend_strings(strings)
-    print(f"Done: {result}")
+    print(f"Uploading {len(strings)} strings to GP bundle '{GP_BACKEND_BUNDLE}' in chunks of {CHUNK_SIZE}...")
+    upload_backend_strings(strings)
+    print("Done.")
 
 
 if __name__ == "__main__":

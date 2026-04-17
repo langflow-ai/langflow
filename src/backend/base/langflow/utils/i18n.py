@@ -3,9 +3,28 @@
 Loads flat JSON locale files from langflow/locales/ and provides a translate()
 function used to substitute component display_names in API responses.
 
-Locale files use the same flat dot-notation format as the frontend en.json:
-    "components.ChatInput.display_name": "Chat Input"
-    "components.ChatInput.inputs.role.display_name": "Role"
+## Component key scheme
+
+Component strings use a hybrid key: human-readable path + content hash suffix.
+
+    "components.{norm_name}.{field_path}.{sha256[:8]}"
+
+Examples:
+    "components.prompttemplate.display_name.a1b2c3d4": "Prompt Template"
+    "components.prompttemplate.inputs.template.display_name.f9e8d7c6": "Template"
+    "components.chatinput.outputs.message.display_name.12345678": "Chat Message"
+
+The norm_name is the component registry key with spaces removed and lowercased
+("Prompt Template" → "prompttemplate"), making it stable across space/case renames.
+
+The 8-char SHA-256 suffix is derived from the English value. When a string
+changes (e.g. "Prompt Template" → "New Prompt Template"), the hash suffix
+changes, the old key becomes orphaned, and the new key is picked up by GP on
+the next upload/translate/download cycle — guaranteeing fresh translations.
+
+Other namespaces keep human-readable keys:
+    "starter_flows.{slug}.name"
+    "notes.{hash}"
 
 Fallback chain: requested locale → "en" → raw default string.
 """
@@ -13,6 +32,7 @@ Fallback chain: requested locale → "en" → raw default string.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import re
 import threading
@@ -21,7 +41,6 @@ from typing import Any
 
 _LOCALES_DIR = Path(__file__).parent.parent / "locales"
 
-# { "en": { "components.ChatInput.display_name": "Chat Input", ... }, "fr": {...} }
 _translations: dict[str, dict[str, str]] = {}
 _translations_lock = threading.Lock()
 
@@ -80,6 +99,41 @@ def _safe_flow_key(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
 
 
+def normalize_component_key(name: str) -> str:
+    """Normalize a component name for frontend lookup and locale key prefixes.
+
+    Removes all whitespace and lowercases, so that "Prompt Template",
+    "PromptTemplate", and "prompt template" all map to "prompttemplate".
+    Used both as the locale key prefix and in the frontend syncNodeTranslations()
+    to resolve stored node.data.type values against the live registry.
+    """
+    return name.replace(" ", "").lower()
+
+
+def _content_hash(english: str) -> str:
+    """Return the first 8 hex chars of SHA-256(english).
+
+    Used as a suffix on component locale keys so that any change to the English
+    source string produces a new key, forcing GP to issue a fresh translation.
+    """
+    return hashlib.sha256(english.encode()).hexdigest()[:8]
+
+
+def component_field_key(norm_name: str, field_path: str, english: str) -> str:
+    """Build the full locale key for a component field.
+
+    Format: components.{norm_name}.{field_path}.{sha256[:8]}
+
+    Args:
+        norm_name:  Normalized component name (no spaces, lowercase).
+        field_path: Dot-separated path to the field, e.g.
+                    "display_name", "inputs.template.display_name",
+                    "outputs.message.display_name".
+        english:    The current English source string (used to compute the hash).
+    """
+    return f"components.{norm_name}.{field_path}.{_content_hash(english)}"
+
+
 def translate_starter_flows(flow_reads: list, locale: str) -> list:
     """Return copies of flow_reads with name/description translated for locale."""
     result = []
@@ -93,7 +147,6 @@ def translate_starter_flows(flow_reads: list, locale: str) -> list:
         )
         result.append(flow_copy)
     return result
-
 
 
 def translate_flow_notes(nodes: list[dict], locale: str) -> list[dict]:
@@ -121,10 +174,13 @@ def translate_component_dict(all_types: dict[str, Any], locale: str) -> dict[str
     """Return a copy of all_types with display_names substituted for locale.
 
     Never mutates the original dict (which is the shared component cache).
-    Only translates:
+    Translates:
       - component-level display_name and description
-      - template field display_names (inputs)
-      - output display_names
+      - template field display_names, info, and placeholders (inputs)
+      - output display_names and info
+
+    Keys are hybrid: human-readable path + content hash suffix.
+    See module docstring for key format details.
 
     Args:
         all_types: The cached component dict from get_and_cache_all_types_dict()
@@ -138,36 +194,50 @@ def translate_component_dict(all_types: dict[str, Any], locale: str) -> dict[str
         result[category] = {}
         for name, data in components.items():
             translated: dict[str, Any] = {**data}
+            norm = normalize_component_key(name)
 
             # Tier 1 — component-level strings
-            translated["display_name"] = translate(
-                f"components.{name}.display_name", locale, data.get("display_name", "")
-            )
-            translated["description"] = translate(f"components.{name}.description", locale, data.get("description", ""))
+            display_name_en = data.get("display_name", "")
+            description_en = data.get("description", "")
+            if display_name_en:
+                translated["display_name"] = translate(
+                    component_field_key(norm, "display_name", display_name_en),
+                    locale,
+                    display_name_en,
+                )
+            if description_en:
+                translated["description"] = translate(
+                    component_field_key(norm, "description", description_en),
+                    locale,
+                    description_en,
+                )
 
-            # Tier 2 — template field display_names and info (inputs serialised as dicts)
+            # Tier 2 — template field display_names, info, and placeholders
             if "template" in data and isinstance(data["template"], dict):
                 translated["template"] = {**data["template"]}
                 for field_name, field in data["template"].items():
                     if isinstance(field, dict):
                         field_updates = {}
-                        if "display_name" in field:
+                        field_display_en = field.get("display_name", "")
+                        field_info_en = field.get("info", "")
+                        field_placeholder_en = field.get("placeholder", "")
+                        if field_display_en:
                             field_updates["display_name"] = translate(
-                                f"components.{name}.inputs.{field_name}.display_name",
+                                component_field_key(norm, f"inputs.{field_name}.display_name", field_display_en),
                                 locale,
-                                field["display_name"],
+                                field_display_en,
                             )
-                        if "info" in field and field["info"]:
+                        if field_info_en:
                             field_updates["info"] = translate(
-                                f"components.{name}.inputs.{field_name}.info",
+                                component_field_key(norm, f"inputs.{field_name}.info", field_info_en),
                                 locale,
-                                field["info"],
+                                field_info_en,
                             )
-                        if "placeholder" in field and field["placeholder"]:
+                        if field_placeholder_en:
                             field_updates["placeholder"] = translate(
-                                f"components.{name}.inputs.{field_name}.placeholder",
+                                component_field_key(norm, f"inputs.{field_name}.placeholder", field_placeholder_en),
                                 locale,
-                                field["placeholder"],
+                                field_placeholder_en,
                             )
                         if field_updates:
                             translated["template"][field_name] = {**field, **field_updates}
@@ -177,20 +247,22 @@ def translate_component_dict(all_types: dict[str, Any], locale: str) -> dict[str
                 translated["outputs"] = []
                 for out in data["outputs"]:
                     out_name = out.get("name", "")
-                    out_updates = {
-                        "display_name": translate(
-                            f"components.{name}.outputs.{out_name}.display_name",
+                    out_display_en = out.get("display_name", "")
+                    out_info_en = out.get("info", "")
+                    out_updates = {}
+                    if out_display_en:
+                        out_updates["display_name"] = translate(
+                            component_field_key(norm, f"outputs.{out_name}.display_name", out_display_en),
                             locale,
-                            out.get("display_name", ""),
-                        ),
-                    }
-                    if out.get("info"):
-                        out_updates["info"] = translate(
-                            f"components.{name}.outputs.{out_name}.info",
-                            locale,
-                            out["info"],
+                            out_display_en,
                         )
-                    translated["outputs"].append({**out, **out_updates})
+                    if out_info_en:
+                        out_updates["info"] = translate(
+                            component_field_key(norm, f"outputs.{out_name}.info", out_info_en),
+                            locale,
+                            out_info_en,
+                        )
+                    translated["outputs"].append({**out, **out_updates} if out_updates else out)
 
             result[category][name] = translated
     return result
