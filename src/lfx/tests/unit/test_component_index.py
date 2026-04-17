@@ -1031,3 +1031,192 @@ class TestIDX03ReadPath:
         assert snapshot == expected, (
             f"IDX-03 async refactor caused parity drift on five_types.json.\n  got: {snapshot}\n  expected: {expected}"
         )
+
+
+@pytest.mark.asyncio
+class TestIDX07StaleIndexWarning:
+    """Phase 2 / IDX-07: read-time stale-index warning via structlog on version mismatch.
+
+    Covers:
+      * Warning fires on disk-cache version != installed version.
+      * Warning silent when versions match.
+      * Warning silent when no disk cache file exists (clean-install / built-in only).
+      * Warning silent when disk cache file is corrupt (handled downstream).
+      * Deep parity guard on smallest.json after IDX-07 lands.
+
+    Per plan 02-06, the warning is captured via a MagicMock on
+    ``ci.logger.warning`` rather than ``caplog`` because ``logger.warning`` here is
+    a structlog BoundLogger method -- caplog captures records bridged to stdlib
+    logging, but only after structlog's BoundLogger runs its processor chain, and
+    the text match here is more robust against structlog-config variance. This
+    mirrors the plan's note on caplog fallback.
+    """
+
+    async def test_warning_fires_on_version_mismatch(self, tmp_path, monkeypatch):
+        """Disk cache stamped with old version + installed is new -> logger.warning fires with all three fields."""
+        from unittest.mock import MagicMock
+
+        from lfx.interface import components as ci
+
+        # Prepare a real-looking disk cache with "old-1.0" version + valid SHA
+        cache_file = tmp_path / "component_index.json"
+        index = {
+            "version": "old-1.0",
+            "metadata": {"num_modules": 0, "num_components": 0},
+            "entries": [],
+        }
+        payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
+        index["sha256"] = hashlib.sha256(payload).hexdigest()
+        cache_file.write_bytes(orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2))
+
+        monkeypatch.setattr(ci, "_get_cache_path", lambda: cache_file)
+        _reset_component_cache_singleton(monkeypatch)
+
+        # Patch installed version so mismatch is deterministic
+        monkeypatch.setattr("importlib.metadata.version", lambda _name: "new-2.0")
+
+        # Stub import_langflow_components + _determine_loading_strategy so the test does
+        # not do a real ~hundred-module scan (we are testing the WARNING, not the cache build).
+        async def _fake_import_langflow_components(*_a, **_kw):
+            return {"components": {}}
+
+        async def _fake_determine_loading_strategy(*_a, **_kw):
+            return {}
+
+        monkeypatch.setattr(ci, "import_langflow_components", _fake_import_langflow_components)
+        monkeypatch.setattr(ci, "_determine_loading_strategy", _fake_determine_loading_strategy)
+
+        # Capture logger.warning calls via MagicMock -- structlog-agnostic.
+        warning_mock = MagicMock()
+        monkeypatch.setattr(ci.logger, "warning", warning_mock)
+
+        settings = _fake_settings_service()
+        await ci.get_and_cache_all_types_dict(settings)
+
+        # Find the stale-index warning among any other warnings (e.g. downstream).
+        stale_calls = [
+            call for call in warning_mock.call_args_list if call.args and "stale component index" in str(call.args[0])
+        ]
+        assert len(stale_calls) == 1, (
+            f"expected exactly 1 stale-index warning, got {len(stale_calls)}. "
+            f"All warning calls: {warning_mock.call_args_list!r}"
+        )
+        fmt, *args = stale_calls[0].args
+        # Format-substitute to verify the three fields made it into the message.
+        rendered = fmt % tuple(args)
+        assert "old-1.0" in rendered, f"warning missing cached version: {rendered!r}"
+        assert "new-2.0" in rendered, f"warning missing installed version: {rendered!r}"
+        assert str(cache_file) in rendered, f"warning missing cache file path: {rendered!r}"
+
+    async def test_warning_silent_on_version_match(self, tmp_path, monkeypatch):
+        """Cached and installed versions identical -> no warning."""
+        from unittest.mock import MagicMock
+
+        from lfx.interface import components as ci
+
+        cache_file = tmp_path / "component_index.json"
+        index = {
+            "version": "same-1.0",
+            "metadata": {"num_modules": 0, "num_components": 0},
+            "entries": [],
+        }
+        payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
+        index["sha256"] = hashlib.sha256(payload).hexdigest()
+        cache_file.write_bytes(orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2))
+
+        monkeypatch.setattr(ci, "_get_cache_path", lambda: cache_file)
+        _reset_component_cache_singleton(monkeypatch)
+        monkeypatch.setattr("importlib.metadata.version", lambda _name: "same-1.0")
+
+        async def _fake_import(*_a, **_kw):
+            return {"components": {}}
+
+        async def _fake_strategy(*_a, **_kw):
+            return {}
+
+        monkeypatch.setattr(ci, "import_langflow_components", _fake_import)
+        monkeypatch.setattr(ci, "_determine_loading_strategy", _fake_strategy)
+
+        warning_mock = MagicMock()
+        monkeypatch.setattr(ci.logger, "warning", warning_mock)
+
+        await ci.get_and_cache_all_types_dict(_fake_settings_service())
+
+        stale_calls = [
+            call for call in warning_mock.call_args_list if call.args and "stale component index" in str(call.args[0])
+        ]
+        assert not stale_calls, (
+            f"expected NO stale-index warning on version match, got {len(stale_calls)}: {stale_calls!r}"
+        )
+
+    async def test_warning_silent_when_cache_file_absent(self, tmp_path, monkeypatch):
+        """Clean install (no disk cache file) -> no warning (built-in shipped index only)."""
+        from unittest.mock import MagicMock
+
+        from lfx.interface import components as ci
+
+        absent_cache = tmp_path / "definitely_not_here.json"
+        assert not absent_cache.exists()
+        monkeypatch.setattr(ci, "_get_cache_path", lambda: absent_cache)
+        _reset_component_cache_singleton(monkeypatch)
+        # Pick a real-ish installed version that would mismatch anything
+        monkeypatch.setattr("importlib.metadata.version", lambda _name: "1.0.0")
+
+        async def _fake_import(*_a, **_kw):
+            return {"components": {}}
+
+        async def _fake_strategy(*_a, **_kw):
+            return {}
+
+        monkeypatch.setattr(ci, "import_langflow_components", _fake_import)
+        monkeypatch.setattr(ci, "_determine_loading_strategy", _fake_strategy)
+
+        warning_mock = MagicMock()
+        monkeypatch.setattr(ci.logger, "warning", warning_mock)
+
+        await ci.get_and_cache_all_types_dict(_fake_settings_service())
+
+        stale_calls = [
+            call for call in warning_mock.call_args_list if call.args and "stale component index" in str(call.args[0])
+        ]
+        assert not stale_calls, f"expected NO stale-index warning when disk cache absent, got: {stale_calls!r}"
+
+    async def test_warning_silent_on_corrupt_cache(self, tmp_path, monkeypatch):
+        """Corrupt disk cache -> no IDX-07 warning (downstream handles corruption separately)."""
+        from unittest.mock import MagicMock
+
+        from lfx.interface import components as ci
+
+        cache_file = tmp_path / "component_index.json"
+        cache_file.write_bytes(b"this is not json at all {{{ garbage")
+
+        monkeypatch.setattr(ci, "_get_cache_path", lambda: cache_file)
+        _reset_component_cache_singleton(monkeypatch)
+        monkeypatch.setattr("importlib.metadata.version", lambda _name: "1.0.0")
+
+        async def _fake_import(*_a, **_kw):
+            return {"components": {}}
+
+        async def _fake_strategy(*_a, **_kw):
+            return {}
+
+        monkeypatch.setattr(ci, "import_langflow_components", _fake_import)
+        monkeypatch.setattr(ci, "_determine_loading_strategy", _fake_strategy)
+
+        warning_mock = MagicMock()
+        monkeypatch.setattr(ci.logger, "warning", warning_mock)
+
+        await ci.get_and_cache_all_types_dict(_fake_settings_service())
+
+        stale_calls = [
+            call for call in warning_mock.call_args_list if call.args and "stale component index" in str(call.args[0])
+        ]
+        assert not stale_calls, f"expected NO IDX-07 stale-index warning on corrupt cache; got: {stale_calls!r}"
+
+    async def test_parity_smallest_after_idx07(self):
+        """Deep parity guard after IDX-07 read-time check is in place."""
+        fixture = _PARITY_FIXTURES_DIR / "smallest.json"
+        expected_path = _PARITY_FIXTURES_DIR / "smallest.snapshot.json"
+        snapshot = await _capture_parity_snapshot(fixture)
+        expected = json.loads(expected_path.read_text())
+        assert snapshot == expected, f"IDX-07 caused parity drift.\n  got: {snapshot}\n  expected: {expected}"
