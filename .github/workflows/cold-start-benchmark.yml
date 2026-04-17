@@ -74,9 +74,59 @@ jobs:
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "Resolved mode: $mode"
 
+  # Build benchmarks-lean AND benchmarks-lean-uncompiled once, save both as a
+  # tarball, upload as an artifact. Matrix jobs `docker load` it. Cuts wall-
+  # clock ~6 minutes and avoids the "--skip-build needs both images present"
+  # failure mode.
+  build-images:
+    name: "Build images"
+    needs: mode
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Build benchmarks-lean
+        run: |
+          docker build \
+            --build-arg BENCH_VARIANT=lean \
+            -t benchmarks-lean \
+            -f src/backend/tests/benchmarks/Dockerfile \
+            .
+
+      - name: Build benchmarks-lean-uncompiled (strip .pyc from benchmarks-lean)
+        run: |
+          # Mirrors driver.py's Option A1 wrapper Dockerfile (plan 02-06 /
+          # 01-CONTEXT.md D-11a/D-12a). Produces the "uncompiled" variant by
+          # deleting __pycache__/.pyc/.pyo from the landed image's /app/.venv.
+          cat > /tmp/Dockerfile.uncompiled <<'DOCKERFILE'
+          FROM benchmarks-lean
+          RUN find /app/.venv -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true \
+              && find /app/.venv -name '*.pyc' -delete \
+              && find /app/.venv -name '*.pyo' -delete
+          DOCKERFILE
+          docker build -t benchmarks-lean-uncompiled -f /tmp/Dockerfile.uncompiled .
+
+      - name: Save both images to tarball
+        run: |
+          docker save benchmarks-lean benchmarks-lean-uncompiled | gzip > /tmp/images.tar.gz
+          ls -la /tmp/images.tar.gz
+
+      - name: Upload images artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: bench-images
+          path: /tmp/images.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+
   scenario:
     name: "bench:${{ matrix.scenario }}"
-    needs: mode
+    needs: [mode, build-images]
     strategy:
       fail-fast: false
       matrix:
@@ -86,8 +136,7 @@ jobs:
           - lfx_with_flow_prebaked
           # langflow_run_http_ready is a known-flaky scenario on CI until the
           # structlog marker fix lands (Phase 4/5). `continue-on-error: true`
-          # at the step level and the `allow_known_flaky` gate in the
-          # aggregation job keep it from breaking the gate while still
+          # at the step level keeps it from failing the gate while still
           # surfacing its status as a CI annotation.
           - langflow_run_http_ready
     runs-on: ubuntu-latest
@@ -118,13 +167,16 @@ jobs:
         run: |
           uv sync --group benchmarks
 
-      - name: Build benchmarks-lean image
+      - name: Download prebuilt images
+        uses: actions/download-artifact@v6
+        with:
+          name: bench-images
+          path: /tmp
+
+      - name: Load images into docker
         run: |
-          docker build \
-            --build-arg BENCH_VARIANT=lean \
-            -t benchmarks-lean \
-            -f src/backend/tests/benchmarks/Dockerfile \
-            .
+          gunzip -c /tmp/images.tar.gz | docker load
+          docker images | grep benchmarks
 
       - name: Run scenario
         id: bench
