@@ -7,6 +7,8 @@ import tempfile
 import warnings
 from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as version_metadata
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from urllib.parse import urlencode
@@ -37,6 +39,13 @@ from langflow.initial_setup.setup import (
     load_bundles_from_urls,
     load_flows_from_directory,
     sync_flows_from_fs,
+)
+from langflow.initial_setup.starter_project_hash import (
+    HASH_FILENAME,
+    compute_starter_projects_hash,
+    is_force_resync_requested,
+    read_hash_file_safe,
+    write_hash_file_safe,
 )
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
@@ -213,10 +222,30 @@ def get_lifespan(*, fix_migration=False, version=None):
             lock = FileLock(lock_file, timeout=1)
             try:
                 with lock:
-                    await create_or_update_starter_projects(all_types_dict)
-                    await logger.adebug(
-                        f"Starter projects created/updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
-                    )
+                    # SVC-01: hash-gated re-sync. Hash read / compute / write all run
+                    # inside the FileLock to preserve multi-worker TOCTOU safety (the
+                    # other worker either wrote the up-to-date hash before releasing
+                    # the lock, or the lock contention path fires below).
+                    config_dir = Path(get_settings_service().settings.config_dir)
+                    hash_path = config_dir / HASH_FILENAME
+                    starter_folder = anyio.Path(__file__).parent / "initial_setup" / "starter_projects"
+                    expected = await compute_starter_projects_hash(starter_folder)
+                    actual = await read_hash_file_safe(hash_path)
+                    if is_force_resync_requested() or actual != expected:
+                        await create_or_update_starter_projects(all_types_dict)
+                        try:
+                            pkg_v = version_metadata("lfx")
+                        except PackageNotFoundError:
+                            pkg_v = "unknown"
+                        await write_hash_file_safe(hash_path, expected, pkg_v)
+                        await logger.adebug(
+                            f"Starter projects created/updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                        )
+                    else:
+                        await logger.adebug(
+                            f"Starter projects hash matches; skipped re-sync in "
+                            f"{asyncio.get_event_loop().time() - current_time:.2f}s"
+                        )
             except TimeoutError:
                 # Another process has the lock
                 await logger.adebug("Another worker is creating starter projects, skipping")

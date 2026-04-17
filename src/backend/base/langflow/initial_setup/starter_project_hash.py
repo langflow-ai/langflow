@@ -18,12 +18,13 @@ from __future__ import annotations
 import hashlib
 import os
 from importlib.metadata import PackageNotFoundError, version
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import aiofiles
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
     from pathlib import Path
 
     import anyio
@@ -123,3 +124,38 @@ def is_force_resync_requested() -> bool:
     path runs normally.
     """
     return os.getenv("LANGFLOW_FORCE_STARTER_RESYNC", "").strip().lower() in ("1", "true", "yes")
+
+
+async def run_starter_projects_hash_gate(
+    *,
+    starter_folder: anyio.Path,
+    hash_path: Path,
+    sync_fn: Callable[[], Awaitable[Any]],
+) -> bool:
+    """Execute the SVC-01 hash-gated starter-project sync.
+
+    This helper encapsulates the hash compare / sync / write sequence so both
+    ``main.py`` (inside its ``FileLock``) and the Phase 4 parity tests invoke
+    the exact same code path. ``sync_fn`` is a zero-arg coroutine factory the
+    caller uses to pass in ``create_or_update_starter_projects(all_types_dict)``
+    with ``all_types_dict`` already bound.
+
+    Returns ``True`` when the full re-sync ran (cache miss or force-resync),
+    ``False`` when the hash matched and the sync was skipped.
+
+    The caller is responsible for wrapping this in its own ``FileLock`` /
+    error-handling context (TOCTOU safety per Pitfall 2). The gate itself
+    does not manage locking.
+    """
+    expected = await compute_starter_projects_hash(starter_folder)
+    actual = await read_hash_file_safe(hash_path)
+    if is_force_resync_requested() or actual != expected:
+        await sync_fn()
+        try:
+            pkg_v = version("lfx")
+        except PackageNotFoundError:
+            pkg_v = "unknown"
+        await write_hash_file_safe(hash_path, expected, pkg_v)
+        return True
+    await logger.adebug("Starter projects hash matches; skipped re-sync")
+    return False
