@@ -82,6 +82,20 @@ class TestIMP02NoPandas:
         _assert_modules_absent("from lfx.graph.graph.base import Graph", set(self.HEAVY))
 
 
+class TestIMP07NoLangchainCore:
+    """IMP-07: importing lfx.field_typing.constants does not pull langchain_core/classic."""
+
+    HEAVY = frozenset({"langchain_core", "langchain_classic", "langchain_text_splitters"})
+
+    def test_constants_import_does_not_pull_langchain(self):
+        _assert_modules_absent("import lfx.field_typing.constants", set(self.HEAVY))
+
+    def test_constants_import_does_not_pull_langchain_via_field_typing(self):
+        # `from lfx.field_typing import Tool` currently triggers constants load
+        # via the existing lazy dispatch. After IMP-07 that remains safe too.
+        _assert_modules_absent("import lfx.field_typing", set(self.HEAVY))
+
+
 class TestIMP03NoPIL:
     """IMP-03: PIL is not loaded at module scope on the Graph hot path.
 
