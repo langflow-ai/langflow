@@ -341,6 +341,76 @@ class TestMCPSessionManager:
         server_key = session_manager._get_server_key(connection_params, "streamable_http")
         assert f"{server_key}_0" in session_manager.sessions_by_server[server_key]["sessions"]
 
+    async def test_cleanup_does_not_wipe_cross_server_handoff(self, session_manager):
+        """Concurrent reconnect to a different server must not be wiped out.
+
+        Regression test for a cross-server race on `_context_to_session`:
+        when `_cleanup_session(ctx)` is running for server A and a concurrent
+        `get_session(ctx, serverB)` re-points the same context at server B,
+        the cleanup previously ran `self._context_to_session.pop(context_id)`
+        unconditionally — destroying the fresh mapping. The new B session
+        then had refcount 1 forever, leaking on subsequent disconnect.
+        """
+        server_a_params = {"url": "http://a.example.test/sse", "headers": {}}
+        server_b_params = {"url": "http://b.example.test/sse", "headers": {}}
+        server_key_a = session_manager._get_server_key(server_a_params, "streamable_http")
+        server_key_b = session_manager._get_server_key(server_b_params, "streamable_http")
+
+        mock_session_a = AsyncMock()
+        mock_task_a = AsyncMock()
+        mock_task_a.done = MagicMock(return_value=False)
+        mock_task_a.cancel = MagicMock()
+        mock_session_b = AsyncMock()
+        mock_task_b = AsyncMock()
+        mock_task_b.done = MagicMock(return_value=False)
+        mock_task_b.cancel = MagicMock()
+
+        async def fake_create(_session_id, params, _preferred_transport=None):
+            if params["url"] == server_a_params["url"]:
+                return mock_session_a, mock_task_a, "streamable_http"
+            return mock_session_b, mock_task_b, "streamable_http"
+
+        with (
+            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
+            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
+        ):
+            # Establish context on server A.
+            s_a = await session_manager.get_session("ctx_move", server_a_params, "streamable_http")
+            assert s_a is mock_session_a
+
+            # Pause cleanup-of-A inside its lock so the concurrent
+            # get-for-B can race the context_to_session.pop().
+            release = asyncio.Event()
+            original_cleanup = session_manager._cleanup_session_by_id
+
+            async def slow_cleanup(server_key, session_id):
+                if server_key == server_key_a:
+                    # Let the B-reconnect proceed while we hold server_A's lock.
+                    await release.wait()
+                await original_cleanup(server_key, session_id)
+
+            with patch.object(session_manager, "_cleanup_session_by_id", side_effect=slow_cleanup):
+                cleanup_task = asyncio.create_task(session_manager._cleanup_session("ctx_move"))
+                # Give cleanup a chance to enter server_A's lock and start awaiting.
+                await asyncio.sleep(0)
+
+                # Concurrent reconnect to server B for the same context. This
+                # runs under server_B's lock, so it is not blocked.
+                s_b = await session_manager.get_session("ctx_move", server_b_params, "streamable_http")
+                assert s_b is mock_session_b
+
+                # Now let the A-cleanup finish. With the CAS check, it must
+                # NOT pop the fresh (server_B, _) mapping.
+                release.set()
+                await cleanup_task
+
+        # The fresh B mapping survives.
+        assert session_manager._context_to_session.get("ctx_move") == (server_key_b, f"{server_key_b}_0")
+        # A's session is gone; B's session is live with refcount 1.
+        assert f"{server_key_a}_0" not in session_manager.sessions_by_server.get(server_key_a, {}).get("sessions", {})
+        assert f"{server_key_b}_0" in session_manager.sessions_by_server[server_key_b]["sessions"]
+        assert session_manager._session_refcount.get((server_key_b, f"{server_key_b}_0")) == 1
+
     async def test_server_lock_and_counter_reclaimed_when_unused(self, session_manager):
         """Per-server locks and id counters must be reclaimed with the server.
 

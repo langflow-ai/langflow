@@ -1365,6 +1365,15 @@ class MCPSessionManager:
         Acquires the per-server lock so concurrent `get_session()` calls don't
         observe a half-torn-down session (e.g. returning a ClientSession whose
         background task was just cancelled out from under them).
+
+        Uses a compare-and-swap on `_context_to_session[context_id]` before
+        popping it: if a concurrent `get_session()` has re-pointed the same
+        context at a *different* server (e.g. a component reconnecting to a
+        new MCP URL while the old disconnect is in flight), we must not wipe
+        out the fresh mapping — otherwise the new session leaks. The per-
+        server lock doesn't cover this case because the new and old sessions
+        live under different server_keys, so the two operations run in
+        parallel.
         """
         mapping = self._context_to_session.get(context_id)
         if not mapping:
@@ -1382,8 +1391,12 @@ class MCPSessionManager:
             else:
                 self._session_refcount[ref_key] = remaining
 
-            # Remove the mapping for this context
-            self._context_to_session.pop(context_id, None)
+            # CAS: only drop the context->session mapping if it still points
+            # at the session we just cleaned up. The get() and pop() below run
+            # synchronously with no `await` between them, so no other coroutine
+            # can interleave and re-point the mapping after our check.
+            if self._context_to_session.get(context_id) == (server_key, session_id):
+                self._context_to_session.pop(context_id, None)
 
 
 class MCPStdioClient:
