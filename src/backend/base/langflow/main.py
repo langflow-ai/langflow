@@ -207,6 +207,11 @@ def get_lifespan(*, fix_migration=False, version=None):
         try:
             start_time = asyncio.get_event_loop().time()
 
+            # SVC-03 (D-12): Event constructed inside lifespan so it binds to the running loop.
+            # Module-level asyncio.Event() would leak across pytest event loops (Pitfall 1, same
+            # root cause as IDX-01's asyncio.Lock issue on Python 3.13/3.14).
+            starter_projects_ready_event = asyncio.Event()
+
             await logger.adebug("Initializing services")
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
@@ -304,6 +309,11 @@ def get_lifespan(*, fix_migration=False, version=None):
                             f"Starter projects hash matches; skipped re-sync in "
                             f"{asyncio.get_event_loop().time() - current_time:.2f}s"
                         )
+                    # SVC-03 producer (D-11): fire on both match and miss paths inside the
+                    # FileLock, but NOT in a finally clause. If create_or_update_starter_projects
+                    # or the hash read raises, DO NOT set the event -- let the 60s consumer
+                    # timeout (D-13) surface the failure as warn-and-continue degraded mode.
+                    starter_projects_ready_event.set()
             except TimeoutError:
                 # Another process has the lock
                 await logger.adebug("Another worker is creating starter projects, skipping")
@@ -368,7 +378,17 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
             async def delayed_init_mcp_servers():
-                await asyncio.sleep(10.0)  # Increased delay to allow starter projects to be created
+                # SVC-03 consumer (D-11/D-13): replace the previously hardcoded 10-second
+                # coordination sleep with a bounded wait on the starter_projects_ready_event
+                # set by the FileLock producer. On timeout, log a warning and proceed with
+                # MCP init anyway (warn-and-continue degraded mode per D-13). Closure captures
+                # the Event because this function is defined inline inside lifespan (Pitfall 6).
+                try:
+                    await asyncio.wait_for(starter_projects_ready_event.wait(), timeout=60.0)
+                except asyncio.TimeoutError:
+                    await logger.awarning(
+                        "Starter-projects readiness timeout (60s); proceeding with MCP init regardless"
+                    )
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Loading MCP servers for projects")
                 try:
@@ -376,7 +396,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                     await logger.adebug(f"MCP servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
                 except Exception as e:  # noqa: BLE001
                     await logger.awarning(f"First MCP server initialization attempt failed: {e}")
-                    await asyncio.sleep(5.0)  # Increased retry delay
+                    await asyncio.sleep(5.0)  # D-14: retain transient-DB-error retry guard
                     current_time = asyncio.get_event_loop().time()
                     await logger.adebug("Retrying MCP servers initialization")
                     try:
