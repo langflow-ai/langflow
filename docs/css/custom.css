@@ -101,8 +101,11 @@ html[data-theme="light"] .navbar__logo {
 
 /* Content area - breathing room */
 [class*="docMainContainer"] {
-  padding-left: 3rem;
-  max-width: 75% !important;
+  padding: 0 3rem;
+}
+
+[class*="docItemWrapper"] {
+  margin: 0 auto;
 }
 
 /* Prev/Next nav — fills the full content column width */
@@ -134,7 +137,7 @@ html[data-theme="light"] .navbar__logo {
   vertical-align: middle;
 }
 
-/* Overall layout - constrain width but keep left-anchored so sidebar hugs the edge */
+/* Overall layout - centered across all screen sizes */
 .main-wrapper {
   max-width: 1600px;
   margin: 0 auto;
@@ -142,8 +145,8 @@ html[data-theme="light"] .navbar__logo {
 
 @media (min-width: 1600px) {
   .main-wrapper {
-    max-width: 100%;
-    margin: 0;
+    max-width: 1760px;
+    margin: 0 auto;
   }
 
   .menu__link {
