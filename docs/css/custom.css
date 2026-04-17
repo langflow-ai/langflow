@@ -99,10 +99,10 @@ html[data-theme="light"] .navbar__logo {
   }
 }
 
-/* Content area - breathing room, capped at 75% of viewport */
+/* Content area - breathing room */
 [class*="docMainContainer"] {
   padding-left: 3rem;
-  max-width: 75vw;
+  max-width: 75% !important;
 }
 
 /* Prev/Next nav — fills the full content column width */
