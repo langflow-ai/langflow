@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
 from uuid import UUID
 
 import nanoid
-import pandas as pd
 import yaml
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
@@ -47,6 +46,8 @@ from .custom_component import CustomComponent
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    import pandas as pd
 
     from lfx.base.tools.component_tool import ComponentToolkit
     from lfx.events.event_manager import EventManager
@@ -1328,6 +1329,8 @@ class Component(CustomComponent):
 
     def extract_data(self, result):
         """Extract the data from the result. this is where the self.status is set."""
+        import pandas as pd
+
         if isinstance(result, Message):
             self.status = result.get_text()
             return (
@@ -1462,6 +1465,8 @@ class Component(CustomComponent):
         Returns:
             list[Tool]: Filtered list of tools.
         """
+        import pandas as pd
+
         # Convert metadata to a list of dicts if it's a DataFrame
         metadata_dict = None  # Initialize as None to avoid lint issues with empty dict
         if isinstance(metadata, pd.DataFrame):

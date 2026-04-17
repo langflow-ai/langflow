@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import shutil
 import tarfile
@@ -9,7 +11,6 @@ from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile, is_zipfile
 
 import orjson
-import pandas as pd
 
 from lfx.base.data.storage_utils import get_file_size, parse_storage_path, read_file_bytes
 from lfx.custom.custom_component.component import Component
@@ -23,6 +24,8 @@ from lfx.utils.helpers import build_content_type_from_extension
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    import pandas as pd
 
 
 class BaseFileComponent(Component, ABC):
@@ -370,6 +373,8 @@ class BaseFileComponent(Component, ABC):
         return Message(text="\n".join(paths) if paths else "")
 
     def load_files_structured_helper(self, file_path: str) -> list[dict] | None:
+        import pandas as pd
+
         if not file_path:
             return None
 
