@@ -190,14 +190,23 @@ describe("ModelInputComponent", () => {
   });
 
   describe("Rendering", () => {
-    it("should render disabled combobox when no options are provided", () => {
+    it("should keep combobox enabled when no options are provided", async () => {
+      const user = userEvent.setup();
       renderWithQueryClient(
         <ModelInputComponent {...defaultProps} options={[]} />,
       );
 
       const combobox = screen.getByRole("combobox");
       expect(combobox).toBeInTheDocument();
-      expect(combobox).toBeDisabled();
+
+      // Even with no models, the dropdown stays clickable so the user can
+      // reach Manage Providers and switch/configure another provider.
+      expect(combobox).not.toBeDisabled();
+
+      await user.click(combobox);
+      await waitFor(() => {
+        expect(screen.getByText("No Models Enabled")).toBeInTheDocument();
+      });
     });
 
     it("should render the model selector when options are available", () => {
@@ -297,6 +306,25 @@ describe("ModelInputComponent", () => {
       await user.click(modelOption);
 
       expect(handleOnNewValue).toHaveBeenCalled();
+    });
+
+    it("should allow opening dropdown even when no models are available", async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} options={[]} value={[]} />,
+      );
+
+      const trigger = screen.getByRole("combobox");
+      expect(trigger).not.toBeDisabled();
+
+      await user.click(trigger);
+
+      await waitFor(() => {
+        expect(screen.getByText("No Models Enabled")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("manage-model-providers"),
+        ).toBeInTheDocument();
+      });
     });
   });
 
