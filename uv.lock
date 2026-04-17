@@ -3406,11 +3406,11 @@ wheels = [
 
 [[package]]
 name = "filelock"
-version = "3.25.2"
+version = "3.28.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/94/b8/00651a0f559862f3bb7d6f7477b192afe3f583cc5e26403b44e59a55ab34/filelock-3.25.2.tar.gz", hash = "sha256:b64ece2b38f4ca29dd3e810287aa8c48182bbecd1ae6e9ae126c9b35f1382694", size = 40480, upload-time = "2026-03-11T20:45:38.487Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d6/17/6e8890271880903e3538660a21d63a6c1fea969ac71d0d6b608b78727fa9/filelock-3.28.0.tar.gz", hash = "sha256:4ed1010aae813c4ee8d9c660e4792475ee60c4a0ba76073ceaf862bd317e3ca6", size = 56474, upload-time = "2026-04-14T22:54:33.625Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a4/a5/842ae8f0c08b61d6484b52f99a03510a3a72d23141942d216ebe81fefbce/filelock-3.25.2-py3-none-any.whl", hash = "sha256:ca8afb0da15f229774c9ad1b455ed96e85a81373065fb10446672f64444ddf70", size = 26759, upload-time = "2026-03-11T20:45:37.437Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/21/2f728888c45033d34a417bfcd248ea2564c9e08ab1bfd301377cf05d5586/filelock-3.28.0-py3-none-any.whl", hash = "sha256:de9af6712788e7171df1b28b15eba2446c69721433fa427a9bee07b17820a9db", size = 39189, upload-time = "2026-04-14T22:54:32.037Z" },
 ]
 
 [[package]]
@@ -3641,10 +3641,10 @@ name = "gassist"
 version = "0.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-    { name = "flask", marker = "sys_platform == 'win32'" },
-    { name = "flask-cors", marker = "sys_platform == 'win32'" },
-    { name = "tqdm", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "sys_platform != 'darwin'" },
+    { name = "flask", marker = "sys_platform != 'darwin'" },
+    { name = "flask-cors", marker = "sys_platform != 'darwin'" },
+    { name = "tqdm", marker = "sys_platform != 'darwin'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b0/2e/f79632d7300874f7f0e60b61a6ab22455a245e1556116a1729542a77b0da/gassist-0.0.1-py3-none-any.whl", hash = "sha256:bb0fac74b453153a6c74b2db40a14fdde7879cbc10ec692ed170e576c8e2b6aa", size = 23819, upload-time = "2025-05-09T18:22:23.609Z" },
@@ -3907,7 +3907,7 @@ wheels = [
 
 [[package]]
 name = "google-cloud-aiplatform"
-version = "1.147.0"
+version = "1.148.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "docstring-parser" },
@@ -3923,9 +3923,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/23/93/9bfcaaf1ceab12999a881ccf69ebd9b30f467ec5623989c66894e81fc139/google_cloud_aiplatform-1.147.0.tar.gz", hash = "sha256:b2e1b669ba37f02426e03eb13187eebf4cbfeaa0a3bfed37b5578abb375ab689", size = 10235245, upload-time = "2026-04-09T17:14:49.179Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fe/5f/4d7c5e1e35f1a514e7f23882cf68738c5ef96d12a74383e6d008e698d207/google_cloud_aiplatform-1.148.0.tar.gz", hash = "sha256:86a736a6a90cb97d17b51c8a973cda474ca9ace44ee00a2da96f8e60e6c6d5df", size = 10275203, upload-time = "2026-04-15T02:35:09.001Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d3/d2/1c1c582f6bbed9bbc0daa5acf3a5d98751ca8bc48584548d28569b8ce1a7/google_cloud_aiplatform-1.147.0-py2.py3-none-any.whl", hash = "sha256:29f7ae020718d3c45094f0475464e06a97f81b1572bea150ae6a1b22c5f45997", size = 8408951, upload-time = "2026-04-09T17:14:45.482Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/f7/f3af0f8b4cee02be64e1f3dede9219b0624f95d788ad334971f5269ed35d/google_cloud_aiplatform-1.148.0-py2.py3-none-any.whl", hash = "sha256:0c4a20e7f096e9a5a3cecc90ba3b67ce27f94afdf089cd9b3a738ff5af2f3b00", size = 8433269, upload-time = "2026-04-15T02:35:05.594Z" },
 ]
 
 [[package]]
@@ -4057,7 +4057,7 @@ wheels = [
 
 [[package]]
 name = "google-genai"
-version = "1.73.0"
+version = "1.73.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -4071,9 +4071,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/99/5f/b293b1a78a547b0dd061642a3f6087f0a52c1b723eafa58f94ccdc3e0d2a/google_genai-1.73.0.tar.gz", hash = "sha256:569395b2c225e12bcd8758b8affe1af480e0a1b1c71d652d38c705677057e05f", size = 530812, upload-time = "2026-04-13T20:40:02.642Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/d8/40f5f107e5a2976bbac52d421f04d14fc221b55a8f05e66be44b2f739fe6/google_genai-1.73.1.tar.gz", hash = "sha256:b637e3a3b9e2eccc46f27136d470165803de84eca52abfed2e7352081a4d5a15", size = 530998, upload-time = "2026-04-14T21:06:19.153Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5a/73/fb36ced456688c9b95a8ab49a1f408f5b3e69a589788f3eb25016002dd7a/google_genai-1.73.0-py3-none-any.whl", hash = "sha256:dfb0214b834bf977e3841de512cfb651d2fe76309f85064b80c2bc11da99d76b", size = 786072, upload-time = "2026-04-13T20:40:00.365Z" },
+    { url = "https://files.pythonhosted.org/packages/65/af/508e0528015240d710c6763f7c89ff44fab9a94a80b4377e265d692cbfd6/google_genai-1.73.1-py3-none-any.whl", hash = "sha256:af2d2287d25e42a187de19811ef33beb2e347c7e2bdb4dc8c467d78254e43a2c", size = 783595, upload-time = "2026-04-14T21:06:17.464Z" },
 ]
 
 [[package]]
@@ -4623,15 +4623,15 @@ wheels = [
 
 [[package]]
 name = "hypothesis"
-version = "6.152.0"
+version = "6.152.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "sortedcontainers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1a/84/0745a9d34f71394af0123fe9b66a2fa261555ea2b39cf5f52815889bf30f/hypothesis-6.152.0.tar.gz", hash = "sha256:c0a7619904f5c218c2a5eac1fed7889b1fdc22cf09d8970775c5b13c8cd57e97", size = 465087, upload-time = "2026-04-14T18:21:08.458Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/64/b1/c32bcddb9aab9e3abc700f1f56faf14e7655c64a16ca47701a57362276ea/hypothesis-6.152.1.tar.gz", hash = "sha256:4f4ed934eee295dd84ee97592477d23e8dc03e9f12ae0ee30a4e7c9ef3fca3b0", size = 465029, upload-time = "2026-04-14T22:29:24.062Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/68/5c52f30714a1058879e72420bd599eef87ae01007db444619b03e50368fc/hypothesis-6.152.0-py3-none-any.whl", hash = "sha256:824037e8214559ad037362c6aaa51f6118f62e548e62b2ad215fbf52f2f45eb4", size = 530765, upload-time = "2026-04-14T18:21:05.594Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/83/860fb3075e00b0fc19a22a2301bc3c96f00437558c3911bdd0a3573a4a53/hypothesis-6.152.1-py3-none-any.whl", hash = "sha256:40a3619d9e0cb97b018857c7986f75cf5de2e5ec0fa8a0b172d00747758f749e", size = 530752, upload-time = "2026-04-14T22:29:20.893Z" },
 ]
 
 [[package]]
@@ -6015,16 +6015,16 @@ wheels = [
 
 [[package]]
 name = "langchain-openai"
-version = "1.1.12"
+version = "1.1.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "openai" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cc/fd/7dee16e882c4c1577d48db174d85aa3a0ee09ba61eb6a5d41650285ca80c/langchain_openai-1.1.12.tar.gz", hash = "sha256:ccf5ef02c896f6807b4d0e51aaf678a72ce81ae41201cae8d65e11eeff9ecb79", size = 1114119, upload-time = "2026-03-23T18:59:19.211Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/63/0fed7cae7103e4b7aced76208aa92c02ae78bdf1be48bd9d83e4051d6c31/langchain_openai-1.1.13.tar.gz", hash = "sha256:88e13342407016785bd3c48be32ded1f28b992403bbb82505b558d81b038adc2", size = 1114743, upload-time = "2026-04-15T01:37:19.409Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6e/a6/68fb22e3604015e6f546fa1d3677d24378b482855ae74710cbf4aec44132/langchain_openai-1.1.12-py3-none-any.whl", hash = "sha256:da71ca3f2d18c16f7a2443cc306aa195ad2a07054335ac9b0626dcae02b6a0c5", size = 88487, upload-time = "2026-03-23T18:59:17.978Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/d1/ca789988897096883289f9597ee653574b67b4b2a8f40bc306dfd73742d5/langchain_openai-1.1.13-py3-none-any.whl", hash = "sha256:54ba1e9f2f0f428aeea68271a87823a0a1b22360283990a713c731d2ef7da926", size = 88723, upload-time = "2026-04-15T01:37:18.062Z" },
 ]
 
 [[package]]
@@ -6124,7 +6124,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.9.0"
+version = "1.10.0"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
@@ -6271,7 +6271,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.9.0"
+version = "0.10.0"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -7294,7 +7294,7 @@ dev = [
 
 [[package]]
 name = "langflow-sdk"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "src/sdk" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
@@ -7478,11 +7478,11 @@ wheels = [
 
 [[package]]
 name = "latex2mathml"
-version = "3.80.0"
+version = "3.81.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/98/4a/3d5bd6070990396c6360dcb2664df695d44b2e51160af423c94c0b63b8e4/latex2mathml-3.80.0.tar.gz", hash = "sha256:104b102ed2e16d4eb565f427fffa9c3928a544db9b274149bb821b3baf194e28", size = 148128, upload-time = "2026-04-12T00:16:12.549Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3b/62/35bb816c5c19d4d0cde5bdfb82ebb996306243d5f94e03f201658c629960/latex2mathml-3.81.0.tar.gz", hash = "sha256:4b959cdc3cac8686bc0e3e5aece8127dfb1b81ca1241bed8e00ef31b82bb4022", size = 77584, upload-time = "2026-04-15T00:55:27.977Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/26/c4/660f9df164330e2396baa2facb72a7c492fc729f764f2ccf6e365e070394/latex2mathml-3.80.0-py3-none-any.whl", hash = "sha256:2ddc8269896c1c29257267b74a050676692255def766feaddeab56e8831f1115", size = 76868, upload-time = "2026-04-12T00:16:13.852Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/b1/c488b530994c4f68e46efa99a4d6ca6741aaf158e35779fe6c4d8a9a427d/latex2mathml-3.81.0-py3-none-any.whl", hash = "sha256:d317710393fe20579aea39cfe8928fa2ad9b8780896e585326c75e89c1d1d1a4", size = 79185, upload-time = "2026-04-15T00:55:29.301Z" },
 ]
 
 [[package]]
@@ -7499,7 +7499,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "0.4.0"
+version = "0.5.0"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "ag-ui-protocol" },
@@ -8315,7 +8315,7 @@ name = "milvus-lite"
 version = "2.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "tqdm", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (sys_platform != 'darwin' and sys_platform != 'win32')" },
+    { name = "tqdm", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9b/2e/746f5bb1d6facd1e73eb4af6dd5efda11125b0f29d7908a097485ca6cad9/milvus_lite-2.5.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:a2e031088bf308afe5f8567850412d618cfb05a65238ed1a6117f60decccc95a", size = 24421451, upload-time = "2025-06-30T04:23:51.747Z" },
@@ -9060,9 +9060,9 @@ name = "ocrmac"
 version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click", marker = "sys_platform == 'darwin'" },
-    { name = "pillow", marker = "sys_platform == 'darwin'" },
-    { name = "pyobjc-framework-vision", marker = "sys_platform == 'darwin'" },
+    { name = "click" },
+    { name = "pillow" },
+    { name = "pyobjc-framework-vision" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5e/07/3e15ab404f75875c5e48c47163300eb90b7409044d8711fc3aaf52503f2e/ocrmac-1.0.1.tar.gz", hash = "sha256:507fe5e4cbd67b2d03f6729a52bbc11f9d0b58241134eb958a5daafd4b9d93d9", size = 1454317, upload-time = "2026-01-08T16:44:26.412Z" }
 wheels = [
@@ -10371,7 +10371,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess", marker = "sys_platform != 'win32'" },
+    { name = "ptyprocess" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
@@ -11656,7 +11656,7 @@ name = "pyobjc-framework-cocoa"
 version = "12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-core" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/02/a3/16ca9a15e77c061a9250afbae2eae26f2e1579eb8ca9462ae2d2c71e1169/pyobjc_framework_cocoa-12.1.tar.gz", hash = "sha256:5556c87db95711b985d5efdaaf01c917ddd41d148b1e52a0c66b1a2e2c5c1640", size = 2772191, upload-time = "2025-11-14T10:13:02.069Z" }
 wheels = [
@@ -11672,8 +11672,8 @@ name = "pyobjc-framework-coreml"
 version = "12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
-    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-core" },
+    { name = "pyobjc-framework-cocoa" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/30/2d/baa9ea02cbb1c200683cb7273b69b4bee5070e86f2060b77e6a27c2a9d7e/pyobjc_framework_coreml-12.1.tar.gz", hash = "sha256:0d1a4216891a18775c9e0170d908714c18e4f53f9dc79fb0f5263b2aa81609ba", size = 40465, upload-time = "2025-11-14T10:14:02.265Z" }
 wheels = [
@@ -11689,8 +11689,8 @@ name = "pyobjc-framework-quartz"
 version = "12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
-    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-core" },
+    { name = "pyobjc-framework-cocoa" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/94/18/cc59f3d4355c9456fc945eae7fe8797003c4da99212dd531ad1b0de8a0c6/pyobjc_framework_quartz-12.1.tar.gz", hash = "sha256:27f782f3513ac88ec9b6c82d9767eef95a5cf4175ce88a1e5a65875fee799608", size = 3159099, upload-time = "2025-11-14T10:21:24.31Z" }
 wheels = [
@@ -11706,10 +11706,10 @@ name = "pyobjc-framework-vision"
 version = "12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
-    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
-    { name = "pyobjc-framework-coreml", marker = "sys_platform == 'darwin'" },
-    { name = "pyobjc-framework-quartz", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-core" },
+    { name = "pyobjc-framework-cocoa" },
+    { name = "pyobjc-framework-coreml" },
+    { name = "pyobjc-framework-quartz" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c2/5a/08bb3e278f870443d226c141af14205ff41c0274da1e053b72b11dfc9fb2/pyobjc_framework_vision-12.1.tar.gz", hash = "sha256:a30959100e85dcede3a786c544e621ad6eb65ff6abf85721f805822b8c5fe9b0", size = 59538, upload-time = "2025-11-14T10:23:21.979Z" }
 wheels = [
@@ -15353,7 +15353,7 @@ wheels = [
 
 [[package]]
 name = "virtualenv"
-version = "21.2.3"
+version = "21.2.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "distlib" },
@@ -15362,9 +15362,9 @@ dependencies = [
     { name = "python-discovery" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/60/8c/bdd9f89f89e4a787ac61bb2da4d884bc45e0c287ec694dfa3170dddd5cfe/virtualenv-21.2.3.tar.gz", hash = "sha256:9bb6d1414ab55ca624371e30c7719c32f183ef44da544ef8aa44a456de7ac191", size = 5844776, upload-time = "2026-04-14T01:10:36.692Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0c/98/3a7e644e19cb26133488caff231be390579860bbbb3da35913c49a1d0a46/virtualenv-21.2.4.tar.gz", hash = "sha256:b294ef68192638004d72524ce7ef303e9d0cf5a44c95ce2e54a7500a6381cada", size = 5850742, upload-time = "2026-04-14T22:15:31.438Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/19/bc7c4e05f42532863cf2ae7e7e847beab25835934e0410160b47eeff1e35/virtualenv-21.2.3-py3-none-any.whl", hash = "sha256:486652347ea8526d91e9807c0274583cb7ba31dd4942ff10fb5621402f0fe0d8", size = 5828329, upload-time = "2026-04-14T01:10:34.809Z" },
+    { url = "https://files.pythonhosted.org/packages/27/8d/edd0bd910ff803c308ee9a6b7778621af0d10252219ad9f19ef4d4982a61/virtualenv-21.2.4-py3-none-any.whl", hash = "sha256:29d21e941795206138d0f22f4e45ff7050e5da6c6472299fb7103318763861ac", size = 5831232, upload-time = "2026-04-14T22:15:29.342Z" },
 ]
 
 [[package]]
