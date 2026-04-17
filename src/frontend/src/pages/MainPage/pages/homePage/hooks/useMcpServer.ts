@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import i18n from "../../../../../i18n";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   useGetFlowsMCP,
@@ -169,9 +170,9 @@ export const useMcpServer = ({
         {
           onSuccess: () => {
             setSuccessData({
-              title: `MCP Server installed successfully on ${
-                clientTitle ?? clientName
-              }. You may need to restart your client to see the changes.`,
+              title: i18n.t("mcp.installedSuccessfully", {
+                client: clientTitle ?? clientName,
+              }),
             });
             setS((p) => ({
               ...p,
