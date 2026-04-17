@@ -89,8 +89,8 @@ html[data-theme="light"] .navbar__logo {
 /* Fix sidebar and TOC column heights — prevent shrinking during scroll */
 @media (min-width: 997px) {
   [class*="sidebarViewport"] {
-    height: 100vh !important;
-    max-height: 100vh !important;
+    height: calc(100vh - var(--ifm-navbar-height)) !important;
+    max-height: calc(100vh - var(--ifm-navbar-height)) !important;
     overflow-y: auto;
   }
 
