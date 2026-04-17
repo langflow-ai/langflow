@@ -52,9 +52,18 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
-### Breaking changes
-
 ### New features and enhancements
+
+- Langflow MCP client for Bob (IBM) and Claude Code
+
+    The **Settings** page now includes <Icon name="Terminal" aria-hidden="true"/> **Langflow MCP Client**, with instructions to connect **Bob (IBM)** and **Claude Code** to your Langflow instance.
+    For more information, see [Langflow MCP client for coding agents](../Agents/langflow-mcp-client.mdx).
+
+- MCP Tools: register servers first, and then add from the MCP sidebar
+
+    **MCP Tools** is no longer added from the **Agents** component list. Register each MCP server under **Settings** > **MCP Servers**, or from the flow editor <McpIcon /> **MCP** sidebar.
+    Each saved server appears as a unique **MCP Tools** component that can be dragged to the canvas.
+    For more information, see [Use Langflow as an MCP client](/mcp-client#use-the-mcp-tools-component).
 
 - Flow DevOps Toolkit SDK
 
@@ -71,10 +80,20 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     The **Data Operations** component is now the [**JSON Operations** component](/data-operations), and the **DataFrame Operations** component is now the [**Table Operations** component](/dataframe-operations).
 
+- Flow version history in the visual editor
+
+    You can now save point-in-time versions of a flow from **Version History**, preview saved versions in read-only mode, and restore an earlier version to your working draft.
+    For more information, see [Build flows](../Flows/concepts-flows.mdx#save-and-restore-flow-versions).
+
 - Enabled tool calling for Gemini 3 preview models
 
     Tool calling is enabled for the following Google Gemini 3 preview models:
     `gemini-3.1-pro-preview`, `gemini-3-pro-preview`, `gemini-3-flash-preview`, and `gemini-3-pro-image-preview`.
+
+- Build components with **Langflow Assistant**
+
+    **Langflow Assistant** is an in-app virtual assistant that can create components from natural language prompts directly within the Langflow workspace.
+    For more information, see [Langflow Assistant](../Flows/langflow-assistant.mdx).
 
 - Vulnerability reporting now uses HackerOne
 
@@ -86,6 +105,11 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     Set `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` to disable custom components and in-editor editing of component code.
     For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx).
+
+- **Policies** component (beta)
+
+    The **Policies** component uses [ToolGuard](https://github.com/AgentToolkit/toolguard) to generate guard code from natural-language business policies and apply it to agent tools.
+    For more information, see [Policies (Beta)](../Components/policies.mdx).
 
 ## 1.8.x
 

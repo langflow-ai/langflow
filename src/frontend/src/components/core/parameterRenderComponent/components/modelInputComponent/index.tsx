@@ -10,7 +10,6 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
-import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { Command } from "../../../../ui/command";
@@ -22,6 +21,7 @@ import {
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
+import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import type {
   ModelInputComponentType,
   ModelOption,
@@ -43,7 +43,8 @@ export default function ModelInputComponent({
   editNode,
   inspectionPanel,
   showEmptyState = false,
-}: BaseInputProps<any> & ModelInputComponentType): JSX.Element | null {
+}: BaseInputProps<SelectedModel[]> &
+  ModelInputComponentType): JSX.Element | null {
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -56,7 +57,8 @@ export default function ModelInputComponent({
   const [isConnectionMode, setIsConnectionMode] = useState(() => {
     if (!nodeId) return false;
     const node = useFlowStore.getState().nodes.find((n) => n.id === nodeId);
-    return (node?.data as any)?._connectionMode === true;
+    const data = node?.data as { _connectionMode?: boolean } | undefined;
+    return data?._connectionMode === true;
   });
 
   const setConnectionMode = useCallback(
@@ -123,26 +125,124 @@ export default function ModelInputComponent({
   }, [providersData]);
 
   // Groups models by their provider name for sectioned display in dropdown.
-  // Filters out models from disabled providers AND disabled models.
+  // Filters out models from disabled providers AND disabled models, then
+  // augments with any enabled models from `providersData` that weren't in the
+  // component's saved `options` (e.g. after importing a flow whose exporter
+  // only had a subset of the current user's enabled providers).
   const groupedOptions = useMemo(() => {
     const grouped: Record<string, ModelOption[]> = {};
+    const seen = new Set<string>();
+
     for (const option of options) {
       if (option.metadata?.is_disabled_provider) continue;
       const provider = option.provider || "Unknown";
 
-      // Filter out disabled models using client-side enabled models data
-      // This provides a reliable fallback when backend filtering fails
-      if (enabledModelsData?.enabled_models) {
+      // Backend sticky-default: options tagged with `not_enabled_locally` are
+      // the user's saved selection injected into the options list by the
+      // unified-models build_config helper even though they aren't in the
+      // enabled list. They must always pass the client-side filter so the
+      // selection stays visible and selectable in the dropdown.
+      const isStickyNotEnabled = option.metadata?.not_enabled_locally === true;
+
+      // Filter against client-side enabled models data. This is the source of
+      // truth for what the current user has enabled — stale `options` saved in
+      // an imported flow may include models from providers the current user
+      // hasn't enabled (e.g. WatsonX). When the provider is tracked in
+      // enabled_models, the model must be explicitly enabled (=== true); a
+      // `false` or missing entry means the model should be hidden.
+      if (!isStickyNotEnabled && enabledModelsData?.enabled_models) {
         const providerModels = enabledModelsData.enabled_models[provider];
-        if (providerModels && providerModels[option.name] === false) {
-          continue; // Skip disabled models
+        if (providerModels && providerModels[option.name] !== true) {
+          continue;
         }
       }
 
-      (grouped[provider] ??= []).push(option);
+      if (!grouped[provider]) {
+        grouped[provider] = [];
+      }
+      grouped[provider].push(option);
+      seen.add(`${provider}::${option.name}`);
     }
+
+    // Augment with models the user has enabled that were not in the saved
+    // `options` (the saved list reflects only what the exporter had available).
+    // This ensures importing a flow shows the importing user's full enabled
+    // list rather than the intersection of the two sets.
+    //
+    // Cross-type guard: `providersData` from ``GET /api/v1/models`` is NOT
+    // filtered by ``model_type`` (the hook doesn't pass one), and the merged
+    // ``enabled_models`` map treats llm + embeddings as a single flat
+    // provider→name→bool record.  Without this check, text-embedding models
+    // leak into the language-model dropdown (and vice versa) whenever their
+    // provider has both kinds enabled.  Filter by each model's own
+    // ``model_type`` metadata so the component only shows its own type.
+    if (enabledModelsData?.enabled_models && providersData) {
+      for (const providerInfo of providersData) {
+        const providerName = providerInfo.provider;
+        const providerModels = enabledModelsData.enabled_models[providerName];
+        if (!providerModels) continue;
+
+        for (const model of providerInfo.models ?? []) {
+          const modelName = model.model_name;
+          if (providerModels[modelName] !== true) continue;
+
+          // Only include models whose declared type matches this component.
+          // Older metadata without ``model_type`` is allowed through so we
+          // don't regress providers that haven't adopted the tag yet.
+          const modelMetadataType = (
+            model.metadata as Record<string, unknown> | undefined
+          )?.model_type;
+          if (
+            typeof modelMetadataType === "string" &&
+            modelMetadataType !== modelType
+          ) {
+            continue;
+          }
+
+          const key = `${providerName}::${modelName}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          if (!grouped[providerName]) {
+            grouped[providerName] = [];
+          }
+          grouped[providerName].push({
+            name: modelName,
+            icon: providerInfo.icon || "Bot",
+            provider: providerName,
+            metadata: (model.metadata ?? {}) as Record<string, unknown>,
+          });
+        }
+      }
+    }
+
+    // Zero-provider import fallback: if the user has no providers configured
+    // locally but an imported flow carries a saved model, inject that saved
+    // selection as the only dropdown entry so the trigger renders the model
+    // (with the Configure wrench) instead of the "Setup Provider" button.
+    // Without this, ``flatOptions`` would be empty and ``ModelTrigger`` would
+    // swap the dropdown for the setup CTA, visually losing the imported
+    // selection.
+    const hasAnyGrouped = Object.keys(grouped).length > 0;
+    const savedValue = value?.[0];
+    if (!hasAnyGrouped && savedValue?.name) {
+      const providerName = savedValue.provider || "Unknown";
+      grouped[providerName] = [
+        {
+          ...(savedValue.id && { id: savedValue.id }),
+          name: savedValue.name,
+          icon: savedValue.icon || "Bot",
+          provider: providerName,
+          metadata: {
+            ...(savedValue.metadata ?? {}),
+            not_enabled_locally: true,
+          },
+        } as ModelOption,
+      ];
+    }
+
     return grouped;
-  }, [options, enabledModelsData]);
+  }, [options, enabledModelsData, providersData, modelType, value]);
 
   // Flattened array of all enabled options for efficient lookups by name
   const flatOptions = useMemo(
@@ -174,39 +274,58 @@ export default function ModelInputComponent({
       return null;
     }
 
-    return (
-      flatOptions.find((option) => option.name === currentName) ||
-      // Fallback: If the saved name isn't in the list (e.g. disabled), select first available?
-      // Or keep displaying the stale one? Original logic selected first available.
-      (flatOptions.length > 0 ? flatOptions[0] : null)
-    );
+    const match = flatOptions.find((option) => option.name === currentName);
+    if (match) return match;
+
+    // Saved name isn't in the filtered options list — typically because the
+    // flow was imported via drag-drop (no backend sticky-default round-trip)
+    // or because an outdated component was upgraded and the fresh template
+    // lacks the sticky-default metadata. Preserve the saved selection in the
+    // trigger so it doesn't visually "snap" to the user's first enabled
+    // model. The wrench affordance in the dropdown handles configuration.
+    const saved = value?.[0];
+    if (saved) {
+      return {
+        ...(saved.id && { id: saved.id }),
+        name: saved.name,
+        icon: saved.icon || "Bot",
+        provider: saved.provider || "Unknown",
+        metadata: {
+          ...(saved.metadata ?? {}),
+          not_enabled_locally: true,
+        },
+      } as SelectedModel;
+    }
+
+    return flatOptions.length > 0 ? flatOptions[0] : null;
   }, [value, flatOptions, isConnectionMode, externalOptions]);
 
   useEffect(() => {
-    // Only proceed if we have options, haven't selected a value, and NOT in connection mode
-    if (
-      flatOptions.length > 0 &&
-      (!value || value.length === 0) &&
-      !isConnectionMode
-    ) {
-      // Check ref to avoid infinite loops
-      if (!hasProcessedEmptyRef.current) {
-        const firstOption = flatOptions[0];
-        // Construct the new value object
-        const newValue = [
-          {
-            ...(firstOption.id && { id: firstOption.id }),
-            name: firstOption.name,
-            icon: firstOption.icon || "Bot",
-            provider: firstOption.provider || "Unknown",
-            metadata: firstOption.metadata ?? {},
-          },
-        ];
-        handleOnNewValue({ value: newValue });
-        hasProcessedEmptyRef.current = true;
-      }
-    }
-  }, [flatOptions, value, handleOnNewValue]);
+    if (flatOptions.length === 0 || isConnectionMode) return;
+    if (hasProcessedEmptyRef.current) return;
+
+    const isEmpty = !value || value.length === 0;
+    // Sticky-default: if the component has a saved value, keep it as-is. The
+    // backend injects any selection that isn't in the user's enabled list
+    // back into `options` tagged with `not_enabled_locally`, so the saved
+    // value remains visible and runnable. Only auto-select the first option
+    // when there's no saved value at all.
+    if (!isEmpty) return;
+
+    const firstOption = flatOptions[0];
+    // Construct the new value object
+    const newValue = [
+      {
+        ...(firstOption.id && { id: firstOption.id }),
+        name: firstOption.name,
+        icon: firstOption.icon || "Bot",
+        provider: firstOption.provider || "Unknown",
+        metadata: firstOption.metadata ?? {},
+      },
+    ];
+    handleOnNewValue({ value: newValue });
+    hasProcessedEmptyRef.current = true;
+  }, [flatOptions, value, handleOnNewValue, isConnectionMode]);
 
   /**
    * Handles model selection from the dropdown.
@@ -402,23 +521,48 @@ export default function ModelInputComponent({
     return <div className="w-full">{renderLoadingButton()}</div>;
   }
 
+  // Show a small "Configure" wrench next to the trigger when the currently
+  // selected model was injected by the backend as a sticky default — i.e.
+  // the user's saved selection isn't in their current enabled_models list.
+  // Clicking it jumps straight to the provider manager so the user can
+  // enable the provider without losing their selection.
+  const showConfigureAffordance =
+    selectedModel?.metadata?.not_enabled_locally === true;
+
   // Main render
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
-        <div className="w-full truncate">
-          <ModelTrigger
-            open={open}
-            disabled={disabled}
-            options={options}
-            selectedModel={selectedModel}
-            placeholder={placeholder}
-            hasEnabledProviders={hasEnabledProviders ?? false}
-            onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
-            id={id}
-            refButton={refButton}
-            showEmptyState={showEmptyState}
-          />
+        <div className="flex w-full items-center gap-2">
+          <div className="min-w-0 flex-1 truncate">
+            <ModelTrigger
+              open={open}
+              disabled={disabled}
+              options={flatOptions}
+              selectedModel={selectedModel}
+              placeholder={placeholder}
+              hasEnabledProviders={hasEnabledProviders ?? false}
+              onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
+              id={id}
+              refButton={refButton}
+              showEmptyState={showEmptyState}
+            />
+          </div>
+          {showConfigureAffordance && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setOpenManageProvidersDialog(true);
+              }}
+              data-testid={`${id}-configure`}
+              aria-label="Configure this model's provider"
+              title="This model isn't enabled for your user. Click to configure its provider."
+              className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-primary"
+            >
+              <ForwardedIconComponent name="Wrench" className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
         {renderPopoverContent()}
       </Popover>

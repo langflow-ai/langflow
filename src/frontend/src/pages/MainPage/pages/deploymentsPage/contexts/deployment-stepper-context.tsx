@@ -28,6 +28,7 @@ import type {
 } from "../types";
 
 interface DeploymentStepperInitialState {
+  projectId?: string;
   selectedVersionByFlow?: Map<
     string,
     { versionId: string; versionTag: string }
@@ -42,7 +43,7 @@ interface DeploymentStepperInitialState {
   initialLlm?: string;
   /** Pre-populated tool names from provider (edit mode). Key = flowId. */
   initialToolNameByFlow?: Map<string, string>;
-  /** Pre-populated connection bindings from provider (edit mode). Key = flowId. */
+  /** Pre-populated connection assignments from provider (edit mode). Key = flowId. */
   initialConnectionsByFlow?: Map<string, string[]>;
 }
 
@@ -92,12 +93,18 @@ interface DeploymentStepperContextType {
   /** User-provided tool names per flow. Key = flowId. */
   toolNameByFlow: Map<string, string>;
   setToolNameByFlow: Dispatch<SetStateAction<Map<string, string>>>;
+  /** Original tool names from provider before this edit session (edit mode). Key = flowId. */
+  initialToolNameByFlow: Map<string, string>;
   /** Flow IDs that were already attached before this edit session (edit mode). */
   preExistingFlowIds: Set<string>;
   /** Flow IDs that were originally attached but the user chose to detach (edit mode). */
   removedFlowIds: Set<string>;
   handleRemoveAttachedFlow: (flowId: string) => void;
   handleUndoRemoveFlow: (flowId: string) => void;
+
+  // Tool name validation
+  hasToolNameErrors: boolean;
+  setHasToolNameErrors: Dispatch<SetStateAction<boolean>>;
 
   // Deploy / Update
   needsProviderAccountCreation: boolean;
@@ -159,6 +166,8 @@ export function DeploymentStepperProvider({
   const [attachedConnectionByFlow, setAttachedConnectionByFlow] = useState<
     Map<string, string[]>
   >(initialState?.initialConnectionsByFlow ?? new Map());
+
+  const [hasToolNameErrors, setHasToolNameErrors] = useState(false);
 
   // Edit mode: track which pre-existing flows the user wants to detach.
   const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(new Set());
@@ -250,6 +259,9 @@ export function DeploymentStepperProvider({
       // In edit mode, user can proceed without new attachments (may just change desc/LLM).
       return isEditMode || selectedVersionByFlow.size > 0;
     }
+    if (logical === 4) {
+      return !hasToolNameErrors;
+    }
     return true;
   }, [
     currentStep,
@@ -261,6 +273,7 @@ export function DeploymentStepperProvider({
     selectedLlm,
     selectedVersionByFlow,
     isEditMode,
+    hasToolNameErrors,
   ]);
 
   const handleNext = useCallback(() => {
@@ -302,8 +315,10 @@ export function DeploymentStepperProvider({
       return {
         name: credentials.name.trim(),
         provider_key: "watsonx-orchestrate",
-        url: credentials.url.trim(),
-        provider_data: { api_key: credentials.api_key.trim() },
+        provider_data: {
+          url: credentials.url.trim(),
+          api_key: credentials.api_key.trim(),
+        },
       };
     }, [credentials, hasValidCredentials]);
 
@@ -363,6 +378,9 @@ export function DeploymentStepperProvider({
 
       return {
         provider_id: providerId,
+        ...(initialState?.projectId
+          ? { project_id: initialState.projectId }
+          : {}),
         name: deploymentName,
         description: deploymentDescription,
         type: deploymentType,
@@ -376,6 +394,7 @@ export function DeploymentStepperProvider({
     [
       attachedConnectionByFlow,
       buildConnectionPayloads,
+      initialState?.projectId,
       deploymentDescription,
       deploymentName,
       deploymentType,
@@ -533,12 +552,15 @@ export function DeploymentStepperProvider({
       handleSelectVersion,
       toolNameByFlow,
       setToolNameByFlow,
+      initialToolNameByFlow,
       attachedConnectionByFlow,
       setAttachedConnectionByFlow,
       preExistingFlowIds,
       removedFlowIds,
       handleRemoveAttachedFlow,
       handleUndoRemoveFlow,
+      hasToolNameErrors,
+      setHasToolNameErrors,
       needsProviderAccountCreation,
       buildProviderAccountPayload,
       buildDeploymentPayload,
@@ -565,11 +587,13 @@ export function DeploymentStepperProvider({
       selectedVersionByFlow,
       handleSelectVersion,
       toolNameByFlow,
+      initialToolNameByFlow,
       attachedConnectionByFlow,
       preExistingFlowIds,
       removedFlowIds,
       handleRemoveAttachedFlow,
       handleUndoRemoveFlow,
+      hasToolNameErrors,
       needsProviderAccountCreation,
       buildProviderAccountPayload,
       buildDeploymentPayload,

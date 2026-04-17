@@ -29,8 +29,16 @@ export const NEW_PROVIDER = {
 
 export const DEPLOYMENT = {
   id: "dep-1",
+  provider_id: "prov-1",
   name: "Test Deployment",
+  description: "Mock deployment for E2E tests",
   type: "agent",
+  created_at: "2026-04-06T00:00:00Z",
+  updated_at: "2026-04-06T00:00:00Z",
+  resource_key: "dep-1-resource",
+  attached_count: 1,
+  flow_version_ids: ["fv1"],
+  // Keep legacy keys to avoid breaking any tests still reading them.
   provider_account_id: "prov-1",
   provider_account_name: "My Env",
   status: "deployed",
@@ -102,6 +110,7 @@ export const FLOW_VERSIONS_MOCK = {
 
 export const DEPLOY_RESPONSE = {
   id: "dep-new",
+  provider_id: "prov-1",
   name: "My Deployment",
   type: "agent",
   provider_account_id: "prov-1",
@@ -144,30 +153,44 @@ export const CONFIGS_WITH_CONNECTIONS_MOCK = {
   },
 };
 
-export const POST_EXECUTION_RESPONSE = {
+// Snapshot list response — used to check duplicate tool names on review step.
+export const SNAPSHOTS_EMPTY_MOCK = {
+  provider_data: { tools: [], page: 1, size: 50, total: 0 },
+};
+
+export const SNAPSHOTS_DUPLICATE_MOCK = {
+  provider_data: {
+    tools: [{ id: "tool-existing", name: "My_Flow", connections: {} }],
+    page: 1,
+    size: 50,
+    total: 1,
+  },
+};
+
+export const POST_RUN_RESPONSE = {
   deployment_id: "dep-1",
   provider_data: {
-    execution_id: "exec-1",
+    id: "exec-1",
     status: "running",
     thread_id: null,
     result: null,
   },
 };
 
-export const RUNNING_EXECUTION_RESPONSE = {
+export const RUNNING_RUN_RESPONSE = {
   deployment_id: "dep-1",
   provider_data: {
-    execution_id: "exec-1",
+    id: "exec-1",
     status: "running",
     result: null,
     thread_id: null,
   },
 };
 
-export const COMPLETED_EXECUTION_RESPONSE = {
+export const COMPLETED_RUN_RESPONSE = {
   deployment_id: "dep-1",
   provider_data: {
-    execution_id: "exec-1",
+    id: "exec-1",
     status: "completed",
     thread_id: "thread-1",
     result: {
