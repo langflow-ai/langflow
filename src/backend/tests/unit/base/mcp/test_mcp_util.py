@@ -6,6 +6,7 @@ This test suite validates the MCP utility functions including:
 - Utility functions for name sanitization and schema conversion
 """
 
+import asyncio
 import re
 import shutil
 import sys
@@ -121,6 +122,115 @@ class TestMCPSessionManager:
 
             assert session1 != session2
             assert mock_create.call_count == 2
+
+    async def test_concurrent_get_session_same_server_reuses_one_session(self, session_manager):
+        """Concurrent get_session calls for the same server must share one session.
+
+        Regression test for the race condition reported in
+        https://github.com/langflow-ai/langflow/issues/9860 where two MCPTools
+        components pointing at the same SSE URL would race on session
+        creation/cleanup under concurrent flow execution and intermittently
+        fail with errors such as:
+            Error updating tool list: 'streamable_http_<hash>_0'
+            Timeout updating tool list: ...
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+
+        mock_session = AsyncMock()
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+
+        create_calls = 0
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            nonlocal create_calls
+            create_calls += 1
+            # Simulate real network latency so callers overlap while the first
+            # creation is in flight. Without the per-server lock, every
+            # concurrent caller enters the creation path and returns its own
+            # session (or worse, races on the shared dict).
+            await asyncio.sleep(0.05)
+            return mock_session, mock_task, "streamable_http"
+
+        with (
+            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
+            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
+        ):
+            results = await asyncio.gather(
+                *[session_manager.get_session(f"ctx_{i}", connection_params, "streamable_http") for i in range(10)]
+            )
+
+        assert all(s is mock_session for s in results)
+        # All 10 concurrent callers must share the single created session.
+        assert create_calls == 1
+        server_key = session_manager._get_server_key(connection_params, "streamable_http")
+        assert len(session_manager.sessions_by_server[server_key]["sessions"]) == 1
+
+    async def test_concurrent_cleanup_same_session_is_idempotent(self, session_manager):
+        """_cleanup_session_by_id must be safe under concurrent invocation.
+
+        Previously the finally-block `del sessions[session_id]` raised
+        `KeyError` when two callers both passed the existence guard — the
+        visible symptom from issue #9860.
+        """
+        server_key = "streamable_http_test"
+        session_id = f"{server_key}_0"
+
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+        mock_task.cancel = MagicMock()
+
+        session_manager.sessions_by_server[server_key] = {
+            "sessions": {
+                session_id: {
+                    "session": AsyncMock(),
+                    "task": mock_task,
+                    "type": "streamable_http",
+                    "last_used": 0,
+                }
+            },
+            "last_cleanup": 0,
+        }
+
+        # Fire many concurrent cleanups; only one should actually tear the
+        # session down, the rest should be no-ops (not KeyError).
+        await asyncio.gather(*[session_manager._cleanup_session_by_id(server_key, session_id) for _ in range(10)])
+
+        assert session_id not in session_manager.sessions_by_server[server_key]["sessions"]
+        mock_task.cancel.assert_called_once()
+
+    async def test_session_ids_are_monotonic_not_len_based(self, session_manager):
+        """Session ids must come from a monotonic counter, not len(sessions).
+
+        With `len(sessions)` as the id source, removing and re-adding sessions
+        can produce colliding ids and silently overwrite a live session entry.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            # Return a fresh session/task for each creation.
+            s = AsyncMock()
+            t = AsyncMock()
+            t.done = MagicMock(return_value=False)
+            t.cancel = MagicMock()
+            return s, t, "streamable_http"
+
+        server_key = session_manager._get_server_key(connection_params, "streamable_http")
+
+        with (
+            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
+            # Force health check to fail so each call creates a fresh session.
+            patch.object(session_manager, "_validate_session_connectivity", return_value=False),
+        ):
+            ids_seen: list[str] = []
+            for i in range(3):
+                await session_manager.get_session(f"ctx_{i}", connection_params, "streamable_http")
+                ids_seen.extend(session_manager.sessions_by_server[server_key]["sessions"].keys())
+
+        # Counter keeps advancing even as old sessions are cleaned up.
+        assert session_manager._session_id_counters[server_key] == 3
+        # And the new id is unique (never recycles "_0").
+        assert f"{server_key}_0" not in session_manager.sessions_by_server[server_key]["sessions"]
 
 
 class TestHeaderValidation:
