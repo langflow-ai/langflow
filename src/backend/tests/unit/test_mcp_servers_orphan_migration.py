@@ -102,17 +102,22 @@ async def test_migrate_orphaned_mcp_servers_config_recovers_previous_user_config
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(30)
-async def test_migrate_orphaned_mcp_servers_config_picks_most_recent_orphan(
+async def test_migrate_orphaned_mcp_servers_config_skips_when_multiple_orphans(
     initialized_services,
 ):
-    """When multiple orphans exist, the most recently modified one wins."""
+    """With multiple orphan candidates we refuse to guess and leave state untouched.
+
+    MCP server entries can contain env/headers auth material, so importing an
+    unrelated user's config would be a security hazard. Operators must resolve
+    the ambiguity manually.
+    """
     config_dir: Path = initialized_services
 
     old_payload = {"mcpServers": {"old": {}}}
     new_payload = {"mcpServers": {"new": {}}}
 
     old_path = _write_orphan(config_dir, old_payload, mtime_offset=-3600)
-    _write_orphan(config_dir, new_payload)
+    new_path = _write_orphan(config_dir, new_payload)
 
     settings = get_settings_service()
 
@@ -122,12 +127,16 @@ async def test_migrate_orphaned_mcp_servers_config_picks_most_recent_orphan(
 
         user = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
         migrated = await migrate_orphaned_mcp_servers_config(session, settings, user)
-        assert migrated is True
+        assert migrated is False
+
+        stmt = select(UserFile).where(UserFile.user_id == user.id).where(UserFile.name == f"_mcp_servers_{user.id}")
+        assert (await session.exec(stmt)).first() is None
 
     target = config_dir / str(user.id) / f"_mcp_servers_{user.id}.json"
-    assert json.loads(target.read_text()) == new_payload
-    # Older orphan is not used but left alone.
+    assert not target.exists()
+    # Both orphans are preserved on disk for manual recovery.
     assert json.loads(old_path.read_text()) == old_payload
+    assert json.loads(new_path.read_text()) == new_payload
 
 
 @pytest.mark.asyncio
@@ -167,13 +176,53 @@ async def test_migrate_orphaned_mcp_servers_config_no_orphans_is_noop(
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(30)
-async def test_migrate_orphaned_mcp_servers_config_does_not_overwrite_existing(
+async def test_migrate_orphaned_mcp_servers_config_self_heals_missing_db_row(
     initialized_services,
 ):
-    """If the user already has an MCP config file on disk, migration is skipped."""
+    """Re-register missing DB rows when the on-disk file already exists.
+
+    If the user's file is on disk but the DB row is missing, the migration
+    should recreate the row instead of leaving the config invisible. This
+    covers recovery from a previous migration attempt that wrote the file
+    but crashed before committing the DB row.
+    """
     config_dir: Path = initialized_services
-    orphan_payload = {"mcpServers": {"orphan": {}}}
-    _write_orphan(config_dir, orphan_payload)
+    settings = get_settings_service()
+
+    async with session_scope() as session:
+        from langflow.services.database.models.user.model import User
+        from lfx.services.settings.constants import DEFAULT_SUPERUSER
+
+        user = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
+
+        # Simulate a file-exists / DB-row-missing state.
+        existing_dir = config_dir / str(user.id)
+        existing_dir.mkdir(parents=True, exist_ok=True)
+        existing_payload = {"mcpServers": {"keep-me": {}}}
+        existing_path = existing_dir / f"_mcp_servers_{user.id}.json"
+        existing_path.write_text(json.dumps(existing_payload))
+
+        migrated = await migrate_orphaned_mcp_servers_config(session, settings, user)
+        assert migrated is True
+
+        stmt = select(UserFile).where(UserFile.user_id == user.id).where(UserFile.name == f"_mcp_servers_{user.id}")
+        row = (await session.exec(stmt)).first()
+        assert row is not None
+        assert row.path == f"{user.id}/_mcp_servers_{user.id}.json"
+        assert row.size == existing_path.stat().st_size
+
+    # File contents are untouched.
+    assert json.loads(existing_path.read_text()) == existing_payload
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(30)
+async def test_migrate_orphaned_mcp_servers_config_skips_when_row_already_present(
+    initialized_services,
+):
+    """When the DB row already exists, do nothing — avoids double-registration."""
+    config_dir: Path = initialized_services
+    _write_orphan(config_dir, {"mcpServers": {"orphan": {}}})
 
     settings = get_settings_service()
 
@@ -183,15 +232,16 @@ async def test_migrate_orphaned_mcp_servers_config_does_not_overwrite_existing(
 
         user = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
 
-        # Simulate an existing user config file on disk (no DB row yet) to ensure
-        # we never overwrite it even if there is no registered UserFile.
-        existing_dir = config_dir / str(user.id)
-        existing_dir.mkdir(parents=True, exist_ok=True)
-        existing_payload = {"mcpServers": {"keep-me": {}}}
-        (existing_dir / f"_mcp_servers_{user.id}.json").write_text(json.dumps(existing_payload))
+        # Pre-register an MCP file row to simulate an already-migrated user.
+        session.add(
+            UserFile(
+                user_id=user.id,
+                name=f"_mcp_servers_{user.id}",
+                path=f"{user.id}/_mcp_servers_{user.id}.json",
+                size=0,
+            )
+        )
+        await session.commit()
 
         migrated = await migrate_orphaned_mcp_servers_config(session, settings, user)
         assert migrated is False
-
-    target = config_dir / str(user.id) / f"_mcp_servers_{user.id}.json"
-    assert json.loads(target.read_text()) == existing_payload
