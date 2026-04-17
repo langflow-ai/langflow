@@ -99,19 +99,15 @@ html[data-theme="light"] .navbar__logo {
   }
 }
 
-/* Content area - breathing room */
+/* Content area - breathing room, capped at 75% of viewport */
 [class*="docMainContainer"] {
   padding-left: 3rem;
+  max-width: 75vw;
 }
 
-/* Main doc content max-width, centered */
-.markdown {
-  max-width: 800px;
-}
-
-/* Prev/Next nav matches content width */
+/* Prev/Next nav — fills the full content column width */
 .pagination-nav {
-  max-width: 800px;
+  max-width: 100%;
 }
 
 /*
@@ -451,10 +447,6 @@ body {
     width: 140px;
   }
 }
-/*
-.ch-scrollycoding {
-  gap: 10rem !important;
-} */
 
 .ch-scrollycoding-content {
   max-width: 55% !important;
