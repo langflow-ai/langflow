@@ -5,6 +5,9 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
+from lfx.log.logger import logger
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
+
 if TYPE_CHECKING:
     from contextvars import Token
     from uuid import UUID
@@ -55,12 +58,26 @@ def deployment_provider_scope(provider_id: UUID):
     ``provider_key`` here and dispatch to the matching adapter's scope
     (if/else on ``provider_key``, or a keyed registry — either works).
     """
-    from langflow.services.adapters.deployment.watsonx_orchestrate.client import (
-        wxo_scope,
-    )
+    adapter_context = DeploymentAdapterContext(provider_id=provider_id)
+
+    if not FEATURE_FLAGS.wxo_deployments:
+        logger.debug("Skipping deployment adapter scope setup: wxo_deployments feature flag disabled")
+        with DeploymentProviderIDContext.scope(adapter_context):
+            yield
+        return
+
+    try:
+        from langflow.services.adapters.deployment.watsonx_orchestrate.client import (
+            wxo_scope,
+        )
+    except ModuleNotFoundError as exc:
+        logger.info("Skipping Watsonx Orchestrate deployment scope setup: %s", exc)
+        with DeploymentProviderIDContext.scope(adapter_context):
+            yield
+        return
 
     with (
-        DeploymentProviderIDContext.scope(DeploymentAdapterContext(provider_id=provider_id)),
+        DeploymentProviderIDContext.scope(adapter_context),
         wxo_scope(),
     ):
         yield
