@@ -66,7 +66,7 @@ from langflow.services.auth.constants import AUTO_LOGIN_WARNING
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import check_key, create_api_key
-from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
+from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service
@@ -77,11 +77,29 @@ ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
 
+def _is_loopback_client(client_host: str | None) -> bool:
+    """Return True if the request's direct TCP peer is a loopback address.
+
+    MCP Composer runs as a subprocess on the same host as Langflow and connects back
+    via the loopback/bound host. Treat loopback peers as trusted for OAuth-configured
+    projects so the composer proxy keeps working, while external unauthenticated
+    traffic is rejected.
+    """
+    if not client_host:
+        return False
+    try:
+        return ip_address(client_host).is_loopback
+    except ValueError:
+        return False
+
+
 async def verify_project_auth(
     db: AsyncSession,
     project_id: UUID,
     query_param: str,
     header_param: str,
+    *,
+    client_host: str | None = None,
 ) -> User:
     """MCP-specific user authentication that allows fallback to username lookup when not using API key auth.
 
@@ -89,7 +107,6 @@ async def verify_project_auth(
     or checks if the API key is valid.
     """
     settings_service = get_settings_service()
-    result: ApiKey | User | None
 
     project = (await db.exec(select(Folder).where(Folder.id == project_id))).first()
 
@@ -108,6 +125,14 @@ async def verify_project_auth(
 
     if requires_api_key:
         api_key = query_param or header_param
+
+        # OAuth projects are fronted by a local MCP Composer subprocess that connects back
+        # over loopback without credentials. Allow those trusted local hops to pass through
+        # to the superuser fallback so the composer proxy keeps working; any non-loopback
+        # peer (i.e. a remote caller hitting Langflow directly) must present a valid key.
+        if not api_key and project_auth_type == "oauth" and _is_loopback_client(client_host):
+            return await _superuser_fallback(db, settings_service)
+
         if not api_key:
             if project_auth_type == "oauth":
                 detail = (
@@ -137,13 +162,16 @@ async def verify_project_auth(
 
         return user
 
-    # Get the first user
+    return await _superuser_fallback(db, settings_service)
+
+
+async def _superuser_fallback(db: AsyncSession, settings_service) -> User:
+    """Resolve the configured superuser for unauthenticated MCP paths that allow fallback."""
     if not settings_service.auth_settings.SUPERUSER:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Missing superuser username in auth settings",
         )
-    # For MCP endpoints, always fall back to username lookup when no API key is provided
     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
     if result:
         logger.warning(AUTO_LOGIN_WARNING)
@@ -183,7 +211,14 @@ async def verify_project_auth_conditional(
 
         # Check if this project requires API key only authentication
         if get_settings_service().settings.mcp_composer_enabled:
-            return await verify_project_auth(session, project_id, api_key_query_value, api_key_header_value)
+            client_host = request.client.host if request.client else None
+            return await verify_project_auth(
+                session,
+                project_id,
+                api_key_query_value,
+                api_key_header_value,
+                client_host=client_host,
+            )
 
         # For all other cases, use standard MCP authentication (allows JWT + API keys)
         # Call the MCP auth function directly

@@ -273,14 +273,37 @@ async def _set_project_auth_type(project_id, auth_type: str) -> None:
         session.add(project)
 
 
-async def test_streamable_rejects_unauthenticated_oauth_project(
+@pytest.fixture
+def force_non_loopback_client():
+    """Make the loopback-trust shortcut in verify_project_auth treat the test client as remote."""
+    with patch("langflow.api.v1.mcp_projects._is_loopback_client", return_value=False) as mock:
+        yield mock
+
+
+def test_is_loopback_client_detects_ipv4_and_ipv6_loopback():
+    """Unit-test the loopback helper used by the OAuth streamable auth path."""
+    from langflow.api.v1.mcp_projects import _is_loopback_client
+
+    assert _is_loopback_client("127.0.0.1") is True
+    assert _is_loopback_client("127.0.0.42") is True
+    assert _is_loopback_client("::1") is True
+    assert _is_loopback_client("10.0.0.1") is False
+    assert _is_loopback_client("192.168.1.5") is False
+    assert _is_loopback_client("testclient") is False
+    assert _is_loopback_client("") is False
+    assert _is_loopback_client(None) is False
+
+
+async def test_streamable_rejects_unauthenticated_oauth_project_from_remote_client(
     client: AsyncClient,
     user_test_project,
     mock_streamable_http_manager,
     enable_mcp_composer,
+    force_non_loopback_client,
 ):
-    """OAuth-configured projects must reject direct unauthenticated /streamable access."""
+    """Remote (non-loopback) unauthenticated callers must be rejected on OAuth projects."""
     assert enable_mcp_composer
+    assert force_non_loopback_client
     await _set_project_auth_type(user_test_project.id, "oauth")
 
     response = await client.post(
@@ -298,9 +321,11 @@ async def test_streamable_rejects_unauthenticated_oauth_project_trailing_slash(
     user_test_project,
     mock_streamable_http_manager,
     enable_mcp_composer,
+    force_non_loopback_client,
 ):
     """Trailing-slash variant of /streamable should also enforce OAuth auth."""
     assert enable_mcp_composer
+    assert force_non_loopback_client
     await _set_project_auth_type(user_test_project.id, "oauth")
 
     response = await client.post(
@@ -312,14 +337,16 @@ async def test_streamable_rejects_unauthenticated_oauth_project_trailing_slash(
     mock_streamable_http_manager.handle_request.assert_not_called()
 
 
-async def test_sse_rejects_unauthenticated_oauth_project(
+async def test_sse_rejects_unauthenticated_oauth_project_from_remote_client(
     client: AsyncClient,
     user_test_project,
     mock_sse_transport,
     enable_mcp_composer,
+    force_non_loopback_client,
 ):
-    """OAuth-configured projects must reject direct unauthenticated SSE access."""
+    """SSE endpoint must also reject remote unauthenticated callers on OAuth projects."""
     assert enable_mcp_composer
+    assert force_non_loopback_client
     await _set_project_auth_type(user_test_project.id, "oauth")
 
     response = await client.get(f"api/v1/mcp/project/{user_test_project.id}/sse")
@@ -328,15 +355,45 @@ async def test_sse_rejects_unauthenticated_oauth_project(
     mock_sse_transport.connect_sse.assert_not_called()
 
 
+async def test_streamable_allows_loopback_oauth_for_composer_forwarding(
+    client: AsyncClient,
+    user_test_project,
+    mock_streamable_http_manager,
+    enable_mcp_composer,
+):
+    """Loopback callers (the local MCP Composer subprocess) must keep forwarding without a key.
+
+    MCP Composer runs as a local subprocess and proxies authenticated OAuth traffic to
+    Langflow's /streamable endpoint without currently forwarding a Langflow API key.
+    We trust loopback peers so the existing OAuth proxy path keeps working; external
+    unauthenticated callers are still rejected (see
+    ``test_streamable_rejects_unauthenticated_oauth_project_from_remote_client``).
+    """
+    assert enable_mcp_composer
+    await _set_project_auth_type(user_test_project.id, "oauth")
+
+    # httpx's AsyncClient against ASGI uses 127.0.0.1 as the client host, which
+    # simulates the on-host MCP Composer forwarding path.
+    response = await client.post(
+        f"api/v1/mcp/project/{user_test_project.id}/streamable",
+        json={"type": "test", "content": "message"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    mock_streamable_http_manager.handle_request.assert_called_once()
+
+
 async def test_streamable_oauth_project_accepts_valid_api_key(
     client: AsyncClient,
     user_test_project,
     created_api_key,
     mock_streamable_http_manager,
     enable_mcp_composer,
+    force_non_loopback_client,
 ):
     """Valid API keys must still be accepted for OAuth-configured projects."""
     assert enable_mcp_composer
+    assert force_non_loopback_client
     await _set_project_auth_type(user_test_project.id, "oauth")
 
     response = await client.post(
@@ -354,9 +411,11 @@ async def test_streamable_oauth_project_rejects_invalid_api_key(
     user_test_project,
     mock_streamable_http_manager,
     enable_mcp_composer,
+    force_non_loopback_client,
 ):
-    """Invalid API keys must be rejected for OAuth-configured projects."""
+    """Invalid API keys must be rejected for OAuth-configured projects even from loopback."""
     assert enable_mcp_composer
+    assert force_non_loopback_client
     await _set_project_auth_type(user_test_project.id, "oauth")
 
     response = await client.post(
