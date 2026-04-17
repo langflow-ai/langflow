@@ -6,7 +6,6 @@ from collections.abc import AsyncIterator, Generator, Iterator
 from typing import TYPE_CHECKING, Any, cast
 
 import yaml
-from langchain_core.messages import AIMessage, AIMessageChunk
 
 from lfx.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
 from lfx.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path
@@ -255,6 +254,8 @@ class InterfaceVertex(ComponentVertex):
         Returns:
             str: The processed message.
         """
+        from langchain_core.messages import AIMessage, AIMessageChunk
+
         artifacts = None
         sender = self.params.get("sender", None)
         sender_name = self.params.get("sender_name", None)

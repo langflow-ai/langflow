@@ -9,7 +9,6 @@ from string import Formatter
 from typing import TYPE_CHECKING
 
 import yaml
-from langchain_core.language_models import BaseLanguageModel
 
 from lfx.log.logger import logger
 from lfx.services.chat.config import ChatConfig
@@ -49,6 +48,8 @@ def try_setting_streaming_options(langchain_object):
     """Try setting streaming options on LangChain objects."""
     # If the LLM type is OpenAI or ChatOpenAI, set streaming to True
     # First we need to find the LLM
+    from langchain_core.language_models import BaseLanguageModel
+
     llm = None
     if hasattr(langchain_object, "llm"):
         llm = langchain_object.llm

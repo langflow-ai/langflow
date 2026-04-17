@@ -6,7 +6,6 @@ import warnings
 from types import FunctionType
 from typing import Optional, Union
 
-from langchain_core._api.deprecation import LangChainDeprecationWarning
 from pydantic import ValidationError
 
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
@@ -308,6 +307,8 @@ def create_type_ignore_class():
 def _import_module_with_warnings(module_name):
     """Import module with appropriate warning suppression."""
     if "langchain" in module_name:
+        from langchain_core._api.deprecation import LangChainDeprecationWarning
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", LangChainDeprecationWarning)
             return importlib.import_module(module_name)

@@ -83,7 +83,13 @@ class TestIMP02NoPandas:
 
 
 class TestIMP07NoLangchainCore:
-    """IMP-07: importing lfx.field_typing.constants does not pull langchain_core/classic."""
+    """IMP-07: importing lfx.field_typing.constants does not pull langchain_core/classic.
+
+    Also asserts that the full Graph hot path is clean of langchain_core after
+    the bundled IMP-08 partial deferrals in custom_component.py,
+    custom_component/custom_component.py, validate.py, interface/utils.py, and
+    vertex_types.py.
+    """
 
     HEAVY = frozenset({"langchain_core", "langchain_classic", "langchain_text_splitters"})
 
@@ -94,6 +100,12 @@ class TestIMP07NoLangchainCore:
         # `from lfx.field_typing import Tool` currently triggers constants load
         # via the existing lazy dispatch. After IMP-07 that remains safe too.
         _assert_modules_absent("import lfx.field_typing", set(self.HEAVY))
+
+    def test_langchain_absent_from_graph_hot_path(self):
+        # Cumulative Graph-path assertion. After IMP-07 + the bundled IMP-08
+        # partial deferrals, `from lfx.graph.graph.base import Graph` no longer
+        # loads langchain_core, langchain_classic, or langchain_text_splitters.
+        _assert_modules_absent("from lfx.graph.graph.base import Graph", set(self.HEAVY))
 
 
 class TestIMP03NoPIL:
