@@ -19,28 +19,26 @@ import requests
 from gp_client import BASE_URL, GP_INSTANCE, TARGET_LANGS, get_headers, list_bundles
 
 DEFAULT_SOURCE = Path(__file__).parent.parent.parent / "src/backend/base/langflow/locales/en.json"
-GP_BACKEND_BUNDLE = os.getenv("GP_BACKEND_BUNDLE", "langflow-backend")
-REQUEST_TIMEOUT = 60
-CHUNK_SIZE = 500
+GP_BACKEND_BUNDLE = os.getenv("GP_BACKEND_BUNDLE", "langflow-ui-backend-v2")
+REQUEST_TIMEOUT = 300  # 5 minutes — single PUT with full payload
 
 
 def upload_backend_strings(strings: dict, lang: str = "en") -> None:
-    """Upload strings in chunks to avoid server read timeouts on large payloads."""
+    """Upload all strings in a single PUT request.
+
+    GP's PUT replaces the entire bundle content, so chunking is not safe —
+    each chunk would overwrite the previous one. We send everything at once
+    with an extended timeout instead.
+    """
     url = f"{BASE_URL}/{GP_INSTANCE}/v2/bundles/{GP_BACKEND_BUNDLE}/{lang}"
-    items = list(strings.items())
-    total_chunks = (len(items) + CHUNK_SIZE - 1) // CHUNK_SIZE
-    for i in range(0, len(items), CHUNK_SIZE):
-        chunk = dict(items[i : i + CHUNK_SIZE])
-        chunk_num = i // CHUNK_SIZE + 1
-        print(f"  Uploading chunk {chunk_num}/{total_chunks} ({len(chunk)} strings)...")
-        response = requests.put(
-            url,
-            headers=get_headers(url, "PUT", chunk),
-            json=chunk,
-            verify=False,  # noqa: S501
-            timeout=REQUEST_TIMEOUT,
-        )
-        response.raise_for_status()
+    response = requests.put(
+        url,
+        headers=get_headers(url, "PUT", strings),
+        json=strings,
+        verify=False,  # noqa: S501
+        timeout=REQUEST_TIMEOUT,
+    )
+    response.raise_for_status()
 
 
 def create_backend_bundle(source_lang: str = "en") -> dict:
@@ -78,7 +76,7 @@ def main() -> None:
     else:
         print(f"Bundle '{GP_BACKEND_BUNDLE}' already exists, skipping creation.")
 
-    print(f"Uploading {len(strings)} strings to GP bundle '{GP_BACKEND_BUNDLE}' in chunks of {CHUNK_SIZE}...")
+    print(f"Uploading {len(strings)} strings to GP bundle '{GP_BACKEND_BUNDLE}' (instance: {GP_INSTANCE})...")
     upload_backend_strings(strings)
     print("Done.")
 

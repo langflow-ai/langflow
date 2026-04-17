@@ -65,7 +65,7 @@ export default function FileManagerModal({
         onSubmit={() => {
           if (internalSelectedFiles.length === 0) {
             setErrorData({
-              title: "Please select at least one file",
+              title: t("fileManager.selectAtLeastOneFile"),
             });
             return;
           }
@@ -109,7 +109,7 @@ export default function FileManagerModal({
 
         <BaseModal.Footer
           submit={{
-            label: `Select files`,
+            label: t("fileManager.selectFiles"),
             dataTestId: "select-files-modal-button",
           }}
         ></BaseModal.Footer>

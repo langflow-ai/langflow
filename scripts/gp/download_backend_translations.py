@@ -19,7 +19,7 @@ import requests
 from gp_client import BASE_URL, GP_INSTANCE, TARGET_LANGS, get_headers
 
 DEFAULT_OUTPUT = Path(__file__).parent.parent.parent / "src/backend/base/langflow/locales"
-GP_BACKEND_BUNDLE = os.getenv("GP_BACKEND_BUNDLE", "langflow-backend")
+GP_BACKEND_BUNDLE = os.getenv("GP_BACKEND_BUNDLE", "langflow-ui-backend-v2")
 REQUEST_TIMEOUT = 30
 
 
@@ -42,6 +42,8 @@ def main() -> None:
 
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Downloading from GP bundle '{GP_BACKEND_BUNDLE}'...")
 
     for lang in TARGET_LANGS:
         print(f"Downloading '{lang}' translations...")

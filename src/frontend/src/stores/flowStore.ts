@@ -1307,7 +1307,7 @@ export function syncNodeTranslations(): void {
   const { nodes } = useFlowStore.getState();
   if (nodes.length === 0) return;
 
-  const { data: typesData, types } = useTypesStore.getState();
+  const { data: typesData, types, templates } = useTypesStore.getState();
 
   // Build normalized lookup: normalize(registryKey) → registryKey
   // This lets us find "Prompt Template" in the registry when nodeType is "PromptTemplate".
@@ -1338,10 +1338,15 @@ export function syncNodeTranslations(): void {
         ? nodeType
         : (normalizedToRegistryKey[normalizeComponentKey(nodeType)] ?? nodeType);
 
-    // Skip custom/group nodes not in the types catalog
-    if (!category || !typesData[category]?.[registryKey]) return node;
+    // Resolve definition: normal path first, then fall back to templates which
+    // has legacy aliases pre-resolved (e.g. "Prompt" → Prompt Template definition,
+    // "parser" → ParserComponent definition).
+    const freshDef =
+      (category && typesData[category]?.[registryKey])
+        ? typesData[category][registryKey]
+        : templates[nodeType];
 
-    const freshDef = typesData[category][registryKey];
+    if (!freshDef) return node;
 
     // Update input field display_names
     const updatedTemplate = { ...node.data.node!.template };
