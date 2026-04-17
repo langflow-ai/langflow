@@ -66,13 +66,13 @@ const ListComponent = ({
     deleteFlow({ id: [flowData.id] })
       .then(() => {
         setSuccessData({
-          title: "Selected items deleted successfully",
+          title: t("flow.deletedSuccessfully"),
         });
       })
       .catch(() => {
         setErrorData({
-          title: "Error deleting items",
-          list: ["Please try again"],
+          title: t("flow.errorDeleting"),
+          list: [t("flow.errorDeletingRetry")],
         });
       });
   };
