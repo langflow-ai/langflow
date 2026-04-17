@@ -535,7 +535,7 @@ class TestIDX01LazyLock:
             f"expected _load_components_dynamically to run once, got {call_count} (lock did not prevent race)"
         )
 
-    def test_cache_built_once_threading(self, monkeypatch):
+    def test_cache_built_once_threading(self, monkeypatch, tmp_path):
         """Ten threads, each with its OWN event loop via asyncio.run.
 
         Purpose per research Code Examples section IDX-01: each thread's event loop
@@ -557,10 +557,29 @@ class TestIDX01LazyLock:
         loader is stubbed (not wrapped around the real loader) for the same reason
         as the async test: real component enumeration brings in optional integrations
         that are not installed in the lfx-only test venv.
+
+        IDX-07 isolation (plan 02-06): with IDX-07's read-time stale-index warning
+        in place, ``get_and_cache_all_types_dict`` calls ``_get_cache_path()`` and,
+        if that path exists, reads the entire disk-cache file (5.9MB typical user
+        cache) via ``asyncio.to_thread`` under the per-thread lock. In a threaded
+        test where ten threads each create their own event loop and reset the
+        lazy-lock, holding the per-thread lock while doing a 5.9MB disk read under
+        ``asyncio.to_thread`` reliably races against the lazy-lock reset and turns
+        the previously-sub-second test into a deadlock-like 60s+ hang. Monkey-patch
+        ``_get_cache_path`` to a path inside ``tmp_path`` that does not exist so
+        the IDX-07 peek short-circuits on ``cache_path.exists()`` being False. This
+        test is about multi-loop lock behaviour, not about the stale-index warning.
         """
         from lfx.interface import components as ci
 
         _reset_component_cache_singleton(monkeypatch)
+
+        # IDX-07 isolation: point _get_cache_path at a non-existent file so the
+        # read-time peek in get_and_cache_all_types_dict short-circuits and does
+        # not trigger a 5.9MB disk read under each thread's lock. See docstring.
+        _absent_cache_path = tmp_path / "definitely_not_here.json"
+        assert not _absent_cache_path.exists()
+        monkeypatch.setattr(ci, "_get_cache_path", lambda: _absent_cache_path)
 
         # Force the dynamic-load fallback path (see async-test rationale above).
         async def _empty_load_from_index_or_cache(*_args, **_kwargs):

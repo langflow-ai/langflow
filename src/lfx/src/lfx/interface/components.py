@@ -698,52 +698,59 @@ async def get_and_cache_all_types_dict(
         telemetry_service: Optional telemetry service for tracking component loading metrics
     """
     if component_cache.all_types_dict is None:
+        # IDX-07: read-time stale-index warning. Fires ONLY when the user's
+        # disk cache exists AND its version differs from the installed lfx
+        # version. Clean installs that hit only the built-in shipped index
+        # never fire this warning (the shipped _assets/component_index.json
+        # lives at a different path and is never compared here). Corrupt /
+        # unreadable cache is handled downstream by _read_component_index
+        # (and swallowed here so the user does not see redundant noise).
+        #
+        # Placed OUTSIDE the lock-critical section per 02-RESEARCH.md "IDX-07
+        # stale warning" recommendation: the peek is idempotent and read-only,
+        # so holding the lock while doing a ~5MB disk read unnecessarily
+        # widens the lock-hold window and reliably exposes a latent race in
+        # the ComponentCache lazy-lock reset pattern exercised by the
+        # multi-event-loop threading test (TestIDX01LazyLock::
+        # test_cache_built_once_threading). Running the peek before
+        # lock acquisition keeps that test at its pre-IDX-07 sub-second
+        # runtime. In the rare case where two callers cold-start simultaneously
+        # and both observe a stale cache, they will each emit the warning once
+        # -- acceptable cosmetic redundancy, not a correctness issue.
+        from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
+        from importlib.metadata import version as _version
+
+        try:
+            installed_version = _version("lfx")
+        except _PackageNotFoundError:
+            installed_version = None
+
+        if installed_version is not None:
+            try:
+                cache_path = _get_cache_path()
+            except Exception:  # noqa: BLE001
+                cache_path = None
+            if cache_path is not None and cache_path.exists():
+                try:
+                    cached_blob = orjson.loads(await asyncio.to_thread(cache_path.read_bytes))
+                    cached_version = cached_blob.get("version") if isinstance(cached_blob, dict) else None
+                    if isinstance(cached_version, str) and cached_version and cached_version != installed_version:
+                        logger.warning(
+                            "stale component index: cached=%s, installed=%s, path=%s. "
+                            "Delete the file or restart to regenerate.",
+                            cached_version,
+                            installed_version,
+                            cache_path,
+                        )
+                except Exception:  # noqa: BLE001, S110
+                    # Corrupt or unreadable cache: downstream _read_component_index
+                    # will log at warning level when it retries the read with SHA check.
+                    pass
+
         async with component_cache.lock:
             # Double-check: another task may have populated while we awaited the lock (IDX-01).
             if component_cache.all_types_dict is None:
                 await logger.adebug("Building components cache")
-
-                # IDX-07: read-time stale-index warning. Fires ONLY when the user's
-                # disk cache exists AND its version differs from the installed lfx
-                # version. Clean installs that hit only the built-in shipped index
-                # never fire this warning (the shipped _assets/component_index.json
-                # lives at a different path and is never compared here). Corrupt /
-                # unreadable cache is handled downstream by _read_component_index
-                # (and swallowed here so the user does not see redundant noise).
-                from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
-                from importlib.metadata import version as _version
-
-                try:
-                    installed_version = _version("lfx")
-                except _PackageNotFoundError:
-                    installed_version = None
-
-                if installed_version is not None:
-                    try:
-                        cache_path = _get_cache_path()
-                    except Exception:  # noqa: BLE001
-                        cache_path = None
-                    if cache_path is not None and cache_path.exists():
-                        try:
-                            cached_blob = orjson.loads(await asyncio.to_thread(cache_path.read_bytes))
-                            cached_version = cached_blob.get("version") if isinstance(cached_blob, dict) else None
-                            if (
-                                isinstance(cached_version, str)
-                                and cached_version
-                                and cached_version != installed_version
-                            ):
-                                logger.warning(
-                                    "stale component index: cached=%s, installed=%s, path=%s. "
-                                    "Delete the file or restart to regenerate.",
-                                    cached_version,
-                                    installed_version,
-                                    cache_path,
-                                )
-                        except Exception:  # noqa: BLE001, S110
-                            # Corrupt or unreadable cache: downstream _read_component_index
-                            # will log at warning level when it retries the read with SHA check.
-                            pass
-
                 langflow_components = await import_langflow_components(settings_service, telemetry_service)
                 custom_components_dict = await _determine_loading_strategy(settings_service)
 
