@@ -23,6 +23,7 @@ from langflow.api.v1.projects_files import download_project_flows, upload_projec
 from langflow.api.v1.projects_mcp_helpers import (
     cleanup_mcp_on_delete,
     handle_mcp_server_rename,
+    reconcile_mcp_server_for_auth_update,
     register_mcp_servers_for_project,
 )
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
@@ -258,6 +259,8 @@ async def update_project(
         # Track if MCP Composer needs to be started or stopped
         should_start_mcp_composer = False
         should_stop_mcp_composer = False
+        new_auth_type: str | None = None
+        auth_settings_updated = False
 
         # Check if auth_settings is being updated
         if "auth_settings" in project.model_fields_set:  # Check if auth_settings was explicitly provided
@@ -268,6 +271,8 @@ async def update_project(
 
             should_start_mcp_composer = auth_result["should_start_composer"]
             should_stop_mcp_composer = auth_result["should_stop_composer"]
+            new_auth_type = auth_result["new_auth_type"]
+            auth_settings_updated = True
 
         # Handle project rename and corresponding MCP server rename
         if project.name and project.name != existing_project.name:
@@ -308,6 +313,24 @@ async def update_project(
                 MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
             )
             await mcp_composer_service.stop_project_composer(str(existing_project.id))
+
+        # Sync MCP server config for apikey/none auth; OAuth is handled by MCP Composer above.
+        if auth_settings_updated and new_auth_type in {"apikey", "none"}:
+            try:
+                await reconcile_mcp_server_for_auth_update(
+                    existing_project,
+                    new_auth_type,
+                    current_user,
+                    session,
+                )
+            except HTTPException:
+                raise
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(
+                    "Failed to reconcile MCP server config for project %s after auth update: %s",
+                    existing_project.id,
+                    e,
+                )
 
         concat_project_components = project.components + project.flows
 
