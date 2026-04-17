@@ -84,6 +84,12 @@ export default function KnowledgeBaseUploadModal({
     }
   };
 
+  const errorCount = Object.keys(form.validationErrors).length;
+  const modalBase = !hideAdvanced && form.showAdvanced ? 690 : 347;
+  const modalHeight = `${modalBase + errorCount * 16}`;
+
+  const showHelpButton = !hideAdvanced && form.currentStep === 1;
+
   return (
     <StepperModal
       open={open}
@@ -104,11 +110,7 @@ export default function KnowledgeBaseUploadModal({
           : STEP_DESCRIPTIONS[form.currentStep]
       }
       icon="Database"
-      height={(() => {
-        const errorCount = Object.keys(form.validationErrors).length;
-        const base = !hideAdvanced && form.showAdvanced ? 690 : 347;
-        return `${base + errorCount * 16}`;
-      })()}
+      height={modalHeight}
       width="w-[700px]"
       showProgress={false}
       sidePanel={
@@ -131,17 +133,13 @@ export default function KnowledgeBaseUploadModal({
           submitTestId="kb-create-button"
           submitLabel={form.isAddSourcesMode ? "Add Sources" : "Create"}
           helpLabel={
-            !hideAdvanced && form.currentStep === 1
+            showHelpButton
               ? form.showAdvanced
                 ? "Hide Configuration"
                 : "Configure Sources"
               : undefined
           }
-          onHelp={
-            !hideAdvanced && form.currentStep === 1
-              ? form.toggleAdvanced
-              : undefined
-          }
+          onHelp={showHelpButton ? form.toggleAdvanced : undefined}
         />
       }
     >
