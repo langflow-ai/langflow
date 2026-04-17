@@ -6,11 +6,12 @@
   "captured_runner": "ubuntu-latest (GitHub Actions)",
   "python_version": "3.13",
   "allowed_regression_pct": 15,
-  "_note": "Captured on Linux CI via run-benchmark-snapshot label trigger (build 24541900208). langflow_run_http_ready remains sentinel: the structlog processor pipeline swallows uvicorn's 'Application startup complete.' marker, so the supervisor times out. Fix deferred to Phase 4/5 when langflow lifespan work touches logging. measurement_mode is bytecode_compile_delta per D-11a.",
+  "_note": "Captured on Linux CI via run-benchmark-snapshot label trigger (build 24541900208). langflow_run_http_ready remains sentinel: the structlog processor pipeline swallows uvicorn's 'Application startup complete.' marker, so the supervisor times out. langflow_run_no_change_restart is a new Phase 4 SVC-01 D-03 scenario; it lands here as a sentinel until a run-benchmark-snapshot label trigger captures authoritative Linux numbers. Fix for the structlog marker is deferred to Phase 4/5 when langflow lifespan work touches logging. measurement_mode is bytecode_compile_delta per D-11a.",
   "scenarios": {
     "lfx_bare": {"mean_ms": 17824.74, "stddev_ms": 117.42, "runs": 10},
     "lfx_with_flow": {"mean_ms": 18920.72, "stddev_ms": 125.59, "runs": 10},
     "lfx_with_flow_prebaked": {"mean_ms": 9520.37, "stddev_ms": 75.60, "runs": 10},
-    "langflow_run_http_ready": {"mean_ms": 0, "stddev_ms": 0, "runs": 0}
+    "langflow_run_http_ready": {"mean_ms": 0, "stddev_ms": 0, "runs": 0},
+    "langflow_run_no_change_restart": {"mean_ms": 0, "stddev_ms": 0, "runs": 0}
   }
 }
