@@ -299,9 +299,11 @@ describe("SidebarSegmentedNav", () => {
       const button = screen.getByTestId(`sidebar-nav-${item.id}`);
       // Check for screen reader only text
       const srOnlySpan = button.querySelector(".sr-only");
-      expect(srOnlySpan).toHaveTextContent(
-        enTranslations[item.label as keyof typeof enTranslations],
-      );
+      const expectedLabel =
+        (enTranslations[item.label as keyof typeof enTranslations] as
+          | string
+          | undefined) ?? item.label;
+      expect(srOnlySpan).toHaveTextContent(expectedLabel);
     });
   });
 
@@ -397,8 +399,8 @@ describe("SidebarSegmentedNav", () => {
     expect(NAV_ITEMS[2]).toEqual({
       id: "mcp",
       icon: "Mcp",
-      label: "MCP",
-      tooltip: "MCP",
+      label: "sidebar.nav.mcp",
+      tooltip: "sidebar.nav.mcp",
     });
     expect(NAV_ITEMS[3]).toEqual({
       id: "bundles",
