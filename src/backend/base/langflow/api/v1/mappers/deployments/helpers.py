@@ -772,10 +772,10 @@ async def list_deployments_synced(
                 user_id=user_id,
                 deployment_ids=accepted_deployment_ids,
             )
-            accepted = [(row, corrected_counts.get(row.id, 0), matched) for row, _attached_count, matched in accepted]
+            accepted = [(row, corrected_counts[row.id], matched) for row, _attached_count, matched in accepted]
         except Exception:  # noqa: BLE001
             logger.warning(
-                "Binding-level sync failed for list_deployments_synced; returning unverified attachment counts",
+                "Snapshot-level sync failed for list_deployments_synced; returning unverified attachment counts",
                 exc_info=True,
             )
 
@@ -830,7 +830,6 @@ async def list_deployment_flow_versions_synced(
                     attachments=attachments,
                     known_snapshot_ids=known_snapshot_ids,
                     db=db,
-                    verified_snapshot_ids=verified_snapshot_ids,
                 )
         except Exception as exc:  # noqa: BLE001
             snapshot_result = None

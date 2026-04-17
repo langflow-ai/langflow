@@ -778,11 +778,11 @@ class TestCountAttachmentsByDeploymentIds:
         counts = await count_attachments_by_deployment_ids(db, user_id=user.id, deployment_ids=[])
         assert counts == {}
 
-    async def test_deployment_with_no_attachments_not_in_result(
+    async def test_deployment_with_no_attachments_returns_zero_count(
         self, db: AsyncSession, user: User, deployment: Deployment
     ):
         counts = await count_attachments_by_deployment_ids(db, user_id=user.id, deployment_ids=[deployment.id])
-        assert deployment.id not in counts
+        assert counts[deployment.id] == 0
 
 
 @pytest.mark.asyncio

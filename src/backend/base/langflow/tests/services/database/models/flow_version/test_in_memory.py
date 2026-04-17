@@ -293,7 +293,7 @@ class TestCountFunctionsExcludeOrphans:
         await db.commit()
 
         counts = await count_attachments_by_deployment_ids(db, user_id=user.id, deployment_ids=[deployment.id])
-        assert counts.get(deployment.id, 0) == 0
+        assert counts[deployment.id] == 0
 
     async def test_count_deployment_attachments_excludes_orphan_version(
         self, db: AsyncSession, flow: Flow, user: User, deployment: Deployment

@@ -1174,7 +1174,6 @@ async def get_deployment(
                     attachments=attachments,
                     known_snapshot_ids=known_snapshots,
                     db=session,
-                    verified_snapshot_ids=verified_snapshot_ids,
                 )
                 attached_count = corrected_counts.get(deployment_row.id, 0)
         except Exception:  # noqa: BLE001

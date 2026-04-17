@@ -2144,14 +2144,15 @@ class TestFlowVersionDeploymentAttachmentCrud:
             count_attachments_by_deployment_ids,
         )
 
+        deployment_id = uuid4()
         db = _CaptureDb(_FakeAllResult([]))
         counts = await count_attachments_by_deployment_ids(
             db,
             user_id=uuid4(),
-            deployment_ids=[uuid4()],
+            deployment_ids=[deployment_id],
         )
 
-        assert counts == {}
+        assert counts == {deployment_id: 0}
         assert len(db.statements) == 1
         statement_text = str(db.statements[0]).lower()
         assert "join flow_version" in statement_text

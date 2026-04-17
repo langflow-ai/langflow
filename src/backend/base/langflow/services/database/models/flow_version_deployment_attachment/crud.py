@@ -550,6 +550,11 @@ async def count_attachments_by_deployment_ids(
     user_id: UUID,
     deployment_ids: list[UUID],
 ) -> dict[UUID, int]:
+    """Return distinct flow-version attachment counts keyed by deployment id.
+
+    Returns a dictionary mapping each deployment id to the number of rows in
+    FlowVersionDeploymentAttachment with that deployment id.
+    """
     if not deployment_ids:
         return {}
 
@@ -572,7 +577,8 @@ async def count_attachments_by_deployment_ids(
         .group_by(FlowVersionDeploymentAttachment.deployment_id)
     )
     rows = (await db.exec(stmt)).all()
-    return {deployment_id: int(count) for deployment_id, count in rows}
+    counts_by_id = {deployment_id: int(count) for deployment_id, count in rows}
+    return {deployment_id: counts_by_id.get(deployment_id, 0) for deployment_id in deployment_ids}
 
 
 async def count_deployment_attachments(

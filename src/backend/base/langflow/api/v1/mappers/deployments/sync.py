@@ -167,20 +167,16 @@ async def sync_attachment_snapshot_ids(
     attachments: list[FlowVersionDeploymentAttachment],
     known_snapshot_ids: set[str],
     db: DbSession,
-    verified_snapshot_ids: list[str] | None = None,
 ) -> dict[UUID, int]:
     """Delete stale attachment rows and return corrected attached counts."""
-    verified_snapshot_ids = verified_snapshot_ids or extract_verified_snapshot_ids(attachments)
-    if len(verified_snapshot_ids) != len(attachments):
-        msg = (
-            "verified_snapshot_ids length must match attachments length "
-            f"({len(verified_snapshot_ids)} != {len(attachments)})"
-        )
-        raise ValueError(msg)
-
     corrected_counts: dict[UUID, int] = {}
     stale_attachment_keys: list[DeploymentAttachmentKey] = []
-    for attachment, snapshot_id in zip(attachments, verified_snapshot_ids, strict=True):
+    for attachment in attachments:
+        snapshot_id = require_non_empty(
+            attachment.provider_snapshot_id,
+            "FlowVersionDeploymentAttachment.provider_snapshot_id must be non-empty "
+            f"(deployment={attachment.deployment_id}, flow_version={attachment.flow_version_id})",
+        )
         if snapshot_id not in known_snapshot_ids:
             await logger.adebug(
                 "Snapshot %s for deployment %s not found on provider — marking stale attachment for batch delete",
