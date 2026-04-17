@@ -77,29 +77,11 @@ ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
 
-def _is_loopback_client(client_host: str | None) -> bool:
-    """Return True if the request's direct TCP peer is a loopback address.
-
-    MCP Composer runs as a subprocess on the same host as Langflow and connects back
-    via the loopback/bound host. Treat loopback peers as trusted for OAuth-configured
-    projects so the composer proxy keeps working, while external unauthenticated
-    traffic is rejected.
-    """
-    if not client_host:
-        return False
-    try:
-        return ip_address(client_host).is_loopback
-    except ValueError:
-        return False
-
-
 async def verify_project_auth(
     db: AsyncSession,
     project_id: UUID,
     query_param: str,
     header_param: str,
-    *,
-    client_host: str | None = None,
 ) -> User:
     """MCP-specific user authentication that allows fallback to username lookup when not using API key auth.
 
@@ -119,20 +101,17 @@ async def verify_project_auth(
         auth_settings = AuthSettings(**project.auth_settings)
 
     project_auth_type = auth_settings.auth_type if auth_settings else None
+    # OAuth projects must present a valid API key at the Langflow transport endpoint: network-level
+    # trust (loopback / same-host proxy) is unsafe because it cannot distinguish the local MCP
+    # Composer subprocess from another loopback peer behind a reverse proxy or sidecar. The
+    # composer-to-Langflow hop should be authenticated explicitly once mcp-composer can forward
+    # a project-scoped backend credential; until then, direct backend access requires a key.
     requires_api_key = (not auth_settings and not settings_service.auth_settings.AUTO_LOGIN) or (
         project_auth_type in {"apikey", "oauth"}
     )
 
     if requires_api_key:
         api_key = query_param or header_param
-
-        # OAuth projects are fronted by a local MCP Composer subprocess that connects back
-        # over loopback without credentials. Allow those trusted local hops to pass through
-        # to the superuser fallback so the composer proxy keeps working; any non-loopback
-        # peer (i.e. a remote caller hitting Langflow directly) must present a valid key.
-        if not api_key and project_auth_type == "oauth" and _is_loopback_client(client_host):
-            return await _superuser_fallback(db, settings_service)
-
         if not api_key:
             if project_auth_type == "oauth":
                 detail = (
@@ -211,13 +190,11 @@ async def verify_project_auth_conditional(
 
         # Check if this project requires API key only authentication
         if get_settings_service().settings.mcp_composer_enabled:
-            client_host = request.client.host if request.client else None
             return await verify_project_auth(
                 session,
                 project_id,
                 api_key_query_value,
                 api_key_header_value,
-                client_host=client_host,
             )
 
         # For all other cases, use standard MCP authentication (allows JWT + API keys)
