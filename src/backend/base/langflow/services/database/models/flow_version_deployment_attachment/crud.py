@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from lfx.log.logger import logger
-from sqlalchemy import and_, column, literal, union_all, values
+from sqlalchemy import and_, column, values
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select, update
 
@@ -373,29 +373,63 @@ async def delete_unbound_attachments(
     db: AsyncSession,
     *,
     user_id: UUID,
+    provider_account_id: UUID,
     deployment_ids: list[UUID],
     bindings: list[ProviderSnapshotBinding],
 ) -> int:
+    """Delete stale attachments for an explicit deployment subset.
+
+    Scope contract:
+    - ``deployment_ids`` defines the target deployment set. Deletions are
+      always constrained to this set.
+    - ``bindings`` is the provider-observed snapshot view for the same scope
+      and is keyed by ``(resource_key, snapshot_id)``.
+
+    Why ``deployment_ids`` is required:
+    - ``bindings`` comes from the provider snapshot view, not from the local
+      target set. It is not a complete scope declaration.
+    - A targeted deployment can be absent from ``bindings`` when the provider
+      returns no snapshots for it; in that case, all local attachments for that
+      deployment are stale and should be deleted.
+    - If scope is derived only from provider-scoped bindings (without explicit
+      ``deployment_ids``), it under-deletes: deployments with zero provider
+      bindings are skipped.
+    Provider scoping:
+    - ``provider_account_id`` scopes ``resource_key`` matching to one provider
+      account namespace.
+    - Any ``deployment_ids`` not owned by ``provider_account_id`` are ignored
+      by the joined predicates (dropped from the effective target set).
+    """
     from langflow.services.database.models.deployment.model import Deployment
 
     if not deployment_ids:
         return 0
 
     if not bindings:
+        # all local db attachments are stale
+        scoped_attachment_ids = (
+            select(FlowVersionDeploymentAttachment.id)
+            .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
+            .where(
+                FlowVersionDeploymentAttachment.user_id == user_id,
+                col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+                Deployment.deployment_provider_account_id == provider_account_id,
+            )
+        )
         stmt = delete(FlowVersionDeploymentAttachment).where(
-            FlowVersionDeploymentAttachment.user_id == user_id,
-            col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+            col(FlowVersionDeploymentAttachment.id).in_(scoped_attachment_ids),
         )
         result = await db.exec(stmt)
         return int(result.rowcount or 0)
 
     deduped_bindings = list(dict.fromkeys((binding.resource_key, binding.snapshot_id) for binding in bindings))
-    binding_selects = [
-        select(literal(resource_key).label("resource_key"), literal(snapshot_id).label("snapshot_id"))
-        for resource_key, snapshot_id in deduped_bindings
-    ]
-    provider_bindings_cte = (binding_selects[0] if len(binding_selects) == 1 else union_all(*binding_selects)).cte(
-        "provider_bindings"
+    provider_bindings_cte = (
+        values(
+            column("resource_key", sa.String()),
+            column("snapshot_id", sa.String()),
+        )
+        .data(deduped_bindings)
+        .cte("provider_bindings")
     )
 
     stale_attachment_ids = (
@@ -411,6 +445,7 @@ async def delete_unbound_attachments(
         .where(
             FlowVersionDeploymentAttachment.user_id == user_id,
             col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+            Deployment.deployment_provider_account_id == provider_account_id,
             provider_bindings_cte.c.resource_key.is_(None),  # No provider binding match => stale local attachment
         )
     )

@@ -1671,6 +1671,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_count_attachments.return_value = {row.id: 0}
         db = MagicMock()
         db.begin_nested.return_value = _AsyncNoopSavepoint()
+        provider_id = uuid4()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
@@ -1678,7 +1679,7 @@ class TestListDeploymentsSyncedBindingPhase:
             deployment_adapter=AsyncMock(),
             deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
             user_id=uuid4(),
-            provider_id=uuid4(),
+            provider_id=provider_id,
             db=db,
             page=1,
             size=10,
@@ -1688,6 +1689,7 @@ class TestListDeploymentsSyncedBindingPhase:
         assert len(accepted) == 1
         mock_delete_unbound.assert_awaited_once()
         assert mock_delete_unbound.await_args.kwargs["bindings"] == []
+        assert mock_delete_unbound.await_args.kwargs["provider_account_id"] == provider_id
         mock_count_attachments.assert_awaited_once()
 
     @pytest.mark.asyncio

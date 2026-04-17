@@ -762,6 +762,7 @@ async def list_deployments_synced(
                 await delete_unbound_attachments(
                     db,
                     user_id=user_id,
+                    provider_account_id=provider_id,
                     deployment_ids=accepted_deployment_ids,
                     bindings=provider_bindings,
                 )

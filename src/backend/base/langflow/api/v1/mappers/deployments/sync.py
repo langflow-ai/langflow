@@ -264,6 +264,7 @@ async def _sync_deployments_and_attachments_by_provider(
                         await delete_unbound_attachments(
                             db=db,
                             user_id=user_id,
+                            provider_account_id=provider_account_id,
                             deployment_ids=[deployment.id for deployment in surviving],
                             bindings=bindings,
                         )
