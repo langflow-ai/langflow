@@ -75,6 +75,13 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    // Don't intercept keyboard events that originate from the textarea
+    // (e.g. space/enter), as calling e.preventDefault() would prevent the
+    // character from being inserted into the input field.
+    if (target.closest("textarea")) {
+      return;
+    }
     if (e.key !== "Enter" && e.key !== " ") {
       return;
     }
