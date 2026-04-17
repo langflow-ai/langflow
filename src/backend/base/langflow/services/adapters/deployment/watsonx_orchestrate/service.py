@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException, status
 from ibm_cloud_sdk_core import ApiException
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool
 from lfx.services.adapters.deployment.base import BaseDeploymentService
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
@@ -91,7 +92,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.status impor
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
     build_langflow_artifact_bytes,
-    create_langflow_tool,
     extract_langflow_connections_binding,
     upload_tool_artifact_bytes,
     verify_tools_by_ids,
@@ -1038,6 +1038,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         tool = create_langflow_tool(
             tool_definition=flow_definition,
             connections={},
+            show_details=False,
         )
 
         artifact_bytes = build_langflow_artifact_bytes(

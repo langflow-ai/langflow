@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 from cachetools import func
 from fastapi import HTTPException
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
-from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool as _create_langflow_tool
+from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
     InvalidContentError,
@@ -303,7 +303,11 @@ def create_wxo_flow_tool(
             raise InvalidContentError(message=msg)
         flow_definition["last_tested_version"] = detected_version
 
-    tool: LangflowTool = create_langflow_tool(tool_definition=flow_definition, connections=connections)
+    tool: LangflowTool = create_langflow_tool(
+        tool_definition=flow_definition,
+        connections=connections,
+        show_details=False,
+    )
 
     tool_payload = tool.__tool_spec__.model_dump(
         mode="json",
@@ -330,25 +334,6 @@ def create_wxo_flow_tool(
     )
 
     return tool_payload, artifacts
-
-
-def create_langflow_tool(
-    *,
-    tool_definition: dict[str, Any],
-    connections: dict[str, str],
-) -> LangflowTool:
-    """Create an ADK Langflow tool with show_details set to False by default.
-
-    There are multiple callsites using this helper. To avoid accidentally
-    setting show_details to True (which enables ADK logs),
-    we default to False here, and suggest all callers to use
-    this helper instead of directly using the ADK.
-    """
-    return _create_langflow_tool(
-        tool_definition=tool_definition,
-        connections=connections,
-        show_details=False,
-    )
 
 
 async def create_and_upload_wxo_flow_tools(
