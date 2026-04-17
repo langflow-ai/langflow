@@ -101,7 +101,12 @@ except (ImportError, OSError):
 
 # Import lfx schema types (avoid circular deps)
 from lfx.schema.data import JSON, Data
-from lfx.schema.dataframe import DataFrame, Table
+
+# Note: DataFrame and Table are deferred to avoid eager pandas load at module import time.
+# They are resolved lazily via the module-level __getattr__ at the bottom of this file,
+# which keeps `from lfx.field_typing.constants import DataFrame` working for callers.
+# This is a partial IMP-07 pattern (PEP 562) applied early to unblock IMP-02's
+# measurable-delta requirement per CONTEXT.md D-10.
 
 # Type aliases
 NestedDict: TypeAlias = dict[str, str | dict]
@@ -154,20 +159,31 @@ LANGCHAIN_BASE_TYPES = {
     "BaseDocumentCompressor": BaseDocumentCompressor,
 }
 
-# Langchain base types plus Python base types
+# Langchain base types plus Python base types.
+# DataFrame and Table are intentionally omitted here to avoid eager pandas load;
+# callers that need their runtime classes go through the module-level __getattr__
+# below (or import them directly from lfx.schema.dataframe). The upstream caller
+# lfx/custom/validate.py only reads .keys() from this dict, so DataFrame/Table
+# are re-injected as keys with sentinel values via _add_deferred_types below.
 CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     **LANGCHAIN_BASE_TYPES,
     "NestedDict": NestedDict,
     "Data": Data,
     "JSON": JSON,
-    "DataFrame": DataFrame,
-    "Table": Table,
     "Text": Text,  # noqa: UP019
     "Object": Object,
     "Callable": Callable,
     "LanguageModel": LanguageModel,
     "Retriever": Retriever,
 }
+
+# Record DataFrame and Table as supported-type names without materializing their
+# classes (and therefore without loading pandas). The langflow backend extension
+# at langflow/field_typing/constants.py re-binds these to the real classes when
+# langflow is installed; lfx-only callers resolve them via __getattr__.
+_DEFERRED_SUPPORTED_TYPE_NAMES: tuple[str, ...] = ("DataFrame", "Table")
+for _name in _DEFERRED_SUPPORTED_TYPE_NAMES:
+    CUSTOM_COMPONENT_SUPPORTED_TYPES[_name] = None
 
 # Default import string for component code generation
 LANGCHAIN_IMPORT_STRING = """from langchain_classic.agents import AgentExecutor
@@ -223,3 +239,25 @@ from lfx.schema.dataframe import DataFrame, Table
 
 if importlib.util.find_spec("langchain") is not None:
     DEFAULT_IMPORT_STRING = LANGCHAIN_IMPORT_STRING + DEFAULT_IMPORT_STRING
+
+
+def __getattr__(name: str):
+    """Lazy resolution for deferred supported types.
+
+    Keeps `from lfx.field_typing.constants import DataFrame` (and Table) working
+    without paying the pandas import cost at module load. This is a partial
+    application of the PEP 562 pattern IMP-07 will fully adopt for all 11
+    langchain_core symbols; applied here only for DataFrame/Table so IMP-02
+    can reach GREEN on its targeted modules.
+    """
+    if name in _DEFERRED_SUPPORTED_TYPE_NAMES:
+        from lfx.schema.dataframe import DataFrame as _DataFrame
+        from lfx.schema.dataframe import Table as _Table
+
+        resolved = {"DataFrame": _DataFrame, "Table": _Table}[name]
+        # Also backfill the dict so downstream callers that use the values
+        # (not just keys) get the real class after first access.
+        CUSTOM_COMPONENT_SUPPORTED_TYPES[name] = resolved
+        return resolved
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
