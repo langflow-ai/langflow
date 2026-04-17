@@ -232,6 +232,158 @@ class TestMCPSessionManager:
         # And the new id is unique (never recycles "_0").
         assert f"{server_key}_0" not in session_manager.sessions_by_server[server_key]["sessions"]
 
+    async def test_cleanup_idle_vs_get_session_are_serialized(self, session_manager):
+        """Idle cleanup must not race a concurrent get_session().
+
+        Without holding the per-server lock, the idle-cleanup task could pop
+        and cancel a session mid-validation; `get_session()` would then hand
+        the caller a dead session plus a dangling refcount entry.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        server_key = session_manager._get_server_key(connection_params, "streamable_http")
+
+        mock_session = AsyncMock()
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+        mock_task.cancel = MagicMock()
+
+        # Seed one idle session (last_used in the distant past).
+        session_manager.sessions_by_server[server_key] = {
+            "sessions": {
+                f"{server_key}_0": {
+                    "session": mock_session,
+                    "task": mock_task,
+                    "type": "streamable_http",
+                    "last_used": 0,  # definitely past the idle timeout
+                }
+            },
+            "last_cleanup": 0,
+        }
+
+        started = asyncio.Event()
+        release = asyncio.Event()
+
+        async def slow_validate(_session):
+            started.set()
+            await release.wait()
+            return True
+
+        with patch.object(session_manager, "_validate_session_connectivity", side_effect=slow_validate):
+            # Start a get_session() that will block inside the health check
+            # while holding the per-server lock.
+            getter = asyncio.create_task(
+                session_manager.get_session("ctx_reader", connection_params, "streamable_http")
+            )
+            await started.wait()
+
+            # Fire the idle cleanup concurrently. It must wait for the lock.
+            cleaner = asyncio.create_task(session_manager._cleanup_idle_sessions())
+            # Give it a chance to run if it were going to race.
+            await asyncio.sleep(0.02)
+
+            # While the getter still holds the lock, the session must not have
+            # been cleaned up.
+            assert f"{server_key}_0" in session_manager.sessions_by_server[server_key]["sessions"]
+            assert not mock_task.cancel.called
+
+            # Let the getter finish.
+            release.set()
+            result = await getter
+            await cleaner
+
+        # Getter returned the healthy cached session. Because `get_session`
+        # bumps `last_used` on reuse, the idle-cleanup pass — which ran only
+        # after the getter released the lock — correctly left the session
+        # alone. Without the lock, the cleaner could have torn it down
+        # mid-validation and the getter would have returned a dead session.
+        assert result is mock_session
+        assert not mock_task.cancel.called
+        assert f"{server_key}_0" in session_manager.sessions_by_server[server_key]["sessions"]
+
+    async def test_concurrent_cleanup_session_and_get_session_safe(self, session_manager):
+        """Disconnect path must honor the per-server lock.
+
+        `_cleanup_session(context_id)` previously mutated refcounts without
+        the per-server lock, so a concurrent `get_session()` could observe
+        state mid-transition and return a session that's about to be torn
+        down by the other caller's disconnect path.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+
+        mock_session = AsyncMock()
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+        mock_task.cancel = MagicMock()
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session, mock_task, "streamable_http"
+
+        with (
+            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
+            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
+        ):
+            # Establish the session with one context.
+            s1 = await session_manager.get_session("ctx_a", connection_params, "streamable_http")
+            assert s1 is mock_session
+
+            # Concurrently: a second caller grabs the session (bumping refcount)
+            # while the first caller disconnects (decrementing refcount).
+            results = await asyncio.gather(
+                session_manager.get_session("ctx_b", connection_params, "streamable_http"),
+                session_manager._cleanup_session("ctx_a"),
+            )
+
+        s2 = results[0]
+        # ctx_b still has a live session because ctx_a's cleanup only decremented
+        # refcount to 1, not zero.
+        assert s2 is mock_session
+        assert not mock_task.cancel.called
+        server_key = session_manager._get_server_key(connection_params, "streamable_http")
+        assert f"{server_key}_0" in session_manager.sessions_by_server[server_key]["sessions"]
+
+    async def test_server_lock_and_counter_reclaimed_when_unused(self, session_manager):
+        """Per-server locks and id counters must be reclaimed with the server.
+
+        Without this, rotating auth/session headers (which change `server_key`
+        via `_get_server_key`) causes `_server_locks` and
+        `_session_id_counters` to grow without bound in long-lived processes.
+        """
+        connection_params = {"url": "http://example.test/sse", "headers": {}}
+        server_key = session_manager._get_server_key(connection_params, "streamable_http")
+
+        mock_session = AsyncMock()
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+        mock_task.cancel = MagicMock()
+
+        async def fake_create(_session_id, _params, _preferred_transport=None):
+            return mock_session, mock_task, "streamable_http"
+
+        with (
+            patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
+            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
+        ):
+            await session_manager.get_session("ctx_gc", connection_params, "streamable_http")
+
+        # While the session is live, the lock entry exists (pin count back to 0
+        # but the sessions_by_server entry holds the server_key alive).
+        assert server_key in session_manager._server_locks
+        assert server_key in session_manager._session_id_counters
+
+        # Disconnect the only context.
+        await session_manager._cleanup_session("ctx_gc")
+
+        # Trigger the periodic cleanup to remove the now-empty server entry.
+        # Mark the session as already expired so it gets swept on this pass,
+        # then run cleanup.
+        # (After _cleanup_session above, the sessions dict is already empty
+        # for this server_key, so _cleanup_idle_sessions will drop the entry.)
+        await session_manager._cleanup_idle_sessions()
+
+        assert server_key not in session_manager.sessions_by_server
+        assert server_key not in session_manager._session_id_counters
+        assert server_key not in session_manager._server_locks
+
 
 class TestHeaderValidation:
     """Test the header validation functionality."""
