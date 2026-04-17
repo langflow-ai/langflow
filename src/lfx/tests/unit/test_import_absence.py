@@ -80,3 +80,23 @@ class TestIMP02NoPandas:
         # The `lfx run <flow>` critical entry point. Per CONCERNS.md 1.1, this was
         # loading pandas (~200-400ms) and numpy (~50-100ms) on every cold boot.
         _assert_modules_absent("from lfx.graph.graph.base import Graph", set(self.HEAVY))
+
+
+class TestIMP03NoPIL:
+    """IMP-03: PIL is not loaded at module scope on the Graph hot path.
+
+    PIL was pulled via `lfx.schema.image` (line 5) and `lfx.interface.utils`
+    (line 10) which sit on the Graph import chain through `lfx.schema.message`
+    and `lfx.interface.*`. Per CONCERNS.md 1.2, PIL init costs ~50 ms on cold
+    imports.
+    """
+
+    PIL_MODULES = ("lfx.schema.image", "lfx.interface.utils")
+    PIL_PKG = frozenset({"PIL"})
+
+    def test_pil_absent_from_imp03_modules(self):
+        for module in self.PIL_MODULES:
+            _assert_modules_absent(f"import {module}", set(self.PIL_PKG))
+
+    def test_pil_absent_from_graph_hot_path(self):
+        _assert_modules_absent("from lfx.graph.graph.base import Graph", set(self.PIL_PKG))

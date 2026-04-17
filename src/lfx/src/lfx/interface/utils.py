@@ -1,17 +1,22 @@
+from __future__ import annotations
+
 import base64
 import json
 import os
 from io import BytesIO
 from pathlib import Path
 from string import Formatter
+from typing import TYPE_CHECKING
 
 import yaml
 from langchain_core.language_models import BaseLanguageModel
-from PIL.Image import Image
 
 from lfx.log.logger import logger
 from lfx.services.chat.config import ChatConfig
 from lfx.services.deps import get_settings_service
+
+if TYPE_CHECKING:
+    from PIL.Image import Image
 
 
 def load_file_into_dict(file_path: str) -> dict:

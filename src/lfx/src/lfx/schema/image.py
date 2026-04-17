@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import base64
 from pathlib import Path
 
 import aiofiles
-from PIL import Image as PILImage
 from platformdirs import user_cache_dir
 from pydantic import BaseModel
 
@@ -14,6 +15,8 @@ IMAGE_ENDPOINT = "/files/images/"
 
 def is_image_file(file_path) -> bool:
     """Check if a file is a valid image."""
+    from PIL import Image as PILImage
+
     try:
         with PILImage.open(file_path) as img:
             img.verify()  # Verify that it is, in fact, an image
