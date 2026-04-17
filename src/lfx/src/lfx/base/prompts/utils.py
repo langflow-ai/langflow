@@ -1,8 +1,12 @@
-from copy import deepcopy
+from __future__ import annotations
 
-from langchain_core.documents import Document
+from copy import deepcopy
+from typing import TYPE_CHECKING
 
 from lfx.schema.data import Data
+
+if TYPE_CHECKING:
+    from langchain_core.documents import Document
 
 
 def data_to_string(record: Data) -> str:
@@ -26,6 +30,8 @@ def dict_values_to_string(d: dict) -> dict:
     Returns:
         dict: The dictionary with values converted to strings.
     """
+    from langchain_core.documents import Document
+
     from lfx.schema.message import Message
 
     # Do something similar to the above

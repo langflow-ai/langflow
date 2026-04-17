@@ -11,7 +11,6 @@ from uuid import UUID
 
 import nanoid
 import yaml
-from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
 
 from lfx.base.tools.constants import (
@@ -874,6 +873,8 @@ class Component(CustomComponent):
     def _process_connection_or_parameters(self, key, value) -> None:
         # if value is a list of components, we need to process each component
         # Note this update make sure it is not a list str | int | float | bool | type(None)
+        from langchain_core.tools import StructuredTool
+
         if isinstance(value, list) and not any(
             isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool | dict)
             for val in value

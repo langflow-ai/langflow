@@ -11,11 +11,10 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
-from langchain_core.load import load
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
 if TYPE_CHECKING:
+    from langchain_core.messages import BaseMessage
     from langchain_core.prompts.chat import BaseChatPromptTemplate
 
 from lfx.base.prompts.utils import dict_values_to_string
@@ -178,6 +177,8 @@ class Message(Data):
         # If the key is not present, it will default to AI
         # But first we check if all required keys are present in the data dictionary
         # they are: "text", "sender"
+        from langchain_core.messages import AIMessage, HumanMessage
+
         if self.text is None or not self.sender:
             logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
         text = "" if not isinstance(self.text, str) else self.text
@@ -327,6 +328,9 @@ class Message(Data):
         return content_dicts
 
     def load_lc_prompt(self):
+        from langchain_core.load import load
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+
         if "prompt" not in self:
             msg = "Prompt is required."
             raise ValueError(msg)
@@ -383,6 +387,7 @@ class Message(Data):
     # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
     @classmethod
     def from_template(cls, template: str, template_format: str = "f-string", **variables):
+        from langchain_core.messages import HumanMessage
         from langchain_core.prompts.chat import ChatPromptTemplate
 
         instance = cls(template=template, variables=variables)
