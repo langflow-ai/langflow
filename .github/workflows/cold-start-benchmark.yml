@@ -2,9 +2,10 @@ name: Cold Start Benchmark
 
 # Label-gated cold-start regression gate (Phase 1 / MEAS-08; D-14, D-16, D-17).
 # Runs only when:
-#   1. A PR carries the `run-benchmarks` label.
-#   2. A commit is pushed to a branch matching `cold-start/**`.
-#   3. A maintainer triggers the workflow manually via workflow_dispatch.
+#   1. A PR carries the `run-benchmarks` label (verify mode: fail if regression exceeds threshold).
+#   2. A PR carries the `run-benchmark-snapshot` label (snapshot mode: capture new authoritative baseline).
+#   3. A commit is pushed to a branch matching `cold-start/**`.
+#   4. A maintainer triggers the workflow manually via workflow_dispatch.
 #
 # Regression policy (D-16): hard-fail the job AND post a bot comment on the PR
 # containing the numbers diff sourced from reports/regression_comment.md.
@@ -42,9 +43,11 @@ jobs:
   benchmark:
     name: "Cold Start Benchmark"
     # Pitfall 9: the `on.pull_request.types` includes `labeled`, but this job-level
-    # `if:` guard ensures only the `run-benchmarks` label triggers an actual run.
+    # `if:` guard ensures only `run-benchmarks` or `run-benchmark-snapshot` labels
+    # trigger an actual run.
     if: >-
       contains(github.event.pull_request.labels.*.name, 'run-benchmarks') ||
+      contains(github.event.pull_request.labels.*.name, 'run-benchmark-snapshot') ||
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -89,7 +92,17 @@ jobs:
         env:
           CONTAINER_CMD: docker
         run: |
-          mode="${{ github.event.inputs.mode || 'verify' }}"
+          # Mode selection precedence:
+          #   1. workflow_dispatch input (maintainer-specified)
+          #   2. run-benchmark-snapshot label on the PR (snapshot mode)
+          #   3. default: verify mode (regression gate)
+          if [ -n "${{ github.event.inputs.mode }}" ]; then
+            mode="${{ github.event.inputs.mode }}"
+          elif ${{ contains(github.event.pull_request.labels.*.name, 'run-benchmark-snapshot') }}; then
+            mode="snapshot"
+          else
+            mode="verify"
+          fi
           echo "Running harness in mode: $mode"
           if [ "$mode" = "snapshot" ]; then
             uv run python -m src.backend.tests.benchmarks.snapshot
@@ -135,7 +148,11 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Snapshot commit note
-        if: success() && github.event.inputs.mode == 'snapshot'
+        if: >-
+          success() && (
+            github.event.inputs.mode == 'snapshot' ||
+            contains(github.event.pull_request.labels.*.name, 'run-benchmark-snapshot')
+          )
         run: |
           {
             echo "## Snapshot run complete"
