@@ -135,12 +135,17 @@ jobs:
           - lfx_with_flow
           - lfx_with_flow_prebaked
           # langflow_run_http_ready is a known-flaky scenario on CI until the
-          # structlog marker fix lands (Phase 4/5). `continue-on-error: true`
-          # at the step level keeps it from failing the gate while still
-          # surfacing its status as a CI annotation.
+          # structlog marker fix lands (Phase 4/5). The matrix expressions
+          # below give it a tight 5-min timeout and mark it non-blocking so
+          # its cancellation does not drag the workflow into `cancelled`.
           - langflow_run_http_ready
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Tight budget for the known-flaky scenario so it fails fast; others get
+    # the full 20 minutes.
+    timeout-minutes: ${{ matrix.scenario == 'langflow_run_http_ready' && 5 || 20 }}
+    # Matrix-entry-level continue-on-error: langflow_run_http_ready is allowed
+    # to fail (or be cancelled by timeout) without marking the workflow red.
+    continue-on-error: ${{ matrix.scenario == 'langflow_run_http_ready' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
