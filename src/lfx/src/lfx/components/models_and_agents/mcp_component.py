@@ -239,7 +239,17 @@ class MCPToolsComponent(ComponentWithCache):
                 from langflow.services.database.models.user.crud import get_user_by_id
 
                 from lfx.services.deps import get_settings_service
-            except ImportError:
+            except ModuleNotFoundError as e:
+                # Only treat this as LFX standalone mode when one of the target Langflow
+                # modules is itself missing. Transitive ModuleNotFoundError (e.g. a
+                # dependency like sqlmodel failing to import inside langflow.*) indicates
+                # a real bug in the full Langflow stack and must surface — otherwise we
+                # would silently use a stale flow-embedded config when DB config should
+                # have taken precedence.
+                missing_module = getattr(e, "name", None) or ""
+                is_langflow_standalone = missing_module == "langflow" or missing_module.startswith("langflow.")
+                if not is_langflow_standalone:
+                    raise
                 await logger.adebug(
                     "Langflow package not available; using MCP server config from flow value (LFX standalone mode)."
                 )
