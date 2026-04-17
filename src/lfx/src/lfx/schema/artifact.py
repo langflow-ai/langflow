@@ -4,7 +4,6 @@ from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 
 from lfx.log.logger import logger
@@ -91,6 +90,8 @@ def post_process_raw(raw, artifact_type: str):
         raw = raw.to_dict(orient="records") if _is_dataframe(raw) else _to_list_of_dicts(raw)
     elif artifact_type == ArtifactType.UNKNOWN.value and raw is not None:
         if isinstance(raw, BaseModel | dict):
+            from fastapi.encoders import jsonable_encoder
+
             try:
                 raw = jsonable_encoder(raw, custom_encoder=CUSTOM_ENCODERS)
                 artifact_type = ArtifactType.OBJECT.value

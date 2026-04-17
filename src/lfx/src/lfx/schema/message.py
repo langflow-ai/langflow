@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 from uuid import UUID
 
-from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
 if TYPE_CHECKING:
@@ -387,6 +386,7 @@ class Message(Data):
     # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
     @classmethod
     def from_template(cls, template: str, template_format: str = "f-string", **variables):
+        from fastapi.encoders import jsonable_encoder
         from langchain_core.messages import HumanMessage
         from langchain_core.prompts.chat import ChatPromptTemplate
 

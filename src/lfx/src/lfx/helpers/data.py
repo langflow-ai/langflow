@@ -5,7 +5,6 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
 import orjson
-from fastapi.encoders import jsonable_encoder
 
 from lfx.schema.data import Data
 from lfx.schema.message import Message
@@ -35,6 +34,8 @@ def clean_string(s):
 
 def _serialize_data(data: Data) -> str:
     """Serialize Data object to JSON string."""
+    from fastapi.encoders import jsonable_encoder
+
     # Convert data.data to JSON-serializable format
     serializable_data = jsonable_encoder(data.data)
     # Serialize with orjson, enabling pretty printing with indentation
