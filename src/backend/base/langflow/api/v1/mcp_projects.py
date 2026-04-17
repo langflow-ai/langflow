@@ -115,9 +115,10 @@ async def verify_project_auth(
         if not api_key:
             if project_auth_type == "oauth":
                 detail = (
-                    "This project is configured for OAuth authentication. Direct access to the MCP transport "
-                    "endpoint is not permitted; connect through the configured MCP Composer OAuth endpoint, "
-                    "or provide a valid x-api-key header for backend access."
+                    "This project is configured for OAuth authentication, but the MCP transport endpoint "
+                    "currently requires a valid x-api-key header or query parameter for backend access. "
+                    "Credential forwarding from MCP Composer is not yet available; use an API key in the "
+                    "meantime."
                 )
             else:
                 detail = "API key required for this project. Provide x-api-key header or query parameter."
