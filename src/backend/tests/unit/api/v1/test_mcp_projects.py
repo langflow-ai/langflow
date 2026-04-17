@@ -958,6 +958,72 @@ async def test_init_mcp_servers_reconciles_existing_apikey_project_server_config
         await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
 
 
+async def test_patch_project_mcp_settings_syncs_server_config_for_apikey(
+    client: AsyncClient,
+    user_test_project,
+    created_api_key,
+    logged_in_headers,
+    monkeypatch,
+):
+    """PATCH /api/v1/mcp/project/{id} with auth_type=apikey must propagate x-api-key to MCP server args.
+
+    Regression test for the PATCH-path gap where auth_settings was updated in the DB but the
+    corresponding MCP server config was never reconciled, leaving args without --headers x-api-key
+    and causing subsequent startup reconciliation to generate duplicate Langflow API keys.
+    """
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+    _set_startup_mcp_settings(
+        monkeypatch,
+        auto_login=False,
+        mcp_composer_enabled=False,
+        add_projects_to_mcp_servers=True,
+    )
+
+    server_name = f"lf-{sanitize_mcp_name(user_test_project.name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+    streamable_http_url = await get_project_streamable_http_url(user_test_project.id)
+    # Seed the server registry with a config that does NOT yet include the apikey header.
+    stale_server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "streamablehttp", streamable_http_url],
+    }
+    api_headers = {"x-api-key": created_api_key.api_key}
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=stale_server_config, headers=api_headers)
+    assert response.status_code == 200
+
+    try:
+        patch_payload = {
+            "settings": [],
+            "auth_settings": {"auth_type": "apikey"},
+        }
+        response = await client.patch(
+            f"/api/v1/mcp/project/{user_test_project.id}",
+            headers=logged_in_headers,
+            json=patch_payload,
+        )
+        assert response.status_code == 200
+
+        # Server config should now reflect apikey auth (--headers x-api-key injected).
+        response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=api_headers)
+        assert response.status_code == 200
+        server_args = response.json()["args"]
+        assert "--headers" in server_args
+        assert "x-api-key" in server_args
+        assert streamable_http_url in server_args
+
+        # PATCHing again with the same auth should be a no-op — no duplicate key creation.
+        with patch("langflow.api.v1.projects_mcp_helpers.create_api_key") as mock_create_api_key:
+            response = await client.patch(
+                f"/api/v1/mcp/project/{user_test_project.id}",
+                headers=logged_in_headers,
+                json=patch_payload,
+            )
+            assert response.status_code == 200
+            mock_create_api_key.assert_not_called()
+    finally:
+        await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=api_headers)
+
+
 async def test_init_mcp_servers_rolls_back_auth_update_when_reconciliation_fails(
     user_test_project,
     monkeypatch,

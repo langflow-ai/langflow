@@ -169,6 +169,31 @@ async def register_mcp_servers_for_project(
         return True
 
 
+async def reconcile_mcp_server_for_auth_update(
+    project,
+    new_auth_type: str | None,
+    current_user,
+    session,
+) -> bool:
+    """Sync the MCP server config for a project whose auth settings just changed.
+
+    OAuth reconciliation is driven separately by MCP Composer, so this helper only
+    touches apikey/none modes. Returns True when the server config was updated.
+    """
+    if new_auth_type not in {"apikey", "none"}:
+        return False
+
+    if not get_settings_service().settings.add_projects_to_mcp_servers:
+        return False
+
+    return await register_mcp_servers_for_project(
+        project,
+        {"auth_type": new_auth_type},
+        current_user,
+        session,
+    )
+
+
 async def handle_mcp_server_rename(
     existing_project,
     old_project_name: str,

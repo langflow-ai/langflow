@@ -508,6 +508,8 @@ async def update_project_mcp_settings(
             should_handle_mcp_composer = False
             should_start_composer = False
             should_stop_composer = False
+            new_auth_type: str | None = None
+            auth_settings_updated = False
 
             # Store original auth settings in case we need to rollback
             original_auth_settings = project.auth_settings
@@ -522,6 +524,8 @@ async def update_project_mcp_settings(
                 should_handle_mcp_composer = auth_result["should_handle_composer"]
                 should_start_composer = auth_result["should_start_composer"]
                 should_stop_composer = auth_result["should_stop_composer"]
+                new_auth_type = auth_result["new_auth_type"]
+                auth_settings_updated = True
 
             # Query flows in the project
             flows = (await session.exec(select(Flow).where(Flow.folder_id == project_id))).all()
@@ -627,12 +631,34 @@ async def update_project_mcp_settings(
                         "uses_composer": False,
                     }
 
+            # Sync MCP server config for apikey/none auth; OAuth is handled by MCP Composer above.
+            if auth_settings_updated and new_auth_type in {"apikey", "none"}:
+                from langflow.api.v1.projects_mcp_helpers import reconcile_mcp_server_for_auth_update
+
+                try:
+                    await reconcile_mcp_server_for_auth_update(
+                        project,
+                        new_auth_type,
+                        current_user,
+                        session,
+                    )
+                except HTTPException:
+                    raise
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(
+                        "Failed to reconcile MCP server config for project %s after auth update: %s",
+                        project_id,
+                        e,
+                    )
+
             # Only commit if composer started successfully (or wasn't needed)
             session.add(project)
             await session.commit()
 
             return response
 
+    except HTTPException:
+        raise
     except Exception as e:
         msg = f"Error updating project MCP settings: {e!s}"
         await logger.aexception(msg)
