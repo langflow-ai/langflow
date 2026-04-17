@@ -182,6 +182,15 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
+            # SVC-02 wave 1: independent filesystem / in-memory ops.
+            # D-09 service-dependency review (enforced by D-10 test; every task passed to gather MUST have a row):
+            #
+            # | Task                  | Reads                                      | Writes                            |
+            # |-----------------------|--------------------------------------------|-----------------------------------|
+            # | setup_llm_caching     | settings.cache config                      | langchain global cache (in-mem)   |
+            # | copy_profile_pictures | initial_setup/profile_pictures (source);   | config_dir/profile_pictures (fs)  |
+            # |                       | config_dir/profile_pictures (target scan)  |                                   |
+            #
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
             setup_llm_caching()
@@ -200,6 +209,16 @@ def get_lifespan(*, fix_migration=False, version=None):
                     f"Default super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
                 )
 
+            # SVC-02 wave 2: independent post-superuser ops.
+            # D-09 service-dependency review (enforced by D-10 test; every task passed to gather MUST have a row):
+            #
+            # | Task                          | Reads                                 | Writes                         |
+            # |-------------------------------|---------------------------------------|--------------------------------|
+            # | load_bundles_with_error_      | DB: select(User) where is_superuser;  | DB: upsert_flow_from_file;     |
+            # |   handling                    | HTTP: bundle_urls                     | FS: TempDir; settings.comps    |
+            # | get_and_cache_all_types_dict  | Component file scan; version("lfx");  | ComponentCache.all_types_dict  |
+            # |                               | settings (cache_dir)                  | (in-memory)                    |
+            #
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading bundles")
             temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
