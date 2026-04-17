@@ -77,6 +77,28 @@ def parse_deployment_guard_error(exc: BaseException) -> DeploymentGuardError | N
 
 def raise_if_deployment_guard_error_or_skip(exc: BaseException) -> None:
     """Raise chained ``DeploymentGuardError`` when present; otherwise do nothing."""
-    if guard_error := parse_deployment_guard_error(exc):
-        logger.error("Deployment guard error: %s (error code: %s)", guard_error.technical_detail, guard_error.code)
-        raise guard_error
+    guard_error = parse_deployment_guard_error(exc)
+    if guard_error is None:
+        return
+
+    raise guard_error from exc
+
+
+async def araise_if_deployment_guard_error_or_skip(
+    exc: BaseException,
+    *,
+    log_message: str | None = None,
+) -> None:
+    """Raise chained ``DeploymentGuardError`` and optionally log a debug message first."""
+    guard_error = parse_deployment_guard_error(exc)
+    if guard_error is None:
+        return
+
+    if log_message is not None:
+        await logger.adebug(
+            "%s code=%s technical_detail=%s",
+            log_message,
+            guard_error.code,
+            guard_error.technical_detail,
+        )
+    raise guard_error from exc

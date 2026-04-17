@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from langflow.services.database.models.deployment.exceptions import (
     DeploymentGuardError,
+    araise_if_deployment_guard_error_or_skip,
     get_friendly_guard_detail,
     parse_deployment_guard_error,
     raise_if_deployment_guard_error_or_skip,
@@ -185,3 +186,56 @@ def test_raise_if_deployment_guard_error_or_skip_raises_first_guard_in_chain() -
 
 def test_raise_if_deployment_guard_error_or_skip_is_noop_when_guard_absent() -> None:
     raise_if_deployment_guard_error_or_skip(Exception("not a guard error"))
+
+
+@pytest.mark.asyncio
+async def test_araise_if_deployment_guard_error_or_skip_raises_and_logs_message(monkeypatch) -> None:
+    guard_error = DeploymentGuardError(
+        code="PROJECT_HAS_DEPLOYMENTS",
+        technical_detail="DELETE project blocked: dependent deployments exist.",
+        detail=get_friendly_guard_detail("PROJECT_HAS_DEPLOYMENTS"),
+    )
+    debug_calls: list[tuple[str, tuple[object, ...]]] = []
+
+    async def _fake_adebug(message: str, *args: object) -> None:
+        debug_calls.append((message, args))
+
+    monkeypatch.setattr("langflow.services.database.models.deployment.exceptions.logger.adebug", _fake_adebug)
+
+    with pytest.raises(DeploymentGuardError) as raised:
+        await araise_if_deployment_guard_error_or_skip(
+            guard_error,
+            log_message="op=test",
+        )
+
+    assert raised.value is guard_error
+    assert debug_calls == [
+        (
+            "%s code=%s technical_detail=%s",
+            (
+                "op=test",
+                "PROJECT_HAS_DEPLOYMENTS",
+                "DELETE project blocked: dependent deployments exist.",
+            ),
+        )
+    ]
+
+
+@pytest.mark.asyncio
+async def test_araise_if_deployment_guard_error_or_skip_raises_without_logging_when_message_absent(monkeypatch) -> None:
+    guard_error = DeploymentGuardError(
+        code="PROJECT_HAS_DEPLOYMENTS",
+        technical_detail="DELETE project blocked: dependent deployments exist.",
+        detail=get_friendly_guard_detail("PROJECT_HAS_DEPLOYMENTS"),
+    )
+    debug_calls: list[tuple[str, tuple[object, ...]]] = []
+
+    async def _fake_adebug(message: str, *args: object) -> None:
+        debug_calls.append((message, args))
+
+    monkeypatch.setattr("langflow.services.database.models.deployment.exceptions.logger.adebug", _fake_adebug)
+
+    with pytest.raises(DeploymentGuardError):
+        await araise_if_deployment_guard_error_or_skip(guard_error)
+
+    assert debug_calls == []

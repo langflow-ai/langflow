@@ -33,8 +33,8 @@ from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLD
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.database.models.deployment.exceptions import (
     DeploymentGuardError,
+    araise_if_deployment_guard_error_or_skip,
     get_friendly_guard_detail,
-    raise_if_deployment_guard_error_or_skip,
 )
 from langflow.services.database.models.deployment.guards import check_project_has_deployments
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
@@ -182,13 +182,21 @@ async def create_project(
 
         # Convert to FolderRead while session is still active to avoid detached instance errors
         folder_read = FolderRead.model_validate(new_project, from_attributes=True)
-    except DeploymentGuardError:
+    except DeploymentGuardError as e:
+        await logger.adebug(
+            "op=create_project code=%s technical_detail=%s",
+            e.code,
+            e.technical_detail,
+        )
         raise
     except HTTPException:
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
         raise
     except Exception as e:
-        raise_if_deployment_guard_error_or_skip(e)
+        await araise_if_deployment_guard_error_or_skip(
+            e,
+            log_message="op=create_project",
+        )
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return folder_read
@@ -423,13 +431,22 @@ async def update_project(
         # Convert to FolderRead while session is still active to avoid detached instance errors
         folder_read = FolderRead.model_validate(existing_project, from_attributes=True)
 
-    except DeploymentGuardError:
+    except DeploymentGuardError as e:
+        await logger.adebug(
+            "op=update_project project_id=%s code=%s technical_detail=%s",
+            project_id,
+            e.code,
+            e.technical_detail,
+        )
         raise
     except HTTPException:
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
         raise
     except Exception as e:
-        raise_if_deployment_guard_error_or_skip(e)
+        await araise_if_deployment_guard_error_or_skip(
+            e,
+            log_message=f"op=update_project project_id={project_id}",
+        )
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return folder_read
@@ -486,14 +503,29 @@ async def delete_project(
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except DeploymentGuardError as exc:
         if exc.code == "FLOW_HAS_DEPLOYED_VERSIONS":
+            await logger.adebug(
+                "op=delete_project project_id=%s code=%s technical_detail=%s",
+                project_id,
+                exc.code,
+                exc.technical_detail,
+            )
             raise DeploymentGuardError(
                 code="PROJECT_HAS_DEPLOYMENTS",
                 technical_detail=(f"DELETE folder blocked while deleting project flows: {exc.technical_detail}"),
                 detail=get_friendly_guard_detail("PROJECT_HAS_DEPLOYMENTS"),
             ) from exc
+        await logger.adebug(
+            "op=delete_project project_id=%s code=%s technical_detail=%s",
+            project_id,
+            exc.code,
+            exc.technical_detail,
+        )
         raise
     except Exception as e:
-        raise_if_deployment_guard_error_or_skip(e)
+        await araise_if_deployment_guard_error_or_skip(
+            e,
+            log_message=f"op=delete_project project_id={project_id}",
+        )
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
