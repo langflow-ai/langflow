@@ -153,6 +153,11 @@ def get_lifespan(*, fix_migration=False, version=None):
     async def lifespan(_app: FastAPI):
         from lfx.interface.components import get_and_cache_all_types_dict
 
+        from langflow.preload import get_preloaded_temp_dirs, is_master, is_preloaded
+
+        preloaded = is_preloaded()
+        running_in_master = is_master()
+
         configure()
 
         # Startup message
@@ -189,6 +194,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await logger.awarning(f"Failed to initialize Sentry SDK (check LANGFLOW_SENTRY_DSN): {e}")
 
             await logger.adebug("Initializing services")
+            # When the master already ran preload, the service_manager (and the
+            # DB service object) are inherited via fork. We still call
+            # initialize_services() here so each worker rebuilds its own fresh
+            # connection pool on first use (the master disposed its engine
+            # before fork). The call is idempotent: factory registration and
+            # migration application both no-op when already done.
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
@@ -197,22 +208,27 @@ def get_lifespan(*, fix_migration=False, version=None):
             setup_llm_caching()
             await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Copying profile pictures")
-            await copy_profile_pictures()
-            await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
-            if get_settings_service().auth_settings.AUTO_LOGIN:
+            if not preloaded:
                 current_time = asyncio.get_event_loop().time()
-                await logger.adebug("Initializing default super user")
-                await initialize_auto_login_default_superuser()
-                await logger.adebug(
-                    f"Default super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
-                )
+                await logger.adebug("Copying profile pictures")
+                await copy_profile_pictures()
+                await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            await logger.adebug("Initializing super user")
-            await initialize_auto_login_default_superuser()
-            await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+                if get_settings_service().auth_settings.AUTO_LOGIN:
+                    current_time = asyncio.get_event_loop().time()
+                    await logger.adebug("Initializing default super user")
+                    await initialize_auto_login_default_superuser()
+                    await logger.adebug(
+                        f"Default super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                    )
+
+                await logger.adebug("Initializing super user")
+                await initialize_auto_login_default_superuser()
+                await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            else:
+                await logger.adebug(
+                    "Skipping profile-picture copy and super user setup: master already ran them during preload"
+                )
 
             if get_settings_service().settings.prometheus_enabled:
                 try:
@@ -237,56 +253,66 @@ def get_lifespan(*, fix_migration=False, version=None):
                     else:
                         await logger.awarning(f"Failed to start Prometheus server: {e}")
 
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Loading bundles")
-            temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
-            get_settings_service().settings.components_path.extend(bundles_components_paths)
-            await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
             telemetry_service = get_telemetry_service()
 
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Caching types")
-            all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
-            await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
-            # Use file-based lock to prevent multiple workers from creating duplicate starter projects concurrently.
-            # Note that it's still possible that one worker may complete this task, release the lock,
-            # then another worker pick it up, but the operation is idempotent so worst case it duplicates
-            # the initialization work.
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Creating/updating starter projects")
-
-            lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
-            lock = FileLock(lock_file, timeout=1)
-            try:
-                with lock:
-                    await create_or_update_starter_projects(all_types_dict)
-                    await logger.adebug(
-                        f"Starter projects created/updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
-                    )
-            except TimeoutError:
-                # Another process has the lock
-                await logger.adebug("Another worker is creating starter projects, skipping")
-            except Exception as e:  # noqa: BLE001
-                await logger.awarning(
-                    f"Failed to acquire lock for starter projects: {e}. Starter projects may not be created or updated."
-                )
-
-            # Initialize agentic global variables early (before MCP server and flows)
-            if get_settings_service().settings.agentic_experience:
-                from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
+            if preloaded:
+                # Inherit bundle paths and types dict from master via COW.
+                # Only the master owns the bundle temp dirs; workers must NOT
+                # add them to their own cleanup list, or shutdown would delete
+                # files that other workers (and the master) still expect.
+                if running_in_master:
+                    temp_dirs = get_preloaded_temp_dirs()
+                await logger.adebug("Skipping bundle load, types cache and starter projects: inherited from master")
+            else:
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Loading bundles")
+                temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
+                get_settings_service().settings.components_path.extend(bundles_components_paths)
+                await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
                 current_time = asyncio.get_event_loop().time()
-                await logger.ainfo("Initializing agentic global variables...")
+                await logger.adebug("Caching types")
+                all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
+                await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+                # Use file-based lock to prevent multiple workers from creating duplicate starter projects
+                # concurrently. Note that it's still possible that one worker may complete this task, release
+                # the lock, then another worker pick it up, but the operation is idempotent so worst case it
+                # duplicates the initialization work.
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Creating/updating starter projects")
+
+                lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
+                lock = FileLock(lock_file, timeout=1)
                 try:
-                    async with session_scope() as session:
-                        await initialize_agentic_global_variables(session)
-                    await logger.adebug(
-                        f"Agentic global variables initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
-                    )
+                    with lock:
+                        await create_or_update_starter_projects(all_types_dict)
+                        await logger.adebug(
+                            f"Starter projects created/updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                        )
+                except TimeoutError:
+                    await logger.adebug("Another worker is creating starter projects, skipping")
                 except Exception as e:  # noqa: BLE001
-                    await logger.awarning(f"Failed to initialize agentic global variables: {e}")
+                    await logger.awarning(
+                        f"Failed to acquire lock for starter projects: {e}. "
+                        "Starter projects may not be created or updated."
+                    )
+
+                # Initialize agentic global variables early (before MCP server and flows)
+                if get_settings_service().settings.agentic_experience:
+                    from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
+
+                    current_time = asyncio.get_event_loop().time()
+                    await logger.ainfo("Initializing agentic global variables...")
+                    try:
+                        async with session_scope() as session:
+                            await initialize_agentic_global_variables(session)
+                        await logger.adebug(
+                            "Agentic global variables initialized in "
+                            f"{asyncio.get_event_loop().time() - current_time:.2f}s"
+                        )
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"Failed to initialize agentic global variables: {e}")
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Starting telemetry service")
@@ -301,8 +327,9 @@ def get_lifespan(*, fix_migration=False, version=None):
                 f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
             )
 
-            # Auto-configure Agentic MCP server if enabled (after variables are initialized)
-            if get_settings_service().settings.agentic_experience:
+            # Auto-configure Agentic MCP server if enabled (after variables are initialized).
+            # Skipped when preloaded: the master already seeded this into the DB.
+            if get_settings_service().settings.agentic_experience and not preloaded:
                 from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
 
                 current_time = asyncio.get_event_loop().time()
@@ -317,11 +344,14 @@ def get_lifespan(*, fix_migration=False, version=None):
                     await logger.awarning(f"Failed to configure agentic MCP server: {e}")
 
             current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Loading flows")
-            await load_flows_from_directory()
+            if not preloaded:
+                await logger.adebug("Loading flows")
+                await load_flows_from_directory()
+            # ``sync_flows_from_fs`` and the queue service MUST be started
+            # per-worker: they create asyncio tasks bound to this event loop.
             sync_flows_from_fs_task = asyncio.create_task(sync_flows_from_fs())
             queue_service = get_queue_service()
-            if not queue_service.is_started():  # Start if not already started
+            if not queue_service.is_started():
                 queue_service.start()
             await logger.adebug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
