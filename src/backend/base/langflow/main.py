@@ -5,12 +5,13 @@ import re
 import sys
 import tempfile
 import warnings
+from collections.abc import Awaitable
 from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as version_metadata
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypeVar, cast
 from urllib.parse import urlencode
 
 import anyio
@@ -65,6 +66,8 @@ if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
 
     from lfx.services.mcp_composer.service import MCPComposerService
+
+T = TypeVar("T")
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -155,6 +158,32 @@ def warn_about_future_cors_changes(settings):
         )
 
 
+async def _safe_step(name: str, coro: Awaitable[T]) -> T | None:
+    """Run a coroutine inside ``asyncio.gather`` with per-task error isolation.
+
+    Wraps a single coroutine so that (a) its exceptions are caught, logged, and
+    swallowed -- preserving the lifespan's existing per-step "log, continue"
+    semantics -- and (b) ``asyncio.gather(_safe_step(...), _safe_step(...))``
+    never receives an unhandled exception that would cancel siblings (per
+    Pitfall 3 in 04-RESEARCH.md; ``gather`` defaults to ``return_exceptions=False``).
+
+    The name is included in the structlog debug/warning messages so the
+    existing per-task timing shape (04-PATTERNS.md Pattern D) is preserved.
+
+    Returns the coroutine's result on success, ``None`` on failure. Callers
+    that rely on the return value (e.g. wave-2's ``bundles_result`` /
+    ``all_types_dict``) must guard for ``None``.
+    """
+    current_time = asyncio.get_event_loop().time()
+    try:
+        result = await coro
+    except Exception as exc:  # noqa: BLE001
+        await logger.awarning(f"{name} failed (continuing): {exc}")
+        return None
+    await logger.adebug(f"{name} completed in {asyncio.get_event_loop().time() - current_time:.2f}s")
+    return result
+
+
 def get_lifespan(*, fix_migration=False, version=None):
     initialize_settings_service()
     telemetry_service = get_telemetry_service()
@@ -192,14 +221,13 @@ def get_lifespan(*, fix_migration=False, version=None):
             # |                       | config_dir/profile_pictures (target scan)  |                                   |
             #
             current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Setting up LLM caching")
-            setup_llm_caching()
-            await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Copying profile pictures")
-            await copy_profile_pictures()
-            await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await asyncio.gather(
+                _safe_step("setup_llm_caching", asyncio.to_thread(setup_llm_caching)),
+                _safe_step("copy_profile_pictures", copy_profile_pictures()),
+            )
+            await logger.adebug(
+                f"Wave 1 (caching + profiles) done in {asyncio.get_event_loop().time() - current_time:.2f}s"
+            )
 
             if get_settings_service().auth_settings.AUTO_LOGIN:
                 current_time = asyncio.get_event_loop().time()
@@ -220,15 +248,26 @@ def get_lifespan(*, fix_migration=False, version=None):
             # |                               | settings (cache_dir)                  | (in-memory)                    |
             #
             current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Loading bundles")
-            temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
-            get_settings_service().settings.components_path.extend(bundles_components_paths)
-            await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Caching types")
-            all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
-            await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            bundles_result, all_types_dict = await asyncio.gather(
+                _safe_step("load_bundles_with_error_handling", load_bundles_with_error_handling()),
+                _safe_step(
+                    "get_and_cache_all_types_dict",
+                    get_and_cache_all_types_dict(get_settings_service(), telemetry_service),
+                ),
+            )
+            if bundles_result is not None:
+                temp_dirs, bundles_components_paths = bundles_result
+                get_settings_service().settings.components_path.extend(bundles_components_paths)
+            else:
+                temp_dirs = []
+            if all_types_dict is None:
+                # Types cache is load-bearing for the starter-project block below; cannot proceed.
+                await logger.aerror("Types cache failed in wave 2; starter projects cannot proceed")
+                msg = "get_and_cache_all_types_dict returned None -- lifespan cannot continue"
+                raise RuntimeError(msg)
+            await logger.adebug(
+                f"Wave 2 (bundles + types) done in {asyncio.get_event_loop().time() - current_time:.2f}s"
+            )
 
             # Use file-based lock to prevent multiple workers from creating duplicate starter projects concurrently.
             # Note that it's still possible that one worker may complete this task, release the lock,
