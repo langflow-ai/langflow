@@ -34,6 +34,13 @@ class Scenario:
     # container. Used by scenarios that need a populated DB or filesystem cache to
     # exercise the cache-hit path (e.g. langflow_run_no_change_restart / SVC-01).
     prewarm_command: list[str] | None = None
+    # When True, the scenario's command is the measurement harness itself: it runs
+    # the pre-warm, loops internally, and writes a hyperfine-compatible JSON
+    # report to $BENCH_OUTPUT_JSON. The driver invokes the command once inside a
+    # single container (no hyperfine wrapping) and copies the JSON back to the
+    # reports directory. Useful for scenarios where hyperfine's opaque output
+    # capture makes CI debugging impossible.
+    self_measuring: bool = False
 
 
 __all__ = ["Scenario"]

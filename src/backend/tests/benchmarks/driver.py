@@ -51,7 +51,7 @@ import statistics
 import subprocess
 import sys
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -323,12 +323,61 @@ def _quote(token: str) -> str:
     return token
 
 
+def _run_self_measuring(scenario: Scenario, *, output_dir: Path) -> dict:
+    """Run a self-measuring scenario inside one docker container; no hyperfine wrapping.
+
+    Self-measuring scenarios execute their own pre-warm + measurement loop inside
+    the container and write a hyperfine-compatible JSON report to
+    ``$BENCH_OUTPUT_JSON`` (bind-mounted to the host reports dir). This keeps
+    iteration output visible in CI logs, which hyperfine's stdout capture does
+    not allow.
+    """
+    image = _image_tag(scenario.variant)
+    # State directory is hidden so `actions/upload-artifact` (configured with
+    # include-hidden-files: false) skips it. This matters because the container
+    # writes files as root; uploading them would trip EACCES in the zip step.
+    state_dir = output_dir / f".{scenario.name}.state"
+    export_path = output_dir / f"{scenario.name}.json"
+    export_path.parent.mkdir(parents=True, exist_ok=True)
+    # Clear any stale export from a prior run so we can detect non-writes.
+    if export_path.exists():
+        export_path.unlink()
+    # The supervisor resolves the output path from BENCH_OUTPUT_JSON. /out is
+    # already bind-mounted to output_dir, so the file will land on the host.
+    env_overrides = dict(scenario.env)
+    env_overrides["BENCH_OUTPUT_JSON"] = f"/out/{scenario.name}.json"
+    # Build a synthetic Scenario view with the merged env for _docker_run_cmd.
+    scenario_with_env = replace(scenario, env=env_overrides)
+    docker_cmd = _docker_run_cmd(
+        scenario=scenario_with_env,
+        image=image,
+        output_dir=output_dir,
+        state_dir=state_dir,
+    )
+    rc = subprocess.run(docker_cmd, check=False)  # noqa: S603
+    if rc.returncode != 0:
+        sys.stderr.write(
+            f"self-measuring scenario {scenario.name!r} failed (exit {rc.returncode})\n",
+        )
+        return {"error": f"self-measuring exit {rc.returncode}", "scenario": scenario.name}
+    if not export_path.exists():
+        sys.stderr.write(
+            f"self-measuring scenario {scenario.name!r} produced no report at {export_path}\n",
+        )
+        return {"error": "self-measuring: report missing", "scenario": scenario.name}
+    return json.loads(export_path.read_text(encoding="utf-8"))
+
+
 def run_hyperfine(scenario: Scenario, *, output_dir: Path, warmup: int, min_runs: int, max_runs: int) -> dict:
     """Run hyperfine for one scenario; return the parsed --export-json payload.
 
     Pitfall 1 (--warmup 0): the default --warmup 3 would defeat cold-start measurement.
     Pitfall 2 (--timer coarse applies to pyinstrument, not hyperfine): see run_pyinstrument.
     D-07 (--prepare docker rm): forces a fresh container per iteration.
+
+    When ``scenario.self_measuring`` is True, the scenario runs its own measurement
+    harness inside one container and we return its hyperfine-format report
+    directly, skipping the hyperfine wrapping entirely.
 
     When the scenario declares ``prewarm_command``, we allocate a host-side state
     directory and:
@@ -338,11 +387,15 @@ def run_hyperfine(scenario: Scenario, *, output_dir: Path, warmup: int, min_runs
     This keeps the measured iteration to a single boot that exercises the
     cache-hit path while the pre-warm cost is paid exactly once per invocation.
     """
+    if scenario.self_measuring:
+        return _run_self_measuring(scenario, output_dir=output_dir)
+
     image = _image_tag(scenario.variant)
     state_dir: Path | None = None
     setup_string: str | None = None
     if scenario.prewarm_command:
-        state_dir = output_dir / f"{scenario.name}.state"
+        # Hidden so upload-artifact's include-hidden-files: false skips root-owned files.
+        state_dir = output_dir / f".{scenario.name}.state"
         prewarm_docker = _docker_run_cmd(
             scenario=scenario,
             image=image,
