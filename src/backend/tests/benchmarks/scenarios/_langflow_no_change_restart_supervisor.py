@@ -1,35 +1,34 @@
 """Supervisor: SVC-01 no-change-restart benchmark.
 
-Runs ``langflow run`` TWICE in sequence:
+Two modes, both driven by CLI flags:
 
-  Boot 1 (pre-warm, discarded): ``langflow run`` until ``Application startup complete.``
-    appears on stderr, then SIGTERM. This writes ``<config_dir>/starter_projects.hash``
-    and populates the DB, so Boot 2 hits the hash-match short-circuit.
+  --prewarm: boot ``langflow run`` once, wait for ``Application startup complete.``
+    on stderr, then SIGTERM. Writes ``<state>/starter_projects.hash`` and populates
+    the shared SQLite DB under ``<state>/bench.db`` so the measured boot can hit
+    the SVC-01 hash-match short-circuit. Used via hyperfine ``--setup`` so it runs
+    exactly once per benchmark invocation, not once per iteration.
 
-  Boot 2 (measured): ``langflow run`` against the SAME ``LANGFLOW_CONFIG_DIR`` and
-    ``LANGFLOW_DATABASE_URL`` so the hash gate's short-circuit actually fires. The
-    wall-clock for Boot 2 is emitted as ``LANGFLOW_NO_CHANGE_RESTART_MS=<ms>`` on
-    stdout. hyperfine measures the total supervisor duration (Boot 1 + Boot 2);
-    the per-boot marker is what the reports pick up.
+  --measure (default): boot ``langflow run`` once against the pre-populated state
+    dir and return. hyperfine measures this boot's wall-clock; with the hash gate
+    firing, the lifespan exits in milliseconds on the starter-project block and
+    the MCP Event fires near-immediately.
 
-Between boots, ``LANGFLOW_CONFIG_DIR`` + ``LANGFLOW_DATABASE_URL`` are NOT cleared
-(that is the whole point: Boot 1's hash file + starter-project DB rows must
-persist for Boot 2 to hit the hash-match path). If the ambient environment
-does not set them, this supervisor picks a deterministic tmp directory and
-exports both vars for the subprocess so the supervisor is self-contained.
-
-Mirrors ``_langflow_supervisor.py`` verbatim for the subprocess+marker
-mechanics (READY_MARKER, STARTUP_TIMEOUT_SEC, Popen shape, SIGTERM cleanup);
-the only new logic is the two-boot wrapper and the tmp config dir seeding.
+Shared state:
+  Both modes read the state directory from ``$BENCH_STATE_DIR`` (set by the driver
+  via a bind mount at ``/bench-state``). If unset, we fall back to a deterministic
+  tmp directory so the supervisor is self-contained for local ad-hoc runs. The
+  supervisor exports ``LANGFLOW_CONFIG_DIR`` and ``LANGFLOW_DATABASE_URL`` into
+  the environment so the subprocess sees them.
 
 Exit codes:
-  0 - success (both boots saw the marker; LANGFLOW_NO_CHANGE_RESTART_MS printed).
-  2 - timeout (STARTUP_TIMEOUT_SEC elapsed without the marker in one of the boots).
-  3 - early exit (process exited before the marker appeared on one of the boots).
+  0 - success (marker observed; in measure mode the benchmark was captured).
+  2 - timeout (STARTUP_TIMEOUT_SEC elapsed without the marker).
+  3 - early exit (process exited before the marker appeared).
 """
 
 from __future__ import annotations
 
+import argparse
 import os
 import signal
 import subprocess
@@ -41,13 +40,12 @@ from pathlib import Path
 READY_MARKER = "Application startup complete."
 # 60s is sufficient on Linux CI (typical cold boot is 30-40s). macOS/podman runs with an
 # emulated VM need more headroom; ``LANGFLOW_BENCH_STARTUP_TIMEOUT`` overrides at
-# invocation time. The second boot is expected to be dramatically faster; we reuse
-# the same generous ceiling for both to keep the supervisor predictable.
+# invocation time. Apply the same generous ceiling to both modes for predictability.
 STARTUP_TIMEOUT_SEC = float(os.environ.get("LANGFLOW_BENCH_STARTUP_TIMEOUT", "180"))
 
 
 def _langflow_argv() -> list[str]:
-    """Return the ``langflow run`` command used for both boots."""
+    """Return the ``langflow run`` command used for both modes."""
     return [
         "uv",
         "run",
@@ -62,14 +60,27 @@ def _langflow_argv() -> list[str]:
     ]
 
 
+def _ensure_state_env() -> Path:
+    """Resolve (and export) the shared state directory; return its Path."""
+    state_root = os.environ.get("BENCH_STATE_DIR")
+    if not state_root:
+        state_root = str(Path(tempfile.gettempdir()) / "langflow_bench_no_change_restart")
+    state_path = Path(state_root)
+    state_path.mkdir(parents=True, exist_ok=True)
+    os.environ["LANGFLOW_CONFIG_DIR"] = str(state_path)
+    os.environ.setdefault(
+        "LANGFLOW_DATABASE_URL",
+        f"sqlite:///{state_path / 'bench.db'}",
+    )
+    return state_path
+
+
 def _boot_once(*, measure: bool) -> float | None:
     """Launch ``langflow run``, wait for ready marker, SIGTERM, return elapsed ms (or None).
 
-    When ``measure`` is False the boot is a pre-warm: the elapsed ms is discarded
-    and the return value is ``None`` on success (but still ``None`` on failure --
-    the caller distinguishes via the non-zero exit code propagated to process-exit).
-    When ``measure`` is True the boot's ready-marker wall-clock in milliseconds is
-    returned on success.
+    When ``measure`` is False the elapsed ms is discarded; the return value is 0.0 on
+    success and ``None`` on failure (callers distinguish via the process exit code
+    they propagate to the outer driver).
     """
     start = time.perf_counter()
     proc = subprocess.Popen(  # noqa: S603
@@ -113,42 +124,58 @@ def _boot_once(*, measure: bool) -> float | None:
     return (ready_at - start) * 1000.0
 
 
-def _ensure_persistent_state_env() -> None:
-    """Export deterministic ``LANGFLOW_CONFIG_DIR`` + ``LANGFLOW_DATABASE_URL`` for both boots.
-
-    If the caller already set them, respect the caller's values (the hyperfine
-    wrapper in CI may choose a controlled location). Otherwise pick a scenario-
-    specific directory under the system tmp dir so Boot 2 reuses Boot 1's state.
-    """
-    if not os.environ.get("LANGFLOW_CONFIG_DIR"):
-        tmp_root = Path(tempfile.gettempdir()) / "langflow_bench_no_change_restart"
-        tmp_root.mkdir(parents=True, exist_ok=True)
-        os.environ["LANGFLOW_CONFIG_DIR"] = str(tmp_root)
-    if not os.environ.get("LANGFLOW_DATABASE_URL"):
-        db_path = Path(os.environ["LANGFLOW_CONFIG_DIR"]) / "bench_no_change_restart.db"
-        os.environ["LANGFLOW_DATABASE_URL"] = f"sqlite:///{db_path}"
-
-
-def main() -> int:
-    """Two-boot supervisor entrypoint. Returns process exit code."""
-    _ensure_persistent_state_env()
-
-    # Boot 1: pre-warm. Writes hash + populates DB. Elapsed time discarded.
-    sys.stdout.write("=== BOOT 1 (pre-warm, discarded) ===\n")
+def _run_prewarm(state_path: Path) -> int:
+    """Boot once to populate ``state_path``. Returns process exit code."""
+    sys.stdout.write(f"=== PREWARM (state={state_path}) ===\n")
     sys.stdout.flush()
-    boot_1 = _boot_once(measure=False)
-    if boot_1 is None:
+    if _boot_once(measure=False) is None:
         return 3
-
-    # Boot 2: measured. Hash should match -> short-circuit starter-project sync.
-    sys.stdout.write("=== BOOT 2 (measured) ===\n")
-    sys.stdout.flush()
-    boot_2_ms = _boot_once(measure=True)
-    if boot_2_ms is None:
-        return 3
-
-    sys.stdout.write(f"LANGFLOW_NO_CHANGE_RESTART_MS={boot_2_ms:.2f}\n")
+    hash_file = state_path / "starter_projects.hash"
+    if not hash_file.exists():
+        sys.stderr.write(f"WARNING: pre-warm did not produce {hash_file}\n")
     return 0
+
+
+def _run_measure(state_path: Path) -> int:
+    """Single measured boot against pre-warmed state. Returns process exit code."""
+    sys.stdout.write(f"=== MEASURE (state={state_path}) ===\n")
+    sys.stdout.flush()
+    boot_ms = _boot_once(measure=True)
+    if boot_ms is None:
+        return 3
+    sys.stdout.write(f"LANGFLOW_NO_CHANGE_RESTART_MS={boot_ms:.2f}\n")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entrypoint with two modes."""
+    parser = argparse.ArgumentParser(
+        description="SVC-01 no-change-restart benchmark supervisor",
+        allow_abbrev=False,
+    )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--prewarm",
+        action="store_const",
+        dest="mode",
+        const="prewarm",
+        help="Run Boot 1 only to populate the shared state dir, then exit.",
+    )
+    group.add_argument(
+        "--measure",
+        action="store_const",
+        dest="mode",
+        const="measure",
+        help="Run a single measured boot against the pre-warmed state.",
+    )
+    args = parser.parse_args(argv)
+    # Default to measure so hyperfine's main command can omit the flag if desired.
+    mode = args.mode or "measure"
+
+    state_path = _ensure_state_env()
+    if mode == "prewarm":
+        return _run_prewarm(state_path)
+    return _run_measure(state_path)
 
 
 if __name__ == "__main__":

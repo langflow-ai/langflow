@@ -266,6 +266,9 @@ def _docker_run_cmd(
     scenario: Scenario,
     image: str,
     output_dir: Path,
+    command: list[str] | None = None,
+    state_dir: Path | None = None,
+    container_name: str = "lfx-bench",
 ) -> list[str]:
     """Build the `docker run` argv for hyperfine to invoke.
 
@@ -273,27 +276,43 @@ def _docker_run_cmd(
     so the checkpoint JSON file (written by lfx._bench.dump inside the container) is copied
     out to the bind-mounted /out path before container exit.
 
+    ``command`` defaults to ``scenario.command``; callers may override (e.g. for a
+    ``prewarm_command`` invocation) without touching the frozen Scenario object.
+
+    ``state_dir`` opts into a second bind mount at ``/bench-state`` and exports
+    ``BENCH_STATE_DIR=/bench-state`` into the container. Scenarios that declare a
+    ``prewarm_command`` use this so the pre-warm step and the measured step share a
+    persistent working directory across ``docker run --rm`` boundaries.
+
     Note: subprocess is always invoked with an argv list (never a shell). The `sh -c`
     invocation is a child of the container, not of the host; the host-side subprocess.run
     call uses the explicit argv form with no shell wrapping.
     """
+    effective_command = command or scenario.command
+    env = dict(scenario.env)
+    extra_mounts: list[str] = []
+    if state_dir is not None:
+        state_dir.mkdir(parents=True, exist_ok=True)
+        extra_mounts.extend(["-v", f"{state_dir}:/bench-state"])
+        env.setdefault("BENCH_STATE_DIR", "/bench-state")
     base = [
         CONTAINER_CMD,
         "run",
         "--rm",
         "--name",
-        "lfx-bench",
+        container_name,
         "-v",
         f"{output_dir}:/out",
-        *_env_args(scenario.env),
+        *extra_mounts,
+        *_env_args(env),
         image,
     ]
     if scenario.captures_checkpoints:
-        inner = " ".join(_quote(tok) for tok in scenario.command)
+        inner = " ".join(_quote(tok) for tok in effective_command)
         cp = f"&& cp /tmp/checkpoints.json /out/{scenario.name}_checkpoints.json 2>/dev/null || true"
         sh_cmd = f"{inner} {cp}"
         return [*base, "sh", "-c", sh_cmd]
-    return [*base, *scenario.command]
+    return [*base, *effective_command]
 
 
 def _quote(token: str) -> str:
@@ -310,9 +329,36 @@ def run_hyperfine(scenario: Scenario, *, output_dir: Path, warmup: int, min_runs
     Pitfall 1 (--warmup 0): the default --warmup 3 would defeat cold-start measurement.
     Pitfall 2 (--timer coarse applies to pyinstrument, not hyperfine): see run_pyinstrument.
     D-07 (--prepare docker rm): forces a fresh container per iteration.
+
+    When the scenario declares ``prewarm_command``, we allocate a host-side state
+    directory and:
+      * bind-mount it at ``/bench-state`` in every docker run (main + prewarm)
+      * invoke the pre-warm container once via hyperfine ``--setup``
+
+    This keeps the measured iteration to a single boot that exercises the
+    cache-hit path while the pre-warm cost is paid exactly once per invocation.
     """
     image = _image_tag(scenario.variant)
-    docker_run = _docker_run_cmd(scenario=scenario, image=image, output_dir=output_dir)
+    state_dir: Path | None = None
+    setup_string: str | None = None
+    if scenario.prewarm_command:
+        state_dir = output_dir / f"{scenario.name}.state"
+        prewarm_docker = _docker_run_cmd(
+            scenario=scenario,
+            image=image,
+            output_dir=output_dir,
+            command=scenario.prewarm_command,
+            state_dir=state_dir,
+            container_name=f"lfx-bench-prewarm-{scenario.name}",
+        )
+        setup_string = " ".join(_quote(tok) for tok in prewarm_docker)
+
+    docker_run = _docker_run_cmd(
+        scenario=scenario,
+        image=image,
+        output_dir=output_dir,
+        state_dir=state_dir,
+    )
     # --prepare must be a single shell command; hyperfine parses it via --shell sh.
     prepare = f"{CONTAINER_CMD} rm -f lfx-bench 2>/dev/null || true"
     # Build the single shell-string form of the docker-run command for hyperfine's arg.
@@ -335,8 +381,10 @@ def run_hyperfine(scenario: Scenario, *, output_dir: Path, warmup: int, min_runs
         str(export_path),
         "--shell",
         "sh",
-        run_string,
     ]
+    if setup_string is not None:
+        cmd.extend(["--setup", setup_string])
+    cmd.append(run_string)
     rc = subprocess.run(cmd, check=False)  # noqa: S603
     if rc.returncode != 0:
         sys.stderr.write(f"hyperfine failed for scenario {scenario.name!r} (exit {rc.returncode})\n")

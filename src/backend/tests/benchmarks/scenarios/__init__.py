@@ -28,6 +28,12 @@ class Scenario:
     captures_checkpoints: bool = True
     captures_pyinstrument: bool = True
     captures_importtime: bool = True
+    # When set, the driver runs this command once via hyperfine --setup before the
+    # measured iterations, and bind-mounts a shared host tmp dir at /bench-state so
+    # state written by the pre-warm survives into every iteration's fresh --rm
+    # container. Used by scenarios that need a populated DB or filesystem cache to
+    # exercise the cache-hit path (e.g. langflow_run_no_change_restart / SVC-01).
+    prewarm_command: list[str] | None = None
 
 
 __all__ = ["Scenario"]
