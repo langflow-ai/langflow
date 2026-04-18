@@ -73,6 +73,9 @@ from src.backend.tests.benchmarks.scenarios import (
     lfx_bare as _scen_lfx_bare,
 )
 from src.backend.tests.benchmarks.scenarios import (
+    lfx_reference_image as _scen_lfx_reference_image,
+)
+from src.backend.tests.benchmarks.scenarios import (
     lfx_with_flow as _scen_lfx_with_flow,
 )
 
@@ -83,6 +86,7 @@ MEASUREMENT_MODE = "bytecode_compile_delta"
 # Image tags produced/used by the driver.
 IMG_BASE_LEAN = "benchmarks-lean"  # landed image, bytecode present (UV_COMPILE_BYTECODE=1).
 IMG_UNCOMPILED = "benchmarks-lean-uncompiled"  # derived, .pyc stripped.
+IMG_LFX_REFERENCE = "lfx-reference"  # lfx reference image built from src/lfx/docker/Dockerfile (CNT-01 / D-13).
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 BENCHMARKS_DIR = Path(__file__).resolve().parent
@@ -141,6 +145,7 @@ def all_scenarios() -> list[Scenario]:
         _scen_lfx_with_flow.SCENARIO_PREBAKED,
         _scen_langflow_run.SCENARIO,
         _scen_langflow_run_no_change_restart.SCENARIO,
+        _scen_lfx_reference_image.SCENARIO,
     ]
 
 
@@ -176,6 +181,8 @@ def _image_tag(variant: str) -> str:
         return IMG_UNCOMPILED
     if variant == "prebaked":
         return IMG_BASE_LEAN
+    if variant == "lfx_reference":
+        return IMG_LFX_REFERENCE
     msg = f"unknown scenario variant: {variant!r}"
     raise ValueError(msg)
 
