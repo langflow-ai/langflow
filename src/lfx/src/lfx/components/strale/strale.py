@@ -2,7 +2,7 @@ import json
 from typing import Any
 
 import httpx
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
@@ -19,7 +19,10 @@ REQUEST_TIMEOUT = 60.0
 class SearchAndExecuteSchema(BaseModel):
     task: str = Field(
         ...,
-        description="Natural language description of the data you need, e.g. 'verify a Swedish company' or 'validate this VAT number'",
+        description=(
+            "Natural language description of the data you need, "
+            "e.g. 'verify a Swedish company' or 'validate this VAT number'"
+        ),
     )
     inputs: str | None = Field(
         default=None,
@@ -48,20 +51,32 @@ class StraleComponent(LCToolComponent):
         SecretStrInput(
             name="api_key",
             display_name="Strale API Key",
-            info="Your Strale API key. Optional — 5 free capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) work without auth.",
+            info=(
+                "Your Strale API key. Optional — 5 free capabilities "
+                "(email-validate, dns-lookup, json-repair, url-to-markdown, "
+                "iban-validate) work without auth."
+            ),
             required=False,
         ),
         DropdownInput(
             name="tool_mode",
             display_name="Mode",
-            info="'Search and execute' finds the best capability for a task description. 'Execute a specific capability' calls a known capability slug directly.",
+            info=(
+                "'Search and execute' finds the best capability for a task "
+                "description. 'Execute a specific capability' calls a known "
+                "capability slug directly."
+            ),
             options=["Search and execute", "Execute a specific capability"],
             value="Search and execute",
         ),
         MessageTextInput(
             name="capability_slug",
             display_name="Capability Slug",
-            info="The slug of the capability to execute (e.g. 'swedish-company-data'). Only used in 'Execute a specific capability' mode.",
+            info=(
+                "The slug of the capability to execute "
+                "(e.g. 'swedish-company-data'). Only used in 'Execute a "
+                "specific capability' mode."
+            ),
             advanced=True,
         ),
         MultilineInput(
