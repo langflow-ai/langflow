@@ -20,7 +20,7 @@ Resolved decisions are captured below; only the measurement-dependent question r
 - [x] **Phase 2: Component Index and Correctness Fixes** - Close TOCTOU race, thread-exhaustion bug, atomic write race, and version-stamp bug in the component index; remove duplicate superuser init; emit stale-index warning. Must maintain behavior parity with component-loaded flows. (completed 2026-04-17)
 - [x] **Phase 3: Import-Time Optimization** - Defer heavy top-level imports (pandas/PIL/OTel first, langchain_core last in sub-tasks); each PR must show both `lfx run` and `langflow run` numbers and pass mypy clean. Services layer and component index semantics must not regress. (completed 2026-04-17; Graph cold-import 1440ms -> 356ms, -75%)
 - [x] **Phase 4: Service Init Restructuring** - Hash-gate starter-project updates, parallelize independent lifespan tasks, replace MCP sleep with event coordination. Services layer must preserve initialization order and behavior parity. (completed 2026-04-17; langflow_run_no_change_restart CI baseline captured 2026-04-18 at 11078ms ± 23ms)
-- [ ] **Phase 5: Container and Deployment Optimization** - Produce optimized Dockerfile, publish cold-start deployment guide, evaluate `LANGFLOW_GUNICORN_PRELOAD` fork safety.
+- [x] **Phase 5: Container and Deployment Optimization** - Produce optimized Dockerfile, publish cold-start deployment guide, evaluate `LANGFLOW_GUNICORN_PRELOAD` fork safety. (completed 2026-04-18; LANGFLOW_GUNICORN_PRELOAD default flipped to true after D-07 gate passed)
 - [ ] **Phase 5.5: Component Index Build Caching** - Read the persisted component index on cold start and skip rebuild when the installed `lfx` version matches; targets the 3.4s ComponentCache rebuild observed in lfx_with_flow profiling on 2026-04-18.
 - [ ] **Phase 6: Validation and Publication** - Re-run harness, produce before/after table, confirm parity, lock in CI regression gate.
 
@@ -163,7 +163,7 @@ Plans:
 - [x] 05-03-PLAN.md — deployment-cold-start.mdx guide (D-08) + sidebars.js wiring + cross-links from deployment-docker.mdx and deployment-prod-best-practices.mdx (D-09). Requirements: CNT-03.
 - [x] 05-04-PLAN.md — Repeat-build cache-hit verification step in build-images job (D-14 <30s assertion for CNT-02). Requirements: CNT-02.
 - [x] 05-05-PLAN.md — D-05 fork-hazard audit + TelemetryService post_fork fix (_langflow_post_fork hook in server.py + start/stop guards in services/telemetry/service.py + test_post_fork.py). Requirements: CNT-04.
-- [ ] 05-06-PLAN.md — LANGFLOW_GUNICORN_PRELOAD default flip conditional on 05-05 D-07 gate + finalize LANGFLOW_GUNICORN_PRELOAD section in deployment-cold-start.mdx. Requirements: CNT-04.
+- [x] 05-06-PLAN.md — LANGFLOW_GUNICORN_PRELOAD default flip conditional on 05-05 D-07 gate + finalize LANGFLOW_GUNICORN_PRELOAD section in deployment-cold-start.mdx. Requirements: CNT-04.
 
 **Wave hints for parallelization:**
 - wave 1 (independent, 4 plans): 05-01 (Dockerfile) + 05-02 (CI scenario) + 05-03 (docs guide) + 05-04 (cache-hit CI assertion). 05-02 and 05-04 both touch .github/workflows/cold-start-benchmark.yml (serialized by file overlap).

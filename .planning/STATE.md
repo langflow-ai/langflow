@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 05 Plan 05 complete; fork-hazard audit fixed TelemetryService.client; all 6 audited hazards documented. CNT-04 half complete (audit+fix). Plan 05-06 is the default-flip half.
-last_updated: "2026-04-18T15:35:30.108Z"
+status: verifying
+stopped_at: Phase 05 Plan 06 complete; LANGFLOW_GUNICORN_PRELOAD default flipped to true (CNT-04 done); Phase 05 all 6 plans executed.
+last_updated: "2026-04-18T16:12:08.923Z"
 last_activity: 2026-04-18
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 36
-  completed_plans: 25
-  percent: 69
+  completed_plans: 26
+  percent: 72
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 Phase: 05 (container-and-deployment-optimization) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-18
 
 Phase 4 outcome: [##########] 100% (5/5 plans executed)
@@ -63,6 +63,7 @@ Phase 4 outcome: [##########] 100% (5/5 plans executed)
 | Phase 05 P02 | 3 | 4 tasks | 4 files |
 | Phase 05 P03 | 8 | 2 tasks | 4 files |
 | Phase 05 P05 | 4 | 3 tasks | 3 files |
+| Phase 05 P06 | 4 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,7 @@ Recent decisions affecting current work:
 - [Phase 05-03]: Cross-platform requirements generation documented as `uv pip compile --python-platform linux --python-version 3.13` (not `uv export`); verified against uv 0.9.11 live — `uv export` lacks these flags entirely.
 - [Phase 05-03]: deployment-prod-best-practices.mdx cross-link added to See also section (end of file) rather than mid-section insertion to avoid disrupting existing content.
 - [Phase ?]: post_fork hook imported get_telemetry_service lazily to avoid circular imports; except Exception swallowed with S110 noqa because gunicorn hook must not crash on uninitialized service
+- [Phase ?]: D-07 gate passed: LANGFLOW_GUNICORN_PRELOAD default flipped to true; Path A docs written with 7-hazard audit summary and opt-out instructions (CNT-04 complete)
 
 ### Pending Todos
 
@@ -139,8 +141,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-18T15:35:30.103Z
-Stopped at: Phase 05 Plan 05 complete; fork-hazard audit fixed TelemetryService.client; all 6 audited hazards documented. CNT-04 half complete (audit+fix). Plan 05-06 is the default-flip half.
+Last session: 2026-04-18T16:12:08.917Z
+Stopped at: Phase 05 Plan 06 complete; LANGFLOW_GUNICORN_PRELOAD default flipped to true (CNT-04 done); Phase 05 all 6 plans executed.
 Resume file: None
 Next step: Execute Phase 05 Plan 04.
 
