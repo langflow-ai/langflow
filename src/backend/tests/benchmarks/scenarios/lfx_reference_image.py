@@ -1,7 +1,7 @@
 """CNT-01 lfx_reference_image scenario: cold-start of the lfx reference Dockerfile image.
 
 Measures `lfx run <noop_flow>` executed inside the patched src/lfx/docker/Dockerfile image
-(Python 3.13-alpine, UV_COMPILE_BYTECODE=1, --no-install-project layer separation).
+(Python 3.13-slim-bookworm, UV_COMPILE_BYTECODE=1, --no-install-project layer separation).
 
 This is a hyperfine-wrapped scenario (self_measuring=False): each hyperfine iteration
 runs `docker run --rm lfx-reference lfx run /fixtures/noop_flow.json --format text` and
@@ -9,6 +9,11 @@ exits. Verified 2026-04-18 via direct read of src/lfx/src/lfx/cli/run.py: the lf
 command calls run_flow, echoes the result, and exits. No port is bound, so a TCP
 readiness probe / self-measuring supervisor is not applicable. The driver handles
 timing via hyperfine wall-clock, identical to the lfx_bare scenario shape.
+
+Unlike `benchmarks-lean`, the lfx-reference image is a production image: it contains
+no `uv` binary and no baked-in `/fixtures` symlink. The scenario therefore invokes
+`lfx` directly (the runtime PATH already includes `/app/.venv/bin`) and relies on the
+driver's variant-aware bind mount that exposes the benchmarks fixtures at `/fixtures`.
 
 Sentinel threshold: {"mean_ms": 0, "stddev_ms": 0, "runs": 0} per D-15 / Phase 3 D-09.
 Authoritative numbers land via run-benchmark-snapshot CI label on the Phase 5 PR.
@@ -25,7 +30,7 @@ from src.backend.tests.benchmarks.scenarios import Scenario
 SCENARIO = Scenario(
     name="lfx_reference_image",
     variant="lfx_reference",
-    command=["uv", "run", "lfx", "run", "/fixtures/noop_flow.json", "--format", "text"],
+    command=["lfx", "run", "/fixtures/noop_flow.json", "--format", "text"],
     env={
         "LFX_BENCHMARK_CHECKPOINTS": "1",
         "LFX_BENCHMARK_CHECKPOINTS_FILE": "/tmp/checkpoints.json",  # noqa: S108

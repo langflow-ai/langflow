@@ -302,6 +302,13 @@ def _docker_run_cmd(
         state_dir.mkdir(parents=True, exist_ok=True)
         extra_mounts.extend(["-v", f"{state_dir}:/bench-state"])
         env.setdefault("BENCH_STATE_DIR", "/bench-state")
+    # The lfx-reference image is the production image: no uv, no baked-in /fixtures.
+    # Bind-mount the benchmarks fixtures directory so `lfx run /fixtures/<flow>.json`
+    # works identically to the benchmarks-lean variants (which have /fixtures as a
+    # symlink built into the image).
+    if scenario.variant == "lfx_reference":
+        fixtures_dir = BENCHMARKS_DIR / "fixtures"
+        extra_mounts.extend(["-v", f"{fixtures_dir}:/fixtures:ro"])
     base = [
         CONTAINER_CMD,
         "run",
