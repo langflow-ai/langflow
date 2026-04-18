@@ -25,8 +25,10 @@ Supported operations (selectable via the operation tab):
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 from astrapy import Collection, DataAPIClient, Database
 from astrapy.info import (
