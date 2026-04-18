@@ -1220,3 +1220,135 @@ class TestIDX07StaleIndexWarning:
         snapshot = await _capture_parity_snapshot(fixture)
         expected = json.loads(expected_path.read_text())
         assert snapshot == expected, f"IDX-07 caused parity drift.\n  got: {snapshot}\n  expected: {expected}"
+
+
+# ---------------------------------------------------------------------------
+# Module-scoped fixture: build a real, SHA-stamped, version-matched cache file
+# once per test module to avoid rebuilding per-test in TestIDX08CacheHit.
+#
+# Uses tmp_path_factory (module-scoped fixture compatible) + direct setattr on
+# ci._get_cache_path rather than monkeypatch, which is function-scoped only.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def prebuilt_cache_file(tmp_path_factory):
+    """Return the Path of a valid, SHA-stamped, version-matched cache file.
+
+    Built once per module: calls _save_generated_index with a minimal
+    synthetic modules_dict so the file carries the real installed lfx version
+    and a non-empty entries list.  Both conditions are required for the IDX-08
+    short-circuit to fire (D-01: version match AND non-empty entries).
+    """
+    from importlib.metadata import version as _version
+
+    from lfx.interface import components as ci
+
+    tmp_dir = tmp_path_factory.mktemp("prebuilt_cache")
+    cache_file = tmp_dir / "component_index.json"
+
+    original_get_cache_path = ci._get_cache_path
+    try:
+        ci._get_cache_path = lambda: cache_file
+        _save_generated_index(
+            {
+                "inputs": {"ChatInput": {"template": {}, "display_name": "Chat Input"}},
+                "outputs": {"ChatOutput": {"template": {}, "display_name": "Chat Output"}},
+            }
+        )
+    finally:
+        ci._get_cache_path = original_get_cache_path
+
+    assert cache_file.exists(), "prebuilt_cache_file fixture: _save_generated_index did not write a file"
+    blob = orjson.loads(cache_file.read_bytes())
+    installed = _version("lfx")
+    assert blob.get("version") == installed, (
+        f"prebuilt cache version {blob.get('version')!r} != installed {installed!r}"
+    )
+    assert blob.get("entries"), "prebuilt cache has empty entries -- IDX-08 short-circuit will not fire"
+    return cache_file
+
+
+@pytest.mark.asyncio
+class TestIDX08CacheHit:
+    """Phase 5.5 / IDX-08 + IDX-09: read-path short-circuit on version-matched cache hit."""
+
+    async def test_cache_hit_populates_all_types_dict(self, tmp_path, monkeypatch, prebuilt_cache_file):
+        """Cache-hit path populates all_types_dict and type_to_current_hash; skips import_langflow_components."""
+        import shutil
+
+        from lfx.interface import components as ci
+
+        cache_file = tmp_path / "component_index.json"
+        shutil.copy(prebuilt_cache_file, cache_file)
+
+        monkeypatch.setattr(ci, "_get_cache_path", lambda: cache_file)
+        _reset_component_cache_singleton(monkeypatch)
+
+        import_calls = []
+        original_import = ci.import_langflow_components
+
+        async def _spy_import(*a, **kw):
+            import_calls.append((a, kw))
+            return await original_import(*a, **kw)
+
+        monkeypatch.setattr(ci, "import_langflow_components", _spy_import)
+
+        result = await ci.get_and_cache_all_types_dict(_fake_settings_service())
+
+        assert result is not None, "cache-hit path returned None"
+        assert isinstance(result, dict), "cache-hit must return a dict"
+        assert result, "cache-hit returned empty dict"
+        # P-2: hash lookups populated on cache-hit
+        assert ci.component_cache.type_to_current_hash is not None, (
+            "type_to_current_hash must be populated on cache-hit (P-2)"
+        )
+        # IDX-08: rebuild skipped
+        assert not import_calls, (
+            f"import_langflow_components must NOT be called on cache-hit, got {len(import_calls)} calls"
+        )
+
+    async def test_cache_miss_falls_back_to_rebuild(self, tmp_path, monkeypatch):
+        """Cache-miss (absent file) falls back to the full rebuild path."""
+        from lfx.interface import components as ci
+
+        absent_cache = tmp_path / "nope.json"
+        assert not absent_cache.exists()
+        monkeypatch.setattr(ci, "_get_cache_path", lambda: absent_cache)
+        _reset_component_cache_singleton(monkeypatch)
+
+        import_calls = []
+        original_import = ci.import_langflow_components
+
+        async def _spy_import(*a, **kw):
+            import_calls.append((a, kw))
+            return await original_import(*a, **kw)
+
+        monkeypatch.setattr(ci, "import_langflow_components", _spy_import)
+
+        result = await ci.get_and_cache_all_types_dict(_fake_settings_service())
+
+        assert result is not None, "cache-miss fallback returned None"
+        assert result, "cache-miss fallback must populate all_types_dict"
+        assert len(import_calls) == 1, (
+            f"cache-miss must call import_langflow_components exactly once, got {len(import_calls)}"
+        )
+
+    async def test_cache_hit_skips_telemetry(self, tmp_path, monkeypatch, prebuilt_cache_file):
+        """D-07: no build work -> no log_component_index on cache-hit."""
+        import shutil
+        from unittest.mock import AsyncMock
+
+        from lfx.interface import components as ci
+
+        cache_file = tmp_path / "component_index.json"
+        shutil.copy(prebuilt_cache_file, cache_file)
+        monkeypatch.setattr(ci, "_get_cache_path", lambda: cache_file)
+        _reset_component_cache_singleton(monkeypatch)
+
+        telemetry = Mock()
+        telemetry.log_component_index = AsyncMock()
+
+        await ci.get_and_cache_all_types_dict(_fake_settings_service(), telemetry_service=telemetry)
+
+        telemetry.log_component_index.assert_not_called()
