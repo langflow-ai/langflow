@@ -38,14 +38,25 @@ import argparse
 import json
 import os
 import signal
+import socket
 import statistics
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
-READY_MARKER = "Application startup complete."
+# We probe TCP readiness on 127.0.0.1:READY_PORT instead of scraping a stdout marker.
+# The ``Application startup complete.`` log line that uvicorn emits is swallowed by
+# langflow's structlog processor pipeline, so relying on it races under load (same
+# class of failure the langflow_run_http_ready scenario hits). TCP connect success
+# is a ground-truth readiness signal that does not depend on logging at all.
+READY_HOST = "127.0.0.1"
+READY_PORT = 7860
+# Poll interval for TCP readiness probes. Short enough to keep measurement noise
+# bounded; long enough to avoid trivial CPU burn during the ~30-40s cold boot.
+READY_POLL_INTERVAL_SEC = 0.05
 # 60s is sufficient on Linux CI (typical cold boot is 30-40s). macOS/podman runs with an
 # emulated VM need more headroom; ``LANGFLOW_BENCH_STARTUP_TIMEOUT`` overrides at
 # invocation time. Apply the same generous ceiling to every boot for predictability.
@@ -61,11 +72,30 @@ def _langflow_argv() -> list[str]:
         "run",
         "--backend-only",
         "--host",
-        "127.0.0.1",
+        READY_HOST,
         "--port",
-        "7860",
+        str(READY_PORT),
         "--no-open-browser",
     ]
+
+
+def _drain_output(stream, stop_event: threading.Event) -> None:
+    """Forward a subprocess pipe to stdout so CI logs show boot progress.
+
+    Runs in a background thread so the main thread can poll TCP readiness without
+    blocking on ``readline``. When ``stop_event`` fires we stop reading even if the
+    child process is still producing output (the shutdown path doesn't care about
+    lossless capture — it only cares about not deadlocking the parent).
+    """
+    try:
+        for line in stream:
+            if stop_event.is_set():
+                break
+            sys.stdout.write(line)
+            sys.stdout.flush()
+    except (ValueError, OSError):
+        # Stream closed from under us; that's fine during shutdown.
+        return
 
 
 def _ensure_state_env() -> Path:
@@ -83,11 +113,24 @@ def _ensure_state_env() -> Path:
     return state_path
 
 
+def _tcp_ready(host: str, port: int, *, connect_timeout: float = 0.5) -> bool:
+    """Return True if a TCP connection to ``(host, port)`` succeeds within the deadline."""
+    try:
+        with socket.create_connection((host, port), timeout=connect_timeout):
+            return True
+    except OSError:
+        return False
+
+
 def _boot_once(*, measure: bool) -> float | None:
-    """Launch ``langflow run``, wait for ready marker, SIGTERM, return elapsed ms (or None).
+    """Launch ``langflow run``, poll TCP 127.0.0.1:7860 for readiness, SIGTERM, return ms.
 
     When ``measure`` is False the elapsed ms is discarded and the return value is 0.0
     on success. On failure (timeout or early exit) the return value is ``None``.
+
+    Readiness is signalled by a successful TCP connect to the bind address. The
+    supervisor tolerates a silent structlog pipeline because it never depends on
+    log output to know when the server is up.
     """
     start = time.perf_counter()
     proc = subprocess.Popen(  # noqa: S603
@@ -101,19 +144,34 @@ def _boot_once(*, measure: bool) -> float | None:
         sys.stderr.write("ERROR: Popen did not provide a stdout stream\n")
         return None
 
+    stop_reader = threading.Event()
+    reader = threading.Thread(
+        target=_drain_output,
+        args=(proc.stdout, stop_reader),
+        daemon=True,
+    )
+    reader.start()
+
     ready_at: float | None = None
     try:
-        for line in proc.stdout:
-            sys.stdout.write(line)
-            sys.stdout.flush()
-            if READY_MARKER in line:
+        while True:
+            if _tcp_ready(READY_HOST, READY_PORT):
                 ready_at = time.perf_counter()
                 break
-            if time.perf_counter() - start > STARTUP_TIMEOUT_SEC:
-                sys.stderr.write(f"TIMEOUT: {STARTUP_TIMEOUT_SEC}s elapsed without seeing {READY_MARKER!r}\n")
-                proc.terminate()
+            if proc.poll() is not None:
+                sys.stderr.write(
+                    f"ERROR: process exited (rc={proc.returncode}) before {READY_HOST}:{READY_PORT} was ready\n",
+                )
                 return None
+            if time.perf_counter() - start > STARTUP_TIMEOUT_SEC:
+                sys.stderr.write(
+                    f"TIMEOUT: {STARTUP_TIMEOUT_SEC}s elapsed without "
+                    f"{READY_HOST}:{READY_PORT} accepting connections\n",
+                )
+                return None
+            time.sleep(READY_POLL_INTERVAL_SEC)
     finally:
+        stop_reader.set()
         if proc.poll() is None:
             proc.send_signal(signal.SIGTERM)
             try:
@@ -121,9 +179,9 @@ def _boot_once(*, measure: bool) -> float | None:
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait(timeout=5)
+        reader.join(timeout=2)
 
     if ready_at is None:
-        sys.stderr.write("ERROR: process exited before ready marker appeared\n")
         return None
 
     if not measure:
