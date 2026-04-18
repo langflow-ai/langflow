@@ -134,6 +134,38 @@ Then install from that file in your derived image.
 
 `LANGFLOW_GUNICORN_PRELOAD=true` asks gunicorn to load the Langflow application once in the master process before forking workers, so every worker inherits the application object instead of loading it independently. When safe, this reduces per-worker startup cost.
 
-> _This section is finalized once Phase 5 Plan 05-06 lands. It will describe the current default, the fork-hazards audit outcome, and the migration steps for any existing deployments that relied on the previous default._
+Starting with this release, `LANGFLOW_GUNICORN_PRELOAD` defaults to `true`. Gunicorn loads the Langflow application once in the master process before forking workers, and every worker inherits the application object instead of loading it independently. On multi-worker deployments this reduces per-worker startup cost by avoiding redundant imports and initialization.
 
-<!-- TODO(plan-05-06): replace the blockquote above with the audit outcome + migration guidance. -->
+### What the audit covered
+
+Enabling `preload_app=true` makes any resource constructed before fork (the master process) shared with every worker via copy-on-write. Sockets and file descriptors are literally shared, not copied — a stale inherited HTTP pool, database engine, or background task will break.
+
+The Phase 5 audit covered seven classes of pre-fork state:
+
+- **SQLAlchemy engine.** Safe by construction — `DatabaseService.__init__` runs inside `initialize_services()` inside the FastAPI lifespan, which executes per-worker post-fork. The engine is never created in the master.
+- **asyncio locks.** Safe. `ComponentCache._lock` uses the IDX-01 lazy `@property` pattern introduced in Phase 2; each worker creates its own `asyncio.Lock()` on first access, bound to its own event loop.
+- **Component index cache.** Safe. `ComponentCache.all_types_dict` is populated inside the FastAPI lifespan (post-fork) by the wave-2 `asyncio.gather` block.
+- **Redis connection pool.** Safe (conditional). `RedisCache` is only constructed when `LANGFLOW_CACHE_TYPE=redis`, and in that case it is built inside `initialize_services()` (post-fork).
+- **asyncio background tasks at import time.** Safe. No `asyncio.create_task` calls at module scope; all tasks are created inside the lifespan body or inside `service.start()` methods.
+- **File descriptors at import time.** Safe. No module-level `open()` calls in `langflow/main.py` or adjacent imports; gunicorn's own `Logger.reopen_files` handles its log FDs.
+- **Telemetry HTTP client.** Hazard — and fixed. `TelemetryService.__init__` constructs `httpx.AsyncClient` at service construction, which happens inside `get_lifespan()` and therefore runs pre-fork when `preload_app=true`. A gunicorn `post_fork` hook now resets `TelemetryService.client` to `None`; the service's `start()` method reconstructs the client inside the worker's event loop on first use.
+
+### Opting out
+
+If your deployment depends on the previous (sequential worker load) behavior, opt out with:
+
+```bash
+export LANGFLOW_GUNICORN_PRELOAD=false
+```
+
+Any truthy value other than `true` (`false`, `0`, empty) disables preload. The environment variable name is preserved from the previous release — existing scripts continue to work.
+
+### When to stay opted out
+
+Preload offers the smallest win (and the most risk) in these cases:
+
+- Single-worker deployments (`WORKERS=1`). There is nothing to share; preload adds nothing.
+- Deployments using custom services or integrations that construct their own connection pools during module import. Audit those services for fork-safety before flipping preload on.
+- Environments where `preload_app=true` is known to conflict with the gunicorn worker class in use.
+
+For multi-worker deployments using the stock services, the default is recommended.
