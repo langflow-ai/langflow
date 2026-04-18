@@ -122,6 +122,34 @@ jobs:
             -f src/lfx/docker/Dockerfile \
             .
 
+      - name: Verify deps layer cache (CNT-02 repeat-build assertion)
+        # D-14: After the initial lfx-reference build, make a no-op source change
+        # and re-run docker build. If Plan 05-01's --no-install-project patch works,
+        # the deps layer cache-hits and total build time is ~5-15s. If the patch was
+        # reverted or broken, the first uv sync reruns and this step exceeds the
+        # 30s target per D-14.
+        #
+        # Touches a trailing comment on src/lfx/src/lfx/__init__.py. The change is
+        # harmless (single-line comment; doesn't affect imports or module attributes)
+        # but invalidates the source COPY layer at Dockerfile line 39.
+        run: |
+          set -e
+          echo "# CNT-02 cache-verification no-op touch: $(date +%s)" >> src/lfx/src/lfx/__init__.py
+          start=$(date +%s)
+          docker build \
+            -t lfx-reference \
+            -f src/lfx/docker/Dockerfile \
+            .
+          end=$(date +%s)
+          elapsed=$((end - start))
+          echo "Repeat build elapsed: ${elapsed}s (CNT-02 target: <30s)"
+          if [ "$elapsed" -ge 30 ]; then
+            echo "::error ::CNT-02 FAILED: repeat build took ${elapsed}s (>=30s). The deps layer is NOT cache-hit. Verify --no-install-project is present on the first uv sync in src/lfx/docker/Dockerfile (Plan 05-01)."
+            exit 1
+          fi
+          # Restore src/lfx/src/lfx/__init__.py so downstream steps see the unmodified tree.
+          git checkout -- src/lfx/src/lfx/__init__.py
+
       - name: Save all images to tarball
         run: |
           docker save benchmarks-lean benchmarks-lean-uncompiled lfx-reference | gzip > /tmp/images.tar.gz
