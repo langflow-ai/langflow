@@ -67,6 +67,9 @@ from src.backend.tests.benchmarks.scenarios import (
     langflow_run as _scen_langflow_run,
 )
 from src.backend.tests.benchmarks.scenarios import (
+    langflow_run_no_change_restart as _scen_langflow_run_no_change_restart,
+)
+from src.backend.tests.benchmarks.scenarios import (
     lfx_bare as _scen_lfx_bare,
 )
 from src.backend.tests.benchmarks.scenarios import (
@@ -128,14 +131,16 @@ def all_scenarios() -> list[Scenario]:
     """Return the full set of scenarios the driver knows about.
 
     Order matters for the baseline doc: lfx_bare (floor), lfx_with_flow (primary MEAS-07
-    lean variant), lfx_with_flow_prebaked (prebaked compiled variant for the delta), then
-    langflow_run_http_ready (terminal / integration scenario).
+    lean variant), lfx_with_flow_prebaked (prebaked compiled variant for the delta),
+    langflow_run_http_ready (terminal / integration scenario), and
+    langflow_run_no_change_restart (Phase 4 SVC-01 two-boot restart scenario).
     """
     return [
         _scen_lfx_bare.SCENARIO,
         _scen_lfx_with_flow.SCENARIO_LEAN,
         _scen_lfx_with_flow.SCENARIO_PREBAKED,
         _scen_langflow_run.SCENARIO,
+        _scen_langflow_run_no_change_restart.SCENARIO,
     ]
 
 

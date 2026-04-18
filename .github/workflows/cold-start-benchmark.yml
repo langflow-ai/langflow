@@ -305,11 +305,16 @@ jobs:
           scenarios_out = {}
           for name in tracked:
               hfile = reports / f"{name}.json"
-              if not hfile.exists():
-                  print(f"WARNING: {hfile} missing; writing sentinel for {name}", file=sys.stderr)
+              if not hfile.exists() or hfile.stat().st_size == 0:
+                  print(f"WARNING: {hfile} missing or empty; writing sentinel for {name}", file=sys.stderr)
                   scenarios_out[name] = {"mean_ms": 0, "stddev_ms": 0, "runs": 0}
                   continue
-              data = json.loads(hfile.read_text())
+              try:
+                  data = json.loads(hfile.read_text())
+              except json.JSONDecodeError as exc:
+                  print(f"WARNING: {hfile} is malformed JSON ({exc}); sentinel for {name}", file=sys.stderr)
+                  scenarios_out[name] = {"mean_ms": 0, "stddev_ms": 0, "runs": 0}
+                  continue
               results = data.get("results", [])
               if not results:
                   print(f"WARNING: {hfile} has no results; sentinel for {name}", file=sys.stderr)
