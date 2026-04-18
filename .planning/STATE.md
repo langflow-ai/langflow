@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 05 Plan 06 complete; LANGFLOW_GUNICORN_PRELOAD default flipped to true (CNT-04 done); Phase 05 all 6 plans executed.
-last_updated: "2026-04-18T19:56:14.041Z"
-last_activity: 2026-04-18
+status: executing
+stopped_at: Phase 05.5 Plan 01 complete; IDX-08 cache-hit short-circuit in get_and_cache_all_types_dict.
+last_updated: "2026-04-18T21:05:18Z"
+last_activity: 2026-04-18 -- Phase 05.5 Plan 01 (IDX-08) executed
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 36
-  completed_plans: 26
-  percent: 72
+  total_plans: 38
+  completed_plans: 27
+  percent: 71
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** Faster cold start for `lfx run` on containerized/serverless deployments without breaking flow file format, Python API surface, or runtime behavior parity.
-**Current focus:** Phase 05 — container-and-deployment-optimization
+**Current focus:** Phase 05.5 — component-index-build-caching
 
 ## Current Position
 
-Phase: 5.5
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-18
+Phase: 05.5 (component-index-build-caching) — EXECUTING
+Plan: 2 of 2
+Status: Executing Phase 05.5 — Plan 01 complete, Plan 02 pending
+Last activity: 2026-04-18 -- Phase 05.5 Plan 01 (IDX-08) complete
 
 Phase 4 outcome: [##########] 100% (5/5 plans executed)
 
@@ -119,6 +119,7 @@ Recent decisions affecting current work:
 - [Phase 05-03]: deployment-prod-best-practices.mdx cross-link added to See also section (end of file) rather than mid-section insertion to avoid disrupting existing content.
 - [Phase ?]: post_fork hook imported get_telemetry_service lazily to avoid circular imports; except Exception swallowed with S110 noqa because gunicorn hook must not crash on uninitialized service
 - [Phase ?]: D-07 gate passed: LANGFLOW_GUNICORN_PRELOAD default flipped to true; Path A docs written with 7-hazard audit summary and opt-out instructions (CNT-04 complete)
+- [Phase 05.5-01]: IDX-08 short-circuit: _pending_cache_hit set in IDX-07 peek when ALL D-01 conditions pass (version match + non-empty entries); entries reconstructed to flat dict + filter_disabled_components_from_dict applied inside lock; _build_code_hash_lookups called on hit path (P-2). 44/44 tests pass, 2 OpenAI-dependent tests skip as expected.
 
 ### Pending Todos
 
@@ -142,10 +143,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-18T16:12:08.917Z
-Stopped at: Phase 05 Plan 06 complete; LANGFLOW_GUNICORN_PRELOAD default flipped to true (CNT-04 done); Phase 05 all 6 plans executed.
+Last session: 2026-04-18T21:05:18Z
+Stopped at: Phase 05.5 Plan 01 complete; IDX-08 cache-hit short-circuit landed (9b11f1a09d, 1f033c1ca5).
 Resume file: None
-Next step: Execute Phase 05 Plan 04.
+Next step: Execute Phase 05.5 Plan 02 (IDX-09 parity + perf test).
 
 ### Phase 3 close notes
 
