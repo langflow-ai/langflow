@@ -725,6 +725,10 @@ async def get_and_cache_all_types_dict(
         except _PackageNotFoundError:
             installed_version = None
 
+        # IDX-08: blob promoted here if ALL D-01 conditions pass; used to
+        # short-circuit the rebuild inside the lock (see below).
+        _pending_cache_hit: dict | None = None
+
         if installed_version is not None:
             try:
                 cache_path = _get_cache_path()
@@ -742,6 +746,17 @@ async def get_and_cache_all_types_dict(
                             installed_version,
                             cache_path,
                         )
+                    elif (
+                        isinstance(cached_blob, dict)
+                        and isinstance(cached_version, str)
+                        and cached_version
+                        and cached_version == installed_version
+                        and isinstance(cached_blob.get("entries"), list)
+                        and cached_blob["entries"]
+                    ):
+                        # All D-01 conditions satisfied: promote the blob for
+                        # the IDX-08 short-circuit inside the lock.
+                        _pending_cache_hit = cached_blob
                 except Exception:  # noqa: BLE001, S110
                     # Corrupt or unreadable cache: downstream _read_component_index
                     # will log at warning level when it retries the read with SHA check.
