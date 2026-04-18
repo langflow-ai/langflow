@@ -13,7 +13,7 @@ Langflow publishes two container images. Choose the one that matches your worklo
 
 | Image | Base | Contents | Use when |
 |---|---|---|---|
-| `langflowai/lfx` (built from `src/lfx/docker/Dockerfile`) | Alpine (musl) | lfx package + venv only | You execute flows programmatically — no UI, no visual editor. Embedded runtime, scale-from-zero, serverless. |
+| `langflowai/lfx` (built from `src/lfx/docker/Dockerfile`) | Debian slim (glibc) | lfx package + venv only | You execute flows programmatically — no UI, no visual editor. Embedded runtime, scale-from-zero, serverless. |
 | `langflowai/langflow` (built from `docker/build_and_push.Dockerfile`) | Debian slim (glibc) | Langflow backend + React frontend + Node.js + Playwright | You host the Langflow UI for flow authoring + execution. |
 
 A common mistake: running `langflowai/langflow` for pure flow execution. The langflow image bundles a compiled React frontend, Node.js runtime, and Playwright binaries that are unused when you only call `lfx run`, and those extras add unnecessary cold-start cost. For execution-only workloads, use `langflowai/lfx`.
@@ -105,17 +105,17 @@ USER lfx
 
 Then build with `docker build --build-arg EXTRA_DEPS="openai chromadb pinecone-client" -t my-lfx ...`.
 
-### Alpine / musl caveat
+### glibc base (manylinux wheels)
 
-The lfx image uses Alpine as its base (musl libc, small image size). Some Python packages do not publish `musllinux_1_1` wheels; pip falls back to a source build, which requires a C / Rust toolchain that the Alpine runtime image does not carry. If your pre-baking recipe fails with `"no matching distribution found"` or `gcc: command not found`, either:
+The lfx image uses Debian slim (glibc) as its base. This accepts `manylinux` wheels from PyPI, which covers essentially every popular Python package including ML / scientific stacks (`onnxruntime`, `torch`, `numpy`, `pandas`, `pillow`). Most pre-baking recipes install cleanly without a compiler.
 
-- Restrict pre-baked deps to packages known to publish musllinux wheels (most popular ones do), or
-- Add `build-base` (gcc, musl-dev) in a builder stage and discard it in the final stage, or
-- Switch to a glibc base (e.g., `python:3.13-slim`) at the cost of a larger image.
+If a specific package only ships wheels for a narrower glibc version (for example `manylinux_2_28` when the runtime is `manylinux_2_17`), either upgrade the base image (`python:3.13-slim-bookworm` tracks `manylinux_2_28`) or add a builder stage with `build-essential` and discard it in the final image.
+
+> The lfx image was previously Alpine-based. It was switched to Debian slim because some transitive dependencies (for example `onnxruntime` via `markitdown → magika`) do not publish `musllinux` wheels at all, and `onnxruntime` has no sdist, so the Alpine image could not resolve its own dependencies. If you have a constrained dep tree that fits musl, you can still build a smaller Alpine variant by swapping the `FROM` lines back to `ghcr.io/astral-sh/uv:python3.13-alpine` and `python:3.13-alpine`.
 
 ### Cross-platform requirements generation
 
-Generating a `requirements.txt` on macOS or Windows and then installing it on Alpine Linux fails: the macOS / Windows resolver picks platform-specific wheels whose hashes do not match musllinux wheels available on Linux.
+Generating a `requirements.txt` on macOS or Windows and then installing it on Linux fails: the macOS / Windows resolver picks platform-specific wheels whose hashes do not match the manylinux wheels available on Linux.
 
 Use `uv pip compile` to generate a Linux-targeted requirements file from any host:
 

@@ -6,11 +6,8 @@
 # Used to build LFX and create our virtual environment
 ################################
 
-# Use an Alpine-based Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.13-alpine AS builder
-
-# Install build dependencies needed for some Python packages on Alpine
-RUN apk add --no-cache build-base libaio-dev linux-headers
+# Use a Debian-slim Python image with uv pre-installed (glibc for manylinux wheels)
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -31,7 +28,7 @@ COPY src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
 COPY src/sdk/README.md /app/src/sdk/README.md
 
 # Create the venv and install *only* what lfx needs (no dev)
-# We expect some packages to be built from source, so we mount the cache
+# --no-install-project keeps the deps layer cache-stable when source changes (CNT-02)
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project --package lfx
 
@@ -47,15 +44,17 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.13-alpine AS runtime
+FROM python:3.13-slim-bookworm AS runtime
 
-# Create a non-root user
-# -D: Don't assign a password
-# -u: Set user ID
-# -G: Add to group (root)
-# -h: Set home directory
-# -s: Set shell
-RUN adduser -D -u 1000 -G root -h /app/data -s /sbin/nologin lfx
+# Create a non-root user (Debian)
+#   -u 1000               set UID
+#   -g 0                  primary group root (matches prior Alpine behavior)
+#   -d /app/data          home directory
+#   -s /usr/sbin/nologin  no shell
+#   -M                    don't auto-create home (we create it below with correct perms)
+RUN useradd -u 1000 -g 0 -d /app/data -s /usr/sbin/nologin -M lfx \
+    && mkdir -p /app/data \
+    && chown -R 1000:0 /app/data
 
 # Copy the virtual environment from the builder stage
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
