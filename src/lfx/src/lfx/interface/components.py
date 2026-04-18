@@ -765,23 +765,43 @@ async def get_and_cache_all_types_dict(
         async with component_cache.lock:
             # Double-check: another task may have populated while we awaited the lock (IDX-01).
             if component_cache.all_types_dict is None:
-                await logger.adebug("Building components cache")
-                langflow_components = await import_langflow_components(settings_service, telemetry_service)
-                custom_components_dict = await _determine_loading_strategy(settings_service)
+                if _pending_cache_hit is not None:
+                    # IDX-08 cache-hit short-circuit. Reconstruct flat dict from entries
+                    # (same pattern as _load_from_index_or_cache at components.py:348-354).
+                    # D-07: no telemetry -- no build work happened.
+                    merged: dict[str, Any] = {}
+                    for top_level, components in _pending_cache_hit["entries"]:
+                        if top_level not in merged:
+                            merged[top_level] = {}
+                        merged[top_level].update(components)
+                    merged = filter_disabled_components_from_dict(merged)
+                    component_cache.all_types_dict = merged
+                    component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
+                    await logger.adebug(
+                        f"IDX-08: loaded {component_count} components from user cache (version={installed_version})"
+                    )
+                    # P-2: populate type_to_current_hash so ensure_component_hash_lookups_loaded
+                    # does not trigger a second rebuild.
+                    _build_code_hash_lookups(component_cache)
+                else:
+                    # Existing rebuild path (unchanged).
+                    await logger.adebug("Building components cache")
+                    langflow_components = await import_langflow_components(settings_service, telemetry_service)
+                    custom_components_dict = await _determine_loading_strategy(settings_service)
 
-                # Flatten custom dict if it has a "components" wrapper
-                custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
+                    # Flatten custom dict if it has a "components" wrapper
+                    custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
 
-                # Merge built-in and custom components (no wrapper at cache level)
-                component_cache.all_types_dict = {
-                    **langflow_components["components"],
-                    **custom_flat,
-                }
-                component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
-                await logger.adebug(f"Loaded {component_count} components")
+                    # Merge built-in and custom components (no wrapper at cache level)
+                    component_cache.all_types_dict = {
+                        **langflow_components["components"],
+                        **custom_flat,
+                    }
+                    component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
+                    await logger.adebug(f"Loaded {component_count} components")
 
-                # Precompute code hash lookups for fast flow validation
-                _build_code_hash_lookups(component_cache)
+                    # Precompute code hash lookups for fast flow validation
+                    _build_code_hash_lookups(component_cache)
 
     return component_cache.all_types_dict
 
