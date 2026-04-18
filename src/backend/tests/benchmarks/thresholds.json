@@ -12,6 +12,7 @@
     "lfx_with_flow": {"mean_ms": 17961.33, "stddev_ms": 242.2, "runs": 10},
     "lfx_with_flow_prebaked": {"mean_ms": 8031.26, "stddev_ms": 267.43, "runs": 10},
     "langflow_run_http_ready": {"mean_ms": 0, "stddev_ms": 0, "runs": 0},
-    "langflow_run_no_change_restart": {"mean_ms": 11078.05, "stddev_ms": 23.39, "runs": 5}
+    "langflow_run_no_change_restart": {"mean_ms": 11078.05, "stddev_ms": 23.39, "runs": 5},
+    "lfx_reference_image": {"mean_ms": 0, "stddev_ms": 0, "runs": 0}
   }
 }
