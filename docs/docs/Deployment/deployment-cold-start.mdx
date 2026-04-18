@@ -1,0 +1,139 @@
+---
+title: Cold-start optimization
+slug: /deployment-cold-start
+---
+
+Langflow and lfx can be deployed in cold-start-sensitive environments (scale-from-zero container platforms, serverless frameworks, CI ephemeral runners). This page documents the container- and deployment-level knobs that reduce first-request latency when your container starts fresh.
+
+If your deployment always runs a warm Langflow server (single long-lived container, persistent VM), the knobs here are optional. They become valuable when every new request risks paying full container cold-start cost.
+
+## Which image for which use
+
+Langflow publishes two container images. Choose the one that matches your workload.
+
+| Image | Base | Contents | Use when |
+|---|---|---|---|
+| `langflowai/lfx` (built from `src/lfx/docker/Dockerfile`) | Alpine (musl) | lfx package + venv only | You execute flows programmatically — no UI, no visual editor. Embedded runtime, scale-from-zero, serverless. |
+| `langflowai/langflow` (built from `docker/build_and_push.Dockerfile`) | Debian slim (glibc) | Langflow backend + React frontend + Node.js + Playwright | You host the Langflow UI for flow authoring + execution. |
+
+A common mistake: running `langflowai/langflow` for pure flow execution. The langflow image bundles a compiled React frontend, Node.js runtime, and Playwright binaries that are unused when you only call `lfx run`, and those extras add unnecessary cold-start cost. For execution-only workloads, use `langflowai/lfx`.
+
+## Cold-start knobs
+
+The lfx reference Dockerfile (`src/lfx/docker/Dockerfile`) already applies the following optimizations. If you build your own image, reuse these patterns.
+
+### Compile bytecode at build time
+
+Set `UV_COMPILE_BYTECODE=1` during `uv sync` so `.pyc` files land in the image layer. Without bytecode compilation, Python compiles on first import in every fresh container, costing hundreds of milliseconds.
+
+```dockerfile
+ENV UV_COMPILE_BYTECODE=1
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project --package lfx
+```
+
+### Layer order: deps first, source last
+
+Structure the Dockerfile so the dependency-install layer is cache-stable across source-only changes. The key flag is `--no-install-project` on the first `uv sync`:
+
+```dockerfile
+# Copy only the files that affect dependency resolution (keeps cache stable).
+COPY pyproject.toml uv.lock ./
+COPY src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
+
+# Install ONLY dependencies — not the lfx package itself. This layer caches.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project --package lfx
+
+# Copy source AFTER deps install (source changes do NOT bust the deps layer).
+COPY src/lfx/src /app/src/lfx/src
+
+# Install lfx itself (fast — deps are already present).
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-editable --package lfx
+```
+
+When only your source code changes, docker re-uses the cached deps layer and only the second `uv sync` runs.
+
+### Python version
+
+Run on Python 3.13. Python 3.13 introduces module-import-time restrictions (notably, creating `asyncio.Lock()` at import raises `RuntimeError`) that Langflow has been updated to handle with lazy-property patterns. Older Python versions still work but lose the runtime improvements landed in Langflow 1.9+.
+
+## Scale-from-zero patterns
+
+For platforms that tear down containers between requests and spin up fresh ones on demand (scale-from-zero), every request pays full cold-start cost: base image pull, venv mount, Python import, `initialize_services`, component-index build, and first-flow execution.
+
+Reduce first-request latency by:
+
+- **Using the lfx image, not the langflow image**, for execution-only workloads.
+- **Pre-baking your flow dependencies** into a derived image (see below).
+- **Caching the container image in the platform's registry** so the pull cost is amortized across requests.
+- **Keeping at least one warm replica** where your platform supports it. One always-on container avoids scale-from-zero on the happy path.
+
+## Pre-baking flow dependencies
+
+Your flows may install runtime provider packages on first execution (openai, anthropic, langchain-*, vector-store clients). Each install adds seconds to the first cold-start in a fresh container. Pre-bake them into a derived image.
+
+### Derived image recipe
+
+```dockerfile
+FROM langflowai/lfx:latest AS base
+
+USER root
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --python /app/.venv/bin/python \
+        openai \
+        anthropic \
+        langchain-openai \
+        chromadb
+
+USER lfx
+```
+
+Pick the deps that match the flows you actually run. The list above covers a common top-tier (LLM providers + a vector store); extend it for embeddings, document loaders, or other providers your flows call.
+
+For parameterized builds, use `--build-arg`:
+
+```dockerfile
+FROM langflowai/lfx:latest AS base
+ARG EXTRA_DEPS="openai anthropic"
+USER root
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --python /app/.venv/bin/python $EXTRA_DEPS
+USER lfx
+```
+
+Then build with `docker build --build-arg EXTRA_DEPS="openai chromadb pinecone-client" -t my-lfx ...`.
+
+### Alpine / musl caveat
+
+The lfx image uses Alpine as its base (musl libc, small image size). Some Python packages do not publish `musllinux_1_1` wheels; pip falls back to a source build, which requires a C / Rust toolchain that the Alpine runtime image does not carry. If your pre-baking recipe fails with `"no matching distribution found"` or `gcc: command not found`, either:
+
+- Restrict pre-baked deps to packages known to publish musllinux wheels (most popular ones do), or
+- Add `build-base` (gcc, musl-dev) in a builder stage and discard it in the final stage, or
+- Switch to a glibc base (e.g., `python:3.13-slim`) at the cost of a larger image.
+
+### Cross-platform requirements generation
+
+Generating a `requirements.txt` on macOS or Windows and then installing it on Alpine Linux fails: the macOS / Windows resolver picks platform-specific wheels whose hashes do not match musllinux wheels available on Linux.
+
+Use `uv pip compile` to generate a Linux-targeted requirements file from any host:
+
+```bash
+uv pip compile requirements.in \
+    --python-platform linux \
+    --python-version 3.13 \
+    -o requirements-linux.txt
+```
+
+> `uv export` does not support `--python-platform` or `--python-version`; use `uv pip compile` for cross-platform pinning. Verify the current flag names with `uv pip compile --help` on your installed uv version.
+
+Then install from that file in your derived image.
+
+## LANGFLOW_GUNICORN_PRELOAD migration notes
+
+`LANGFLOW_GUNICORN_PRELOAD=true` asks gunicorn to load the Langflow application once in the master process before forking workers, so every worker inherits the application object instead of loading it independently. When safe, this reduces per-worker startup cost.
+
+> _This section is finalized once Phase 5 Plan 05-06 lands. It will describe the current default, the fork-hazards audit outcome, and the migration steps for any existing deployments that relied on the previous default._
+
+<!-- TODO(plan-05-06): replace the blockquote above with the audit outcome + migration guidance. -->
