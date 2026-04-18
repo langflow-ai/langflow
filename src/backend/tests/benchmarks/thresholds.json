@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
   "measurement_mode": "bytecode_compile_delta",
-  "captured_on": "2026-04-17",
-  "captured_ref": "cold-start-improvements-v2 @ 55b023733c (build 24541900208)",
+  "captured_on": "2026-04-18",
+  "captured_ref": "cold-start-improvements-v2 @ b7567a96ca (build 24593040868)",
   "captured_runner": "ubuntu-latest (GitHub Actions)",
   "python_version": "3.13",
   "allowed_regression_pct": 15,
-  "_note": "Captured on Linux CI via run-benchmark-snapshot label trigger (build 24541900208). langflow_run_http_ready remains sentinel: the structlog processor pipeline swallows uvicorn's 'Application startup complete.' marker, so the supervisor times out. langflow_run_no_change_restart is a new Phase 4 SVC-01 D-03 scenario; it lands here as a sentinel until a run-benchmark-snapshot label trigger captures authoritative Linux numbers. Fix for the structlog marker is deferred to Phase 4/5 when langflow lifespan work touches logging. measurement_mode is bytecode_compile_delta per D-11a.",
+  "_note": "Captured on Linux CI via run-benchmark-snapshot label trigger (build 24593040868). Phase 3 import-time deferrals dropped lfx_bare from 17824.74ms to 10619.55ms (-40%) vs the Phase 1 baseline. langflow_run_http_ready remains sentinel: the structlog processor pipeline swallows uvicorn's 'Application startup complete.' marker, so the supervisor times out. langflow_run_no_change_restart is the Phase 4 SVC-01 D-03 scenario; the supervisor runs two full langflow boots per hyperfine iteration and cannot fit the 5-15 min CI budget with runs=5, so it stays sentinel until the supervisor is refactored (follow-up). measurement_mode is bytecode_compile_delta per D-11a.",
   "scenarios": {
-    "lfx_bare": {"mean_ms": 17824.74, "stddev_ms": 117.42, "runs": 10},
-    "lfx_with_flow": {"mean_ms": 18920.72, "stddev_ms": 125.59, "runs": 10},
-    "lfx_with_flow_prebaked": {"mean_ms": 9520.37, "stddev_ms": 75.60, "runs": 10},
+    "lfx_bare": {"mean_ms": 10619.55, "stddev_ms": 155.1, "runs": 10},
+    "lfx_with_flow": {"mean_ms": 18983.21, "stddev_ms": 158.94, "runs": 10},
+    "lfx_with_flow_prebaked": {"mean_ms": 9232.05, "stddev_ms": 80.85, "runs": 10},
     "langflow_run_http_ready": {"mean_ms": 0, "stddev_ms": 0, "runs": 0},
     "langflow_run_no_change_restart": {"mean_ms": 0, "stddev_ms": 0, "runs": 0}
   }
