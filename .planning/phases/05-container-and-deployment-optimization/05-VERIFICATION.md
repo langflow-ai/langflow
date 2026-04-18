@@ -1,24 +1,26 @@
 ---
 phase: 05-container-and-deployment-optimization
 verified: 2026-04-18T18:00:00Z
-status: human_needed
-score: 3/4 success criteria fully verified
+re_verified: 2026-04-18T19:55:00Z
+status: passed
+score: 4/4 success criteria verified
 overrides_applied: 0
-human_verification:
-  - test: "Trigger the cold-start-benchmark workflow with the run-benchmark-snapshot label on the Phase 5 PR. Observe the CI log for the lfx_reference_image matrix job. Capture the mean cold-start time for the lfx reference image and compare against the lfx_bare baseline (8481ms uncompiled, baseline-2026-04-16.md). Confirm mean_ms < lfx_bare_uncompiled_baseline to show measurable improvement."
-    expected: "lfx_reference_image mean cold-start < 8481ms (uncompiled lfx_bare baseline). The existing bytecode_compile_delta evidence (9.40s = 49.7%) from baseline-2026-04-17.md strongly predicts improvement will be confirmed."
-    why_human: "The lfx_reference_image thresholds.json row is a sentinel (mean_ms=0, runs=0). No CI run with the run-benchmark-snapshot label has executed for the Phase 5 PR yet. The measurement pipeline is fully wired — CI workflow builds lfx-reference image from src/lfx/docker/Dockerfile, runs hyperfine, and writes results. The improvement claim cannot be programmatically confirmed without an actual CI run."
-  - test: "Observe the 'Verify deps layer cache (CNT-02 repeat-build assertion)' step in the build-images job of the cold-start-benchmark workflow. The step runs docker build twice (initial + repeat after no-op source change) and asserts elapsed < 30s."
-    expected: "Repeat build elapsed < 30s. The --no-install-project patch on Dockerfile line 36 ensures the deps layer (uv sync first run) is cache-stable. Only the second uv sync (--no-editable) re-runs after source COPY layer invalidation, which should complete in 5-15s on ubuntu-latest runners."
-    why_human: "The CNT-02 CI assertion step is wired in .github/workflows/cold-start-benchmark.yml but has not executed in CI yet. No CI run for the cold-start-benchmark workflow on the current branch was observed during verification. The --no-install-project Dockerfile patch is in place and correct; CI timing is the only outstanding evidence."
+human_verification_resolved:
+  - test: "lfx_reference_image authoritative CI measurement (CNT-01)"
+    result: "pass"
+    evidence: "CI run 24612246320 (sha e405e75b52, run-benchmark-snapshot label). lfx_reference_image mean = 2972.10 ms ± 27.36 (10 runs). lfx_bare uncompiled baseline = 10189.69 ms. Delta = -7217.59 ms (-70.8%)."
+  - test: "CNT-02 repeat-build cache-hit timing"
+    result: "pass"
+    evidence: "Same CI run, build-images job -> 'Verify deps layer cache (CNT-02 repeat-build assertion)' step. Repeat build elapsed: 12s (target <30s). No CNT-02 FAILED line."
 ---
 
 # Phase 5: Container and Deployment Optimization Verification Report
 
 **Phase Goal:** A reference Dockerfile produces a container image that boots measurably faster than the pre-optimization baseline, and a deployment guide gives the watsonX.orchestrate integration team actionable cold-start tuning instructions.
 **Verified:** 2026-04-18T18:00:00Z
-**Status:** human_needed
-**Re-verification:** No — initial verification
+**Re-verified:** 2026-04-18T19:55:00Z — CI authoritative numbers captured; both human-verification items closed.
+**Status:** passed
+**Re-verification:** Yes — CNT-01 / CNT-02 CI evidence now in, supersedes the initial human_needed verdict.
 
 ## Goal Achievement
 
