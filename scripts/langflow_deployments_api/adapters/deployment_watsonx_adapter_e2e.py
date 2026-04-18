@@ -41,14 +41,19 @@ Live lifecycle scenarios:
 - `live_status_after_delete_not_found_state`: confirms status on deleted deployment returns not found
   (expects DeploymentNotFoundError).
 
-Live list-snapshots-by-ids scenarios:
+Live snapshot/config listing scenarios:
 - `live_list_snapshots_by_ids_returns_known`: fetches known snapshot ids via
   snapshot_ids mode and confirms all are returned (expects Success).
 - `live_list_snapshots_by_ids_filters_unknown`: mixes a known id with a bogus id;
   confirms the provider returns only existing snapshots (expects Success).
-- `live_list_snapshots_by_ids_empty_input`: passes an empty list; the adapter treats
-  this as "no snapshot filter" and falls through to the deployment-scoped branch,
-  which rejects because no deployment_id is provided (expects DeploymentError).
+- `live_list_snapshots_by_ids_empty_input`: passes an empty list; this normalizes to
+  tenant-scoped snapshot listing and should still succeed (expects Success).
+- `live_list_snapshots_tenant_scope`: lists tenant-scoped snapshots (expects Success).
+- `live_list_configs_tenant_scope`: lists tenant-scoped configs (expects Success).
+- `live_list_snapshots_by_names_returns_known`: queries snapshot_names mode and
+  confirms known names resolve to known snapshot ids (expects Success).
+- `live_list_snapshots_by_names_ignored_with_deployment_scope`: passes both deployment_ids
+  and snapshot_names, and confirms deployment scope takes precedence (expects Success).
 
 Live negative scenarios:
 - `live_negative_create_seed`: creates a second seed deployment for negative-path checks (expects Success).
@@ -58,9 +63,23 @@ Live negative scenarios:
 - `live_delete_missing_not_found`: delete on unknown deployment id returns not found (expects DeploymentNotFoundError).
 - `live_negative_delete_seed`: cleans up negative-path seed deployment (expects Success).
 
+Live service-surface scenarios:
+- `live_list_types_supports_agent`: lists supported deployment types and validates AGENT is present (expects Success).
+- `live_list_llms_returns_models`: lists provider models and validates the normalized payload
+  is non-empty (expects Success).
+- `live_verify_credentials_success`: verifies configured credentials against the provider instance (expects Success).
+- `live_update_snapshot_success`: updates an existing snapshot artifact by id (expects Success).
+- `live_rollback_create_result_cleans_up_created`: runs create rollback cleanup using a real create result
+  and verifies the created deployment is removed (expects Success).
+- `live_redeploy_not_supported`: ensures redeploy returns operation-not-supported semantics
+  (expects InvalidDeploymentOperationError).
+- `live_duplicate_not_supported`: ensures duplicate returns operation-not-supported semantics
+  (expects InvalidDeploymentOperationError).
+- `live_teardown_noop`: calls adapter teardown and expects a successful no-op (expects Success).
+
 Live update-matrix scenarios:
-- Contract note: in provider_data operations, `app_ids` are unprefixed operation ids.
-  `resource_name_prefix` is applied only when raw resources are created in the provider.
+- Contract note: in provider_data operations, `app_ids` are operation ids.
+  Raw connection `app_id` values are preserved exactly as declared.
 - `upd_spec_only_name_desc`: updates deployment metadata only (expects Success).
 - `upd_snapshot_remove_only_no_config`: removes an attached snapshot via provider_data operation
   (expects Success).
@@ -146,6 +165,7 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidContentError,
     InvalidDeploymentOperationError,
     InvalidDeploymentTypeError,
+    OperationNotSupportedError,
     ResourceConflictError,
 )
 from lfx.services.adapters.deployment.schema import (
@@ -160,6 +180,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentUpdate,
     ExecutionCreate,
     SnapshotListParams,
+    VerifyCredentials,
 )
 
 OUTCOME_SUCCESS = "Success"
@@ -175,6 +196,7 @@ DEFAULT_CONCURRENCY_ITERATIONS = 1
 EXECUTION_POLL_INTERVAL_SECS = 2
 EXECUTION_POLL_MAX_ATTEMPTS = 10
 EXECUTION_TERMINAL_STATUSES = {"completed", "failed", "cancelled", "async_completed", "expired", "requires_input"}
+DEFAULT_WXO_LLM = "groq/openai/gpt-oss-120b"
 
 _INVALID_WXO_NAME_CHARS = re.compile(r"[^A-Za-z0-9_]")
 
@@ -211,12 +233,14 @@ class WatsonxAdapterDirectE2E:
         project_id: str,
         mode: str,
         keep_resources: bool,
+        llm: str,
     ) -> None:
         self.provider_backend_url = provider_backend_url
         self.provider_api_key = provider_api_key
         self.project_id = project_id
         self.mode = mode
         self.keep_resources = keep_resources
+        self.llm = llm
         self.run_suffix = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + "-" + uuid4().hex[:8]
 
         self.user_id = str(uuid4())
@@ -249,7 +273,7 @@ class WatsonxAdapterDirectE2E:
 
     async def run(self) -> int:
         print("Starting watsonx direct adapter runner...")
-        print(f"mode={self.mode} project_id={self.project_id} keep_resources={self.keep_resources}")
+        print(f"mode={self.mode} project_id={self.project_id} keep_resources={self.keep_resources} llm={self.llm}")
         try:
             results: list[ScenarioResult] = []
             if self.mode in {"live", "both"}:
@@ -301,6 +325,8 @@ class WatsonxAdapterDirectE2E:
         results = await self._run_scenarios(scenarios)
         results.extend(await self._run_live_lifecycle_scenarios())
         results.extend(await self._run_live_list_snapshots_by_ids_scenarios())
+        results.extend(await self._run_live_listing_mode_scenarios())
+        results.extend(await self._run_live_service_surface_scenarios())
         results.extend(await self._run_live_update_matrix_scenarios())
         results.extend(await self._run_live_concurrency_scenarios())
         results.extend(await self._run_live_negative_scenarios())
@@ -529,11 +555,16 @@ class WatsonxAdapterDirectE2E:
             for target, attr_name, original in originals:
                 setattr(target, attr_name, original)
 
-    async def _run_list_snapshots(self, deployment_id: str) -> tuple[str, str, Any | None]:
+    async def _run_list_snapshots_with_params(
+        self,
+        *,
+        params: SnapshotListParams | None,
+        detail_label: str = "snapshots_listed",
+    ) -> tuple[str, str, Any | None]:
         try:
             result = await self.service.list_snapshots(
                 user_id=self.user_id,
-                params=SnapshotListParams(deployment_ids=[deployment_id]),
+                params=params,
                 db=self.db,
             )
         except DeploymentNotFoundError as exc:
@@ -551,37 +582,36 @@ class WatsonxAdapterDirectE2E:
         except Exception as exc:  # noqa: BLE001
             return OUTCOME_FAILURE, str(exc), None
         else:
-            return OUTCOME_SUCCESS, "snapshots_listed", result
+            return OUTCOME_SUCCESS, detail_label, result
+
+    async def _run_list_snapshots(self, deployment_id: str) -> tuple[str, str, Any | None]:
+        return await self._run_list_snapshots_with_params(
+            params=SnapshotListParams(deployment_ids=[deployment_id]),
+            detail_label="snapshots_listed",
+        )
 
     async def _run_list_snapshots_by_ids(self, snapshot_ids: list[str]) -> tuple[str, str, Any | None]:
-        try:
-            result = await self.service.list_snapshots(
-                user_id=self.user_id,
-                params=SnapshotListParams(snapshot_ids=snapshot_ids),
-                db=self.db,
-            )
-        except DeploymentNotFoundError as exc:
-            return OUTCOME_NOT_FOUND, str(exc), None
-        except ResourceConflictError as exc:
-            return OUTCOME_CONFLICT, exc.message, None
-        except InvalidContentError as exc:
-            return OUTCOME_INVALID_CONTENT, exc.message, None
-        except (InvalidDeploymentOperationError, InvalidDeploymentTypeError) as exc:
-            return OUTCOME_INVALID_OPERATION, exc.message, None
-        except DeploymentError as exc:
-            return OUTCOME_FAILURE, exc.message, None
-        except HTTPException as exc:
-            return self._outcome_from_http_exception(exc), str(exc.detail), None
-        except Exception as exc:  # noqa: BLE001
-            return OUTCOME_FAILURE, str(exc), None
-        else:
-            return OUTCOME_SUCCESS, "snapshots_by_ids_listed", result
+        return await self._run_list_snapshots_with_params(
+            params=SnapshotListParams(snapshot_ids=snapshot_ids),
+            detail_label="snapshots_by_ids_listed",
+        )
 
-    async def _run_list_configs(self, deployment_id: str) -> tuple[str, str, Any | None]:
+    async def _run_list_snapshots_by_names(self, snapshot_names: list[str]) -> tuple[str, str, Any | None]:
+        return await self._run_list_snapshots_with_params(
+            params=SnapshotListParams(snapshot_names=snapshot_names),
+            detail_label="snapshots_by_names_listed",
+        )
+
+    async def _run_list_configs_with_params(
+        self,
+        *,
+        params: ConfigListParams | None,
+        detail_label: str = "configs_listed",
+    ) -> tuple[str, str, Any | None]:
         try:
             result = await self.service.list_configs(
                 user_id=self.user_id,
-                params=ConfigListParams(deployment_ids=[deployment_id]),
+                params=params,
                 db=self.db,
             )
         except DeploymentNotFoundError as exc:
@@ -599,7 +629,204 @@ class WatsonxAdapterDirectE2E:
         except Exception as exc:  # noqa: BLE001
             return OUTCOME_FAILURE, str(exc), None
         else:
-            return OUTCOME_SUCCESS, "configs_listed", result
+            return OUTCOME_SUCCESS, detail_label, result
+
+    async def _run_list_configs(self, deployment_id: str) -> tuple[str, str, Any | None]:
+        return await self._run_list_configs_with_params(
+            params=ConfigListParams(deployment_ids=[deployment_id]),
+            detail_label="configs_listed",
+        )
+
+    async def _run_list_types(self) -> tuple[str, str, Any | None]:
+        try:
+            result = await self.service.list_types(user_id=self.user_id, db=self.db)
+        except DeploymentNotFoundError as exc:
+            return OUTCOME_NOT_FOUND, str(exc), None
+        except ResourceConflictError as exc:
+            return OUTCOME_CONFLICT, exc.message, None
+        except InvalidContentError as exc:
+            return OUTCOME_INVALID_CONTENT, exc.message, None
+        except (InvalidDeploymentOperationError, InvalidDeploymentTypeError, OperationNotSupportedError) as exc:
+            return OUTCOME_INVALID_OPERATION, exc.message, None
+        except DeploymentError as exc:
+            return OUTCOME_FAILURE, exc.message, None
+        except HTTPException as exc:
+            return self._outcome_from_http_exception(exc), str(exc.detail), None
+        except Exception as exc:  # noqa: BLE001
+            return OUTCOME_FAILURE, str(exc), None
+        else:
+            return OUTCOME_SUCCESS, "types_listed", result
+
+    async def _run_list_llms(self) -> tuple[str, str, Any | None]:
+        try:
+            result = await self.service.list_llms(user_id=self.user_id, db=self.db)
+        except DeploymentNotFoundError as exc:
+            return OUTCOME_NOT_FOUND, str(exc), None
+        except ResourceConflictError as exc:
+            return OUTCOME_CONFLICT, exc.message, None
+        except InvalidContentError as exc:
+            return OUTCOME_INVALID_CONTENT, exc.message, None
+        except (InvalidDeploymentOperationError, InvalidDeploymentTypeError, OperationNotSupportedError) as exc:
+            return OUTCOME_INVALID_OPERATION, exc.message, None
+        except DeploymentError as exc:
+            return OUTCOME_FAILURE, exc.message, None
+        except HTTPException as exc:
+            return self._outcome_from_http_exception(exc), str(exc.detail), None
+        except Exception as exc:  # noqa: BLE001
+            return OUTCOME_FAILURE, str(exc), None
+        else:
+            return OUTCOME_SUCCESS, "llms_listed", result
+
+    async def _run_verify_credentials(self, *, base_url: str, api_key: str) -> tuple[str, str, Any | None]:
+        try:
+            result = await self.service.verify_credentials(
+                user_id=self.user_id,
+                payload=VerifyCredentials(base_url=base_url, provider_data={"api_key": api_key}),
+            )
+        except DeploymentNotFoundError as exc:
+            return OUTCOME_NOT_FOUND, str(exc), None
+        except ResourceConflictError as exc:
+            return OUTCOME_CONFLICT, exc.message, None
+        except InvalidContentError as exc:
+            return OUTCOME_INVALID_CONTENT, exc.message, None
+        except (InvalidDeploymentOperationError, InvalidDeploymentTypeError, OperationNotSupportedError) as exc:
+            return OUTCOME_INVALID_OPERATION, exc.message, None
+        except DeploymentError as exc:
+            return OUTCOME_FAILURE, exc.message, None
+        except HTTPException as exc:
+            return self._outcome_from_http_exception(exc), str(exc.detail), None
+        except Exception as exc:  # noqa: BLE001
+            return OUTCOME_FAILURE, str(exc), None
+        else:
+            return OUTCOME_SUCCESS, "credentials_verified", result
+
+    async def _run_update_snapshot(
+        self,
+        *,
+        snapshot_id: str,
+        flow_artifact: BaseFlowArtifact[WatsonxFlowArtifactProviderData],
+    ) -> tuple[str, str, Any | None]:
+        try:
+            result = await self.service.update_snapshot(
+                user_id=self.user_id,
+                db=self.db,
+                snapshot_id=snapshot_id,
+                flow_artifact=flow_artifact,
+            )
+        except DeploymentNotFoundError as exc:
+            return OUTCOME_NOT_FOUND, str(exc), None
+        except ResourceConflictError as exc:
+            return OUTCOME_CONFLICT, exc.message, None
+        except InvalidContentError as exc:
+            return OUTCOME_INVALID_CONTENT, exc.message, None
+        except (InvalidDeploymentOperationError, InvalidDeploymentTypeError, OperationNotSupportedError) as exc:
+            return OUTCOME_INVALID_OPERATION, exc.message, None
+        except DeploymentError as exc:
+            return OUTCOME_FAILURE, exc.message, None
+        except HTTPException as exc:
+            return self._outcome_from_http_exception(exc), str(exc.detail), None
+        except Exception as exc:  # noqa: BLE001
+            return OUTCOME_FAILURE, str(exc), None
+        else:
+            return OUTCOME_SUCCESS, "snapshot_updated", result
+
+    async def _run_rollback_create_result(
+        self,
+        *,
+        deployment_id: str,
+        provider_result: object,
+    ) -> tuple[str, str, Any | None]:
+        try:
+            result = await self.service.rollback_create_result(
+                user_id=self.user_id,
+                deployment_id=deployment_id,
+                provider_result=provider_result,
+                db=self.db,
+            )
+        except DeploymentNotFoundError as exc:
+            return OUTCOME_NOT_FOUND, str(exc), None
+        except ResourceConflictError as exc:
+            return OUTCOME_CONFLICT, exc.message, None
+        except InvalidContentError as exc:
+            return OUTCOME_INVALID_CONTENT, exc.message, None
+        except (InvalidDeploymentOperationError, InvalidDeploymentTypeError, OperationNotSupportedError) as exc:
+            return OUTCOME_INVALID_OPERATION, exc.message, None
+        except DeploymentError as exc:
+            return OUTCOME_FAILURE, exc.message, None
+        except HTTPException as exc:
+            return self._outcome_from_http_exception(exc), str(exc.detail), None
+        except Exception as exc:  # noqa: BLE001
+            return OUTCOME_FAILURE, str(exc), None
+        else:
+            return OUTCOME_SUCCESS, "rollback_create_result_done", result
+
+    async def _run_redeploy(self, deployment_id: str) -> tuple[str, str, Any | None]:
+        try:
+            result = await self.service.redeploy(
+                user_id=self.user_id,
+                deployment_id=deployment_id,
+                db=self.db,
+            )
+        except DeploymentNotFoundError as exc:
+            return OUTCOME_NOT_FOUND, str(exc), None
+        except ResourceConflictError as exc:
+            return OUTCOME_CONFLICT, exc.message, None
+        except InvalidContentError as exc:
+            return OUTCOME_INVALID_CONTENT, exc.message, None
+        except (InvalidDeploymentOperationError, InvalidDeploymentTypeError, OperationNotSupportedError) as exc:
+            return OUTCOME_INVALID_OPERATION, exc.message, None
+        except DeploymentError as exc:
+            return OUTCOME_FAILURE, exc.message, None
+        except HTTPException as exc:
+            return self._outcome_from_http_exception(exc), str(exc.detail), None
+        except Exception as exc:  # noqa: BLE001
+            return OUTCOME_FAILURE, str(exc), None
+        else:
+            return OUTCOME_SUCCESS, "redeployed", result
+
+    async def _run_duplicate(self, deployment_id: str) -> tuple[str, str, Any | None]:
+        try:
+            result = await self.service.duplicate(
+                user_id=self.user_id,
+                deployment_id=deployment_id,
+                db=self.db,
+            )
+        except DeploymentNotFoundError as exc:
+            return OUTCOME_NOT_FOUND, str(exc), None
+        except ResourceConflictError as exc:
+            return OUTCOME_CONFLICT, exc.message, None
+        except InvalidContentError as exc:
+            return OUTCOME_INVALID_CONTENT, exc.message, None
+        except (InvalidDeploymentOperationError, InvalidDeploymentTypeError, OperationNotSupportedError) as exc:
+            return OUTCOME_INVALID_OPERATION, exc.message, None
+        except DeploymentError as exc:
+            return OUTCOME_FAILURE, exc.message, None
+        except HTTPException as exc:
+            return self._outcome_from_http_exception(exc), str(exc.detail), None
+        except Exception as exc:  # noqa: BLE001
+            return OUTCOME_FAILURE, str(exc), None
+        else:
+            return OUTCOME_SUCCESS, "duplicated", result
+
+    async def _run_teardown(self) -> tuple[str, str, Any | None]:
+        try:
+            result = await self.service.teardown()
+        except DeploymentNotFoundError as exc:
+            return OUTCOME_NOT_FOUND, str(exc), None
+        except ResourceConflictError as exc:
+            return OUTCOME_CONFLICT, exc.message, None
+        except InvalidContentError as exc:
+            return OUTCOME_INVALID_CONTENT, exc.message, None
+        except (InvalidDeploymentOperationError, InvalidDeploymentTypeError, OperationNotSupportedError) as exc:
+            return OUTCOME_INVALID_OPERATION, exc.message, None
+        except DeploymentError as exc:
+            return OUTCOME_FAILURE, exc.message, None
+        except HTTPException as exc:
+            return self._outcome_from_http_exception(exc), str(exc.detail), None
+        except Exception as exc:  # noqa: BLE001
+            return OUTCOME_FAILURE, str(exc), None
+        else:
+            return OUTCOME_SUCCESS, "teardown_done", result
 
     async def _run_status(self, deployment_id: str) -> tuple[str, str, Any | None]:
         try:
@@ -1044,20 +1271,317 @@ class WatsonxAdapterDirectE2E:
             )
         )
 
-        # Empty snapshot_ids → SnapshotListParams.has_snapshot_ids is False →
-        # the service falls through to the deployment-scoped path which requires
-        # deployment_id.  Since we don't provide one here, a DeploymentError is
-        # raised, making OUTCOME_FAILURE the correct expectation.
+        # Empty snapshot_ids currently normalizes to tenant-scoped listing.
+        # We still expect a successful response and ensure known seed IDs
+        # are visible in the returned set.
         print("[snap-ids/4] live_list_snapshots_by_ids_empty_input")
         status_code, detail, snap_result = await self._run_list_snapshots_by_ids([])
         returned_ids = self._extract_snapshot_ids(snap_result)
+        has_known_subset = set(known_ids).issubset(returned_ids)
         results.append(
             self._build_result(
                 name="live_list_snapshots_by_ids_empty_input",
-                expected={OUTCOME_FAILURE},
+                expected={OUTCOME_SUCCESS},
                 actual_outcome=status_code,
-                detail=f"{detail} | returned_count={len(returned_ids)}",
-                ok=status_code == OUTCOME_FAILURE,
+                detail=(f"{detail} | returned_count={len(returned_ids)} has_known_subset={has_known_subset}"),
+                ok=status_code == OUTCOME_SUCCESS and has_known_subset,
+            )
+        )
+
+        return results
+
+    async def _run_live_listing_mode_scenarios(self) -> list[ScenarioResult]:
+        results: list[ScenarioResult] = []
+        print("\n[list/1] creating seed for list mode checks")
+        deployment_id, config_id, seed_snapshot_ids, _ = await self._create_update_seed(
+            label="list_modes_seed",
+            snapshot_count=1,
+        )
+        seed_snapshot_id = next(iter(seed_snapshot_ids), "")
+        if not seed_snapshot_id:
+            results.append(
+                self._build_result(
+                    name="live_list_modes_seed_missing_snapshot",
+                    expected={OUTCOME_SUCCESS},
+                    actual_outcome=OUTCOME_FAILURE,
+                    detail="seed snapshot id missing",
+                    ok=False,
+                )
+            )
+            return results
+
+        print("[list/2] live_list_snapshots_tenant_scope")
+        status_code, detail, tenant_snapshots = await self._run_list_snapshots_with_params(
+            params=None,
+            detail_label="snapshots_tenant_listed",
+        )
+        tenant_snapshot_ids = self._extract_snapshot_ids(tenant_snapshots)
+        tenant_has_seed = seed_snapshot_id in tenant_snapshot_ids
+        results.append(
+            self._build_result(
+                name="live_list_snapshots_tenant_scope",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=(
+                    f"{detail} | seed_snapshot_id={seed_snapshot_id} "
+                    f"tenant_has_seed={tenant_has_seed} total={len(tenant_snapshot_ids)}"
+                ),
+                ok=status_code == OUTCOME_SUCCESS and tenant_has_seed,
+            )
+        )
+
+        print("[list/3] live_list_configs_tenant_scope")
+        status_code, detail, tenant_configs = await self._run_list_configs_with_params(
+            params=None,
+            detail_label="configs_tenant_listed",
+        )
+        tenant_config_ids = self._extract_config_ids(tenant_configs)
+        tenant_has_config = bool(config_id and config_id in tenant_config_ids)
+        results.append(
+            self._build_result(
+                name="live_list_configs_tenant_scope",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=(
+                    f"{detail} | seed_config_id={config_id} "
+                    f"tenant_has_config={tenant_has_config} total={len(tenant_config_ids)}"
+                ),
+                ok=status_code == OUTCOME_SUCCESS and bool(config_id) and tenant_has_config,
+            )
+        )
+
+        deployment_list_status, deployment_list_detail, deployment_snapshot_list = await self._run_list_snapshots(
+            deployment_id
+        )
+        deployment_snapshots = getattr(deployment_snapshot_list, "snapshots", []) if deployment_snapshot_list else []
+        seed_snapshot_name = ""
+        for snapshot in deployment_snapshots:
+            snapshot_id = str(getattr(snapshot, "id", "")).strip()
+            snapshot_name = str(getattr(snapshot, "name", "")).strip()
+            if snapshot_id == seed_snapshot_id and snapshot_name:
+                seed_snapshot_name = snapshot_name
+                break
+        if not seed_snapshot_name:
+            results.append(
+                self._build_result(
+                    name="live_list_snapshots_by_names_seed_missing_name",
+                    expected={OUTCOME_SUCCESS},
+                    actual_outcome=deployment_list_status,
+                    detail=(
+                        f"{deployment_list_detail} | seed_snapshot_id={seed_snapshot_id} "
+                        "is missing from deployment-scoped snapshot names"
+                    ),
+                    ok=False,
+                )
+            )
+            return results
+
+        print("[list/4] live_list_snapshots_by_names_returns_known")
+        status_code, detail, by_name_result = await self._run_list_snapshots_by_names([seed_snapshot_name])
+        by_name_ids = self._extract_snapshot_ids(by_name_result)
+        by_name_has_seed = seed_snapshot_id in by_name_ids
+        results.append(
+            self._build_result(
+                name="live_list_snapshots_by_names_returns_known",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=(
+                    f"{detail} | seed_snapshot_name={seed_snapshot_name} "
+                    f"seed_snapshot_id={seed_snapshot_id} by_name_has_seed={by_name_has_seed}"
+                ),
+                ok=status_code == OUTCOME_SUCCESS and by_name_has_seed,
+            )
+        )
+
+        print("[list/5] live_list_snapshots_by_names_ignored_with_deployment_scope")
+        status_code, detail, mixed_filter_result = await self._run_list_snapshots_with_params(
+            params=SnapshotListParams(
+                deployment_ids=[deployment_id],
+                snapshot_names=[self._mk_name("snap_name_ignored")],
+            ),
+            detail_label="snapshots_mixed_filter_listed",
+        )
+        mixed_filter_ids = self._extract_snapshot_ids(mixed_filter_result)
+        mixed_kept_seed = seed_snapshot_id in mixed_filter_ids
+        results.append(
+            self._build_result(
+                name="live_list_snapshots_by_names_ignored_with_deployment_scope",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=(
+                    f"{detail} | seed_snapshot_id={seed_snapshot_id} mixed_kept_seed={mixed_kept_seed} "
+                    f"returned={sorted(mixed_filter_ids)}"
+                ),
+                ok=status_code == OUTCOME_SUCCESS and mixed_kept_seed,
+            )
+        )
+
+        return results
+
+    async def _run_live_service_surface_scenarios(self) -> list[ScenarioResult]:
+        results: list[ScenarioResult] = []
+
+        print("\n[surface/1] live_list_types_supports_agent")
+        status_code, detail, types_result = await self._run_list_types()
+        deployment_types = {
+            (dtype.value if hasattr(dtype, "value") else str(dtype)).strip()
+            for dtype in getattr(types_result, "deployment_types", [])
+        }
+        has_agent_type = DeploymentType.AGENT.value in deployment_types
+        results.append(
+            self._build_result(
+                name="live_list_types_supports_agent",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=f"{detail} | deployment_types={sorted(deployment_types)}",
+                ok=status_code == OUTCOME_SUCCESS and has_agent_type,
+            )
+        )
+
+        print("[surface/2] live_list_llms_returns_models")
+        status_code, detail, llms_result = await self._run_list_llms()
+        llm_provider_result = getattr(llms_result, "provider_result", {}) if llms_result else {}
+        models = llm_provider_result.get("models", []) if isinstance(llm_provider_result, dict) else []
+        results.append(
+            self._build_result(
+                name="live_list_llms_returns_models",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=f"{detail} | model_count={len(models)}",
+                ok=status_code == OUTCOME_SUCCESS and len(models) > 0,
+            )
+        )
+
+        print("[surface/3] live_verify_credentials_success")
+        status_code, detail, _ = await self._run_verify_credentials(
+            base_url=self.provider_backend_url,
+            api_key=self.provider_api_key,
+        )
+        results.append(
+            self._build_result(
+                name="live_verify_credentials_success",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=detail,
+                ok=status_code == OUTCOME_SUCCESS,
+            )
+        )
+
+        print("[surface/4] creating seed for update_snapshot + unsupported operations")
+        deployment_id, _config_id, surface_snapshot_ids, _ = await self._create_update_seed(
+            label="surface_seed",
+            snapshot_count=1,
+        )
+        surface_snapshot_id = next(iter(surface_snapshot_ids), "")
+        if not surface_snapshot_id:
+            results.append(
+                self._build_result(
+                    name="live_update_snapshot_seed_missing_snapshot",
+                    expected={OUTCOME_SUCCESS},
+                    actual_outcome=OUTCOME_FAILURE,
+                    detail="surface seed has no snapshot ids",
+                    ok=False,
+                )
+            )
+            return results
+
+        print("[surface/5] live_update_snapshot_success")
+        status_code, detail, update_snapshot_result = await self._run_update_snapshot(
+            snapshot_id=surface_snapshot_id,
+            flow_artifact=self._build_flow_payload(label="surface_update_snapshot_flow"),
+        )
+        updated_snapshot_id = (
+            str(getattr(update_snapshot_result, "snapshot_id", "")).strip() if update_snapshot_result else ""
+        )
+        results.append(
+            self._build_result(
+                name="live_update_snapshot_success",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=f"{detail} | expected_snapshot_id={surface_snapshot_id} got={updated_snapshot_id}",
+                ok=status_code == OUTCOME_SUCCESS and updated_snapshot_id == surface_snapshot_id,
+            )
+        )
+
+        print("[surface/6] live_rollback_create_result_cleans_up_created")
+        rollback_create_status, rollback_create_detail, rollback_created = await self._run_create(
+            self._build_create_payload(
+                tool_payloads=[self._build_flow_payload(label="surface_rb_seed_snap")],
+                raw_connection=self._build_config_payload(label="surface_rb_seed_cfg"),
+            )
+        )
+        if rollback_create_status != OUTCOME_SUCCESS or rollback_created is None:
+            results.append(
+                self._build_result(
+                    name="live_rollback_create_result_cleans_up_created",
+                    expected={OUTCOME_SUCCESS},
+                    actual_outcome=rollback_create_status,
+                    detail=f"seed_create={rollback_create_status}:{rollback_create_detail}",
+                    ok=False,
+                )
+            )
+        else:
+            rollback_deployment_id = rollback_created.deployment_id
+            rollback_snapshot_ids = self._extract_create_snapshot_ids(rollback_created.provider_result)
+            rollback_app_ids = self._extract_create_app_ids(rollback_created.provider_result)
+            self.created_deployment_ids.add(rollback_deployment_id)
+            self.created_snapshot_ids.update(rollback_snapshot_ids)
+            self.created_config_ids.update(rollback_app_ids)
+            rollback_status, rollback_detail, _ = await self._run_rollback_create_result(
+                deployment_id=rollback_deployment_id,
+                provider_result=rollback_created.provider_result,
+            )
+            post_status, post_detail, _ = await self._run_get(rollback_deployment_id)
+            cleaned_up = rollback_status == OUTCOME_SUCCESS and post_status == OUTCOME_NOT_FOUND
+            if cleaned_up:
+                self.created_deployment_ids.discard(rollback_deployment_id)
+                self.created_snapshot_ids.difference_update(rollback_snapshot_ids)
+                self.created_config_ids.difference_update(rollback_app_ids)
+            results.append(
+                self._build_result(
+                    name="live_rollback_create_result_cleans_up_created",
+                    expected={OUTCOME_SUCCESS},
+                    actual_outcome=rollback_status,
+                    detail=(f"rollback={rollback_status}:{rollback_detail} post_get={post_status}:{post_detail}"),
+                    ok=cleaned_up,
+                )
+            )
+
+        print("[surface/7] live_redeploy_not_supported")
+        status_code, detail, _ = await self._run_redeploy(deployment_id)
+        redeploy_not_supported = "not supported" in detail.lower()
+        results.append(
+            self._build_result(
+                name="live_redeploy_not_supported",
+                expected={OUTCOME_INVALID_OPERATION},
+                actual_outcome=status_code,
+                detail=detail,
+                ok=status_code == OUTCOME_INVALID_OPERATION and redeploy_not_supported,
+            )
+        )
+
+        print("[surface/8] live_duplicate_not_supported")
+        status_code, detail, _ = await self._run_duplicate(deployment_id)
+        duplicate_not_supported = "not supported" in detail.lower()
+        results.append(
+            self._build_result(
+                name="live_duplicate_not_supported",
+                expected={OUTCOME_INVALID_OPERATION},
+                actual_outcome=status_code,
+                detail=detail,
+                ok=status_code == OUTCOME_INVALID_OPERATION and duplicate_not_supported,
+            )
+        )
+
+        print("[surface/9] live_teardown_noop")
+        status_code, detail, _ = await self._run_teardown()
+        results.append(
+            self._build_result(
+                name="live_teardown_noop",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=detail,
+                ok=status_code == OUTCOME_SUCCESS,
             )
         )
 
@@ -1214,6 +1738,16 @@ class WatsonxAdapterDirectE2E:
             snapshot_ids = getattr(provider_result, "created_snapshot_ids", []) if provider_result else []
         return {str(snapshot_id) for snapshot_id in snapshot_ids if str(snapshot_id).strip()}
 
+    def _extract_update_added_snapshot_ids(self, update_result: Any) -> set[str]:
+        if update_result is None:
+            return set()
+        provider_result = getattr(update_result, "provider_result", None)
+        if isinstance(provider_result, dict):
+            snapshot_ids = provider_result.get("added_snapshot_ids", [])
+        else:
+            snapshot_ids = getattr(provider_result, "added_snapshot_ids", []) if provider_result else []
+        return {str(snapshot_id) for snapshot_id in snapshot_ids if str(snapshot_id).strip()}
+
     def _extract_update_created_app_ids(self, update_result: Any) -> set[str]:
         if update_result is None:
             return set()
@@ -1350,7 +1884,7 @@ class WatsonxAdapterDirectE2E:
             DeploymentUpdate(
                 provider_data={
                     "tools": {},
-                    "connections": {"existing_app_ids": [str(donor_config_id)]},
+                    "connections": {},
                     "operations": [
                         {
                             "op": "bind",
@@ -1364,8 +1898,8 @@ class WatsonxAdapterDirectE2E:
         )
         list_status, _list_detail, list_after_config_only = await self._run_list_snapshots(primary_deployment_id)
         attached_after_config_only = self._extract_snapshot_ids(list_after_config_only)
-        config_only_snapshot_ids = self._extract_update_snapshot_ids(config_only_result)
-        config_only_snapshot_ids_ok = retained_snapshot_ids.issubset(config_only_snapshot_ids)
+        config_only_created_snapshot_ids = self._extract_update_snapshot_ids(config_only_result)
+        config_only_created_ok = len(config_only_created_snapshot_ids) == 0
         results.append(
             self._build_result(
                 name="upd_config_only_existing_tools_with_config_id",
@@ -1376,7 +1910,7 @@ class WatsonxAdapterDirectE2E:
                     status_code == OUTCOME_SUCCESS
                     and list_status == OUTCOME_SUCCESS
                     and retained_snapshot_ids.issubset(attached_after_config_only)
-                    and config_only_snapshot_ids_ok
+                    and config_only_created_ok
                 ),
             )
         )
@@ -1387,7 +1921,7 @@ class WatsonxAdapterDirectE2E:
             DeploymentUpdate(
                 provider_data={
                     "tools": {},
-                    "connections": {"existing_app_ids": [str(donor_config_id)]},
+                    "connections": {},
                     "operations": [
                         {
                             "op": "bind",
@@ -1400,7 +1934,7 @@ class WatsonxAdapterDirectE2E:
         )
         list_status, _list_detail, list_after_add_id = await self._run_list_snapshots(primary_deployment_id)
         attached_after_add_id = self._extract_snapshot_ids(list_after_add_id)
-        add_id_snapshot_ids = self._extract_update_snapshot_ids(add_id_result)
+        add_id_snapshot_ids = self._extract_update_added_snapshot_ids(add_id_result)
         results.append(
             self._build_result(
                 name="upd_snapshot_add_ids_with_config_id",
@@ -1422,9 +1956,8 @@ class WatsonxAdapterDirectE2E:
             primary_deployment_id,
             DeploymentUpdate(
                 provider_data={
-                    "resource_name_prefix": f"e2e_upd_{uuid4().hex[:6]}_",
                     "tools": {"raw_payloads": [raw_payload.model_dump(mode="json")]},
-                    "connections": {"existing_app_ids": [str(donor_config_id)]},
+                    "connections": {},
                     "operations": [
                         {
                             "op": "bind",
@@ -1462,11 +1995,10 @@ class WatsonxAdapterDirectE2E:
             primary_deployment_id,
             DeploymentUpdate(
                 provider_data={
-                    "resource_name_prefix": f"e2e_upd_mix_{uuid4().hex[:6]}_",
                     "tools": {
                         "raw_payloads": [mixed_raw_payload.model_dump(mode="json")],
                     },
-                    "connections": {"existing_app_ids": [str(donor_config_id)]},
+                    "connections": {},
                     "operations": [
                         {
                             "op": "bind",
@@ -1483,7 +2015,7 @@ class WatsonxAdapterDirectE2E:
                 }
             ),
         )
-        mixed_snapshot_ids = self._extract_update_snapshot_ids(mixed_result)
+        mixed_snapshot_ids = self._extract_update_added_snapshot_ids(mixed_result)
         self.created_snapshot_ids.update(mixed_snapshot_ids)
         list_status, _list_detail, list_after_mixed = await self._run_list_snapshots(primary_deployment_id)
         attached_after_mixed = self._extract_snapshot_ids(list_after_mixed)
@@ -1588,7 +2120,7 @@ class WatsonxAdapterDirectE2E:
             primary_deployment_id,
             DeploymentUpdate(
                 provider_data={
-                    "connections": {"existing_app_ids": [str(donor_config_id)]},
+                    "connections": {},
                     "operations": [
                         {
                             "op": "unbind",
@@ -1615,7 +2147,7 @@ class WatsonxAdapterDirectE2E:
             DeploymentUpdate(
                 provider_data={
                     "tools": {},
-                    "connections": {"existing_app_ids": [str(donor_config_id)]},
+                    "connections": {},
                     "operations": [
                         {
                             "op": "bind",
@@ -1642,7 +2174,6 @@ class WatsonxAdapterDirectE2E:
             snapshot_count=1,
         )
         conflict_suffix = uuid4().hex[:8]
-        conflict_prefix = f"e2e_upd_conflict_{conflict_suffix}_"
         conflict_name = f"dup_cfg_{conflict_suffix}"
         conflict_tool_id = next(iter(_conflict_snapshot_ids), "")
         if not conflict_tool_id:
@@ -1658,7 +2189,6 @@ class WatsonxAdapterDirectE2E:
             return results
         conflict_payload = DeploymentUpdate(
             provider_data={
-                "resource_name_prefix": conflict_prefix,
                 "tools": {},
                 "connections": {"raw_payloads": [{"app_id": conflict_name, "environment_variables": {}}]},
                 "operations": [
@@ -1797,7 +2327,6 @@ class WatsonxAdapterDirectE2E:
         results: list[ScenarioResult] = []
 
         print(f"[cc/{iteration}.1] cc_create_same_prefix_race")
-        shared_prefix = f"e2e_cc_shared_{uuid4().hex[:6]}_"
         shared_dep_name = self._mk_name("dep_cc_shared")
         shared_cfg_name = self._mk_name("cfg_cc_shared")
         shared_snap_name = self._mk_name("snap_cc_shared")
@@ -1808,7 +2337,6 @@ class WatsonxAdapterDirectE2E:
                 description="concurrency create collision",
                 environment_variables={},
             ),
-            resource_name_prefix=shared_prefix,
         )
         shared_payload.spec = shared_payload.spec.model_copy(update={"name": shared_dep_name}, deep=True)
         create_race = await self._run_parallel_calls(
@@ -1859,7 +2387,7 @@ class WatsonxAdapterDirectE2E:
                     DeploymentUpdate(
                         provider_data={
                             "tools": {},
-                            "connections": {"existing_app_ids": [str(donor_cfg_id)]},
+                            "connections": {},
                             "operations": [
                                 {
                                     "op": "bind",
@@ -1987,7 +2515,7 @@ class WatsonxAdapterDirectE2E:
                 DeploymentUpdate(
                     provider_data={
                         "tools": {},
-                        "connections": {"existing_app_ids": [str(bind_cfg_id)]},
+                        "connections": {},
                         "operations": [
                             {
                                 "op": "unbind",
@@ -2028,7 +2556,6 @@ class WatsonxAdapterDirectE2E:
                 )
             )
             return results
-        cfg_prefix = f"e2e_cc_del_cfg_{uuid4().hex[:6]}_"
         raw_cfg_name = self._mk_name("cc_raw_cfg")
 
         async def _delete_created_app_after_config_create(created_app_id: Any, **kwargs: Any) -> None:
@@ -2045,7 +2572,6 @@ class WatsonxAdapterDirectE2E:
                 delete_cfg_id,
                 DeploymentUpdate(
                     provider_data={
-                        "resource_name_prefix": cfg_prefix,
                         "tools": {},
                         "connections": {"raw_payloads": [{"app_id": raw_cfg_name, "environment_variables": {}}]},
                         "operations": [
@@ -2077,7 +2603,6 @@ class WatsonxAdapterDirectE2E:
         )
 
         print(f"[cc/{iteration}.7] cc_create_during_create_snapshots_stage")
-        create_race_prefix = f"e2e_cc_create_stage_{uuid4().hex[:6]}_"
         create_race_dep = self._mk_name("cc_stage_dep")
         create_race_cfg = self._mk_name("cc_stage_cfg")
         create_race_snap = self._mk_name("cc_stage_snap")
@@ -2088,7 +2613,6 @@ class WatsonxAdapterDirectE2E:
                 description="cc competing create",
                 environment_variables={},
             ),
-            resource_name_prefix=create_race_prefix,
         )
         race_payload.spec = race_payload.spec.model_copy(update={"name": create_race_dep}, deep=True)
         competing_create_task: asyncio.Task[tuple[str, str, WxoCreatedDeploymentResult | None]] | None = None
@@ -2146,13 +2670,11 @@ class WatsonxAdapterDirectE2E:
                 )
             )
             return results
-        update_cfg_prefix = f"e2e_cc_upd_cfg_create_{uuid4().hex[:6]}_"
         update_cfg_name = self._mk_name("cc_upd_cfg_create")
         competing_update_task: asyncio.Task[tuple[str, str, Any | None]] | None = None
 
         competing_update_payload = DeploymentUpdate(
             provider_data={
-                "resource_name_prefix": update_cfg_prefix,
                 "tools": {},
                 "connections": {"raw_payloads": [{"app_id": update_cfg_name, "environment_variables": {}}]},
                 "operations": [
@@ -2223,7 +2745,6 @@ class WatsonxAdapterDirectE2E:
                 )
             )
             return results
-        rollback_prefix = f"e2e_cc_rollback_{uuid4().hex[:6]}_"
         rollback_raw_flow = self._build_flow_payload(label=f"cc_rb_raw_{iteration}")
         rollback_raw_cfg_name = self._mk_name("cc_rb_cfg")
         rollback_status, rollback_detail, _ = await self._run_with_stage_hook(
@@ -2233,12 +2754,10 @@ class WatsonxAdapterDirectE2E:
                 DeploymentUpdate(
                     spec=BaseDeploymentDataUpdate(description="cc rollback delete race"),
                     provider_data={
-                        "resource_name_prefix": rollback_prefix,
                         "tools": {
                             "raw_payloads": [rollback_raw_flow.model_dump(mode="json")],
                         },
                         "connections": {
-                            "existing_app_ids": [str(rollback_cfg_id)],
                             "raw_payloads": [{"app_id": rollback_raw_cfg_name, "environment_variables": {}}],
                         },
                         "operations": [
@@ -2303,7 +2822,6 @@ class WatsonxAdapterDirectE2E:
                 )
             )
             return results
-        rollback_create_prefix = f"e2e_cc_rb_create_{uuid4().hex[:6]}_"
         rollback_create_cfg_name = self._mk_name("cc_rb_create_cfg")
         competing_rollback_create_task: asyncio.Task[tuple[str, str, Any | None]] | None = None
 
@@ -2316,7 +2834,6 @@ class WatsonxAdapterDirectE2E:
                     rollback_create_id,
                     DeploymentUpdate(
                         provider_data={
-                            "resource_name_prefix": rollback_create_prefix,
                             "tools": {},
                             "connections": {
                                 "raw_payloads": [{"app_id": rollback_create_cfg_name, "environment_variables": {}}]
@@ -2342,12 +2859,10 @@ class WatsonxAdapterDirectE2E:
                 DeploymentUpdate(
                     spec=BaseDeploymentDataUpdate(description="cc rollback create race"),
                     provider_data={
-                        "resource_name_prefix": rollback_create_prefix,
                         "tools": {
                             "raw_payloads": [rollback_create_raw_flow.model_dump(mode="json")],
                         },
                         "connections": {
-                            "existing_app_ids": [str(rollback_create_cfg_id)],
                             "raw_payloads": [{"app_id": rollback_create_cfg_name, "environment_variables": {}}],
                         },
                         "operations": [
@@ -2465,7 +2980,17 @@ class WatsonxAdapterDirectE2E:
 
     def _extract_config_ids(self, config_result: Any) -> set[str]:
         configs = getattr(config_result, "configs", []) if config_result else []
-        return {str(config.id) for config in configs if config and getattr(config, "id", None)}
+        ids_or_names: set[str] = set()
+        for config in configs:
+            if not config:
+                continue
+            config_id = str(getattr(config, "id", "")).strip()
+            config_name = str(getattr(config, "name", "")).strip()
+            if config_id:
+                ids_or_names.add(config_id)
+            if config_name:
+                ids_or_names.add(config_name)
+        return ids_or_names
 
     def _stage_hook_mapping(self) -> dict[str, tuple[Any, str]]:
         return {
@@ -2611,13 +3136,11 @@ class WatsonxAdapterDirectE2E:
                 )
             )
             return results
-        failpoint_prefix = f"e2e_fp_upd_{uuid4().hex[:6]}_"
         failpoint_raw_app_id = self._mk_name("fp_upd_cfg")
 
         update_payload = DeploymentUpdate(
             spec=BaseDeploymentDataUpdate(description="trigger update failpoint"),
             provider_data={
-                "resource_name_prefix": failpoint_prefix,
                 "tools": {},
                 "connections": {"raw_payloads": [{"app_id": failpoint_raw_app_id, "environment_variables": {}}]},
                 "operations": [
@@ -2697,14 +3220,12 @@ class WatsonxAdapterDirectE2E:
             )
             return results
 
-        restore_prefix = f"e2e_fp_restore_{uuid4().hex[:6]}_"
         restore_raw_cfg = self._mk_name("fp_restore_cfg")
         print("[fp-upd/3a] injecting update failure to corrupt tool list")
         inject_status, inject_detail, _ = await self._run_update(
             restore_id,
             DeploymentUpdate(
                 provider_data={
-                    "resource_name_prefix": restore_prefix,
                     "tools": {},
                     "connections": {"raw_payloads": [{"app_id": restore_raw_cfg, "environment_variables": {}}]},
                     "operations": [
@@ -2841,9 +3362,7 @@ class WatsonxAdapterDirectE2E:
         tool_payloads: list[BaseFlowArtifact[WatsonxFlowArtifactProviderData]],
         raw_connection: DeploymentConfig | None = None,
         existing_connection_app_id: str | None = None,
-        resource_name_prefix: str | None = None,
     ) -> DeploymentCreate:
-        prefix = resource_name_prefix or f"e2e_{uuid4().hex[:8]}_"
         spec = BaseDeploymentData(
             name=self._mk_name("dep_agent"),
             description="direct adapter scenario",
@@ -2863,7 +3382,6 @@ class WatsonxAdapterDirectE2E:
             ]
         elif existing_connection_app_id:
             operation_app_id = str(existing_connection_app_id).strip()
-            connections["existing_app_ids"] = [operation_app_id]
         else:
             operation_app_id = self._mk_name("cfg_default_app")
             connections["raw_payloads"] = [{"app_id": operation_app_id, "environment_variables": {}}]
@@ -2878,10 +3396,10 @@ class WatsonxAdapterDirectE2E:
         ]
 
         provider_data = {
-            "resource_name_prefix": prefix,
             "tools": {"raw_payloads": raw_tool_payloads},
             "connections": connections,
             "operations": operations,
+            "llm": self.llm,
         }
         return DeploymentCreate(spec=spec, provider_data=provider_data)
 
@@ -3062,6 +3580,7 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run direct Watsonx adapter matrix (live + failpoints).")
     parser.add_argument("--project-id", default=os.getenv("WXO_PROJECT_ID", "e2e-project"))
     parser.add_argument("--mode", choices=["live", "failpoint", "both"], default=os.getenv("WXO_E2E_MODE", "both"))
+    parser.add_argument("--llm", default=os.getenv("WXO_DEFAULT_LLM", DEFAULT_WXO_LLM))
     parser.add_argument("--keep-resources", action="store_true")
     return parser.parse_args()
 
@@ -3075,6 +3594,7 @@ async def _main() -> int:
         project_id=args.project_id,
         mode=args.mode,
         keep_resources=args.keep_resources,
+        llm=args.llm,
     )
     return await runner.run()
 
