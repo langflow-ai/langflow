@@ -1352,3 +1352,37 @@ class TestIDX08CacheHit:
         await ci.get_and_cache_all_types_dict(_fake_settings_service(), telemetry_service=telemetry)
 
         telemetry.log_component_index.assert_not_called()
+
+    async def test_parity_cache_hit_vs_miss(self, tmp_path, monkeypatch, prebuilt_cache_file):
+        """D-04: byte-identical vertex_order + final_text on both paths, via Phase 2 helper."""
+        import shutil
+
+        from lfx.interface import components as ci
+
+        _install_mock_llm()
+        fixture = _PARITY_FIXTURES_DIR / "smallest.json"
+        snapshot_path = _PARITY_FIXTURES_DIR / "smallest.snapshot.json"
+        expected = orjson.loads(snapshot_path.read_bytes())
+
+        # --- cache-hit pass
+        hit_cache = tmp_path / "hit.json"
+        shutil.copy(prebuilt_cache_file, hit_cache)
+        monkeypatch.setattr(ci, "_get_cache_path", lambda: hit_cache)
+        _reset_component_cache_singleton(monkeypatch)
+        hit_snapshot = await _capture_parity_snapshot(fixture)
+
+        # --- cache-miss pass
+        absent = tmp_path / "missing.json"
+        monkeypatch.setattr(ci, "_get_cache_path", lambda: absent)
+        _reset_component_cache_singleton(monkeypatch)
+        miss_snapshot = await _capture_parity_snapshot(fixture)
+
+        assert hit_snapshot == expected, (
+            f"cache-hit parity snapshot drifted: got {hit_snapshot!r}, expected {expected!r}"
+        )
+        assert miss_snapshot == expected, (
+            f"cache-miss parity snapshot drifted: got {miss_snapshot!r}, expected {expected!r}"
+        )
+        assert hit_snapshot == miss_snapshot, (
+            f"cache-hit and cache-miss snapshots diverged (hit={hit_snapshot!r}, miss={miss_snapshot!r})"
+        )
