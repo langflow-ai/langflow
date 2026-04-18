@@ -47,7 +47,6 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 
-
 # Operation option constants -- kept as module-level constants so the UI
 # tab values and the dispatcher stay in sync with a single source of truth.
 OP_FIND = "Find"
@@ -174,10 +173,7 @@ class AstraDBDataAPIComponent(AstraDBBaseComponent):
         NestedDictInput(
             name="projection",
             display_name="Projection",
-            info=(
-                "Fields to include (``1``/``true``) or exclude (``0``/``false``), "
-                'e.g. {"name": 1, "email": 1}.'
-            ),
+            info=('Fields to include (``1``/``true``) or exclude (``0``/``false``), e.g. {"name": 1, "email": 1}.'),
             advanced=True,
         ),
         NestedDictInput(
@@ -326,9 +322,7 @@ class AstraDBDataAPIComponent(AstraDBBaseComponent):
         if dimension:
             vector_options = CollectionVectorOptions(dimension=dimension)
         elif embedding_generation_provider and embedding_generation_provider != "Bring your own":
-            providers = cls.get_vectorize_providers(
-                token=token, environment=env, api_endpoint=api_endpoint
-            )
+            providers = cls.get_vectorize_providers(token=token, environment=env, api_endpoint=api_endpoint)
             provider_key = providers.get(embedding_generation_provider, [None, []])[0]
             if provider_key is None:
                 msg = (

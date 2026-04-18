@@ -99,9 +99,7 @@ class TestStaticConfiguration:
         input_names = {inp.name for inp in AstraDBDataAPIComponent.inputs}
         for op, fields in OPERATION_FIELDS.items():
             for field in fields:
-                assert field in input_names, (
-                    f"Operation '{op}' references unknown input field '{field}'"
-                )
+                assert field in input_names, f"Operation '{op}' references unknown input field '{field}'"
 
     def test_component_metadata(self):
         """Component metadata is sensible."""
@@ -117,11 +115,7 @@ class TestStaticConfiguration:
 
     def test_tool_mode_inputs(self):
         """Key agent-controllable inputs expose ``tool_mode=True``."""
-        tool_mode_names = {
-            inp.name
-            for inp in AstraDBDataAPIComponent.inputs
-            if getattr(inp, "tool_mode", False)
-        }
+        tool_mode_names = {inp.name for inp in AstraDBDataAPIComponent.inputs if getattr(inp, "tool_mode", False)}
         expected = {"operation", "filter_query", "limit", "document", "documents", "update"}
         assert expected.issubset(tool_mode_names), (
             f"Missing tool_mode on agent-controllable inputs: {expected - tool_mode_names}"
@@ -129,8 +123,7 @@ class TestStaticConfiguration:
         # Secrets and selector fields should never be marked as tool-controllable.
         forbidden = {"token", "api_endpoint", "database_name", "collection_name", "keyspace"}
         assert forbidden.isdisjoint(tool_mode_names), (
-            f"Sensitive/selector fields must not be tool_mode: "
-            f"{forbidden & tool_mode_names}"
+            f"Sensitive/selector fields must not be tool_mode: {forbidden & tool_mode_names}"
         )
 
 
@@ -359,9 +352,7 @@ class TestInsertManyOperation:
 
         result = component_with_collection.run_operation()
 
-        mock_collection.insert_many.assert_called_once_with(
-            [{"a": 1}, {"a": 2}, {"a": 3}], ordered=True
-        )
+        mock_collection.insert_many.assert_called_once_with([{"a": 1}, {"a": 2}, {"a": 3}], ordered=True)
         assert result[0].data == {
             "inserted_ids": ["id-1", "id-2", "id-3"],
             "inserted_count": 3,
@@ -406,9 +397,7 @@ class TestUpdateOperations:
 
         result = component_with_collection.run_operation()
 
-        mock_collection.update_one.assert_called_once_with(
-            {"_id": "1"}, {"$set": {"status": "active"}}, upsert=True
-        )
+        mock_collection.update_one.assert_called_once_with({"_id": "1"}, {"$set": {"status": "active"}}, upsert=True)
         assert result[0].data["matched_count"] == 1
         assert result[0].data["modified_count"] == 1
         assert result[0].data["upserted_id"] is None
@@ -426,9 +415,7 @@ class TestUpdateOperations:
 
         result = component_with_collection.run_operation()
 
-        mock_collection.update_many.assert_called_once_with(
-            {"active": True}, {"$inc": {"version": 1}}, upsert=False
-        )
+        mock_collection.update_many.assert_called_once_with({"active": True}, {"$inc": {"version": 1}}, upsert=False)
         assert result[0].data["modified_count"] == 5
 
 
@@ -498,10 +485,12 @@ class TestCountOperations:
 
 class TestDataFrameOutput:
     def test_as_dataframe_from_find(self, component_with_collection, mock_collection):
-        mock_collection.find.return_value = iter([
-            {"name": "Ada", "age": 36},
-            {"name": "Grace", "age": 85},
-        ])
+        mock_collection.find.return_value = iter(
+            [
+                {"name": "Ada", "age": 36},
+                {"name": "Grace", "age": 85},
+            ]
+        )
         component_with_collection.operation = OP_FIND
 
         df = component_with_collection.as_dataframe()
@@ -578,14 +567,17 @@ class TestUpdateBuildConfig:
         }
 
         # Switching to Insert One should hide find-style fields.
-        with patch.object(
-            AstraDBDataAPIComponent,
-            "get_database_list_static",
-            return_value={},
-        ), patch.object(
-            AstraDBDataAPIComponent,
-            "map_cloud_providers",
-            return_value={},
+        with (
+            patch.object(
+                AstraDBDataAPIComponent,
+                "get_database_list_static",
+                return_value={},
+            ),
+            patch.object(
+                AstraDBDataAPIComponent,
+                "map_cloud_providers",
+                return_value={},
+            ),
         ):
             # Swap to a non-managed field so we don't trigger the full base reset,
             # then directly invoke the visibility helper via the operation branch.
