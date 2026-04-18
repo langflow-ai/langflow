@@ -1,6 +1,7 @@
 import { Background, Panel } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
@@ -35,6 +36,7 @@ export const MemoizedCanvasControls = memo(
     selectedNode,
     isAgentWorking,
   }: MemoizedCanvasControlsProps) => {
+    const { t } = useTranslation();
     const currentFlow = useFlowStore(useShallow((state) => state.currentFlow));
     const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
     const saveFlow = useSaveFlow();
@@ -80,12 +82,12 @@ export const MemoizedCanvasControls = memo(
           )}
           title={
             isAgentWorking
-              ? "Agent Working"
+              ? t("canvas.agentWorking")
               : isSaving
-                ? "Saving..."
+                ? t("canvas.saving")
                 : isLocked
-                  ? "Unlock flow"
-                  : "Lock flow"
+                  ? t("canvas.unlockFlow")
+                  : t("canvas.lockFlow")
           }
           onClick={handleToggleLock}
         >
@@ -98,7 +100,7 @@ export const MemoizedCanvasControls = memo(
           />
           {effectiveLocked && (
             <span className="text-xs text-destructive">
-              {isAgentWorking ? "Agent Working" : "Flow Locked"}
+              {isAgentWorking ? t("canvas.agentWorking") : t("canvas.flowLocked")}
             </span>
           )}
         </Button>
