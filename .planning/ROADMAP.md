@@ -162,7 +162,7 @@ Plans:
 - [x] 05-02-PLAN.md — lfx_reference_image CI scenario + driver registry + thresholds.json sentinel + cold-start-benchmark.yml wiring (hyperfine-wrapped; lfx run exits after flow completion). Requirements: CNT-01.
 - [x] 05-03-PLAN.md — deployment-cold-start.mdx guide (D-08) + sidebars.js wiring + cross-links from deployment-docker.mdx and deployment-prod-best-practices.mdx (D-09). Requirements: CNT-03.
 - [x] 05-04-PLAN.md — Repeat-build cache-hit verification step in build-images job (D-14 <30s assertion for CNT-02). Requirements: CNT-02.
-- [ ] 05-05-PLAN.md — D-05 fork-hazard audit + TelemetryService post_fork fix (_langflow_post_fork hook in server.py + start/stop guards in services/telemetry/service.py + test_post_fork.py). Requirements: CNT-04.
+- [x] 05-05-PLAN.md — D-05 fork-hazard audit + TelemetryService post_fork fix (_langflow_post_fork hook in server.py + start/stop guards in services/telemetry/service.py + test_post_fork.py). Requirements: CNT-04.
 - [ ] 05-06-PLAN.md — LANGFLOW_GUNICORN_PRELOAD default flip conditional on 05-05 D-07 gate + finalize LANGFLOW_GUNICORN_PRELOAD section in deployment-cold-start.mdx. Requirements: CNT-04.
 
 **Wave hints for parallelization:**
@@ -208,6 +208,6 @@ Plans:
 | 2. Component Index and Correctness Fixes | 6/6 | Complete    | 2026-04-17 |
 | 3. Import-Time Optimization | 9/13 | Complete | 2026-04-17 (4 deferred to future milestone) |
 | 4. Service Init Restructuring | 5/5 | Complete | 2026-04-17 (CI baseline snapshot 2026-04-18) |
-| 5. Container and Deployment Optimization | 0/? | Not started | - |
+| 5. Container and Deployment Optimization | 5/6 | In Progress|  |
 | 5.5. Component Index Build Caching | 0/? | Not started | - |
 | 6. Validation and Publication | 0/? | Not started | - |
