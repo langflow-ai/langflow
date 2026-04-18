@@ -74,6 +74,42 @@ class LangflowApplication(BaseApplication):
         config = {key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None}
         for key, value in config.items():
             self.cfg.set(key.lower(), value)
+        # CNT-04: reset fork-unsafe resources in each worker after fork.
+        # See _langflow_post_fork below + TelemetryService.start() guard.
+        self.cfg.set("post_fork", _langflow_post_fork)
 
     def load(self):
         return self.application
+
+
+def _langflow_post_fork(server, worker) -> None:  # noqa: ARG001
+    """Reset fork-unsafe resources in each worker after gunicorn forks.
+
+    Gunicorn calls this hook synchronously in the worker process immediately
+    after fork, before any request is served. No event loop exists yet here —
+    this function MUST remain fully synchronous (no async calls, no
+    asyncio.get_event_loop, no await).
+
+    Current responsibilities (CNT-04 fork-hazard audit, RESEARCH.md section
+    "Fork Hazard Audit (D-05)"):
+
+    * TelemetryService.client (httpx.AsyncClient) — reset to None so that
+      TelemetryService.start() reconstructs it inside the worker's event
+      loop. httpx.AsyncClient has no synchronous .close(), so we cannot
+      aclose() here; replacing the reference is the correct pattern
+      (Pitfall 1).
+
+    All other hazards audited in Phase 5 (SQLAlchemy engine, asyncio locks,
+    ComponentCache.all_types_dict, Redis pool, asyncio.create_task, open
+    file descriptors) are SAFE by construction — see the phase 05 SUMMARY
+    for evidence.
+    """
+    try:
+        from langflow.services.deps import get_telemetry_service
+
+        tel = get_telemetry_service()
+        tel.client = None
+    except Exception:  # noqa: BLE001, S110
+        # Service not yet initialized (e.g. preload_app=False path). The
+        # hook must not crash gunicorn.
+        pass
