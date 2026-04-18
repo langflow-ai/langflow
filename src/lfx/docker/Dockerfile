@@ -7,7 +7,7 @@
 ################################
 
 # Use an Alpine-based Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-alpine AS builder
+FROM ghcr.io/astral-sh/uv:python3.13-alpine AS builder
 
 # Install build dependencies needed for some Python packages on Alpine
 RUN apk add --no-cache build-base libaio-dev linux-headers
@@ -33,7 +33,7 @@ COPY src/sdk/README.md /app/src/sdk/README.md
 # Create the venv and install *only* what lfx needs (no dev)
 # We expect some packages to be built from source, so we mount the cache
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --package lfx
+    uv sync --frozen --no-dev --no-install-project --package lfx
 
 # --- Now copy the source (doesn't bust the deps layer) ---
 COPY src/lfx/src /app/src/lfx/src
@@ -47,7 +47,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12-alpine AS runtime
+FROM python:3.13-alpine AS runtime
 
 # Create a non-root user
 # -D: Don't assign a password
