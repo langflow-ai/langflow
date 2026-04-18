@@ -111,9 +111,20 @@ jobs:
           DOCKERFILE
           docker build -t benchmarks-lean-uncompiled -f /tmp/Dockerfile.uncompiled .
 
-      - name: Save both images to tarball
+      - name: Build lfx-reference image (CNT-01 reference Dockerfile)
         run: |
-          docker save benchmarks-lean benchmarks-lean-uncompiled | gzip > /tmp/images.tar.gz
+          # Builds the patched src/lfx/docker/Dockerfile image that Plan 05-01
+          # delivers (Python 3.13-alpine, --no-install-project layer separation,
+          # UV_COMPILE_BYTECODE=1). This is the image the lfx_reference_image
+          # scenario measures (CNT-01 authoritative signal).
+          docker build \
+            -t lfx-reference \
+            -f src/lfx/docker/Dockerfile \
+            .
+
+      - name: Save all images to tarball
+        run: |
+          docker save benchmarks-lean benchmarks-lean-uncompiled lfx-reference | gzip > /tmp/images.tar.gz
           ls -la /tmp/images.tar.gz
 
       - name: Upload images artifact
@@ -143,6 +154,7 @@ jobs:
           # verified to reach the supervisor reliably.
           - langflow_run_http_ready
           - langflow_run_no_change_restart
+          - lfx_reference_image
     runs-on: ubuntu-latest
     # Budgets:
     #   - langflow_run_http_ready: 5 min (known-flaky sentinel scenario until the
@@ -157,7 +169,7 @@ jobs:
     # timeout) without marking the workflow red. no_change_restart keeps the
     # non-blocking treatment until Boot-2's marker is verified to reach the
     # supervisor reliably under CI load.
-    continue-on-error: ${{ matrix.scenario == 'langflow_run_http_ready' || matrix.scenario == 'langflow_run_no_change_restart' }}
+    continue-on-error: ${{ matrix.scenario == 'langflow_run_http_ready' || matrix.scenario == 'langflow_run_no_change_restart' || matrix.scenario == 'lfx_reference_image' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -197,7 +209,7 @@ jobs:
 
       - name: Run scenario
         id: bench
-        continue-on-error: ${{ matrix.scenario == 'langflow_run_http_ready' || matrix.scenario == 'langflow_run_no_change_restart' }}
+        continue-on-error: ${{ matrix.scenario == 'langflow_run_http_ready' || matrix.scenario == 'langflow_run_no_change_restart' || matrix.scenario == 'lfx_reference_image' }}
         env:
           CONTAINER_CMD: docker
         run: |
@@ -228,7 +240,8 @@ jobs:
           failure() &&
           github.event.pull_request &&
           matrix.scenario != 'langflow_run_http_ready' &&
-          matrix.scenario != 'langflow_run_no_change_restart'
+          matrix.scenario != 'langflow_run_no_change_restart' &&
+          matrix.scenario != 'lfx_reference_image'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -307,6 +320,7 @@ jobs:
               "lfx_with_flow_prebaked",
               "langflow_run_http_ready",
               "langflow_run_no_change_restart",
+              "lfx_reference_image",
           ]
 
           scenarios_out = {}
