@@ -160,7 +160,7 @@ All five plans touch main.py sequentially (plans 04-01..04-04) by design; splitt
 Plans:
 - [x] 05-01-PLAN.md — Dockerfile patches in-place: builder FROM to python3.13-alpine (D-02 unblocked), first uv sync gains --no-install-project (CNT-02 cache fix), runtime FROM to python3.13-alpine (Pitfall 2 ABI match). Requirements: CNT-01, CNT-02.
 - [x] 05-02-PLAN.md — lfx_reference_image CI scenario + driver registry + thresholds.json sentinel + cold-start-benchmark.yml wiring (hyperfine-wrapped; lfx run exits after flow completion). Requirements: CNT-01.
-- [ ] 05-03-PLAN.md — deployment-cold-start.mdx guide (D-08) + sidebars.js wiring + cross-links from deployment-docker.mdx and deployment-prod-best-practices.mdx (D-09). Requirements: CNT-03.
+- [x] 05-03-PLAN.md — deployment-cold-start.mdx guide (D-08) + sidebars.js wiring + cross-links from deployment-docker.mdx and deployment-prod-best-practices.mdx (D-09). Requirements: CNT-03.
 - [ ] 05-04-PLAN.md — Repeat-build cache-hit verification step in build-images job (D-14 <30s assertion for CNT-02). Requirements: CNT-02.
 - [ ] 05-05-PLAN.md — D-05 fork-hazard audit + TelemetryService post_fork fix (_langflow_post_fork hook in server.py + start/stop guards in services/telemetry/service.py + test_post_fork.py). Requirements: CNT-04.
 - [ ] 05-06-PLAN.md — LANGFLOW_GUNICORN_PRELOAD default flip conditional on 05-05 D-07 gate + finalize LANGFLOW_GUNICORN_PRELOAD section in deployment-cold-start.mdx. Requirements: CNT-04.

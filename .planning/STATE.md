@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 05 Plan 02 complete; commits b7e96bf269/fec7507534/44bdf971df/0353a93c08 (lfx_reference_image scenario + driver wiring + sentinel threshold + CI workflow).
-last_updated: "2026-04-18T14:58:06.000Z"
-last_activity: 2026-04-18 -- Phase 05 Plan 02 complete
+stopped_at: Phase 05 Plan 03 complete; commits 197c421107/ec4125a5c6 (cold-start guide + sidebar/cross-links).
+last_updated: "2026-04-18T15:10:00.000Z"
+last_activity: 2026-04-18 -- Phase 05 Plan 03 complete
 progress:
   total_phases: 7
   completed_phases: 3
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 ## Current Position
 
 Phase: 05 (container-and-deployment-optimization) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Executing Phase 05
-Last activity: 2026-04-18 -- Phase 05 Plan 02 complete (lfx_reference_image CI scenario)
+Last activity: 2026-04-18 -- Phase 05 Plan 03 complete (cold-start deployment guide CNT-03)
 
 Phase 4 outcome: [##########] 100% (5/5 plans executed)
 
@@ -61,6 +61,7 @@ Phase 4 outcome: [##########] 100% (5/5 plans executed)
 | Phase 04 P05 | 29 | 2 tasks | 5 files |
 | Phase 05 P01 | 1 | 2 tasks | 1 file |
 | Phase 05 P02 | 3 | 4 tasks | 4 files |
+| Phase 05 P03 | 8 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,8 @@ Recent decisions affecting current work:
 - [Phase 05-02]: lfx_reference_image uses hyperfine wrapping (self_measuring=False): lfx run exits after flow completion (no port bound); TCP readiness probe / supervisor not applicable. Resolves RESEARCH.md Open Question 2.
 - [Phase 05-02]: Sentinel threshold mean_ms=0 for lfx_reference_image per D-15; authoritative numbers land via run-benchmark-snapshot CI label on Phase 5 PR.
 - [Phase 05-02]: captures_pyinstrument=False and captures_importtime=False for lfx_reference_image: measures deployed image as black box; harness tooling not present in lfx reference image.
+- [Phase 05-03]: Cross-platform requirements generation documented as `uv pip compile --python-platform linux --python-version 3.13` (not `uv export`); verified against uv 0.9.11 live — `uv export` lacks these flags entirely.
+- [Phase 05-03]: deployment-prod-best-practices.mdx cross-link added to See also section (end of file) rather than mid-section insertion to avoid disrupting existing content.
 
 ### Pending Todos
 
@@ -134,10 +137,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-18T14:55:09.000Z
-Stopped at: Phase 05 Plan 02 complete; lfx_reference_image scenario wired (4 commits: b7e96bf269, fec7507534, 44bdf971df, 0353a93c08). CNT-01 measurement pipeline in place; authoritative numbers pending run-benchmark-snapshot label.
+Last session: 2026-04-18T15:10:00.000Z
+Stopped at: Phase 05 Plan 03 complete; cold-start deployment guide created (2 commits: 197c421107, ec4125a5c6). CNT-03 satisfied. uv export flag discrepancy found and corrected (uv pip compile used instead).
 Resume file: None.
-Next step: Execute Phase 05 Plan 03.
+Next step: Execute Phase 05 Plan 04.
 
 ### Phase 3 close notes
 
