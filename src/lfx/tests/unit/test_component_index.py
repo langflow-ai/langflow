@@ -1386,3 +1386,35 @@ class TestIDX08CacheHit:
         assert hit_snapshot == miss_snapshot, (
             f"cache-hit and cache-miss snapshots diverged (hit={hit_snapshot!r}, miss={miss_snapshot!r})"
         )
+
+    def test_cache_hit_perf_under_500ms(self, tmp_path, monkeypatch, prebuilt_cache_file):
+        """D-05: unit-level perf ceiling on the cache-hit path.
+
+        Not a CI-wide perf gate (the benchmark harness owns the public 500ms claim);
+        this asserts the call path is cheap enough that a regression (e.g. reading the
+        cache a second time, or re-walking lfx.components) shows up locally.
+
+        Kept as a sync def so asyncio.run() creates the ONLY event loop for this test.
+        Per Assumption A2 (RESEARCH.md): if this assertion flakes on slow CI hardware,
+        widen the ceiling here with a comment rather than deleting the assertion.
+        """
+        import shutil
+        import time
+
+        from lfx.interface import components as ci
+
+        cache_file = tmp_path / "component_index.json"
+        shutil.copy(prebuilt_cache_file, cache_file)
+        monkeypatch.setattr(ci, "_get_cache_path", lambda: cache_file)
+        _reset_component_cache_singleton(monkeypatch)
+
+        start = time.perf_counter()
+        result = asyncio.run(ci.get_and_cache_all_types_dict(_fake_settings_service()))
+        elapsed = time.perf_counter() - start
+
+        assert result is not None, "perf test cannot run without a valid cache-hit"
+        assert result, "perf test: cache-hit returned empty dict"
+        assert elapsed < 0.5, (
+            f"cache-hit path took {elapsed * 1000:.1f}ms, must be under 500ms (D-05). "
+            "Regression likely: check for double-read of cache file or residual walk of lfx.components."
+        )
