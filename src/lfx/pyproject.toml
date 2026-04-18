@@ -50,6 +50,10 @@ dependencies = [
     "setuptools>=80.0.0,<81.0.0",
     "wheel>=0.46.2,<1.0.0",
     "mcp>=1.17.0,<2.0.0",
+    # anyio 4.13 dropped sniffio from its metadata but still imports it; declare
+    # explicitly so `uv sync --package lfx` installs it in stripped environments
+    # like the lfx-reference Docker image (surfaced by Phase 5 CNT-01 CI).
+    "sniffio>=1.3.0,<2.0.0",
 ]
 
 [project.scripts]
