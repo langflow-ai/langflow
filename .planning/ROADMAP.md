@@ -179,7 +179,8 @@ Plans:
   2. On cold start in a fresh container with a pre-baked cache, the index-build checkpoint (Phase 1 harness `after-component-index` minus `before-run-flow`) is under 500ms, down from the ~3.4s measured on `lfx_with_flow` 2026-04-18 (IDX-08).
   3. Cache-miss (missing file, version mismatch, parse error) falls through to the full rebuild without error, emitting the IDX-07 warning so dev environments notice (IDX-08).
   4. A parity test loads the same flow through both cache-hit and cache-miss paths and asserts byte-identical final output + vertex execution order via the Phase 2 `_capture_parity_snapshot` helper (IDX-09).
-**Plans**: TBD
+**Plans**: 2/2 complete (05.5-01: IDX-08 cache-hit short-circuit; 05.5-02: IDX-09 parity + perf test)
+**Status**: COMPLETE (2026-04-18)
 
 **Wave hints for parallelization:**
 - wave 1: IDX-08 (read-path short-circuit in `_read_component_index` + caller threading) + IDX-09 (parity test) — can develop in parallel; tests exercise both paths by controlling whether the cache file exists.
