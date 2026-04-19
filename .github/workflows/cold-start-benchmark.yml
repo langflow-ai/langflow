@@ -424,7 +424,9 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: cold-start-benchmark-reports
-          path: src/backend/tests/benchmarks/reports/
+          path: |
+            src/backend/tests/benchmarks/reports/
+            src/backend/tests/benchmarks/thresholds.json
           if-no-files-found: warn
 
       - name: Record override label usage
