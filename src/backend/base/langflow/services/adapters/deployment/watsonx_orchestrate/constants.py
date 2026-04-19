@@ -11,10 +11,8 @@ from lfx.services.adapters.deployment.schema import DeploymentType
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 
 SUPPORTED_ADAPTER_DEPLOYMENT_TYPES: frozenset[DeploymentType] = frozenset({DeploymentType.AGENT})
-CREATE_MAX_RETRIES = 3
-UPDATE_MAX_RETRIES = 3
 ROLLBACK_MAX_RETRIES = 5
-RETRY_INITIAL_DELAY_SECONDS = 0.5
+ROLLBACK_INITIAL_DELAY_SECONDS = 0.5
 WXO_SANITIZE_RE = re.compile(r"[^a-zA-Z0-9_]")
 WXO_TRANSLATE = str.maketrans({" ": "_", "-": "_"})
 

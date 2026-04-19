@@ -18,8 +18,6 @@ from lfx.services.adapters.payload import AdapterPayloadValidationError
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
-    retry_create,
-    retry_update,
     rollback_created_resources,
     rollback_update_resources,
 )
@@ -263,8 +261,7 @@ async def apply_provider_create_plan_with_rollback(
             )
 
         final_tool_ids = dedupe_list([*plan.existing_tool_ids, *created_tool_ids])
-        agent_create_response = await retry_create(
-            create_agent_deployment,
+        agent_create_response = await create_agent_deployment(
             clients=clients,
             agent_name=plan.deployment_name,
             agent_display_name=deployment_spec.name,
@@ -400,10 +397,7 @@ async def _bind_existing_tools_for_create(
         tool_updates.append((tool_id, writable_tool))
 
     await asyncio.gather(
-        *(
-            retry_update(asyncio.to_thread, clients.tool.update, tool_id, writable_tool)
-            for tool_id, writable_tool in tool_updates
-        )
+        *(asyncio.to_thread(clients.tool.update, tool_id, writable_tool) for tool_id, writable_tool in tool_updates)
     )
 
 

@@ -17,7 +17,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
     retry_rollback,
-    retry_update,
     rollback_update_resources,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.shared import (
@@ -318,10 +317,7 @@ async def _update_existing_tool_connection_deltas(
         tool_updates.append((tool_id, writable_tool))
 
     await asyncio.gather(
-        *(
-            retry_update(asyncio.to_thread, clients.tool.update, tool_id, writable_tool)
-            for tool_id, writable_tool in tool_updates
-        )
+        *(asyncio.to_thread(clients.tool.update, tool_id, writable_tool) for tool_id, writable_tool in tool_updates)
     )
 
 
@@ -377,7 +373,7 @@ async def _apply_tool_renames(
         tool_updates.append((tool_id, writable))
 
     await asyncio.gather(
-        *(retry_update(asyncio.to_thread, clients.tool.update, tool_id, writable) for tool_id, writable in tool_updates)
+        *(asyncio.to_thread(clients.tool.update, tool_id, writable) for tool_id, writable in tool_updates)
     )
     logger.debug("_apply_tool_renames: renamed %d tools: %s", len(tool_updates), tool_renames)
 
@@ -553,7 +549,7 @@ async def apply_provider_update_plan_with_rollback(
             final_update_payload=final_update_payload,
         )
         if final_update_payload:
-            await retry_update(asyncio.to_thread, clients.agent.update, agent_id, final_update_payload)
+            await asyncio.to_thread(clients.agent.update, agent_id, final_update_payload)
     except Exception:
         logger.warning(
             "Provider update failed for agent_id=%s — initiating rollback (tools=%s, apps=%s)",
