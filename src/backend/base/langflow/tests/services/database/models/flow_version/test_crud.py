@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from langflow.services.database.models.flow_version.crud import (
     create_flow_version_entry,
-    get_flow_version_list,
+    get_flow_versions_with_provider_status,
     has_deployment_attachments,
 )
 
@@ -79,15 +79,15 @@ async def test_has_deployment_attachments_prunes_orphan_rows_when_no_live_attach
 
 
 @pytest.mark.asyncio
-async def test_get_flow_version_list_marks_deployment_status_using_live_deployments_only():
+async def test_get_flow_versions_with_provider_status_marks_live_deployment_status():
     db = AsyncMock()
     db.exec = AsyncMock(return_value=_AllResult([(SimpleNamespace(id=uuid4()), True)]))
 
-    rows = await get_flow_version_list(
+    rows = await get_flow_versions_with_provider_status(
         db,
         flow_id=uuid4(),
         user_id=uuid4(),
-        deployment_ids=[uuid4()],
+        provider_account_id=uuid4(),
     )
 
     assert len(rows) == 1

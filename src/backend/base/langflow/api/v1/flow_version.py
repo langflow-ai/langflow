@@ -12,17 +12,15 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.core import remove_api_keys
+from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
 from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
-from langflow.services.database.models.deployment_provider_account.crud import (
-    count_provider_accounts,
-)
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_version.crud import (
     create_flow_version_entry,
     delete_flow_version_entry,
     get_flow_version_entry_or_raise,
-    get_flow_version_list,
     get_flow_version_list_simple,
+    get_flow_versions_with_provider_status,
 )
 from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionConflictError,
@@ -98,9 +96,9 @@ def _translate_version_error(exc: FlowVersionError) -> HTTPException:
     return HTTPException(status_code=500, detail=str(exc))
 
 
-def _ensure_deployments_enabled_for_filters(deployment_ids: list[UUID] | None) -> None:
-    if deployment_ids and not FEATURE_FLAGS.wxo_deployments:
-        msg = "Cannot filter by deployment_ids: the wxo_deployments feature flag is disabled"
+def _ensure_deployments_enabled_for_provider_id(deployment_provider_id: UUID | None) -> None:
+    if deployment_provider_id and not FEATURE_FLAGS.wxo_deployments:
+        msg = "Cannot use deployment_provider_id: the wxo_deployments feature flag is disabled"
         raise HTTPException(status_code=400, detail=msg)
 
 
@@ -115,30 +113,20 @@ async def list_flow_versions(
     session: DbSession,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
-    deployment_ids: Annotated[
-        list[UUID] | None,
-        Query(
-            description=(
-                "Optional deployment ids to filter by (pass as repeated query params, "
-                "e.g. ?deployment_ids=id1&deployment_ids=id2). When provided, only "
-                "versions attached to at least one of these deployments are returned."
-            ),
-        ),
-    ] = None,
     deployment_provider_id: Annotated[
         UUID | None,
         Query(description=("Optional provider account ID for provider account-scoped deployment status.")),
     ] = None,
 ) -> FlowVersionListResponse:
     await _get_user_flow(session, flow_id, current_user.id)
-    _ensure_deployments_enabled_for_filters(deployment_ids)
+    _ensure_deployments_enabled_for_provider_id(deployment_provider_id)
 
-    has_providers = (
-        FEATURE_FLAGS.wxo_deployments and await count_provider_accounts(session, user_id=current_user.id) > 0
-    )
-
-    include_deployment_status = deployment_provider_id is not None
-    if has_providers and include_deployment_status:
+    if deployment_provider_id is not None:
+        await get_owned_provider_account_or_404(
+            provider_id=deployment_provider_id,
+            user_id=current_user.id,
+            db=session,
+        )
         # Best-effort provider-scoped sync before read to keep status fresh.
         try:
             await sync_flow_version_attachments(
@@ -154,20 +142,16 @@ async def list_flow_versions(
                 exc_info=True,
             )
 
-    if has_providers:
-        rows = await get_flow_version_list(
+    if deployment_provider_id is not None:
+        rows = await get_flow_versions_with_provider_status(
             session,
             flow_id,
             current_user.id,
-            limit,
-            offset,
-            deployment_ids=deployment_ids,
+            provider_account_id=deployment_provider_id,
+            limit=limit,
+            offset=offset,
         )
-        # `is_deployed` is included only for provider-scoped status requests.
-        entries = [
-            _version_to_read(entry, is_deployed=(is_deployed if include_deployment_status else None))
-            for entry, is_deployed in rows
-        ]
+        entries = [_version_to_read(entry, is_deployed=is_deployed) for entry, is_deployed in rows]
     else:
         rows_simple = await get_flow_version_list_simple(
             session,

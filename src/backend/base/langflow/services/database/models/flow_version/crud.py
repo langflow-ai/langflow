@@ -167,20 +167,16 @@ async def get_flow_version_list_simple(
     return [(version, False) for version in rows]
 
 
-async def get_flow_version_list(
+async def get_flow_versions_with_provider_status(
     session: AsyncSession,
     flow_id: UUID,
     user_id: UUID,
+    *,
+    provider_account_id: UUID,
     limit: int = 50,
     offset: int = 0,
-    deployment_ids: list[UUID] | None = None,
 ) -> list[tuple[FlowVersion, bool]]:
-    """Return flow versions with a deployed indicator.
-
-    When *deployment_ids* is provided, only versions attached to at least one
-    of those deployments are returned.  The boolean second element is True when
-    the version is attached to *any* deployment (regardless of the filter).
-    """
+    """Return flow versions with deployment status scoped to a provider account."""
     # Deployment status is derived from live parent joins so stale attachment
     # rows (missing deployment parent) do not leak into API status.
     deployed_subquery = (
@@ -189,6 +185,7 @@ async def get_flow_version_list(
         .where(
             FlowVersionDeploymentAttachment.user_id == user_id,
             Deployment.user_id == user_id,
+            Deployment.deployment_provider_account_id == provider_account_id,
             col(FlowVersionDeploymentAttachment.flow_version_id).in_(
                 select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
             ),
@@ -204,19 +201,6 @@ async def get_flow_version_list(
         .outerjoin(deployed_subquery, deployed_subquery.c.flow_version_id == FlowVersion.id)
         .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
     )
-    if deployment_ids:
-        filter_subquery = (
-            select(FlowVersionDeploymentAttachment.flow_version_id)
-            .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
-            .where(
-                col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
-                FlowVersionDeploymentAttachment.user_id == user_id,
-                Deployment.user_id == user_id,
-            )
-            .distinct()
-            .subquery()
-        )
-        stmt = stmt.join(filter_subquery, filter_subquery.c.flow_version_id == FlowVersion.id)
     stmt = stmt.order_by(col(FlowVersion.version_number).desc()).offset(offset).limit(limit)
     rows = (await session.exec(stmt)).all()
     return [(version, bool(is_deployed)) for version, is_deployed in rows]

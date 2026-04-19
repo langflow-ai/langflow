@@ -55,7 +55,7 @@ from langflow.services.database.models.flow.model import (
 )
 
 # TODO: Full-version import/export is planned as a follow-up feature. When implemented,
-# re-add imports for create_flow_version_entry, get_flow_version_list, strip_version_data,
+# re-add imports for create_flow_version_entry, get_flow_versions_with_provider_status, strip_version_data,
 # and FlowVersionError from the flow_version modules.
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
@@ -531,7 +531,7 @@ async def download_multiple_file(
     """Download all flows as a zip file."""
     # TODO: Full-version download (include_version parameter) is planned as a follow-up feature.
     # When implemented, add an include_version: bool = False parameter and embed version
-    # entries in each flow dict using get_flow_version_list and strip_version_data.
+    # entries in each flow dict using get_flow_versions_with_provider_status and strip_version_data.
     flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
 
     if not flows:

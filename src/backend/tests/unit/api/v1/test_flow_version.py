@@ -852,7 +852,7 @@ async def test_rapid_snapshots_with_low_limit(client: AsyncClient, logged_in_hea
 
 
 # ---------------------------------------------------------------------------
-# Deployment-aware: is_deployed indicator + deployment_ids filter
+# Deployment-aware: provider-scoped is_deployed indicator
 # ---------------------------------------------------------------------------
 
 
@@ -889,37 +889,20 @@ async def _create_deployment_row(session, *, user_id, project_id, provider_accou
 
 async def _create_provider_account_row(session, *, user_id):
     """Create a DeploymentProviderAccount row directly in the DB."""
+    from uuid import uuid4
+
     from langflow.services.database.models.deployment_provider_account.crud import create_provider_account
 
+    suffix = uuid4()
     return await create_provider_account(
         session,
         user_id=user_id,
-        name="test-provider-account",
+        name=f"test-provider-account-{suffix}",
         provider_tenant_id=None,
         provider_key="watsonx-orchestrate",
-        provider_url="https://test.example.com",
+        provider_url=f"https://test-{suffix}.example.com",
         api_key="test-key",  # pragma: allowlist secret
     )
-
-
-async def test_list_versions_with_deployment_ids_returns_404_when_feature_disabled(
-    client: AsyncClient, logged_in_headers, monkeypatch
-):
-    """Filtering by deployment_ids should return 404 when wxo_deployments is off."""
-    from uuid import uuid4
-
-    _set_deployments_feature_flag(monkeypatch, enabled=False)
-    flow = await _create_flow(client, logged_in_headers)
-    await _create_snapshot(client, logged_in_headers, flow["id"])
-
-    fake_deployment_id = str(uuid4())
-    resp = await client.get(
-        f"api/v1/flows/{flow['id']}/versions/",
-        params={"deployment_ids": fake_deployment_id},
-        headers=logged_in_headers,
-    )
-    assert resp.status_code == status.HTTP_400_BAD_REQUEST
-    assert resp.json()["detail"] == "Cannot filter by deployment_ids: the wxo_deployments feature flag is disabled"
 
 
 async def test_list_versions_omits_is_deployed_without_provider_scope(
@@ -935,8 +918,8 @@ async def test_list_versions_omits_is_deployed_without_provider_scope(
     assert "is_deployed" not in entries[0]
 
 
-async def test_list_versions_is_deployed_true_when_attached(client: AsyncClient, logged_in_headers, monkeypatch):
-    """Versions attached to a deployment should have is_deployed=True."""
+async def test_list_versions_is_deployed_scoped_to_provider(client: AsyncClient, logged_in_headers, monkeypatch):
+    """Provider-scoped status only reflects deployments under the selected provider."""
     from uuid import UUID
 
     from langflow.services.deps import session_scope
@@ -953,13 +936,15 @@ async def test_list_versions_is_deployed_true_when_attached(client: AsyncClient,
         flow_row = (await session.exec(select(Flow).where(Flow.id == UUID(flow["id"])))).one()
         user_id = flow_row.user_id
         project_id = flow_row.folder_id
-        provider_account = await _create_provider_account_row(session, user_id=user_id)
-        provider_account_id = str(provider_account.id)
+        provider_account_a = await _create_provider_account_row(session, user_id=user_id)
+        provider_account_b = await _create_provider_account_row(session, user_id=user_id)
+        provider_account_a_id = str(provider_account_a.id)
+        provider_account_b_id = str(provider_account_b.id)
         deployment = await _create_deployment_row(
             session,
             user_id=user_id,
             project_id=project_id,
-            provider_account_id=provider_account.id,
+            provider_account_id=provider_account_a.id,
             name="test-deployment",
             resource_key="rk-1",
         )
@@ -974,7 +959,7 @@ async def test_list_versions_is_deployed_true_when_attached(client: AsyncClient,
         client,
         logged_in_headers,
         flow["id"],
-        params={"deployment_provider_id": provider_account_id},
+        params={"deployment_provider_id": provider_account_a_id},
     )
     assert len(entries) == 2
     deployed_entry = next(e for e in entries if e["id"] == snap["id"])
@@ -982,90 +967,17 @@ async def test_list_versions_is_deployed_true_when_attached(client: AsyncClient,
     assert deployed_entry["is_deployed"] is True
     assert undeployed_entry["is_deployed"] is False
 
-
-async def test_list_versions_filter_by_deployment_ids(client: AsyncClient, logged_in_headers, monkeypatch):
-    """Filtering by deployment_ids returns only versions attached to those deployments."""
-    from uuid import UUID
-
-    from langflow.services.deps import session_scope
-
-    _set_deployments_feature_flag(monkeypatch, enabled=True)
-    flow = await _create_flow(client, logged_in_headers)
-    snap1 = await _create_snapshot(client, logged_in_headers, flow["id"], description="deployed-to-d1")
-    snap2 = await _create_snapshot(client, logged_in_headers, flow["id"], description="deployed-to-d2")
-    await _create_snapshot(client, logged_in_headers, flow["id"], description="not-deployed")
-
-    async with session_scope() as session:
-        from langflow.services.database.models.flow.model import Flow
-        from sqlmodel import select
-
-        flow_row = (await session.exec(select(Flow).where(Flow.id == UUID(flow["id"])))).one()
-        user_id = flow_row.user_id
-        project_id = flow_row.folder_id
-        provider_account = await _create_provider_account_row(session, user_id=user_id)
-        provider_account_id = str(provider_account.id)
-        d1 = await _create_deployment_row(
-            session,
-            user_id=user_id,
-            project_id=project_id,
-            provider_account_id=provider_account.id,
-            name="deploy-filter-1",
-            resource_key="rk-filter-1",
-        )
-        d2 = await _create_deployment_row(
-            session,
-            user_id=user_id,
-            project_id=project_id,
-            provider_account_id=provider_account.id,
-            name="deploy-filter-2",
-            resource_key="rk-filter-2",
-        )
-        await _attach_version_to_deployment(
-            session,
-            user_id=user_id,
-            flow_version_id=UUID(snap1["id"]),
-            deployment_id=d1.id,
-        )
-        await _attach_version_to_deployment(
-            session,
-            user_id=user_id,
-            flow_version_id=UUID(snap2["id"]),
-            deployment_id=d2.id,
-        )
-        d1_id = str(d1.id)
-        d2_id = str(d2.id)
-
-    # Filter by d1 only
-    resp = await client.get(
-        f"api/v1/flows/{flow['id']}/versions/",
-        params={"deployment_ids": d1_id, "deployment_provider_id": provider_account_id},
-        headers=logged_in_headers,
+    entries_other_provider = await _list_versions(
+        client,
+        logged_in_headers,
+        flow["id"],
+        params={"deployment_provider_id": provider_account_b_id},
     )
-    assert resp.status_code == status.HTTP_200_OK
-    entries = resp.json()["entries"]
-    assert len(entries) == 1
-    assert entries[0]["id"] == snap1["id"]
-    assert entries[0]["is_deployed"] is True
-
-    # Filter by both d1 and d2
-    resp = await client.get(
-        f"api/v1/flows/{flow['id']}/versions/",
-        params=[
-            ("deployment_ids", d1_id),
-            ("deployment_ids", d2_id),
-            ("deployment_provider_id", provider_account_id),
-        ],
-        headers=logged_in_headers,
-    )
-    assert resp.status_code == status.HTTP_200_OK
-    entries = resp.json()["entries"]
-    assert len(entries) == 2
-    entry_ids = {e["id"] for e in entries}
-    assert snap1["id"] in entry_ids
-    assert snap2["id"] in entry_ids
+    assert len(entries_other_provider) == 2
+    assert all(entry["is_deployed"] is False for entry in entries_other_provider)
 
 
-async def test_list_versions_no_deployment_ids_returns_all(client: AsyncClient, logged_in_headers, monkeypatch):
+async def test_list_versions_plain_mode_returns_all(client: AsyncClient, logged_in_headers, monkeypatch):
     """Without provider scoping, all versions are returned without deployment status."""
     from uuid import UUID
 
@@ -1121,7 +1033,6 @@ async def test_create_snapshot_omits_is_deployed(client: AsyncClient, logged_in_
 async def test_list_versions_hides_deployment_state_when_feature_disabled(
     client: AsyncClient, logged_in_headers, monkeypatch
 ):
-    from unittest.mock import AsyncMock, patch
     from uuid import UUID
 
     from langflow.services.deps import session_scope
@@ -1153,23 +1064,13 @@ async def test_list_versions_hides_deployment_state_when_feature_disabled(
             deployment_id=deployment.id,
         )
 
-    with (
-        patch(
-            "langflow.api.v1.flow_version.count_provider_accounts",
-            new_callable=AsyncMock,
-            return_value=1,
-        ) as mock_count,
-        patch(SYNC_MODULE, new_callable=AsyncMock) as mock_sync,
-    ):
-        resp = await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)
+    resp = await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)
 
     assert resp.status_code == status.HTTP_200_OK
     assert "is_deployed" not in resp.json()["entries"][0]
-    mock_count.assert_not_awaited()
-    mock_sync.assert_not_awaited()
 
 
-async def test_list_versions_rejects_deployment_ids_when_feature_disabled(
+async def test_list_versions_rejects_provider_id_when_feature_disabled(
     client: AsyncClient, logged_in_headers, monkeypatch
 ):
     from uuid import uuid4
@@ -1180,12 +1081,60 @@ async def test_list_versions_rejects_deployment_ids_when_feature_disabled(
 
     resp = await client.get(
         f"api/v1/flows/{flow['id']}/versions/",
-        params={"deployment_ids": str(uuid4())},
+        params={"deployment_provider_id": str(uuid4())},
         headers=logged_in_headers,
     )
 
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
-    assert resp.json()["detail"] == "Cannot filter by deployment_ids: the wxo_deployments feature flag is disabled"
+    assert resp.json()["detail"] == "Cannot use deployment_provider_id: the wxo_deployments feature flag is disabled"
+
+
+async def test_list_versions_rejects_unknown_provider_id(client: AsyncClient, logged_in_headers, monkeypatch):
+    from uuid import uuid4
+
+    _set_deployments_feature_flag(monkeypatch, enabled=True)
+    flow = await _create_flow(client, logged_in_headers)
+    await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    resp = await client.get(
+        f"api/v1/flows/{flow['id']}/versions/",
+        params={"deployment_provider_id": str(uuid4())},
+        headers=logged_in_headers,
+    )
+
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
+    assert resp.json()["detail"] == "Deployment provider account not found."
+
+
+async def test_list_versions_rejects_foreign_provider_id(client: AsyncClient, logged_in_headers, monkeypatch):
+    from uuid import uuid4
+
+    from langflow.services.database.models.user.model import User
+    from langflow.services.deps import session_scope
+
+    _set_deployments_feature_flag(monkeypatch, enabled=True)
+    flow = await _create_flow(client, logged_in_headers)
+    await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    async with session_scope() as session:
+        foreign_user = User(
+            username=f"foreign-provider-owner-{uuid4()}",
+            password=str(uuid4()),
+            is_active=True,
+        )
+        session.add(foreign_user)
+        await session.flush()
+        foreign_provider = await _create_provider_account_row(session, user_id=foreign_user.id)
+        foreign_provider_id = str(foreign_provider.id)
+
+    resp = await client.get(
+        f"api/v1/flows/{flow['id']}/versions/",
+        params={"deployment_provider_id": foreign_provider_id},
+        headers=logged_in_headers,
+    )
+
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
+    assert resp.json()["detail"] == "Deployment provider account not found."
 
 
 # ---------------------------------------------------------------------------

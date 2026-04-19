@@ -25,7 +25,7 @@ from langflow.services.database.models.deployment_provider_account.model import 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.crud import (
     create_flow_version_entry,
-    get_flow_version_list,
+    get_flow_versions_with_provider_status,
     has_deployment_attachments,
 )
 from langflow.services.database.models.flow_version.model import FlowVersion
@@ -623,35 +623,57 @@ class TestListDeploymentsPageAttachmentCount:
 
 
 # ===========================================================================
-# get_flow_version_list marks deployment status using live deployments only
+# Provider-scoped deployment status uses live deployments only
 # ===========================================================================
 
 
 @pytest.mark.asyncio
-class TestGetFlowVersionListDeploymentStatus:
+class TestGetFlowVersionsWithProviderStatus:
     async def test_live_attachment_marks_version_as_deployed(
-        self, db: AsyncSession, flow: Flow, user: User, deployment: Deployment
+        self,
+        db: AsyncSession,
+        flow: Flow,
+        user: User,
+        deployment: Deployment,
+        provider_account: DeploymentProviderAccount,
     ):
         v1 = await _create_version(db, flow, user, n=1)
         await _attach(db, user, v1, deployment)
 
-        rows = await get_flow_version_list(db, flow.id, user.id, deployment_ids=[deployment.id])
+        rows = await get_flow_versions_with_provider_status(
+            db,
+            flow.id,
+            user.id,
+            provider_account_id=provider_account.id,
+        )
         assert len(rows) == 1
         version, is_deployed = rows[0]
         assert version.id == v1.id
         assert is_deployed is True
 
-    async def test_orphan_attachment_does_not_mark_version_as_deployed(self, db: AsyncSession, flow: Flow, user: User):
+    async def test_orphan_attachment_does_not_mark_version_as_deployed(
+        self, db: AsyncSession, flow: Flow, user: User, provider_account: DeploymentProviderAccount
+    ):
         v1 = await _create_version(db, flow, user, n=1)
         await _make_orphan_attachment(db, user, v1)
 
-        rows = await get_flow_version_list(db, flow.id, user.id)
+        rows = await get_flow_versions_with_provider_status(
+            db,
+            flow.id,
+            user.id,
+            provider_account_id=provider_account.id,
+        )
         assert len(rows) == 1
         _, is_deployed = rows[0]
         assert is_deployed is False
 
     async def test_mixed_live_and_orphan_only_live_counts(
-        self, db: AsyncSession, flow: Flow, user: User, deployment: Deployment
+        self,
+        db: AsyncSession,
+        flow: Flow,
+        user: User,
+        deployment: Deployment,
+        provider_account: DeploymentProviderAccount,
     ):
         v1 = await _create_version(db, flow, user, n=1)
         await _attach(db, user, v1, deployment)
@@ -659,7 +681,12 @@ class TestGetFlowVersionListDeploymentStatus:
         v2 = await _create_version(db, flow, user, n=2)
         await _make_orphan_attachment(db, user, v2)
 
-        rows = await get_flow_version_list(db, flow.id, user.id)
+        rows = await get_flow_versions_with_provider_status(
+            db,
+            flow.id,
+            user.id,
+            provider_account_id=provider_account.id,
+        )
         by_id = {version.id: is_deployed for version, is_deployed in rows}
         assert by_id[v1.id] is True
         assert by_id[v2.id] is False
