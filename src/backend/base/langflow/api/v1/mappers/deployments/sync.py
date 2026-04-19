@@ -32,7 +32,7 @@ from lfx.services.interfaces import DeploymentServiceProtocol
 
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.database.models.deployment.crud import (
-    delete_deployment_by_id,
+    delete_deployments_by_ids,
     list_deployments_for_flows_with_provider_info,
     list_project_deployments_with_provider_info,
 )
@@ -240,6 +240,7 @@ async def _sync_deployments_and_attachments_by_provider(
             )
 
             surviving: list[Deployment] = []
+            stale_deployment_ids: list[UUID] = []
             for deployment in deployments:
                 if deployment.resource_key in known_resource_keys:
                     surviving.append(deployment)
@@ -250,7 +251,16 @@ async def _sync_deployments_and_attachments_by_provider(
                     deployment.resource_key,
                     stale_scope_label,
                 )
-                await delete_deployment_by_id(db, user_id=user_id, deployment_id=deployment.id)
+                stale_deployment_ids.append(deployment.id)
+            # TODO: Accumulate stale deployment IDs and orphaned attachment rows across all
+            # provider groups and perform a single cross-provider batched delete instead of
+            # one batched delete per group, to further reduce round-trips when many provider
+            # accounts are involved in a single sync pass. Not done today because buffering
+            # every stale resource across the full sync pass can grow unboundedly in memory;
+            # any implementation should bound that cost (for example, by flushing in chunks
+            # once a size threshold is reached) rather than accumulating without limit.
+            if stale_deployment_ids:
+                await delete_deployments_by_ids(db, user_id=user_id, deployment_ids=stale_deployment_ids)
 
             if surviving:
                 try:

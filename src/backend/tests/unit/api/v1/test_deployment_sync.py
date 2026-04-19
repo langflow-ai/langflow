@@ -1170,6 +1170,74 @@ class TestSyncFlowVersionAttachments:
 
 
 # ---------------------------------------------------------------------------
+# _sync_deployments_and_attachments_by_provider
+# ---------------------------------------------------------------------------
+
+
+class TestSyncDeploymentsAndAttachmentsByProvider:
+    @pytest.mark.asyncio
+    @patch(f"{SYNC_MODULE}.delete_deployments_by_ids", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.get_deployment_adapter")
+    @patch("langflow.api.v1.mappers.deployments.registry.get_deployment_mapper")
+    async def test_batches_stale_deletions_once_per_provider_group(
+        self,
+        mock_get_mapper,
+        mock_get_adapter,
+        mock_fetch_resource_keys,
+        mock_delete_unbound,
+        mock_delete_deployments,
+    ):
+        provider_account_id = uuid4()
+        stale_a = SimpleNamespace(
+            id=uuid4(),
+            resource_key="rk-stale-a",
+            deployment_provider_account_id=provider_account_id,
+        )
+        stale_b = SimpleNamespace(
+            id=uuid4(),
+            resource_key="rk-stale-b",
+            deployment_provider_account_id=provider_account_id,
+        )
+        surviving = SimpleNamespace(
+            id=uuid4(),
+            resource_key="rk-live",
+            deployment_provider_account_id=provider_account_id,
+        )
+        provider_view = _mock_provider_view([_mock_item(item_id="rk-live")])
+        mock_get_adapter.return_value = AsyncMock()
+        mock_fetch_resource_keys.return_value = ({"rk-live"}, provider_view)
+        mapper = MagicMock()
+        mapper.extract_snapshot_bindings.return_value = ["binding-1"]
+        mock_get_mapper.return_value = mapper
+
+        db = MagicMock()
+        db.begin_nested.return_value = _AsyncNoopSavepoint()
+
+        from langflow.api.v1.mappers.deployments.sync import _sync_deployments_and_attachments_by_provider
+
+        await _sync_deployments_and_attachments_by_provider(
+            db=db,
+            user_id=uuid4(),
+            deployments_with_provider=[
+                (stale_a, "watsonx-orchestrate"),
+                (stale_b, "watsonx-orchestrate"),
+                (surviving, "watsonx-orchestrate"),
+            ],
+            stale_scope_label="flow",
+            failure_log_message="ignored",
+            failure_scope_value=uuid4(),
+        )
+
+        mock_delete_deployments.assert_awaited_once()
+        assert set(mock_delete_deployments.await_args.kwargs["deployment_ids"]) == {stale_a.id, stale_b.id}
+        mock_delete_unbound.assert_awaited_once()
+        assert mock_delete_unbound.await_args.kwargs["deployment_ids"] == [surviving.id]
+        assert mock_delete_unbound.await_args.kwargs["bindings"] == ["binding-1"]
+
+
+# ---------------------------------------------------------------------------
 # provider-account scoped sync entry points
 # ---------------------------------------------------------------------------
 

@@ -8,6 +8,7 @@ from langflow.services.database.models.deployment.crud import (
     create_deployment,
     delete_deployment_by_id,
     delete_deployment_by_resource_key,
+    delete_deployments_by_ids,
     deployment_name_exists,
     get_deployment,
     list_deployments_page,
@@ -523,6 +524,79 @@ async def test_delete_by_id_removes_attached_rows_with_fk_on(
         )
     ).all()
     assert deployment_row is None
+    assert attachment_rows == []
+
+
+@pytest.mark.asyncio
+async def test_delete_by_ids_removes_multiple_deployments_and_attached_rows(
+    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
+):
+    flow = Flow(name="flow-del-ids", user_id=user.id, folder_id=folder.id, data={"nodes": [], "edges": []})
+    db.add(flow)
+    await db.flush()
+
+    flow_version_1 = FlowVersion(flow_id=flow.id, user_id=user.id, version_number=1, data={"nodes": [], "edges": []})
+    flow_version_2 = FlowVersion(flow_id=flow.id, user_id=user.id, version_number=2, data={"nodes": [], "edges": []})
+    db.add_all([flow_version_1, flow_version_2])
+    await db.flush()
+
+    deployment_1 = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-delete-ids-1",
+        name="delete-ids-1",
+        deployment_type=DeploymentType.AGENT,
+    )
+    deployment_2 = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-delete-ids-2",
+        name="delete-ids-2",
+        deployment_type=DeploymentType.AGENT,
+    )
+    await db.flush()
+
+    db.add_all(
+        [
+            FlowVersionDeploymentAttachment(
+                user_id=user.id,
+                flow_version_id=flow_version_1.id,
+                deployment_id=deployment_1.id,
+                provider_snapshot_id="snap-del-ids-1",
+            ),
+            FlowVersionDeploymentAttachment(
+                user_id=user.id,
+                flow_version_id=flow_version_2.id,
+                deployment_id=deployment_2.id,
+                provider_snapshot_id="snap-del-ids-2",
+            ),
+        ]
+    )
+    await db.commit()
+
+    deleted = await delete_deployments_by_ids(
+        db,
+        user_id=user.id,
+        deployment_ids=[deployment_1.id, deployment_2.id],
+    )
+    await db.commit()
+    assert deleted == 2
+
+    deployment_rows = (
+        await db.exec(select(Deployment).where(Deployment.id.in_([deployment_1.id, deployment_2.id])))
+    ).all()
+    attachment_rows = (
+        await db.exec(
+            select(FlowVersionDeploymentAttachment).where(
+                FlowVersionDeploymentAttachment.deployment_id.in_([deployment_1.id, deployment_2.id])
+            )
+        )
+    ).all()
+    assert deployment_rows == []
     assert attachment_rows == []
 
 

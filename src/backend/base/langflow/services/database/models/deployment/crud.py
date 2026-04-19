@@ -449,3 +449,36 @@ async def delete_deployment_by_id(
             deployment_uuid,
         )
     return int(result.rowcount or 0)
+
+
+async def delete_deployments_by_ids(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_ids: list[UUID],
+) -> int:
+    """Delete multiple deployments (and their attachments) in two batched statements."""
+    if not deployment_ids:
+        return 0
+    # Delete attachment rows explicitly before deleting the deployments, mirroring
+    # delete_deployment_by_id so behavior stays correct when DB-level FK cascades
+    # are disabled (for example, SQLite with foreign_keys=OFF).
+    await db.exec(
+        delete(FlowVersionDeploymentAttachment).where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+        )
+    )
+
+    stmt = delete(Deployment).where(
+        Deployment.user_id == user_id,
+        col(Deployment.id).in_(deployment_ids),
+    )
+    result = await db.exec(stmt)
+    if result.rowcount is None:
+        await logger.aerror(
+            "DELETE rowcount was None for deployments=%s -- "
+            "database driver may not support rowcount for DELETE statements",
+            deployment_ids,
+        )
+    return int(result.rowcount or 0)
