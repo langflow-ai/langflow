@@ -25,10 +25,7 @@ Supported operations (selectable via the operation tab):
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
+from typing import Any
 
 from astrapy import Collection, DataAPIClient, Database
 from astrapy.info import (
@@ -600,7 +597,7 @@ def _stringify(value: Any) -> Any:
     return str(value)
 
 
-def _coerce_documents(value: Any) -> list[Mapping[str, Any]]:
+def _coerce_documents(value: Any) -> list[dict[str, Any]]:
     """Accept either a ``list[dict]`` or a single ``dict`` and normalise to a list."""
     if value is None or value == "":
         return []
