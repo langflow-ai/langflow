@@ -504,6 +504,40 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             provider_result=create_provider_result,
         )
 
+    def util_create_result_from_existing_resource(
+        self,
+        *,
+        existing_resource_key: str,
+    ) -> DeploymentCreateResult:
+        """Build a create-style result payload for DB-only onboarding.
+
+        This path is used when create request includes ``existing_agent_id``
+        without create-time mutation operations. ``created_*`` fields represent
+        what this request created, so they are intentionally empty here.
+        """
+        create_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create_result
+        if create_slot is None:
+            msg = "Watsonx deployment_create_result payload slot is not configured."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        try:
+            create_provider_result = create_slot.apply(
+                {
+                    "app_ids": [],
+                    "tools_with_refs": [],
+                }
+            )
+        except AdapterPayloadValidationError as exc:
+            first_error = exc.error.errors()[0] if exc.error.errors() else {}
+            detail = str(first_error.get("msg") or exc)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Deployment existing-resource create result cannot be normalized: {detail}",
+            ) from exc
+        return DeploymentCreateResult(
+            id=existing_resource_key,
+            provider_result=create_provider_result,
+        )
+
     async def _resolve_provider_payload_from_create_api(
         self,
         *,
