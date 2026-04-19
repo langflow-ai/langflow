@@ -469,6 +469,118 @@ async def test_update_deployment_strips_whitespace(
 
 
 @pytest.mark.asyncio
+async def test_delete_by_id_removes_attached_rows_with_fk_on(
+    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
+):
+    flow = Flow(name="flow-del-id", user_id=user.id, folder_id=folder.id, data={"nodes": [], "edges": []})
+    db.add(flow)
+    await db.flush()
+
+    flow_version_1 = FlowVersion(flow_id=flow.id, user_id=user.id, version_number=1, data={"nodes": [], "edges": []})
+    flow_version_2 = FlowVersion(flow_id=flow.id, user_id=user.id, version_number=2, data={"nodes": [], "edges": []})
+    db.add_all([flow_version_1, flow_version_2])
+    await db.flush()
+
+    deployment = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-delete-id",
+        name="delete-id",
+        deployment_type=DeploymentType.AGENT,
+    )
+    await db.flush()
+
+    db.add_all(
+        [
+            FlowVersionDeploymentAttachment(
+                user_id=user.id,
+                flow_version_id=flow_version_1.id,
+                deployment_id=deployment.id,
+                provider_snapshot_id="snap-del-id-1",
+            ),
+            FlowVersionDeploymentAttachment(
+                user_id=user.id,
+                flow_version_id=flow_version_2.id,
+                deployment_id=deployment.id,
+                provider_snapshot_id="snap-del-id-2",
+            ),
+        ]
+    )
+    await db.commit()
+
+    deleted = await delete_deployment_by_id(db, user_id=user.id, deployment_id=deployment.id)
+    await db.commit()
+    assert deleted == 1
+
+    deployment_row = (await db.exec(select(Deployment).where(Deployment.id == deployment.id))).first()
+    attachment_rows = (
+        await db.exec(
+            select(FlowVersionDeploymentAttachment).where(
+                FlowVersionDeploymentAttachment.deployment_id == deployment.id
+            )
+        )
+    ).all()
+    assert deployment_row is None
+    assert attachment_rows == []
+
+
+@pytest.mark.asyncio
+async def test_delete_by_resource_key_removes_attached_rows_with_fk_on(
+    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
+):
+    flow = Flow(name="flow-del-rk", user_id=user.id, folder_id=folder.id, data={"nodes": [], "edges": []})
+    db.add(flow)
+    await db.flush()
+
+    flow_version = FlowVersion(flow_id=flow.id, user_id=user.id, version_number=1, data={"nodes": [], "edges": []})
+    db.add(flow_version)
+    await db.flush()
+
+    deployment = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-delete-rk",
+        name="delete-rk",
+        deployment_type=DeploymentType.AGENT,
+    )
+    await db.flush()
+
+    db.add(
+        FlowVersionDeploymentAttachment(
+            user_id=user.id,
+            flow_version_id=flow_version.id,
+            deployment_id=deployment.id,
+            provider_snapshot_id="snap-del-rk-1",
+        )
+    )
+    await db.commit()
+
+    deleted = await delete_deployment_by_resource_key(
+        db,
+        user_id=user.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-delete-rk",
+    )
+    await db.commit()
+    assert deleted == 1
+
+    deployment_row = (await db.exec(select(Deployment).where(Deployment.id == deployment.id))).first()
+    attachment_rows = (
+        await db.exec(
+            select(FlowVersionDeploymentAttachment).where(
+                FlowVersionDeploymentAttachment.deployment_id == deployment.id
+            )
+        )
+    ).all()
+    assert deployment_row is None
+    assert attachment_rows == []
+
+
+@pytest.mark.asyncio
 async def test_deployment_name_exists_returns_true_when_found(
     db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
 ):

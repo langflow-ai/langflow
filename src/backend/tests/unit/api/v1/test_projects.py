@@ -2051,3 +2051,41 @@ async def test_update_project_with_deployed_component_returns_409_guard(
     )
     assert update_resp.status_code == status.HTTP_409_CONFLICT
     assert "cannot be moved to another project" in update_resp.json()["detail"]
+
+
+async def test_delete_project_with_deployments_returns_409_project_guard(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    active_user,
+):
+    project_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "delete-guard-project", "description": "", "flows_list": [], "components_list": []},
+        headers=logged_in_headers,
+    )
+    assert project_resp.status_code == status.HTTP_201_CREATED
+    project_id = project_resp.json()["id"]
+
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={
+            "name": "delete-guard-flow",
+            "folder_id": project_id,
+            "data": {"nodes": [], "edges": []},
+        },
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = UUID(flow_resp.json()["id"])
+
+    await _attach_deployment_to_flow(
+        user_id=active_user.id,
+        flow_id=flow_id,
+        project_id=UUID(project_id),
+    )
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert delete_resp.status_code == status.HTTP_409_CONFLICT
+    detail = delete_resp.json()["detail"]
+    assert "project cannot be deleted because it has deployments" in detail.lower()
+    assert "flow cannot be deleted because it has deployed versions" not in detail.lower()

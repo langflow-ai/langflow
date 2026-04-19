@@ -128,7 +128,7 @@ class TestFetchProviderResourceKeys:
         assert provider_view is adapter.list.return_value
 
     @pytest.mark.asyncio
-    async def test_skips_items_with_no_id(self):
+    async def test_empty_provider_id_raises_value_error(self):
         adapter = AsyncMock()
         adapter.list.return_value = _mock_provider_view(
             [
@@ -139,16 +139,14 @@ class TestFetchProviderResourceKeys:
 
         from langflow.api.v1.mappers.deployments.helpers import fetch_provider_resource_keys
 
-        known_keys, provider_view = await fetch_provider_resource_keys(
-            deployment_adapter=adapter,
-            user_id=uuid4(),
-            provider_id=uuid4(),
-            db=AsyncMock(),
-            resource_keys=["rk-1"],
-        )
-
-        assert known_keys == {"rk-1"}
-        assert provider_view is adapter.list.return_value
+        with pytest.raises(ValueError, match="empty id"):
+            await fetch_provider_resource_keys(
+                deployment_adapter=adapter,
+                user_id=uuid4(),
+                provider_id=uuid4(),
+                db=AsyncMock(),
+                resource_keys=["rk-1"],
+            )
 
     @pytest.mark.asyncio
     async def test_empty_provider_response(self):
@@ -956,7 +954,7 @@ class TestFetchProviderSnapshotKeys:
         adapter.list_snapshots.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_provider_error_raises_502(self):
+    async def test_provider_error_raises_500(self):
         adapter = AsyncMock()
         adapter.list_snapshots.side_effect = RuntimeError("provider down")
 
@@ -971,7 +969,7 @@ class TestFetchProviderSnapshotKeys:
                 snapshot_ids=["snap-1"],
             )
 
-        assert exc_info.value.status_code == 502
+        assert exc_info.value.status_code == 500
 
     @pytest.mark.asyncio
     async def test_falsy_snapshot_id_from_provider_raises_value_error(self):
@@ -1103,6 +1101,27 @@ class TestSyncAttachmentSnapshotIds:
         assert counts[dep_id] == 2
         mock_delete_att.assert_not_awaited()
 
+    @pytest.mark.asyncio
+    @patch(f"{SYNC_MODULE}.delete_deployment_attachments_by_keys", new_callable=AsyncMock)
+    async def test_extra_known_provider_snapshots_are_ignored(self, mock_delete_att):
+        dep_id = uuid4()
+        attachments = [
+            _mock_attachment(provider_snapshot_id="snap-1", deployment_id=dep_id),
+            _mock_attachment(provider_snapshot_id="snap-2", deployment_id=dep_id),
+        ]
+
+        from langflow.api.v1.mappers.deployments.sync import sync_attachment_snapshot_ids
+
+        counts = await sync_attachment_snapshot_ids(
+            user_id=uuid4(),
+            attachments=attachments,
+            known_snapshot_ids={"snap-1", "snap-2", "snap-extra"},
+            db=AsyncMock(),
+        )
+
+        assert counts[dep_id] == 2
+        mock_delete_att.assert_not_awaited()
+
 
 # ---------------------------------------------------------------------------
 # sync_flow_version_attachments
@@ -1156,6 +1175,73 @@ class TestSyncFlowVersionAttachments:
 
 
 class TestProviderAccountScopedSync:
+    @pytest.mark.asyncio
+    @patch(f"{SYNC_MODULE}.delete_orphan_attachments_for_flow_ids", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.list_deployments_for_flows_with_provider_info", new_callable=AsyncMock)
+    async def test_sync_flow_deployment_state_returns_early_when_flow_ids_empty(
+        self,
+        mock_list_deployments,
+        mock_delete_orphans,
+    ):
+        from langflow.api.v1.mappers.deployments.sync import sync_flow_deployment_state
+
+        await sync_flow_deployment_state(
+            db=AsyncMock(),
+            flow_ids=[],
+            user_id=uuid4(),
+        )
+
+        mock_delete_orphans.assert_not_awaited()
+        mock_list_deployments.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @patch(f"{SYNC_MODULE}.delete_orphan_attachments_for_flow_ids", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}._sync_deployments_and_attachments_by_provider", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.list_deployments_for_flows_with_provider_info", new_callable=AsyncMock)
+    async def test_sync_flow_deployment_state_deduplicates_flow_ids(
+        self,
+        mock_list_deployments,
+        mock_sync_by_provider,
+        mock_delete_orphans,
+    ):
+        from langflow.api.v1.mappers.deployments.sync import sync_flow_deployment_state
+
+        flow_id = uuid4()
+        mock_list_deployments.return_value = [(_mock_deployment_row("rk-1"), "watsonx-orchestrate")]
+
+        await sync_flow_deployment_state(
+            db=AsyncMock(),
+            flow_ids=[flow_id, flow_id],
+            user_id=uuid4(),
+        )
+
+        assert mock_delete_orphans.await_args.kwargs["flow_ids"] == [flow_id]
+        assert mock_list_deployments.await_args.kwargs["flow_ids"] == [flow_id]
+        mock_sync_by_provider.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{SYNC_MODULE}.delete_orphan_attachments_for_project", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}._sync_deployments_and_attachments_by_provider", new_callable=AsyncMock)
+    @patch(f"{SYNC_MODULE}.list_project_deployments_with_provider_info", new_callable=AsyncMock, return_value=[])
+    async def test_sync_project_deployments_returns_when_no_deployments(
+        self,
+        mock_list_deployments,
+        mock_sync_by_provider,
+        mock_delete_orphans,
+    ):
+        from langflow.api.v1.mappers.deployments.sync import sync_project_deployments
+
+        project_id = uuid4()
+        await sync_project_deployments(
+            db=AsyncMock(),
+            project_id=project_id,
+            user_id=uuid4(),
+        )
+
+        mock_delete_orphans.assert_awaited_once()
+        mock_list_deployments.assert_awaited_once()
+        mock_sync_by_provider.assert_not_awaited()
+
     @pytest.mark.asyncio
     @patch(f"{SYNC_MODULE}.delete_orphan_attachments_for_flow_ids", new_callable=AsyncMock)
     @patch(f"{SYNC_MODULE}._sync_deployments_and_attachments_by_provider", new_callable=AsyncMock)

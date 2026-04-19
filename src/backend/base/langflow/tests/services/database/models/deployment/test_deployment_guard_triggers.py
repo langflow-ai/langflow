@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, cast
+from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.deployment.crud import update_deployment
@@ -10,6 +11,7 @@ from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment.orm_guards import (
     ensure_deployment_immutable_fields,
     ensure_flow_move_allowed,
+    ensure_flow_moves_allowed,
     ensure_provider_account_identity_immutable,
 )
 from langflow.services.database.models.deployment_provider_account.crud import update_provider_account
@@ -205,6 +207,81 @@ async def test_flow_move_guard_blocks_when_flow_is_deployed(
     assert exc_info.value.code == "FLOW_DEPLOYED_IN_PROJECT"
 
 
+@pytest.mark.asyncio
+async def test_flow_moves_guard_allows_empty_batch(db: AsyncSession, target_project: Folder) -> None:
+    await ensure_flow_moves_allowed(
+        db,
+        flow_folder_pairs=[],
+        new_folder_id=target_project.id,
+    )
+
+
+@pytest.mark.asyncio
+async def test_flow_moves_guard_allows_when_all_moves_are_noop(db: AsyncSession, flow: Flow) -> None:
+    await ensure_flow_moves_allowed(
+        db,
+        flow_folder_pairs=[(flow.id, flow.folder_id)],
+        new_folder_id=flow.folder_id,
+    )
+
+
+@pytest.mark.asyncio
+async def test_flow_moves_guard_blocks_when_any_group_has_deployed_flow(
+    db: AsyncSession,
+    user: User,
+    flow: Flow,
+    flow_version: FlowVersion,
+    deployment: Deployment,
+    target_project: Folder,
+) -> None:
+    other_source_project = Folder(name="source-project-2", user_id=user.id)
+    db.add(other_source_project)
+    await db.commit()
+    await db.refresh(other_source_project)
+
+    undeployed_flow = Flow(
+        name="flow-2",
+        user_id=user.id,
+        folder_id=other_source_project.id,
+        data={"nodes": [], "edges": []},
+        updated_at=_utcnow_naive(),
+    )
+    db.add(undeployed_flow)
+    await db.commit()
+    await db.refresh(undeployed_flow)
+
+    undeployed_flow_version = FlowVersion(
+        flow_id=undeployed_flow.id,
+        user_id=user.id,
+        version_number=1,
+        data={"nodes": [], "edges": []},
+    )
+    db.add(undeployed_flow_version)
+    await db.commit()
+    await db.refresh(undeployed_flow_version)
+
+    await create_deployment_attachment(
+        db,
+        user_id=user.id,
+        flow_version_id=flow_version.id,
+        deployment_id=deployment.id,
+        provider_snapshot_id="snapshot-batch",
+    )
+    await db.commit()
+
+    with pytest.raises(DeploymentGuardError) as exc_info:
+        await ensure_flow_moves_allowed(
+            db,
+            flow_folder_pairs=[
+                (flow.id, flow.folder_id),
+                (undeployed_flow.id, undeployed_flow.folder_id),
+            ],
+            new_folder_id=target_project.id,
+        )
+
+    assert exc_info.value.code == "FLOW_DEPLOYED_IN_PROJECT"
+
+
 def test_deployment_immutable_field_guard_blocks_project_move(deployment: Deployment, target_project: Folder) -> None:
     with pytest.raises(DeploymentGuardError) as exc_info:
         ensure_deployment_immutable_fields(
@@ -237,6 +314,38 @@ def test_deployment_immutable_field_guard_blocks_type_update(deployment: Deploym
     assert exc_info.value.code == "DEPLOYMENT_TYPE_UPDATE"
 
 
+def test_deployment_immutable_field_guard_blocks_resource_key_update(deployment: Deployment) -> None:
+    with pytest.raises(DeploymentGuardError) as exc_info:
+        ensure_deployment_immutable_fields(
+            old_project_id=deployment.project_id,
+            new_project_id=deployment.project_id,
+            old_deployment_type=deployment.deployment_type,
+            new_deployment_type=deployment.deployment_type,
+            old_resource_key=deployment.resource_key,
+            new_resource_key="rk-updated",
+            old_provider_account_id=deployment.deployment_provider_account_id,
+            new_provider_account_id=deployment.deployment_provider_account_id,
+        )
+
+    assert exc_info.value.code == "DEPLOYMENT_RESOURCE_KEY_UPDATE"
+
+
+def test_deployment_immutable_field_guard_blocks_provider_account_move(deployment: Deployment) -> None:
+    with pytest.raises(DeploymentGuardError) as exc_info:
+        ensure_deployment_immutable_fields(
+            old_project_id=deployment.project_id,
+            new_project_id=deployment.project_id,
+            old_deployment_type=deployment.deployment_type,
+            new_deployment_type=deployment.deployment_type,
+            old_resource_key=deployment.resource_key,
+            new_resource_key=deployment.resource_key,
+            old_provider_account_id=deployment.deployment_provider_account_id,
+            new_provider_account_id=uuid4(),
+        )
+
+    assert exc_info.value.code == "DEPLOYMENT_PROVIDER_ACCOUNT_MOVE"
+
+
 def test_provider_identity_guard_blocks_changes(provider_account: DeploymentProviderAccount) -> None:
     with pytest.raises(DeploymentGuardError) as exc_info:
         ensure_provider_account_identity_immutable(
@@ -249,6 +358,45 @@ def test_provider_identity_guard_blocks_changes(provider_account: DeploymentProv
         )
 
     assert exc_info.value.code == "DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE"
+
+
+def test_provider_identity_guard_blocks_provider_key_changes(provider_account: DeploymentProviderAccount) -> None:
+    with pytest.raises(DeploymentGuardError) as exc_info:
+        ensure_provider_account_identity_immutable(
+            old_provider_key=provider_account.provider_key,
+            new_provider_key=cast("DeploymentProviderKey", "changed-provider-key"),
+            old_provider_tenant_id=provider_account.provider_tenant_id,
+            new_provider_tenant_id=provider_account.provider_tenant_id,
+            old_provider_url=provider_account.provider_url,
+            new_provider_url=provider_account.provider_url,
+        )
+
+    assert exc_info.value.code == "DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE"
+
+
+def test_provider_identity_guard_blocks_provider_tenant_id_changes(provider_account: DeploymentProviderAccount) -> None:
+    with pytest.raises(DeploymentGuardError) as exc_info:
+        ensure_provider_account_identity_immutable(
+            old_provider_key=provider_account.provider_key,
+            new_provider_key=provider_account.provider_key,
+            old_provider_tenant_id=provider_account.provider_tenant_id,
+            new_provider_tenant_id="tenant-updated",
+            old_provider_url=provider_account.provider_url,
+            new_provider_url=provider_account.provider_url,
+        )
+
+    assert exc_info.value.code == "DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE"
+
+
+def test_provider_identity_guard_allows_noop(provider_account: DeploymentProviderAccount) -> None:
+    ensure_provider_account_identity_immutable(
+        old_provider_key=provider_account.provider_key,
+        new_provider_key=provider_account.provider_key,
+        old_provider_tenant_id=provider_account.provider_tenant_id,
+        new_provider_tenant_id=provider_account.provider_tenant_id,
+        old_provider_url=provider_account.provider_url,
+        new_provider_url=provider_account.provider_url,
+    )
 
 
 @pytest.mark.asyncio

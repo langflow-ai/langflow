@@ -422,6 +422,28 @@ class TestUpdateDeploymentAttachmentProviderSnapshotId:
                 provider_snapshot_id="   ",
             )
 
+    async def test_same_snapshot_id_is_noop(
+        self, db: AsyncSession, user: User, flow_version: FlowVersion, deployment: Deployment
+    ):
+        att = await create_deployment_attachment(
+            db,
+            user_id=user.id,
+            flow_version_id=flow_version.id,
+            deployment_id=deployment.id,
+            provider_snapshot_id="snap-same",
+        )
+        await db.commit()
+
+        updated = await update_deployment_attachment_provider_snapshot_id(
+            db,
+            attachment=att,
+            provider_snapshot_id="snap-same",
+        )
+        await db.commit()
+
+        assert updated.id == att.id
+        assert updated.provider_snapshot_id == "snap-same"
+
 
 @pytest.mark.asyncio
 class TestUpdateFlowVersionByProviderSnapshotId:

@@ -12,6 +12,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from langflow.api.utils.flow_utils import cascade_delete_flow
 from langflow.services.database.models.deployment.crud import list_deployments_page
 from langflow.services.database.models.deployment.guards import (
     check_flow_has_deployed_versions,
@@ -38,7 +39,11 @@ from langflow.services.database.models.flow_version_deployment_attachment.model 
     FlowVersionDeploymentAttachment,
 )
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.message.model import MessageTable
+from langflow.services.database.models.traces.model import SpanTable, TraceTable
+from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User
+from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -242,6 +247,60 @@ class TestGuardOrphanPruning:
 
 
 # ===========================================================================
+# cascade_delete_flow
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+class TestCascadeDeleteFlow:
+    async def test_deletes_related_rows_under_fk_enforcement(self, db: AsyncSession, flow: Flow, user: User):
+        version = await _create_version(db, flow, user)
+
+        trace = TraceTable(name="trace-1", flow_id=flow.id, session_id="session-1")
+        db.add(trace)
+        await db.flush()
+
+        span = SpanTable(name="span-1", trace_id=trace.id)
+        message = MessageTable(
+            sender="user",
+            sender_name="User",
+            session_id="session-1",
+            text="hello",
+            flow_id=flow.id,
+        )
+        transaction = TransactionTable(vertex_id="vertex-1", status="ok", flow_id=flow.id)
+        vertex_build = VertexBuildTable(id="vertex-1", valid=True, flow_id=flow.id)
+        db.add_all([span, message, transaction, vertex_build])
+        await db.commit()
+
+        await cascade_delete_flow(db, flow.id)
+        await db.commit()
+
+        assert (await db.exec(select(Flow).where(Flow.id == flow.id))).first() is None
+        assert (await db.exec(select(FlowVersion).where(FlowVersion.id == version.id))).first() is None
+        assert (await db.exec(select(TraceTable).where(TraceTable.id == trace.id))).first() is None
+        assert (await db.exec(select(SpanTable).where(SpanTable.id == span.id))).first() is None
+        assert (await db.exec(select(MessageTable).where(MessageTable.flow_id == flow.id))).all() == []
+        assert (await db.exec(select(TransactionTable).where(TransactionTable.flow_id == flow.id))).all() == []
+        assert (await db.exec(select(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))).all() == []
+
+    async def test_deletes_flow_when_only_orphan_attachments_exist(self, db: AsyncSession, flow: Flow, user: User):
+        version = await _create_version(db, flow, user)
+        orphan = await _make_orphan_attachment(db, user, version, snapshot_id="orphan-only")
+
+        await cascade_delete_flow(db, flow.id)
+        await db.commit()
+
+        assert (await db.exec(select(Flow).where(Flow.id == flow.id))).first() is None
+        assert (await db.exec(select(FlowVersion).where(FlowVersion.id == version.id))).first() is None
+        assert (
+            await db.exec(
+                select(FlowVersionDeploymentAttachment).where(FlowVersionDeploymentAttachment.id == orphan.id)
+            )
+        ).first() is None
+
+
+# ===========================================================================
 # has_deployment_attachments
 # ===========================================================================
 
@@ -344,6 +403,42 @@ class TestDeleteOrphanAttachmentsForFlowIds:
         deleted = await delete_orphan_attachments_for_flow_ids(db, user_id=user.id, flow_ids=[])
         assert deleted == 0
 
+    async def test_scopes_deletion_by_user(self, db: AsyncSession, user: User, flow: Flow):
+        version = await _create_version(db, flow, user)
+        own_orphan = await _make_orphan_attachment(db, user, version, snapshot_id="self-orphan")
+
+        other_user = User(username="other-user", password=_TEST_PASSWORD, is_active=True)
+        db.add(other_user)
+        await db.commit()
+        await db.refresh(other_user)
+
+        other_folder = Folder(name="other-user-project", user_id=other_user.id)
+        db.add(other_folder)
+        await db.commit()
+        await db.refresh(other_folder)
+
+        other_flow = Flow(name="other-user-flow", user_id=other_user.id, folder_id=other_folder.id)
+        db.add(other_flow)
+        await db.commit()
+        await db.refresh(other_flow)
+
+        other_version = await _create_version(db, other_flow, other_user)
+        other_orphan = await _make_orphan_attachment(db, other_user, other_version, snapshot_id="other-orphan")
+
+        deleted = await delete_orphan_attachments_for_flow_ids(db, user_id=user.id, flow_ids=[flow.id])
+        await db.commit()
+        assert deleted == 1
+
+        remaining_ids = (
+            await db.exec(
+                select(FlowVersionDeploymentAttachment.id).where(
+                    FlowVersionDeploymentAttachment.id.in_([own_orphan.id, other_orphan.id])
+                )
+            )
+        ).all()
+        assert own_orphan.id not in remaining_ids
+        assert other_orphan.id in remaining_ids
+
 
 # ===========================================================================
 # delete_orphan_attachments_for_project
@@ -380,6 +475,42 @@ class TestDeleteOrphanAttachmentsForProject:
 
         deleted = await delete_orphan_attachments_for_project(db, user_id=user.id, project_id=other_folder.id)
         assert deleted == 0
+
+    async def test_project_cleanup_scopes_by_user(self, db: AsyncSession, user: User, folder: Folder, flow: Flow):
+        own_version = await _create_version(db, flow, user)
+        own_orphan = await _make_orphan_attachment(db, user, own_version, snapshot_id="own-project-orphan")
+
+        other_user = User(username="project-other-user", password=_TEST_PASSWORD, is_active=True)
+        db.add(other_user)
+        await db.commit()
+        await db.refresh(other_user)
+
+        other_folder = Folder(name="project-other-folder", user_id=other_user.id)
+        db.add(other_folder)
+        await db.commit()
+        await db.refresh(other_folder)
+
+        other_flow = Flow(name="project-other-flow", user_id=other_user.id, folder_id=other_folder.id)
+        db.add(other_flow)
+        await db.commit()
+        await db.refresh(other_flow)
+
+        other_version = await _create_version(db, other_flow, other_user)
+        other_orphan = await _make_orphan_attachment(db, other_user, other_version, snapshot_id="other-project-orphan")
+
+        deleted = await delete_orphan_attachments_for_project(db, user_id=user.id, project_id=folder.id)
+        await db.commit()
+        assert deleted == 1
+
+        remaining_ids = (
+            await db.exec(
+                select(FlowVersionDeploymentAttachment.id).where(
+                    FlowVersionDeploymentAttachment.id.in_([own_orphan.id, other_orphan.id])
+                )
+            )
+        ).all()
+        assert own_orphan.id not in remaining_ids
+        assert other_orphan.id in remaining_ids
 
 
 # ===========================================================================
