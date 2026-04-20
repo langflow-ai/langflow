@@ -60,7 +60,11 @@ const ModelTrigger = ({
           name="Brain"
           className="h-4 w-4 flex-shrink-0 text-muted-foreground"
         />
-        <div className="text-[13px] text-muted-foreground">{placeholder}</div>
+        <div className="text-[13px] text-muted-foreground">
+          {placeholder === "Setup Provider"
+            ? t("model.setupProvider")
+            : placeholder}
+        </div>
       </Button>
     );
   }
