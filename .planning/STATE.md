@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 6 Plan 04 complete (VAL-04 publication surfaces landed)
-last_updated: "2026-04-20T11:58:00.000Z"
-last_activity: 2026-04-20 -- Phase 6 Plan 04 (VAL-04 three-surface publication) complete
+stopped_at: Phase 6 Plan 03 complete (VAL-03 CI verify-mode run + synthetic-regression exhibit landed)
+last_updated: "2026-04-20T12:50:00.000Z"
+last_activity: 2026-04-20 -- Phase 6 Plan 03 (VAL-03 CI verify-mode run 24666601910 + local synthetic-regression evidence) complete
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 43
-  completed_plans: 30
-  percent: 70
+  completed_plans: 31
+  percent: 72
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 ## Current Position
 
 Phase: 6 (validation-and-publication) — EXECUTING
-Plan: 4 of 6 (06-01 VAL-01 post-fix doc + thresholds.json snapshot landed; 06-02 VAL-02 parity doc landed; 06-04 VAL-04 publication surfaces landed; next is 06-03 VAL-03 CI verify-mode run + synthetic-regression exhibit, then 06-05 citation backfill)
+Plan: 5 of 6 (06-01 VAL-01 post-fix doc + thresholds.json snapshot landed; 06-02 VAL-02 parity doc landed; 06-03 VAL-03 CI verify-mode run 24666601910 + synthetic-regression exhibit landed; 06-04 VAL-04 publication surfaces landed; next is 06-05 VAL-05 citation backfill, then 06-06 phase close)
 Status: Executing Phase 6
-Last activity: 2026-04-20 -- Phase 6 Plan 04 (VAL-04 release-notes bullet + deployment-cold-start append + watsonx integration note) complete
+Last activity: 2026-04-20 -- Phase 6 Plan 03 (VAL-03 CI verify-mode run + local synthetic-regression evidence) complete
 
 Phase 4 outcome: [##########] 100% (5/5 plans executed)
 
@@ -51,7 +51,7 @@ Phase 4 outcome: [##########] 100% (5/5 plans executed)
 
 **Recent Trend:**
 
-- Last 5 plans: 04-05 (29m, 2 tasks, 5 files), 04-04 (5m, 2 tasks, 2 files), 04-03 (9m, 2 tasks, 3 files), 04-02 (6m, 2 tasks, 2 files), 04-01 (10m, 3 tasks, 12 files)
+- Last 5 plans: 06-03 (90m, 3 tasks, 5 files), 06-04 (-, -, -), 06-02 (6m, 1 task, 1 file), 06-01 (-, -, -), 05.5-02 (15m, 3 tasks, 1 file)
 - Trend: -
 
 *Updated after each plan completion*
@@ -69,6 +69,7 @@ Phase 4 outcome: [##########] 100% (5/5 plans executed)
 | Phase 05.5 P01 | 4 | 3 tasks | 1 file |
 | Phase 05.5 P02 | 15 | 3 tasks | 1 file |
 | Phase 06 P02 | 6 | 1 task | 1 file |
+| Phase 06 P03 | 90 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,8 @@ Recent decisions affecting current work:
 - [Phase 05.5-02]: IDX-09 test: prebuilt_cache_file fixture uses tmp_path_factory + direct setattr (module-scope; no monkeypatch conflict); perf test is sync def + asyncio.run() (not async def) to avoid event-loop conflict with asyncio_mode=auto. 49/49 tests pass, 2 OpenAI-dependent skips.
 - [Phase 06-02]: parity-confirmation-2026-04-20.md scope locked to CONTEXT D-07 (15 requirements, 16 rows incl. combined IDX-04+IDX-05 parity). IMP-11 row NOT added: D-07 predates the Phase-6 IMP-11 discovery (commit 11470f8107), and the regression test TestIMP11LazyValidateGlobals is covered by the umbrella CI run cited at the doc level, so scope adherence wins over optional inclusion. Date stem resolved from thresholds.json .captured_on = 2026-04-20 with hard guard against stale 4d2820ae73 interim.
 - [Phase 06-04]: Three-surface publication split per D-13: release-notes.mdx bullet owns the 4-row headline before/after table (authoritative anchor with scannable deltas); deployment-cold-start.mdx `### Measured improvements` append stays concise (~11 lines per D-15) with 3-bullet lfx summary and cross-link back to /release-notes; watsonx-integration-note.md (496 words, local-only via .git/info/exclude) is operator-scoped with env settings + pre-bake recipe. `langflow_run_no_change_restart` included in release-notes + watsonx-note but NOT in deployment-cold-start append (audience scoping: deployment-cold-start reads as lfx-container-operator guidance). `lfx_reference_image` NOT in release-notes table (no pre-Phase-5 baseline; covered only in the VAL-01 post-doc).
+- [Phase 06-03]: VAL-03 accepted on 4/4 authoritative-cells-green + Aggregate-gate-step-success for run 24666601910, despite workflow-level conclusion reading `cancelled`. Cancellation came from `langflow_run_http_ready` sentinel timing out at its 5-min budget (known-flaky before Phase 6; thresholds.json has 0 runs for it and workflow line 11 calls it "known-broken scenario"). GH Actions propagates matrix `cancelled` states to workflow conclusion even with matrix-level `continue-on-error: true` (which only swallows `failure`). Per D-12 + D-16 + the plan's "authoritative-cells green = gate green" rule, this is not a blocker; prior run on this branch had this sentinel SKIPPED so the cancellation is not a green-to-not-green regression either.
+- [Phase 06-03]: Makefile `bench-verify-synthetic` required three in-scope fixes before it correctly proved the gate trips. (1) Injection-point: switched from `printf | cat` prepend to `awk` injection AFTER first `from __future__` line (future-imports must be first non-docstring statement in Python). (2) Calibration: bumped sleep from 0.3s to 13.0s so the regressed mean exceeds the threshold on both CI (10549.93ms baseline * 1.15 = 12132.42ms) and local hardware. (3) Stale-derivative-image: force-removed `benchmarks-lean-uncompiled` before driver invocation and dropped `--skip-build` so the driver rebuilds the wrapper from the freshly-injected base (prior cached wrapper from an earlier broken experiment was shadowing fresh input). Result: regressed lfx_bare ran at 18196ms mean (+72.5% delta), driver exited non-zero, Makefile printed PASS.
 
 ### Pending Todos
 
@@ -150,10 +153,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-20T11:58:00.000Z
-Stopped at: Phase 6 Plan 04 complete (VAL-04 publication surfaces; release-notes at e889d26645, deployment-cold-start at aa1daedc7b, watsonx-note local-only at .planning/deliverables/watsonx-integration-note.md)
-Resume file: .planning/phases/06-validation-and-publication/06-03-PLAN.md
-Next step: Execute Plan 06-03 (VAL-03: CI verify-mode run under run-benchmarks label + local synthetic-regression exhibit). Plan 06-05 follows to backfill verify-run ID into post-doc and parity-doc placeholders.
+Last session: 2026-04-20T12:50:00.000Z
+Stopped at: Phase 6 Plan 03 complete (VAL-03 verify-mode CI run 24666601910 green on 4/4 authoritative cells; local synthetic-regression evidence at .planning/phases/06-validation-and-publication/synthetic-regression-evidence/ committed at 391f6117b8; Makefile calibration + stale-image fixes at f3266a74cb and 6866a32471)
+Resume file: .planning/phases/06-validation-and-publication/06-05-PLAN.md
+Next step: Execute Plan 06-05 (VAL-05 citation backfill: replace `<verify-run-id-from-06-03>` placeholder in .planning/benchmarks/post-2026-04-20.md and .planning/benchmarks/parity-confirmation-2026-04-20.md with https://github.com/langflow-ai/langflow/actions/runs/24666601910). Plan 06-06 closes the phase.
 
 ### Phase 3 close notes
 
