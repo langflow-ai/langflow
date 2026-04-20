@@ -75,6 +75,10 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("textarea")) {
+      return;
+    }
     if (e.key !== "Enter" && e.key !== " ") {
       return;
     }
