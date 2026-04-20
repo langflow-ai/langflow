@@ -47,7 +47,7 @@ def create_model_metadata(
     )
 
 
-LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX"]
+LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "vLLM", "IBM WatsonX"]
 
 # Provider metadata configuration
 # Defines the variables (credentials, URLs, etc.) required for each model provider
@@ -223,6 +223,47 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         "mapping": {
             "model_class": "AzureChatOpenAI",
             "model_param": "model",
+        },
+    },
+    "vLLM": {
+        "icon": "vLLM",
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+            {
+                "variable_name": "vLLM API Base URL",
+                "variable_key": "VLLM_API_BASE",
+                "required": True,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "base_url",
+                "component_metadata": {
+                    "mapping_field": "api_base",
+                    "required": False,
+                    "advanced": True,
+                    "info": "Falls back to VLLM_API_BASE environment variable",
+                },
+            },
+            {
+                "variable_name": "vLLM API Key",
+                "variable_key": "VLLM_API_KEY",
+                "required": False,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "api_key",
+                "component_metadata": {
+                    "mapping_field": "api_key",
+                    "required": False,
+                    "advanced": True,
+                    "info": "Falls back to VLLM_API_KEY environment variable (optional for local servers)",
+                },
+            },
+        ],
+        "api_docs_url": "https://docs.vllm.ai/",
+        "mapping": {
+            "model_class": "ChatOpenAI",
+            "model_param": "model_name",
         },
     },
     "IBM WatsonX": {

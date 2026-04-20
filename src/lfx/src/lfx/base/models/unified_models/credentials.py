@@ -399,6 +399,19 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             )
             llm.invoke("test")
 
+        elif provider == "vLLM":
+            import requests
+
+            base_url = variables.get("VLLM_API_BASE")
+            if not base_url:
+                msg = "Invalid vLLM API base URL"
+                logger.error(msg)
+                raise ValueError(msg)
+
+            base_url = base_url.rstrip("/")
+            response = requests.get(f"{base_url}/models", timeout=5)
+            response.raise_for_status()
+
         elif provider == "Ollama":
             import requests
 
@@ -444,9 +457,14 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             logger.error(f"Invalid API key for {provider}: {e}")
             raise ValueError(msg) from e
 
-        # Rethrow specific Ollama errors with a user-facing message
+        # Rethrow specific Ollama/vLLM errors with a user-facing message
         if provider == "Ollama":
             msg = "Invalid Ollama base URL"
+            logger.error(msg)
+            raise ValueError(msg) from e
+
+        if provider == "vLLM":
+            msg = "Invalid vLLM API base URL"
             logger.error(msg)
             raise ValueError(msg) from e
 
