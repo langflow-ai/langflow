@@ -1,7 +1,7 @@
-"""IDX-06 regression: duplicate initialize_auto_login_default_superuser call removal.
+"""regression: duplicate initialize_auto_login_default_superuser call removal.
 
 Guards against re-introduction of the duplicate unconditional call that existed at
-src/backend/base/langflow/main.py lines 194-196 prior to Phase 2. Also confirms the
+src/backend/base/langflow/main.py lines 194-196 prior to . Also confirms the
 conditional call inside the AUTO_LOGIN branch still fires exactly once.
 """
 

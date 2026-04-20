@@ -90,7 +90,7 @@ def _langflow_post_fork(server, worker) -> None:  # noqa: ARG001
     this function MUST remain fully synchronous (no async calls, no
     asyncio.get_event_loop, no await).
 
-    Current responsibilities (CNT-04 fork-hazard audit, RESEARCH.md section
+    Current responsibilities ( fork-hazard audit, RESEARCH.md section
     "Fork Hazard Audit"):
 
     * TelemetryService.client (httpx.AsyncClient) — reset to None so that

@@ -1,4 +1,4 @@
-"""SVC-01 starter-projects hash gate helpers.
+"""starter-projects hash gate helpers.
 
 Computes a content hash over the starter-project JSON files plus the installed
 ``lfx`` package version, and persists it as plaintext under

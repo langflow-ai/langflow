@@ -89,7 +89,7 @@ async def _run_lifespan_chain() -> None:
 
 
 @pytest.mark.asyncio
-async def test_svc04_initialize_services_boot_1_clean(
+async def test_initialize_services_boot_1_clean(
     tmp_config_dir,  # noqa: ARG001 -- fixture side-effect: redirects LANGFLOW_CONFIG_DIR + DB URL
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -110,7 +110,7 @@ async def test_svc04_initialize_services_boot_1_clean(
 
 
 @pytest.mark.asyncio
-async def test_svc04_full_lifespan_sequence_boot_1(
+async def test_full_lifespan_sequence_boot_1(
     tmp_config_dir,  # noqa: ARG001 -- fixture side-effect: redirects LANGFLOW_CONFIG_DIR + DB URL
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -129,7 +129,7 @@ async def test_svc04_full_lifespan_sequence_boot_1(
 
 
 @pytest.mark.asyncio
-async def test_svc04_restart_with_matching_hash_seeds_second_boot(
+async def test_restart_with_matching_hash_seeds_second_boot(
     tmp_config_dir,
     starter_folder_minimal,
     caplog: pytest.LogCaptureFixture,
@@ -174,7 +174,7 @@ async def test_svc04_restart_with_matching_hash_seeds_second_boot(
 
 
 @pytest.mark.asyncio
-async def test_svc04_restart_with_corrupt_hash_falls_through_cleanly(
+async def test_restart_with_corrupt_hash_falls_through_cleanly(
     tmp_config_dir,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -203,7 +203,7 @@ async def test_svc04_restart_with_corrupt_hash_falls_through_cleanly(
 
 
 @pytest.mark.asyncio
-async def test_svc04_force_resync_env_var_second_boot_clean(
+async def test_force_resync_env_var_second_boot_clean(
     tmp_config_dir,  # noqa: ARG001 -- fixture side-effect: redirects LANGFLOW_CONFIG_DIR + DB URL
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
