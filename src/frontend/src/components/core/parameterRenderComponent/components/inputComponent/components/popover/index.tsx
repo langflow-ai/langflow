@@ -1,7 +1,7 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { X } from "lucide-react";
-import { type ReactNode, useCallback, useMemo, useState } from "react";
-import { useIMEInput } from "../../../../hooks/use-ime-input";
+import { type ReactNode, useMemo, useState } from "react";
+import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -190,24 +190,16 @@ const CustomInputPopover = ({
   inspectionPanel,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
-  const [cursor, setCursor] = useState<number | null>(null);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
   const PopoverContentInput =
     editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
-  const commitValue = useCallback(
-    (newValue: string) => onChange?.(newValue),
-    [onChange],
-  );
-
   const { displayValue, inputProps: imeInputProps } =
-    useIMEInput<HTMLInputElement>({
-      value: value ?? "",
-      onCommit: commitValue,
+    useIMEInputForOnChange<HTMLInputElement>({
+      value,
+      onChange,
       inputRef: refInput,
-      cursor,
-      setCursor,
     });
 
   const handleRemoveOption = (

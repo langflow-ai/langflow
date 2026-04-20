@@ -1,8 +1,8 @@
-import { forwardRef, useCallback, useRef, useState } from "react";
+import { forwardRef, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { handleKeyDown } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
-import { useIMEInput } from "../../../hooks/use-ime-input";
+import { useIMEInputForOnChange } from "../../../hooks/use-ime-input";
 
 interface CursorInputProps {
   value: string;
@@ -31,20 +31,12 @@ export const CursorInput = forwardRef<HTMLInputElement, CursorInputProps>(
     },
     ref,
   ) => {
-    const [cursor, setCursor] = useState<number | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const commitValue = useCallback(
-      (newValue: string) => onChange(newValue),
-      [onChange],
-    );
-
-    const { displayValue, inputProps } = useIMEInput<HTMLInputElement>({
+    const { displayValue, inputProps } = useIMEInputForOnChange<HTMLInputElement>({
       value,
-      onCommit: commitValue,
+      onChange,
       inputRef,
-      cursor,
-      setCursor,
     });
 
     const handleInputBlur = () => {

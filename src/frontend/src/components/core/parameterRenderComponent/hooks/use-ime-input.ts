@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type InputLikeElement = HTMLInputElement | HTMLTextAreaElement;
 
@@ -107,7 +107,35 @@ export function useIMEInput<T extends InputLikeElement>({
   };
 }
 
-function normalizeNFC(value: string | null | undefined): string {
+export function normalizeNFC(value: string | null | undefined): string {
   if (value == null) return "";
   return typeof value.normalize === "function" ? value.normalize("NFC") : value;
+}
+
+/**
+ * Convenience wrapper for the common case: owner-component whose commit is a
+ * plain `(value: string) => void` callback. Bundles cursor state + commitValue
+ * memoization so call sites don't each roll their own.
+ */
+export function useIMEInputForOnChange<T extends InputLikeElement>({
+  value,
+  onChange,
+  inputRef,
+}: {
+  value: string | null | undefined;
+  onChange?: (value: string) => void;
+  inputRef: React.RefObject<T | null>;
+}): UseIMEInputResult<T> {
+  const [cursor, setCursor] = useState<number | null>(null);
+  const commitValue = useCallback(
+    (newValue: string) => onChange?.(newValue),
+    [onChange],
+  );
+  return useIMEInput<T>({
+    value: value ?? "",
+    onCommit: commitValue,
+    inputRef,
+    cursor,
+    setCursor,
+  });
 }

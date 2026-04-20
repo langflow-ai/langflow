@@ -8,7 +8,7 @@ import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { useIMEInput } from "../../hooks/use-ime-input";
+import { normalizeNFC, useIMEInput } from "../../hooks/use-ime-input";
 import type { InputProps, TextAreaComponentType } from "../../types";
 import { getIconName } from "../inputComponent/components/helpers/get-icon-name";
 
@@ -214,13 +214,7 @@ export default function TextAreaComponent({
       <ComponentTextModal
         changeVisibility={updateVisibility}
         value={displayValue}
-        setValue={(newValue) =>
-          commitValue(
-            typeof newValue?.normalize === "function"
-              ? newValue.normalize("NFC")
-              : newValue,
-          )
-        }
+        setValue={(newValue) => commitValue(normalizeNFC(newValue))}
         disabled={disabled}
         onCloseModal={() => changeWebhookFormat("singleline")}
       >

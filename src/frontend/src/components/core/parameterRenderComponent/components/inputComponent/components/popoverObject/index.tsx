@@ -1,5 +1,4 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
-import { useCallback, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Command,
@@ -15,7 +14,7 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { classNames, cn } from "@/utils/utils";
-import { useIMEInput } from "../../../../hooks/use-ime-input";
+import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
 
 const CustomInputPopoverObject = ({
   id,
@@ -43,23 +42,14 @@ const CustomInputPopoverObject = ({
   showOptions,
   inspectionPanel,
 }) => {
-  const [cursor, setCursor] = useState<number | null>(null);
-
   const PopoverContentInput =
     editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
-  const commitValue = useCallback(
-    (newValue: string) => onChange?.(newValue),
-    [onChange],
-  );
-
   const { displayValue, inputProps: imeInputProps } =
-    useIMEInput<HTMLInputElement>({
-      value: value ?? "",
-      onCommit: commitValue,
+    useIMEInputForOnChange<HTMLInputElement>({
+      value,
+      onChange,
       inputRef: refInput,
-      cursor,
-      setCursor,
     });
 
   const isSingleSelectionMode =
@@ -88,7 +78,7 @@ const CustomInputPopoverObject = ({
           type="text"
           onBlur={onInputLostFocus}
           {...(isSelectionMode ? {} : imeInputProps)}
-          readOnly={isSelectionMode || undefined}
+          readOnly={Boolean(isSelectionMode) || undefined}
           value={isSelectionMode ? selectionDisplay : displayValue}
           autoFocus={autoFocus}
           disabled={disabled}
@@ -128,7 +118,7 @@ const CustomInputPopoverObject = ({
           <CommandInput placeholder={optionsPlaceholder} />
           <CommandList>
             <CommandGroup defaultChecked={false}>
-              {options.map((option, index) => (
+              {(options ?? []).map((option, index) => (
                 <CommandItem
                   className="group"
                   key={option.id}
