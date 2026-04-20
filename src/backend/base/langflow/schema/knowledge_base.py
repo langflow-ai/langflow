@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -53,6 +56,60 @@ class ChunkInfo(BaseModel):
 
 class PaginatedChunkResponse(BaseModel):
     chunks: list[ChunkInfo]
+    total: int
+    page: int
+    limit: int
+    total_pages: int
+
+
+class IngestionRunItemInfo(BaseModel):
+    """Per-item outcome inside a run (``ingestion_run.items`` row shape)."""
+
+    item_id: str
+    display_name: str
+    status: str
+    chunks_created: int = 0
+    error_message: str | None = None
+
+
+class IngestionRunInfo(BaseModel):
+    """Lightweight row shape for run-list endpoints.
+
+    Excludes the full per-item array so list responses stay small even
+    for KBs with many large runs. Clients fetch the detail endpoint
+    when the user drills into a specific run.
+    """
+
+    id: str
+    kb_name: str
+    kb_id: str | None = None
+    job_id: str | None = None
+    source_type: str
+    status: str
+    error_message: str | None = None
+    total_items: int = 0
+    succeeded: int = 0
+    failed: int = 0
+    skipped: int = 0
+    total_bytes: int = 0
+    chunks_created: int = 0
+    started_at: datetime
+    finished_at: datetime | None = None
+
+
+class IngestionRunDetail(IngestionRunInfo):
+    """Full run row including per-item breakdown + source config.
+
+    Returned by ``GET /{kb_name}/runs/{run_id}`` so the UI can render
+    a file-by-file drill-down with individual error messages.
+    """
+
+    source_config: dict[str, Any] = {}
+    items: list[IngestionRunItemInfo] = []
+
+
+class PaginatedIngestionRunResponse(BaseModel):
+    runs: list[IngestionRunInfo]
     total: int
     page: int
     limit: int

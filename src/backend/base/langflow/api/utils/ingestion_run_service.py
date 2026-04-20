@@ -21,6 +21,8 @@ from lfx.base.knowledge_bases.ingestion_sources.base import (
     IngestionSummary,
 )
 from lfx.log.logger import logger
+from sqlalchemy import func
+from sqlmodel import select
 
 from langflow.services.database.models.ingestion_run import IngestionRun, IngestionRunStatus
 from langflow.services.deps import session_scope
@@ -134,3 +136,52 @@ def _serialize_item(item) -> dict:
         "chunks_created": item.chunks_created,
         "error_message": item.error_message,
     }
+
+
+async def list_runs_for_kb(
+    *,
+    kb_name: str,
+    user_id: UUID,
+    page: int = 1,
+    limit: int = 50,
+) -> tuple[list[IngestionRun], int]:
+    """Return a page of runs for ``kb_name`` scoped to ``user_id``.
+
+    Runs are scoped to the user so one account can't observe another's
+    ingestion history. Ordered newest first — the drill-down UI reads
+    the most recent run the vast majority of the time.
+
+    Returns the page of rows plus the total count (needed so the UI
+    can render pagination without a second round-trip).
+    """
+    offset = max(page - 1, 0) * limit
+    async with session_scope() as session:
+        base_filter = (IngestionRun.kb_name == kb_name) & (IngestionRun.user_id == user_id)
+
+        count_stmt = select(func.count()).select_from(IngestionRun).where(base_filter)
+        total = (await session.exec(count_stmt)).one()
+
+        page_stmt = (
+            select(IngestionRun)
+            .where(base_filter)
+            .order_by(IngestionRun.started_at.desc())  # type: ignore[attr-defined]
+            .offset(offset)
+            .limit(limit)
+        )
+        rows = list((await session.exec(page_stmt)).all())
+
+    return rows, int(total)
+
+
+async def get_run(run_id: UUID, *, user_id: UUID) -> IngestionRun | None:
+    """Fetch a single run, scoped to ``user_id`` for authz.
+
+    Returns ``None`` when the run is missing *or* belongs to someone
+    else — the caller maps both to 404 so a user can't enumerate
+    other users' run ids.
+    """
+    async with session_scope() as session:
+        row = await session.get(IngestionRun, run_id)
+    if row is None or row.user_id != user_id:
+        return None
+    return row
