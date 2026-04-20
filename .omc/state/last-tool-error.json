@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"docker exec langflow-sso-rc6 grep -l \\\"changeLanguage\\\" /app/.venv/lib/python3.12/site-packages/langflow/frontend/assets/*.js 2>&1\",\"description\":\"Check if changeLanguage is in bundled JS\"...",
-  "error": "Exit code 1\n(eval):1: no matches found: /app/.venv/lib/python3.12/site-packages/langflow/frontend/assets/*.js",
-  "timestamp": "2026-04-19T08:21:27.994Z",
-  "retry_count": 2
-}
