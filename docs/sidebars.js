@@ -223,6 +223,11 @@ module.exports = {
               label: "Deploy Langflow on a remote server"
             },
             {
+              type: "doc",
+              id: "Deployment/deployment-cold-start",
+              label: "Cold-start optimization"
+            },
+            {
               type: "category",
               label: "Kubernetes",
               items: [

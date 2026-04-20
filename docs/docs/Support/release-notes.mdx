@@ -111,6 +111,21 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     The **Policies** component uses [ToolGuard](https://github.com/AgentToolkit/toolguard) to generate guard code from natural-language business policies and apply it to agent tools.
     For more information, see [Policies (Beta)](../Components/policies.mdx).
 
+- Cold-start performance improvements for `lfx run` and `langflow run`
+
+    Cold-start latency is reduced on the `lfx run` execution path and on `langflow run` restart scenarios. The gains come from deferred heavy imports on the Graph hot path, atomic and version-stamped component index, parallelized lifespan tasks, event-driven MCP startup, and a persisted component-index cache that skips the full package walk when the installed lfx version matches. The reference `langflowai/lfx` image also sets `UV_COMPILE_BYTECODE=1` at build time and uses a multi-stage layer layout so `.pyc` files are baked into the image layer.
+
+    Cold-start numbers (Linux CI, Python 3.13, `ubuntu-latest`):
+
+    | Scenario | Before (ms) | After (ms) | Delta |
+    |----------|-------------|------------|-------|
+    | `lfx run` bare boot (`lfx_bare`) | 17820 | 10550 | -7270ms (-40.8%) |
+    | `lfx run <flow>` uncompiled (`lfx_with_flow`) | 18920 | 16013 | -2907ms (-15.4%) |
+    | `lfx run <flow>` prebaked (`lfx_with_flow_prebaked`) | 9520 | 8425 | -1095ms (-11.5%) |
+    | `langflow run --backend-only` no-change restart | new scenario | 11325 | see [Cold-start optimization](../Deployment/deployment-cold-start.mdx) |
+
+    For deployment-level tuning (build-time bytecode compilation, layer ordering, pre-baking flow dependencies, `LANGFLOW_GUNICORN_PRELOAD`), see [Cold-start optimization](../Deployment/deployment-cold-start.mdx).
+
 ## 1.8.x
 
 Highlights of this release include the following changes.
