@@ -39,6 +39,7 @@ from lfx.services.adapters.deployment.schema import (
     ConfigListParams,
     ConfigListResult,
     DeploymentCreateResult,
+    DeploymentGetResult,
     DeploymentListLlmsResult,
     DeploymentListResult,
     DeploymentUpdateResult,
@@ -55,7 +56,7 @@ from lfx.services.adapters.deployment.schema import (
 from lfx.services.adapters.deployment.schema import (
     DeploymentUpdate as AdapterDeploymentUpdate,
 )
-from lfx.services.adapters.payload import PayloadSlot
+from lfx.services.adapters.payload import AdapterPayload, PayloadSlot
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentConfigListResponse,
@@ -657,6 +658,26 @@ class BaseDeploymentMapper:
         _ = provider_view
         return []
 
+    def extract_snapshot_bindings_for_get(
+        self,
+        get_result: DeploymentGetResult,
+        *,
+        resource_key: str,
+    ) -> list[ProviderSnapshotBinding]:
+        """Extract bindings from a single-deployment provider GET payload.
+
+        Provider mappers that support binding-aware sync for ``get_deployment``
+        must override this method. The base implementation raises intentionally
+        so callers never interpret an implicit empty-list fallback as
+        "delete all attachments for this deployment."
+        """
+        _ = get_result, resource_key
+        msg = (
+            "BaseDeploymentMapper does not implement extract_snapshot_bindings_for_get; "
+            "Must be implemented by subclasses. (e.g. watsonx_orchestrate)"
+        )
+        raise NotImplementedError(msg)
+
     async def resolve_rollback_update(
         self,
         *,
@@ -818,6 +839,16 @@ class BaseDeploymentMapper:
 
     def shape_deployment_item_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_data
+
+    def shape_deployment_get_data(self, provider_data: AdapterPayload | None) -> dict[str, Any] | None:
+        """Shape provider_data for single-deployment GET responses."""
+        _ = provider_data
+        msg = (
+            "BaseDeploymentMapper does not implement shape_deployment_get_data; "
+            "must be implemented by subclasses (e.g. watsonx_orchestrate). "
+            "GET provider_data shaping is unavailable for this provider."
+        )
+        raise NotImplementedError(msg)
 
     def shape_deployment_status_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_data

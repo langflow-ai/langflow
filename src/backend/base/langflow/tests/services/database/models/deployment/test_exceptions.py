@@ -7,29 +7,8 @@ from langflow.services.database.models.deployment.exceptions import (
     get_friendly_guard_detail,
     parse_deployment_guard_error,
     raise_if_deployment_guard_error_or_skip,
+    remap_flow_guard_for_project_delete,
 )
-
-
-class _OuterWrapperError(Exception):
-    """Synthetic wrapper exception used to build a chain."""
-
-
-def test_parse_deployment_guard_error_from_cause_chain() -> None:
-    guard_error = DeploymentGuardError(
-        code="PROJECT_HAS_DEPLOYMENTS",
-        technical_detail="DELETE folder blocked: dependent rows exist in deployment for the target project.",
-        detail=get_friendly_guard_detail("PROJECT_HAS_DEPLOYMENTS"),
-    )
-    try:
-        try:
-            raise guard_error
-        except DeploymentGuardError as exc:
-            msg = "wrapped"
-            raise _OuterWrapperError(msg) from exc
-    except _OuterWrapperError as exc:
-        parsed = parse_deployment_guard_error(exc)
-
-    assert parsed is guard_error
 
 
 @pytest.mark.parametrize(
@@ -110,41 +89,6 @@ def test_parse_deployment_guard_error_returns_none_when_absent() -> None:
     assert parsed is None
 
 
-def test_parse_deployment_guard_error_from_implicit_context_chain() -> None:
-    """Parser should walk __context__ (implicit chaining), not just __cause__."""
-    guard_error = DeploymentGuardError(
-        code="FLOW_HAS_DEPLOYED_VERSIONS",
-        technical_detail="DELETE flow_version blocked: dependent rows exist.",
-        detail=get_friendly_guard_detail("FLOW_HAS_DEPLOYED_VERSIONS"),
-    )
-    try:
-        try:
-            raise guard_error
-        except DeploymentGuardError:
-            msg = "wrapped"
-            raise _OuterWrapperError(msg)  # noqa: B904 — intentional implicit chain
-    except _OuterWrapperError as exc:
-        parsed = parse_deployment_guard_error(exc)
-
-    assert isinstance(parsed, DeploymentGuardError)
-    assert parsed.code == "FLOW_HAS_DEPLOYED_VERSIONS"
-    assert (
-        parsed.detail == "This flow cannot be deleted because it has deployed versions. "
-        "Please remove its versions from deployments first."
-    )
-
-
-def test_parse_deployment_guard_error_handles_cyclic_chain() -> None:
-    """Parser must not loop forever when an exception chain contains a cycle."""
-    exc_a = Exception("a")
-    exc_b = Exception("b")
-    exc_a.__cause__ = exc_b
-    exc_b.__cause__ = exc_a
-
-    parsed = parse_deployment_guard_error(exc_a)
-    assert parsed is None
-
-
 def test_deployment_guard_error_supports_manual_technical_and_code() -> None:
     err = DeploymentGuardError(
         code="FLOW_HAS_DEPLOYED_VERSIONS",
@@ -162,26 +106,17 @@ def test_deployment_guard_error_supports_manual_technical_and_code() -> None:
     )
 
 
-def test_raise_if_deployment_guard_error_or_skip_raises_first_guard_in_chain() -> None:
+def test_raise_if_deployment_guard_error_or_skip_raises_guard_error() -> None:
     guard_error = DeploymentGuardError(
         code="PROJECT_HAS_DEPLOYMENTS",
         technical_detail="DELETE project blocked: dependent deployments exist.",
         detail=get_friendly_guard_detail("PROJECT_HAS_DEPLOYMENTS"),
     )
-    wrapped_error: _OuterWrapperError | None = None
-    try:
-        try:
-            raise guard_error
-        except DeploymentGuardError as inner:
-            msg = "wrapped guard"
-            raise _OuterWrapperError(msg) from inner
-    except _OuterWrapperError as wrapped:
-        wrapped_error = wrapped
-        with pytest.raises(DeploymentGuardError) as raised:
-            raise_if_deployment_guard_error_or_skip(wrapped)
+
+    with pytest.raises(DeploymentGuardError) as raised:
+        raise_if_deployment_guard_error_or_skip(guard_error)
 
     assert raised.value is guard_error
-    assert raised.value.__cause__ is wrapped_error
 
 
 def test_raise_if_deployment_guard_error_or_skip_is_noop_when_guard_absent() -> None:
@@ -239,3 +174,32 @@ async def test_araise_if_deployment_guard_error_or_skip_raises_without_logging_w
         await araise_if_deployment_guard_error_or_skip(guard_error)
 
     assert debug_calls == []
+
+
+def test_remap_flow_guard_for_project_delete_remaps_flow_guard() -> None:
+    flow_guard = DeploymentGuardError(
+        code="FLOW_HAS_DEPLOYED_VERSIONS",
+        technical_detail="DELETE flow blocked by deployment attachment",
+        detail=get_friendly_guard_detail("FLOW_HAS_DEPLOYED_VERSIONS"),
+    )
+
+    remapped = remap_flow_guard_for_project_delete(flow_guard)
+
+    assert remapped is not flow_guard
+    assert remapped.code == "PROJECT_HAS_DEPLOYMENTS"
+    assert remapped.technical_detail == (
+        "DELETE folder blocked while deleting project flows: DELETE flow blocked by deployment attachment"
+    )
+    assert remapped.detail == get_friendly_guard_detail("PROJECT_HAS_DEPLOYMENTS")
+
+
+def test_remap_flow_guard_for_project_delete_keeps_non_flow_guard() -> None:
+    project_guard = DeploymentGuardError(
+        code="PROJECT_HAS_DEPLOYMENTS",
+        technical_detail="DELETE project blocked by deployment row",
+        detail=get_friendly_guard_detail("PROJECT_HAS_DEPLOYMENTS"),
+    )
+
+    remapped = remap_flow_guard_for_project_delete(project_guard)
+
+    assert remapped is project_guard

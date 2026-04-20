@@ -16,6 +16,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
 from langflow.api.v1.schemas.deployments import (
     DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
@@ -89,6 +90,14 @@ def _fake_attachment(*, provider_snapshot_id: str | None = None) -> SimpleNamesp
         provider_snapshot_id=provider_snapshot_id,
         deployment_id=uuid4(),
     )
+
+
+class _AsyncNoopSavepoint:
+    async def __aenter__(self):
+        return None
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -1963,6 +1972,15 @@ class TestGetDeploymentSync:
         from langflow.api.v1.deployments import get_deployment
         from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
 
+        class _MapperForGet(BaseDeploymentMapper):
+            def shape_deployment_get_data(self, provider_data):
+                if provider_data is None:
+                    return None
+                sanitized_provider_data = dict(provider_data)
+                sanitized_provider_data.pop("tool_ids", None)
+                sanitized_provider_data.pop("environment", None)
+                return sanitized_provider_data or None
+
         created_at = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
         updated_at = datetime(2026, 1, 3, 4, 5, 6, tzinfo=timezone.utc)
         dep_row = _fake_deployment_row(
@@ -1983,10 +2001,12 @@ class TestGetDeploymentSync:
         provider_deployment.model_dump.return_value = {
             "provider_data": {
                 "llm": "virtual-model/bedrock/openai.gpt-oss-120b-1:0",
+                "tool_ids": ["tool-1", "tool-2"],
+                "environment": "draft",
             }
         }
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper(), "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, _MapperForGet(), "watsonx-orchestrate")
 
         session = AsyncMock()
         result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
@@ -1997,21 +2017,21 @@ class TestGetDeploymentSync:
         assert result.type == "agent"
         assert result.created_at == created_at
         assert result.updated_at == updated_at
+        assert "tool_ids" not in result.provider_data
+        assert "environment" not in result.provider_data
         assert result.provider_data == {"llm": "virtual-model/bedrock/openai.gpt-oss-120b-1:0"}
 
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_snapshot_sync_corrects_attached_count(
         self,
         mock_resolve,
         mock_list_att,
-        mock_fetch_snap,
-        mock_sync_snap,
+        mock_delete_unbound,
     ):
-        """Snapshot-level sync corrects the attached_count in the response."""
+        """Binding-aware sync corrects attached_count in the response."""
         from langflow.api.v1.deployments import get_deployment
 
         dep_row = _fake_deployment_row()
@@ -2025,34 +2045,33 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
+        mapper.extract_snapshot_bindings_for_get.return_value = [
+            ProviderSnapshotBinding(resource_key=dep_row.resource_key, snapshot_id="snap-1")
+        ]
+        mapper.shape_deployment_get_data.return_value = None
         mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
 
         att_good = _fake_attachment(provider_snapshot_id="snap-1")
-        att_stale = _fake_attachment(provider_snapshot_id="snap-stale")
-        mock_list_att.return_value = [att_good, att_stale]
-        mock_fetch_snap.return_value = {"snap-1"}
-        mock_sync_snap.return_value = {dep_row.id: 1}
+        mock_list_att.return_value = [att_good]
 
         session = AsyncMock()
+        session.begin_nested = MagicMock(return_value=_AsyncNoopSavepoint())
         result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
         assert result.attached_count == 1
-        mock_fetch_snap.assert_awaited_once()
-        mock_sync_snap.assert_awaited_once()
+        mock_delete_unbound.assert_awaited_once()
 
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
-    async def test_snapshot_sync_invalid_attachment_snapshot_id_falls_back_to_unverified_count(
+    async def test_unsupported_provider_falls_back_to_unverified_count(
         self,
         mock_resolve,
         mock_list_att,
-        mock_fetch_snap,
-        mock_sync_snap,
+        mock_delete_unbound,
     ):
-        """Missing attachment snapshot ids trigger rollback and fallback counting."""
+        """NotImplemented mapper sync falls back to unverified count."""
         from langflow.api.v1.deployments import get_deployment
 
         dep_row = _fake_deployment_row()
@@ -2066,6 +2085,8 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
+        mapper.extract_snapshot_bindings_for_get.side_effect = NotImplementedError("not supported")
+        mapper.shape_deployment_get_data.return_value = None
         mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
         mock_list_att.return_value = [_fake_attachment(provider_snapshot_id=None)]
 
@@ -2073,23 +2094,20 @@ class TestGetDeploymentSync:
         result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
         assert result.attached_count == 1
-        session.rollback.assert_awaited_once()
-        mock_fetch_snap.assert_not_awaited()
-        mock_sync_snap.assert_not_awaited()
+        session.rollback.assert_not_awaited()
+        mock_delete_unbound.assert_not_awaited()
 
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
-    async def test_snapshot_sync_error_falls_back_to_unverified_count(
+    async def test_binding_aware_sync_error_falls_back_to_unverified_count(
         self,
         mock_resolve,
         mock_list_att,
-        mock_fetch_snap,
-        mock_sync_snap,
+        mock_delete_unbound,
     ):
-        """When snapshot-level sync raises, the response uses unverified attachment count."""
+        """When binding-aware sync raises, response uses unverified attachment count."""
         from langflow.api.v1.deployments import get_deployment
 
         dep_row = _fake_deployment_row()
@@ -2103,18 +2121,62 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
+        mapper.extract_snapshot_bindings_for_get.return_value = [
+            ProviderSnapshotBinding(resource_key=dep_row.resource_key, snapshot_id="snap-1")
+        ]
+        mapper.shape_deployment_get_data.return_value = None
         mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
 
         att1 = _fake_attachment(provider_snapshot_id="snap-1")
         att2 = _fake_attachment(provider_snapshot_id="snap-2")
         mock_list_att.return_value = [att1, att2]
-        mock_fetch_snap.side_effect = RuntimeError("provider down")
+        mock_delete_unbound.side_effect = RuntimeError("provider down")
 
         session = AsyncMock()
+        session.begin_nested = MagicMock(return_value=_AsyncNoopSavepoint())
         result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
         assert result.attached_count == 2
-        mock_sync_snap.assert_not_awaited()
+        session.rollback.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
+    async def test_binding_aware_sync_prunes_detached_attachments(
+        self,
+        mock_resolve,
+        mock_list_att,
+        mock_delete_unbound,
+    ):
+        """Binding-aware sync sends authoritative bindings and returns corrected count."""
+        from langflow.api.v1.deployments import get_deployment
+
+        dep_row = _fake_deployment_row(resource_key="agent-rk-1")
+        adapter = AsyncMock()
+        mapper = MagicMock()
+        provider_deployment = MagicMock()
+        provider_deployment.model_dump.return_value = {}
+        adapter.get.return_value = provider_deployment
+        mapper.extract_snapshot_bindings_for_get.return_value = [
+            ProviderSnapshotBinding(resource_key="agent-rk-1", snapshot_id="snap-1")
+        ]
+        mapper.shape_deployment_get_data.return_value = None
+        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
+        mock_list_att.return_value = [_fake_attachment(provider_snapshot_id="snap-1")]
+
+        session = AsyncMock()
+        session.begin_nested = MagicMock(return_value=_AsyncNoopSavepoint())
+        result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
+
+        assert result.attached_count == 1
+        mock_delete_unbound.assert_awaited_once_with(
+            db=session,
+            user_id=ANY,
+            provider_account_id=dep_row.deployment_provider_account_id,
+            deployment_ids=[dep_row.id],
+            bindings=[ProviderSnapshotBinding(resource_key="agent-rk-1", snapshot_id="snap-1")],
+        )
 
 
 # ---------------------------------------------------------------------------

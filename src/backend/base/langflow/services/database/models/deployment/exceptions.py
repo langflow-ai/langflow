@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from lfx.log.logger import logger
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _GUARD_FRIENDLY_DETAILS: dict[str, str] = {
     "FLOW_HAS_DEPLOYED_VERSIONS": (
@@ -57,42 +62,37 @@ def get_friendly_guard_detail(code: str) -> str:
 
 
 def parse_deployment_guard_error(exc: BaseException) -> DeploymentGuardError | None:
-    """Return the first ``DeploymentGuardError`` found in an exception chain.
+    """Return ``exc`` when it is a ``DeploymentGuardError``; otherwise ``None``.
 
-    This intentionally does not parse generic exception messages. Guard failures
-    must be raised explicitly as ``DeploymentGuardError``.
+    Guard failures must be raised explicitly as ``DeploymentGuardError`` by the
+    operation that enforces the guard.
     """
-    seen: set[int] = set()
-    current: BaseException | None = exc
-
-    while current is not None and id(current) not in seen:
-        seen.add(id(current))
-        if isinstance(current, DeploymentGuardError):
-            return current
-
-        current = current.__cause__ or current.__context__
-
-    return None
+    return exc if isinstance(exc, DeploymentGuardError) else None
 
 
 def raise_if_deployment_guard_error_or_skip(exc: BaseException) -> None:
-    """Raise chained ``DeploymentGuardError`` when present; otherwise do nothing."""
-    guard_error = parse_deployment_guard_error(exc)
-    if guard_error is None:
+    """Raise ``DeploymentGuardError`` when ``exc`` is one; otherwise do nothing."""
+    if not isinstance(exc, DeploymentGuardError):
         return
 
-    raise guard_error from exc
+    raise exc
 
 
 async def araise_if_deployment_guard_error_or_skip(
     exc: BaseException,
     *,
     log_message: str | None = None,
+    remap: Callable[[DeploymentGuardError], DeploymentGuardError] | None = None,
 ) -> None:
-    """Raise chained ``DeploymentGuardError`` and optionally log a debug message first."""
-    guard_error = parse_deployment_guard_error(exc)
-    if guard_error is None:
+    """Raise ``DeploymentGuardError`` and optionally log/remap it; otherwise do nothing.
+
+    Callers should invoke this in the broad ``except Exception`` arm before
+    handling generic failures.
+    """
+    if not isinstance(exc, DeploymentGuardError):
         return
+
+    guard_error = remap(exc) if remap is not None else exc
 
     if log_message is not None:
         await logger.adebug(
@@ -101,4 +101,19 @@ async def araise_if_deployment_guard_error_or_skip(
             guard_error.code,
             guard_error.technical_detail,
         )
+
+    if guard_error is exc:
+        raise exc
     raise guard_error from exc
+
+
+def remap_flow_guard_for_project_delete(exc: DeploymentGuardError) -> DeploymentGuardError:
+    """Map flow-scoped guard code to a project-scoped code for project deletes."""
+    if exc.code != "FLOW_HAS_DEPLOYED_VERSIONS":
+        return exc
+
+    return DeploymentGuardError(
+        code="PROJECT_HAS_DEPLOYMENTS",
+        technical_detail=(f"DELETE folder blocked while deleting project flows: {exc.technical_detail}"),
+        detail=get_friendly_guard_detail("PROJECT_HAS_DEPLOYMENTS"),
+    )

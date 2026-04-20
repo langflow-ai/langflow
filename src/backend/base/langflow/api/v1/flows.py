@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
-from lfx.log.logger import logger
 from lfx.services.cache.utils import CACHE_MISS
 from sqlmodel import and_, col, select
 
@@ -42,7 +41,6 @@ from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.models.deployment.exceptions import (
-    DeploymentGuardError,
     araise_if_deployment_guard_error_or_skip,
 )
 from langflow.services.database.models.flow.model import (
@@ -252,14 +250,6 @@ async def update_flow(
                 operation=operation,
             )
         return await operation()
-    except DeploymentGuardError as e:
-        await logger.adebug(
-            "op=update_flow flow_id=%s code=%s technical_detail=%s",
-            flow_id,
-            e.code,
-            e.technical_detail,
-        )
-        raise
     except HTTPException:
         raise
     except Exception as e:
@@ -341,14 +331,6 @@ async def upsert_flow(
 
         return JSONResponse(status_code=status_code, content=jsonable_encoder(flow_read))
 
-    except DeploymentGuardError as e:
-        await logger.adebug(
-            "op=upsert_flow flow_id=%s code=%s technical_detail=%s",
-            flow_id,
-            e.code,
-            e.technical_detail,
-        )
-        raise
     except HTTPException:
         raise
     except Exception as e:
@@ -505,15 +487,11 @@ async def delete_multiple_flows(
             flow_ids=flow_ids,
             operation=_delete_operation,
         )
-    except DeploymentGuardError as e:
-        await logger.adebug(
-            "op=delete_multiple_flows flow_ids_count=%s code=%s technical_detail=%s",
-            len(flow_ids),
-            e.code,
-            e.technical_detail,
-        )
-        raise
     except Exception as exc:
+        await araise_if_deployment_guard_error_or_skip(
+            exc,
+            log_message=f"op=delete_multiple_flows flow_ids_count={len(flow_ids)}",
+        )
         import logging as _logging
 
         _logging.getLogger(__name__).exception("Error deleting multiple flows")

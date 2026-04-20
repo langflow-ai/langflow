@@ -24,6 +24,7 @@ from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
 from lfx.services.adapters.deployment.exceptions import ServiceUnavailableError
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
+    DeploymentGetResult,
     DeploymentUpdateResult,
     SnapshotItem,
     SnapshotListResult,
@@ -827,6 +828,111 @@ def test_watsonx_mapper_extract_snapshot_bindings_requires_deployment_id():
 
     with pytest.raises(ValueError, match=r"^deployment id is required from wxO adapter\.$"):
         mapper.extract_snapshot_bindings(provider_view)
+
+
+def test_watsonx_mapper_extract_snapshot_bindings_for_get():
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    get_result = DeploymentGetResult(
+        id="agent-1",
+        name="agent-name",
+        type="agent",
+        provider_data={"tool_ids": ["tool-1", "tool-2"]},
+    )
+
+    bindings = mapper.extract_snapshot_bindings_for_get(get_result, resource_key="agent-1")
+
+    assert [(binding.resource_key, binding.snapshot_id) for binding in bindings] == [
+        ("agent-1", "tool-1"),
+        ("agent-1", "tool-2"),
+    ]
+
+
+def test_watsonx_mapper_extract_snapshot_bindings_for_get_requires_tool_ids():
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    get_result = DeploymentGetResult(
+        id="agent-1",
+        name="agent-name",
+        type="agent",
+        provider_data={},
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"^An internal error occured\. provider_data must contain 'tool_ids' from wxO adapter for get\(\)\.$",
+    ):
+        mapper.extract_snapshot_bindings_for_get(get_result, resource_key="agent-1")
+
+
+def test_watsonx_mapper_extract_snapshot_bindings_for_get_requires_provider_data():
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    get_result = DeploymentGetResult(
+        id="agent-1",
+        name="agent-name",
+        type="agent",
+        provider_data=None,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"^An internal error occured\. provider_data is required from wxO adapter for get\(\)\.$",
+    ):
+        mapper.extract_snapshot_bindings_for_get(get_result, resource_key="agent-1")
+
+
+def test_watsonx_mapper_extract_snapshot_bindings_for_get_requires_tool_ids_list_type():
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    get_result = DeploymentGetResult(
+        id="agent-1",
+        name="agent-name",
+        type="agent",
+        provider_data={"tool_ids": "tool-1"},
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"^An internal error occured\. provider_data\['tool_ids'\] must be a list "
+            r"from wxO adapter for get\(\)\.$"
+        ),
+    ):
+        mapper.extract_snapshot_bindings_for_get(get_result, resource_key="agent-1")
+
+
+def test_watsonx_mapper_shape_deployment_get_data_hides_internal_sync_fields():
+    mapper = WatsonxOrchestrateDeploymentMapper()
+
+    shaped = mapper.shape_deployment_get_data(
+        {
+            "llm": "my-llm",
+            "tool_ids": ["tool-1", "tool-2"],
+            "environment": "draft",
+        }
+    )
+
+    assert shaped == {"llm": "my-llm"}
+
+
+def test_watsonx_mapper_shape_deployment_get_data_requires_provider_data():
+    mapper = WatsonxOrchestrateDeploymentMapper()
+
+    with pytest.raises(
+        HTTPException,
+        match=r"^500: An internal error occured\. provider_data is required from wxO adapter for get\(\)\.$",
+    ):
+        mapper.shape_deployment_get_data(None)
+
+
+def test_base_mapper_extract_snapshot_bindings_for_get_raises_not_implemented():
+    mapper = BaseDeploymentMapper()
+    get_result = DeploymentGetResult(
+        id="agent-1",
+        name="agent-name",
+        type="agent",
+        provider_data={"tool_ids": ["tool-1"]},
+    )
+
+    with pytest.raises(NotImplementedError, match="extract_snapshot_bindings_for_get"):
+        mapper.extract_snapshot_bindings_for_get(get_result, resource_key="agent-1")
 
 
 def test_resolve_flow_version_patch_for_update_watsonx_operations():

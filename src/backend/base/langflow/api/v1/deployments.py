@@ -44,11 +44,6 @@ from langflow.api.v1.mappers.deployments.helpers import (
     rollback_provider_update,
     validate_project_scoped_flow_version_ids,
 )
-from langflow.api.v1.mappers.deployments.sync import (
-    extract_verified_snapshot_ids,
-    fetch_provider_snapshot_keys,
-    sync_attachment_snapshot_ids,
-)
 from langflow.api.v1.schemas.deployments import (
     DeploymentConfigListResponse,
     DeploymentCreateRequest,
@@ -107,6 +102,7 @@ from langflow.services.database.models.deployment_provider_account.crud import (
 )
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     AttachmentConflictError,
+    delete_unbound_attachments,
     get_attachment_by_provider_snapshot_id,
     list_deployment_attachments,
     list_deployment_attachments_for_flow_version_ids,
@@ -1115,7 +1111,7 @@ async def get_deployment(
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
-    deployment_row, deployment_adapter, _deployment_mapper, provider_key = await resolve_adapter_mapper_from_deployment(
+    deployment_row, deployment_adapter, deployment_mapper, provider_key = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
@@ -1152,33 +1148,40 @@ async def get_deployment(
                 detail=exc.message,
             ) from exc
 
-        # Snapshot-level sync: verify that tracked provider_snapshot_ids still exist.
-        # Best-effort — a provider outage should not block the GET response.
+        # Snapshot-level sync: reconcile tracked attachments against provider
+        # binding state for this deployment.
         try:
+            try:
+                bindings = deployment_mapper.extract_snapshot_bindings_for_get(
+                    deployment,
+                    resource_key=deployment_row.resource_key,
+                )
+            except NotImplementedError:
+                logger.debug(
+                    "Mapper for provider %s does not support binding-aware GET sync; "
+                    "returning unverified attachment count for deployment %s",
+                    provider_key,
+                    deployment_row.id,
+                )
+                bindings = None
+
+            if bindings is not None:
+                async with session.begin_nested():
+                    await delete_unbound_attachments(
+                        db=session,
+                        user_id=current_user.id,
+                        provider_account_id=deployment_row.deployment_provider_account_id,
+                        deployment_ids=[deployment_row.id],
+                        bindings=bindings,
+                    )
+
             attachments = await list_deployment_attachments(
                 session, user_id=current_user.id, deployment_id=deployment_row.id
             )
             attached_count = len(attachments)
-            verified_snapshot_ids = extract_verified_snapshot_ids(attachments)
-            snapshot_ids_to_verify = list(dict.fromkeys(verified_snapshot_ids))
-            if snapshot_ids_to_verify:
-                known_snapshots = await fetch_provider_snapshot_keys(
-                    deployment_adapter=deployment_adapter,
-                    user_id=current_user.id,
-                    provider_id=deployment_row.deployment_provider_account_id,
-                    db=session,
-                    snapshot_ids=snapshot_ids_to_verify,
-                )
-                corrected_counts = await sync_attachment_snapshot_ids(
-                    user_id=current_user.id,
-                    attachments=attachments,
-                    known_snapshot_ids=known_snapshots,
-                    db=session,
-                )
-                attached_count = corrected_counts.get(deployment_row.id, 0)
         except Exception:  # noqa: BLE001
             logger.warning(
-                "Snapshot-level sync failed for deployment %s; returning unverified attachment count",
+                "Binding-aware sync failed for deployment %s; returning unverified attachment count",
                 deployment_row.id,
                 exc_info=True,
             )
@@ -1198,7 +1201,7 @@ async def get_deployment(
 
     payload = deployment.model_dump(exclude_unset=True)
     raw_provider_data = payload.get("provider_data")
-    provider_data = raw_provider_data if isinstance(raw_provider_data, dict) and raw_provider_data else None
+    provider_data = deployment_mapper.shape_deployment_get_data(raw_provider_data)
     return DeploymentGetResponse(
         id=deployment_row.id,
         provider_id=deployment_row.deployment_provider_account_id,

@@ -4670,6 +4670,58 @@ async def test_get_deployment_returns_agent(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_get_deployment_includes_tool_ids_and_environment_in_provider_data(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient(
+            {
+                "id": "dep-1",
+                "name": "my_agent",
+                "description": "desc",
+                "tools": ["tool-1", "tool-2"],
+                "environments": [{"name": "draft"}],
+                "llm": "meta-llm",
+            },
+        ),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.get(user_id="user-1", deployment_id="dep-1", db=object())
+
+    assert result.provider_data == {
+        "tool_ids": ["tool-1", "tool-2"],
+        "environment": "draft",
+        "llm": "meta-llm",
+    }
+
+
+@pytest.mark.anyio
+async def test_get_deployment_defaults_tool_ids_to_empty_list(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient(
+            {"id": "dep-1", "name": "my_agent", "description": "desc"},
+        ),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.get(user_id="user-1", deployment_id="dep-1", db=object())
+
+    assert result.provider_data == {
+        "tool_ids": [],
+        "environment": "unknown",
+    }
+
+
+@pytest.mark.anyio
 async def test_get_deployment_not_found_raises(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_clients = SimpleNamespace(
@@ -5251,6 +5303,10 @@ async def test_deployment_provider_scope_resets_wxo_context_between_provider_sco
         )
 
     monkeypatch.setattr(client_module, "resolve_wxo_client_credentials", mock_resolve_wxo_client_credentials)
+    # ``deployment_provider_scope`` only composes ``wxo_scope`` (which is what
+    # actually resets the wxo provider-clients context between scopes) when the
+    # wxo deployments feature flag is enabled.
+    monkeypatch.setattr(deployment_context_module.FEATURE_FLAGS, "wxo_deployments", True)
     client_module.clear_provider_clients_request_context()
 
     with deployment_context_module.deployment_provider_scope(UUID(int=1)):

@@ -563,6 +563,234 @@ class TestVersionPruningRespectsLiveDeployments:
 
 
 # ===========================================================================
+# Pruning cleans attachment children (no doubly-orphan attachments form)
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+class TestVersionPruningCleansOrphanAttachments:
+    """Source-fix coverage for prune cleanup.
+
+    attachment children for the versions it removes, otherwise stale
+    orphan-deployment attachments would survive as doubly-orphaned rows
+    (deployment AND flow_version both missing). No existing cleanup helper
+    catches that shape, so the only place to plug it is at the formation site.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _patch_max_entries(self, request):
+        """Allow each test to set max_flow_version_entries_per_flow via marker."""
+        max_entries = getattr(request, "param", 1)
+        with patch(
+            "langflow.services.database.models.flow_version.crud.get_settings_service",
+            return_value=SimpleNamespace(settings=SimpleNamespace(max_flow_version_entries_per_flow=max_entries)),
+        ):
+            yield
+
+    async def test_prune_deletes_orphan_attachment_alongside_version(self, db: AsyncSession, flow: Flow, user: User):
+        """A version that gets pruned must also have its orphan attachment removed."""
+        v1 = await _create_version(db, flow, user, n=1)
+        orphan = await _make_orphan_attachment(db, user, v1, snapshot_id="orphan-pruned")
+
+        await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+        await db.commit()
+
+        # v1 was pruned (only v2 remains)
+        versions = (await db.exec(select(FlowVersion).where(FlowVersion.flow_id == flow.id))).all()
+        assert len(versions) == 1
+        assert versions[0].version_number == 2
+
+        # Crucially: the orphan attachment is gone too — no doubly-orphan formed.
+        remaining_attachment = (
+            await db.exec(
+                select(FlowVersionDeploymentAttachment).where(FlowVersionDeploymentAttachment.id == orphan.id)
+            )
+        ).first()
+        assert remaining_attachment is None
+
+    async def test_prune_with_no_attachments_is_unchanged(self, db: AsyncSession, flow: Flow, user: User):
+        """The fast-path (no attachments to clean) must still prune the version."""
+        await _create_version(db, flow, user, n=1)
+
+        await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+        await db.commit()
+
+        versions = (await db.exec(select(FlowVersion).where(FlowVersion.flow_id == flow.id))).all()
+        assert len(versions) == 1
+        assert versions[0].version_number == 2
+
+    async def test_prune_preserves_live_attachment_and_its_version(
+        self, db: AsyncSession, flow: Flow, user: User, deployment: Deployment
+    ):
+        """A live-deployed version must not be pruned, and its attachment must stay."""
+        v1 = await _create_version(db, flow, user, n=1)
+        live = await _attach(db, user, v1, deployment, snapshot_id="snap-live")
+
+        await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+        await db.commit()
+
+        versions = (
+            await db.exec(
+                select(FlowVersion).where(FlowVersion.flow_id == flow.id).order_by(FlowVersion.version_number)
+            )
+        ).all()
+        assert [v.version_number for v in versions] == [1, 2]
+
+        live_remaining = (
+            await db.exec(select(FlowVersionDeploymentAttachment).where(FlowVersionDeploymentAttachment.id == live.id))
+        ).first()
+        assert live_remaining is not None
+
+    async def test_prune_mixed_attachment_states_in_single_pass(
+        self, db: AsyncSession, flow: Flow, user: User, deployment: Deployment
+    ):
+        """Versions with no/orphan attachments are pruned together; live ones survive.
+
+        max_entries=1 so we keep only the newest non-deployed version (plus all
+        deployed ones). Setup builds 4 versions with mixed attachment states,
+        then create_flow_version_entry adds v5 and prunes.
+        """
+        v1 = await _create_version(db, flow, user, n=1)  # no attachment
+        v2 = await _create_version(db, flow, user, n=2)  # orphan attachment
+        v3 = await _create_version(db, flow, user, n=3)  # live attachment
+        v4 = await _create_version(db, flow, user, n=4)  # no attachment
+
+        live = await _attach(db, user, v3, deployment, snapshot_id="mixed-live")
+        orphan = await _make_orphan_attachment(db, user, v2, snapshot_id="mixed-orphan")
+
+        await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+        await db.commit()
+
+        # Only v3 (live-deployed) and v5 (newest, just created) survive — v1,
+        # v2, v4 are pruned.
+        remaining_version_numbers = sorted(
+            v.version_number for v in (await db.exec(select(FlowVersion).where(FlowVersion.flow_id == flow.id))).all()
+        )
+        assert remaining_version_numbers == [3, 5]
+
+        # The live attachment stays because v3 stayed.
+        assert (
+            await db.exec(select(FlowVersionDeploymentAttachment).where(FlowVersionDeploymentAttachment.id == live.id))
+        ).first() is not None
+
+        # The orphan attachment was reaped along with v2 — no doubly-orphan formed.
+        assert (
+            await db.exec(
+                select(FlowVersionDeploymentAttachment).where(FlowVersionDeploymentAttachment.id == orphan.id)
+            )
+        ).first() is None
+
+        # And there are no doubly-orphan rows lurking anywhere.
+        doubly_orphans = (
+            await db.exec(
+                select(FlowVersionDeploymentAttachment.id)
+                .outerjoin(
+                    FlowVersion,
+                    FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
+                )
+                .where(FlowVersion.id.is_(None))
+            )
+        ).all()
+        assert doubly_orphans == []
+
+        # Touch v4 reference so the linter doesn't complain about unused vars.
+        assert v1.version_number == 1
+        assert v4.version_number == 4
+
+    async def test_prune_does_not_touch_attachments_for_other_flows(
+        self, db: AsyncSession, flow: Flow, folder: Folder, user: User, deployment: Deployment
+    ):
+        """Pruning flow A must not delete attachments belonging to flow B."""
+        v1_a = await _create_version(db, flow, user, n=1)
+        await _make_orphan_attachment(db, user, v1_a, snapshot_id="flow-a-orphan")
+
+        other_flow = Flow(name="other-flow", user_id=user.id, folder_id=folder.id)
+        db.add(other_flow)
+        await db.commit()
+        await db.refresh(other_flow)
+
+        v1_b = await _create_version(db, other_flow, user, n=1)
+        live_b = await _attach(db, user, v1_b, deployment, snapshot_id="flow-b-live")
+        orphan_b = await _make_orphan_attachment(db, user, v1_b, snapshot_id="flow-b-orphan")
+
+        await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+        await db.commit()
+
+        # Flow B's attachments are untouched.
+        assert (
+            await db.exec(
+                select(FlowVersionDeploymentAttachment).where(FlowVersionDeploymentAttachment.id == live_b.id)
+            )
+        ).first() is not None
+        assert (
+            await db.exec(
+                select(FlowVersionDeploymentAttachment).where(FlowVersionDeploymentAttachment.id == orphan_b.id)
+            )
+        ).first() is not None
+
+        # Flow B's version is untouched.
+        assert (await db.exec(select(FlowVersion).where(FlowVersion.id == v1_b.id))).first() is not None
+
+    async def test_prune_does_not_touch_attachments_for_other_users(self, db: AsyncSession, flow: Flow, user: User):
+        """Pruning user A's flow must not delete user B's attachments."""
+        v1 = await _create_version(db, flow, user, n=1)
+        await _make_orphan_attachment(db, user, v1, snapshot_id="user-a-orphan")
+
+        other_user = User(username="prune-other-user", password=_TEST_PASSWORD, is_active=True)
+        db.add(other_user)
+        await db.commit()
+        await db.refresh(other_user)
+
+        other_folder = Folder(name="prune-other-folder", user_id=other_user.id)
+        db.add(other_folder)
+        await db.commit()
+        await db.refresh(other_folder)
+
+        other_flow = Flow(name="prune-other-flow", user_id=other_user.id, folder_id=other_folder.id)
+        db.add(other_flow)
+        await db.commit()
+        await db.refresh(other_flow)
+
+        other_v1 = await _create_version(db, other_flow, other_user, n=1)
+        other_orphan = await _make_orphan_attachment(db, other_user, other_v1, snapshot_id="user-b-orphan")
+
+        await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+        await db.commit()
+
+        # User B's row is untouched.
+        assert (
+            await db.exec(
+                select(FlowVersionDeploymentAttachment).where(FlowVersionDeploymentAttachment.id == other_orphan.id)
+            )
+        ).first() is not None
+        assert (await db.exec(select(FlowVersion).where(FlowVersion.id == other_v1.id))).first() is not None
+
+    async def test_repeated_snapshots_never_accumulate_doubly_orphans(self, db: AsyncSession, flow: Flow, user: User):
+        """Stress test repeated snapshot cycles with a stale orphan attachment.
+
+        converge to zero doubly-orphan rows.
+        """
+        v1 = await _create_version(db, flow, user, n=1)
+        await _make_orphan_attachment(db, user, v1, snapshot_id="legacy-orphan")
+
+        for _ in range(10):
+            await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+            await db.commit()
+
+        doubly_orphans = (
+            await db.exec(
+                select(FlowVersionDeploymentAttachment.id)
+                .outerjoin(
+                    FlowVersion,
+                    FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
+                )
+                .where(FlowVersion.id.is_(None))
+            )
+        ).all()
+        assert doubly_orphans == []
+
+
+# ===========================================================================
 # list_deployments_page excludes orphan flow-version attachments from counts
 # ===========================================================================
 

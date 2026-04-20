@@ -14,7 +14,6 @@ from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.deployment.exceptions import (
-    DeploymentGuardError,
     araise_if_deployment_guard_error_or_skip,
 )
 from langflow.services.database.models.deployment.guards import check_flow_has_deployed_versions
@@ -114,14 +113,6 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
             await session.exec(delete(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)))
             await session.exec(delete(TraceTable).where(col(TraceTable.id).in_(trace_ids)))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
-    except DeploymentGuardError as e:
-        await logger.adebug(
-            "op=cascade_delete_flow flow_id=%s code=%s technical_detail=%s",
-            flow_id,
-            e.code,
-            e.technical_detail,
-        )
-        raise
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
             e,

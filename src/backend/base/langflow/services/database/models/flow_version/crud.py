@@ -114,10 +114,8 @@ async def create_flow_version_entry(
             )
             .distinct()
         )
-        delete_older = delete(FlowVersion).where(
-            FlowVersion.flow_id == flow_id,
-            col(FlowVersion.id).not_in(deployed_version_ids),
-            col(FlowVersion.id).in_(
+        version_ids_to_prune = (
+            await session.exec(
                 select(FlowVersion.id)
                 .where(
                     FlowVersion.flow_id == flow_id,
@@ -125,11 +123,24 @@ async def create_flow_version_entry(
                 )
                 .order_by(col(FlowVersion.version_number).desc())
                 .offset(max_entries)
-            ),
-        )
-        result = await session.exec(delete_older)
-        if hasattr(result, "rowcount") and result.rowcount:  # type: ignore[union-attr]
-            await logger.adebug("Pruned %d old version entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
+            )
+        ).all()
+        if version_ids_to_prune:
+            # Delete attachment children first so the row is fully reaped under
+            # SQLite foreign_keys=OFF (no DB-level cascade). A version reaches
+            # this branch only when no attachment of it points to a live
+            # deployment, but stale orphan-deployment attachments may still
+            # exist; without this explicit delete those rows would survive the
+            # FlowVersion delete as doubly-orphaned and no cleanup helper
+            # catches that shape.
+            await session.exec(
+                delete(FlowVersionDeploymentAttachment).where(
+                    col(FlowVersionDeploymentAttachment.flow_version_id).in_(version_ids_to_prune)
+                )
+            )
+            result = await session.exec(delete(FlowVersion).where(col(FlowVersion.id).in_(version_ids_to_prune)))
+            if hasattr(result, "rowcount") and result.rowcount:  # type: ignore[union-attr]
+                await logger.adebug("Pruned %d old version entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
     except SQLAlchemyError:
         # Pruning is best-effort: we don't fail the snapshot because pruning broke.
         # Logged at error level because repeated failures cause unbounded table growth

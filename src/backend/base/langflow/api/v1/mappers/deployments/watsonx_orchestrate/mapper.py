@@ -13,6 +13,7 @@ from lfx.services.adapters.deployment.schema import (
     BaseDeploymentDataUpdate,
     ConfigListResult,
     DeploymentCreateResult,
+    DeploymentGetResult,
     DeploymentListLlmsResult,
     DeploymentListResult,
     DeploymentUpdateResult,
@@ -776,6 +777,29 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             )
         return bindings
 
+    def extract_snapshot_bindings_for_get(
+        self,
+        get_result: DeploymentGetResult,
+        *,
+        resource_key: str,
+    ) -> list[ProviderSnapshotBinding]:
+        if get_result.provider_data is None:
+            msg = "An internal error occured. provider_data is required from wxO adapter for get()."
+            raise ValueError(msg)
+        if "tool_ids" not in get_result.provider_data:
+            msg = "An internal error occured. provider_data must contain 'tool_ids' from wxO adapter for get()."
+            raise ValueError(msg)
+
+        tool_ids = get_result.provider_data["tool_ids"]
+
+        if not isinstance(tool_ids, list):
+            msg = "An internal error occured. provider_data['tool_ids'] must be a list from wxO adapter for get()."
+            raise ValueError(msg)  # noqa: TRY004
+
+        return [
+            ProviderSnapshotBinding(resource_key=resource_key, snapshot_id=str(snapshot_id)) for snapshot_id in tool_ids
+        ]
+
     async def resolve_rollback_update(
         self,
         *,
@@ -1348,6 +1372,25 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Invalid deployment list item provider_data payload: {detail}",
             ) from exc
+
+    def shape_deployment_get_data(self, provider_data: AdapterPayload | None) -> dict[str, Any] | None:
+        if provider_data is None:
+            msg = "An internal error occured. provider_data is required from wxO adapter for get()."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+
+        if "llm" not in provider_data:
+            msg = "An internal error occured. provider_data must contain 'llm' from wxO adapter for get()."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+
+        llm = provider_data["llm"]
+
+        if not isinstance(llm, str) or not llm.strip():
+            msg = (
+                "An internal error occured. provider_data['llm'] must be a non-empty string from wxO adapter for get()."
+            )
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+
+        return {"llm": llm}
 
     def shape_config_item_data(self, provider_data: dict[str, Any]) -> WatsonxApiConfigListItem:
         return self._parse_required_payload_slot(
