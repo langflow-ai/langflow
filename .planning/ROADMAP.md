@@ -198,8 +198,8 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
-- [ ] 06-06-PLAN.md — IMP-11 regression fix (discovered during Phase 6 snapshot): defer langchain_core imports on lfx.base.models path (PEP 562 __getattr__ on __init__.py; TYPE_CHECKING + function-body imports in model.py) + absence test. Unblocks VAL-01 authoritative snapshot. Requirements: VAL-01.
-- [ ] 06-01-PLAN.md — VAL-01: workflow-upload mitigation + snapshot-mode CI re-run + post-YYYY-MM-DD.{md,json} authoring with MEAS-03 checkpoint breakdown and Phase 3 ROADMAP reconciliation. Requirements: VAL-01.
+- [x] 06-06-PLAN.md — IMP-11 regression fix (discovered during Phase 6 snapshot): lazy `_LazyExecGlobals` in `validate.prepare_global_scope` defers `langchain_*` imports until first access (commit 11470f8107). Unblocks VAL-01 authoritative snapshot. Requirements: VAL-01.
+- [x] 06-01-PLAN.md — VAL-01: workflow-upload mitigation + snapshot-mode CI re-run (run 24642673292) + post-2026-04-20.{md,json} authoring with MEAS-03 checkpoint breakdown and Phase 3 ROADMAP reconciliation (commits 8501709b49, 8b70a2deeb). Requirements: VAL-01.
 - [x] 06-02-PLAN.md — VAL-02: author parity-confirmation-YYYY-MM-DD.md covering Phase 2 IDX-01..IDX-07, Phase 3 IMP-02 + IMP-07 + IMP-11, Phase 4 SVC-01..SVC-04, Phase 5.5 IDX-08 + IDX-09 (no new test runs per D-09). Requirements: VAL-02.
 - [x] 06-03-PLAN.md — VAL-03: local make bench-verify-synthetic capture under synthetic-regression-evidence/ + verify-mode CI green run under run-benchmarks label. Records verify-run ID in 06-03-SUMMARY for 06-05 backfill. Requirements: VAL-03.
 - [x] 06-04-PLAN.md — VAL-04: three-layer publication (release-notes.mdx bullet, deployment-cold-start.mdx ### Measured improvements append, .planning/deliverables/watsonx-integration-note.md). Requirements: VAL-04.
