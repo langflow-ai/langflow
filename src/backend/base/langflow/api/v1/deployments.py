@@ -644,9 +644,7 @@ async def list_deployments(
     if flow_ids:
         resolved = await flow_version_ids_for_flows(session, flow_ids=flow_ids, user_id=current_user.id)
         if not resolved:
-            return DeploymentListResponse(
-                deployments=[], page=params.page, size=params.size, total=0, deployment_type=deployment_type
-            )
+            return DeploymentListResponse(deployments=[], page=params.page, size=params.size, total=0)
         effective_flow_version_ids = resolved
 
     provider_account = await get_owned_provider_account_or_404(
@@ -655,11 +653,13 @@ async def list_deployments(
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     if load_from_provider:
+        provider_list_params = deployment_mapper.resolve_load_from_provider_deployment_list_params()
+        adapter_params = DeploymentListParams(provider_params=provider_list_params) if provider_list_params else None
         with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
             provider_view = await deployment_adapter.list(
                 user_id=current_user.id,
                 db=session,
-                params=None if deployment_type is None else DeploymentListParams(deployment_types=[deployment_type]),
+                params=adapter_params,
             )
         return deployment_mapper.shape_deployment_list_result(provider_view)
 

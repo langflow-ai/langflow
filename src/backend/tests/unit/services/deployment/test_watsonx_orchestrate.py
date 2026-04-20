@@ -1966,9 +1966,9 @@ async def test_list_deployments_filters_with_provider_draft_filters(monkeypatch)
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": []},
         listed_agents=[
-            {"id": "dep-1", "name": "deployment-1", "tools": []},
-            {"id": "dep-2", "name": "deployment-2", "tools": []},
-            {"id": "dep-3", "name": "deployment-3", "tools": []},
+            {"id": "dep-1", "name": "deployment-1", "tools": [], "environments": [{"name": "draft"}]},
+            {"id": "dep-2", "name": "deployment-2", "tools": [], "environments": [{"name": "prod"}]},
+            {"id": "dep-3", "name": "deployment-3", "tools": [], "environments": [{"name": "draft"}]},
         ],
     )
     fake_clients = _with_wxo_wrappers(
@@ -1990,11 +1990,11 @@ async def test_list_deployments_filters_with_provider_draft_filters(monkeypatch)
         db=object(),
         params=DeploymentListParams(
             deployment_types=[DeploymentType.AGENT],
-            provider_params={"ids": ["dep-2"], "names": ["deployment-3"]},
+            provider_params={"ids": ["dep-2"], "names": ["deployment-3"], "environment": "draft"},
         ),
     )
 
-    assert sorted(item.id for item in result.deployments) == ["dep-2", "dep-3"]
+    assert sorted(item.id for item in result.deployments) == ["dep-3"]
 
 
 @pytest.mark.anyio
@@ -4812,6 +4812,7 @@ async def test_get_status_connected(monkeypatch):
     result = await service.get_status(user_id="user-1", deployment_id="dep-1", db=object())
     assert result.id == "dep-1"
     assert result.provider_data["status"] == "connected"
+    assert result.provider_data["environments"] == ["draft"]
 
 
 @pytest.mark.anyio
@@ -4893,7 +4894,7 @@ async def test_list_deployments_without_params(monkeypatch):
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": []},
         listed_agents=[
-            {"id": "dep-1", "name": "agent-1", "tools": []},
+            {"id": "dep-1", "name": "agent-1", "tools": [], "environments": [{"name": "draft"}]},
         ],
     )
     fake_clients = _with_wxo_wrappers(
@@ -5832,29 +5833,38 @@ def test_create_agent_run_result_omits_thread_id_when_absent():
 # ---------------------------------------------------------------------------
 
 
-def test_derive_agent_environment_draft():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import derive_agent_environment
+def test_get_agent_environments_dedupes_preserving_order():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import get_agent_environments
 
-    assert derive_agent_environment({"environments": [{"name": "draft"}]}) == "draft"
-
-
-def test_derive_agent_environment_live():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import derive_agent_environment
-
-    assert derive_agent_environment({"environments": [{"name": "production"}]}) == "live"
-
-
-def test_derive_agent_environment_both():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import derive_agent_environment
-
-    assert derive_agent_environment({"environments": [{"name": "draft"}, {"name": "prod"}]}) == "both"
+    agent = {
+        "environments": [
+            {"name": "draft"},
+            {"name": "draft"},
+            {"name": "live"},
+            {"name": "future-env"},
+        ]
+    }
+    assert get_agent_environments(agent) == ["draft", "live", "future-env"]
 
 
-def test_derive_agent_environment_empty():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import derive_agent_environment
+def test_get_agent_environments_returns_empty_list_when_provider_returns_empty():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import get_agent_environments
 
-    assert derive_agent_environment({}) == "unknown"
-    assert derive_agent_environment({"environments": []}) == "unknown"
+    assert get_agent_environments({"environments": []}) == []
+
+
+def test_get_agent_environments_raises_when_environments_key_missing():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import get_agent_environments
+
+    with pytest.raises(KeyError):
+        get_agent_environments({})
+
+
+def test_get_agent_environments_raises_when_env_entry_missing_name():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import get_agent_environments
+
+    with pytest.raises(KeyError):
+        get_agent_environments({"environments": [{"not_name": "draft"}]})
 
 
 # ---------------------------------------------------------------------------

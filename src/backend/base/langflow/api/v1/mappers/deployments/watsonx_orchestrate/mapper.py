@@ -316,6 +316,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         return parsed.model_dump(mode="json", exclude_none=True)
 
+    def resolve_load_from_provider_deployment_list_params(self) -> dict[str, Any] | None:
+        """Force provider-backed list mode to draft agents only."""
+        return {"environment": "draft"}
+
     def resolve_credentials(
         self,
         *,
