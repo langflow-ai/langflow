@@ -1,6 +1,7 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { X } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { useIMEInput } from "../../../../hooks/use-ime-input";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -195,12 +196,19 @@ const CustomInputPopover = ({
   const PopoverContentInput =
     editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
-  // Restore cursor position after value changes
-  useEffect(() => {
-    if (cursor !== null && refInput.current) {
-      refInput.current.setSelectionRange(cursor, cursor);
-    }
-  }, [cursor, value]);
+  const commitValue = useCallback(
+    (newValue: string) => onChange?.(newValue),
+    [onChange],
+  );
+
+  const { displayValue, inputProps: imeInputProps } =
+    useIMEInput<HTMLInputElement>({
+      value: value ?? "",
+      onCommit: commitValue,
+      inputRef: refInput,
+      cursor,
+      setCursor,
+    });
 
   const handleRemoveOption = (
     optionToRemove: string,
@@ -297,7 +305,8 @@ const CustomInputPopover = ({
                 onInputLostFocus?.();
                 setIsFocused(false);
               }}
-              value={disabled ? "" : value || ""}
+              {...imeInputProps}
+              value={disabled ? "" : displayValue}
               disabled={disabled}
               required={required}
               className={getInputClassName(
@@ -312,10 +321,6 @@ const CustomInputPopover = ({
                   ? ""
                   : placeholder
               }
-              onChange={(e) => {
-                setCursor(e.target.selectionStart);
-                onChange?.(e.target.value);
-              }}
               onKeyDown={(e) => {
                 handleKeyDown?.(e);
                 if (blurOnEnter && e.key === "Enter") refInput.current?.blur();

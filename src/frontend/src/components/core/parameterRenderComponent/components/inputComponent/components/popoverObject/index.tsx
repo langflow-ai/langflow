@@ -1,5 +1,5 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Command,
@@ -15,6 +15,7 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { classNames, cn } from "@/utils/utils";
+import { useIMEInput } from "../../../../hooks/use-ime-input";
 
 const CustomInputPopoverObject = ({
   id,
@@ -47,17 +48,36 @@ const CustomInputPopoverObject = ({
   const PopoverContentInput =
     editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
-  // Restore cursor position after value changes
-  useEffect(() => {
-    if (cursor !== null && refInput.current) {
-      refInput.current.setSelectionRange(cursor, cursor);
-    }
-  }, [cursor, value]);
+  const commitValue = useCallback(
+    (newValue: string) => onChange?.(newValue),
+    [onChange],
+  );
 
-  const handleInputChange = (e) => {
-    setCursor(e.target.selectionStart);
-    onChange && onChange(e.target.value);
-  };
+  const { displayValue, inputProps: imeInputProps } =
+    useIMEInput<HTMLInputElement>({
+      value: value ?? "",
+      onCommit: commitValue,
+      inputRef: refInput,
+      cursor,
+      setCursor,
+    });
+
+  const isSingleSelectionMode =
+    (selectedOption !== "" || !onChange) && setSelectedOption;
+  const isMultiSelectionMode =
+    (selectedOptions?.length !== 0 || !onChange) && setSelectedOptions;
+  const isSelectionMode = isSingleSelectionMode || isMultiSelectionMode;
+
+  const selectionDisplay = isSingleSelectionMode
+    ? options?.find((option) => option.id === selectedOption)?.name || ""
+    : isMultiSelectionMode
+      ? (selectedOptions ?? [])
+          .map(
+            (optionId) =>
+              options?.find((option) => option.id === optionId)?.name,
+          )
+          .join(", ")
+      : "";
 
   return (
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
@@ -67,20 +87,9 @@ const CustomInputPopoverObject = ({
           ref={refInput}
           type="text"
           onBlur={onInputLostFocus}
-          value={
-            (selectedOption !== "" || !onChange) && setSelectedOption
-              ? options.find((option) => option.id === selectedOption)?.name ||
-                ""
-              : (selectedOptions?.length !== 0 || !onChange) &&
-                  setSelectedOptions
-                ? selectedOptions
-                    .map(
-                      (optionId) =>
-                        options.find((option) => option.id === optionId)?.name,
-                    )
-                    .join(", ")
-                : value
-          }
+          {...(isSelectionMode ? {} : imeInputProps)}
+          readOnly={isSelectionMode || undefined}
+          value={isSelectionMode ? selectionDisplay : displayValue}
           autoFocus={autoFocus}
           disabled={disabled}
           onClick={() => {
@@ -92,7 +101,6 @@ const CustomInputPopoverObject = ({
           required={required}
           className={classNames(className!)}
           placeholder={placeholder}
-          onChange={handleInputChange}
           onKeyDown={(e) => {
             handleKeyDown(e);
             if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
