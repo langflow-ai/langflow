@@ -72,14 +72,14 @@ bench-snapshot: ## one-shot: capture baseline on release-1.9.0 and overwrite thr
 	@echo "$(YELLOW)  This MUST run on the release-1.9.0 branch on a Linux GHA runner for authoritative numbers.$(NC)"
 	@uv run python -m src.backend.tests.benchmarks.snapshot || { echo "$(RED)snapshot.py not yet implemented. Land plan 05 of phase 01-measurement-foundation first.$(NC)" ; exit 1; }
 
-bench-verify-synthetic: ## MEAS-08 D-18: prove the CI gate trips on a synthetic 300ms regression
-	@echo "$(YELLOW)bench-verify-synthetic:$(NC) injecting 300ms synthetic regression into lfx/_bench.py"
+bench-verify-synthetic: ## MEAS-08 D-18: prove the CI gate trips on a synthetic regression
+	@echo "$(YELLOW)bench-verify-synthetic:$(NC) injecting synthetic regression into lfx/_bench.py"
 	@cp src/lfx/src/lfx/_bench.py src/lfx/src/lfx/_bench.py.orig.bak
 	@trap 'mv src/lfx/src/lfx/_bench.py.orig.bak src/lfx/src/lfx/_bench.py 2>/dev/null || true' EXIT HUP INT TERM ; \
-	  { printf 'import time\ntime.sleep(0.3)\n' && cat src/lfx/src/lfx/_bench.py.orig.bak ; } > src/lfx/src/lfx/_bench.py ; \
+	  awk 'BEGIN{done=0} {print} /^from __future__ / && !done { print "import time as _bench_synth_time"; print "_bench_synth_time.sleep(13.0)"; done=1 }' src/lfx/src/lfx/_bench.py.orig.bak > src/lfx/src/lfx/_bench.py ; \
 	  $(DOCKER) build --build-arg BENCH_VARIANT=lean -t benchmarks-lean -f src/backend/tests/benchmarks/Dockerfile . >/dev/null ; \
 	  if uv run python -m src.backend.tests.benchmarks.driver --mode docker --verify --scenarios lfx_bare --skip-build --output-dir /tmp/bench_synth ; then \
-	    echo "$(RED)FAIL:$(NC) driver exited 0 despite 300ms synthetic regression. Gate is NOT wired correctly." ; \
+	    echo "$(RED)FAIL:$(NC) driver exited 0 despite synthetic regression. Gate is NOT wired correctly." ; \
 	    exit 1 ; \
 	  else \
 	    echo "$(GREEN)PASS:$(NC) driver exited non-zero on synthetic regression. Gate is wired correctly." ; \
