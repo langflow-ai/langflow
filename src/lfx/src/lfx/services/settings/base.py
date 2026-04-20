@@ -81,6 +81,20 @@ class Settings(BaseSettings):
     Ignored for the default ``chroma`` backend. Populated per-backend (e.g.
     connection URIs, index names, auth references) as additional backends land."""
 
+    kb_allowed_folder_roots: list[str] = ["~"]
+    """Directories the server-side ``FolderSource`` is permitted to walk.
+
+    Each entry is expanded (``~`` → user home) and resolved before use.
+    ``FolderSource`` refuses to ingest any folder whose resolved path is
+    not equal to or underneath one of these roots, which blocks both
+    arbitrary-path access and symlink escapes (``resolve()`` follows
+    symlinks before the containment check).
+
+    Defaults to the user's home directory for single-user desktop /
+    self-hosted deployments. Set to an empty list (or per-tenant roots)
+    for multi-tenant cloud to disable folder ingestion until explicitly
+    configured."""
+
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
