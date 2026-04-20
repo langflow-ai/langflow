@@ -14,10 +14,15 @@ i18n.use(initReactI18next).init({
 });
 
 export async function loadLanguage(lang: string): Promise<void> {
-  if (lang === "en") return;
+  if (!lang || lang === "en") return;
   if (i18n.hasResourceBundle(lang, "translation")) return;
-  const messages = await import(`./locales/${lang}.json`);
-  i18n.addResourceBundle(lang, "translation", messages.default);
+
+  try {
+    const messages = await import(`./locales/${lang}.json`);
+    i18n.addResourceBundle(lang, "translation", messages.default);
+  } catch (error) {
+    console.warn(`Locale "${lang}" not found. Falling back to English.`, error);
+  }
 }
 
 export default i18n;
