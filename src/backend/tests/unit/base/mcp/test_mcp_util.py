@@ -141,24 +141,34 @@ class TestMCPSessionManager:
         mock_task.done = MagicMock(return_value=False)
 
         create_calls = 0
+        # Deterministic rendezvous: the first caller enters ``fake_create`` and
+        # parks on ``release``, giving every other caller time to queue on the
+        # per-server lock. Without the lock, they would all enter the creation
+        # path and ``create_calls`` would exceed 1. This replaces a timing-
+        # based ``asyncio.sleep(0.05)`` so the test does not rely on CI speed.
+        create_started = asyncio.Event()
+        release = asyncio.Event()
 
         async def fake_create(_session_id, _params, _preferred_transport=None):
             nonlocal create_calls
             create_calls += 1
-            # Simulate real network latency so callers overlap while the first
-            # creation is in flight. Without the per-server lock, every
-            # concurrent caller enters the creation path and returns its own
-            # session (or worse, races on the shared dict).
-            await asyncio.sleep(0.05)
+            create_started.set()
+            await release.wait()
             return mock_session, mock_task, "streamable_http"
 
         with (
             patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
             patch.object(session_manager, "_validate_session_connectivity", return_value=True),
         ):
-            results = await asyncio.gather(
-                *[session_manager.get_session(f"ctx_{i}", connection_params, "streamable_http") for i in range(10)]
-            )
+            getters = [
+                asyncio.create_task(session_manager.get_session(f"ctx_{i}", connection_params, "streamable_http"))
+                for i in range(10)
+            ]
+            # Wait until the first caller is in ``fake_create``; every other
+            # caller is now queued on the per-server lock.
+            await create_started.wait()
+            release.set()
+            results = await asyncio.gather(*getters)
 
         assert all(s is mock_session for s in results)
         # All 10 concurrent callers must share the single created session.
@@ -278,8 +288,15 @@ class TestMCPSessionManager:
 
             # Fire the idle cleanup concurrently. It must wait for the lock.
             cleaner = asyncio.create_task(session_manager._cleanup_idle_sessions())
-            # Give it a chance to run if it were going to race.
-            await asyncio.sleep(0.02)
+            # Deterministic rendezvous: wait until the cleaner has pinned the
+            # per-server lock (but is still blocked on the getter releasing
+            # it). Polling ``pins`` with scheduler-only yields replaces a
+            # timing-based ``asyncio.sleep(0.02)`` so the test does not rely
+            # on CI speed to expose a race. ``asyncio.Lock`` does not expose
+            # a waiters count, so internal-state polling is the deterministic
+            # primitive we have.
+            while session_manager._server_locks.get(server_key, {}).get("pins", 0) < 2:  # noqa: ASYNC110
+                await asyncio.sleep(0)
 
             # While the getter still holds the lock, the session must not have
             # been cleaned up.

@@ -9,9 +9,9 @@ import shlex
 import shutil
 import subprocess
 import unicodedata
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from types import UnionType
-from typing import Any, Union, get_args, get_origin
+from typing import Any, TypedDict, Union, get_args, get_origin
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -722,6 +722,22 @@ async def _validate_connection_params(mode: str, command: str | None = None, url
         raise ValueError(msg)
 
 
+class _ServerLockEntry(TypedDict):
+    """Shape of each value in ``MCPSessionManager._server_locks``.
+
+    ``pins`` is the number of callers that have obtained (but not yet
+    released) the lock via ``_server_lock``; it gates reclamation of the
+    entry so a new caller can't grab a fresh lock while an older caller is
+    about to enter the old one.
+    """
+
+    lock: asyncio.Lock
+    pins: int
+
+
+# TODO(langflow-ai/langflow#12541-followup): MCPSessionManager lives in this
+# 2k+ line module; extract it (and the concurrency primitives below) into a
+# dedicated ``mcp/session_manager.py`` so future edits stay small.
 class MCPSessionManager:
     """Manages persistent MCP sessions with proper context manager lifecycle.
 
@@ -750,12 +766,12 @@ class MCPSessionManager:
         # KeyError from `del sessions[session_id]` in `_cleanup_session_by_id`, or
         # create colliding session_ids from `len(sessions)`.
         #
-        # Each entry is {"lock": asyncio.Lock(), "pins": int}. The pin count is
-        # the number of callers that have obtained (but not yet released) the
-        # lock via `_server_lock`. We reclaim the entry only when pins == 0 and
-        # the lock is not held, to avoid a new caller grabbing a fresh lock
-        # while an older caller is about to enter the old one.
-        self._server_locks: dict[str, dict[str, Any]] = {}
+        # Each entry is a `_ServerLockEntry` {"lock": asyncio.Lock(), "pins": int}.
+        # The pin count is the number of callers that have obtained (but not yet
+        # released) the lock via `_server_lock`. We reclaim the entry only when
+        # pins == 0 and the lock is not held, to avoid a new caller grabbing a
+        # fresh lock while an older caller is about to enter the old one.
+        self._server_locks: dict[str, _ServerLockEntry] = {}
         self._locks_guard = asyncio.Lock()
         # Monotonic counter per server_key to generate unique session_ids even
         # when sessions are removed between allocations.
@@ -764,7 +780,7 @@ class MCPSessionManager:
         self._start_cleanup_task()
 
     @contextlib.asynccontextmanager
-    async def _server_lock(self, server_key: str):
+    async def _server_lock(self, server_key: str) -> AsyncIterator[None]:
         """Acquire the per-server lock with pin counting for safe reclamation.
 
         The pin count prevents reclaiming a lock that another task is about to
@@ -775,7 +791,7 @@ class MCPSessionManager:
         async with self._locks_guard:
             entry = self._server_locks.get(server_key)
             if entry is None:
-                entry = {"lock": asyncio.Lock(), "pins": 0}
+                entry = _ServerLockEntry(lock=asyncio.Lock(), pins=0)
                 self._server_locks[server_key] = entry
             entry["pins"] += 1
             lock = entry["lock"]
@@ -803,15 +819,43 @@ class MCPSessionManager:
             if entry is None:
                 return
             entry["pins"] -= 1
+            if entry["pins"] < 0:
+                # A negative pin count means a missing acquire or a double release.
+                # Log loudly so it surfaces in telemetry instead of being swept.
+                await logger.awarning(
+                    f"Negative pin count ({entry['pins']}) for server_key {server_key}; "
+                    "this indicates a missing _server_lock acquire or a double release.",
+                )
             if entry["pins"] <= 0 and not entry["lock"].locked() and server_key not in self.sessions_by_server:
                 self._server_locks.pop(server_key, None)
                 self._session_id_counters.pop(server_key, None)
 
     def _next_session_id(self, server_key: str) -> str:
-        """Generate a monotonically unique session_id for *server_key*."""
+        """Generate a monotonically unique session_id for *server_key*.
+
+        Caller must hold ``self._server_lock(server_key)`` while invoking this.
+        The increment is otherwise unsynchronised — two concurrent callers
+        without the lock would race on ``_session_id_counters[server_key]`` and
+        produce colliding ids.
+        """
         current = self._session_id_counters.get(server_key, 0)
         self._session_id_counters[server_key] = current + 1
         return f"{server_key}_{current}"
+
+    def _sessions_for(self, server_key: str) -> dict[str, dict[str, Any]]:
+        """Return the sessions dict for *server_key* (empty dict if absent).
+
+        Encapsulates the ``sessions_by_server[server_key]["sessions"]`` shape
+        so callers don't have to reach through the outer envelope. Handles the
+        legacy structure (sessions stored directly under the server_key)
+        uniformly as well.
+        """
+        server_data = self.sessions_by_server.get(server_key)
+        if server_data is None:
+            return {}
+        if isinstance(server_data, dict) and "sessions" in server_data:
+            return server_data["sessions"]
+        return server_data  # legacy flat structure
 
     def _start_cleanup_task(self):
         """Start the periodic cleanup task."""
@@ -845,10 +889,9 @@ class MCPSessionManager:
         # Snapshot keys to avoid mutating-while-iterating.
         for server_key in list(self.sessions_by_server.keys()):
             async with self._server_lock(server_key):
-                server_data = self.sessions_by_server.get(server_key)
-                if server_data is None:
+                sessions = self._sessions_for(server_key)
+                if not sessions and server_key not in self.sessions_by_server:
                     continue
-                sessions = server_data.get("sessions", {})
 
                 sessions_to_remove = [
                     session_id
@@ -1244,16 +1287,9 @@ class MCPSessionManager:
         task or `del` the same key (which raised `KeyError: 'streamable_http_..._0'`
         previously under concurrent flow execution).
         """
-        if server_key not in self.sessions_by_server:
+        sessions = self._sessions_for(server_key)
+        if not sessions and server_key not in self.sessions_by_server:
             return
-
-        server_data = self.sessions_by_server[server_key]
-        # Handle both old and new session structure
-        if isinstance(server_data, dict) and "sessions" in server_data:
-            sessions = server_data["sessions"]
-        else:
-            # Handle old structure where sessions were stored directly
-            sessions = server_data
 
         # Atomically remove the session entry; only the caller that wins this
         # pop performs the actual teardown. Concurrent callers get None and
@@ -1307,6 +1343,10 @@ class MCPSessionManager:
                     except asyncio.CancelledError:
                         await logger.ainfo(f"Cancelled task for session {session_id}")
         except Exception as e:  # noqa: BLE001
+            # Teardown is load-bearing: MCP transports (stdio subprocess, SSE,
+            # streamable HTTP) all raise their own exception hierarchies on
+            # shutdown, and a leak on cleanup is far worse than a swallowed
+            # error. Log and continue rather than propagating.
             await logger.awarning(f"Error cleaning up session {session_id}: {e}")
 
     async def cleanup_all(self):
@@ -1319,15 +1359,7 @@ class MCPSessionManager:
 
         # Clean up all sessions
         for server_key in list(self.sessions_by_server.keys()):
-            server_data = self.sessions_by_server[server_key]
-            # Handle both old and new session structure
-            if isinstance(server_data, dict) and "sessions" in server_data:
-                sessions = server_data["sessions"]
-            else:
-                # Handle old structure where sessions were stored directly
-                sessions = server_data
-
-            for session_id in list(sessions.keys()):
+            for session_id in list(self._sessions_for(server_key).keys()):
                 await self._cleanup_session_by_id(server_key, session_id)
 
         # Clear the sessions_by_server structure completely
