@@ -712,8 +712,7 @@ class TestKnowledgeBaseAPI:
 class TestPerformIngestionTask:
     """Tests for the internal KBIngestionHelper.perform_ingestion background task."""
 
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client")
-    @patch("langflow.api.utils.kb_helpers.Chroma")
+    @patch("langflow.api.utils.kb_helpers.ChromaBackend")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper._build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
@@ -724,19 +723,19 @@ class TestPerformIngestionTask:
         mock_size,
         mock_meta,
         mock_build,
-        mock_chroma,
-        mock_fresh_client,
+        mock_backend_cls,
         mock_kb_path,
         sample_text_file,
     ):
-        mock_fresh_client.return_value = MagicMock()
         mock_update.return_value = None
         mock_embeddings = MagicMock()
         mock_build.return_value = mock_embeddings
 
-        mock_chroma_inst = MagicMock()
-        mock_chroma.return_value = mock_chroma_inst
-        mock_chroma_inst.aadd_documents = AsyncMock()
+        mock_backend = MagicMock()
+        mock_backend.add_documents = AsyncMock()
+        mock_backend.teardown = AsyncMock()
+        mock_backend.raw_langchain_store = MagicMock(return_value=MagicMock())
+        mock_backend_cls.return_value = mock_backend
 
         mock_meta.return_value = {"chunks": 5, "size": 100, "source_types": []}
         mock_size.return_value = 100
@@ -760,20 +759,24 @@ class TestPerformIngestionTask:
         )
 
         assert result["files_processed"] == 1
-        mock_chroma_inst.aadd_documents.assert_called()
+        mock_backend.add_documents.assert_called()
+        mock_backend.teardown.assert_awaited()
 
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client")
-    @patch("langflow.api.utils.kb_helpers.Chroma")
+        # Every chunk should carry the default ingestion-source-type tag so
+        # Phase 2 visibility tooling can key off origin.
+        written_docs = [doc for call in mock_backend.add_documents.call_args_list for doc in call.args[0]]
+        assert written_docs, "expected at least one chunk document to be written"
+        assert all(doc.metadata.get("source_type") == "file_upload" for doc in written_docs)
+
+    @patch("langflow.api.utils.kb_helpers.ChromaBackend")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper._build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.cleanup_chroma_chunks_by_job", new_callable=AsyncMock)
-    async def test_perform_ingestion_rollback(
-        self, mock_cleanup, mock_build, mock_chroma, mock_fresh_client, mock_kb_path
-    ):
-        mock_fresh_client.return_value = MagicMock()
-        mock_chroma_inst = MagicMock()
-        mock_chroma.return_value = mock_chroma_inst
-        mock_chroma_inst.aadd_documents = AsyncMock(side_effect=Exception("Chroma error"))
-        mock_chroma_inst.adelete = AsyncMock()
+    async def test_perform_ingestion_rollback(self, mock_cleanup, mock_build, mock_backend_cls, mock_kb_path):
+        mock_backend = MagicMock()
+        mock_backend.add_documents = AsyncMock(side_effect=Exception("Chroma error"))
+        mock_backend.teardown = AsyncMock()
+        mock_backend.raw_langchain_store = MagicMock(return_value=MagicMock())
+        mock_backend_cls.return_value = mock_backend
 
         files_data = [("test.txt", b"content")]
         job_id = uuid.uuid4()
@@ -796,6 +799,7 @@ class TestPerformIngestionTask:
 
         mock_build.assert_called_once()
         mock_cleanup.assert_called_once_with(job_id, mock_kb_path, "test_kb")
+        mock_backend.teardown.assert_awaited()
 
 
 class TestCancelIngestion:

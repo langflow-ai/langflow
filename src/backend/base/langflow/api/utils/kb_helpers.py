@@ -18,6 +18,17 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
+from lfx.base.knowledge_bases.backends import ChromaBackend
+from lfx.base.knowledge_bases.backends.base import (
+    METADATA_KEY_CHUNK_INDEX,
+    METADATA_KEY_FILE_NAME,
+    METADATA_KEY_INGESTED_AT,
+    METADATA_KEY_JOB_ID,
+    METADATA_KEY_SOURCE,
+    METADATA_KEY_SOURCE_METADATA,
+    METADATA_KEY_SOURCE_TYPE,
+    METADATA_KEY_TOTAL_CHUNKS,
+)
 from lfx.base.models.unified_models import get_embedding_model_options
 from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
 from lfx.log import logger
@@ -33,6 +44,11 @@ from langflow.utils.kb_constants import (
     MAX_DELETE_RETRIES,
     MAX_RETRY_ATTEMPTS,
 )
+
+# Default ingestion source type written to every chunk created via the
+# direct file-upload path. Phase 1 will introduce additional source types
+# (folder, connectors, URL, template) through the ingestion-source registry.
+DEFAULT_INGESTION_SOURCE_TYPE = "file_upload"
 
 
 class IngestionCancelledError(Exception):
@@ -433,8 +449,19 @@ class KBIngestionHelper:
         embedding_model: str,
         task_job_id: uuid.UUID,
         job_service: JobService,
+        source_type: str = DEFAULT_INGESTION_SOURCE_TYPE,
+        source_metadata: dict | None = None,
     ) -> dict[str, object]:
-        """Orchestrate the ingestion of files into a knowledge base."""
+        """Orchestrate the ingestion of files into a knowledge base.
+
+        ``source_type`` and ``source_metadata`` are written onto every chunk
+        Document so downstream visibility tooling (Phase 2) can group,
+        filter, and inspect chunks by origin. The file-upload API route uses
+        the defaults; Phase 1+ call sites (folder walk, cloud connectors)
+        will pass ingestion-source-specific values.
+        """
+        source_metadata = source_metadata or {}
+        backend: ChromaBackend | None = None
         try:
             processed_files = []
             total_chunks_created = 0
@@ -446,13 +473,7 @@ class KBIngestionHelper:
             text_splitter = RecursiveCharacterTextSplitter(**splitter_kwargs)
 
             embeddings = await KBIngestionHelper._build_embeddings(embedding_provider, embedding_model, current_user)
-
-            client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-            chroma = Chroma(
-                client=client,
-                embedding_function=embeddings,
-                collection_name=kb_name,
-            )
+            backend = ChromaBackend(kb_name=kb_name, kb_path=kb_path, embedding_function=embeddings)
 
             job_id_str = str(task_job_id)
             for file_name, file_content in files_data:
@@ -471,12 +492,14 @@ class KBIngestionHelper:
                         Document(
                             page_content=c,
                             metadata={
-                                "source": source_name or file_name,
-                                "file_name": file_name,
-                                "chunk_index": i + j,
-                                "total_chunks": len(chunks),
-                                "ingested_at": datetime.now(timezone.utc).isoformat(),
-                                "job_id": job_id_str,
+                                METADATA_KEY_SOURCE: source_name or file_name,
+                                METADATA_KEY_FILE_NAME: file_name,
+                                METADATA_KEY_CHUNK_INDEX: i + j,
+                                METADATA_KEY_TOTAL_CHUNKS: len(chunks),
+                                METADATA_KEY_INGESTED_AT: datetime.now(timezone.utc).isoformat(),
+                                METADATA_KEY_JOB_ID: job_id_str,
+                                METADATA_KEY_SOURCE_TYPE: source_type,
+                                METADATA_KEY_SOURCE_METADATA: json.dumps(source_metadata) if source_metadata else "",
                             },
                         )
                         for j, c in enumerate(batch)
@@ -486,7 +509,7 @@ class KBIngestionHelper:
                         if await KBIngestionHelper._is_job_cancelled(job_service, task_job_id):
                             raise IngestionCancelledError
                         try:
-                            await chroma.aadd_documents(docs)
+                            await backend.add_documents(docs)
                             break
                         except Exception as e:
                             if attempt == MAX_RETRY_ATTEMPTS - 1:
@@ -501,7 +524,10 @@ class KBIngestionHelper:
                 processed_files.append(file_name)
 
             metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-            KBAnalysisHelper.update_text_metrics(kb_path, metadata, chroma=chroma)
+            # update_text_metrics still accepts a Chroma instance for backwards
+            # compat with the component-based ingestion path; pass the backend's
+            # underlying LangChain store so we share the live connection.
+            KBAnalysisHelper.update_text_metrics(kb_path, metadata, chroma=backend.raw_langchain_store())
             metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
             metadata["chunk_size"] = chunk_size
             metadata["chunk_overlap"] = chunk_overlap
@@ -528,9 +554,8 @@ class KBIngestionHelper:
             await KBIngestionHelper.cleanup_chroma_chunks_by_job(task_job_id, kb_path, kb_name)
             raise
         finally:
-            client = None
-            chroma = None
-            KBStorageHelper.release_chroma_resources(kb_path)
+            if backend is not None:
+                await backend.teardown()
 
     @staticmethod
     async def cleanup_chroma_chunks_by_job(
@@ -538,21 +563,21 @@ class KBIngestionHelper:
         kb_path: Path,
         kb_name: str,
     ) -> None:
-        """Clean up ChromaDB chunks associated with a specific job ID."""
+        """Delete every chunk written by ``job_id`` from this KB.
+
+        Used by the ingestion rollback path on error or cancellation. The
+        backend-level filter keyed on ``METADATA_KEY_JOB_ID`` is what makes
+        rollbacks safe even when multiple concurrent jobs write to the same
+        collection.
+        """
+        backend = ChromaBackend(kb_name=kb_name, kb_path=kb_path)
         try:
-            client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-            chroma = Chroma(
-                client=client,
-                collection_name=kb_name,
-            )
-            await chroma.adelete(where={"job_id": str(job_id)})
+            await backend.delete_by({METADATA_KEY_JOB_ID: str(job_id)})
             await logger.ainfo(f"Cleaned up chunks for job {job_id} in knowledge base '{kb_name}'")
         except (OSError, ValueError, TypeError, chromadb.errors.ChromaError) as cleanup_error:
             await logger.aerror(f"Failed to clean up chunks for job {job_id}: {cleanup_error}")
         finally:
-            client = None
-            chroma = None
-            KBStorageHelper.release_chroma_resources(kb_path)
+            await backend.teardown()
 
     @staticmethod
     async def _is_job_cancelled(job_service: JobService, job_id: uuid.UUID) -> bool:
