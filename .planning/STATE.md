@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Phase 05.5 Plan 02 complete; IDX-09 parity + perf tests landed (78ae2b035a, 6c00cb3b1e, d11675f745).
-last_updated: "2026-04-18T22:01:22.847Z"
-last_activity: 2026-04-18
+status: executing
+stopped_at: Phase 6 Plan 02 complete (VAL-02 parity doc landed)
+last_updated: "2026-04-20T12:00:00.000Z"
+last_activity: 2026-04-20 -- Phase 6 Plan 02 (VAL-02 parity confirmation doc) complete
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 38
-  completed_plans: 28
-  percent: 74
+  total_plans: 43
+  completed_plans: 29
+  percent: 67
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** Faster cold start for `lfx run` on containerized/serverless deployments without breaking flow file format, Python API surface, or runtime behavior parity.
-**Current focus:** Phase 05.5 — component-index-build-caching
+**Current focus:** Phase 6 — validation-and-publication
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
-Status: Phase 05.5 COMPLETE — both plans executed
-Last activity: 2026-04-18
+Phase: 6 (validation-and-publication) — EXECUTING
+Plan: 3 of 5 (06-01 VAL-01 post-fix doc + thresholds.json snapshot landed; 06-02 VAL-02 parity doc landed; next is 06-03 VAL-03 CI verify-mode run + synthetic-regression exhibit)
+Status: Executing Phase 6
+Last activity: 2026-04-20 -- Phase 6 Plan 02 (VAL-02 parity confirmation doc) complete
 
 Phase 4 outcome: [##########] 100% (5/5 plans executed)
 
@@ -68,6 +68,7 @@ Phase 4 outcome: [##########] 100% (5/5 plans executed)
 | Phase 05 P06 | 4 | 2 tasks | 2 files |
 | Phase 05.5 P01 | 4 | 3 tasks | 1 file |
 | Phase 05.5 P02 | 15 | 3 tasks | 1 file |
+| Phase 06 P02 | 6 | 1 task | 1 file |
 
 ## Accumulated Context
 
@@ -124,6 +125,7 @@ Recent decisions affecting current work:
 - [Phase ?]: D-07 gate passed: LANGFLOW_GUNICORN_PRELOAD default flipped to true; Path A docs written with 7-hazard audit summary and opt-out instructions (CNT-04 complete)
 - [Phase 05.5-01]: IDX-08 short-circuit: _pending_cache_hit set in IDX-07 peek when ALL D-01 conditions pass (version match + non-empty entries); entries reconstructed to flat dict + filter_disabled_components_from_dict applied inside lock; _build_code_hash_lookups called on hit path (P-2). 44/44 tests pass, 2 OpenAI-dependent tests skip as expected.
 - [Phase 05.5-02]: IDX-09 test: prebuilt_cache_file fixture uses tmp_path_factory + direct setattr (module-scope; no monkeypatch conflict); perf test is sync def + asyncio.run() (not async def) to avoid event-loop conflict with asyncio_mode=auto. 49/49 tests pass, 2 OpenAI-dependent skips.
+- [Phase 06-02]: parity-confirmation-2026-04-20.md scope locked to CONTEXT D-07 (15 requirements, 16 rows incl. combined IDX-04+IDX-05 parity). IMP-11 row NOT added: D-07 predates the Phase-6 IMP-11 discovery (commit 11470f8107), and the regression test TestIMP11LazyValidateGlobals is covered by the umbrella CI run cited at the doc level, so scope adherence wins over optional inclusion. Date stem resolved from thresholds.json .captured_on = 2026-04-20 with hard guard against stale 4d2820ae73 interim.
 
 ### Pending Todos
 
@@ -147,10 +149,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-18T22:00:00Z
-Stopped at: Phase 05.5 Plan 02 complete; IDX-09 parity + perf tests landed (78ae2b035a, 6c00cb3b1e, d11675f745).
-Resume file: None
-Next step: Phase 05.5 complete. Advance to next phase.
+Last session: 2026-04-20T12:00:00.000Z
+Stopped at: Phase 6 Plan 02 complete (VAL-02 parity doc at commit ebb35f7eb8)
+Resume file: .planning/phases/06-validation-and-publication/06-03-PLAN.md
+Next step: Execute Plan 06-03 (VAL-03: CI verify-mode run under run-benchmarks label + local synthetic-regression exhibit).
 
 ### Phase 3 close notes
 

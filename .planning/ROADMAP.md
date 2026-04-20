@@ -195,11 +195,21 @@ Plans:
   2. A behavior parity confirmation document lists every change touching the services layer or component index (Phase 2 IDX-*, Phase 3 IMP-07/IMP-08, Phase 4 SVC-*), with test run references or assertion evidence that observable flow behavior is unchanged (VAL-02).
   3. The CI regression gate from MEAS-08 runs green on the final branch; a synthetic regression test (artificially add a 300ms sleep to an import path) confirms the gate would fail on regression (VAL-03).
   4. Final cold-start numbers are published in the appropriate release artifact (CHANGELOG, release notes, or integration note for the watsonX.orchestrate team) in whatever format is confirmed appropriate before this phase begins (VAL-04).
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 06-06-PLAN.md — IMP-11 regression fix (discovered during Phase 6 snapshot): defer langchain_core imports on lfx.base.models path (PEP 562 __getattr__ on __init__.py; TYPE_CHECKING + function-body imports in model.py) + absence test. Unblocks VAL-01 authoritative snapshot. Requirements: VAL-01.
+- [ ] 06-01-PLAN.md — VAL-01: workflow-upload mitigation + snapshot-mode CI re-run + post-YYYY-MM-DD.{md,json} authoring with MEAS-03 checkpoint breakdown and Phase 3 ROADMAP reconciliation. Requirements: VAL-01.
+- [x] 06-02-PLAN.md — VAL-02: author parity-confirmation-YYYY-MM-DD.md covering Phase 2 IDX-01..IDX-07, Phase 3 IMP-02 + IMP-07 + IMP-11, Phase 4 SVC-01..SVC-04, Phase 5.5 IDX-08 + IDX-09 (no new test runs per D-09). Requirements: VAL-02.
+- [ ] 06-03-PLAN.md — VAL-03: local make bench-verify-synthetic capture under synthetic-regression-evidence/ + verify-mode CI green run under run-benchmarks label. Records verify-run ID in 06-03-SUMMARY for 06-05 backfill. Requirements: VAL-03.
+- [ ] 06-04-PLAN.md — VAL-04: three-layer publication (release-notes.mdx bullet, deployment-cold-start.mdx ### Measured improvements append, .planning/deliverables/watsonx-integration-note.md). Requirements: VAL-04.
+- [ ] 06-05-PLAN.md — VAL-03 citation tail: backfill the verify-mode CI run ID from 06-03 into post-YYYY-MM-DD.md and parity-confirmation-YYYY-MM-DD.md, replacing the `<verify-run-id-from-06-03>` placeholders. Requirements: VAL-03.
 
 **Wave hints for parallelization:**
-- wave 1: VAL-01 (re-run harness, produce comparison table) + VAL-02 (parity confirmation document) + VAL-03 (CI gate green run) — these can all proceed in parallel once all prior phases are complete
-- wave 2 (depends on VAL-01 complete): VAL-04 (publication, requires final numbers)
+- wave 1 (regression fix, blocks all measurement): 06-06 (IMP-11 langchain_core deferral on lfx.base.models path).
+- wave 2 (parallel; depends on 06-06 landing so the lfx path is clean): 06-01 (authoritative snapshot + post-doc) + 06-03 (CI verify-mode run + local synthetic-regression evidence).
+- wave 3 (parallel; disjoint files_modified; both depends_on ["06-01"]): 06-02 (parity doc; derives date from post-06-01 thresholds.json) + 06-04 (publication; consumes post-06-01 numbers).
+- wave 4 (depends on 06-01 + 06-02 + 06-03): 06-05 (backfill verify-run ID into the placeholder-bearing docs created by 06-01 and 06-02, using the run ID recorded by 06-03).
 
 ## Progress
 
