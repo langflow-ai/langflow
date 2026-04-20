@@ -69,6 +69,18 @@ class Settings(BaseSettings):
     knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
     """The directory to store knowledge bases."""
 
+    vector_store_backend: str = "chroma"
+    """Vector-store backend for Knowledge Bases.
+
+    Currently only ``chroma`` (local, persistent) is shipped; ``mongodb``,
+    ``astra``, and ``postgres`` are reserved identifiers for upcoming phases
+    of the KB DB-Connectors epic."""
+    vector_store_backend_config: dict = {}
+    """Backend-specific configuration for the selected ``vector_store_backend``.
+
+    Ignored for the default ``chroma`` backend. Populated per-backend (e.g.
+    connection URIs, index names, auth references) as additional backends land."""
+
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
