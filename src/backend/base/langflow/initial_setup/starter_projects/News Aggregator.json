@@ -1735,6 +1735,7 @@
               "storage_location",
               "input",
               "file_name",
+              "file_format",
               "append_mode",
               "local_format",
               "aws_format",
@@ -1973,6 +1974,25 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "news-aggregated"
+              },
+              "file_format": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "File Format (Tool)",
+                "dynamic": false,
+                "info": "Output format: 'csv', 'json', 'txt', 'html', 'excel', 'markdown'. Overrides pre-configured format.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "file_format",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
               },
               "folder_id": {
                 "_input_type": "StrInput",
