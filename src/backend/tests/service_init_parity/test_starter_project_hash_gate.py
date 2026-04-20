@@ -1,6 +1,6 @@
-"""SVC-01 starter-projects hash-gate behavioral tests (D-05 / D-04).
+"""SVC-01 starter-projects hash-gate behavioral tests (D-05 /).
 
-Exercises ``run_starter_projects_hash_gate`` against the Phase 4 synthetic
+Exercises ``run_starter_projects_hash_gate`` against the synthetic
 starter folders. The gate is the exact helper ``langflow/main.py`` calls
 inside its ``FileLock`` block (see ``04-01-PLAN.md`` Task 3 approach (b) --
 planner chose "extract testable helper" so tests and production share code),
@@ -8,12 +8,12 @@ minus the lock itself -- locking is orthogonal infrastructure covered by the
 existing FileLock behavior.
 
 Tests use a hand-written ``_CallCounter`` rather than ``unittest.mock``
-(``monkeypatch`` + call-site spy per Phase 2 D-08 / global CLAUDE.md "avoid
+(``monkeypatch`` + call-site spy per / global CLAUDE.md "avoid
 mocking in tests").
 
 Pitfall 7 reminder: the wall-clock tripwire is 200ms (generous, local). The
 50ms number lives in CI's ``cold-start-benchmark.yml`` + ``thresholds.json``
-pipeline (D-03), not here. Do not tighten.
+pipeline, not here. Do not tighten.
 """
 
 from __future__ import annotations

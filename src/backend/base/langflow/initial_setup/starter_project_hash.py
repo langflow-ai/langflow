@@ -6,7 +6,7 @@ Computes a content hash over the starter-project JSON files plus the installed
 short-circuit the full starter-project re-sync on restarts where nothing
 changed.
 
-Failure modes (D-04): missing, unreadable, or corrupt hash files all fall
+Failure modes: missing, unreadable, or corrupt hash files all fall
 through to a full re-sync. ``LANGFLOW_FORCE_STARTER_RESYNC=1`` bypasses the
 comparison. Write failures (read-only root filesystem, e.g. container
 deployments) log at debug level and never raise -- mirroring the
@@ -45,7 +45,7 @@ async def compute_starter_projects_hash(starter_folder: anyio.Path) -> str:
     (source-only checkout without ``pip install -e .``), the sentinel
     ``"unknown"`` is substituted (Pattern F / Pitfall 5). The hash remains
     stable within such an environment but will invalidate whenever the
-    fallback fires in a fresh environment -- acceptable per D-01.
+    fallback fires in a fresh environment -- acceptable .
     """
     try:
         pkg_version = version("lfx")
@@ -77,7 +77,7 @@ async def read_hash_file_safe(hash_path: Path) -> str | None:
     - Corrupt content (first non-comment line is not 64 hex chars)
 
     The caller is expected to treat ``None`` as a cache miss and fall through
-    to a full re-sync (D-04).
+    to a full re-sync.
     """
     try:
         async with aiofiles.open(str(hash_path), encoding="utf-8") as f:
@@ -132,10 +132,10 @@ async def run_starter_projects_hash_gate(
     hash_path: Path,
     sync_fn: Callable[[], Awaitable[Any]],
 ) -> bool:
-    """Execute the SVC-01 hash-gated starter-project sync.
+    """Execute the hash-gated starter-project sync.
 
     This helper encapsulates the hash compare / sync / write sequence so both
-    ``main.py`` (inside its ``FileLock``) and the Phase 4 parity tests invoke
+    ``main.py`` (inside its ``FileLock``) and the parity tests invoke
     the exact same code path. ``sync_fn`` is a zero-arg coroutine factory the
     caller uses to pass in ``create_or_update_starter_projects(all_types_dict)``
     with ``all_types_dict`` already bound.

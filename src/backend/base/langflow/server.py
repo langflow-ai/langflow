@@ -74,7 +74,7 @@ class LangflowApplication(BaseApplication):
         config = {key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None}
         for key, value in config.items():
             self.cfg.set(key.lower(), value)
-        # CNT-04: reset fork-unsafe resources in each worker after fork.
+        # reset fork-unsafe resources in each worker after fork.
         # See _langflow_post_fork below + TelemetryService.start() guard.
         self.cfg.set("post_fork", _langflow_post_fork)
 
@@ -91,7 +91,7 @@ def _langflow_post_fork(server, worker) -> None:  # noqa: ARG001
     asyncio.get_event_loop, no await).
 
     Current responsibilities (CNT-04 fork-hazard audit, RESEARCH.md section
-    "Fork Hazard Audit (D-05)"):
+    "Fork Hazard Audit"):
 
     * TelemetryService.client (httpx.AsyncClient) — reset to None so that
       TelemetryService.start() reconstructs it inside the worker's event
@@ -99,7 +99,7 @@ def _langflow_post_fork(server, worker) -> None:  # noqa: ARG001
       aclose() here; replacing the reference is the correct pattern
       (Pitfall 1).
 
-    All other hazards audited in Phase 5 (SQLAlchemy engine, asyncio locks,
+    All other hazards audited in (SQLAlchemy engine, asyncio locks,
     ComponentCache.all_types_dict, Redis pool, asyncio.create_task, open
     file descriptors) are SAFE by construction — see the phase 05 SUMMARY
     for evidence.

@@ -41,7 +41,7 @@ def test_main_py_has_exactly_one_superuser_init_call():
     call_count = source.count("await initialize_auto_login_default_superuser()")
     assert call_count == 1, (
         f"expected exactly 1 `await initialize_auto_login_default_superuser()` call in langflow/main.py, "
-        f"got {call_count}. The IDX-06 duplicate may have been re-introduced."
+        f"got {call_count}. The duplicate may have been re-introduced."
     )
 
 
@@ -53,7 +53,7 @@ def test_main_py_call_is_inside_auto_login_branch():
     conditional_marker = "if get_settings_service().auth_settings.AUTO_LOGIN:"
     assert conditional_marker in source, (
         f"expected the AUTO_LOGIN conditional marker in langflow/main.py; got source that did not contain "
-        f"{conditional_marker!r}. The IDX-06 fix may have removed the wrong branch."
+        f"{conditional_marker!r}. The fix may have removed the wrong branch."
     )
 
     # Locate the conditional and assert the call comes after it (and no duplicate before "Loading bundles")
@@ -123,5 +123,5 @@ async def test_superuser_init_zero_calls_with_auto_login_false(monkeypatch):
 
     assert counter.count == 0, (
         f"with AUTO_LOGIN=False, expected 0 calls from the lifespan fragment, got {counter.count}. "
-        f"The IDX-06 fix may have preserved the unconditional call by mistake."
+        f"The fix may have preserved the unconditional call by mistake."
     )

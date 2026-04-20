@@ -1,4 +1,4 @@
-"""D-06 structural assertion + D-10 review-coverage enforcement for SVC-02.
+"""D-06 structural assertion + review-coverage enforcement for.
 
 Plan 04-03 replaces two sequential lifespan blocks in
 ``src/backend/base/langflow/main.py`` with two ``asyncio.gather`` calls (wave 1:
@@ -9,9 +9,9 @@ wrapped in the ``_safe_step`` per-task error-isolation helper.
 These tests enforce:
 
 - **D-06 / Tests 1-3**: the two gathers exist and their task-name sets match the
-  contract seeded in plan 04-02's D-09 review tables.
+  contract seeded in plan 04-02's review tables.
 - **D-10 / Test 4**: every callable passed to a gather has a row in the
-  co-located D-09 review comment block directly above it.
+  co-located review comment block directly above it.
 - **Defensive parity / Test 5**: no task is both sequential AND in a gather
   (guards against leaving the old sequential call alongside the new gather).
 - **SVC-04 parity / Test 6**: ``initialize_services`` remains a single
@@ -28,7 +28,7 @@ import re
 import langflow.main as main_mod
 import pytest
 
-from tests.phase_04_service_init_parity.ast_helpers import (
+from tests.phase_service_init_parity.ast_helpers import (
     extract_gather_task_names,
     find_calls_to,
     parse_lifespan_module,
@@ -44,7 +44,7 @@ EXPECTED_WAVE_2 = {"load_bundles_with_error_handling", "get_and_cache_all_types_
 # ``load_bundles_with_error_``) are stitched with the next row's first cell.
 _TABLE_ROW_RE = re.compile(r"^\s*#\s*\|([^|]*)\|")
 
-# Marker that identifies the start of a D-09 review comment block. Plan 04-02
+# Marker that identifies the start of a review comment block. Plan 04-02
 # committed this marker verbatim in langflow/main.py.
 _REVIEW_HEADER = "D-09 service-dependency review"
 
@@ -56,7 +56,7 @@ _REVIEW_LOOKBACK_LINES = 25
 
 
 def _extract_table_rows_from_block(lines: list[str]) -> set[str]:
-    """Parse a list of comment lines starting from a D-09 review block header.
+    """Parse a list of comment lines starting from a review block header.
 
     Same stitching rules as plan 04-02's ``_extract_table_rows``: skip the
     ``Task`` header and separator rows, stitch rows whose first cell ends with
@@ -93,7 +93,7 @@ def _extract_table_rows_from_block(lines: list[str]) -> set[str]:
 
 
 def _find_review_block_above(source_lines: list[str], gather_lineno: int) -> list[str]:
-    """Return the slice of source lines that contains the D-09 block above a gather.
+    """Return the slice of source lines that contains the block above a gather.
 
     Scans up to ``_REVIEW_LOOKBACK_LINES`` lines backward from ``gather_lineno``
     (1-indexed AST line numbers, converted to 0-indexed slices) for the
@@ -139,7 +139,7 @@ def lifespan_gathers(lifespan_tree):
     """Return the gathers in source order, filtered to startup-lifespan gathers.
 
     Excludes shutdown/cleanup gathers (which have no ``_safe_step`` wrappers
-    and no D-09 review block above them). The filter is ``extract_gather_task_names``
+    and no review block above them). The filter is ``extract_gather_task_names``
     returning a non-empty list -- startup gathers always have at least one
     ``_safe_step`` wrapper and therefore yield one or more names; shutdown
     gathers pass bare task lists (or unpacked splats) and yield an empty list.
@@ -150,16 +150,16 @@ def lifespan_gathers(lifespan_tree):
 
 
 def test_lifespan_has_two_startup_gathers(lifespan_gathers) -> None:
-    """Test 1 (D-06): two startup-wave gathers exist in the lifespan."""
+    """Test 1: two startup-wave gathers exist in the lifespan."""
     assert len(lifespan_gathers) >= 2, (
         f"expected at least two asyncio.gather calls with _safe_step-wrapped tasks "
         f"in langflow/main.py lifespan (wave 1 + wave 2); found {len(lifespan_gathers)}. "
-        f"Plan 04-03 landed the two gathers directly below the D-09 review blocks."
+        f"Plan 04-03 landed the two gathers directly below the review blocks."
     )
 
 
 def test_gather_wave_1_task_set_matches_expected(lifespan_gathers) -> None:
-    """Test 2 (D-06): wave-1 gather task set equals ``EXPECTED_WAVE_1``."""
+    """Test 2: wave-1 gather task set equals ``EXPECTED_WAVE_1``."""
     wave_1 = lifespan_gathers[0]
     names = set(extract_gather_task_names(wave_1))
     assert names == EXPECTED_WAVE_1, (
@@ -170,7 +170,7 @@ def test_gather_wave_1_task_set_matches_expected(lifespan_gathers) -> None:
 
 
 def test_gather_wave_2_task_set_matches_expected(lifespan_gathers) -> None:
-    """Test 3 (D-06): wave-2 gather task set equals ``EXPECTED_WAVE_2``."""
+    """Test 3: wave-2 gather task set equals ``EXPECTED_WAVE_2``."""
     wave_2 = lifespan_gathers[1]
     names = set(extract_gather_task_names(wave_2))
     assert names == EXPECTED_WAVE_2, (
@@ -184,14 +184,14 @@ def test_every_gather_task_has_review_row(
     lifespan_gathers,
     lifespan_source_lines: list[str],
 ) -> None:
-    """Test 4 (D-10): every task inside a startup gather has a D-09 table row.
+    """Test 4: every task inside a startup gather has a table row.
 
     For each startup gather, walks backwards from the gather's line number until
     the ``_REVIEW_HEADER`` marker is found, then parses the comment-table rows
     between the header and the gather. Asserts the set of extracted row names
     is a superset of the set of gather task names.
 
-    This is the D-10 enforcement: if a reviewer adds a new callable to the
+    This is the enforcement: if a reviewer adds a new callable to the
     gather without updating the review table above it, the set inclusion check
     fails and points to the exact gather line number.
     """
@@ -203,7 +203,7 @@ def test_every_gather_task_has_review_row(
         )
         review_lines = _find_review_block_above(lifespan_source_lines, gather.lineno)
         assert review_lines, (
-            f"gather #{i} at line {gather.lineno} has no D-09 review block "
+            f"gather #{i} at line {gather.lineno} has no review block "
             f"within {_REVIEW_LOOKBACK_LINES} lines above it; the 04-02 anchor "
             f"('{_REVIEW_HEADER}') was removed or moved."
         )
@@ -211,7 +211,7 @@ def test_every_gather_task_has_review_row(
         missing = task_names - row_names
         assert not missing, (
             f"gather #{i} at line {gather.lineno} passes task(s) {sorted(missing)!r} "
-            f"to asyncio.gather but the D-09 review table above it has no row for "
+            f"to asyncio.gather but the review table above it has no row for "
             f"them (extracted rows: {sorted(row_names)!r}). Add a row to the "
             f"review table -- or remove the task from the gather."
         )

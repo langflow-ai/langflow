@@ -1,8 +1,8 @@
 """SVC-04 restart-parity integration test -- boot lifespan sequence twice.
 
-Closes ROADMAP Phase 4 Success Criterion #4 ("restart integration test
+Closes ROADMAP Success Criterion #4 ("restart integration test
 confirms no 'service not initialized' or 'table doesn't exist' errors with
-the new lifespan order") and SVC-04 ROADMAP row.
+the new lifespan order") and ROADMAP row.
 
 Strategy (analog: ``src/backend/tests/performance/test_server_init.py`` 26-75):
 chain the three public async functions the FastAPI lifespan invokes --
@@ -29,7 +29,7 @@ table"), and no ERROR-level log records whose message contains
 "service not initialized" or similar ordering-violation strings.
 
 SVC-04 parity also asserts that ``src/backend/base/langflow/services/utils.py``
-is untouched by Phase 4 (Test 6 -- AST-level function-name + order check).
+is untouched by (Test 6 -- AST-level function-name + order check).
 """
 
 from __future__ import annotations
@@ -97,7 +97,7 @@ async def test_svc04_initialize_services_boot_1_clean(
     with caplog.at_level(logging.ERROR):
         await initialize_services(fix_migration=False)
     settings_service = get_settings_service()
-    assert "test_phase_04.db" in settings_service.settings.database_url, (
+    assert "test_.db" in settings_service.settings.database_url, (
         f"Expected tmp DB URL; got {settings_service.settings.database_url!r}"
     )
     offenders = _init_order_error_records(caplog)
@@ -226,21 +226,21 @@ async def test_svc04_force_resync_env_var_second_boot_clean(
 
 
 # ---------------------------------------------------------------------------
-# Test 6 -- SVC-04 parity: services/utils.py module structure unchanged.
+# Test 6 -- parity: services/utils.py module structure unchanged.
 # ---------------------------------------------------------------------------
 
 
-def test_svc04_services_utils_module_structure_unchanged() -> None:
+def test_services_utils_module_structure_unchanged() -> None:
     """Assert ``services/utils.py`` top-level async function names + order are unchanged.
 
-    SVC-04 contract: service initialization order is preserved. Phase 4 plans
+    contract: service initialization order is preserved. plans
     04-01 through 04-04 all modified ``langflow/main.py`` but NOT
     ``langflow/services/utils.py`` -- the init ordering (database, superuser,
     orphan-reassignment, transaction cleanup) is preserved verbatim.
 
     This test codifies the current module-level function layout. If a future
     change adds/removes/reorders a function in services/utils.py, this test
-    fails and the author must explicitly document the SVC-04 compatibility
+    fails and the author must explicitly document the compatibility
     impact.
     """
     import langflow.services.utils as utils_mod
@@ -269,10 +269,10 @@ def test_svc04_services_utils_module_structure_unchanged() -> None:
     )
 
 
-def test_svc04_initialize_services_signature_unchanged() -> None:
+def test_initialize_services_signature_unchanged() -> None:
     """Guard initialize_services' public signature (``fix_migration: bool = False``).
 
-    The SVC-04 restart-parity contract is that callers (FastAPI lifespan,
+    The restart-parity contract is that callers (FastAPI lifespan,
     integration tests, CLI `langflow run`) continue to invoke
     ``await initialize_services(fix_migration=...)`` with exactly this
     keyword-only bool. Changing the signature breaks every caller silently.

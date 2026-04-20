@@ -1,11 +1,11 @@
-"""D-10 precondition enforcement: SVC-02 D-09 dependency-review comment blocks.
+"""D-10 precondition enforcement: dependency-review comment blocks.
 
 These tests assert that ``src/backend/base/langflow/main.py`` contains the two
-review comment blocks (wave 1 + wave 2) that anchor where plan 04-03 will
+review comment blocks (wave 1 + wave 2) that anchor where will
 insert its ``asyncio.gather`` calls. The actual gather + task-name cross-check
 lives in plan 04-03's own test; this module only guards the review anchor.
 
-Also asserts the SVC-04 parity guardrail: ``initialize_services`` is called
+Also asserts the parity guardrail: ``initialize_services`` is called
 exactly once and is NOT passed to ``asyncio.gather``.
 
 Source inspection only -- no live database, settings, or event loop needed.
@@ -98,11 +98,11 @@ def lifespan_source() -> str:
 
 
 def test_wave_1_review_block_present(lifespan_source: str) -> None:
-    """Test 1: wave-1 D-09 review block anchors the future gather insertion point."""
+    """Test 1: wave-1 review block anchors the future gather insertion point."""
     if lifespan_source.count("SVC-02 wave 1") != 1:
         pytest.fail(
             "expected exactly one 'SVC-02 wave 1' marker in langflow/main.py; "
-            f"got {lifespan_source.count('SVC-02 wave 1')}. The D-09 review block "
+            f"got {lifespan_source.count('SVC-02 wave 1')}. The review block "
             "anchor for plan 04-03's wave-1 gather is missing or duplicated."
         )
     if "D-09 service-dependency review" not in lifespan_source:
@@ -122,11 +122,11 @@ def test_wave_1_review_block_present(lifespan_source: str) -> None:
 
 
 def test_wave_2_review_block_present(lifespan_source: str) -> None:
-    """Test 2: wave-2 D-09 review block anchors the future gather insertion point."""
+    """Test 2: wave-2 review block anchors the future gather insertion point."""
     if lifespan_source.count("SVC-02 wave 2") != 1:
         pytest.fail(
             "expected exactly one 'SVC-02 wave 2' marker in langflow/main.py; "
-            f"got {lifespan_source.count('SVC-02 wave 2')}. The D-09 review block "
+            f"got {lifespan_source.count('SVC-02 wave 2')}. The review block "
             "anchor for plan 04-03's wave-2 gather is missing or duplicated."
         )
     wave_2_slice = lifespan_source.split("SVC-02 wave 2", 1)[1].splitlines()[:20]
@@ -153,27 +153,27 @@ def test_table_rows_match_expected_sets(lifespan_source: str) -> None:
     if got_wave_1 != EXPECTED_WAVE_1:
         pytest.fail(
             f"wave-1 parsed task set {sorted(got_wave_1)!r} does not match the "
-            f"contract {sorted(EXPECTED_WAVE_1)!r} that plan 04-03 will pass to "
-            "asyncio.gather. Update the D-09 review table OR the EXPECTED_WAVE_1 "
+            f"contract {sorted(EXPECTED_WAVE_1)!r} that will pass to "
+            "asyncio.gather. Update the review table OR the EXPECTED_WAVE_1 "
             "constant (whichever is authoritative) before 04-03 lands."
         )
     got_wave_2 = _extract_table_rows(lifespan_source, "SVC-02 wave 2")
     if got_wave_2 != EXPECTED_WAVE_2:
         pytest.fail(
             f"wave-2 parsed task set {sorted(got_wave_2)!r} does not match the "
-            f"contract {sorted(EXPECTED_WAVE_2)!r} that plan 04-03 will pass to "
-            "asyncio.gather. Update the D-09 review table OR the EXPECTED_WAVE_2 "
+            f"contract {sorted(EXPECTED_WAVE_2)!r} that will pass to "
+            "asyncio.gather. Update the review table OR the EXPECTED_WAVE_2 "
             "constant (whichever is authoritative) before 04-03 lands."
         )
 
 
 def test_initialize_services_parity_guardrail(lifespan_source: str) -> None:
-    """Test 4: SVC-04 parity -- initialize_services stays a single sequential await.
+    """Test 4: parity -- initialize_services stays a single sequential await.
 
     Asserts:
     - ``await initialize_services(fix_migration=fix_migration)`` appears exactly once.
     - No ``asyncio.gather`` on the same line as ``initialize_services`` (defensive:
-      someone later moving services init into a gather would silently break SVC-04).
+      someone later moving services init into a gather would silently break).
     """
     call_marker = "await initialize_services(fix_migration=fix_migration)"
     call_count = lifespan_source.count(call_marker)

@@ -1,4 +1,4 @@
-"""Unit tests for the gunicorn post_fork hook + TelemetryService None-guards (CNT-04)."""
+"""Unit tests for the gunicorn post_fork hook + TelemetryService None-guards."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def telemetry_service():
 def test_post_fork_resets_telemetry_client(monkeypatch, telemetry_service):
     """_langflow_post_fork must set TelemetryService.client to None.
 
-    CNT-04 + RESEARCH.md 'Fork Hazard Audit -> 4. Redis / httpx connection pools'.
+    + RESEARCH.md 'Fork Hazard Audit -> 4. Redis / httpx connection pools'.
     """
     import langflow.services.deps as deps_module
 

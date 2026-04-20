@@ -1,4 +1,4 @@
-"""Phase 4 service-init parity test fixtures.
+"""service-init parity test fixtures.
 
 Provides a phase-local ``tmp_config_dir`` that redirects
 ``LANGFLOW_CONFIG_DIR`` + ``LANGFLOW_DATABASE_URL`` into a per-test tmp
@@ -32,7 +32,7 @@ def tmp_config_dir(tmp_path, monkeypatch):
     settings_service = get_settings_service()
     config_dir = tmp_path / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
-    db_path = tmp_path / "test_phase_04.db"
+    db_path = tmp_path / "test_.db"
     test_db_url = f"sqlite:///{db_path}"
 
     original_config = os.getenv("LANGFLOW_CONFIG_DIR")

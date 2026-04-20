@@ -28,7 +28,7 @@ COPY src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
 COPY src/sdk/README.md /app/src/sdk/README.md
 
 # Create the venv and install *only* what lfx needs (no dev)
-# --no-install-project keeps the deps layer cache-stable when source changes (CNT-02)
+# --no-install-project keeps the deps layer cache-stable when source changes
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project --package lfx
 

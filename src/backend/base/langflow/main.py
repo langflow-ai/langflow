@@ -207,17 +207,17 @@ def get_lifespan(*, fix_migration=False, version=None):
         try:
             start_time = asyncio.get_event_loop().time()
 
-            # SVC-03 (D-12): Event constructed inside lifespan so it binds to the running loop.
+            # Event constructed inside lifespan so it binds to the running loop.
             # Module-level asyncio.Event() would leak across pytest event loops (Pitfall 1, same
-            # root cause as IDX-01's asyncio.Lock issue on Python 3.13/3.14).
+            # root cause as's asyncio.Lock issue on Python 3.13/3.14).
             starter_projects_ready_event = asyncio.Event()
 
             await logger.adebug("Initializing services")
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
-            # SVC-02 wave 1: independent filesystem / in-memory ops.
-            # D-09 service-dependency review (enforced by D-10 test; every task passed to gather MUST have a row):
+            # wave 1: independent filesystem / in-memory ops.
+            # service-dependency review (enforced by test; every task passed to gather MUST have a row):
             #
             # | Task                  | Reads                                      | Writes                            |
             # |-----------------------|--------------------------------------------|-----------------------------------|
@@ -242,8 +242,8 @@ def get_lifespan(*, fix_migration=False, version=None):
                     f"Default super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
                 )
 
-            # SVC-02 wave 2: independent post-superuser ops.
-            # D-09 service-dependency review (enforced by D-10 test; every task passed to gather MUST have a row):
+            # wave 2: independent post-superuser ops.
+            # service-dependency review (enforced by test; every task passed to gather MUST have a row):
             #
             # | Task                          | Reads                                 | Writes                         |
             # |-------------------------------|---------------------------------------|--------------------------------|
@@ -285,7 +285,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             lock = FileLock(lock_file, timeout=1)
             try:
                 with lock:
-                    # SVC-01: hash-gated re-sync. Hash read / compute / write all run
+                    # hash-gated re-sync. Hash read / compute / write all run
                     # inside the FileLock to preserve multi-worker TOCTOU safety (the
                     # other worker either wrote the up-to-date hash before releasing
                     # the lock, or the lock contention path fires below).
@@ -309,10 +309,10 @@ def get_lifespan(*, fix_migration=False, version=None):
                             f"Starter projects hash matches; skipped re-sync in "
                             f"{asyncio.get_event_loop().time() - current_time:.2f}s"
                         )
-                    # SVC-03 producer (D-11): fire on both match and miss paths inside the
+                    # producer: fire on both match and miss paths inside the
                     # FileLock, but NOT in a finally clause. If create_or_update_starter_projects
                     # or the hash read raises, DO NOT set the event -- let the 60s consumer
-                    # timeout (D-13) surface the failure as warn-and-continue degraded mode.
+                    # timeout surface the failure as warn-and-continue degraded mode.
                     starter_projects_ready_event.set()
             except TimeoutError:
                 # Another process has the lock
@@ -378,10 +378,10 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
             async def delayed_init_mcp_servers():
-                # SVC-03 consumer (D-11/D-13): replace the previously hardcoded 10-second
+                # consumer (D-11/D-13): replace the previously hardcoded 10-second
                 # coordination sleep with a bounded wait on the starter_projects_ready_event
                 # set by the FileLock producer. On timeout, log a warning and proceed with
-                # MCP init anyway (warn-and-continue degraded mode per D-13). Closure captures
+                # MCP init anyway (warn-and-continue degraded mode ). Closure captures
                 # the Event because this function is defined inline inside lifespan (Pitfall 6).
                 try:
                     await asyncio.wait_for(starter_projects_ready_event.wait(), timeout=60.0)
@@ -396,7 +396,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                     await logger.adebug(f"MCP servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
                 except Exception as e:  # noqa: BLE001
                     await logger.awarning(f"First MCP server initialization attempt failed: {e}")
-                    await asyncio.sleep(5.0)  # D-14: retain transient-DB-error retry guard
+                    await asyncio.sleep(5.0)  #: retain transient-DB-error retry guard
                     current_time = asyncio.get_event_loop().time()
                     await logger.adebug("Retrying MCP servers initialization")
                     try:

@@ -1,22 +1,22 @@
-"""D-07 + D-12 + D-14 + Pitfall 1/6 assertions for SVC-03 MCP Event readiness.
+"""D-07 + + + Pitfall 1/6 assertions for MCP Event readiness.
 
 Plan 04-04 replaces the hardcoded ``asyncio.sleep(10.0)`` coordination hint in
 ``delayed_init_mcp_servers`` (``src/backend/base/langflow/main.py``) with an
 ``asyncio.Event`` driven by the starter-project FileLock block:
 
 - The Event is constructed **inside** ``lifespan()`` so it binds to the running
-  loop (D-12 / Pitfall 1, same root cause as IDX-01's lock issue).
+  loop (D-12 / Pitfall 1, same root cause as's lock issue).
 - The Event is ``.set()`` on both hash-hit and hash-miss paths inside the
-  ``with lock:`` body (D-11), NOT in a ``finally:`` clause (so starter-project
+  ``with lock:`` body, NOT in a ``finally:`` clause (so starter-project
   failures are surfaced via the 60s consumer timeout, not masked).
 - ``delayed_init_mcp_servers`` now does
   ``await asyncio.wait_for(starter_projects_ready_event.wait(), timeout=60.0)``
   with a warn-and-continue degraded-mode path on ``asyncio.TimeoutError``
-  (D-13).
+ .
 - ``delayed_init_mcp_servers`` remains defined **inline** inside ``lifespan()``
   so the Event closure is captured (Pitfall 6).
 - The 5s retry at the retry-after-first-failure site is preserved verbatim
-  (D-14).
+ .
 
 These tests enforce the above structurally (AST) and behaviorally (a small
 asyncio race harness that proves the Event unblocks in < 600ms when the
@@ -39,7 +39,7 @@ import time
 import langflow.main as main_mod
 import pytest
 
-from tests.phase_04_service_init_parity.ast_helpers import (
+from tests.phase_service_init_parity.ast_helpers import (
     find_calls_to,
     find_sleep_with_value,
     parse_lifespan_module,
@@ -58,7 +58,7 @@ def _get_lifespan_func_node(tree: ast.Module) -> ast.AsyncFunctionDef:
 
 
 # ---------------------------------------------------------------------------
-# Test 1 -- D-07 absence: no asyncio.sleep(10.0) on the MCP init path.
+# Test 1 -- absence: no asyncio.sleep(10.0) on the MCP init path.
 # ---------------------------------------------------------------------------
 def test_no_asyncio_sleep_10_in_mcp_init_path() -> None:
     tree = parse_lifespan_module()
@@ -69,19 +69,19 @@ def test_no_asyncio_sleep_10_in_mcp_init_path() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Test 2 -- D-14 guard: asyncio.sleep(5.0) retry is preserved.
+# Test 2 -- guard: asyncio.sleep(5.0) retry is preserved.
 # ---------------------------------------------------------------------------
 def test_asyncio_sleep_5_retry_still_present() -> None:
     tree = parse_lifespan_module()
     sleeps_5 = find_sleep_with_value(tree, 5.0)
     assert len(sleeps_5) >= 1, (
         "asyncio.sleep(5.0) must remain in langflow/main.py as the transient-DB-error "
-        "retry guard per D-14; no occurrences found."
+        "retry guard ; no occurrences found."
     )
 
 
 # ---------------------------------------------------------------------------
-# Test 3 -- D-11 source-level: Event producer fires inside the FileLock body,
+# Test 3 -- source-level: Event producer fires inside the FileLock body,
 # NOT in a ``finally:`` clause.
 # ---------------------------------------------------------------------------
 def test_event_set_inside_filelock_not_in_finally() -> None:
@@ -125,7 +125,7 @@ def test_event_set_inside_filelock_not_in_finally() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Test 4 -- D-12 / Pitfall 1: Event constructed inside lifespan(), never at
+# Test 4 -- / Pitfall 1: Event constructed inside lifespan(), never at
 # module level.
 # ---------------------------------------------------------------------------
 def test_event_constructed_inside_lifespan_not_module_level() -> None:
@@ -201,7 +201,7 @@ def test_delayed_init_mcp_servers_remains_inline_inside_lifespan() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Test 6 -- D-13: consumer uses asyncio.wait_for with bounded timeout = 60.0.
+# Test 6 --: consumer uses asyncio.wait_for with bounded timeout = 60.0.
 # ---------------------------------------------------------------------------
 def test_consumer_uses_wait_for_with_60s_timeout() -> None:
     tree = parse_lifespan_module()
@@ -227,14 +227,14 @@ def test_consumer_uses_wait_for_with_60s_timeout() -> None:
 
     assert len(matching) >= 1, (
         f"Expected at least 1 asyncio.wait_for({_EVENT_NAME}.wait(), ...) call; "
-        f"found 0. D-13 requires the consumer to bounded-wait on the Event."
+        f"found 0. requires the consumer to bounded-wait on the Event."
     )
 
     # Assert the timeout kwarg is a numeric constant == 60.0.
     for call in matching:
         timeout_kw = next((k for k in call.keywords if k.arg == "timeout"), None)
         assert timeout_kw is not None, (
-            "asyncio.wait_for must be called with an explicit `timeout=` keyword per D-13 bounded-wait contract."
+            "asyncio.wait_for must be called with an explicit `timeout=` keyword  bounded-wait contract."
         )
         val = timeout_kw.value
         assert isinstance(val, ast.Constant), (
@@ -243,11 +243,11 @@ def test_consumer_uses_wait_for_with_60s_timeout() -> None:
         assert isinstance(val.value, (int, float)), (
             f"`timeout` Constant must hold a numeric value; got {type(val.value).__name__}: {val.value!r}"
         )
-        assert float(val.value) == 60.0, f"`timeout` must be 60.0 per D-13 default; got {val.value!r}."
+        assert float(val.value) == 60.0, f"`timeout` must be 60.0  default; got {val.value!r}."
 
 
 # ---------------------------------------------------------------------------
-# Test 7 -- D-07 event-race: Event unblocks in < 600ms when producer takes
+# Test 7 -- event-race: Event unblocks in < 600ms when producer takes
 # 500ms.
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio

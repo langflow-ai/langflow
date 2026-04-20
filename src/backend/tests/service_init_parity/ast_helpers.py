@@ -1,9 +1,9 @@
-"""AST helpers for Phase 4 structural assertions.
+"""AST helpers for structural assertions.
 
 Source: docs.python.org/3/library/ast.html
 
-These helpers support Phase 4 D-06 (SVC-02 gather structure), D-07
-(SVC-03 ``asyncio.sleep(10.0)`` absence), and D-10 (gather-review-table
+These helpers support (SVC-02 gather structure),
+(SVC-03 ``asyncio.sleep(10.0)`` absence), and (gather-review-table
 enforcement) tests. They parse ``src/backend/base/langflow/main.py`` once and
 expose a tiny query API over the AST.
 """
@@ -35,7 +35,7 @@ def find_calls_to(tree: ast.AST, qualname: str) -> list[ast.Call]:
     - Two-segment qualified names ("asyncio.gather") matched against
       ``Call(func=Attribute(value=Name('asyncio'), attr='gather'))``.
 
-    Longer dotted paths are not currently needed by Phase 4 and are not
+    Longer dotted paths are not currently needed by and are not
     supported.
     """
     parts = qualname.split(".")
@@ -62,7 +62,7 @@ def find_sleep_with_value(tree: ast.AST, value: float) -> list[ast.Call]:
 
     Non-literal arguments (e.g. ``asyncio.sleep(timeout_var)``) are ignored --
     they are not regressions of the Phase 3 / 4 "no magic sleep(10.0)"
-    constraint. The literal check exactly matches what D-07 absence assertions
+    constraint. The literal check exactly matches what absence assertions
     care about.
     """
     return [
@@ -80,7 +80,7 @@ def extract_gather_task_names(call: ast.Call) -> list[str]:
 
     For ``asyncio.gather(foo(), bar.baz())`` returns ``["foo", "baz"]``.
 
-    Two levels of unwrapping are applied so the D-10 review-table enforcement
+    Two levels of unwrapping are applied so the review-table enforcement
     test sees the *actual* task names regardless of the transport wrapper used:
 
     1. ``_safe_step("name", real_call())`` -> look at ``arg.args[1]``. Phase 4
