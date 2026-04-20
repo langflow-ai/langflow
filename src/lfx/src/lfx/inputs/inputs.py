@@ -592,6 +592,18 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolMode
     value: CoalesceBool = False
     track_in_telemetry: CoalesceBool = True  # Safe boolean flag
 
+    @field_validator("value", mode="before")
+    @classmethod
+    def coerce_message_or_data(cls, v: Any):
+        # Allow BoolInput to receive Message/Data connections (e.g. from MCP tool
+        # schema-generated inputs) by extracting a comparable text value before
+        # CoalesceBool runs. See https://github.com/langflow-ai/langflow/issues/9424
+        if isinstance(v, Message):
+            return v.text
+        if isinstance(v, Data):
+            return v.data.get(v.text_key, "")
+        return v
+
 
 class NestedDictInput(
     BaseInputMixin,
@@ -656,6 +668,40 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
 
     field_type: SerializableFieldTypes = FieldTypes.DICT
     value: dict = Field(default_factory=dict)
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def validate_value(cls, v: Any, info):
+        # Allow DictInput to receive Data/Message connections (e.g. from MCP tool
+        # schema-generated inputs) and coerce JSON strings to dicts.
+        # See https://github.com/langflow-ai/langflow/issues/9424
+        if isinstance(v, dict):
+            return v
+        if isinstance(v, Message):
+            v = v.text
+        elif isinstance(v, Data):
+            # Pass through the data dict directly when it's already a mapping.
+            if isinstance(v.data, dict):
+                return v.data
+            v = v.data.get(v.text_key, "")
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return {}
+            import json
+
+            try:
+                parsed = json.loads(v)
+            except json.JSONDecodeError as e:
+                input_name = info.data.get("name", "unknown")
+                msg = f"Could not parse JSON string for input {input_name}: {e}"
+                raise ValueError(msg) from None
+            if not isinstance(parsed, dict):
+                input_name = info.data.get("name", "unknown")
+                msg = f"Expected a JSON object for input {input_name}, got {type(parsed).__name__}."
+                raise TypeError(msg)
+            return parsed
+        return v
 
 
 class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):

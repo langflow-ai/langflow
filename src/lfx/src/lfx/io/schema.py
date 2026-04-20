@@ -50,6 +50,20 @@ _convert_type_to_field_type = {
 }
 
 
+# Input types assigned to schema-generated inputs so the frontend renders
+# connection handles for non-string fields (MCP tools, dynamic Composio tools, etc.).
+# Without these, int/float/bool/dict inputs render as UI-only widgets with no
+# input port, preventing values from being wired in from other components.
+# See https://github.com/langflow-ai/langflow/issues/9424
+_SCHEMA_INPUT_TYPES_BY_CLS: dict[type[InputTypes], list[str]] = {
+    IntInput: ["Message"],
+    FloatInput: ["Message"],
+    BoolInput: ["Message"],
+    DictInput: ["Data"],
+    NestedDictInput: ["Data"],
+}
+
+
 def _resolve_input_type(annotation: Any, *, required: bool) -> tuple[type[InputTypes], bool, list[Any] | None]:
     """Resolve a Pydantic annotation into a Langflow input type."""
     ann = annotation
@@ -242,6 +256,10 @@ def schema_to_langflow_inputs(schema: type[BaseModel]) -> list[InputTypes]:
 
         if options is not None:
             input_kwargs["options"] = options
+
+        handle_input_types = _SCHEMA_INPUT_TYPES_BY_CLS.get(lf_cls)
+        if handle_input_types is not None:
+            input_kwargs["input_types"] = list(handle_input_types)
 
         inputs.append(lf_cls(**input_kwargs))
 
