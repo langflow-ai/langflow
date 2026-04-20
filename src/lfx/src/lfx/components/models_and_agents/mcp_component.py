@@ -50,6 +50,9 @@ def resolve_mcp_config(
     return server_config_from_value
 
 
+# TODO(legacy-cleanup): This file is ~800 lines, over the 500-line guideline. Split
+# helper functions (resolve_mcp_config, connection resolution) from the MCPToolsComponent
+# orchestration logic in a follow-up PR.
 class MCPToolsComponent(ComponentWithCache):
     schema_inputs: list = []
     tools: list[StructuredTool] = []
@@ -240,17 +243,23 @@ class MCPToolsComponent(ComponentWithCache):
 
                 from lfx.services.deps import get_settings_service
             except ModuleNotFoundError as e:
-                # Only treat this as LFX standalone mode when one of the target Langflow
-                # modules is itself missing. Transitive ModuleNotFoundError (e.g. a
-                # dependency like sqlmodel failing to import inside langflow.*) indicates
-                # a real bug in the full Langflow stack and must surface — otherwise we
-                # would silently use a stale flow-embedded config when DB config should
-                # have taken precedence.
-                missing_module = getattr(e, "name", None) or ""
+                # Deliberately `except ModuleNotFoundError` (not `except ImportError`): a
+                # plain ImportError here means `get_server` / `get_user_by_id` was removed
+                # from an installed Langflow — a real API break that should NOT be
+                # swallowed as "standalone mode". ModuleNotFoundError alone covers the
+                # "Langflow absent" case.
+                #
+                # Even within ModuleNotFoundError, only treat this as LFX standalone mode
+                # when one of the target Langflow modules is itself missing. Transitive
+                # ModuleNotFoundError (e.g. a dependency like sqlmodel failing to import
+                # inside langflow.*) indicates a real bug in the full Langflow stack and
+                # must surface — otherwise we would silently use a stale flow-embedded
+                # config when DB config should have taken precedence.
+                missing_module = e.name or ""
                 is_langflow_standalone = missing_module == "langflow" or missing_module.startswith("langflow.")
                 if not is_langflow_standalone:
                     raise
-                await logger.adebug(
+                await logger.ainfo(
                     "Langflow package not available; using MCP server config from flow value (LFX standalone mode)."
                 )
             else:
