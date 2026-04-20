@@ -15,15 +15,19 @@ from lfx.base.knowledge_bases.ingestion_sources import FolderSource
 from lfx.log import logger
 from pydantic import BaseModel, Field
 
-from langflow.api.utils import CurrentActiveUser, knowledge_base_service
+from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
 from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
 from langflow.api.v1.schemas import TaskResponse
 from langflow.schema.knowledge_base import (
     BulkDeleteRequest,
     ChunkInfo,
     CreateKnowledgeBaseRequest,
+    IngestionRunDetail,
+    IngestionRunInfo,
+    IngestionRunItemInfo,
     KnowledgeBaseInfo,
     PaginatedChunkResponse,
+    PaginatedIngestionRunResponse,
 )
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
@@ -699,8 +703,26 @@ async def get_knowledge_base_chunks(
     page: Annotated[int, Query(ge=1)] = 1,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     search: Annotated[str, Query(description="Filter chunks whose text contains this substring")] = "",
+    source_type: Annotated[
+        str | None,
+        Query(description="Only return chunks ingested via the given source type (e.g. 'file_upload', 'folder')."),
+    ] = None,
+    file_name: Annotated[
+        str | None,
+        Query(description="Only return chunks whose source filename exactly matches."),
+    ] = None,
+    job_id: Annotated[
+        str | None,
+        Query(description="Only return chunks written by the given ingestion job_id."),
+    ] = None,
 ) -> PaginatedChunkResponse:
-    """Get chunks from a specific knowledge base with pagination."""
+    """Get chunks from a specific knowledge base with pagination.
+
+    The ``source_type`` / ``file_name`` / ``job_id`` filters map
+    directly onto the metadata keys every chunk receives at ingestion
+    time, so a UI can drill from a run row down to the chunks that run
+    produced without pulling the whole collection into memory.
+    """
     kb_path: Path | None = None
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
@@ -729,13 +751,43 @@ async def get_knowledge_base_chunks(
 
         search_term = search.strip()
 
+        # Assemble the metadata filter. Chroma requires a single
+        # operator at the top level when more than one key is present.
+        metadata_filters: list[dict[str, Any]] = []
+        if source_type:
+            metadata_filters.append({"source_type": source_type})
+        if file_name:
+            metadata_filters.append({"file_name": file_name})
+        if job_id:
+            metadata_filters.append({"job_id": job_id})
+        where_metadata: dict[str, Any] | None
+        if len(metadata_filters) > 1:
+            where_metadata = {"$and": metadata_filters}
+        elif metadata_filters:
+            where_metadata = metadata_filters[0]
+        else:
+            where_metadata = None
+
+        get_kwargs: dict[str, Any] = {"include": ["documents", "metadatas"]}
+        if where_metadata is not None:
+            get_kwargs["where"] = where_metadata
+
         if search_term:
             # When searching, fetch all matching docs then paginate in-memory
-            where_doc = {"$contains": search_term}
             all_results = collection.get(
-                include=["documents", "metadatas"],
-                where_document=where_doc,
+                where_document={"$contains": search_term},
+                **get_kwargs,
             )
+            total_count = len(all_results["ids"])
+            offset = (page - 1) * limit
+            sliced_ids = all_results["ids"][offset : offset + limit]
+            sliced_docs = all_results["documents"][offset : offset + limit]
+            sliced_metas = all_results["metadatas"][offset : offset + limit]
+        elif where_metadata is not None:
+            # Metadata-filtered reads can't use Chroma's paginated
+            # ``count`` shortcut because ``collection.count()`` ignores
+            # the filter. Fetch all matches and slice in-memory.
+            all_results = collection.get(**get_kwargs)
             total_count = len(all_results["ids"])
             offset = (page - 1) * limit
             sliced_ids = all_results["ids"][offset : offset + limit]
@@ -783,6 +835,93 @@ async def get_knowledge_base_chunks(
         chroma = None
         if kb_path is not None:
             KBStorageHelper.release_chroma_resources(kb_path)
+
+
+@router.get("/{kb_name}/runs", status_code=HTTPStatus.OK)
+async def list_ingestion_runs(
+    kb_name: str,
+    current_user: CurrentActiveUser,
+    page: Annotated[int, Query(ge=1)] = 1,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> PaginatedIngestionRunResponse:
+    """Paginated list of ingestion runs for a KB (newest first).
+
+    Scoped to the requesting user so one account can't observe
+    another's run history. Returns counter-only rows; the UI fetches
+    the detail endpoint for the drill-down.
+    """
+    # Verify the KB path exists + traversal-safe before exposing run
+    # history — otherwise a crafted ``kb_name`` could be used to probe
+    # for other users' KB existence by timing list_runs_for_kb.
+    _resolve_kb_path(kb_name, current_user)
+
+    rows, total = await ingestion_run_service.list_runs_for_kb(
+        kb_name=kb_name,
+        user_id=current_user.id,
+        page=page,
+        limit=limit,
+    )
+    runs = [_run_row_to_info(row) for row in rows]
+    total_pages = (total + limit - 1) // limit if total > 0 else 0
+    return PaginatedIngestionRunResponse(
+        runs=runs,
+        total=total,
+        page=page,
+        limit=limit,
+        total_pages=total_pages,
+    )
+
+
+@router.get("/{kb_name}/runs/{run_id}", status_code=HTTPStatus.OK)
+async def get_ingestion_run(
+    kb_name: str,
+    run_id: uuid.UUID,
+    current_user: CurrentActiveUser,
+) -> IngestionRunDetail:
+    """Full run detail including per-item breakdown + error messages."""
+    _resolve_kb_path(kb_name, current_user)
+
+    row = await ingestion_run_service.get_run(run_id, user_id=current_user.id)
+    if row is None or row.kb_name != kb_name:
+        raise HTTPException(status_code=404, detail="Ingestion run not found.")
+
+    base = _run_row_to_info(row)
+    items = [
+        IngestionRunItemInfo(
+            item_id=item.get("item_id", ""),
+            display_name=item.get("display_name", ""),
+            status=item.get("status", "succeeded"),
+            chunks_created=int(item.get("chunks_created", 0) or 0),
+            error_message=item.get("error_message"),
+        )
+        for item in (row.items or [])
+    ]
+    return IngestionRunDetail(
+        **base.model_dump(),
+        source_config=row.source_config or {},
+        items=items,
+    )
+
+
+def _run_row_to_info(row) -> IngestionRunInfo:
+    """Translate an ``IngestionRun`` row into its list-response shape."""
+    return IngestionRunInfo(
+        id=str(row.id),
+        kb_name=row.kb_name,
+        kb_id=str(row.kb_id) if row.kb_id else None,
+        job_id=str(row.job_id) if row.job_id else None,
+        source_type=row.source_type,
+        status=row.status,
+        error_message=row.error_message,
+        total_items=row.total_items,
+        succeeded=row.succeeded,
+        failed=row.failed,
+        skipped=row.skipped,
+        total_bytes=row.total_bytes,
+        chunks_created=row.chunks_created,
+        started_at=row.started_at,
+        finished_at=row.finished_at,
+    )
 
 
 @router.delete("/{kb_name}", status_code=HTTPStatus.OK)
