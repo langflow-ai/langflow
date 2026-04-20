@@ -54,8 +54,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   const { data: config } = useGetConfig({});
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (target.closest("textarea")) {
+    if (e.target !== e.currentTarget) {
       return;
     }
     inputRef.current?.focus();
@@ -66,8 +65,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   };
 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (target.closest("textarea")) {
+    if (e.target !== e.currentTarget) {
       return;
     }
     e.stopPropagation();
@@ -75,8 +73,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (target.closest("textarea")) {
+    if (e.target !== e.currentTarget) {
       return;
     }
     if (e.key !== "Enter" && e.key !== " ") {
