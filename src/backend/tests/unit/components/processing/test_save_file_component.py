@@ -183,6 +183,43 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             assert "test_message.txt" in result.text
 
     @pytest.mark.asyncio
+    async def test_save_message_to_html(self, component_class):
+        """Test saving Message to html format."""
+        component = component_class(_user_id=str(uuid4()))
+        html_content = "<html><body><h1>Test</h1></body></html>"
+        message = Message(text=html_content)
+        component.set_attributes(
+            {
+                "input": message,
+                "file_name": "test_page",
+                "local_format": "html",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
+
+        with (
+            patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
+            patch("lfx.services.deps.session_scope") as mock_session,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+            ) as mock_get_user,
+        ):
+            mock_db = AsyncMock()
+            mock_session.return_value.__aenter__.return_value = mock_db
+            mock_get_user.return_value = MagicMock()
+            mock_upload.return_value = "test_page.html"
+
+            result = await component.save_to_file()
+
+            assert "saved successfully" in result.text
+            assert "test_page.html" in result.text
+
+            # Verify upload was called with a real file containing the HTML
+            mock_upload.assert_called_once()
+            upload_file = mock_upload.call_args[1]["file"]
+            assert upload_file.filename == "test_page.html"
+
+    @pytest.mark.asyncio
     async def test_cleanup_on_error(self, component_class):
         """Test that temp file is cleaned up even when upload fails."""
         component = component_class(_user_id=str(uuid4()))
