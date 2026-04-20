@@ -2691,6 +2691,7 @@ def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkey
     )
 
     def mock_create_langflow_tool(*, tool_definition, connections, show_details):  # noqa: ARG001
+        assert show_details is False
         captured_tool_definition.update(tool_definition)
         return fake_tool
 
@@ -2758,6 +2759,7 @@ def test_create_wxo_flow_tool_excludes_provider_data_from_artifact(monkeypatch):
     )
 
     def mock_create_langflow_tool(*, tool_definition, connections, show_details):  # noqa: ARG001
+        assert show_details is False
         captured_flow_definition.update(tool_definition)
         return fake_tool
 

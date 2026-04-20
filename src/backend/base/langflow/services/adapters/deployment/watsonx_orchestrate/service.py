@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException, status
 from ibm_cloud_sdk_core import ApiException
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool
 from lfx.services.adapters.deployment.base import BaseDeploymentService
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
@@ -1005,10 +1006,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         method; this prevents accidental overwrites of externally managed
         WXO tools.
         """
-        from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import (
-            create_langflow_tool as _create_langflow_tool,
-        )
-
         from langflow.utils.version import get_version_info
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
@@ -1038,10 +1035,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             if detected_version:
                 flow_definition["last_tested_version"] = detected_version
 
-        tool = _create_langflow_tool(
+        tool = create_langflow_tool(
             tool_definition=flow_definition,
             connections={},
-            show_details=True,
+            show_details=False,
         )
 
         artifact_bytes = build_langflow_artifact_bytes(
