@@ -42,6 +42,11 @@ class SourceType(str, Enum):
     FILE_UPLOAD = "file_upload"
     FOLDER = "folder"
     TEMPLATE = "template"  # Reserved — existing flow-template ingestion path
+    S3 = "s3"
+    GOOGLE_DRIVE = "google_drive"  # Reserved for Phase 3B
+    ONEDRIVE = "onedrive"  # Reserved for Phase 3C
+    SHAREPOINT = "sharepoint"  # Reserved for Phase 3C
+    IBM_COS = "ibm_cos"  # Reserved for Phase 3C
 
 
 class IngestionItemStatus(str, Enum):

@@ -114,3 +114,29 @@ class PaginatedIngestionRunResponse(BaseModel):
     page: int
     limit: int
     total_pages: int
+
+
+class ConnectorCatalogEntry(BaseModel):
+    """Published metadata for a registered ingestion source.
+
+    Drives the UI's connector picker — one card per registered source
+    type. Excludes file_upload because that path is wired through the
+    dedicated upload modal, not the generic connector flow.
+    """
+
+    source_type: str
+    display_name: str
+    description: str = ""
+    icon: str | None = None
+    requires_credentials: bool = False
+
+
+class ConnectorIngestRequest(BaseModel):
+    """Body payload for the generic ``POST /{kb}/ingest/connector`` route."""
+
+    source_type: str
+    source_config: dict[str, Any] = {}
+    source_name: str = ""
+    chunk_size: int = 1000
+    chunk_overlap: int = 200
+    separator: str = ""

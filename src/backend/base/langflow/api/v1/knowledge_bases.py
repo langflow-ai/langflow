@@ -11,7 +11,13 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
-from lfx.base.knowledge_bases.ingestion_sources import FolderSource
+from lfx.base.knowledge_bases.ingestion_sources import (
+    FolderSource,
+    SourceType,
+    create_source,
+    get_source_class,
+    registered_sources,
+)
 from lfx.log import logger
 from pydantic import BaseModel, Field
 
@@ -21,6 +27,8 @@ from langflow.api.v1.schemas import TaskResponse
 from langflow.schema.knowledge_base import (
     BulkDeleteRequest,
     ChunkInfo,
+    ConnectorCatalogEntry,
+    ConnectorIngestRequest,
     CreateKnowledgeBaseRequest,
     IngestionRunDetail,
     IngestionRunInfo,
@@ -656,6 +664,35 @@ async def list_knowledge_bases(
         return knowledge_bases
 
 
+@router.get("/connectors", status_code=HTTPStatus.OK)
+async def list_connectors(_current_user: CurrentActiveUser) -> list[ConnectorCatalogEntry]:
+    """Enumerate registered connector sources for the UI picker.
+
+    Declared before the ``GET /{kb_name}`` route so FastAPI matches
+    the literal ``/connectors`` path first rather than treating it
+    as a ``kb_name`` parameter. Skips ``file_upload`` because that
+    path is wired through the dedicated upload modal.
+    """
+    entries: list[ConnectorCatalogEntry] = []
+    for source_type in registered_sources():
+        if source_type is SourceType.FILE_UPLOAD:
+            continue
+        try:
+            source_cls = get_source_class(source_type)
+        except ValueError:
+            continue
+        entries.append(
+            ConnectorCatalogEntry(
+                source_type=source_type.value,
+                display_name=getattr(source_cls, "display_name", source_type.value),
+                description=getattr(source_cls, "description", "") or "",
+                icon=getattr(source_cls, "icon", None),
+                requires_credentials=bool(getattr(source_cls, "requires_credentials", False)),
+            )
+        )
+    return entries
+
+
 @router.get("/{kb_name}", status_code=HTTPStatus.OK)
 async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
     """Get detailed information about a specific knowledge base."""
@@ -835,6 +872,89 @@ async def get_knowledge_base_chunks(
         chroma = None
         if kb_path is not None:
             KBStorageHelper.release_chroma_resources(kb_path)
+
+
+@router.post("/{kb_name}/ingest/connector", status_code=HTTPStatus.OK)
+async def ingest_via_connector(
+    kb_name: str,
+    payload: ConnectorIngestRequest,
+    current_user: CurrentActiveUser,
+) -> TaskResponse:
+    """Generic connector-driven ingestion dispatcher.
+
+    Accepts a ``source_type`` string + ``source_config`` dict,
+    instantiates the matching source via the registry, validates its
+    config (surfaces credential / config errors as 400 before the job
+    is spawned), then hands off to the same async ingestion machinery
+    file-upload + folder already use.
+    """
+    try:
+        kb_path = _resolve_kb_path(kb_name, current_user)
+
+        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=False)
+        if not metadata:
+            raise HTTPException(
+                status_code=400,
+                detail="Knowledge base missing embedding configuration. Please create a new KB or reconfigure it.",
+            )
+        embedding_provider = metadata.get("embedding_provider")
+        embedding_model = metadata.get("embedding_model")
+        if not embedding_provider or not embedding_model:
+            raise HTTPException(status_code=400, detail="Invalid embedding configuration")
+        asset_id_str = metadata.get("id")
+        asset_id = uuid.UUID(asset_id_str) if asset_id_str else uuid.uuid4()
+
+        try:
+            source = create_source(
+                payload.source_type,
+                user_id=current_user.id,
+                source_config=payload.source_config,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        try:
+            await source.validate_config()
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        job_service = get_job_service()
+        job_id = uuid.uuid4()
+        await job_service.create_job(
+            job_id=job_id,
+            flow_id=job_id,
+            job_type=JobType.INGESTION,
+            asset_id=asset_id,
+            asset_type="knowledge_base",
+            user_id=current_user.id,
+        )
+
+        task_service = get_task_service()
+        await task_service.fire_and_forget_task(
+            job_service.execute_with_status,
+            job_id=job_id,
+            run_coro_func=KBIngestionHelper.perform_ingestion,
+            kb_name=kb_name,
+            kb_path=kb_path,
+            files_data=None,
+            chunk_size=payload.chunk_size,
+            chunk_overlap=payload.chunk_overlap,
+            separator=payload.separator,
+            source_name=payload.source_name,
+            current_user=current_user,
+            embedding_provider=embedding_provider,
+            embedding_model=embedding_model,
+            task_job_id=job_id,
+            job_service=job_service,
+            source=source,
+        )
+        return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await logger.aerror("Error ingesting via connector to KB: %s", e)
+        raise HTTPException(status_code=500, detail="Error ingesting via connector.") from e
 
 
 @router.get("/{kb_name}/runs", status_code=HTTPStatus.OK)

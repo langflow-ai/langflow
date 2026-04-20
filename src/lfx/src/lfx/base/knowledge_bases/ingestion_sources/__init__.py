@@ -30,6 +30,7 @@ from lfx.base.knowledge_bases.ingestion_sources.base import (
     KBIngestionSource,
     SourceType,
 )
+from lfx.base.knowledge_bases.ingestion_sources.connector_base import KBConnectorSource
 from lfx.base.knowledge_bases.ingestion_sources.file_upload import FileUploadSource
 from lfx.base.knowledge_bases.ingestion_sources.folder import FolderSource
 from lfx.base.knowledge_bases.ingestion_sources.registry import (
@@ -38,10 +39,12 @@ from lfx.base.knowledge_bases.ingestion_sources.registry import (
     register_source,
     registered_sources,
 )
+from lfx.base.knowledge_bases.ingestion_sources.s3 import S3Source
 
 # Register built-in sources on import.
 register_source(SourceType.FILE_UPLOAD, FileUploadSource)
 register_source(SourceType.FOLDER, FolderSource)
+register_source(SourceType.S3, S3Source)
 
 __all__ = [
     "FileUploadSource",
@@ -51,7 +54,9 @@ __all__ = [
     "IngestionItemResult",
     "IngestionItemStatus",
     "IngestionSummary",
+    "KBConnectorSource",
     "KBIngestionSource",
+    "S3Source",
     "SourceType",
     "create_source",
     "get_source_class",
