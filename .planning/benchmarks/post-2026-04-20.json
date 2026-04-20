@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-04-20",
+  "captured_ref": "12750/merge@eb2272ccc711768ecb11a3c0982aa419852bb17a",
+  "snapshot_run_id": "24642673292",
+  "before_anchor": ".planning/benchmarks/baseline-2026-04-17.md",
+  "scenarios": {
+    "lfx_bare":                       {"before_ms": 17820, "after_ms": 10550, "delta_ms": -7270, "delta_pct": -40.8, "runs": 10, "stddev_ms": 99.0},
+    "lfx_with_flow":                  {"before_ms": 18920, "after_ms": 16013, "delta_ms": -2907, "delta_pct": -15.4, "runs": 10, "stddev_ms": 228.6},
+    "lfx_with_flow_prebaked":         {"before_ms":  9520, "after_ms":  8425, "delta_ms": -1095, "delta_pct": -11.5, "runs": 10, "stddev_ms":  99.9},
+    "langflow_run_no_change_restart": {"before_ms": null,  "after_ms": 11325, "delta_ms": null,  "delta_pct": null,  "runs":  5, "stddev_ms":  83.7, "note": "New scenario in Phase 4; no pre-Phase-4 baseline"},
+    "langflow_run_http_ready":        {"before_ms": null,  "after_ms":     0, "delta_ms": null,  "delta_pct": null,  "runs":  0, "stddev_ms":   0.0, "note": "Sentinel; pre-existing structlog marker issue deferred"},
+    "lfx_reference_image":            {"before_ms": null,  "after_ms":  2404, "delta_ms": null,  "delta_pct": null,  "runs": 10, "stddev_ms":  20.9, "note": "New in Phase 5 plan 05-02; promoted from sentinel per D-12 amendment"}
+  },
+  "checkpoints_seconds": {
+    "lfx_bare":               {"process-start": 0.00, "after-imports": 0.58, "after-initialize-services": 0.93, "before-run-flow": 0.95, "after-component-index": 7.88, "after-run-flow": 8.71},
+    "lfx_with_flow":          {"process-start": 0.00, "after-imports": 8.22, "after-initialize-services": 8.58, "before-run-flow": 8.60, "after-component-index": 12.16, "after-run-flow": 13.85},
+    "lfx_with_flow_prebaked": {"process-start": 0.00, "after-imports": 3.84, "after-initialize-services": 3.93, "before-run-flow": 3.93, "after-component-index": 5.72, "after-run-flow": 6.49}
+  }
+}

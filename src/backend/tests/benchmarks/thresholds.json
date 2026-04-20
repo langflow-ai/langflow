@@ -1,18 +1,42 @@
 {
   "schema_version": 1,
   "measurement_mode": "bytecode_compile_delta",
-  "captured_on": "2026-04-18",
-  "captured_ref": "cold-start-improvements-v2 @ 4d2820ae73 (build 24603653799)",
+  "captured_on": "2026-04-20",
+  "captured_ref": "12750/merge@eb2272ccc711768ecb11a3c0982aa419852bb17a",
   "captured_runner": "ubuntu-latest (GitHub Actions)",
   "python_version": "3.13",
   "allowed_regression_pct": 15,
-  "_note": "Captured on Linux CI via run-benchmark-snapshot label trigger (build 24603653799). Phase 3 import-time deferrals dropped lfx_bare by ~42% vs the Phase 1 baseline (17824.74ms -> 10275.94ms). langflow_run_no_change_restart is the Phase 4 SVC-01 D-03 scenario: total `langflow run --backend-only` wall-clock when the starter-projects hash matches; the 11s mean is the whole process (Python startup + imports + alembic + service init + lifespan + uvicorn bind), with the starter-sync block itself gated to ms by the hash check. langflow_run_http_ready remains sentinel: structlog swallows uvicorn's startup marker; no_change_restart sidesteps this by probing TCP 127.0.0.1:7860 instead. measurement_mode is bytecode_compile_delta per D-11a.",
+  "_note": "Captured on Linux CI via the cold-start-benchmark matrix workflow. langflow_run_http_ready may be sentinel if its supervisor marker is still unresolved. measurement_mode is bytecode_compile_delta per D-11a.",
   "scenarios": {
-    "lfx_bare": {"mean_ms": 10275.94, "stddev_ms": 33.6, "runs": 10},
-    "lfx_with_flow": {"mean_ms": 17961.33, "stddev_ms": 242.2, "runs": 10},
-    "lfx_with_flow_prebaked": {"mean_ms": 8031.26, "stddev_ms": 267.43, "runs": 10},
-    "langflow_run_http_ready": {"mean_ms": 0, "stddev_ms": 0, "runs": 0},
-    "langflow_run_no_change_restart": {"mean_ms": 11078.05, "stddev_ms": 23.39, "runs": 5},
-    "lfx_reference_image": {"mean_ms": 0, "stddev_ms": 0, "runs": 0}
+    "lfx_bare": {
+      "mean_ms": 10549.93,
+      "stddev_ms": 98.96,
+      "runs": 10
+    },
+    "lfx_with_flow": {
+      "mean_ms": 16012.93,
+      "stddev_ms": 228.58,
+      "runs": 10
+    },
+    "lfx_with_flow_prebaked": {
+      "mean_ms": 8424.65,
+      "stddev_ms": 99.93,
+      "runs": 10
+    },
+    "langflow_run_http_ready": {
+      "mean_ms": 0,
+      "stddev_ms": 0,
+      "runs": 0
+    },
+    "langflow_run_no_change_restart": {
+      "mean_ms": 11324.7,
+      "stddev_ms": 83.73,
+      "runs": 5
+    },
+    "lfx_reference_image": {
+      "mean_ms": 2404.12,
+      "stddev_ms": 20.93,
+      "runs": 10
+    }
   }
 }
