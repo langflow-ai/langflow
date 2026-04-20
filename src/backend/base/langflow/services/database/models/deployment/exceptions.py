@@ -84,11 +84,7 @@ async def araise_if_deployment_guard_error_or_skip(
     log_message: str | None = None,
     remap: Callable[[DeploymentGuardError], DeploymentGuardError] | None = None,
 ) -> None:
-    """Raise ``DeploymentGuardError`` and optionally log/remap it; otherwise do nothing.
-
-    Callers should invoke this in the broad ``except Exception`` arm before
-    handling generic failures.
-    """
+    """Raise ``DeploymentGuardError`` and optionally log/remap it; otherwise do nothing."""
     if not isinstance(exc, DeploymentGuardError):
         return
 
