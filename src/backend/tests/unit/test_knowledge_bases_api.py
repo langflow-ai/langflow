@@ -712,6 +712,9 @@ class TestKnowledgeBaseAPI:
 class TestPerformIngestionTask:
     """Tests for the internal KBIngestionHelper.perform_ingestion background task."""
 
+    @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.ChromaBackend")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper._build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.get_metadata")
@@ -724,6 +727,9 @@ class TestPerformIngestionTask:
         mock_meta,
         mock_build,
         mock_backend_cls,
+        mock_create_run,
+        mock_mark_running,
+        mock_finalize_run,
         mock_kb_path,
         sample_text_file,
     ):
@@ -737,11 +743,16 @@ class TestPerformIngestionTask:
         mock_backend.raw_langchain_store = MagicMock(return_value=MagicMock())
         mock_backend_cls.return_value = mock_backend
 
+        run_id = uuid.uuid4()
+        mock_create_run.return_value = run_id
         mock_meta.return_value = {"chunks": 5, "size": 100, "source_types": []}
         mock_size.return_value = 100
 
         file_name, file_content = sample_text_file
         files_data = [(file_name, file_content.encode())]
+
+        current_user = MagicMock()
+        current_user.id = uuid.uuid4()
 
         result = await KBIngestionHelper.perform_ingestion(
             kb_name="test_kb",
@@ -751,7 +762,7 @@ class TestPerformIngestionTask:
             chunk_overlap=20,
             separator="\n",
             source_name="src",
-            current_user=MagicMock(),
+            current_user=current_user,
             embedding_provider="OpenAI",
             embedding_model="model",
             task_job_id=uuid.uuid4(),
@@ -759,8 +770,20 @@ class TestPerformIngestionTask:
         )
 
         assert result["files_processed"] == 1
+        assert result["ingestion_run_id"] == str(run_id)
         mock_backend.add_documents.assert_called()
         mock_backend.teardown.assert_awaited()
+        mock_create_run.assert_awaited_once()
+        mock_mark_running.assert_awaited_once_with(run_id)
+        mock_finalize_run.assert_awaited_once()
+
+        # Finalize should mark the run SUCCEEDED when every item lands.
+        finalize_kwargs = mock_finalize_run.await_args.kwargs
+        from langflow.services.database.models.ingestion_run import IngestionRunStatus
+
+        assert finalize_kwargs["status"] is IngestionRunStatus.SUCCEEDED
+        assert finalize_kwargs["summary"].succeeded == 1
+        assert finalize_kwargs["summary"].failed == 0
 
         # Every chunk should carry the default ingestion-source-type tag so
         # Phase 2 visibility tooling can key off origin.
@@ -768,18 +791,35 @@ class TestPerformIngestionTask:
         assert written_docs, "expected at least one chunk document to be written"
         assert all(doc.metadata.get("source_type") == "file_upload" for doc in written_docs)
 
+    @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.ChromaBackend")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper._build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.cleanup_chroma_chunks_by_job", new_callable=AsyncMock)
-    async def test_perform_ingestion_rollback(self, mock_cleanup, mock_build, mock_backend_cls, mock_kb_path):
+    async def test_perform_ingestion_rollback(
+        self,
+        mock_cleanup,
+        mock_build,
+        mock_backend_cls,
+        mock_create_run,
+        mock_mark_running,  # noqa: ARG002 — patched to keep ingestion_run DB calls out of this test
+        mock_finalize_run,
+        mock_kb_path,
+    ):
+        """Write-loop errors that exhaust retries must propagate and trigger rollback."""
         mock_backend = MagicMock()
         mock_backend.add_documents = AsyncMock(side_effect=Exception("Chroma error"))
         mock_backend.teardown = AsyncMock()
         mock_backend.raw_langchain_store = MagicMock(return_value=MagicMock())
         mock_backend_cls.return_value = mock_backend
+        mock_create_run.return_value = uuid.uuid4()
 
         files_data = [("test.txt", b"content")]
         job_id = uuid.uuid4()
+
+        current_user = MagicMock()
+        current_user.id = uuid.uuid4()
 
         with pytest.raises(Exception, match="Chroma error"):
             await KBIngestionHelper.perform_ingestion(
@@ -790,7 +830,7 @@ class TestPerformIngestionTask:
                 chunk_overlap=20,
                 separator="\n",
                 source_name="src",
-                current_user=MagicMock(),
+                current_user=current_user,
                 embedding_provider="OpenAI",
                 embedding_model="model",
                 task_job_id=job_id,
@@ -800,6 +840,14 @@ class TestPerformIngestionTask:
         mock_build.assert_called_once()
         mock_cleanup.assert_called_once_with(job_id, mock_kb_path, "test_kb")
         mock_backend.teardown.assert_awaited()
+        # The run row must still be finalized even on error so the
+        # visibility UI doesn't show stuck RUNNING rows.
+        mock_finalize_run.assert_awaited_once()
+        finalize_kwargs = mock_finalize_run.await_args.kwargs
+        from langflow.services.database.models.ingestion_run import IngestionRunStatus
+
+        assert finalize_kwargs["status"] is IngestionRunStatus.FAILED
+        assert finalize_kwargs["error_message"] == "Chroma error"
 
 
 class TestCancelIngestion:

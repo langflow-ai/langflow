@@ -29,11 +29,19 @@ from lfx.base.knowledge_bases.backends.base import (
     METADATA_KEY_SOURCE_TYPE,
     METADATA_KEY_TOTAL_CHUNKS,
 )
+from lfx.base.knowledge_bases.ingestion_sources import (
+    FileUploadSource,
+    IngestionItemResult,
+    IngestionSummary,
+    KBIngestionSource,
+)
+from lfx.base.knowledge_bases.ingestion_sources.base import IngestionItemStatus
 from lfx.base.models.unified_models import get_embedding_model_options
 from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
 from lfx.log import logger
 
 from langflow.api.utils import CurrentActiveUser
+from langflow.services.database.models.ingestion_run import IngestionRunStatus
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_settings_service
 from langflow.services.jobs.service import JobService
@@ -439,7 +447,7 @@ class KBIngestionHelper:
     async def perform_ingestion(
         kb_name: str,
         kb_path: Path,
-        files_data: list[tuple[str, bytes]],
+        files_data: list[tuple[str, bytes]] | None,
         chunk_size: int,
         chunk_overlap: int,
         separator: str,
@@ -451,21 +459,65 @@ class KBIngestionHelper:
         job_service: JobService,
         source_type: str = DEFAULT_INGESTION_SOURCE_TYPE,
         source_metadata: dict | None = None,
+        source: KBIngestionSource | None = None,
     ) -> dict[str, object]:
-        """Orchestrate the ingestion of files into a knowledge base.
+        """Orchestrate the ingestion of content into a knowledge base.
 
-        ``source_type`` and ``source_metadata`` are written onto every chunk
-        Document so downstream visibility tooling (Phase 2) can group,
-        filter, and inspect chunks by origin. The file-upload API route uses
-        the defaults; Phase 1+ call sites (folder walk, cloud connectors)
-        will pass ingestion-source-specific values.
+        Accepts either a preloaded ``files_data`` list (the long-standing
+        file-upload path) or a ``source`` — any ``KBIngestionSource``
+        implementation. When both are provided, ``source`` wins; when
+        neither is, raises ``ValueError``.
+
+        Every chunk carries ``source_type`` + ``source_metadata`` so
+        Phase 2 visibility tooling can group, filter, and drill into
+        chunks by origin.
+
+        Persistence side-effects: on entry, inserts a PENDING row in
+        ``ingestion_run`` and transitions it to RUNNING; on exit,
+        finalizes the row with succeeded / failed / skipped counters,
+        per-item details, and one of SUCCEEDED / PARTIAL / FAILED /
+        CANCELLED.
         """
-        source_metadata = source_metadata or {}
-        backend: ChromaBackend | None = None
-        try:
-            processed_files = []
-            total_chunks_created = 0
+        # Lazy import: the service reaches into langflow DB plumbing we
+        # can't expose at module scope without widening lfx's surface.
+        from langflow.api.utils import ingestion_run_service
 
+        if source is None:
+            if not files_data:
+                msg = "perform_ingestion requires either 'source' or non-empty 'files_data'."
+                raise ValueError(msg)
+            source = FileUploadSource(
+                user_id=current_user.id,
+                source_config={"files": files_data, "source_name": source_name},
+            )
+
+        try:
+            await source.validate_config()
+        except ValueError as exc:
+            await logger.aerror("Ingestion source validation failed: %s", exc)
+            raise
+
+        summary = IngestionSummary(
+            kb_name=kb_name,
+            source_type=source.source_type.value,
+            user_id=current_user.id,
+            job_id=task_job_id,
+            source_config=source.describe().get("config") or {},
+        )
+        run_id = await ingestion_run_service.create_run(
+            kb_name=kb_name,
+            source=source,
+            job_id=task_job_id,
+            user_id=current_user.id,
+        )
+        await ingestion_run_service.mark_running(run_id)
+
+        backend: ChromaBackend | None = None
+        final_status = IngestionRunStatus.SUCCEEDED
+        final_error: str | None = None
+        encoded_metadata_tag = json.dumps(source_metadata) if source_metadata else ""
+        source_extension_tags: set[str] = set()
+        try:
             splitter_kwargs: dict = {"chunk_size": chunk_size, "chunk_overlap": chunk_overlap}
             if separator:
                 resolved_separator = separator.replace("\\n", "\n")
@@ -476,13 +528,55 @@ class KBIngestionHelper:
             backend = ChromaBackend(kb_name=kb_name, kb_path=kb_path, embedding_function=embeddings)
 
             job_id_str = str(task_job_id)
-            for file_name, file_content in files_data:
-                await logger.ainfo("Starting ingestion of %s for %s", file_name, kb_name)
-                content = extract_text_from_bytes(file_name, file_content)
-                if not content.strip():
+
+            async for item in source.list_items():
+                if await KBIngestionHelper._is_job_cancelled(job_service, task_job_id):
+                    raise IngestionCancelledError
+
+                await logger.ainfo("Starting ingestion of %s for %s", item.display_name, kb_name)
+
+                try:
+                    content_obj = await source.fetch_content(item)
+                except (OSError, ValueError) as fetch_exc:
+                    summary.record_item(
+                        IngestionItemResult(
+                            item_id=item.item_id,
+                            display_name=item.display_name,
+                            status=IngestionItemStatus.FAILED,
+                            error_message=f"fetch failed: {fetch_exc}",
+                        ),
+                        size_bytes=item.size_bytes or 0,
+                    )
+                    await logger.awarning("Failed to fetch %s: %s", item.display_name, fetch_exc)
                     continue
 
-                chunks = text_splitter.split_text(content)
+                size_bytes = len(content_obj.raw_bytes)
+                text = extract_text_from_bytes(content_obj.file_name, content_obj.raw_bytes)
+                if not text.strip():
+                    summary.record_item(
+                        IngestionItemResult(
+                            item_id=item.item_id,
+                            display_name=item.display_name,
+                            status=IngestionItemStatus.SKIPPED,
+                            error_message="no extractable text",
+                        ),
+                        size_bytes=size_bytes,
+                    )
+                    continue
+
+                # Collapse per-item + run-level metadata into one blob so
+                # Phase 2 can render either view.
+                combined_metadata: dict = dict(item.source_metadata or {})
+                if source_metadata:
+                    combined_metadata.update(source_metadata)
+                item_metadata_tag = json.dumps(combined_metadata) if combined_metadata else encoded_metadata_tag
+
+                chunks = text_splitter.split_text(text)
+                item_chunks_written = 0
+                # Writes that exhaust the retry budget still propagate to
+                # the outer handler so the whole run can roll back
+                # uncommitted chunks. Only per-item fetch/extraction
+                # failures are caught and continue (above).
                 for i in range(0, len(chunks), INGESTION_BATCH_SIZE):
                     if await KBIngestionHelper._is_job_cancelled(job_service, task_job_id):
                         raise IngestionCancelledError
@@ -492,14 +586,14 @@ class KBIngestionHelper:
                         Document(
                             page_content=c,
                             metadata={
-                                METADATA_KEY_SOURCE: source_name or file_name,
-                                METADATA_KEY_FILE_NAME: file_name,
+                                METADATA_KEY_SOURCE: source_name or content_obj.file_name,
+                                METADATA_KEY_FILE_NAME: content_obj.file_name,
                                 METADATA_KEY_CHUNK_INDEX: i + j,
                                 METADATA_KEY_TOTAL_CHUNKS: len(chunks),
                                 METADATA_KEY_INGESTED_AT: datetime.now(timezone.utc).isoformat(),
                                 METADATA_KEY_JOB_ID: job_id_str,
-                                METADATA_KEY_SOURCE_TYPE: source_type,
-                                METADATA_KEY_SOURCE_METADATA: json.dumps(source_metadata) if source_metadata else "",
+                                METADATA_KEY_SOURCE_TYPE: source.source_type.value or source_type,
+                                METADATA_KEY_SOURCE_METADATA: item_metadata_tag,
                             },
                         )
                         for j, c in enumerate(batch)
@@ -511,51 +605,85 @@ class KBIngestionHelper:
                         try:
                             await backend.add_documents(docs)
                             break
-                        except Exception as e:
+                        except Exception as exc:
                             if attempt == MAX_RETRY_ATTEMPTS - 1:
                                 raise
                             wait = (attempt + 1) * EXPONENTIAL_BACKOFF_MULTIPLIER
-                            await logger.awarning("Write failed, retrying in %ds: %s", wait, e)
+                            await logger.awarning("Write failed, retrying in %ds: %s", wait, exc)
                             await asyncio.sleep(wait)
 
+                    item_chunks_written += len(batch)
                     await asyncio.sleep(0.01)
 
-                total_chunks_created += len(chunks)
-                processed_files.append(file_name)
+                summary.record_item(
+                    IngestionItemResult(
+                        item_id=item.item_id,
+                        display_name=item.display_name,
+                        status=IngestionItemStatus.SUCCEEDED,
+                        chunks_created=item_chunks_written,
+                    ),
+                    size_bytes=size_bytes,
+                )
+                # Track extension for the legacy ``source_types`` list
+                # in the KB's ``embedding_metadata.json``.
+                if "." in content_obj.file_name:
+                    source_extension_tags.add(content_obj.file_name.rsplit(".", 1)[-1].lower())
+
+            if summary.failed > 0 and summary.succeeded > 0:
+                final_status = IngestionRunStatus.PARTIAL
+            elif summary.failed > 0 and summary.succeeded == 0:
+                final_status = IngestionRunStatus.FAILED
+            else:
+                final_status = IngestionRunStatus.SUCCEEDED
 
             metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-            # update_text_metrics still accepts a Chroma instance for backwards
-            # compat with the component-based ingestion path; pass the backend's
-            # underlying LangChain store so we share the live connection.
             KBAnalysisHelper.update_text_metrics(kb_path, metadata, chroma=backend.raw_langchain_store())
             metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
             metadata["chunk_size"] = chunk_size
             metadata["chunk_overlap"] = chunk_overlap
             metadata["separator"] = separator or None
             metadata_path = kb_path / "embedding_metadata.json"
-            new_source_types = list({f.rsplit(".", 1)[-1].lower() for f in processed_files if "." in f})
             existing_source_types = metadata.get("source_types", [])
-            metadata["source_types"] = list(set(existing_source_types + new_source_types))
+            metadata["source_types"] = sorted(set(existing_source_types) | source_extension_tags)
             metadata_path.write_text(json.dumps(metadata, indent=2))
-            await logger.ainfo(f"Completed ingestion for {kb_name}")
+            await logger.ainfo(
+                "Completed ingestion for %s (succeeded=%d failed=%d skipped=%d)",
+                kb_name,
+                summary.succeeded,
+                summary.failed,
+                summary.skipped,
+            )
 
             return {
-                "message": f"Successfully ingested {len(processed_files)} file(s)",
-                "files_processed": len(processed_files),
-                "chunks_created": total_chunks_created,
+                "message": f"Successfully ingested {summary.succeeded} item(s)",
+                "files_processed": summary.succeeded,
+                "chunks_created": summary.chunks_created,
+                "ingestion_run_id": str(run_id),
+                "failed": summary.failed,
+                "skipped": summary.skipped,
             }
 
         except IngestionCancelledError:
-            await logger.awarning(f"Ingestion job {task_job_id} was cancelled. Cleaning up partial data...")
+            final_status = IngestionRunStatus.CANCELLED
+            final_error = "ingestion cancelled by user"
+            await logger.awarning("Ingestion job %s was cancelled; rolling back partial data.", task_job_id)
             await KBIngestionHelper.cleanup_chroma_chunks_by_job(task_job_id, kb_path, kb_name)
-            return {"message": "Job cancelled"}
-        except Exception as e:
-            await logger.aerror(f"Error in background ingestion: {e!s}. Initiating rollback...")
+            return {"message": "Job cancelled", "ingestion_run_id": str(run_id)}
+        except Exception as exc:
+            final_status = IngestionRunStatus.FAILED
+            final_error = str(exc)
+            await logger.aerror("Error in background ingestion: %s. Initiating rollback.", exc)
             await KBIngestionHelper.cleanup_chroma_chunks_by_job(task_job_id, kb_path, kb_name)
             raise
         finally:
             if backend is not None:
                 await backend.teardown()
+            await ingestion_run_service.finalize_run(
+                run_id,
+                summary=summary,
+                status=final_status,
+                error_message=final_error,
+            )
 
     @staticmethod
     async def cleanup_chroma_chunks_by_job(
