@@ -2,7 +2,10 @@ import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useGetConnectors } from "@/controllers/API/queries/knowledge-bases/use-get-connectors";
+import GoogleDriveConnectorForm from "./GoogleDriveConnectorForm";
+import OneDriveConnectorForm from "./OneDriveConnectorForm";
 import S3ConnectorForm from "./S3ConnectorForm";
+import SharePointConnectorForm from "./SharePointConnectorForm";
 
 interface ConnectorsSectionProps {
   kbName: string;
@@ -67,13 +70,37 @@ const ConnectorsSection = ({ kbName }: ConnectorsSectionProps) => {
           onSubmitted={() => setActiveType(null)}
         />
       )}
-
-      {activeType && activeType !== "s3" && (
-        <div className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
-          {connectors?.find((c) => c.source_type === activeType)?.display_name}{" "}
-          support is coming in a later phase of this epic.
-        </div>
+      {activeType === "google_drive" && (
+        <GoogleDriveConnectorForm
+          kbName={kbName}
+          onSubmitted={() => setActiveType(null)}
+        />
       )}
+      {activeType === "onedrive" && (
+        <OneDriveConnectorForm
+          kbName={kbName}
+          onSubmitted={() => setActiveType(null)}
+        />
+      )}
+      {activeType === "sharepoint" && (
+        <SharePointConnectorForm
+          kbName={kbName}
+          onSubmitted={() => setActiveType(null)}
+        />
+      )}
+
+      {activeType &&
+        !["s3", "google_drive", "onedrive", "sharepoint"].includes(
+          activeType,
+        ) && (
+          <div className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
+            {
+              connectors?.find((c) => c.source_type === activeType)
+                ?.display_name
+            }{" "}
+            support is coming in a later phase of this epic.
+          </div>
+        )}
     </div>
   );
 };
