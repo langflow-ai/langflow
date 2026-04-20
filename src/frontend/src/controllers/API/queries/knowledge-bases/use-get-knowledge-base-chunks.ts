@@ -24,6 +24,9 @@ interface GetKnowledgeBaseChunksParams {
   page?: number;
   limit?: number;
   search?: string;
+  source_type?: string;
+  file_name?: string;
+  job_id?: string;
 }
 
 export const useGetKnowledgeBaseChunks: useQueryFunctionType<
@@ -43,6 +46,15 @@ export const useGetKnowledgeBaseChunks: useQueryFunctionType<
     if (params?.search) {
       queryParams.append("search", params.search);
     }
+    if (params?.source_type) {
+      queryParams.append("source_type", params.source_type);
+    }
+    if (params?.file_name) {
+      queryParams.append("file_name", params.file_name);
+    }
+    if (params?.job_id) {
+      queryParams.append("job_id", params.job_id);
+    }
 
     const url = `${getURL("KNOWLEDGE_BASES")}/${params?.kb_name}/chunks${
       queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -52,19 +64,23 @@ export const useGetKnowledgeBaseChunks: useQueryFunctionType<
     return res.data;
   };
 
-  const queryResult: UseQueryResult<PaginatedChunkResponse, any> = query(
+  const queryResult: UseQueryResult<PaginatedChunkResponse, Error> = query(
     [
       "useGetKnowledgeBaseChunks",
       params?.kb_name,
       params?.page,
       params?.limit,
       params?.search,
+      params?.source_type,
+      params?.file_name,
+      params?.job_id,
     ],
     getChunksFn,
     {
       enabled: !!params?.kb_name,
-      retry: (failureCount, error: any) => {
-        const status = error?.response?.status;
+      retry: (failureCount, error: unknown) => {
+        const status = (error as { response?: { status?: unknown } })?.response
+          ?.status;
         if (typeof status === "number") {
           return status >= 500 && failureCount < 3;
         }
