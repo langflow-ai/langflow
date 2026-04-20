@@ -9,6 +9,7 @@ from langflow.services.database.models.deployment.crud import update_deployment
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment.orm_guards import (
+    ensure_attachment_project_match,
     ensure_deployment_immutable_fields,
     ensure_flow_move_allowed,
     ensure_flow_moves_allowed,
@@ -346,6 +347,19 @@ def test_deployment_immutable_field_guard_blocks_provider_account_move(deploymen
     assert exc_info.value.code == "DEPLOYMENT_PROVIDER_ACCOUNT_MOVE"
 
 
+def test_deployment_immutable_field_guard_allows_noop(deployment: Deployment) -> None:
+    ensure_deployment_immutable_fields(
+        old_project_id=deployment.project_id,
+        new_project_id=deployment.project_id,
+        old_deployment_type=deployment.deployment_type,
+        new_deployment_type=deployment.deployment_type,
+        old_resource_key=deployment.resource_key,
+        new_resource_key=deployment.resource_key,
+        old_provider_account_id=deployment.deployment_provider_account_id,
+        new_provider_account_id=deployment.deployment_provider_account_id,
+    )
+
+
 def test_provider_identity_guard_blocks_changes(provider_account: DeploymentProviderAccount) -> None:
     with pytest.raises(DeploymentGuardError) as exc_info:
         ensure_provider_account_identity_immutable(
@@ -439,6 +453,49 @@ async def test_crud_update_provider_account_blocks_identity_update(
         )
 
     assert exc_info.value.code == "DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE"
+
+
+@pytest.mark.asyncio
+async def test_attachment_project_match_blocks_cross_project_directly(
+    db: AsyncSession,
+    user: User,
+    target_project: Folder,
+    flow_version: FlowVersion,
+    provider_account: DeploymentProviderAccount,
+) -> None:
+    deployment_in_other_project = Deployment(
+        user_id=user.id,
+        project_id=target_project.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-direct-block",
+        name="deployment-direct-block",
+        deployment_type=DeploymentType.AGENT,
+    )
+    db.add(deployment_in_other_project)
+    await db.commit()
+    await db.refresh(deployment_in_other_project)
+
+    with pytest.raises(DeploymentGuardError) as exc_info:
+        await ensure_attachment_project_match(
+            db,
+            flow_version_id=flow_version.id,
+            deployment_id=deployment_in_other_project.id,
+        )
+
+    assert exc_info.value.code == "CROSS_PROJECT_ATTACHMENT"
+
+
+@pytest.mark.asyncio
+async def test_attachment_project_match_allows_same_project_directly(
+    db: AsyncSession,
+    flow_version: FlowVersion,
+    deployment: Deployment,
+) -> None:
+    await ensure_attachment_project_match(
+        db,
+        flow_version_id=flow_version.id,
+        deployment_id=deployment.id,
+    )
 
 
 @pytest.mark.asyncio
