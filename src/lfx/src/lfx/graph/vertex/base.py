@@ -93,6 +93,12 @@ class Vertex:
         self.params = params or {}
         self.parent_node_id: str | None = self.full_data.get("parent_node_id")
         self.load_from_db_fields: list[str] = []
+        # Populated by ``update_params_with_load_from_db_fields`` during
+        # ``get_instance_results``: maps each resolved global-variable value
+        # (i.e. the fetched secret) to the variable name that supplied it.
+        # Used by the output/log finalisers to mask those values before they
+        # reach the UI's Component Output panel.
+        self._resolved_global_values: dict[str, str] = {}
         self.parent_is_top_level = False
         self.layer = None
         self.result: ResultData | None = None
@@ -745,6 +751,28 @@ class Vertex:
                 self.artifacts = {self.outputs[0]["name"]: self.artifacts}
         else:
             self.built_object = result
+        self._redact_resolved_global_values()
+
+    def _redact_resolved_global_values(self) -> None:
+        """Mask resolved global-variable values in anything the UI renders.
+
+        ``self.built_object`` is deliberately left alone — downstream vertices
+        consume it via edges and must receive the real values. The fields we
+        touch are the user-facing copies: logs, artifacts, and the output
+        payload. ``build_output_logs`` handles ``self.outputs_logs`` itself
+        (before this is called) so it can redact even when no artifacts exist.
+        """
+        from lfx.serialization.redaction import build_redaction_map, redact_values
+
+        redaction_map = build_redaction_map(getattr(self, "_resolved_global_values", {}) or {})
+        if not redaction_map:
+            return
+        if self.logs:
+            self.logs = redact_values(self.logs, redaction_map)
+        if self.artifacts:
+            self.artifacts = redact_values(self.artifacts, redaction_map)
+        if self.artifacts_raw:
+            self.artifacts_raw = redact_values(self.artifacts_raw, redaction_map)
 
     def _validate_built_object(self) -> None:
         """Checks if the built object is None and raises a ValueError if so."""

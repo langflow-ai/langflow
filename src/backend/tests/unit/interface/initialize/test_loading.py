@@ -1,8 +1,10 @@
 import os
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.interface.initialize.loading import (
+    get_instance_results,
     update_params_with_load_from_db_fields,
     update_table_params_with_load_from_db_fields,
 )
@@ -525,3 +527,106 @@ async def test_update_table_params_handles_user_id_not_set_error():
             await update_table_params_with_load_from_db_fields(
                 custom_component, params, "table_data", fallback_to_env_vars=True
             )
+
+
+# =====================================================================================
+# RESOLVED GLOBAL VARIABLE TRACKING (for output-panel redaction)
+# =====================================================================================
+
+
+@pytest.mark.asyncio
+async def test_get_instance_results_records_resolved_global_on_vertex():
+    """``load_from_db`` resolution should record the resolved value on the vertex.
+
+    The output-panel redactor reads ``vertex._resolved_global_values`` to know
+    which literals to mask before handing outputs to the UI, so this mapping
+    must be populated whenever a field is resolved from a global variable.
+    """
+    # Build a fake vertex whose load_from_db_fields names the field we expect
+    # to be resolved.
+    vertex = SimpleNamespace(load_from_db_fields=["api_key"])
+
+    custom_component = MagicMock()
+    custom_component.get_variable = AsyncMock(return_value="sk-leaked-value")
+
+    # Minimal build_component stand-in so get_instance_results doesn't try to
+    # instantiate a real component.
+    async def _fake_build(**_kwargs):
+        return custom_component, {}, {}
+
+    custom_params = {"api_key": "OPENAI_API_KEY"}  # pragma: allowlist secret
+
+    with (
+        patch("lfx.interface.initialize.loading.session_scope") as mock_session_scope,
+        patch("lfx.interface.initialize.loading.build_component", side_effect=_fake_build),
+    ):
+        mock_session_scope.return_value.__aenter__.return_value = MagicMock()
+
+        await get_instance_results(
+            custom_component=custom_component,
+            custom_params=custom_params,
+            vertex=vertex,
+            fallback_to_env_vars=False,
+            base_type="component",
+        )
+
+    assert vertex._resolved_global_values == {"sk-leaked-value": "OPENAI_API_KEY"}  # pragma: allowlist secret
+
+
+@pytest.mark.asyncio
+async def test_get_instance_results_skips_recording_when_resolution_fails():
+    """A failed resolution (value unchanged) must not be added to the redaction map.
+
+    If the variable wasn't found and the field kept its original name, redacting
+    would destroy legitimate output text rather than protect a secret.
+    """
+    vertex = SimpleNamespace(load_from_db_fields=["api_key"])
+
+    custom_component = MagicMock()
+    custom_component.get_variable = AsyncMock(side_effect=ValueError("Database connection failed"))
+
+    async def _fake_build(**_kwargs):
+        return custom_component, {}, {}
+
+    custom_params = {"api_key": "UNRESOLVED_VAR"}  # pragma: allowlist secret
+
+    with (
+        patch("lfx.interface.initialize.loading.session_scope") as mock_session_scope,
+        patch("lfx.interface.initialize.loading.build_component", side_effect=_fake_build),
+    ):
+        mock_session_scope.return_value.__aenter__.return_value = MagicMock()
+
+        await get_instance_results(
+            custom_component=custom_component,
+            custom_params=custom_params,
+            vertex=vertex,
+            fallback_to_env_vars=True,
+            base_type="component",
+        )
+
+    # The field resolves to None on failure, so nothing sensitive was resolved
+    # and the redaction map must stay empty.
+    assert getattr(vertex, "_resolved_global_values", {}) == {}
+
+
+@pytest.mark.asyncio
+async def test_table_column_resolution_records_on_vertex():
+    """Table column resolutions must also feed the vertex redaction map."""
+    vertex = SimpleNamespace()
+    custom_component = MagicMock()
+    custom_component._vertex = vertex
+    custom_component.get_variable = AsyncMock(return_value="actual_admin_user")
+
+    params = {
+        "table_data": [{"username": "ADMIN_USER"}],
+        "table_data_load_from_db_columns": ["username"],
+    }
+
+    with patch("lfx.interface.initialize.loading.session_scope") as mock_session_scope:
+        mock_session_scope.return_value.__aenter__.return_value = MagicMock()
+
+        await update_table_params_with_load_from_db_fields(
+            custom_component, params, "table_data", fallback_to_env_vars=False
+        )
+
+    assert vertex._resolved_global_values == {"actual_admin_user": "ADMIN_USER"}

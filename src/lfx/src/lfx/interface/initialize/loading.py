@@ -62,12 +62,18 @@ async def get_instance_results(
     fallback_to_env_vars: bool = False,
     base_type: str = "component",
 ):
+    # Snapshot the variable names *before* load_from_db resolution overwrites
+    # them with the resolved values. ``update_params_with_load_from_db_fields``
+    # uses these names to populate ``vertex._resolved_global_values`` so the
+    # output panel can redact the resolved values it would otherwise echo.
+    pre_resolution_params = {field: custom_params.get(field) for field in vertex.load_from_db_fields}
     custom_params = await update_params_with_load_from_db_fields(
         custom_component,
         custom_params,
         vertex.load_from_db_fields,
         fallback_to_env_vars=fallback_to_env_vars,
     )
+    _record_resolved_global_values(vertex, pre_resolution_params, custom_params)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
         if base_type == "custom_components":
@@ -109,6 +115,55 @@ def convert_kwargs(params):
         params.pop(key, None)
 
     return params
+
+
+def _record_table_resolved_value(custom_component, resolved_value: str, variable_name: str) -> None:
+    """Record a resolved table-column global value on the owning vertex.
+
+    Table columns resolve one cell at a time inside
+    ``update_table_params_with_load_from_db_fields`` and don't flow through
+    ``_record_resolved_global_values``, so they need their own hook.
+    """
+    vertex = getattr(custom_component, "_vertex", None)
+    if vertex is None:
+        return
+    resolved_values: dict[str, str] = getattr(vertex, "_resolved_global_values", {}) or {}
+    resolved_values[resolved_value] = variable_name
+    vertex._resolved_global_values = resolved_values  # noqa: SLF001
+
+
+def _record_resolved_global_values(
+    vertex: Vertex,
+    pre_resolution_params: dict[str, Any],
+    resolved_params: dict[str, Any],
+) -> None:
+    """Track the post-resolution values so the output layer can redact them.
+
+    ``pre_resolution_params`` maps each ``load_from_db`` field to the global
+    variable name that was configured (e.g. ``{"api_key": "OPENAI_API_KEY"}``),  # pragma: allowlist secret
+    captured before the resolver overwrote the params dict with the fetched
+    value. ``resolved_params`` holds the result of that resolution. The pair is
+    stitched back into a ``{resolved_value: variable_name}`` map stored on the
+    vertex so that :func:`lfx.schema.schema.build_output_logs` (and the vertex's
+    own log/artifact finalisers) can mask those literal values in anything the
+    UI renders.
+
+    Non-string resolved values and empty/unchanged placeholders are skipped —
+    the redactor only operates on literal string substrings.
+    """
+    resolved_values: dict[str, str] = getattr(vertex, "_resolved_global_values", {}) or {}
+    for field, variable_name in pre_resolution_params.items():
+        if not isinstance(variable_name, str) or not variable_name:
+            continue
+        resolved_value = resolved_params.get(field)
+        if not isinstance(resolved_value, str) or not resolved_value:
+            continue
+        # If resolution failed we keep the original variable name in params, in
+        # which case redacting it would destroy legitimate output text.
+        if resolved_value == variable_name:
+            continue
+        resolved_values[resolved_value] = variable_name
+    vertex._resolved_global_values = resolved_values  # noqa: SLF001
 
 
 def load_from_env_vars(params, load_from_db_fields, context=None):
@@ -228,6 +283,8 @@ async def update_table_params_with_load_from_db_fields(
                     logger.warning(
                         f"Could not get value for {variable_name} in table column {column_name}. Setting it to None."
                     )
+                elif isinstance(key, str) and key and key != variable_name:
+                    _record_table_resolved_value(custom_component, key, variable_name)
 
             updated_table_data.append(updated_row)
 

@@ -95,6 +95,7 @@ def build_output_logs(vertex, result) -> dict:
     """Build output logs from vertex outputs and results."""
     # Importing here to avoid circular imports
     from lfx.schema.dataframe import DataFrame
+    from lfx.serialization.redaction import build_redaction_map, redact_values
     from lfx.serialization.serialization import serialize
 
     outputs: dict[str, OutputValue] = {}
@@ -128,6 +129,10 @@ def build_output_logs(vertex, result) -> dict:
                 message = [serialize(item) for item in message]
         name = output.get("name", f"output_{index}")
         outputs |= {name: OutputValue(message=message, type=type_).model_dump()}
+
+    redaction_map = build_redaction_map(getattr(vertex, "_resolved_global_values", {}) or {})
+    if redaction_map:
+        outputs = redact_values(outputs, redaction_map)
 
     return outputs
 
