@@ -169,3 +169,15 @@ Preload offers the smallest win (and the most risk) in these cases:
 - Environments where `preload_app=true` is known to conflict with the gunicorn worker class in use.
 
 For multi-worker deployments using the stock services, the default is recommended.
+
+### Measured improvements
+
+Phase 2 through 5.5 of the cold-start improvements milestone reduced `lfx run` and `langflow run` cold-start latency on Linux CI runners. Headline numbers from the post-fix authoritative run on Python 3.13:
+
+- `lfx run` bare boot dropped from 17.82 s to 10.55 s (`lfx_bare` scenario).
+- `lfx run <flow>` uncompiled dropped from 18.92 s to 16.01 s (`lfx_with_flow` scenario).
+- `lfx run <flow>` with pre-baked bytecode dropped from 9.52 s to 8.43 s (`lfx_with_flow_prebaked` scenario).
+
+The gains come from in-process changes (deferred imports on the Graph hot path, atomic and version-stamped component index, parallelized lifespan tasks, event-driven MCP startup, persisted component-index cache) combined with the build-time and image-layer tunings documented above (`UV_COMPILE_BYTECODE=1`, multi-stage layer separation).
+
+For the full before / after table, per-scenario deltas, and MEAS-03 per-phase checkpoint breakdown, see the cold-start performance improvements entry in the [Langflow release notes](/release-notes).
