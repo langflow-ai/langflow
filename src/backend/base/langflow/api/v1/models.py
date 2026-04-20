@@ -213,12 +213,14 @@ async def list_models(
         if prov_name not in existing_providers:
             if selected_providers and prov_name not in selected_providers:
                 continue
-            filtered_models.append({
-                "provider": prov_name,
-                "icon": meta.get("icon", prov_name),
-                "models": [],
-                "api_docs_url": meta.get("api_docs_url", ""),
-            })
+            filtered_models.append(
+                {
+                    "provider": prov_name,
+                    "icon": meta.get("icon", prov_name),
+                    "models": [],
+                    "api_docs_url": meta.get("api_docs_url", ""),
+                }
+            )
 
     # Replace static models with live models for providers that support it
     configured_providers = {p for p, configured in provider_configured_status.items() if configured}
