@@ -30,9 +30,17 @@ from lfx.base.knowledge_bases.ingestion_sources.base import (
     KBIngestionSource,
     SourceType,
 )
-from lfx.base.knowledge_bases.ingestion_sources.connector_base import KBConnectorSource
+from lfx.base.knowledge_bases.ingestion_sources.connector_base import (
+    KBConnectorSource,
+    OAuthConnectorBase,
+)
 from lfx.base.knowledge_bases.ingestion_sources.file_upload import FileUploadSource
 from lfx.base.knowledge_bases.ingestion_sources.folder import FolderSource
+from lfx.base.knowledge_bases.ingestion_sources.google_drive import GoogleDriveSource
+from lfx.base.knowledge_bases.ingestion_sources.microsoft_graph import (
+    MicrosoftGraphSource,
+)
+from lfx.base.knowledge_bases.ingestion_sources.onedrive import OneDriveSource
 from lfx.base.knowledge_bases.ingestion_sources.registry import (
     create_source,
     get_source_class,
@@ -40,15 +48,20 @@ from lfx.base.knowledge_bases.ingestion_sources.registry import (
     registered_sources,
 )
 from lfx.base.knowledge_bases.ingestion_sources.s3 import S3Source
+from lfx.base.knowledge_bases.ingestion_sources.sharepoint import SharePointSource
 
 # Register built-in sources on import.
 register_source(SourceType.FILE_UPLOAD, FileUploadSource)
 register_source(SourceType.FOLDER, FolderSource)
 register_source(SourceType.S3, S3Source)
+register_source(SourceType.GOOGLE_DRIVE, GoogleDriveSource)
+register_source(SourceType.ONEDRIVE, OneDriveSource)
+register_source(SourceType.SHAREPOINT, SharePointSource)
 
 __all__ = [
     "FileUploadSource",
     "FolderSource",
+    "GoogleDriveSource",
     "IngestionItem",
     "IngestionItemContent",
     "IngestionItemResult",
@@ -56,7 +69,11 @@ __all__ = [
     "IngestionSummary",
     "KBConnectorSource",
     "KBIngestionSource",
+    "MicrosoftGraphSource",
+    "OAuthConnectorBase",
+    "OneDriveSource",
     "S3Source",
+    "SharePointSource",
     "SourceType",
     "create_source",
     "get_source_class",

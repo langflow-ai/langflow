@@ -30,6 +30,14 @@ from uuid import UUID
 from lfx.base.knowledge_bases.ingestion_sources.base import KBIngestionSource
 from lfx.log.logger import logger
 
+# HTTP-status threshold cloud-connector helpers treat as "request failed".
+# Shared so every connector checks the same boundary.
+HTTP_STATUS_CLIENT_ERROR_FLOOR = 400
+
+# Below this, we treat a ``expires_in`` reply as bogus and fall back to
+# our hard-coded default TTL rather than thrashing token refreshes.
+MIN_EXPIRES_IN_SECONDS = 60
+
 
 class KBConnectorSource(KBIngestionSource):
     """Base class for third-party / cloud ingestion sources."""
@@ -125,3 +133,149 @@ class KBConnectorSource(KBIngestionSource):
         additional secret-adjacent fields.
         """
         return super().describe()
+
+
+class OAuthConnectorBase(KBConnectorSource):
+    """Shared OAuth 2.0 refresh-token flow for cloud connectors.
+
+    **Approach: bring-your-own-refresh-token.** Rather than build a
+    full OAuth callback system (redirect URLs, CSRF-protected state,
+    per-user token storage schema), we trade the setup burden:
+
+    * User goes through the OAuth consent flow *once* externally
+      (via ``gcloud auth`` / Azure CLI / Google OAuth Playground /
+      Microsoft MSAL sample) to obtain a long-lived refresh token.
+    * User stores the refresh token plus OAuth client id/secret as
+      Langflow variables.
+    * The connector mints a short-lived access token on every list /
+      fetch call by POSTing the refresh token back to the provider.
+
+    This keeps the Phase 3B/C surface identical to S3: all three
+    connectors share the ``KBConnectorSource`` variable-resolution
+    pattern. A dedicated "Connect with Google / Microsoft" UX can
+    land in a follow-up phase without changing the connector
+    implementations — it just populates the same variables that
+    power this flow today.
+
+    Subclasses set ``token_endpoint`` and optionally override
+    ``_token_request_body`` to tune provider-specific quirks.
+    Access tokens are cached in memory for ``token_ttl_seconds`` to
+    avoid refreshing on every API call within a single ingestion
+    run.
+    """
+
+    # Subclass must override.
+    token_endpoint: str = ""
+    # Default cache: most providers issue 1-hour tokens; refresh 5
+    # minutes before expiry to give clock skew a margin.
+    token_ttl_seconds: int = 55 * 60
+
+    def __init__(self, user_id, source_config) -> None:
+        super().__init__(user_id=user_id, source_config=source_config)
+        self._cached_access_token: str | None = None
+        self._cached_token_expires_at: float = 0.0
+
+    async def get_access_token(self) -> str:
+        """Return a currently-valid access token, refreshing if needed.
+
+        Shared entry point for subclasses — don't hit the refresh
+        endpoint yourself. Caches the token until it's within a 5-
+        minute window of expiry so a run that performs N list+fetch
+        calls makes only one refresh round-trip.
+        """
+        import time
+
+        now = time.monotonic()
+        if self._cached_access_token and now < self._cached_token_expires_at:
+            return self._cached_access_token
+
+        token = await self._refresh_access_token()
+        self._cached_access_token = token
+        self._cached_token_expires_at = now + self.token_ttl_seconds
+        return token
+
+    async def _refresh_access_token(self) -> str:
+        """Exchange the refresh token for an access token via HTTP.
+
+        Kept small and httpx-based on purpose — we don't need the full
+        google-auth / msal SDKs just for a single POST, and avoiding
+        those deps keeps Langflow's install footprint tight.
+        """
+        import httpx
+
+        body = await self._token_request_body()
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(self.token_endpoint, data=body)
+        except httpx.HTTPError as exc:
+            msg = f"OAuth token refresh against {self.token_endpoint} failed: {exc}"
+            raise ValueError(msg) from exc
+
+        if response.status_code >= HTTP_STATUS_CLIENT_ERROR_FLOOR:
+            msg = (
+                f"OAuth token refresh failed with {response.status_code}: "
+                f"{response.text[:200]}. Verify your refresh token + client credentials."
+            )
+            raise ValueError(msg)
+
+        payload = response.json()
+        access_token = payload.get("access_token")
+        if not access_token:
+            msg = f"Token endpoint did not return an access_token: {payload}"
+            raise ValueError(msg)
+
+        # Use provider-reported expiry when available so the cache
+        # matches reality rather than our 55-minute guess.
+        expires_in = payload.get("expires_in")
+        if isinstance(expires_in, (int, float)) and expires_in > MIN_EXPIRES_IN_SECONDS:
+            # Subtract a 60-second safety margin.
+            self.token_ttl_seconds = int(expires_in) - 60
+
+        return str(access_token)
+
+    async def _token_request_body(self) -> dict[str, str]:
+        """Build the form body for the refresh POST.
+
+        Default matches the OAuth 2.0 spec; subclasses override when
+        their provider wants extra fields (scope, tenant, etc.).
+        """
+        client_id = await self.resolve_required_secret(self._client_id_variable())
+        client_secret = await self.resolve_required_secret(self._client_secret_variable())
+        refresh_token = await self.resolve_required_secret(self._refresh_token_variable())
+        return {
+            "grant_type": "refresh_token",
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+        }
+
+    # --- variable-name conventions (subclass-overridable) ---------
+
+    def _client_id_variable(self) -> str:
+        return self.source_config.get("client_id_variable") or self.default_client_id_variable
+
+    def _client_secret_variable(self) -> str:
+        return self.source_config.get("client_secret_variable") or self.default_client_secret_variable
+
+    def _refresh_token_variable(self) -> str:
+        return self.source_config.get("refresh_token_variable") or self.default_refresh_token_variable
+
+    # Subclasses override.
+    default_client_id_variable: str = ""
+    default_client_secret_variable: str = ""
+    default_refresh_token_variable: str = ""
+
+    def describe(self) -> dict[str, Any]:
+        """Expose the resolved variable names alongside the base config.
+
+        The OAuth triple is stored as *references* (variable names),
+        so the describe payload is safe to show in the UI — it tells
+        the user which variables this source reads without leaking
+        any resolved value.
+        """
+        base = super().describe()
+        base.setdefault("config", {})
+        base["config"].setdefault("client_id_variable", self._client_id_variable())
+        base["config"].setdefault("client_secret_variable", self._client_secret_variable())
+        base["config"].setdefault("refresh_token_variable", self._refresh_token_variable())
+        return base
