@@ -51,7 +51,7 @@ jobs:
           GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
           GP_INSTANCE: ${{ vars.GP_INSTANCE }}
           GP_BUNDLE: ${{ vars.GP_BUNDLE }}
-        run: python download_translations.py --output ../../src/frontend/src/locales/
+        run: python download.py --target frontend --output ../../src/frontend/src/locales/
 
       - name: Close stale translation PRs
         uses: actions/github-script@v8
@@ -152,7 +152,7 @@ jobs:
           GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
           GP_INSTANCE: ${{ vars.GP_INSTANCE }}
           GP_BACKEND_BUNDLE: ${{ vars.GP_BACKEND_BUNDLE }}
-        run: python download_backend_translations.py
+        run: python download.py --target backend
 
       - name: Close stale backend translation PRs
         uses: actions/github-script@v8
