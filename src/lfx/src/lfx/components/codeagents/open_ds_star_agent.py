@@ -95,6 +95,7 @@ class OpenDsStarAgentRunnable(Runnable):
         )
 
         # Yield chunks from the synchronous stream using asyncio.to_thread
+        last_chunk = None
         while True:
             try:
                 # Get next chunk in a thread to avoid blocking
@@ -102,6 +103,7 @@ class OpenDsStarAgentRunnable(Runnable):
                 if chunk is StopIteration:
                     break
 
+                last_chunk = chunk
                 # Each chunk is a dict with node name as key and state update as value
                 yield {"chunk": chunk, "type": "node_update"}
                 # Allow other async tasks to run
@@ -109,9 +111,9 @@ class OpenDsStarAgentRunnable(Runnable):
             except StopIteration:
                 break
 
-        # After streaming all nodes, yield the final result
-        result = await self.ainvoke(input_value, config)
-        yield {"chunk": result, "type": "final"}
+        # Yield the final state from the last streamed chunk
+        if last_chunk is not None:
+            yield {"chunk": last_chunk, "type": "final"}
 
     async def astream_events(
         self,
