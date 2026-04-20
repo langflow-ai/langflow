@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   PROVIDER_VARIABLE_MAPPING,
   ProviderVariable,
@@ -87,6 +88,7 @@ export const useProviderConfiguration = ({
     null,
   );
 
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -416,17 +418,17 @@ export const useProviderConfiguration = ({
       );
 
       // All succeeded — defer toast and value clear until after models refetch
-      pendingSuccessTitleRef.current = `${selectedProvider.provider} Configuration Saved`;
+      pendingSuccessTitleRef.current = t("modelProviders.configurationSaved", { provider: selectedProvider.provider });
       setIsFetchingAfterSave(true);
       clearValuesAfterFetchRef.current = true;
       invalidateProviderQueries();
     } catch (error: any) {
       setValidationFailed(true);
       setErrorData({
-        title: "Error Saving Configuration",
+        title: t("modelProviders.errorSavingConfiguration"),
         list: [
           error?.response?.data?.detail ||
-            "An unexpected error occurred. Please try again.",
+            t("modelProviders.errorUnexpected"),
         ],
       });
     } finally {
@@ -456,9 +458,9 @@ export const useProviderConfiguration = ({
 
     if (!variableName) {
       setErrorData({
-        title: "Invalid Provider",
+        title: t("modelProviders.errorInvalidProvider"),
         list: [
-          `Provider "${syncedSelectedProvider.provider}" is not supported.`,
+          t("modelProviders.errorInvalidProviderMessage", { provider: syncedSelectedProvider.provider }),
         ],
       });
       return;
@@ -486,14 +488,14 @@ export const useProviderConfiguration = ({
         });
       }
 
-      setSuccessData({ title: `${syncedSelectedProvider.provider} Activated` });
+      setSuccessData({ title: t("modelProviders.providerActivated", { provider: syncedSelectedProvider.provider }) });
       invalidateProviderQueries();
     } catch (error: any) {
       setErrorData({
-        title: "Error Activating Provider",
+        title: t("modelProviders.errorActivatingProvider"),
         list: [
           error?.response?.data?.detail ||
-            "An unexpected error occurred. Please try again.",
+            t("modelProviders.errorUnexpected"),
         ],
       });
     }
@@ -525,16 +527,16 @@ export const useProviderConfiguration = ({
       await deleteGlobalVariable({ id: existingVariable.id });
 
       setSuccessData({
-        title: `${syncedSelectedProvider.provider} Disconnected`,
+        title: t("modelProviders.providerDisconnected", { provider: syncedSelectedProvider.provider }),
       });
       setIsFetchingAfterDisconnect(true);
       invalidateProviderQueries();
     } catch (error: any) {
       setErrorData({
-        title: "Error Disconnecting Provider",
+        title: t("modelProviders.errorDisconnectingProvider"),
         list: [
           error?.response?.data?.detail ||
-            "An unexpected error occurred. Please try again.",
+            t("modelProviders.errorUnexpected"),
         ],
       });
     }
@@ -583,9 +585,9 @@ export const useProviderConfiguration = ({
           const errorMessage =
             error?.response?.data?.detail ||
             error?.message ||
-            "Failed to update model status";
+            t("modelProviders.errorFailedToUpdateModelStatus");
           setErrorData({
-            title: "Error updating model status",
+            title: t("modelProviders.errorUpdatingModelStatus"),
             list: [errorMessage],
           });
         },
@@ -636,9 +638,9 @@ export const useProviderConfiguration = ({
       const errorMessage =
         error?.response?.data?.detail ||
         error?.message ||
-        "Failed to update model status";
+        t("modelProviders.errorFailedToUpdateModelStatus");
       setErrorData({
-        title: "Error updating model status",
+        title: t("modelProviders.errorUpdatingModelStatus"),
         list: [errorMessage],
       });
     }
