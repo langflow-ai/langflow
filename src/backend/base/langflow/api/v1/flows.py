@@ -480,6 +480,10 @@ _starter_flows_cache: ThreadingInMemoryCache[threading.RLock] = ThreadingInMemor
     max_size=1,
     expiration_time=int(_STARTER_FLOWS_TTL_SECONDS),
 )
+_starter_flows_translated_cache: ThreadingInMemoryCache[threading.RLock] = ThreadingInMemoryCache(
+    max_size=16,
+    expiration_time=int(_STARTER_FLOWS_TTL_SECONDS),
+)
 _starter_flows_lock = asyncio.Lock()
 
 
@@ -490,57 +494,63 @@ async def read_basic_examples(
     request: Request,
 ):
     """Retrieve a list of basic example flows."""
-    cached_flow_reads = _starter_flows_cache.get("starter_flows")
-    if cached_flow_reads is CACHE_MISS:
-        async with _starter_flows_lock:
-            cached_flow_reads = _starter_flows_cache.get("starter_flows")
-            if cached_flow_reads is CACHE_MISS:
-                try:
-                    starter_folder = (
-                        await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))
-                    ).first()
-
-                    if not starter_folder:
-                        return compress_response([])
-
-                    all_starter_folder_flows = (
-                        await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))
-                    ).all()
-
-                    cached_flow_reads = [
-                        FlowRead.model_validate(flow, from_attributes=True) for flow in all_starter_folder_flows
-                    ]
-                    _starter_flows_cache.set("starter_flows", cached_flow_reads)
-
-                except Exception as e:
-                    import logging as _logging
-
-                    _logging.getLogger(__name__).exception("Error loading basic examples")
-                    raise HTTPException(
-                        status_code=500, detail="An internal error occurred while loading examples."
-                    ) from e
-
-    # Translate per-request — always called so name_key is set for all locales
-    from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
-
     locale = getattr(request.state, "locale", "en")
-    translated = translate_starter_flows(cached_flow_reads, locale)
+    translated_cache_key = f"starter_flows_{locale}"
 
-    # Translate note node descriptions in each flow.
-    # Use name_key (the original English name set by translate_starter_flows) so that
-    # translate_flow_notes can resolve the correct template_notes.* key even when the
-    # flow name has already been translated into the requested locale.
-    result = []
-    for flow in translated:
-        flow_copy = flow.model_copy()
-        if flow_copy.data and isinstance(flow_copy.data, dict):
-            nodes = flow_copy.data.get("nodes", [])
-            translated_nodes = translate_flow_notes(nodes, locale)
-            flow_copy.data = {
-                **flow_copy.data,
-                "nodes": translated_nodes,
-            }
-        result.append(flow_copy)
+    # Fast path: translated result already cached for this locale
+    cached_translated = _starter_flows_translated_cache.get(translated_cache_key)
+    if cached_translated is not CACHE_MISS:
+        return compress_response(cached_translated)
+
+    async with _starter_flows_lock:
+        # Double-check inside lock to prevent thundering herd
+        cached_translated = _starter_flows_translated_cache.get(translated_cache_key)
+        if cached_translated is not CACHE_MISS:
+            return compress_response(cached_translated)
+
+        # Ensure raw DB data is cached
+        cached_flow_reads = _starter_flows_cache.get("starter_flows")
+        if cached_flow_reads is CACHE_MISS:
+            try:
+                starter_folder = (
+                    await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))
+                ).first()
+
+                if not starter_folder:
+                    return compress_response([])
+
+                all_starter_folder_flows = (
+                    await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))
+                ).all()
+
+                cached_flow_reads = [
+                    FlowRead.model_validate(flow, from_attributes=True) for flow in all_starter_folder_flows
+                ]
+                _starter_flows_cache.set("starter_flows", cached_flow_reads)
+
+            except Exception as e:
+                import logging as _logging
+
+                _logging.getLogger(__name__).exception("Error loading basic examples")
+                raise HTTPException(
+                    status_code=500, detail="An internal error occurred while loading examples."
+                ) from e
+
+        # Translate once per locale and cache the result
+        from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
+
+        translated = translate_starter_flows(cached_flow_reads, locale)
+        result = []
+        for flow in translated:
+            flow_copy = flow.model_copy()
+            if flow_copy.data and isinstance(flow_copy.data, dict):
+                nodes = flow_copy.data.get("nodes", [])
+                translated_nodes = translate_flow_notes(nodes, locale)
+                flow_copy.data = {**flow_copy.data, "nodes": translated_nodes}
+            result.append(flow_copy)
+
+        _starter_flows_translated_cache.set(translated_cache_key, result)
+
     return compress_response(result)
 
 
