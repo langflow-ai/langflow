@@ -36,4 +36,8 @@ export type UtilityStoreType = {
   setDefaultFolderName: (defaultFolderName: string) => void;
   hideGettingStartedProgress: boolean;
   setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) => void;
+  allowCustomComponents: boolean;
+  setAllowCustomComponents: (allowCustomComponents: boolean) => void;
+  mcpBaseUrl: string;
+  setMcpBaseUrl: (mcpBaseUrl: string) => void;
 };

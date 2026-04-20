@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from langchain.memory import ConversationBufferMemory
+from langchain_classic.memory import ConversationBufferMemory
 
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing import BaseChatMemory

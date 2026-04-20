@@ -115,8 +115,22 @@ class MemoryComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Message", name="messages_text", method="retrieve_messages_as_text", dynamic=True),
-        Output(display_name="Table", name="dataframe", method="retrieve_messages_dataframe", dynamic=True),
+        Output(
+            display_name="Messages",
+            name="messages_text",
+            method="retrieve_messages_as_text",
+            types=["Message"],
+            selected="Message",
+            dynamic=True,
+        ),
+        Output(
+            display_name="Table",
+            name="dataframe",
+            method="retrieve_messages_dataframe",
+            types=["Table"],
+            selected="Table",
+            dynamic=True,
+        ),
     ]
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
@@ -130,6 +144,8 @@ class MemoryComponent(Component):
                         display_name="Stored Messages",
                         name="stored_messages",
                         method="store_message",
+                        types=["Message"],
+                        selected="Message",
                         hidden=True,
                         dynamic=True,
                     )
@@ -137,9 +153,21 @@ class MemoryComponent(Component):
             if field_value == "Retrieve":
                 frontend_node["outputs"] = [
                     Output(
-                        display_name="Messages", name="messages_text", method="retrieve_messages_as_text", dynamic=True
+                        display_name="Messages",
+                        name="messages_text",
+                        method="retrieve_messages_as_text",
+                        types=["Message"],
+                        selected="Message",
+                        dynamic=True,
                     ),
-                    Output(display_name="Table", name="dataframe", method="retrieve_messages_dataframe", dynamic=True),
+                    Output(
+                        display_name="Table",
+                        name="dataframe",
+                        method="retrieve_messages_dataframe",
+                        types=["Table"],
+                        selected="Table",
+                        dynamic=True,
+                    ),
                 ]
         return frontend_node
 

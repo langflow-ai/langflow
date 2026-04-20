@@ -15,9 +15,11 @@ Strategies to reduce mocking:
 
 import json
 from io import StringIO
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from lfx.interface.components import component_cache
 from lfx.run.base import RunError, output_error, run_flow
 
 
@@ -191,6 +193,50 @@ class TestRunFlowJsonInput:
             # The function should have loaded from JSON successfully
             mock_load.assert_called_once()
             assert result["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_custom_component_validation_errors_surface_as_run_error(self):
+        blocked_flow = json.dumps(
+            {
+                "data": {
+                    "nodes": [
+                        {
+                            "id": "node-1",
+                            "data": {
+                                "id": "node-1",
+                                "type": "TotallyCustom",
+                                "node": {
+                                    "display_name": "Blocked Node",
+                                    "template": {
+                                        "code": {"value": "print('blocked')"},
+                                    },
+                                },
+                            },
+                        }
+                    ],
+                    "edges": [],
+                }
+            }
+        )
+
+        settings_service = SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False))
+
+        with (
+            patch(
+                "lfx.services.deps.get_settings_service",
+                return_value=settings_service,
+            ),
+            patch(
+                "lfx.utils.flow_validation.ensure_component_hash_lookups_loaded",
+                new=AsyncMock(return_value={"ChatInput": {"knownhash1234"}}),
+            ),
+            patch.object(component_cache, "type_to_current_hash", {"ChatInput": {"knownhash1234"}}),
+            pytest.raises(
+                RunError,
+                match="custom components are not allowed",
+            ),
+        ):
+            await run_flow(flow_json=blocked_flow)
 
 
 class TestRunFlowStdinInput:

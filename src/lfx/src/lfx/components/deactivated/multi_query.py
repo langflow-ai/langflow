@@ -1,5 +1,5 @@
-from langchain.prompts import PromptTemplate
-from langchain.retrievers import MultiQueryRetriever
+from langchain_classic.retrievers import MultiQueryRetriever
+from langchain_core.prompts import PromptTemplate
 
 from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.field_typing import BaseRetriever, LanguageModel, Text
