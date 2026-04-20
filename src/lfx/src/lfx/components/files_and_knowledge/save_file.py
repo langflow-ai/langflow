@@ -253,6 +253,8 @@ class SaveToFileComponent(Component):
                 build_config[f_name]["show"] = False
 
         # Show fields based on selected storage location
+        is_tool_mode = build_config.get("tools_metadata", {}).get("show", False)
+
         if len(selected) == 1:
             location = selected[0]
 
@@ -266,7 +268,7 @@ class SaveToFileComponent(Component):
 
             if location == "Local":
                 if "local_format" in build_config:
-                    build_config["local_format"]["show"] = True
+                    build_config["local_format"]["show"] = not is_tool_mode
 
             elif location == "AWS":
                 aws_fields = [
@@ -279,14 +281,16 @@ class SaveToFileComponent(Component):
                 ]
                 for f_name in aws_fields:
                     if f_name in build_config:
-                        build_config[f_name]["show"] = True
+                        show = f_name != "aws_format" or not is_tool_mode
+                        build_config[f_name]["show"] = show
                         build_config[f_name]["advanced"] = False
 
             elif location == "Google Drive":
                 gdrive_fields = ["gdrive_format", "service_account_key", "folder_id"]
                 for f_name in gdrive_fields:
                     if f_name in build_config:
-                        build_config[f_name]["show"] = True
+                        show = f_name != "gdrive_format" or not is_tool_mode
+                        build_config[f_name]["show"] = show
                         build_config[f_name]["advanced"] = False
 
         return build_config
