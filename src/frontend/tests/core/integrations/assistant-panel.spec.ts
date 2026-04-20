@@ -1,8 +1,13 @@
-import { test, expect } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.describe("Assistant Panel UI", { tag: ["@release"] }, () => {
   test("should open and close from canvas controls", async ({ page }) => {
+    test.skip(
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
+    );
+
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
