@@ -2,6 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import ConnectorsSection from "./ConnectorsSection";
 import IngestionRunsSection from "./IngestionRunsSection";
 
 interface KnowledgeBaseDrawerProps {
@@ -60,6 +61,10 @@ const KnowledgeBaseDrawer = ({
               No linked flows available.
             </div>
           </div>
+
+          <Separator />
+
+          <ConnectorsSection kbName={knowledgeBase.dir_name} />
 
           <Separator />
 
