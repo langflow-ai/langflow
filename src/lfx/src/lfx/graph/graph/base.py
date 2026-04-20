@@ -1590,6 +1590,18 @@ class Graph:
                         vertex.built_result = cached_vertex_dict["built_result"]
                         vertex.full_data = cached_vertex_dict["full_data"]
                         vertex.results = cached_vertex_dict["results"]
+                        # Restore the resolved global-variable map so
+                        # ``finalize_build`` can re-redact ``ResultData.results``
+                        # on this run. Cache entries written before the
+                        # redaction fix landed do not carry this key; treat
+                        # them as a cache miss (the outer ``except KeyError``
+                        # forces a rebuild) rather than restoring a raw
+                        # ``built_result`` with no redaction map — that would
+                        # replay the original secret leak one more time on
+                        # the first restore after upgrade.
+                        vertex._resolved_global_values = cached_vertex_dict[  # noqa: SLF001
+                            "_resolved_global_values"
+                        ]
                         try:
                             vertex.finalize_build()
 
@@ -1619,6 +1631,10 @@ class Graph:
                         "built_object": vertex.built_object,
                         "built_result": vertex.built_result,
                         "full_data": vertex.full_data,
+                        # Persist the resolved global-variable map so cache
+                        # restores re-redact ``ResultData.results`` instead of
+                        # surfacing the raw ``load_from_db`` value.
+                        "_resolved_global_values": getattr(vertex, "_resolved_global_values", {}),
                     }
 
                     await set_cache(key=vertex.id, data=vertex_dict)

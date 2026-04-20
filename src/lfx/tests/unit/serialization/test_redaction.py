@@ -79,6 +79,32 @@ def test_build_redaction_map_skips_empty_values():
     assert build_redaction_map({"value": "NAME"}) == {"value": "[REDACTED: NAME]"}
 
 
+def test_build_redaction_map_skips_short_values():
+    """Resolved values shorter than the minimum length must be skipped.
+
+    Regression: a generic global like a Split Text separator bound to ``,``
+    would otherwise rewrite every comma in unrelated output (results, logs,
+    artifacts) to ``[REDACTED: ...]``. The threshold guards against that
+    while still catching multi-character config values and credentials.
+    """
+    assert build_redaction_map({",": "SEPARATOR"}) == {}
+    assert build_redaction_map({" ": "DELIM"}) == {}
+    assert build_redaction_map({"\n": "NEWLINE"}) == {}
+    assert build_redaction_map({"ab": "SHORT"}) == {}
+    assert build_redaction_map({"key": "THREE_CHAR"}) == {}
+    # Four characters is the smallest length that is redacted.
+    assert build_redaction_map({"abcd": "MIN_LEN"}) == {"abcd": "[REDACTED: MIN_LEN]"}
+    # Realistic short generic globals (model names) must still be caught.
+    assert build_redaction_map({"gpt-4": "MODEL"}) == {"gpt-4": "[REDACTED: MODEL]"}
+
+
+def test_build_redaction_map_short_value_does_not_corrupt_output():
+    """End-to-end: a sub-threshold value must leave unrelated text untouched."""
+    redaction_map = build_redaction_map({",": "SEPARATOR"})
+    payload = "a,b,c,d"
+    assert redact_values(payload, redaction_map) == payload
+
+
 def test_build_redaction_map_uses_generic_placeholder_when_name_missing():
     redaction_map = build_redaction_map({"value": ""})
     assert "value" in redaction_map

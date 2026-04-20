@@ -18,7 +18,13 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 REDACTED_PLACEHOLDER_TEMPLATE = "[REDACTED: {name}]"
-_MIN_REDACTABLE_LENGTH = 1
+# Resolved values shorter than this are skipped to avoid mangling unrelated
+# output. Generic globals like a Split Text separator (``,``) or a single-line
+# delimiter (``\n``) would otherwise rewrite every matching character in the
+# results/logs/artifacts payloads. Four characters is the smallest length that
+# keeps real configuration values redactable (model names like ``gpt-4`` are
+# 5+) while skipping the high-false-positive single/two/three-char cases.
+_MIN_REDACTABLE_LENGTH = 4
 
 
 def _placeholder_for(variable_name: str | None) -> str:

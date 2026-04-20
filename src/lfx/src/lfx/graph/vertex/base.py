@@ -529,12 +529,27 @@ class Vertex:
         return None
 
     def finalize_build(self) -> None:
+        from lfx.serialization.redaction import build_redaction_map, redact_values
+
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
         # to the frontend
         self.set_artifacts()
         artifacts = self.artifacts_raw
         messages = self.extract_messages_from_artifacts(artifacts) if isinstance(artifacts, dict) else []
+
+        # Mask resolved global-variable values in the UI-facing copies of the
+        # built result and chat messages. ``self.built_object``/``self.results``
+        # are deliberately untouched — downstream vertices consume those over
+        # edges and require the real values. ``CustomComponentVertex`` (which
+        # does not override ``finalize_build``) relies on this hook to keep
+        # custom components with ``load_from_db`` SecretStr inputs from leaking
+        # the resolved value into ``ResultData.results``.
+        redaction_map = build_redaction_map(getattr(self, "_resolved_global_values", {}) or {})
+        if redaction_map:
+            result_dict = redact_values(result_dict, redaction_map)
+            messages = redact_values(messages, redaction_map)
+
         token_usage = self._extract_token_usage()
         result_dict = ResultData(
             results=result_dict,
@@ -795,6 +810,12 @@ class Vertex:
         self.built_object = UnbuiltObject()
         self.built_result = UnbuiltResult()
         self.artifacts = {}
+        # Drop the redaction map from the previous run. The
+        # ``load_from_db`` resolvers append into whatever map is already on
+        # the vertex, so leaving stale entries here causes earlier secrets to
+        # keep masking unrelated output on later rebuilds (and to be
+        # re-persisted into the frozen-result cache).
+        self._resolved_global_values = {}
         self.steps_ran = []
         self.build_params()
 

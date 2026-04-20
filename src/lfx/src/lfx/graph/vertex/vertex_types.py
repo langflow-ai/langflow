@@ -77,6 +77,13 @@ class ComponentVertex(Vertex):
         for key, value in self.built_object.items():
             self.add_result(key, value)
 
+        # Mask resolved global-variable values in user-facing fields. The base
+        # implementation does this at the end of its own version; this override
+        # replaces the base method entirely so we must invoke the hook here too.
+        # ``self.results``/``self.built_object`` are intentionally left raw —
+        # downstream vertices read them via edges and need the real values.
+        self._redact_resolved_global_values()
+
     def get_edge_with_target(self, target_id: str) -> Generator[CycleEdge]:
         """Get the edge with the target id.
 
@@ -183,10 +190,22 @@ class ComponentVertex(Vertex):
         return messages
 
     def finalize_build(self) -> None:
+        from lfx.serialization.redaction import build_redaction_map, redact_values
+
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
         # to the frontend
         messages = self.extract_messages_from_artifacts(result_dict)
+
+        # Mask resolved global-variable values in the UI-facing copies of the
+        # built result and chat messages. ``self.built_object``/``self.results``
+        # are deliberately untouched — downstream vertices consume those over
+        # edges and require the real values.
+        redaction_map = build_redaction_map(getattr(self, "_resolved_global_values", {}) or {})
+        if redaction_map:
+            result_dict = redact_values(result_dict, redaction_map)
+            messages = redact_values(messages, redaction_map)
+
         token_usage = self._extract_token_usage()
         result_dict = ResultData(
             results=result_dict,
