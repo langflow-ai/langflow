@@ -205,6 +205,21 @@ async def list_models(
         has_active_model = any(prov_models_status.values())
         provider_dict["is_enabled"] = has_active_model
 
+    # Ensure all providers in MODEL_PROVIDER_METADATA appear in results
+    # (even if they have no static models, e.g. vLLM with dynamic-only discovery)
+    existing_providers = {p.get("provider") for p in filtered_models}
+    all_metadata = get_model_provider_metadata()
+    for prov_name, meta in all_metadata.items():
+        if prov_name not in existing_providers:
+            if selected_providers and prov_name not in selected_providers:
+                continue
+            filtered_models.append({
+                "provider": prov_name,
+                "icon": meta.get("icon", prov_name),
+                "models": [],
+                "api_docs_url": meta.get("api_docs_url", ""),
+            })
+
     # Replace static models with live models for providers that support it
     configured_providers = {p for p, configured in provider_configured_status.items() if configured}
     replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
