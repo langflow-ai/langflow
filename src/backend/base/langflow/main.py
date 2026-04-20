@@ -5,10 +5,13 @@ import re
 import sys
 import tempfile
 import warnings
+from collections.abc import Awaitable
 from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as version_metadata
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypeVar, cast
 from urllib.parse import urlencode
 
 import anyio
@@ -38,6 +41,13 @@ from langflow.initial_setup.setup import (
     load_flows_from_directory,
     sync_flows_from_fs,
 )
+from langflow.initial_setup.starter_project_hash import (
+    HASH_FILENAME,
+    compute_starter_projects_hash,
+    is_force_resync_requested,
+    read_hash_file_safe,
+    write_hash_file_safe,
+)
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
@@ -56,6 +66,8 @@ if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
 
     from lfx.services.mcp_composer.service import MCPComposerService
+
+T = TypeVar("T")
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -146,8 +158,35 @@ def warn_about_future_cors_changes(settings):
         )
 
 
+async def _safe_step(name: str, coro: Awaitable[T]) -> T | None:
+    """Run a coroutine inside ``asyncio.gather`` with per-task error isolation.
+
+    Wraps a single coroutine so that (a) its exceptions are caught, logged, and
+    swallowed -- preserving the lifespan's existing per-step "log, continue"
+    semantics -- and (b) ``asyncio.gather(_safe_step(...), _safe_step(...))``
+    never receives an unhandled exception that would cancel siblings (per
+    Pitfall 3 in 04-RESEARCH.md; ``gather`` defaults to ``return_exceptions=False``).
+
+    The name is included in the structlog debug/warning messages so the
+    existing per-task timing shape (04-PATTERNS.md Pattern D) is preserved.
+
+    Returns the coroutine's result on success, ``None`` on failure. Callers
+    that rely on the return value (e.g. wave-2's ``bundles_result`` /
+    ``all_types_dict``) must guard for ``None``.
+    """
+    current_time = asyncio.get_event_loop().time()
+    try:
+        result = await coro
+    except Exception as exc:  # noqa: BLE001
+        await logger.awarning(f"{name} failed (continuing): {exc}")
+        return None
+    await logger.adebug(f"{name} completed in {asyncio.get_event_loop().time() - current_time:.2f}s")
+    return result
+
+
 def get_lifespan(*, fix_migration=False, version=None):
     initialize_settings_service()
+    telemetry_service = get_telemetry_service()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -168,39 +207,32 @@ def get_lifespan(*, fix_migration=False, version=None):
         try:
             start_time = asyncio.get_event_loop().time()
 
-            if get_settings_service().settings.sentry_dsn:
-                try:
-                    import sentry_sdk
-                except ImportError:
-                    await logger.awarning(
-                        "LANGFLOW_SENTRY_DSN is set but sentry-sdk is not installed; "
-                        "Sentry will not be initialized. Install it with: pip install sentry-sdk"
-                    )
-                else:
-                    try:
-                        sentry_settings = get_settings_service().settings
-                        sentry_sdk.init(
-                            dsn=sentry_settings.sentry_dsn,
-                            traces_sample_rate=sentry_settings.sentry_traces_sample_rate,
-                            profiles_sample_rate=sentry_settings.sentry_profiles_sample_rate,
-                        )
-                        await logger.adebug("Sentry SDK initialized in worker")
-                    except Exception as e:  # noqa: BLE001
-                        await logger.awarning(f"Failed to initialize Sentry SDK (check LANGFLOW_SENTRY_DSN): {e}")
+            # SVC-03 (D-12): Event constructed inside lifespan so it binds to the running loop.
+            # Module-level asyncio.Event() would leak across pytest event loops (Pitfall 1, same
+            # root cause as IDX-01's asyncio.Lock issue on Python 3.13/3.14).
+            starter_projects_ready_event = asyncio.Event()
 
             await logger.adebug("Initializing services")
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
+            # SVC-02 wave 1: independent filesystem / in-memory ops.
+            # D-09 service-dependency review (enforced by D-10 test; every task passed to gather MUST have a row):
+            #
+            # | Task                  | Reads                                      | Writes                            |
+            # |-----------------------|--------------------------------------------|-----------------------------------|
+            # | setup_llm_caching     | settings.cache config                      | langchain global cache (in-mem)   |
+            # | copy_profile_pictures | initial_setup/profile_pictures (source);   | config_dir/profile_pictures (fs)  |
+            # |                       | config_dir/profile_pictures (target scan)  |                                   |
+            #
             current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Setting up LLM caching")
-            setup_llm_caching()
-            await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Copying profile pictures")
-            await copy_profile_pictures()
-            await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await asyncio.gather(
+                _safe_step("setup_llm_caching", asyncio.to_thread(setup_llm_caching)),
+                _safe_step("copy_profile_pictures", copy_profile_pictures()),
+            )
+            await logger.adebug(
+                f"Wave 1 (caching + profiles) done in {asyncio.get_event_loop().time() - current_time:.2f}s"
+            )
 
             if get_settings_service().auth_settings.AUTO_LOGIN:
                 current_time = asyncio.get_event_loop().time()
@@ -210,45 +242,37 @@ def get_lifespan(*, fix_migration=False, version=None):
                     f"Default super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
                 )
 
-            await logger.adebug("Initializing super user")
-            await initialize_auto_login_default_superuser()
-            await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
-            if get_settings_service().settings.prometheus_enabled:
-                try:
-                    from prometheus_client import start_http_server
-
-                    start_http_server(get_settings_service().settings.prometheus_port)
-                    await logger.adebug(
-                        f"Started Prometheus server on port {get_settings_service().settings.prometheus_port}"
-                    )
-                except ImportError:
-                    await logger.aerror(
-                        "prometheus_client is not installed. Install it with: pip install prometheus-client"
-                    )
-                except OSError as e:
-                    import errno
-
-                    if e.errno == errno.EADDRINUSE:
-                        await logger.adebug(
-                            f"Prometheus port {get_settings_service().settings.prometheus_port} already in use "
-                            "(may be running in another worker)"
-                        )
-                    else:
-                        await logger.awarning(f"Failed to start Prometheus server: {e}")
-
+            # SVC-02 wave 2: independent post-superuser ops.
+            # D-09 service-dependency review (enforced by D-10 test; every task passed to gather MUST have a row):
+            #
+            # | Task                          | Reads                                 | Writes                         |
+            # |-------------------------------|---------------------------------------|--------------------------------|
+            # | load_bundles_with_error_      | DB: select(User) where is_superuser;  | DB: upsert_flow_from_file;     |
+            # |   handling                    | HTTP: bundle_urls                     | FS: TempDir; settings.comps    |
+            # | get_and_cache_all_types_dict  | Component file scan; version("lfx");  | ComponentCache.all_types_dict  |
+            # |                               | settings (cache_dir)                  | (in-memory)                    |
+            #
             current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Loading bundles")
-            temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
-            get_settings_service().settings.components_path.extend(bundles_components_paths)
-            await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
-            telemetry_service = get_telemetry_service()
-
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Caching types")
-            all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
-            await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            bundles_result, all_types_dict = await asyncio.gather(
+                _safe_step("load_bundles_with_error_handling", load_bundles_with_error_handling()),
+                _safe_step(
+                    "get_and_cache_all_types_dict",
+                    get_and_cache_all_types_dict(get_settings_service(), telemetry_service),
+                ),
+            )
+            if bundles_result is not None:
+                temp_dirs, bundles_components_paths = bundles_result
+                get_settings_service().settings.components_path.extend(bundles_components_paths)
+            else:
+                temp_dirs = []
+            if all_types_dict is None:
+                # Types cache is load-bearing for the starter-project block below; cannot proceed.
+                await logger.aerror("Types cache failed in wave 2; starter projects cannot proceed")
+                msg = "get_and_cache_all_types_dict returned None -- lifespan cannot continue"
+                raise RuntimeError(msg)
+            await logger.adebug(
+                f"Wave 2 (bundles + types) done in {asyncio.get_event_loop().time() - current_time:.2f}s"
+            )
 
             # Use file-based lock to prevent multiple workers from creating duplicate starter projects concurrently.
             # Note that it's still possible that one worker may complete this task, release the lock,
@@ -261,10 +285,35 @@ def get_lifespan(*, fix_migration=False, version=None):
             lock = FileLock(lock_file, timeout=1)
             try:
                 with lock:
-                    await create_or_update_starter_projects(all_types_dict)
-                    await logger.adebug(
-                        f"Starter projects created/updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
-                    )
+                    # SVC-01: hash-gated re-sync. Hash read / compute / write all run
+                    # inside the FileLock to preserve multi-worker TOCTOU safety (the
+                    # other worker either wrote the up-to-date hash before releasing
+                    # the lock, or the lock contention path fires below).
+                    config_dir = Path(get_settings_service().settings.config_dir)
+                    hash_path = config_dir / HASH_FILENAME
+                    starter_folder = anyio.Path(__file__).parent / "initial_setup" / "starter_projects"
+                    expected = await compute_starter_projects_hash(starter_folder)
+                    actual = await read_hash_file_safe(hash_path)
+                    if is_force_resync_requested() or actual != expected:
+                        await create_or_update_starter_projects(all_types_dict)
+                        try:
+                            pkg_v = version_metadata("lfx")
+                        except PackageNotFoundError:
+                            pkg_v = "unknown"
+                        await write_hash_file_safe(hash_path, expected, pkg_v)
+                        await logger.adebug(
+                            f"Starter projects created/updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                        )
+                    else:
+                        await logger.adebug(
+                            f"Starter projects hash matches; skipped re-sync in "
+                            f"{asyncio.get_event_loop().time() - current_time:.2f}s"
+                        )
+                    # SVC-03 producer (D-11): fire on both match and miss paths inside the
+                    # FileLock, but NOT in a finally clause. If create_or_update_starter_projects
+                    # or the hash read raises, DO NOT set the event -- let the 60s consumer
+                    # timeout (D-13) surface the failure as warn-and-continue degraded mode.
+                    starter_projects_ready_event.set()
             except TimeoutError:
                 # Another process has the lock
                 await logger.adebug("Another worker is creating starter projects, skipping")
@@ -329,7 +378,17 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
             async def delayed_init_mcp_servers():
-                await asyncio.sleep(10.0)  # Increased delay to allow starter projects to be created
+                # SVC-03 consumer (D-11/D-13): replace the previously hardcoded 10-second
+                # coordination sleep with a bounded wait on the starter_projects_ready_event
+                # set by the FileLock producer. On timeout, log a warning and proceed with
+                # MCP init anyway (warn-and-continue degraded mode per D-13). Closure captures
+                # the Event because this function is defined inline inside lifespan (Pitfall 6).
+                try:
+                    await asyncio.wait_for(starter_projects_ready_event.wait(), timeout=60.0)
+                except asyncio.TimeoutError:
+                    await logger.awarning(
+                        "Starter-projects readiness timeout (60s); proceeding with MCP init regardless"
+                    )
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Loading MCP servers for projects")
                 try:
@@ -337,7 +396,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                     await logger.adebug(f"MCP servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
                 except Exception as e:  # noqa: BLE001
                     await logger.awarning(f"First MCP server initialization attempt failed: {e}")
-                    await asyncio.sleep(5.0)  # Increased retry delay
+                    await asyncio.sleep(5.0)  # D-14: retain transient-DB-error retry guard
                     current_time = asyncio.get_event_loop().time()
                     await logger.adebug("Retrying MCP servers initialization")
                     try:
@@ -489,7 +548,7 @@ def create_app():
         ContentSizeLimitMiddleware,
     )
 
-    add_sentry_middleware(app)
+    setup_sentry(app)
 
     # Warn about future CORS changes
     warn_about_future_cors_changes(settings)
@@ -579,13 +638,18 @@ def create_app():
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
-        if prome_port > 0 and prome_port < MAX_PORT:
-            logger.debug(f"Prometheus server port configured as {prome_port}...")
+        if prome_port > 0 or prome_port < MAX_PORT:
+            logger.debug(f"Starting Prometheus server on port {prome_port}...")
             settings.prometheus_enabled = True
             settings.prometheus_port = prome_port
         else:
             msg = f"Invalid port number {prome_port_str}"
             raise ValueError(msg)
+
+    if settings.prometheus_enabled:
+        from prometheus_client import start_http_server
+
+        start_http_server(settings.prometheus_port)
 
     if settings.mcp_server_enabled:
         from langflow.api.v1 import mcp_router
@@ -623,27 +687,17 @@ def create_app():
     return app
 
 
-def add_sentry_middleware(app: FastAPI) -> None:
-    """Attach SentryAsgiMiddleware to the app.
-
-    Only the ASGI middleware is registered here so it is available at request time.
-    The actual ``sentry_sdk.init()`` call is deferred to the worker lifespan
-    (see ``get_lifespan``) to avoid ghost transactions across pre-fork workers.
-    """
+def setup_sentry(app: FastAPI) -> None:
     settings = get_settings_service().settings
     if settings.sentry_dsn:
-        try:
-            from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
-        except ImportError:
-            logger.warning(
-                "LANGFLOW_SENTRY_DSN is set but sentry-sdk is not installed; "
-                "SentryAsgiMiddleware will not be added. Install it with: pip install sentry-sdk"
-            )
-            return
-        except Exception as e:  # noqa: BLE001
-            logger.warning(f"Failed to import SentryAsgiMiddleware: {e}")
-            return
+        import sentry_sdk
+        from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+            profiles_sample_rate=settings.sentry_profiles_sample_rate,
+        )
         app.add_middleware(SentryAsgiMiddleware)
 
 
