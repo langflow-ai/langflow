@@ -1,0 +1,50 @@
+{
+  "results": [
+    {
+      "command": "/opt/homebrew/bin/podman run --rm --name lfx-bench -v /private/tmp/bench_synth:/out -e LFX_BENCHMARK_CHECKPOINTS=1 -e LFX_BENCHMARK_CHECKPOINTS_FILE=/tmp/checkpoints.json benchmarks-lean-uncompiled sh -c 'uv run lfx run /fixtures/noop_flow.json --format text && cp /tmp/checkpoints.json /out/lfx_bare_checkpoints.json 2>/dev/null || true'",
+      "mean": 18.195713497459998,
+      "stddev": 0.2759649530216471,
+      "median": 18.11584911366,
+      "user": 0.021358299999999997,
+      "system": 0.01595908,
+      "min": 17.973355780160002,
+      "max": 18.87560294816,
+      "times": [
+        18.87560294816,
+        18.44429698916,
+        18.01008019716,
+        17.973355780160002,
+        17.973799073160002,
+        18.12861844716,
+        18.10307978016,
+        18.21878582216,
+        18.14209944816,
+        18.087416489160002
+      ],
+      "memory_usage_byte": [
+        32800768,
+        32800768,
+        32800768,
+        32800768,
+        33161216,
+        33161216,
+        33161216,
+        33292288,
+        33292288,
+        33292288
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}
