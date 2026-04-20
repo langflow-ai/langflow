@@ -10,8 +10,10 @@ import asyncio
 import re
 import shutil
 import sys
+from contextlib import suppress
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from lfx.base.mcp import util
 from lfx.base.mcp.util import (
@@ -19,7 +21,9 @@ from lfx.base.mcp.util import (
     MCPSseClient,
     MCPStdioClient,
     MCPStreamableHttpClient,
+    _is_transient_streamable_http_error,
     _process_headers,
+    _should_attempt_sse_after_streamable_failure,
     update_tools,
     validate_headers,
 )
@@ -154,7 +158,7 @@ class TestMCPSessionManager:
             create_calls += 1
             create_started.set()
             await release.wait()
-            return mock_session, mock_task, "streamable_http"
+            return mock_session, mock_task, "streamable_http", False
 
         with (
             patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
@@ -223,7 +227,7 @@ class TestMCPSessionManager:
             t = AsyncMock()
             t.done = MagicMock(return_value=False)
             t.cancel = MagicMock()
-            return s, t, "streamable_http"
+            return s, t, "streamable_http", False
 
         server_key = session_manager._get_server_key(connection_params, "streamable_http")
 
@@ -333,7 +337,7 @@ class TestMCPSessionManager:
         mock_task.cancel = MagicMock()
 
         async def fake_create(_session_id, _params, _preferred_transport=None):
-            return mock_session, mock_task, "streamable_http"
+            return mock_session, mock_task, "streamable_http", False
 
         with (
             patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
@@ -384,8 +388,8 @@ class TestMCPSessionManager:
 
         async def fake_create(_session_id, params, _preferred_transport=None):
             if params["url"] == server_a_params["url"]:
-                return mock_session_a, mock_task_a, "streamable_http"
-            return mock_session_b, mock_task_b, "streamable_http"
+                return mock_session_a, mock_task_a, "streamable_http", False
+            return mock_session_b, mock_task_b, "streamable_http", False
 
         with (
             patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
@@ -444,7 +448,7 @@ class TestMCPSessionManager:
         mock_task.cancel = MagicMock()
 
         async def fake_create(_session_id, _params, _preferred_transport=None):
-            return mock_session, mock_task, "streamable_http"
+            return mock_session, mock_task, "streamable_http", False
 
         with (
             patch.object(session_manager, "_create_streamable_http_session", side_effect=fake_create),
@@ -2330,7 +2334,9 @@ class TestMCPSseClientUnit:
             patch.object(sse_client, "_get_or_create_session", side_effect=mock_get_session_side_effect),
             patch.object(sse_client, "_get_session_manager") as mock_get_manager,
         ):
-            mock_manager = AsyncMock()
+            mock_manager = MagicMock()
+            mock_manager.invalidate_server_key = AsyncMock()
+            mock_manager._get_server_key = MagicMock(return_value="streamable_http_testkey")
             mock_get_manager.return_value = mock_manager
 
             result = await sse_client.run_tool("test_tool", {"param": "value"})
@@ -2338,8 +2344,7 @@ class TestMCPSseClientUnit:
             # Should have retried and succeeded on second attempt
             assert call_count == 2
             assert result is not None
-            # Should have cleaned up the failed session
-            mock_manager._cleanup_session.assert_called_once_with("test_context")
+            mock_manager.invalidate_server_key.assert_called_once_with("streamable_http_testkey")
 
 
 class TestMCPStructuredTool:
@@ -3681,3 +3686,128 @@ class TestMCPStructuredToolToolCallId:
         assert handler.outputs[0].name == "get_image"
         assert handler.outputs[0].artifact is raw
         assert result.name == "get_image"
+
+
+class TestStreamableHttpTransportPolicy:
+    """Mocked streamable HTTP vs SSE: reconnect policy and fallback classification."""
+
+    def _connection_params(self):
+        return {
+            "url": "http://test-mcp.example/mcp",
+            "headers": {},
+            "timeout_seconds": 30,
+            "verify_ssl": True,
+        }
+
+    def _fake_client_session(self):
+        inst = MagicMock()
+        inst.initialize = AsyncMock()
+        inst.__aenter__ = AsyncMock(return_value=inst)
+        inst.__aexit__ = AsyncMock(return_value=None)
+        return inst
+
+    @pytest.mark.asyncio
+    async def test_streamable_success_sse_not_invoked(self):
+        manager = MCPSessionManager()
+        try:
+            fake = self._fake_client_session()
+            stream_cm = MagicMock()
+            stream_cm.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock(), None))
+            stream_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            with (
+                patch("lfx.base.mcp.util.ClientSession", return_value=fake),
+                patch("mcp.client.streamable_http.streamablehttp_client", stream_cm),
+                patch("mcp.client.sse.sse_client") as sse_cm,
+            ):
+                session, task, transport, sse_lock = await manager._create_streamable_http_session(
+                    "test_sess", self._connection_params(), None
+                )
+                assert transport == "streamable_http"
+                assert sse_lock is False
+                assert session is fake
+                sse_cm.assert_not_called()
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        finally:
+            await manager.cleanup_all()
+
+    @pytest.mark.asyncio
+    async def test_transient_streamable_failure_no_sse_fallback(self):
+        manager = MCPSessionManager()
+        try:
+            fake = self._fake_client_session()
+            stream_cm = MagicMock()
+            stream_cm.return_value.__aenter__ = AsyncMock(side_effect=ConnectionError("connection refused"))
+            stream_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            with (
+                patch("lfx.base.mcp.util.ClientSession", return_value=fake),
+                patch("mcp.client.streamable_http.streamablehttp_client", stream_cm),
+                patch("mcp.client.sse.sse_client") as sse_cm,
+            ):
+                with pytest.raises(ConnectionError, match="connection refused"):
+                    await manager._create_streamable_http_session("test_sess", self._connection_params(), None)
+                sse_cm.assert_not_called()
+        finally:
+            await manager.cleanup_all()
+
+    @pytest.mark.asyncio
+    async def test_streamable_404_triggers_sse(self):
+        manager = MCPSessionManager()
+        try:
+            req = httpx.Request("GET", "http://test-mcp.example/mcp")
+            resp = httpx.Response(404, request=req)
+            err404 = httpx.HTTPStatusError("not found", request=req, response=resp)
+            fake_stream = self._fake_client_session()
+            fake_sse = self._fake_client_session()
+            sessions = iter([fake_stream, fake_sse])
+
+            def client_session_factory(_r, _w, *_args):
+                return next(sessions)
+
+            stream_cm = MagicMock()
+            stream_cm.return_value.__aenter__ = AsyncMock(side_effect=err404)
+            stream_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            sse_cm = MagicMock()
+            sse_cm.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+            sse_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            with (
+                patch("lfx.base.mcp.util.ClientSession", side_effect=client_session_factory),
+                patch("mcp.client.streamable_http.streamablehttp_client", stream_cm),
+                patch("mcp.client.sse.sse_client", sse_cm),
+            ):
+                _session, task, transport, sse_lock = await manager._create_streamable_http_session(
+                    "test_sess", self._connection_params(), None
+                )
+                assert transport == "sse"
+                assert sse_lock is True
+                sse_cm.assert_called_once()
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        finally:
+            await manager.cleanup_all()
+
+    @pytest.mark.asyncio
+    async def test_validate_connectivity_mcp_session_terminated_returns_false(self):
+        manager = MCPSessionManager()
+        try:
+            mock_session = AsyncMock()
+            mock_session.list_tools = AsyncMock(side_effect=RuntimeError("Session terminated"))
+            assert await manager._validate_session_connectivity(mock_session) is False
+        finally:
+            await manager.cleanup_all()
+
+    def test_classify_transient_includes_connection_and_taskgroup_hints(self):
+        assert _is_transient_streamable_http_error(ConnectionError("x")) is True
+        assert _is_transient_streamable_http_error(RuntimeError("unhandled errors in a TaskGroup")) is True
+        req = httpx.Request("GET", "http://x")
+        resp_404 = httpx.Response(404, request=req)
+        assert _is_transient_streamable_http_error(httpx.HTTPStatusError("x", request=req, response=resp_404)) is False
+
+    def test_sse_fallback_after_404(self):
+        req = httpx.Request("GET", "http://x")
+        resp_404 = httpx.Response(404, request=req)
+        e = httpx.HTTPStatusError("x", request=req, response=resp_404)
+        assert _should_attempt_sse_after_streamable_failure(e) is True
+        assert _should_attempt_sse_after_streamable_failure(ConnectionError("x")) is False
