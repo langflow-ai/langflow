@@ -1,15 +1,31 @@
+from __future__ import annotations
+
 from collections.abc import Generator
 from enum import Enum
+from typing import TYPE_CHECKING
 
-from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 
 from lfx.log.logger import logger
 from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
 from lfx.schema.encoders import CUSTOM_ENCODERS
 from lfx.schema.message import Message
 from lfx.serialization.serialization import serialize
+
+if TYPE_CHECKING:
+    from lfx.schema.dataframe import DataFrame  # noqa: F401
+
+
+def _is_dataframe(value: object) -> bool:
+    """Return True if value is an lfx DataFrame (Table) instance.
+
+    Imported lazily so the module-level import of artifact.py does not pull
+    pandas into the cold-start path. Callers that hit the runtime path pay the
+    pandas import cost on first use; callers on the cold path never do.
+    """
+    from lfx.schema.dataframe import DataFrame as _DataFrame
+
+    return isinstance(value, _DataFrame)
 
 
 class ArtifactType(str, Enum):
@@ -42,7 +58,9 @@ def get_artifact_type(value, build_result=None) -> str:
         case dict():
             result = ArtifactType.OBJECT
 
-        case list() | DataFrame():
+        case list():
+            result = ArtifactType.ARRAY
+        case _ if _is_dataframe(value):
             result = ArtifactType.ARRAY
     if result == ArtifactType.UNKNOWN and (
         (build_result and isinstance(build_result, Generator))
@@ -69,9 +87,11 @@ def post_process_raw(raw, artifact_type: str):
     if artifact_type == ArtifactType.STREAM.value:
         raw = ""
     elif artifact_type == ArtifactType.ARRAY.value:
-        raw = raw.to_dict(orient="records") if isinstance(raw, DataFrame) else _to_list_of_dicts(raw)
+        raw = raw.to_dict(orient="records") if _is_dataframe(raw) else _to_list_of_dicts(raw)
     elif artifact_type == ArtifactType.UNKNOWN.value and raw is not None:
         if isinstance(raw, BaseModel | dict):
+            from fastapi.encoders import jsonable_encoder
+
             try:
                 raw = jsonable_encoder(raw, custom_encoder=CUSTOM_ENCODERS)
                 artifact_type = ArtifactType.OBJECT.value

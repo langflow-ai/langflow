@@ -374,7 +374,7 @@ class TestImportLangflowComponents:
         payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
         index["sha256"] = hashlib.sha256(payload).hexdigest()
 
-        # _read_component_index is async (IDX-03); patch with AsyncMock so the
+        # _read_component_index is async; patch with AsyncMock so the
         # awaited return value is the index dict, not a coroutine.
         with (
             patch("lfx.interface.components._read_component_index", new=AsyncMock(return_value=index)),
@@ -392,7 +392,7 @@ class TestImportLangflowComponents:
         cache_file = tmp_path / "component_index.json"
         monkeypatch.setattr("lfx.interface.components._get_cache_path", lambda: cache_file)
 
-        # _read_component_index is async (IDX-03); AsyncMock returns None when awaited.
+        # _read_component_index is async; AsyncMock returns None when awaited.
         with (
             patch("lfx.interface.components._read_component_index", new=AsyncMock(return_value=None)),
             patch("lfx.interface.components._process_single_module") as mock_process,
@@ -425,7 +425,7 @@ class TestImportLangflowComponents:
         mock_settings = Mock()
         mock_settings.settings.components_index_path = str(custom_file)
 
-        # _read_component_index is async (IDX-03); AsyncMock awaits to the index dict.
+        # _read_component_index is async; AsyncMock awaits to the index dict.
         # ``with patch(..., new=AsyncMock(...)) as mock_read`` binds the AsyncMock to
         # mock_read so we can still assert_called_with(...) after the awaited call.
         with (
@@ -458,7 +458,7 @@ class TestImportLangflowComponents:
 
 
 # =====================================================================
-# Phase 2 parity test scaffolding (IDX-01 plan lands this; later plans reuse)
+# parity test scaffolding
 # =====================================================================
 
 
@@ -476,8 +476,8 @@ def _install_mock_llm_for_parity_tests():
 
 
 @pytest.mark.asyncio
-class TestIDX01LazyLock:
-    """Phase 2 / IDX-01: lazy asyncio.Lock property on ComponentCache.
+class TestComponentCacheLazyLock:
+    """/ lazy asyncio.Lock property on ComponentCache.
 
     Covers:
       * Concurrent callers in a single event loop -- loader runs exactly once.
@@ -499,7 +499,7 @@ class TestIDX01LazyLock:
         ``_load_components_dynamically`` itself is replaced by a counting stub (no call
         to the real loader) because the real loader walks every installed lfx component
         package, which in this repo pulls in optional integrations (toolguard) that are
-        not installed in the lfx-only test venv. D-08 permits monkey-patching the loader
+        not installed in the lfx-only test venv. permits monkey-patching the loader
         with a counter; it does not require the real loader to execute.
         """
         from lfx.interface import components as ci
@@ -538,7 +538,7 @@ class TestIDX01LazyLock:
     def test_cache_built_once_threading(self, monkeypatch, tmp_path):
         """Ten threads, each with its OWN event loop via asyncio.run.
 
-        Purpose per research Code Examples section IDX-01: each thread's event loop
+        Purpose per research Code Examples section each thread's event loop
         creates its own asyncio.Lock, so the per-thread counter would be 1 but the
         cross-thread aggregate would be 10. This test asserts "no crashes / no
         deadlocks" under multi-loop conditions, NOT an exact call_count. Guards
@@ -558,7 +558,7 @@ class TestIDX01LazyLock:
         as the async test: real component enumeration brings in optional integrations
         that are not installed in the lfx-only test venv.
 
-        IDX-07 isolation (plan 02-06): with IDX-07's read-time stale-index warning
+        isolation (): with's read-time stale-index warning
         in place, ``get_and_cache_all_types_dict`` calls ``_get_cache_path()`` and,
         if that path exists, reads the entire disk-cache file (5.9MB typical user
         cache) via ``asyncio.to_thread`` under the per-thread lock. In a threaded
@@ -567,14 +567,14 @@ class TestIDX01LazyLock:
         ``asyncio.to_thread`` reliably races against the lazy-lock reset and turns
         the previously-sub-second test into a deadlock-like 60s+ hang. Monkey-patch
         ``_get_cache_path`` to a path inside ``tmp_path`` that does not exist so
-        the IDX-07 peek short-circuits on ``cache_path.exists()`` being False. This
+        the peek short-circuits on ``cache_path.exists()`` being False. This
         test is about multi-loop lock behaviour, not about the stale-index warning.
         """
         from lfx.interface import components as ci
 
         _reset_component_cache_singleton(monkeypatch)
 
-        # IDX-07 isolation: point _get_cache_path at a non-existent file so the
+        # isolation: point _get_cache_path at a non-existent file so the
         # read-time peek in get_and_cache_all_types_dict short-circuits and does
         # not trigger a 5.9MB disk read under each thread's lock. See docstring.
         _absent_cache_path = tmp_path / "definitely_not_here.json"
@@ -633,8 +633,8 @@ class TestIDX01LazyLock:
 
 
 @pytest.mark.asyncio
-class TestIDX02SemaphoreCap:
-    """Phase 2 / IDX-02: Semaphore(16) cap on _load_components_dynamically.
+class TestDynamicLoadSemaphore:
+    """/ Semaphore(16) cap on _load_components_dynamically.
 
     **Test-wiring rationale (per reviewer Blocker 2):** these tests call
     ``_load_components_dynamically`` DIRECTLY rather than going through
@@ -650,7 +650,7 @@ class TestIDX02SemaphoreCap:
     async def test_component_count_stable_across_rebuilds(self, monkeypatch):
         """Baseline + 5 direct rebuilds of _load_components_dynamically: per-top-level counts must match exactly.
 
-        No tolerance per D-09 -- pitfall 9 is specifically about components
+        No tolerance
         being silently dropped under thread-pool pressure, and any tolerance
         would hide that. The lfx-only test venv lacks optional integrations
         (toolguard, langchain_openai) that the real pkgutil.walk_packages call
@@ -660,7 +660,7 @@ class TestIDX02SemaphoreCap:
         return deterministic per-top-level results. With ~200 modules and a
         Semaphore(16) cap, the gather/merge path under test is exercised
         exactly as it would be in production, and any drop-under-pressure
-        regression (pitfall 9) surfaces as per-top-level count drift across
+        regression surfaces as per-top-level count drift across
         the 5 rebuilds.
         """
         import lfx.interface.components as ci
@@ -692,7 +692,7 @@ class TestIDX02SemaphoreCap:
             # short-circuits the fallback and the semaphore path is never
             # entered.
             modules_dict = await ci._load_components_dynamically(target_modules=None)
-            # Per top-level component count. No tolerance per D-09.
+            # Per top-level component count. No tolerance .
             return {top_level: len(components) for top_level, components in modules_dict.items()}
 
         baseline = await build_snapshot()
@@ -751,13 +751,13 @@ class TestIDX02SemaphoreCap:
         assert snapshot == expected, f"parity drift detected.\n  got: {snapshot}\n  expected: {expected}"
 
 
-class TestIDX04IDX05WriteSide:
-    """Phase 2 / IDX-04 + IDX-05: version('lfx') stamp + atomic write via Path.replace.
+class TestComponentIndexAtomicWrite:
+    """/ + version('lfx') stamp + atomic write via Path.replace.
 
-    IDX-04 stamps the cache with ``version("lfx")`` (was ``version("langflow")``);
-    IDX-05 writes atomically via a temp file in the SAME directory as the target,
+    stamps the cache with ``version("lfx")`` (was ``version("langflow")``);
+    writes atomically via a temp file in the SAME directory as the target,
     then ``Path.replace`` (a thin wrapper around ``os.replace``, atomic on POSIX
-    and on Windows since Python 3.3). Landed together per CONTEXT.md D-10 because
+    and on Windows since Python 3.3). Landed together per CONTEXT.md because
     both touch ``_save_generated_index`` and share the write-then-read round-trip
     assertion.
     """
@@ -816,15 +816,15 @@ class TestIDX04IDX05WriteSide:
     async def test_round_trip_lfx_only_env(self, tmp_path, monkeypatch, caplog):
         """Save then read in this lfx-only env: no version-mismatch log, entries match.
 
-        This is the key IDX-04 validation. Before the fix, the cache was stamped
+        This is the key validation. Before the fix, the cache was stamped
         with ``version('langflow')``, which raised PackageNotFoundError in lfx-only
         environments -- effectively meaning the cache never rolled forward and
         ``_read_component_index`` silently rejected every cache on the version
         check. With the fix, ``version('lfx')`` matches at read time and the
         round-trip succeeds.
 
-        Converted to async in IDX-03 (plan 02-05): ``_read_component_index`` is
-        now ``async def`` and must be awaited. The enclosing ``TestIDX04IDX05WriteSide``
+        Converted to async in (): ``_read_component_index`` is
+        now ``async def`` and must be awaited. The enclosing ``TestComponentIndexAtomicWrite``
         remains a sync class for truly-sync tests; only this method opts in to
         ``@pytest.mark.asyncio``.
         """
@@ -846,7 +846,7 @@ class TestIDX04IDX05WriteSide:
 
         assert result is not None, (
             "round-trip failed: _read_component_index returned None "
-            "(likely version-mismatch rejection -- IDX-04 not wired correctly)"
+            "(likely version-mismatch rejection not wired correctly)"
         )
         assert "version mismatch" not in caplog.text.lower(), (
             f"unexpected version-mismatch log on round-trip: {caplog.text}"
@@ -861,7 +861,7 @@ class TestIDX04IDX05WriteSide:
 
         The production code uses ``tmp_path.replace(cache_path)`` (Path.replace is
         a thin wrapper around os.replace; satisfies the ruff PTH105 rule while
-        preserving the atomic-rename semantics that IDX-05 requires). We capture
+        preserving the atomic-rename semantics that requires). We capture
         calls by wrapping ``pathlib.Path.replace`` at the class level, since the
         method is bound on the Path instance.
         """
@@ -905,13 +905,13 @@ class TestIDX04IDX05WriteSide:
 
 
 @pytest.mark.asyncio
-class TestIDX04IDX05WriteSideParity:
-    """Deep parity guard for the IDX-04 + IDX-05 write-side changes."""
+class TestComponentIndexAtomicWriteParity:
+    """Deep parity guard for the + write-side changes."""
 
     async def test_parity_smallest_after_write_change(self):
-        """smallest.json snapshot must match byte-identically after IDX-04/IDX-05.
+        """smallest.json snapshot must match byte-identically after .
 
-        Reuses the shared parity scaffolding from plan 02-01
+        Reuses the shared parity scaffolding from
         (_PARITY_FIXTURES_DIR, _capture_parity_snapshot). The write-side change
         only affects cache-persistence, not flow execution, so this snapshot
         should be byte-identical to the pre-change snapshot captured on
@@ -923,14 +923,12 @@ class TestIDX04IDX05WriteSideParity:
         assert expected_path.exists(), f"missing pre-change snapshot: {expected_path}"
         snapshot = await _capture_parity_snapshot(fixture)
         expected = json.loads(expected_path.read_text())
-        assert snapshot == expected, (
-            f"IDX-04/IDX-05 changes caused parity drift.\n  got: {snapshot}\n  expected: {expected}"
-        )
+        assert snapshot == expected, f"changes caused parity drift.\n  got: {snapshot}\n  expected: {expected}"
 
 
 @pytest.mark.asyncio
-class TestIDX03ReadPath:
-    """Phase 2 / IDX-03: async _read_component_index with asyncio.to_thread-wrapped read_bytes.
+class TestComponentIndexAsyncRead:
+    """/ async _read_component_index with asyncio.to_thread-wrapped read_bytes.
 
     The refactor converts ``_read_component_index`` from sync to async and wraps
     both ``index_path.read_bytes()`` call sites in ``await asyncio.to_thread(...)``
@@ -941,13 +939,13 @@ class TestIDX03ReadPath:
     """
 
     def test_is_coroutine_function(self):
-        """_read_component_index must be an async def (IDX-03 refactor)."""
+        """_read_component_index must be an async def (refactor)."""
         import inspect as _inspect
 
         from lfx.interface import components as ci
 
         assert _inspect.iscoroutinefunction(ci._read_component_index), (
-            "_read_component_index should be async def after IDX-03 refactor"
+            "_read_component_index should be async def after refactor"
         )
 
     async def test_read_does_not_block_event_loop(self, tmp_path):
@@ -1010,41 +1008,39 @@ class TestIDX03ReadPath:
         assert expected_path.exists(), f"missing pre-change snapshot: {expected_path}"
         snapshot = await _capture_parity_snapshot(fixture)
         expected = json.loads(expected_path.read_text())
-        assert snapshot == expected, (
-            f"IDX-03 async refactor caused parity drift.\n  got: {snapshot}\n  expected: {expected}"
-        )
+        assert snapshot == expected, f"async refactor caused parity drift.\n  got: {snapshot}\n  expected: {expected}"
 
     async def test_parity_five_types_after_async_refactor(self):
         """Parity guard on the 5-type fixture as well (may skip on lfx-only env)."""
         fixture = _PARITY_FIXTURES_DIR / "five_types.json"
         expected_path = _PARITY_FIXTURES_DIR / "five_types.snapshot.json"
         if not fixture.exists() or not expected_path.exists():
-            pytest.skip("five_types.json / snapshot from plan 02-02 not landed; skipping")
+            pytest.skip("five_types.json / snapshot from  not landed; skipping")
         try:
             snapshot = await _capture_parity_snapshot(fixture)
         except Exception as exc:
             # five_types.json instantiates an OpenAIModel component which requires
             # langchain_openai; the lfx-only venv lacks this dep. Skip cleanly,
-            # matching TestIDX02SemaphoreCap::test_parity_five_types behaviour.
+            # matching TestDynamicLoadSemaphore::test_parity_five_types behaviour.
             pytest.skip(f"five_types.json flow requires optional deps not available here: {exc}")
         expected = json.loads(expected_path.read_text())
         assert snapshot == expected, (
-            f"IDX-03 async refactor caused parity drift on five_types.json.\n  got: {snapshot}\n  expected: {expected}"
+            f"async refactor caused parity drift on five_types.json.\n  got: {snapshot}\n  expected: {expected}"
         )
 
 
 @pytest.mark.asyncio
-class TestIDX07StaleIndexWarning:
-    """Phase 2 / IDX-07: read-time stale-index warning via structlog on version mismatch.
+class TestStaleIndexWarning:
+    """/ read-time stale-index warning via structlog on version mismatch.
 
     Covers:
       * Warning fires on disk-cache version != installed version.
       * Warning silent when versions match.
       * Warning silent when no disk cache file exists (clean-install / built-in only).
       * Warning silent when disk cache file is corrupt (handled downstream).
-      * Deep parity guard on smallest.json after IDX-07 lands.
+      * Deep parity guard on smallest.json after lands.
 
-    Per plan 02-06, the warning is captured via a MagicMock on
+    Per , the warning is captured via a MagicMock on
     ``ci.logger.warning`` rather than ``caplog`` because ``logger.warning`` here is
     a structlog BoundLogger method -- caplog captures records bridged to stdlib
     logging, but only after structlog's BoundLogger runs its processor chain, and
@@ -1182,7 +1178,7 @@ class TestIDX07StaleIndexWarning:
         assert not stale_calls, f"expected NO stale-index warning when disk cache absent, got: {stale_calls!r}"
 
     async def test_warning_silent_on_corrupt_cache(self, tmp_path, monkeypatch):
-        """Corrupt disk cache -> no IDX-07 warning (downstream handles corruption separately)."""
+        """Corrupt disk cache -> no warning (downstream handles corruption separately)."""
         from unittest.mock import MagicMock
 
         from lfx.interface import components as ci
@@ -1211,20 +1207,20 @@ class TestIDX07StaleIndexWarning:
         stale_calls = [
             call for call in warning_mock.call_args_list if call.args and "stale component index" in str(call.args[0])
         ]
-        assert not stale_calls, f"expected NO IDX-07 stale-index warning on corrupt cache; got: {stale_calls!r}"
+        assert not stale_calls, f"expected NO stale-index warning on corrupt cache; got: {stale_calls!r}"
 
     async def test_parity_smallest_after_idx07(self):
-        """Deep parity guard after IDX-07 read-time check is in place."""
+        """Deep parity guard after read-time check is in place."""
         fixture = _PARITY_FIXTURES_DIR / "smallest.json"
         expected_path = _PARITY_FIXTURES_DIR / "smallest.snapshot.json"
         snapshot = await _capture_parity_snapshot(fixture)
         expected = json.loads(expected_path.read_text())
-        assert snapshot == expected, f"IDX-07 caused parity drift.\n  got: {snapshot}\n  expected: {expected}"
+        assert snapshot == expected, f"caused parity drift.\n  got: {snapshot}\n  expected: {expected}"
 
 
 # ---------------------------------------------------------------------------
 # Module-scoped fixture: build a real, SHA-stamped, version-matched cache file
-# once per test module to avoid rebuilding per-test in TestIDX08CacheHit.
+# once per test module to avoid rebuilding per-test in TestComponentIndexCacheHit.
 #
 # Uses tmp_path_factory (module-scoped fixture compatible) + direct setattr on
 # ci._get_cache_path rather than monkeypatch, which is function-scoped only.
@@ -1237,7 +1233,7 @@ def prebuilt_cache_file(tmp_path_factory):
 
     Built once per module: calls _save_generated_index with a minimal
     synthetic modules_dict so the file carries the real installed lfx version
-    and a non-empty entries list.  Both conditions are required for the IDX-08
+    and a non-empty entries list.  Both conditions are required for the
     short-circuit to fire (D-01: version match AND non-empty entries).
     """
     from importlib.metadata import version as _version
@@ -1265,13 +1261,13 @@ def prebuilt_cache_file(tmp_path_factory):
     assert blob.get("version") == installed, (
         f"prebuilt cache version {blob.get('version')!r} != installed {installed!r}"
     )
-    assert blob.get("entries"), "prebuilt cache has empty entries -- IDX-08 short-circuit will not fire"
+    assert blob.get("entries"), "prebuilt cache has empty entries short-circuit will not fire"
     return cache_file
 
 
 @pytest.mark.asyncio
-class TestIDX08CacheHit:
-    """Phase 5.5 / IDX-08 + IDX-09: read-path short-circuit on version-matched cache hit."""
+class TestComponentIndexCacheHit:
+    """/ + read-path short-circuit on version-matched cache hit."""
 
     async def test_cache_hit_populates_all_types_dict(self, tmp_path, monkeypatch, prebuilt_cache_file):
         """Cache-hit path populates all_types_dict and type_to_current_hash; skips import_langflow_components."""
@@ -1303,7 +1299,7 @@ class TestIDX08CacheHit:
         assert ci.component_cache.type_to_current_hash is not None, (
             "type_to_current_hash must be populated on cache-hit (P-2)"
         )
-        # IDX-08: rebuild skipped
+        # rebuild skipped
         assert not import_calls, (
             f"import_langflow_components must NOT be called on cache-hit, got {len(import_calls)} calls"
         )
@@ -1354,7 +1350,7 @@ class TestIDX08CacheHit:
         telemetry.log_component_index.assert_not_called()
 
     async def test_parity_cache_hit_vs_miss(self, tmp_path, monkeypatch, prebuilt_cache_file):
-        """D-04: byte-identical vertex_order + final_text on both paths, via Phase 2 helper."""
+        """D-04: byte-identical vertex_order + final_text on both paths, via helper."""
         import shutil
 
         from lfx.interface import components as ci
@@ -1415,6 +1411,6 @@ class TestIDX08CacheHit:
         assert result is not None, "perf test cannot run without a valid cache-hit"
         assert result, "perf test: cache-hit returned empty dict"
         assert elapsed < 0.5, (
-            f"cache-hit path took {elapsed * 1000:.1f}ms, must be under 500ms (D-05). "
+            f"cache-hit path took {elapsed * 1000:.1f}ms, must be under 500ms. "
             "Regression likely: check for double-read of cache file or residual walk of lfx.components."
         )

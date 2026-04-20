@@ -5,7 +5,6 @@ import re
 from copy import deepcopy
 from typing import TYPE_CHECKING
 
-import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
 
@@ -18,6 +17,7 @@ from lfx.serialization.serialization import serialize
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import pandas as pd
     from langchain_core.callbacks import Callbacks
 
     from lfx.custom.custom_component.component import Component
@@ -319,6 +319,8 @@ class ComponentToolkit:
         return tools
 
     def get_tools_metadata_dictionary(self) -> dict:
+        import pandas as pd
+
         if isinstance(self.metadata, pd.DataFrame):
             try:
                 return {
@@ -336,6 +338,8 @@ class ComponentToolkit:
         tools: list[BaseTool | StructuredTool],
     ) -> list[BaseTool]:
         # update the tool_name and description according to the name and secriotion mentioned in the list
+        import pandas as pd
+
         if isinstance(self.metadata, pd.DataFrame):
             metadata_dict = self.get_tools_metadata_dictionary()
             filtered_tools = []

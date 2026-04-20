@@ -6,8 +6,6 @@ import threading
 from contextlib import asynccontextmanager, suppress
 from typing import TYPE_CHECKING, cast
 
-from fastapi import HTTPException
-
 from lfx.log.logger import logger
 from lfx.services.config_discovery import resolve_config_dir
 from lfx.services.schema import ServiceType
@@ -217,6 +215,8 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
     Raises:
         Exception: If an error occurs during the session scope.
     """
+    from fastapi import HTTPException
+
     db_service = get_db_service()
     async with db_service._with_session() as session:  # noqa: SLF001
         try:

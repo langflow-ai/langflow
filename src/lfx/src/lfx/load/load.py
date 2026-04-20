@@ -82,6 +82,12 @@ async def aload_flow_from_json(
 
     try:
         await ensure_component_hash_lookups_loaded()
+        # MEAS-03 landmark (D-03a). Records the completion of the component-index warmup, which
+        # transitively invokes `get_and_cache_all_types_dict()` the first time any flow is loaded.
+        # No-op unless LFX_BENCHMARK_CHECKPOINTS is set. See `lfx/_bench.py`.
+        from lfx._bench import checkpoint as _checkpoint
+
+        _checkpoint("after-component-index")
     except CustomComponentValidationError:
         raise
     except Exception as exc:
