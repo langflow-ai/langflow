@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax bench-local bench-docker bench-snapshot bench-verify-synthetic
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -40,6 +40,47 @@ check_tools:
 	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
 	@echo "$(GREEN)All required tools are installed.$(NC)"
+
+######################
+# BENCHMARKS (Phase 1: cold-start measurement)
+######################
+
+# See src/backend/tests/benchmarks/README.md for rationale and usage.
+#
+# - bench-local:    fast iteration against dev venv; NOT comparable to CI or baseline.
+# - bench-docker:   authoritative; runs inside python:3.13-slim with fresh container per measurement.
+# - bench-snapshot: one-shot; captures a baseline and overwrites src/backend/tests/benchmarks/thresholds.json.
+#
+# All targets delegate to src/backend/tests/benchmarks/driver.py.
+
+bench-local: ## run cold-start harness against dev venv (fast iteration; NOT authoritative)
+	@echo "$(YELLOW)bench-local:$(NC) running harness against dev venv (no cold-cache prep)"
+	@echo "$(YELLOW)  NOTE:$(NC) these numbers are NOT comparable to CI or the committed baseline."
+	@uv run python -m src.backend.tests.benchmarks.driver --mode local
+
+bench-docker: ## run cold-start harness inside python:3.13-slim (authoritative)
+	@echo "$(GREEN)bench-docker:$(NC) building measurement image and running harness"
+	@command -v $(DOCKER) >/dev/null 2>&1 || { echo >&2 "$(RED)$(DOCKER) is not installed. Aborting.$(NC)"; exit 1; }
+	@uv run python -m src.backend.tests.benchmarks.driver --mode docker
+
+bench-snapshot: ## one-shot: capture authoritative baseline and overwrite thresholds.json
+	@echo "$(GREEN)bench-snapshot:$(NC) capturing authoritative baseline + writing thresholds.json"
+	@echo "$(YELLOW)  NOTE:$(NC) authoritative numbers require a Linux GHA runner; local captures are for iteration only."
+	@uv run python -m src.backend.tests.benchmarks.snapshot
+
+bench-verify-synthetic: ## MEAS-08 prove the CI gate trips on a synthetic regression
+	@echo "$(YELLOW)bench-verify-synthetic:$(NC) injecting synthetic regression into lfx/_bench.py"
+	@cp src/lfx/src/lfx/_bench.py src/lfx/src/lfx/_bench.py.orig.bak
+	@trap 'mv src/lfx/src/lfx/_bench.py.orig.bak src/lfx/src/lfx/_bench.py 2>/dev/null || true' EXIT HUP INT TERM ; \
+	  awk 'BEGIN{done=0} {print} /^from __future__ / && !done { print "import time as _bench_synth_time"; print "_bench_synth_time.sleep(13.0)"; done=1 }' src/lfx/src/lfx/_bench.py.orig.bak > src/lfx/src/lfx/_bench.py ; \
+	  $(DOCKER) build --build-arg BENCH_VARIANT=lean -t benchmarks-lean -f src/backend/tests/benchmarks/Dockerfile . >/dev/null ; \
+	  $(DOCKER) rmi -f benchmarks-lean-uncompiled >/dev/null 2>&1 || true ; \
+	  if uv run python -m src.backend.tests.benchmarks.driver --mode docker --verify --scenarios lfx_bare --output-dir /tmp/bench_synth ; then \
+	    echo "$(RED)FAIL:$(NC) driver exited 0 despite synthetic regression. Gate is NOT wired correctly." ; \
+	    exit 1 ; \
+	  else \
+	    echo "$(GREEN)PASS:$(NC) driver exited non-zero on synthetic regression. Gate is wired correctly." ; \
+	  fi
 
 help: ## show basic help message with common commands
 	@echo ''

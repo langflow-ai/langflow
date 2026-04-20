@@ -1,0 +1,6 @@
+# All driver-produced artifacts are ephemeral runtime output. Keep the directory
+# tracked (via .gitkeep) but ignore every generated file. Per README.md:
+# "reports/ - driver output; gitignored except .gitkeep".
+*
+!.gitignore
+!.gitkeep

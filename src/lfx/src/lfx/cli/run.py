@@ -7,7 +7,23 @@ from pathlib import Path
 import typer
 from asyncer import syncify
 
+# Cold-start benchmark hook. No-op when LFX_BENCHMARK_CHECKPOINTS is unset.
+# See src/lfx/src/lfx/_bench.py for the checkpoint / dump contract.
+from lfx._bench import _ENABLED as _BENCH_ENABLED
+from lfx._bench import checkpoint, dump
 from lfx.run.base import RunError, run_flow
+
+checkpoint("after-imports")
+
+# Benchmark landmark trigger. The `lfx run` path does NOT transitively import
+# `lfx.services.initialize` during normal flow loading, so its module-level
+# `initialize_services()` (and the landmark checkpoint that follows it) would never fire.
+# Gated on the benchmark env var so production runs pay ZERO import cost; under measurement
+# this triggers the module body and therefore records `after-initialize-services`.
+# The landmarks themselves live at their true call sites in `lfx/services/initialize.py`
+# and `lfx/load/load.py`.
+if _BENCH_ENABLED:
+    import lfx.services.initialize  # noqa: F401
 
 # Verbosity level constants
 VERBOSITY_DETAILED = 2
@@ -126,6 +142,7 @@ async def run(
     verbosity = 3 if verbose_full else (2 if verbose_detailed else (1 if verbose else 0))
 
     try:
+        checkpoint("before-run-flow")
         result = await run_flow(
             script_path=script_path,
             input_value=input_value,
@@ -140,6 +157,7 @@ async def run(
             timing=timing,
             global_variables=None,
         )
+        checkpoint("after-run-flow")
 
         # Output based on format
         if output_format in {"text", "message", "result"}:
@@ -147,6 +165,7 @@ async def run(
         else:
             indent = 2 if verbosity > 0 else None
             typer.echo(json.dumps(result, indent=indent))
+        dump()
 
     except RunError as e:
         error_response = {
@@ -159,4 +178,5 @@ async def run(
         else:
             error_response["exception_message"] = str(e)
         typer.echo(json.dumps(error_response))
+        dump()
         raise typer.Exit(1) from e

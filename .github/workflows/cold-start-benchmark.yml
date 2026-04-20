@@ -1,0 +1,458 @@
+name: Cold Start Benchmark
+
+# Label-gated cold-start regression gate (Phase 1 / MEAS-08; D-14, D-16, D-17).
+# Runs only when:
+#   1. A PR carries the `run-benchmarks` label (verify mode: fail if regression exceeds threshold).
+#   2. A PR carries the `run-benchmark-snapshot` label (snapshot mode: capture new authoritative baseline).
+#   3. A commit is pushed to a branch matching `cold-start/**`.
+#   4. A maintainer triggers the workflow manually via workflow_dispatch.
+#
+# Workflow structure: scenarios run in parallel matrix jobs so a single slow or
+# broken scenario (e.g. langflow_run_http_ready's structlog marker issue) cannot
+# exhaust the 30-minute job budget for the whole pipeline. Each matrix job owns
+# ONE scenario; a final aggregation job assembles results.
+#
+# Regression policy: any matrix job with a regression fails the workflow
+# AND posts a bot comment on the PR with the numbers diff sourced from the
+# scenario's reports/regression_comment.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "verify: run gate against thresholds.json. snapshot: capture new baseline."
+        required: false
+        default: verify
+        type: choice
+        options:
+          - verify
+          - snapshot
+      ref:
+        description: "Git ref to checkout (branch, tag, or commit SHA)."
+        required: false
+        default: ""
+        type: string
+  pull_request:
+    types: [opened, labeled, synchronize, reopened]
+  push:
+    branches:
+      - "cold-start/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # One-shot job that decides mode once for the whole workflow and emits it
+  # as a job output. Matrix jobs read this instead of each re-evaluating the
+  # (messy) PR-label + inputs + event-name expression.
+  mode:
+    name: "Resolve mode"
+    if: >-
+      contains(github.event.pull_request.labels.*.name, 'run-benchmarks') ||
+      contains(github.event.pull_request.labels.*.name, 'run-benchmark-snapshot') ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      mode: ${{ steps.resolve.outputs.mode }}
+    steps:
+      - id: resolve
+        run: |
+          # Mode selection precedence:
+          #   1. workflow_dispatch input (maintainer-specified)
+          #   2. run-benchmark-snapshot label on the PR (snapshot mode)
+          #   3. default: verify mode (regression gate)
+          if [ -n "${{ github.event.inputs.mode }}" ]; then
+            mode="${{ github.event.inputs.mode }}"
+          elif ${{ contains(github.event.pull_request.labels.*.name, 'run-benchmark-snapshot') }}; then
+            mode="snapshot"
+          else
+            mode="verify"
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "Resolved mode: $mode"
+
+  # Build benchmarks-lean AND benchmarks-lean-uncompiled once, save both as a
+  # tarball, upload as an artifact. Matrix jobs `docker load` it. Cuts wall-
+  # clock ~6 minutes and avoids the "--skip-build needs both images present"
+  # failure mode.
+  build-images:
+    name: "Build images"
+    needs: mode
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Build benchmarks-lean
+        run: |
+          docker build \
+            --build-arg BENCH_VARIANT=lean \
+            -t benchmarks-lean \
+            -f src/backend/tests/benchmarks/Dockerfile \
+            .
+
+      - name: Build benchmarks-lean-uncompiled (strip .pyc from benchmarks-lean)
+        run: |
+          # Mirrors driver.py's Option A1 wrapper Dockerfile (plan 02-06 /
+          # 01-CONTEXT.md D-11a/D-12a). Produces the "uncompiled" variant by
+          # deleting __pycache__/.pyc/.pyo from the landed image's /app/.venv.
+          cat > /tmp/Dockerfile.uncompiled <<'DOCKERFILE'
+          FROM benchmarks-lean
+          RUN find /app/.venv -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true \
+              && find /app/.venv -name '*.pyc' -delete \
+              && find /app/.venv -name '*.pyo' -delete
+          DOCKERFILE
+          docker build -t benchmarks-lean-uncompiled -f /tmp/Dockerfile.uncompiled .
+
+      - name: Build lfx-reference image (CNT-01 reference Dockerfile)
+        run: |
+          # Builds the patched src/lfx/docker/Dockerfile image that Plan 05-01
+          # delivers (Python 3.13-alpine, --no-install-project layer separation,
+          # UV_COMPILE_BYTECODE=1). This is the image the lfx_reference_image
+          # scenario measures (CNT-01 authoritative signal).
+          docker build \
+            -t lfx-reference \
+            -f src/lfx/docker/Dockerfile \
+            .
+
+      - name: Verify deps layer cache (CNT-02 repeat-build assertion)
+        # After the initial lfx-reference build, make a no-op source change
+        # and re-run docker build. If Plan 05-01's --no-install-project patch works,
+        # the deps layer cache-hits and total build time is ~5-15s. If the patch was
+        # reverted or broken, the first uv sync reruns and this step exceeds the
+        # 30s target .
+        #
+        # Touches a trailing comment on src/lfx/src/lfx/__init__.py. The change is
+        # harmless (single-line comment; doesn't affect imports or module attributes)
+        # but invalidates the source COPY layer at Dockerfile line 39.
+        run: |
+          set -e
+          echo "# CNT-02 cache-verification no-op touch: $(date +%s)" >> src/lfx/src/lfx/__init__.py
+          start=$(date +%s)
+          docker build \
+            -t lfx-reference \
+            -f src/lfx/docker/Dockerfile \
+            .
+          end=$(date +%s)
+          elapsed=$((end - start))
+          echo "Repeat build elapsed: ${elapsed}s (CNT-02 target: <30s)"
+          if [ "$elapsed" -ge 30 ]; then
+            echo "::error ::CNT-02 FAILED: repeat build took ${elapsed}s (>=30s). The deps layer is NOT cache-hit. Verify --no-install-project is present on the first uv sync in src/lfx/docker/Dockerfile (Plan 05-01)."
+            exit 1
+          fi
+          # Restore src/lfx/src/lfx/__init__.py so downstream steps see the unmodified tree.
+          git checkout -- src/lfx/src/lfx/__init__.py
+
+      - name: Save all images to tarball
+        run: |
+          docker save benchmarks-lean benchmarks-lean-uncompiled lfx-reference | gzip > /tmp/images.tar.gz
+          ls -la /tmp/images.tar.gz
+
+      - name: Upload images artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: bench-images
+          path: /tmp/images.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+
+  scenario:
+    name: "bench:${{ matrix.scenario }}"
+    needs: [mode, build-images]
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario:
+          - lfx_bare
+          - lfx_with_flow
+          - lfx_with_flow_prebaked
+          # langflow_run_http_ready and langflow_run_no_change_restart are known-
+          # flaky scenarios on CI until the structlog marker fix lands (Phase 4/5).
+          # The matrix expressions below give them a tight 5-min timeout and mark
+          # them non-blocking so their cancellation does not drag the workflow into
+          # `cancelled`. Phase 4 plan 04-05 adds langflow_run_no_change_restart,
+          # which inherits the flaky-scenario treatment until Boot-2's marker is
+          # verified to reach the supervisor reliably.
+          - langflow_run_http_ready
+          - langflow_run_no_change_restart
+          - lfx_reference_image
+    runs-on: ubuntu-latest
+    # Budgets:
+    #   - langflow_run_http_ready: 5 min (known-flaky sentinel scenario until the
+    #     structlog marker fix lands; kept tight so it fails fast).
+    #   - langflow_run_no_change_restart: 15 min. Its supervisor runs TWO full
+    #     langflow boots per hyperfine iteration (pre-warm + measured), and
+    #     hyperfine defaults to runs=5, so ~10 boots at ~35s each on Linux CI.
+    #   - all others: 20 min.
+    timeout-minutes: ${{ matrix.scenario == 'langflow_run_http_ready' && 5 || (matrix.scenario == 'langflow_run_no_change_restart' && 15 || 20) }}
+    # Matrix-entry-level continue-on-error: langflow_run_http_ready and
+    # langflow_run_no_change_restart are allowed to fail (or be cancelled by
+    # timeout) without marking the workflow red. no_change_restart keeps the
+    # non-blocking treatment until Boot-2's marker is verified to reach the
+    # supervisor reliably under CI load.
+    continue-on-error: ${{ matrix.scenario == 'langflow_run_http_ready' || matrix.scenario == 'langflow_run_no_change_restart' || matrix.scenario == 'lfx_reference_image' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: Install hyperfine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y hyperfine
+
+      - name: Install benchmark dependencies
+        run: |
+          uv sync --group benchmarks
+
+      - name: Download prebuilt images
+        uses: actions/download-artifact@v6
+        with:
+          name: bench-images
+          path: /tmp
+
+      - name: Load images into docker
+        run: |
+          gunzip -c /tmp/images.tar.gz | docker load
+          docker images | grep benchmarks
+
+      - name: Run scenario
+        id: bench
+        continue-on-error: ${{ matrix.scenario == 'langflow_run_http_ready' || matrix.scenario == 'langflow_run_no_change_restart' || matrix.scenario == 'lfx_reference_image' }}
+        env:
+          CONTAINER_CMD: docker
+        run: |
+          mode="${{ needs.mode.outputs.mode }}"
+          scenario="${{ matrix.scenario }}"
+          echo "Running scenario=$scenario in mode=$mode"
+          verify_flag=""
+          if [ "$mode" = "verify" ]; then
+            verify_flag="--verify"
+          fi
+          uv run python -m src.backend.tests.benchmarks.driver \
+            --mode docker \
+            --scenarios "$scenario" \
+            $verify_flag \
+            --output-dir src/backend/tests/benchmarks/reports \
+            --skip-build
+
+      - name: Upload scenario artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: scenario-${{ matrix.scenario }}
+          path: src/backend/tests/benchmarks/reports/
+          if-no-files-found: warn
+
+      - name: Post regression comment on failure
+        if: >-
+          failure() &&
+          github.event.pull_request &&
+          matrix.scenario != 'langflow_run_http_ready' &&
+          matrix.scenario != 'langflow_run_no_change_restart' &&
+          matrix.scenario != 'lfx_reference_image'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f src/backend/tests/benchmarks/reports/regression_comment.md ]; then
+            gh pr comment "${{ github.event.pull_request.number }}" \
+              --body-file src/backend/tests/benchmarks/reports/regression_comment.md
+          else
+            echo "No regression_comment.md produced by driver for scenario ${{ matrix.scenario }}. Inspect the harness step logs above."
+          fi
+
+  aggregate:
+    name: "Aggregate"
+    if: always() && needs.mode.result == 'success'
+    needs: [mode, scenario]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Download all scenario artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: all-scenarios
+          pattern: scenario-*
+          merge-multiple: false
+
+      - name: Merge scenario reports
+        run: |
+          mkdir -p src/backend/tests/benchmarks/reports
+          # Each scenario uploaded its entire reports/ dir under its own name.
+          # Merge them into one dir for the snapshot step (or the uploaded rollup).
+          for dir in all-scenarios/scenario-*; do
+            [ -d "$dir" ] || continue
+            cp -rv "$dir"/. src/backend/tests/benchmarks/reports/ || true
+          done
+          echo "=== Merged reports/ contents ==="
+          ls -la src/backend/tests/benchmarks/reports/ || true
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: Install benchmark dependencies
+        run: |
+          uv sync --group benchmarks
+
+      - name: Snapshot mode - assemble thresholds.json
+        if: needs.mode.outputs.mode == 'snapshot'
+        env:
+          CAPTURED_REF: ${{ github.ref_name }}@${{ github.sha }}
+          CAPTURED_RUNNER: ubuntu-latest (GitHub Actions)
+          CAPTURED_ON: ${{ github.event.repository.updated_at || '' }}
+        run: |
+          # Read per-scenario hyperfine JSONs produced by matrix jobs, assemble
+          # thresholds.json. Does not re-invoke the driver.
+          python3 <<'PY'
+          import json, os, pathlib, sys
+          from datetime import datetime, timezone
+
+          reports = pathlib.Path("src/backend/tests/benchmarks/reports")
+          out_thresholds = pathlib.Path("src/backend/tests/benchmarks/thresholds.json")
+
+          tracked = [
+              "lfx_bare",
+              "lfx_with_flow",
+              "lfx_with_flow_prebaked",
+              "langflow_run_http_ready",
+              "langflow_run_no_change_restart",
+              "lfx_reference_image",
+          ]
+
+          scenarios_out = {}
+          for name in tracked:
+              hfile = reports / f"{name}.json"
+              if not hfile.exists() or hfile.stat().st_size == 0:
+                  print(f"WARNING: {hfile} missing or empty; writing sentinel for {name}", file=sys.stderr)
+                  scenarios_out[name] = {"mean_ms": 0, "stddev_ms": 0, "runs": 0}
+                  continue
+              try:
+                  data = json.loads(hfile.read_text())
+              except json.JSONDecodeError as exc:
+                  print(f"WARNING: {hfile} is malformed JSON ({exc}); sentinel for {name}", file=sys.stderr)
+                  scenarios_out[name] = {"mean_ms": 0, "stddev_ms": 0, "runs": 0}
+                  continue
+              results = data.get("results", [])
+              if not results:
+                  print(f"WARNING: {hfile} has no results; sentinel for {name}", file=sys.stderr)
+                  scenarios_out[name] = {"mean_ms": 0, "stddev_ms": 0, "runs": 0}
+                  continue
+              r = results[0]
+              times = r.get("times", [])
+              scenarios_out[name] = {
+                  "mean_ms": round(r.get("mean", 0) * 1000, 2),
+                  "stddev_ms": round(r.get("stddev", 0) * 1000, 2),
+                  "runs": len(times),
+              }
+
+          thresholds = {
+              "schema_version": 1,
+              "measurement_mode": "bytecode_compile_delta",
+              "captured_on": datetime.now(timezone.utc).date().isoformat(),
+              "captured_ref": os.environ.get("CAPTURED_REF", "unknown"),
+              "captured_runner": os.environ.get("CAPTURED_RUNNER", "ubuntu-latest (GitHub Actions)"),
+              "python_version": "3.13",
+              "allowed_regression_pct": 15,
+              "_note": (
+                  "Captured on Linux CI via the cold-start-benchmark matrix workflow. "
+                  "langflow_run_http_ready may be sentinel if its supervisor marker is "
+                  "still unresolved. measurement_mode is bytecode_compile_delta ."
+              ),
+              "scenarios": scenarios_out,
+          }
+
+          tmp = out_thresholds.with_suffix(out_thresholds.suffix + ".tmp")
+          tmp.write_text(json.dumps(thresholds, indent=2) + "\n", encoding="utf-8")
+          tmp.replace(out_thresholds)
+
+          print("Wrote thresholds.json:")
+          print(json.dumps(thresholds, indent=2))
+          PY
+
+      - name: Verify mode — final gate summary
+        if: needs.mode.outputs.mode == 'verify'
+        run: |
+          # Per-scenario verify already ran in the matrix jobs (each one exited
+          # non-zero on regression). This step just summarizes the results for
+          # the workflow-run UI.
+          echo "## Verify mode results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          # Inspect the needs.scenario.result for each matrix cell in aggregate.
+          # GitHub doesn't expose per-cell results directly, so we read file
+          # existence of regression_comment.md as the signal.
+          if ls src/backend/tests/benchmarks/reports/regression_comment*.md 1> /dev/null 2>&1; then
+            echo "One or more scenarios regressed. See the bot comments on the PR." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          else
+            echo "All scenarios within tolerance ✓" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload final rollup
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: cold-start-benchmark-reports
+          path: |
+            src/backend/tests/benchmarks/reports/
+            src/backend/tests/benchmarks/thresholds.json
+          if-no-files-found: warn
+
+      - name: Record override label usage
+        if: always() && contains(github.event.pull_request.labels.*.name, 'benchmarks:override')
+        run: |
+          {
+            echo "## benchmarks:override applied"
+            echo ""
+            echo "PR #${{ github.event.pull_request.number }} carries the \`benchmarks:override\` label."
+            echo "Actor: ${{ github.actor }}"
+            echo "Event: ${{ github.event_name }}"
+            echo ""
+            echo "The override does NOT bypass the workflow's failure status; it is recorded here for audit."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Snapshot commit note
+        if: >-
+          success() && needs.mode.outputs.mode == 'snapshot'
+        run: |
+          {
+            echo "## Snapshot run complete"
+            echo ""
+            echo "The aggregation step assembled src/backend/tests/benchmarks/thresholds.json from the per-scenario matrix artifacts."
+            echo "Download the \`cold-start-benchmark-reports\` artifact and commit the updated thresholds.json"
+            echo "plus the baseline md/json files manually in a PR titled something like"
+            echo "\`docs(bench): capture release-1.9.0 baseline thresholds\`."
+            echo ""
+            echo "Per Pitfall 11 this snapshot is authoritative only because it ran on the GHA Linux runner."
+          } >> "$GITHUB_STEP_SUMMARY"

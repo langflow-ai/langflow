@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.10.0"
+version = "1.9.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.10.0",
+    "langflow-base[complete]>=0.9.0",
 ]
 
 
@@ -45,8 +45,6 @@ dev = [
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
     "blockbuster>=1.5.20,<1.6",
-    "types-aiofiles>=24.1.0.20240626",
-    "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
     "locust~=2.40.5",
     "pytest-rerunfailures>=15.0",
@@ -59,6 +57,15 @@ dev = [
     "pyleak>=0.1.14",
     "mcp-server-fetch>=2025.1.17",
     "onnxruntime>=1.20,<1.24" # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
+]
+benchmarks = [
+    # Cold-start measurement tooling. Installed only when `uv sync --group benchmarks`.
+    # Never a runtime dep of lfx or langflow (preserves the "no runtime deps in lfx" rule).
+    "pyinstrument>=5.1.2",
+    "importtime-convert>=1.1.0",
+    # importtime-waterfall latest on PyPI is 1.0.0; RESEARCH.md §Standard Stack lists
+    # 2.0.0 but that release is not available. Floor at 1.0.0 so the group resolves.
+    "importtime-waterfall>=1.0.0",
 ]
 
 [[tool.uv.index]]
