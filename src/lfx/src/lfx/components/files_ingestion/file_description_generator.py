@@ -9,10 +9,10 @@ vector store component.
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 import sys
 import textwrap
-import traceback
 from pathlib import Path
 
 from lfx.custom.custom_component.component import Component
@@ -20,11 +20,7 @@ from lfx.io import HandleInput, IntInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 
-
-def _dbg(msg: str) -> None:
-    """Write debug message to stderr so it always appears in the terminal."""
-    sys.stderr.write(f"[FileDescriptionGeneratorComponent] {msg}\n")
-    sys.stderr.flush()
+logger = logging.getLogger(__name__)
 
 
 _DEFAULT_TIMEOUT_SECONDS = 3600
@@ -103,59 +99,43 @@ class FileDescriptionGeneratorComponent(Component):
 
         file_paths: list[str] = []
         for i, item in enumerate(self.file_data):
-            _dbg(f"  item[{i}] type: {type(item).__name__}")
             if isinstance(item, DataFrame):
                 fp = item.attrs.get("source_file_path", "")
                 if fp:
-                    _dbg(f"  item[{i}] DataFrame source_file_path from attrs={fp!r}")
                     file_paths.append(str(Path(fp)))
                 elif "file_path" in item.columns and not item.empty:
                     unique_paths = item["file_path"].dropna().unique().tolist()
-                    _dbg(f"  item[{i}] DataFrame found {len(unique_paths)} file_path(s) in column")
                     file_paths.extend(str(Path(path)) for path in unique_paths if path)
                 else:
-                    _dbg(
-                        f"  WARNING: item[{i}] DataFrame has no source_file_path in attrs or file_path column, skipping"
-                    )
+                    logger.warning("item[%d] DataFrame has no source_file_path or file_path column, skipping", i)
             elif isinstance(item, Message):
                 fp = getattr(item, "file_path", "") or ""
-                _dbg(f"  item[{i}] Message file_path={fp!r}")
                 if fp:
                     file_paths.append(str(Path(fp)))
                 else:
-                    _dbg(f"  WARNING: item[{i}] Message has no file_path, skipping")
+                    logger.warning("item[%d] Message has no file_path, skipping", i)
             elif isinstance(item, Data):
                 fp = item.data.get("file_path", "")
-                _dbg(f"  item[{i}] Data file_path={fp!r}")
                 if fp:
                     file_paths.append(str(Path(fp)))
                 else:
-                    _dbg(f"  WARNING: item[{i}] Data has no file_path key, skipping")
+                    logger.warning("item[%d] Data has no file_path key, skipping", i)
             else:
-                _dbg(f"  WARNING: item[{i}] unsupported type {type(item).__name__}, skipping")
+                logger.warning("item[%d] unsupported type %s, skipping", i, type(item).__name__)
         return file_paths
 
     def generate_descriptions(self) -> list[Data]:
-        _dbg("========== generate_descriptions CALLED ==========")
-
         try:
-            _dbg(f"self.file_data type: {type(self.file_data).__name__}")
-            _dbg(f"self.file_data length: {len(self.file_data)}")
-
             file_paths = self._extract_file_paths()
-            _dbg(f"Extracted file_paths: {file_paths}")
 
             if not file_paths:
-                _dbg("NO FILE PATHS FOUND - returning empty list")
+                logger.warning("No file paths found, returning empty list")
                 return []
 
-            _dbg(f"Processing {len(file_paths)} file(s) in subprocess...")
+            logger.info("Processing %d file(s) in subprocess...", len(file_paths))
 
             # Serialize LLM
-            _dbg(f"LLM type: {type(self.llm).__name__}")
-            _dbg("Serializing LLM...")
             llm_config = self._serialize_llm()
-            _dbg(f"LLM serialized, class_path: {llm_config.get('__class_path__', 'unknown')}")
 
             config = {
                 "file_paths": file_paths,
@@ -164,12 +144,6 @@ class FileDescriptionGeneratorComponent(Component):
                 "embedding_model": self.embedding_model,
                 "batch_size": self.batch_size,
             }
-
-            _dbg(f"Config keys: {list(config.keys())}")
-            _dbg(f"cache_dir: {self.cache_dir}")
-            _dbg(f"embedding_model: {self.embedding_model}")
-            _dbg(f"batch_size: {self.batch_size}")
-            _dbg("Launching subprocess...")
 
             # Run the entire ingestion in a single subprocess over all files
             script = textwrap.dedent("""\
@@ -282,7 +256,6 @@ class FileDescriptionGeneratorComponent(Component):
                                 line, stderr_buf = stderr_buf.split("\n", 1)
                                 line = line.strip()
                                 if line:
-                                    _dbg(f"[subprocess] {line}")
                                     self.log(line)
                                     stderr_lines.append(line)
                         else:
@@ -301,7 +274,6 @@ class FileDescriptionGeneratorComponent(Component):
                             line, stderr_buf = stderr_buf.split("\n", 1)
                             line = line.strip()
                             if line:
-                                _dbg(f"[subprocess] {line}")
                                 self.log(line)
                                 stderr_lines.append(line)
                     time.sleep(0.1)
@@ -313,7 +285,6 @@ class FileDescriptionGeneratorComponent(Component):
             for remaining_line in stderr_buf.strip().split("\n"):
                 stripped = remaining_line.strip()
                 if stripped:
-                    _dbg(f"[subprocess] {stripped}")
                     self.log(stripped)
                     stderr_lines.append(stripped)
 
@@ -322,22 +293,14 @@ class FileDescriptionGeneratorComponent(Component):
                 stdout_chunks.append(remaining_stdout)
             stdout_data = "".join(stdout_chunks)
 
-            _dbg(f"Subprocess finished, returncode={proc.returncode}")
-            _dbg(f"Subprocess stdout length: {len(stdout_data)}")
-
             if proc.returncode != 0:
-                _dbg(f"SUBPROCESS FAILED with exit code {proc.returncode}")
                 stderr_tail = "\n".join(stderr_lines[-20:])
                 msg = f"Ingestion subprocess failed (exit code {proc.returncode}): {stderr_tail}"
                 raise RuntimeError(msg)
 
-            _dbg(f"Subprocess stdout preview: {stdout_data[:500]!r}")
-
             try:
                 output = json.loads(stdout_data)
             except json.JSONDecodeError as e:
-                _dbg(f"JSON DECODE ERROR: {e}")
-                _dbg(f"stdout was: {stdout_data[:1000]!r}")
                 stderr_tail = "\n".join(stderr_lines[-10:])
                 msg = f"Invalid JSON from subprocess: {e}. stderr={stderr_tail}"
                 raise RuntimeError(msg) from e
@@ -347,7 +310,7 @@ class FileDescriptionGeneratorComponent(Component):
             failed = output.get("failed", [])
             total = output.get("total", len(file_paths))
 
-            _dbg(f"Parsed {len(successful)} successful, {len(failed)} failed out of {total}")
+            logger.info("Parsed %d successful, %d failed out of %d", len(successful), len(failed), total)
 
             # Fail if any descriptions were not generated
             if failed:
@@ -374,17 +337,9 @@ class FileDescriptionGeneratorComponent(Component):
                 self.log(msg)
                 raise RuntimeError(msg)
 
-            results: list[Data] = []
-            for i, item in enumerate(successful):
-                _dbg(f"  result[{i}]: file_path={item.get('file_path', '')}, text_len={len(item.get('text', ''))}")
-                results.append(
-                    Data(
-                        data={
-                            "text": item["text"],
-                            "file_path": item["file_path"],
-                        },
-                    )
-                )
+            results: list[Data] = [
+                Data(data={"text": item["text"], "file_path": item["file_path"]}) for item in successful
+            ]
 
             # Log all descriptions
             for r in results:
@@ -396,11 +351,9 @@ class FileDescriptionGeneratorComponent(Component):
                 msg = f"Ingestion produced 0 descriptions for {total} files. Check LLM configuration."
                 raise RuntimeError(msg)
 
-            _dbg(f"Returning {len(results)} Data object(s)")
-            _dbg("========== generate_descriptions DONE ==========")
+            logger.info("Returning %d Data object(s)", len(results))
             return results  # noqa: TRY300
 
-        except Exception as e:
-            _dbg(f"EXCEPTION: {type(e).__name__}: {e}")
-            _dbg(traceback.format_exc())
+        except Exception:
+            logger.exception("generate_descriptions failed")
             raise
