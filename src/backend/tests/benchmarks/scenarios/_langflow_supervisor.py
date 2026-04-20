@@ -63,6 +63,18 @@ def _drain_output(stream, stop_event: threading.Event) -> None:
 
 def main() -> int:
     """Launch `langflow run`, wait for TCP readiness, terminate cleanly."""
+    # Pre-flight: if something is already bound to the scenario port, any TCP
+    # probe we run against our own child will race against that listener and
+    # silently record a near-zero LANGFLOW_READY_MS. Refuse to measure rather
+    # than produce garbage numbers.
+    if _tcp_ready(READY_HOST, READY_PORT, connect_timeout=0.1):
+        sys.stderr.write(
+            f"ERROR: {READY_HOST}:{READY_PORT} already accepts connections before "
+            f"the supervisor started its child; another process (dev server, leftover "
+            f"benchmark boot) is squatting the port.\n",
+        )
+        return 3
+
     start = time.perf_counter()
     proc = subprocess.Popen(  # noqa: S603
         [  # noqa: S607
@@ -95,25 +107,31 @@ def main() -> int:
     reader.start()
 
     ready_at: float | None = None
-    exit_code = 0
     try:
         while True:
             if _tcp_ready(READY_HOST, READY_PORT):
+                # Defense in depth: if the connect succeeded but our child is
+                # already gone, we hit a listener that isn't ours. Don't record
+                # a bogus LANGFLOW_READY_MS.
+                if proc.poll() is not None:
+                    sys.stderr.write(
+                        f"ERROR: {READY_HOST}:{READY_PORT} connected but child exited "
+                        f"(rc={proc.returncode}); another listener is squatting the port.\n",
+                    )
+                    return 3
                 ready_at = time.perf_counter()
                 break
             if proc.poll() is not None:
                 sys.stderr.write(
                     f"ERROR: process exited (rc={proc.returncode}) before {READY_HOST}:{READY_PORT} was ready\n",
                 )
-                exit_code = 3
-                break
+                return 3
             if time.perf_counter() - start > STARTUP_TIMEOUT_SEC:
                 sys.stderr.write(
                     f"TIMEOUT: {STARTUP_TIMEOUT_SEC}s elapsed without "
                     f"{READY_HOST}:{READY_PORT} accepting connections\n",
                 )
-                exit_code = 2
-                break
+                return 2
             time.sleep(READY_POLL_INTERVAL_SEC)
     finally:
         stop_reader.set()
@@ -125,9 +143,6 @@ def main() -> int:
                 proc.kill()
                 proc.wait(timeout=5)
         reader.join(timeout=2)
-
-    if ready_at is None:
-        return exit_code or 3
 
     elapsed_ms = (ready_at - start) * 1000.0
     sys.stdout.write(f"LANGFLOW_READY_MS={elapsed_ms:.2f}\n")
