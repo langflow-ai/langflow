@@ -203,7 +203,7 @@ Plans:
 - [x] 06-02-PLAN.md — VAL-02: author parity-confirmation-YYYY-MM-DD.md covering Phase 2 IDX-01..IDX-07, Phase 3 IMP-02 + IMP-07 + IMP-11, Phase 4 SVC-01..SVC-04, Phase 5.5 IDX-08 + IDX-09 (no new test runs per D-09). Requirements: VAL-02.
 - [x] 06-03-PLAN.md — VAL-03: local make bench-verify-synthetic capture under synthetic-regression-evidence/ + verify-mode CI green run under run-benchmarks label. Records verify-run ID in 06-03-SUMMARY for 06-05 backfill. Requirements: VAL-03.
 - [x] 06-04-PLAN.md — VAL-04: three-layer publication (release-notes.mdx bullet, deployment-cold-start.mdx ### Measured improvements append, .planning/deliverables/watsonx-integration-note.md). Requirements: VAL-04.
-- [ ] 06-05-PLAN.md — VAL-03 citation tail: backfill the verify-mode CI run ID from 06-03 into post-YYYY-MM-DD.md and parity-confirmation-YYYY-MM-DD.md, replacing the `<verify-run-id-from-06-03>` placeholders. Requirements: VAL-03.
+- [x] 06-05-PLAN.md — VAL-03 citation tail: backfilled verify-mode CI run ID 24666601910 into post-2026-04-20.md and parity-confirmation-2026-04-20.md, replacing the `<verify-run-id-from-06-03>` placeholders (commit 864db4bea4, 2026-04-18). Requirements: VAL-03.
 
 **Wave hints for parallelization:**
 - wave 1 (regression fix, blocks all measurement): 06-06 (IMP-11 langchain_core deferral on lfx.base.models path).
@@ -221,4 +221,4 @@ Plans:
 | 4. Service Init Restructuring | 5/5 | Complete | 2026-04-17 (CI baseline snapshot 2026-04-18) |
 | 5. Container and Deployment Optimization | 5/6 | In Progress|  |
 | 5.5. Component Index Build Caching | 0/? | Not started | - |
-| 6. Validation and Publication | 4/6 | In Progress | - |
+| 6. Validation and Publication | 5/6 | In Progress | - |
