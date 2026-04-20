@@ -78,7 +78,8 @@ bench-verify-synthetic: ## MEAS-08 D-18: prove the CI gate trips on a synthetic 
 	@trap 'mv src/lfx/src/lfx/_bench.py.orig.bak src/lfx/src/lfx/_bench.py 2>/dev/null || true' EXIT HUP INT TERM ; \
 	  awk 'BEGIN{done=0} {print} /^from __future__ / && !done { print "import time as _bench_synth_time"; print "_bench_synth_time.sleep(13.0)"; done=1 }' src/lfx/src/lfx/_bench.py.orig.bak > src/lfx/src/lfx/_bench.py ; \
 	  $(DOCKER) build --build-arg BENCH_VARIANT=lean -t benchmarks-lean -f src/backend/tests/benchmarks/Dockerfile . >/dev/null ; \
-	  if uv run python -m src.backend.tests.benchmarks.driver --mode docker --verify --scenarios lfx_bare --skip-build --output-dir /tmp/bench_synth ; then \
+	  $(DOCKER) rmi -f benchmarks-lean-uncompiled >/dev/null 2>&1 || true ; \
+	  if uv run python -m src.backend.tests.benchmarks.driver --mode docker --verify --scenarios lfx_bare --output-dir /tmp/bench_synth ; then \
 	    echo "$(RED)FAIL:$(NC) driver exited 0 despite synthetic regression. Gate is NOT wired correctly." ; \
 	    exit 1 ; \
 	  else \
