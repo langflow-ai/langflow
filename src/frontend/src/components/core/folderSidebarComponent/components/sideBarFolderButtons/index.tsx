@@ -1,5 +1,4 @@
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -167,17 +166,9 @@ const SideBarFoldersButtonsComponent = ({
                   },
                   onError: (err) => {
                     console.error(err);
-                    const axiosErr = err as AxiosError<{
-                      detail?: string;
-                      message?: string;
-                    }>;
-                    const detail =
-                      axiosErr?.response?.data?.detail ??
-                      axiosErr?.response?.data?.message ??
-                      (err instanceof Error ? err.message : String(err));
                     setErrorData({
                       title: t("sidebar.projectUploadError"),
-                      list: [detail],
+                      list: [err["response"]["data"]["detail"]],
                     });
                   },
                 },
