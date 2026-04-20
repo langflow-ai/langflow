@@ -9,6 +9,7 @@ from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
 from .folder import Folder
 from .ingestion_run import IngestionRun, IngestionRunStatus
 from .jobs import Job
+from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from .message import MessageTable
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
@@ -27,6 +28,8 @@ __all__ = [
     "IngestionRun",
     "IngestionRunStatus",
     "Job",
+    "KnowledgeBaseRecord",
+    "KnowledgeBaseStatus",
     "MessageTable",
     "SSOConfig",
     "SSOUserProfile",

@@ -52,7 +52,10 @@ class IngestionRunStatus(str, Enum):
 class IngestionRunBase(SQLModel):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     job_id: UUID | None = Field(default=None, index=True, nullable=True)
+    # ``kb_name`` is the legacy pointer (kept through an
+    # expand-contract transition); ``kb_id`` is the new FK.
     kb_name: str = Field(index=True, nullable=False)
+    kb_id: UUID | None = Field(default=None, index=True, nullable=True)
     user_id: UUID | None = Field(default=None, index=True, nullable=True)
 
     source_type: str = Field(index=True, nullable=False)
