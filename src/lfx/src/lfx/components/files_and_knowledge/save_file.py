@@ -43,7 +43,7 @@ class SaveToFileComponent(Component):
         "Arguments: 'input' — the content to save (pass a DataFrame directly, or a JSON string "
         "for tabular data, or plain text for messages); "
         "'file_name' — the name to save as, without extension (e.g. 'report'); "
-        "'file_format' — output format: 'csv', 'json', 'txt', 'excel', 'markdown' (optional). "
+        "'file_format' — output format: 'csv', 'json', 'txt', 'html', 'excel', 'markdown' (optional). "
         "Returns a confirmation with the file path or URL."
     )
     documentation: str = "https://docs.langflow.org/write-file"
@@ -52,7 +52,7 @@ class SaveToFileComponent(Component):
 
     # File format options for different storage types
     LOCAL_DATA_FORMAT_CHOICES = ["csv", "excel", "json", "markdown"]
-    LOCAL_MESSAGE_FORMAT_CHOICES = ["txt", "json", "markdown"]
+    LOCAL_MESSAGE_FORMAT_CHOICES = ["txt", "html", "json", "markdown"]
     AWS_FORMAT_CHOICES = [
         "txt",
         "json",
@@ -68,7 +68,7 @@ class SaveToFileComponent(Component):
         "xlsx",
         "zip",
     ]
-    GDRIVE_FORMAT_CHOICES = ["txt", "json", "csv", "xlsx", "slides", "docs", "jpg", "mp3"]
+    GDRIVE_FORMAT_CHOICES = ["txt", "html", "json", "csv", "xlsx", "slides", "docs", "jpg", "mp3"]
 
     inputs = [
         SortableListInput(
@@ -106,7 +106,7 @@ class SaveToFileComponent(Component):
         StrInput(
             name="file_format",
             display_name="File Format (Tool)",
-            info="Output format: 'csv', 'json', 'txt', 'excel', 'markdown'. Overrides pre-configured format.",
+            info="Output format: 'csv', 'json', 'txt', 'html', 'excel', 'markdown'. Overrides pre-configured format.",
             required=False,
             show=False,
             tool_mode=True,
@@ -530,7 +530,7 @@ class SaveToFileComponent(Component):
         append_mode = getattr(self, "append_mode", False)
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
 
-        if fmt == "txt":
+        if fmt in ("txt", "html"):
             if should_append:
                 path.write_text(path.read_text(encoding="utf-8") + "\n" + content, encoding="utf-8")
             else:
