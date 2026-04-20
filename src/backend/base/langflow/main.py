@@ -508,17 +508,29 @@ def create_app():
 
         return await call_next(request)
 
+    _supported_locales: frozenset[str] | None = None
+
     @app.middleware("http")
     async def set_locale(request: Request, call_next):
         """Parse Accept-Language header and store normalised locale in request.state.
 
         Handles quality values ("fr-FR,fr;q=0.9,en;q=0.8" → "fr") and preserves
         zh-Hans as a full tag. All other locales are reduced to the language code.
+        Validates against the loaded locale files and falls back to "en" for unknown
+        values — prevents client-supplied headers from polluting the per-locale cache.
         Result is available as request.state.locale in any endpoint.
         """
+        nonlocal _supported_locales
+        if _supported_locales is None:
+            from langflow.utils.i18n import get_supported_locales
+
+            _supported_locales = frozenset(get_supported_locales())
+
         accept_lang = request.headers.get("Accept-Language", "en")
         primary = accept_lang.split(",")[0].strip()
-        locale = "zh-Hans" if primary.lower().startswith("zh-hans") else primary.split("-")[0] or "en"
+        locale = "zh-Hans" if primary.lower().startswith("zh-hans") else primary.split("-")[0]
+        if locale not in _supported_locales:
+            locale = "en"
         request.state.locale = locale
         return await call_next(request)
 

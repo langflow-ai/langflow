@@ -26,38 +26,21 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib
 import json
 import pkgutil
-import re
 import sys
 from pathlib import Path
 
+from langflow.utils.i18n_keys import (
+    component_field_key as _component_field_key,
+    content_hash as _content_hash,
+    normalize_component_key as _normalize_component_key,
+    safe_flow_key as _safe_key,
+)
+
 OUTPUT_PATH = Path(__file__).parent.parent.parent / "src/backend/base/langflow/locales/en.json"
 STARTER_PROJECTS_DIR = Path(__file__).parent.parent.parent / "src/backend/base/langflow/initial_setup/starter_projects"
-
-
-def _safe_key(name: str) -> str:
-    return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
-
-
-def _normalize_component_key(name: str) -> str:
-    """Normalize component name: remove spaces and lowercase.
-
-    Keeps the key prefix stable across renames like "PromptTemplate" → "Prompt Template".
-    """
-    return name.replace(" ", "").lower()
-
-
-def _content_hash(english: str) -> str:
-    """Return first 8 hex chars of SHA-256(english) — used as the key suffix."""
-    return hashlib.sha256(english.encode()).hexdigest()[:8]
-
-
-def _component_field_key(norm_name: str, field_path: str, english: str) -> str:
-    """Build locale key: components.{norm_name}.{field_path}.{sha256[:8]}"""
-    return f"components.{norm_name}.{field_path}.{_content_hash(english)}"
 
 
 def collect_strings() -> dict[str, str]:

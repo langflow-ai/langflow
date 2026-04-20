@@ -54,7 +54,7 @@ def print_status(en_keys: set, comp_keys: set, other_keys: set) -> None:
             response = requests.get(
                 url,
                 headers=get_headers(url, "GET"),
-                verify=False,  # noqa: S501
+                verify=False,  # noqa: S501  # Why: IBM GP's TLS cert has historically caused verification failures in CI
                 timeout=REQUEST_TIMEOUT,
             )
             response.raise_for_status()
@@ -86,15 +86,7 @@ def print_status(en_keys: set, comp_keys: set, other_keys: set) -> None:
     if all_done:
         print("All languages fully translated. Run download_backend_translations.py to save.")
     else:
-        remaining = len(comp_keys) - min(
-            sum(1 for k in requests.get(
-                f"{BASE_URL}/{GP_INSTANCE}/v2/bundles/{GP_BACKEND_BUNDLE}/{TARGET_LANGS[0]}",
-                headers=get_headers(f"{BASE_URL}/{GP_INSTANCE}/v2/bundles/{GP_BACKEND_BUNDLE}/{TARGET_LANGS[0]}", "GET"),
-                verify=False, timeout=REQUEST_TIMEOUT,
-            ).json().get("resourceStrings", {}) if k in comp_keys)
-            for _ in [None]
-        )
-        print(f"Still in progress — run again later or use --watch to poll automatically.")
+        print("Still in progress — run again later or use --watch to poll automatically.")
 
 
 def main() -> None:

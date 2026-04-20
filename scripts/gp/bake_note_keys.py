@@ -29,6 +29,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parent.parent.parent
 STARTER_PROJECTS_DIR = REPO_ROOT / "src/backend/base/langflow/initial_setup/starter_projects"
 
+# NOTE: _safe_flow_key and _note_hash are intentionally kept inline (not imported from
+# langflow.utils.i18n_keys) because this script is designed to run WITHOUT a virtualenv —
+# the CI workflow calls it before the Python environment is set up.  bake_note_keys.py
+# only writes template_notes.{key} values that are read back verbatim by i18n.py at
+# runtime, so a local drift here does NOT affect component-translation correctness.
+
 
 def _safe_flow_key(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()

@@ -32,12 +32,20 @@ Fallback chain: requested locale → "en" → raw default string.
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
-import re
+import logging
 import threading
 from pathlib import Path
 from typing import Any
+
+from langflow.utils.i18n_keys import (
+    component_field_key,
+    content_hash as _content_hash,
+    normalize_component_key,
+    safe_flow_key as _safe_flow_key,
+)
+
+logger = logging.getLogger(__name__)
 
 _LOCALES_DIR = Path(__file__).parent.parent / "locales"
 
@@ -62,8 +70,8 @@ def _load_translations() -> None:
             try:
                 with path.open(encoding="utf-8") as f:
                     _translations[locale_code] = json.load(f)
-            except (OSError, json.JSONDecodeError):
-                pass
+            except (OSError, json.JSONDecodeError) as exc:
+                logger.warning("Failed to load locale %s: %s", locale_code, exc)
 
 
 def translate(key: str, locale: str, default: str) -> str:
@@ -95,45 +103,6 @@ def get_supported_locales() -> list[str]:
     return list(_translations.keys())
 
 
-def _safe_flow_key(name: str) -> str:
-    return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
-
-
-def normalize_component_key(name: str) -> str:
-    """Normalize a component name for frontend lookup and locale key prefixes.
-
-    Removes all whitespace and lowercases, so that "Prompt Template",
-    "PromptTemplate", and "prompt template" all map to "prompttemplate".
-    Used both as the locale key prefix and in the frontend syncNodeTranslations()
-    to resolve stored node.data.type values against the live registry.
-    """
-    return name.replace(" ", "").lower()
-
-
-def _content_hash(english: str) -> str:
-    """Return the first 8 hex chars of SHA-256(english).
-
-    Used as a suffix on component locale keys so that any change to the English
-    source string produces a new key, forcing GP to issue a fresh translation.
-    """
-    return hashlib.sha256(english.encode()).hexdigest()[:8]
-
-
-def component_field_key(norm_name: str, field_path: str, english: str) -> str:
-    """Build the full locale key for a component field.
-
-    Format: components.{norm_name}.{field_path}.{sha256[:8]}
-
-    Args:
-        norm_name:  Normalized component name (no spaces, lowercase).
-        field_path: Dot-separated path to the field, e.g.
-                    "display_name", "inputs.template.display_name",
-                    "outputs.message.display_name".
-        english:    The current English source string (used to compute the hash).
-    """
-    return f"components.{norm_name}.{field_path}.{_content_hash(english)}"
-
-
 def translate_starter_flows(flow_reads: list, locale: str) -> list:
     """Return copies of flow_reads with name/description translated for locale."""
     result = []
@@ -156,14 +125,12 @@ def translate_flow_notes(nodes: list[dict], locale: str) -> list[dict]:
     substitutes the translated markdown. Nodes without i18n_key are passed through
     unchanged. Never mutates the input list.
     """
-    import copy as _copy
-
     result = []
     for node in nodes:
         if node.get("type") == "noteNode":
             i18n_key = node.get("data", {}).get("node", {}).get("i18n_key")
             if i18n_key:
-                node = _copy.deepcopy(node)
+                node = copy.deepcopy(node)
                 description = node["data"]["node"].get("description", "")
                 node["data"]["node"]["description"] = translate(i18n_key, locale, description)
         result.append(node)

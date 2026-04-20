@@ -26,8 +26,12 @@ console.info = _consoleInfo;
 export async function loadLanguage(lang: string): Promise<void> {
   if (lang === "en") return;
   if (i18n.hasResourceBundle(lang, "translation")) return;
-  const messages = await import(`./locales/${lang}.json`);
-  i18n.addResourceBundle(lang, "translation", messages.default);
+  try {
+    const messages = await import(`./locales/${lang}.json`);
+    i18n.addResourceBundle(lang, "translation", messages.default);
+  } catch {
+    // Unknown locale — no bundle file exists. i18next's fallbackLng: "en" takes over.
+  }
 }
 
 export default i18n;

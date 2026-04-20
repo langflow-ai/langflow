@@ -129,8 +129,10 @@ class TestSafeFlowKey:
     def test_lowercases_and_replaces_spaces(self):
         assert _safe_flow_key("Simple Agent") == "simple_agent"
 
-    def test_strips_dedup_suffix(self):
-        # Dedup suffix must NOT be stripped — the caller must pass the original name
+    def test_parentheses_in_name_become_underscores(self):
+        # Parentheses are replaced with underscores, so the dedup number is
+        # preserved in the key. Callers must pass the original (deduped) name
+        # to get a stable key.
         assert _safe_flow_key("Simple Agent (2)") == "simple_agent_2"
 
     def test_handles_special_characters(self):

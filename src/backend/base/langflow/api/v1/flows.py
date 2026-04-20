@@ -56,6 +56,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response
+from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
 
 # Re-export helpers so existing ``from langflow.api.v1.flows import ...`` still works.
 __all__ = [
@@ -481,7 +482,7 @@ _starter_flows_cache: ThreadingInMemoryCache[threading.RLock] = ThreadingInMemor
     expiration_time=int(_STARTER_FLOWS_TTL_SECONDS),
 )
 _starter_flows_translated_cache: ThreadingInMemoryCache[threading.RLock] = ThreadingInMemoryCache(
-    max_size=16,
+    max_size=16,  # Why: 16 > 7 current supported locales, leaves headroom for future additions
     expiration_time=int(_STARTER_FLOWS_TTL_SECONDS),
 )
 _starter_flows_lock = asyncio.Lock()
@@ -537,8 +538,9 @@ async def read_basic_examples(
                 ) from e
 
         # Translate once per locale and cache the result
-        from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
-
+        # Why: cached uncompressed so the same result can be re-compressed per
+        # response — keeps locale-switching working without storing per-locale
+        # compressed blobs.
         translated = translate_starter_flows(cached_flow_reads, locale)
         result = []
         for flow in translated:
