@@ -480,7 +480,7 @@ class KBIngestionHelper:
         """
         # Lazy import: the service reaches into langflow DB plumbing we
         # can't expose at module scope without widening lfx's surface.
-        from langflow.api.utils import ingestion_run_service
+        from langflow.api.utils import ingestion_run_service, knowledge_base_service
 
         if source is None:
             if not files_data:
@@ -504,11 +504,18 @@ class KBIngestionHelper:
             job_id=task_job_id,
             source_config=source.describe().get("config") or {},
         )
+        # Link the run to the ``knowledge_base`` row when one exists.
+        # During the Phase 1.5 rollout some KBs still only exist in
+        # JSON files; in that case ``kb_id`` stays None and the run
+        # row keeps pointing at ``kb_name`` for N-1 compatibility.
+        kb_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+        kb_record_id = kb_record.id if kb_record is not None else None
         run_id = await ingestion_run_service.create_run(
             kb_name=kb_name,
             source=source,
             job_id=task_job_id,
             user_id=current_user.id,
+            kb_id=kb_record_id,
         )
         await ingestion_run_service.mark_running(run_id)
 
@@ -646,6 +653,26 @@ class KBIngestionHelper:
             existing_source_types = metadata.get("source_types", [])
             metadata["source_types"] = sorted(set(existing_source_types) | source_extension_tags)
             metadata_path.write_text(json.dumps(metadata, indent=2))
+
+            # Mirror the refreshed stats onto the DB row. Done after
+            # the JSON write so if the DB update fails, older service
+            # versions still see a consistent filesystem view.
+            if kb_record_id is not None:
+                try:
+                    await knowledge_base_service.update_stats(
+                        kb_record_id,
+                        chunks=metadata.get("chunks", 0),
+                        words=metadata.get("words", 0),
+                        characters=metadata.get("characters", 0),
+                        size_bytes=metadata.get("size", 0),
+                        source_types=metadata.get("source_types", []),
+                        chunk_size=chunk_size,
+                        chunk_overlap=chunk_overlap,
+                        separator=separator or None,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning("KB DB stat update lagged for %s: %s", kb_name, exc)
+
             await logger.ainfo(
                 "Completed ingestion for %s (succeeded=%d failed=%d skipped=%d)",
                 kb_name,

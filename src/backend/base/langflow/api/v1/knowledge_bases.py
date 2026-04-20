@@ -15,7 +15,7 @@ from lfx.base.knowledge_bases.ingestion_sources import FolderSource
 from lfx.log import logger
 from pydantic import BaseModel, Field
 
-from langflow.api.utils import CurrentActiveUser
+from langflow.api.utils import CurrentActiveUser, knowledge_base_service
 from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
 from langflow.api.v1.schemas import TaskResponse
 from langflow.schema.knowledge_base import (
@@ -143,6 +143,24 @@ async def create_knowledge_base(
             schema_data = [{**col, "data_type": "string"} for col in column_config_dicts]
             schema_path = kb_path / "schema.json"
             schema_path.write_text(json.dumps(schema_data, indent=2))
+
+        # Dual-write: persist the identity + config to the DB alongside
+        # the JSON file so older service versions still see the legacy
+        # on-disk view, while new code reads from the DB first.
+        try:
+            await knowledge_base_service.create_record(
+                user_id=current_user.id,
+                name=kb_name,
+                embedding_provider=request.embedding_provider,
+                embedding_model=request.embedding_model,
+                column_config=column_config_dicts or [],
+                record_id=kb_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            # JSON file is already written; the next backfill on boot
+            # will upsert the missing row. Don't fail the create call
+            # for a DB-side glitch.
+            await logger.awarning("KB DB persist failed for %s; relying on JSON fallback: %s", kb_name, exc)
 
         return KnowledgeBaseInfo(
             id=str(kb_id),
@@ -537,6 +555,17 @@ async def list_knowledge_bases(
         if not kb_path.exists():
             return []
 
+        # Opportunistic backfill: ensure every KB on disk has a row so
+        # Phase 2 visibility queries don't miss legacy KBs. Idempotent
+        # — existing rows are skipped.
+        try:
+            await knowledge_base_service.backfill_from_disk(
+                user_id=current_user.id,
+                kb_user_root=kb_path,
+            )
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning("KB backfill swallowed error: %s", exc)
+
         knowledge_bases = []
         kb_ids_to_fetch = []  # Collect KB IDs for batch fetching
 
@@ -768,6 +797,15 @@ async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -
                 detail=f"Failed to delete knowledge base '{kb_name}'. The database may be in use.",
             )
 
+        # Mirror the deletion in the DB so list/search endpoints stop
+        # returning a stale row. Failures don't fail the request — the
+        # filesystem is already gone; the orphan row will be reaped by
+        # the next backfill when the disk dir is absent.
+        try:
+            await knowledge_base_service.delete_by_user_and_name(current_user.id, kb_name)
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning("KB DB delete lagged for %s: %s", kb_name, exc)
+
     except HTTPException:
         raise
     except Exception as e:
@@ -797,6 +835,10 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
             try:
                 if KBStorageHelper.delete_storage(kb_path, kb_name):
                     deleted_count += 1
+                    try:
+                        await knowledge_base_service.delete_by_user_and_name(current_user.id, kb_name)
+                    except Exception as exc:  # noqa: BLE001
+                        await logger.awarning("KB DB delete lagged for %s: %s", kb_name, exc)
             except (OSError, PermissionError) as e:
                 await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)
                 # Continue with other deletions even if one fails

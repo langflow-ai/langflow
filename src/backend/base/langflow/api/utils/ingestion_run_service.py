@@ -35,11 +35,17 @@ async def create_run(
     source: KBIngestionSource,
     job_id: UUID | None,
     user_id: UUID | None,
+    kb_id: UUID | None = None,
 ) -> UUID:
     """Insert a PENDING ``ingestion_run`` row and return its id.
 
     ``source.describe()`` is responsible for redacting credential
     material from ``source_config`` before it lands in the DB.
+
+    ``kb_id`` is optional: the Phase 1.5 expand-contract pattern keeps
+    ``kb_name`` as the legacy pointer, so a run still records a row
+    even if the KB doesn't yet have a ``knowledge_base`` DB entry
+    (backfill will link them on the next list).
     """
     run_id = uuid4()
     description = source.describe()
@@ -52,6 +58,7 @@ async def create_run(
             id=run_id,
             job_id=job_id,
             kb_name=kb_name,
+            kb_id=kb_id,
             user_id=user_id,
             source_type=source.source_type.value,
             source_config=source_config,
