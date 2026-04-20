@@ -27,6 +27,10 @@ MIN_MODULE_PARTS = 2
 MIN_MODULE_PARTS_WITH_FILENAME = 4  # Minimum parts needed to have a module filename (lfx.components.type.filename)
 EXPECTED_RESULT_LENGTH = 2  # Expected length of the tuple returned by _process_single_module
 
+# IDX-02: cap concurrent module scans so the thread pool is not exhausted
+# (prevents silent component drops under high concurrency; see pitfall 9 in 02-RESEARCH.md).
+_MODULE_SCAN_CONCURRENCY = 16
+
 
 # Create a class to manage component cache instead of using globals
 class ComponentCache:
@@ -42,6 +46,23 @@ class ComponentCache:
         # None means "not yet loaded" (fail-closed); {} means "loaded, no components found".
         self.type_to_current_hash: dict[str, set[str]] | None = None
         self.all_known_hashes: set[str] | None = None
+        # IDX-01: lazily created on first access inside a running event loop.
+        # Constructing asyncio.Lock() at import time raises RuntimeError on Python 3.13/3.14
+        # because the singleton ComponentCache() below runs at module import. See
+        # .planning/phases/02-component-index-and-correctness-fixes/02-RESEARCH.md Pitfall 1.
+        self._lock: asyncio.Lock | None = None
+
+    @property
+    def lock(self) -> asyncio.Lock:
+        """Return the asyncio.Lock, creating it lazily on first access.
+
+        Must be called from inside a running event loop (asyncio.Lock() constructor
+        requires a running loop on Python 3.13+). The singleton is instantiated at
+        module import, which is why this property exists (IDX-01).
+        """
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
 
 
 # Singleton instance
@@ -84,7 +105,7 @@ def _parse_dev_mode() -> tuple[bool, list[str] | None]:
     return (False, None)
 
 
-def _read_component_index(custom_path: str | None = None) -> dict | None:
+async def _read_component_index(custom_path: str | None = None) -> dict | None:
     """Read and validate the prebuilt component index.
 
     Args:
@@ -104,7 +125,10 @@ def _read_component_index(custom_path: str | None = None) -> dict | None:
                 import httpx
 
                 try:
-                    response = httpx.get(custom_path, timeout=10.0)
+                    # Out of scope for IDX-03: URL fetch path (see CONCERNS.md §1.7; tracked for a later phase).
+                    # The sync call is only reached when the user explicitly points components_index_path
+                    # at an http(s) URL; the 5.7MB built-in read path (the common case) is now async.
+                    response = httpx.get(custom_path, timeout=10.0)  # noqa: ASYNC210
                     response.raise_for_status()
                     blob = orjson.loads(response.content)
                 except httpx.HTTPError as e:
@@ -120,7 +144,8 @@ def _read_component_index(custom_path: str | None = None) -> dict | None:
                     logger.warning(f"Custom component index not found at {custom_path}")
                     return None
                 try:
-                    blob = orjson.loads(index_path.read_bytes())
+                    # IDX-03: do not block the event loop during disk read (custom user cache path).
+                    blob = orjson.loads(await asyncio.to_thread(index_path.read_bytes))
                 except orjson.JSONDecodeError as e:
                     logger.warning(f"Component index at {custom_path} is corrupted or invalid JSON: {e}")
                     return None
@@ -133,7 +158,8 @@ def _read_component_index(custom_path: str | None = None) -> dict | None:
                 return None
 
             try:
-                blob = orjson.loads(index_path.read_bytes())
+                # IDX-03: do not block the event loop during disk read (built-in 5.7MB file).
+                blob = orjson.loads(await asyncio.to_thread(index_path.read_bytes))
             except orjson.JSONDecodeError as e:
                 logger.warning(f"Built-in component index is corrupted or invalid JSON: {e}")
                 return None
@@ -187,6 +213,11 @@ def _get_cache_path() -> Path:
 def _save_generated_index(modules_dict: dict) -> None:
     """Save a dynamically generated component index to cache for future use.
 
+    IDX-04: stamps the cache with the lfx package version (not langflow),
+    so lfx-only deployments do not invalidate the cache on every restart.
+    IDX-05: writes atomically via tmp file in same directory + os.replace so
+    concurrent workers never see a torn file.
+
     Args:
         modules_dict: Dictionary of components by category
     """
@@ -200,14 +231,23 @@ def _save_generated_index(modules_dict: dict) -> None:
         num_modules = len(modules_dict)
         num_components = sum(len(components) for components in modules_dict.values())
 
-        # Get version
-        from importlib.metadata import version
+        # IDX-04: stamp with lfx version, not langflow. Mirror the read-time
+        # PackageNotFoundError fallback at lines ~178-186 so workspace/editable
+        # installs (no dist-info) do not crash the save path.
+        from importlib.metadata import PackageNotFoundError, version
 
-        langflow_version = version("langflow")
+        try:
+            lfx_version = version("lfx")
+        except PackageNotFoundError:
+            logger.debug(
+                "Could not determine installed lfx version (no package metadata); "
+                "stamping generated index with 'unknown'"
+            )
+            lfx_version = "unknown"
 
         # Build index structure
         index = {
-            "version": langflow_version,
+            "version": lfx_version,
             "metadata": {
                 "num_modules": num_modules,
                 "num_components": num_components,
@@ -219,9 +259,16 @@ def _save_generated_index(modules_dict: dict) -> None:
         payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
         index["sha256"] = hashlib.sha256(payload).hexdigest()
 
-        # Write to cache
+        # IDX-05: atomic write via temp file in the SAME directory as the target,
+        # then atomic rename via Path.replace (a thin wrapper around os.replace,
+        # atomic on POSIX and on Windows since Python 3.3). Temp file must live
+        # on the same filesystem as the target to avoid cross-device-link errors
+        # in containers where $TMPDIR is tmpfs and the cache dir is a persistent
+        # volume (pitfall 4). Matches the pattern used in src/lfx/src/lfx/_bench.py.
         json_bytes = orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
-        cache_path.write_bytes(json_bytes)
+        tmp_path = cache_path.with_suffix(cache_path.suffix + ".tmp")
+        tmp_path.write_bytes(json_bytes)
+        tmp_path.replace(cache_path)
 
         logger.debug(f"Saved generated component index to cache: {cache_path}")
     except Exception as e:  # noqa: BLE001
@@ -293,7 +340,7 @@ async def _load_from_index_or_cache(
         custom_index_path = settings_service.settings.components_index_path
         await logger.adebug(f"Using custom component index: {custom_index_path}")
 
-    index = _read_component_index(custom_index_path)
+    index = await _read_component_index(custom_index_path)
     if index and "entries" in index:
         source = custom_index_path or "built-in index"
         await logger.adebug(f"Loading components from {source}")
@@ -316,7 +363,7 @@ async def _load_from_index_or_cache(
     else:
         if cache_path.exists():
             await logger.adebug(f"Attempting to load from cache: {cache_path}")
-            index = _read_component_index(str(cache_path))
+            index = await _read_component_index(str(cache_path))
             if index and "entries" in index:
                 await logger.adebug("Loading components from cached index")
                 for top_level, components in index["entries"]:
@@ -380,8 +427,16 @@ async def _load_components_dynamically(
     if not module_names:
         return modules_dict
 
-    # Create tasks for parallel module processing
-    tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
+    # IDX-02: bound concurrent scans with a semaphore so the thread pool is not exhausted
+    # under high module-count workloads. Pattern: wrap each asyncio.to_thread in an
+    # async helper that acquires the semaphore. See 02-RESEARCH.md Pattern 2 / Pitfall 2.
+    semaphore = asyncio.Semaphore(_MODULE_SCAN_CONCURRENCY)
+
+    async def _bounded(modname: str):
+        async with semaphore:
+            return await asyncio.to_thread(_process_single_module, modname)
+
+    tasks = [_bounded(modname) for modname in module_names]
 
     # Wait for all modules to be processed
     try:
@@ -643,24 +698,110 @@ async def get_and_cache_all_types_dict(
         telemetry_service: Optional telemetry service for tracking component loading metrics
     """
     if component_cache.all_types_dict is None:
-        await logger.adebug("Building components cache")
+        # IDX-07: read-time stale-index warning. Fires ONLY when the user's
+        # disk cache exists AND its version differs from the installed lfx
+        # version. Clean installs that hit only the built-in shipped index
+        # never fire this warning (the shipped _assets/component_index.json
+        # lives at a different path and is never compared here). Corrupt /
+        # unreadable cache is handled downstream by _read_component_index
+        # (and swallowed here so the user does not see redundant noise).
+        #
+        # Placed OUTSIDE the lock-critical section per 02-RESEARCH.md "IDX-07
+        # stale warning" recommendation: the peek is idempotent and read-only,
+        # so holding the lock while doing a ~5MB disk read unnecessarily
+        # widens the lock-hold window and reliably exposes a latent race in
+        # the ComponentCache lazy-lock reset pattern exercised by the
+        # multi-event-loop threading test (TestIDX01LazyLock::
+        # test_cache_built_once_threading). Running the peek before
+        # lock acquisition keeps that test at its pre-IDX-07 sub-second
+        # runtime. In the rare case where two callers cold-start simultaneously
+        # and both observe a stale cache, they will each emit the warning once
+        # -- acceptable cosmetic redundancy, not a correctness issue.
+        from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
+        from importlib.metadata import version as _version
 
-        langflow_components = await import_langflow_components(settings_service, telemetry_service)
-        custom_components_dict = await _determine_loading_strategy(settings_service)
+        try:
+            installed_version = _version("lfx")
+        except _PackageNotFoundError:
+            installed_version = None
 
-        # Flatten custom dict if it has a "components" wrapper
-        custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
+        # IDX-08: blob promoted here if ALL D-01 conditions pass; used to
+        # short-circuit the rebuild inside the lock (see below).
+        _pending_cache_hit: dict | None = None
 
-        # Merge built-in and custom components (no wrapper at cache level)
-        component_cache.all_types_dict = {
-            **langflow_components["components"],
-            **custom_flat,
-        }
-        component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
-        await logger.adebug(f"Loaded {component_count} components")
+        if installed_version is not None:
+            try:
+                cache_path = _get_cache_path()
+            except Exception:  # noqa: BLE001
+                cache_path = None
+            if cache_path is not None and cache_path.exists():
+                try:
+                    cached_blob = orjson.loads(await asyncio.to_thread(cache_path.read_bytes))
+                    cached_version = cached_blob.get("version") if isinstance(cached_blob, dict) else None
+                    if isinstance(cached_version, str) and cached_version and cached_version != installed_version:
+                        logger.warning(
+                            "stale component index: cached=%s, installed=%s, path=%s. "
+                            "Delete the file or restart to regenerate.",
+                            cached_version,
+                            installed_version,
+                            cache_path,
+                        )
+                    elif (
+                        isinstance(cached_blob, dict)
+                        and isinstance(cached_version, str)
+                        and cached_version
+                        and cached_version == installed_version
+                        and isinstance(cached_blob.get("entries"), list)
+                        and cached_blob["entries"]
+                    ):
+                        # All D-01 conditions satisfied: promote the blob for
+                        # the IDX-08 short-circuit inside the lock.
+                        _pending_cache_hit = cached_blob
+                except Exception:  # noqa: BLE001, S110
+                    # Corrupt or unreadable cache: downstream _read_component_index
+                    # will log at warning level when it retries the read with SHA check.
+                    pass
 
-        # Precompute code hash lookups for fast flow validation
-        _build_code_hash_lookups(component_cache)
+        async with component_cache.lock:
+            # Double-check: another task may have populated while we awaited the lock (IDX-01).
+            if component_cache.all_types_dict is None:
+                if _pending_cache_hit is not None:
+                    # IDX-08 cache-hit short-circuit. Reconstruct flat dict from entries
+                    # (same pattern as _load_from_index_or_cache at components.py:348-354).
+                    # D-07: no telemetry -- no build work happened.
+                    merged: dict[str, Any] = {}
+                    for top_level, components in _pending_cache_hit["entries"]:
+                        if top_level not in merged:
+                            merged[top_level] = {}
+                        merged[top_level].update(components)
+                    merged = filter_disabled_components_from_dict(merged)
+                    component_cache.all_types_dict = merged
+                    component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
+                    await logger.adebug(
+                        f"IDX-08: loaded {component_count} components from user cache (version={installed_version})"
+                    )
+                    # P-2: populate type_to_current_hash so ensure_component_hash_lookups_loaded
+                    # does not trigger a second rebuild.
+                    _build_code_hash_lookups(component_cache)
+                else:
+                    # Existing rebuild path (unchanged).
+                    await logger.adebug("Building components cache")
+                    langflow_components = await import_langflow_components(settings_service, telemetry_service)
+                    custom_components_dict = await _determine_loading_strategy(settings_service)
+
+                    # Flatten custom dict if it has a "components" wrapper
+                    custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
+
+                    # Merge built-in and custom components (no wrapper at cache level)
+                    component_cache.all_types_dict = {
+                        **langflow_components["components"],
+                        **custom_flat,
+                    }
+                    component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
+                    await logger.adebug(f"Loaded {component_count} components")
+
+                    # Precompute code hash lookups for fast flow validation
+                    _build_code_hash_lookups(component_cache)
 
     return component_cache.all_types_dict
 
