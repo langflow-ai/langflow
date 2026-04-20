@@ -1,6 +1,7 @@
 import { NodeResizer } from "@xyflow/react";
 import { debounce } from "lodash";
 import { useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
@@ -69,6 +70,7 @@ function NoteNode({
   data: NoteDataType;
   selected?: boolean;
 }) {
+  const { t } = useTranslation();
   const nodeRef = useRef<HTMLDivElement>(null);
   const [isEditingDescription, setIsEditingDescription] = useAlternate(false);
 
@@ -217,7 +219,7 @@ function NoteNode({
             nodeId={data.id}
             selected={selected}
             description={data.node?.description}
-            emptyPlaceholder="Double-click to start typing or enter Markdown..."
+            emptyPlaceholder={t("noteNode.emptyPlaceholder")}
             placeholderClassName={cn(
               hasCustomColor
                 ? textColorMode === "light"

@@ -516,6 +516,7 @@
   "project.newName": "New Project",
   "project.starterName": "Starter Project",
   "fileManager.selectFiles": "Select files",
+  "fileManager.selectFile": "Select file",
   "fileManager.selectAtLeastOneFile": "Please select at least one file",
   "fileManager.fileUploadedSuccessfully": "File uploaded successfully",
   "fileManager.filesUploadedSuccessfully": "Files uploaded successfully",
@@ -817,5 +818,6 @@
   "nodeToolbar.ungroup": "Ungroup",
   "nodeToolbar.download": "Download",
   "nodeToolbar.delete": "Delete",
-  "nodeToolbar.showMore": "Show More"
+  "nodeToolbar.showMore": "Show More",
+  "noteNode.emptyPlaceholder": "Double-click to start typing or enter Markdown..."
 }
