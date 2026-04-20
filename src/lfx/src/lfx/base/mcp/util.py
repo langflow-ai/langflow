@@ -37,6 +37,7 @@ HTTP_NOT_FOUND = 404
 HTTP_METHOD_NOT_ALLOWED = 405
 HTTP_NOT_ACCEPTABLE = 406
 HTTP_BAD_REQUEST = 400
+HTTP_TOO_MANY_REQUESTS = 429
 HTTP_INTERNAL_SERVER_ERROR = 500
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
@@ -722,6 +723,99 @@ async def _validate_connection_params(mode: str, command: str | None = None, url
         raise ValueError(msg)
 
 
+# Streamable HTTP connect: retries before giving up (transient network / server restart)
+STREAMABLE_HTTP_CONNECT_ATTEMPTS = 3
+STREAMABLE_HTTP_RETRY_BASE_DELAY_SEC = 0.35
+
+
+def _iter_exception_leaves(exc: BaseException) -> list[BaseException]:
+    """Flatten ExceptionGroup / TaskGroup failures to individual exceptions (Python 3.11+)."""
+    beg = getattr(__import__("builtins"), "BaseExceptionGroup", None)
+    if beg is not None and isinstance(exc, beg):
+        leaves: list[BaseException] = []
+        for sub in exc.exceptions:
+            leaves.extend(_iter_exception_leaves(sub))
+        return leaves
+    return [exc]
+
+
+def _is_transient_streamable_http_error(exc: BaseException) -> bool:
+    """True when Streamable HTTP failed for a likely-temporary reason; do not fall back to SSE."""
+    for leaf in _iter_exception_leaves(exc):
+        if isinstance(leaf, (asyncio.TimeoutError, ConnectionError, OSError, BrokenPipeError)):
+            return True
+        if isinstance(leaf, ClosedResourceError):
+            return True
+        if isinstance(leaf, httpx.RequestError):
+            return True
+        if isinstance(leaf, httpx.HTTPStatusError):
+            # Server errors and rate limits — retry Streamable HTTP, not SSE switch
+            if leaf.response.status_code >= HTTP_INTERNAL_SERVER_ERROR:
+                return True
+            if leaf.response.status_code == HTTP_TOO_MANY_REQUESTS:
+                return True
+            # 404/405/406: try SSE; other 4xx: retry Streamable HTTP
+            return leaf.response.status_code not in (
+                HTTP_NOT_FOUND,
+                HTTP_METHOD_NOT_ALLOWED,
+                HTTP_NOT_ACCEPTABLE,
+            )
+        if isinstance(leaf, McpError):
+            msg = str(leaf).lower()
+            return not any(x in msg for x in ("404", "405", "406", "not found", "method not allowed"))
+        msg = str(leaf).lower()
+        if any(
+            x in msg
+            for x in (
+                "session terminated",
+                "connection closed",
+                "connection lost",
+                "connection reset",
+                "taskgroup",
+                "unhandled errors in a taskgroup",
+                "broken pipe",
+                "transport closed",
+                "stream closed",
+            )
+        ):
+            return True
+    return False
+
+
+def _should_attempt_sse_after_streamable_failure(exc: BaseException) -> bool:
+    """True when Streamable HTTP likely failed because the endpoint expects legacy SSE, not transient outage."""
+    if _is_transient_streamable_http_error(exc):
+        return False
+    for leaf in _iter_exception_leaves(exc):
+        if isinstance(leaf, httpx.HTTPStatusError) and leaf.response.status_code in (
+            HTTP_NOT_FOUND,
+            HTTP_METHOD_NOT_ALLOWED,
+            HTTP_NOT_ACCEPTABLE,
+        ):
+            return True
+        if isinstance(leaf, McpError):
+            msg = str(leaf).lower()
+            if any(x in msg for x in ("404", "405", "406", "not found", "method not allowed", "not acceptable")):
+                return True
+    lowered = str(exc).lower()
+    return any(x in lowered for x in ("404", "405", "406", "not found", "method not allowed", "not acceptable"))
+
+
+def _is_mcp_session_bust_error(exc: BaseException) -> bool:
+    """Whether cached ClientSession should be discarded and re-established (run_tool / list_tools)."""
+    for leaf in _iter_exception_leaves(exc):
+        if isinstance(leaf, ClosedResourceError):
+            return True
+        if isinstance(leaf, McpError):
+            msg = str(leaf).lower()
+            if any(x in msg for x in ("connection closed", "session terminated", "connection lost")):
+                return True
+        msg = str(leaf).lower()
+        if any(x in msg for x in ("session terminated", "connection closed", "connection lost")):
+            return True
+    return False
+
+
 class MCPSessionManager:
     """Manages persistent MCP sessions with proper context manager lifecycle.
 
@@ -813,31 +907,32 @@ class MCPSessionManager:
         # Fallback to a generic key
         return f"{transport_type}_{hash(str(connection_params))}"
 
+    async def invalidate_server_key(self, server_key: str) -> None:
+        """Tear down all sessions for this server and reset transport preference (e.g. remote MCP restart)."""
+        self._transport_preference.pop(server_key, None)
+        if server_key in self.sessions_by_server:
+            server_data = self.sessions_by_server[server_key]
+            sessions = server_data.get("sessions", {}) if isinstance(server_data, dict) else server_data
+            for sid in list(sessions.keys()):
+                await self._cleanup_session_by_id(server_key, sid)
+            self.sessions_by_server.pop(server_key, None)
+        for k in list(self._session_refcount):
+            if k[0] == server_key:
+                self._session_refcount.pop(k, None)
+        for ctx, pair in list(self._context_to_session.items()):
+            if pair[0] == server_key:
+                self._context_to_session.pop(ctx, None)
+
     async def _validate_session_connectivity(self, session) -> bool:
         """Validate that the session is actually usable by testing a simple operation."""
         try:
             # Try to list tools as a connectivity test (this is a lightweight operation)
             # Use a shorter timeout for the connectivity test to fail fast
             response = await asyncio.wait_for(session.list_tools(), timeout=3.0)
-        except (asyncio.TimeoutError, ConnectionError, OSError, ValueError) as e:
-            await logger.adebug(f"Session connectivity test failed (standard error): {e}")
+        except Exception as e:  # noqa: BLE001
+            # Any failure means the session is not safe to reuse (SDK errors, terminated session, etc.)
+            await logger.adebug(f"Session connectivity test failed: {type(e).__name__}: {e}")
             return False
-        except Exception as e:
-            # Handle MCP-specific errors that might not be in the standard list
-            error_str = str(e)
-            if (
-                "ClosedResourceError" in str(type(e))
-                or "Connection closed" in error_str
-                or "Connection lost" in error_str
-                or "Connection failed" in error_str
-                or "Transport closed" in error_str
-                or "Stream closed" in error_str
-            ):
-                await logger.adebug(f"Session connectivity test failed (MCP connection error): {e}")
-                return False
-            # Re-raise unexpected errors
-            await logger.awarning(f"Unexpected error in connectivity test: {e}")
-            raise
         else:
             # Validate that we got a meaningful response
             if response is None:
@@ -915,13 +1010,15 @@ class MCPSessionManager:
             session, task = await self._create_stdio_session(session_id, connection_params)
             actual_transport = "stdio"
         elif transport_type == "streamable_http":
-            # Pass the cached transport preference if available
+            # Pass the cached transport preference if available (SSE only when last success required it)
             preferred_transport = self._transport_preference.get(server_key)
-            session, task, actual_transport = await self._create_streamable_http_session(
+            session, task, actual_transport, sse_pref_lock = await self._create_streamable_http_session(
                 session_id, connection_params, preferred_transport
             )
-            # Cache the transport that worked for future connections
-            self._transport_preference[server_key] = actual_transport
+            if actual_transport == "streamable_http":
+                self._transport_preference[server_key] = "streamable_http"
+            elif sse_pref_lock:
+                self._transport_preference[server_key] = "sse"
         else:
             msg = f"Unknown transport type: {transport_type}"
             raise ValueError(msg)
@@ -997,30 +1094,26 @@ class MCPSessionManager:
     async def _create_streamable_http_session(
         self, session_id: str, connection_params, preferred_transport: str | None = None
     ):
-        """Create a new Streamable HTTP session with SSE fallback as a background task to avoid context issues.
+        """Create Streamable HTTP session with selective SSE fallback (background task lifecycle).
 
-        Args:
-            session_id: Unique identifier for this session
-            connection_params: Connection parameters including URL, headers, timeouts, verify_ssl
-            preferred_transport: If set to "sse", skip Streamable HTTP and go directly to SSE
+        SSE is attempted only when Streamable HTTP fails with an endpoint/transport mismatch signal
+        (e.g. HTTP 404/405/406), not for transient outages (connection reset, TaskGroup teardown, etc.).
 
         Returns:
-            tuple: (session, task, transport_used) where transport_used is "streamable_http" or "sse"
+            tuple: (session, task, transport_used, sse_preference_lock) where sse_preference_lock is True
+            iff SSE connected successfully and the server key should prefer legacy SSE in the future.
         """
         import asyncio
 
         from mcp.client.sse import sse_client
         from mcp.client.streamable_http import streamablehttp_client
 
-        # Create a future to get the session
         session_future: asyncio.Future[ClientSession] = asyncio.Future()
-        # Track which transport succeeded
         used_transport: list[str] = []
+        sse_preference_locked: list[bool] = [False]
 
-        # Get verify_ssl option from connection params, default to True
         verify_ssl = connection_params.get("verify_ssl", True)
 
-        # Create custom httpx client factory with SSL verification option
         def custom_httpx_factory(
             headers: dict[str, str] | None = None,
             timeout: httpx.Timeout | None = None,
@@ -1034,117 +1127,128 @@ class MCPSessionManager:
             """Background task that keeps the session alive."""
             streamable_error = None
 
-            # Skip Streamable HTTP if we know SSE works for this server
             if preferred_transport != "sse":
-                # Try Streamable HTTP first with a quick timeout
-                try:
-                    await logger.adebug(f"Attempting Streamable HTTP connection for session {session_id}")
-                    # Use a shorter timeout for the initial connection attempt (2 seconds)
-                    async with streamablehttp_client(
-                        url=connection_params["url"],
-                        headers=connection_params["headers"],
-                        timeout=connection_params["timeout_seconds"],
-                        httpx_client_factory=custom_httpx_factory,
-                    ) as (read, write, _):
-                        session = ClientSession(read, write)
-                        async with session:
-                            # Initialize with a timeout to fail fast
-                            await asyncio.wait_for(session.initialize(), timeout=2.0)
-                            used_transport.append("streamable_http")
-                            await logger.ainfo(f"Session {session_id} connected via Streamable HTTP")
-                            # Signal that session is ready
-                            session_future.set_result(session)
+                for attempt in range(STREAMABLE_HTTP_CONNECT_ATTEMPTS):
+                    try:
+                        await logger.adebug(
+                            f"Attempting Streamable HTTP connection for session {session_id} "
+                            f"(attempt {attempt + 1}/{STREAMABLE_HTTP_CONNECT_ATTEMPTS})"
+                        )
+                        async with streamablehttp_client(
+                            url=connection_params["url"],
+                            headers=connection_params["headers"],
+                            timeout=connection_params["timeout_seconds"],
+                            httpx_client_factory=custom_httpx_factory,
+                        ) as (read, write, _):
+                            session = ClientSession(read, write)
+                            async with session:
+                                await asyncio.wait_for(session.initialize(), timeout=2.0)
+                                used_transport.append("streamable_http")
+                                await logger.ainfo(f"Session {session_id} connected via Streamable HTTP")
+                                session_future.set_result(session)
 
-                            # Keep the session alive until cancelled
-                            import anyio
+                                import anyio
 
-                            event = anyio.Event()
-                            try:
-                                await event.wait()
-                            except asyncio.CancelledError:
-                                await logger.ainfo(f"Session {session_id} (Streamable HTTP) is shutting down")
-                except (asyncio.TimeoutError, Exception) as e:  # noqa: BLE001
-                    # If Streamable HTTP fails or times out, try SSE as fallback immediately
-                    streamable_error = e
-                    error_type = "timed out" if isinstance(e, asyncio.TimeoutError) else "failed"
+                                event = anyio.Event()
+                                try:
+                                    await event.wait()
+                                except asyncio.CancelledError:
+                                    await logger.ainfo(f"Session {session_id} (Streamable HTTP) is shutting down")
+                        return  # noqa: TRY300
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        if _is_transient_streamable_http_error(e) and attempt < STREAMABLE_HTTP_CONNECT_ATTEMPTS - 1:
+                            await logger.awarning(
+                                f"Streamable HTTP transient failure for session {session_id} "
+                                f"(attempt {attempt + 1}): {e}; retrying..."
+                            )
+                            await asyncio.sleep(STREAMABLE_HTTP_RETRY_BASE_DELAY_SEC * (attempt + 1))
+                            continue
+                        streamable_error = e
+                        break
+
+                if streamable_error is not None:
+                    if _is_transient_streamable_http_error(streamable_error):
+                        await logger.aerror(
+                            f"Streamable HTTP failed after {STREAMABLE_HTTP_CONNECT_ATTEMPTS} attempt(s) "
+                            f"for session {session_id}: {streamable_error}. Not attempting SSE fallback."
+                        )
+                        if not session_future.done():
+                            session_future.set_exception(streamable_error)
+                        return
+                    if not _should_attempt_sse_after_streamable_failure(streamable_error):
+                        if not session_future.done():
+                            session_future.set_exception(streamable_error)
+                        return
                     await logger.awarning(
-                        f"Streamable HTTP {error_type} for session {session_id}: {e}. Falling back to SSE..."
+                        f"Streamable HTTP failed for session {session_id}: {streamable_error}. "
+                        "Trying SSE (endpoint may require legacy transport)..."
                     )
             else:
                 await logger.adebug(f"Skipping Streamable HTTP for session {session_id}, using cached SSE preference")
 
-            # Try SSE if Streamable HTTP failed or if SSE is preferred
-            if streamable_error is not None or preferred_transport == "sse":
-                try:
-                    await logger.adebug(f"Attempting SSE connection for session {session_id}")
-                    # Extract SSE read timeout from connection params, default to 30s if not present
-                    sse_read_timeout = connection_params.get("sse_read_timeout_seconds", 30)
+            # SSE path: preferred mode, or Streamable indicated legacy transport
+            try:
+                await logger.adebug(f"Attempting SSE connection for session {session_id}")
+                sse_read_timeout = connection_params.get("sse_read_timeout_seconds", 30)
 
-                    async with sse_client(
-                        connection_params["url"],
-                        connection_params["headers"],
-                        connection_params["timeout_seconds"],
-                        sse_read_timeout,
-                        httpx_client_factory=custom_httpx_factory,
-                    ) as (read, write):
-                        session = ClientSession(read, write)
-                        async with session:
-                            await session.initialize()
-                            used_transport.append("sse")
-                            fallback_msg = " (fallback)" if streamable_error else " (preferred)"
-                            await logger.ainfo(f"Session {session_id} connected via SSE{fallback_msg}")
-                            # Signal that session is ready
-                            if not session_future.done():
-                                session_future.set_result(session)
-
-                            # Keep the session alive until cancelled
-                            import anyio
-
-                            event = anyio.Event()
-                            try:
-                                await event.wait()
-                            except asyncio.CancelledError:
-                                await logger.ainfo(f"Session {session_id} (SSE) is shutting down")
-                except Exception as sse_error:  # noqa: BLE001
-                    # Both transports failed (or just SSE if it was preferred)
-                    if streamable_error:
-                        await logger.aerror(
-                            f"Both Streamable HTTP and SSE failed for session {session_id}. "
-                            f"Streamable HTTP error: {streamable_error}. SSE error: {sse_error}"
-                        )
+                async with sse_client(
+                    connection_params["url"],
+                    connection_params["headers"],
+                    connection_params["timeout_seconds"],
+                    sse_read_timeout,
+                    httpx_client_factory=custom_httpx_factory,
+                ) as (read, write):
+                    session = ClientSession(read, write)
+                    async with session:
+                        await session.initialize()
+                        used_transport.append("sse")
+                        sse_preference_locked[0] = True
+                        fallback_msg = " (fallback)" if streamable_error else " (preferred)"
+                        await logger.ainfo(f"Session {session_id} connected via SSE{fallback_msg}")
                         if not session_future.done():
-                            session_future.set_exception(
-                                ValueError(
-                                    f"Failed to connect via Streamable HTTP ({streamable_error}) or SSE ({sse_error})"
-                                )
+                            session_future.set_result(session)
+
+                        import anyio
+
+                        event = anyio.Event()
+                        try:
+                            await event.wait()
+                        except asyncio.CancelledError:
+                            await logger.ainfo(f"Session {session_id} (SSE) is shutting down")
+            except Exception as sse_error:  # noqa: BLE001
+                if streamable_error:
+                    await logger.aerror(
+                        f"Both Streamable HTTP and SSE failed for session {session_id}. "
+                        f"Streamable HTTP error: {streamable_error}. SSE error: {sse_error}"
+                    )
+                    if not session_future.done():
+                        session_future.set_exception(
+                            ValueError(
+                                f"Failed to connect via Streamable HTTP ({streamable_error}) or SSE ({sse_error})"
                             )
-                    else:
-                        await logger.aerror(f"SSE connection failed for session {session_id}: {sse_error}")
-                        if not session_future.done():
-                            session_future.set_exception(ValueError(f"Failed to connect via SSE: {sse_error}"))
+                        )
+                else:
+                    await logger.aerror(f"SSE connection failed for session {session_id}: {sse_error}")
+                    if not session_future.done():
+                        session_future.set_exception(ValueError(f"Failed to connect via SSE: {sse_error}"))
 
-        # Start the background task
         task = asyncio.create_task(session_task())
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
 
-        # Wait for session to be ready (use longer timeout for remote connections)
         try:
             session = await asyncio.wait_for(session_future, timeout=30.0)
-            # Log which transport was used
             if used_transport:
                 transport_used = used_transport[0]
                 await logger.ainfo(f"Session {session_id} successfully established using {transport_used}")
-                return session, task, transport_used
-            # This shouldn't happen, but handle it just in case
+                return session, task, transport_used, sse_preference_locked[0]
             msg = f"Session {session_id} established but transport not recorded"
             raise ValueError(msg)
         except asyncio.TimeoutError as timeout_err:
-            # Clean up the failed task
             if not task.done():
                 task.cancel()
-                import contextlib
-
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
             self._background_tasks.discard(task)
@@ -1591,9 +1695,17 @@ class MCPStreamableHttpClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_http_{param_hash}"
 
-        # Get or create a persistent session (will try Streamable HTTP, then SSE fallback)
+        # Get or create a persistent session (will try Streamable HTTP, then selective SSE fallback)
         session = await self._get_or_create_session()
-        response = await session.list_tools()
+        try:
+            response = await session.list_tools()
+        except Exception:
+            self._connected = False
+            if self._connection_params:
+                session_manager = self._get_session_manager()
+                sk = session_manager._get_server_key(self._connection_params, "streamable_http")
+                await session_manager.invalidate_server_key(sk)
+            raise
         self._connected = True
         return response.tools
 
@@ -1698,16 +1810,7 @@ class MCPStreamableHttpClient:
                 current_error_type = type(e).__name__
                 await logger.awarning(f"Tool '{tool_name}' failed on attempt {attempt + 1}: {current_error_type} - {e}")
 
-                # Import specific MCP error types for detection
-                try:
-                    from anyio import ClosedResourceError
-                    from mcp.shared.exceptions import McpError
-
-                    is_closed_resource_error = isinstance(e, ClosedResourceError)
-                    is_mcp_connection_error = isinstance(e, McpError) and "Connection closed" in str(e)
-                except ImportError:
-                    is_closed_resource_error = "ClosedResourceError" in str(type(e))
-                    is_mcp_connection_error = "Connection closed" in str(e)
+                bust_session = _is_mcp_session_bust_error(e)
 
                 # Detect timeout errors
                 is_timeout_error = isinstance(e, asyncio.TimeoutError | TimeoutError)
@@ -1719,16 +1822,14 @@ class MCPStreamableHttpClient:
 
                 last_error_type = current_error_type
 
-                # If it's a connection error (ClosedResourceError or MCP connection closed) and we have retries left
-                if (is_closed_resource_error or is_mcp_connection_error) and attempt < max_retries - 1:
+                if bust_session and attempt < max_retries - 1:
                     await logger.awarning(
-                        f"MCP session connection issue for tool '{tool_name}', retrying with fresh session..."
+                        f"MCP session issue for tool '{tool_name}', invalidating server sessions and retrying..."
                     )
-                    # Clean up the dead session
-                    if self._session_context:
+                    if self._connection_params:
                         session_manager = self._get_session_manager()
-                        await session_manager._cleanup_session(self._session_context)
-                    # Add a small delay before retry
+                        sk = session_manager._get_server_key(self._connection_params, "streamable_http")
+                        await session_manager.invalidate_server_key(sk)
                     await asyncio.sleep(0.5)
                     continue
 
@@ -1742,8 +1843,7 @@ class MCPStreamableHttpClient:
                 # For other errors or no retries left, handle as before
                 if (
                     isinstance(e, ConnectionError | TimeoutError | OSError | ValueError)
-                    or is_closed_resource_error
-                    or is_mcp_connection_error
+                    or bust_session
                     or is_timeout_error
                 ):
                     msg = f"Failed to run tool '{tool_name}' after {attempt + 1} attempts: {e}"
