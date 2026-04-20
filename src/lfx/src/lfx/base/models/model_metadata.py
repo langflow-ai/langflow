@@ -238,7 +238,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                 "options": [],
                 "langchain_param": "base_url",
                 "component_metadata": {
-                    "mapping_field": "api_base",
+                    "mapping_field": "vllm_base_url",
                     "required": False,
                     "advanced": True,
                     "info": "Falls back to VLLM_API_BASE environment variable",
@@ -263,7 +263,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         "api_docs_url": "https://docs.vllm.ai/",
         "mapping": {
             "model_class": "ChatOpenAI",
-            "model_param": "model_name",
+            "model_param": "model",
         },
     },
     "IBM WatsonX": {

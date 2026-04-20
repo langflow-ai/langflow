@@ -409,7 +409,16 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 raise ValueError(msg)
 
             base_url = base_url.rstrip("/")
-            response = requests.get(f"{base_url}/models", timeout=5)
+            headers = {}
+            api_key = variables.get("VLLM_API_KEY")
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+
+            response = requests.get(f"{base_url}/v1/models", headers=headers, timeout=5)
+            if response.status_code in (401, 403):
+                msg = "Authentication failed for vLLM server. Check VLLM_API_KEY."
+                logger.error(msg)
+                raise ValueError(msg)
             response.raise_for_status()
 
         elif provider == "Ollama":
@@ -465,7 +474,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
         if provider == "vLLM":
             msg = "Invalid vLLM API base URL"
-            logger.error(msg)
+            logger.error(f"{msg}: {e}")
             raise ValueError(msg) from e
 
         # For others, log and return (allow saving despite minor errors)

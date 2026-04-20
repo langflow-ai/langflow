@@ -1,0 +1,475 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1776134697356,
+  "projectRoot": "/Users/yeonghyeonko/Development/git/langflow-hynix",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "Python",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "pyproject.toml"
+        ]
+      },
+      {
+        "name": "C/C++",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "Makefile"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "fastapi",
+        "version": null,
+        "category": "backend"
+      },
+      {
+        "name": "pytest",
+        "version": null,
+        "category": "testing"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "make build",
+    "testCommand": "make test",
+    "lintCommand": "ruff check",
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "docs",
+      "scripts",
+      "src"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "deploy": {
+      "path": "deploy",
+      "purpose": null,
+      "fileCount": 6,
+      "lastAccessed": 1776134697312,
+      "keyFiles": [
+        "README.md",
+        "docker-compose.override.yml",
+        "docker-compose.yml",
+        "prometheus.yml"
+      ]
+    },
+    "docker": {
+      "path": "docker",
+      "purpose": null,
+      "fileCount": 17,
+      "lastAccessed": 1776134697313,
+      "keyFiles": [
+        "build_and_push.Dockerfile",
+        "build_and_push_backend.Dockerfile",
+        "build_and_push_base.Dockerfile",
+        "build_and_push_ep.Dockerfile",
+        "build_and_push_with_extras.Dockerfile"
+      ]
+    },
+    "docker_example": {
+      "path": "docker_example",
+      "purpose": null,
+      "fileCount": 5,
+      "lastAccessed": 1776134697318,
+      "keyFiles": [
+        "Dockerfile",
+        "README.md",
+        "docker-compose.yml",
+        "pre.Dockerfile",
+        "pre.docker-compose.yml"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 11,
+      "lastAccessed": 1776134697334,
+      "keyFiles": [
+        "README.md",
+        "babel.config.js",
+        "docusaurus.config.js",
+        "index.d.ts",
+        "package-lock.json"
+      ]
+    },
+    "helm": {
+      "path": "helm",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1776134697335,
+      "keyFiles": []
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 15,
+      "lastAccessed": 1776134697335,
+      "keyFiles": [
+        "__init__.py",
+        "build_component_index.py",
+        "build_hash_history.py",
+        "check_changes_filter.py",
+        "check_deprecated_imports.py"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 0,
+      "lastAccessed": 1776134697337,
+      "keyFiles": []
+    },
+    "test-results": {
+      "path": "test-results",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1776134697341,
+      "keyFiles": []
+    },
+    "docs/docs": {
+      "path": "docs/docs",
+      "purpose": "Documentation",
+      "fileCount": 14,
+      "lastAccessed": 1776134697347,
+      "keyFiles": [
+        "_partial-agents-work.mdx",
+        "_partial-basic-component-structure.mdx",
+        "_partial-conditional-params.mdx"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "README.md",
+      "accessCount": 33,
+      "lastAccessed": 1776329862434,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow/values.yaml",
+      "accessCount": 24,
+      "lastAccessed": 1776585574081,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src",
+      "accessCount": 19,
+      "lastAccessed": 1776607934478,
+      "type": "directory"
+    },
+    {
+      "path": "src/frontend/src/components/core/appHeaderComponent/components/AccountMenu/index.tsx",
+      "accessCount": 16,
+      "lastAccessed": 1776413279228,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow/README.md",
+      "accessCount": 13,
+      "lastAccessed": 1776329864947,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/pages/LoginPage/index.tsx",
+      "accessCount": 10,
+      "lastAccessed": 1776413368414,
+      "type": "directory"
+    },
+    {
+      "path": "docker/keycloak-sso.Dockerfile",
+      "accessCount": 9,
+      "lastAccessed": 1776306349428,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow/Chart.yaml",
+      "accessCount": 8,
+      "lastAccessed": 1776294812557,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/constants/constants.ts",
+      "accessCount": 5,
+      "lastAccessed": 1775490957776,
+      "type": "directory"
+    },
+    {
+      "path": "helm/langflow/templates/frontend-deployment.yaml",
+      "accessCount": 5,
+      "lastAccessed": 1775537404404,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow/templates/service.yaml",
+      "accessCount": 5,
+      "lastAccessed": 1775537422982,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow/templates/backend-deployment.yaml",
+      "accessCount": 4,
+      "lastAccessed": 1775537377258,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow/templates/deployment.yaml",
+      "accessCount": 3,
+      "lastAccessed": 1775524330424,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow/templates/_helpers.tpl",
+      "accessCount": 3,
+      "lastAccessed": 1775524586205,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow/templates/ingress.yaml",
+      "accessCount": 3,
+      "lastAccessed": 1775537425470,
+      "type": "file"
+    },
+    {
+      "path": "src/backend/base/langflow",
+      "accessCount": 3,
+      "lastAccessed": 1776607961496,
+      "type": "directory"
+    },
+    {
+      "path": "helm/langflow/templates/pv.yaml",
+      "accessCount": 2,
+      "lastAccessed": 1775527735016,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/utils/styleUtils.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775529094383,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/modals/knowledgeBaseUploadModal/components/StepConfiguration.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775530486770,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/modals/knowledgeBaseUploadModal/constants.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775530488435,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/modals/knowledgeBaseUploadModal/hooks/useKnowledgeBaseForm.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775530489709,
+      "type": "file"
+    },
+    {
+      "path": "RELEASE.md",
+      "accessCount": 2,
+      "lastAccessed": 1776294530388,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/vite.config.mts",
+      "accessCount": 2,
+      "lastAccessed": 1776327419752,
+      "type": "file"
+    },
+    {
+      "path": "src/backend/base/langflow/__main__.py",
+      "accessCount": 1,
+      "lastAccessed": 1775437758405,
+      "type": "file"
+    },
+    {
+      "path": "docker/frontend/default.conf.template",
+      "accessCount": 1,
+      "lastAccessed": 1775473233891,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/controllers/API/queries/keycloak/use-get-keycloak-config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775489754221,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/stores",
+      "accessCount": 1,
+      "lastAccessed": 1775490908457,
+      "type": "directory"
+    },
+    {
+      "path": "src/frontend/src/controllers/API/queries/auth/use-get-autologin.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775490926953,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow-v2/Chart.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1775524356925,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow-v2/values.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1775524370868,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow-v2/templates/_helpers.tpl",
+      "accessCount": 1,
+      "lastAccessed": 1775524378003,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow-v2/templates/backend-deployment.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1775524401095,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow-v2/templates/frontend-deployment.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1775524404835,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow-v2/templates/service.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1775524407437,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow-v2/templates/ingress.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1775524409986,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow-v2/templates/secret.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1775524412961,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow-v2/templates/pvc.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1775524414304,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow-v2/templates/pv.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1775524418111,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow-v2/templates/ssl-configmap.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1775524420071,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow/templates/image-pull-secret.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1775524570905,
+      "type": "file"
+    },
+    {
+      "path": "helm/langflow/templates/pvc.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1775539390178,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/modals/apiModal",
+      "accessCount": 1,
+      "lastAccessed": 1776209302117,
+      "type": "directory"
+    },
+    {
+      "path": "src/frontend/src/modals/apiModal/index.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1776209305684,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/modals/apiModal/codeTabs/code-tabs.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1776209306454,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/modals/apiModal/utils/get-curl-code.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1776209306525,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/modals/apiModal/utils/get-python-api-code.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1776209306648,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/customization/utils/custom-code-samples.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776209310895,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/modals/apiModal/utils/get-js-api-code.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1776209311021,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/customization/utils/custom-get-host-protocol.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776209315560,
+      "type": "file"
+    },
+    {
+      "path": "src/frontend/src/components/core/parameterRenderComponent/components/copyFieldAreaComponent/index.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1776209326722,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}
