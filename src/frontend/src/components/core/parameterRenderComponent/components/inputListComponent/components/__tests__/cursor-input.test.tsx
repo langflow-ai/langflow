@@ -71,11 +71,7 @@ describe("CursorInput ref forwarding", () => {
   it("commits onChange per keystroke when not composing", () => {
     const onChange = jest.fn();
     render(
-      <CursorInput
-        value=""
-        onChange={onChange}
-        dataTestId="cursor-input"
-      />,
+      <CursorInput value="" onChange={onChange} dataTestId="cursor-input" />,
     );
     const input = screen.getByTestId("cursor-input") as HTMLInputElement;
 

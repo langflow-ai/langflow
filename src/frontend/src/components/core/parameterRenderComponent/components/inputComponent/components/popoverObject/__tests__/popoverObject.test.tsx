@@ -35,7 +35,10 @@ const renderPopoverObject = (overrides: Record<string, unknown> = {}) => {
     showOptions: false,
     inspectionPanel: false,
   };
-  return { refInput, ...render(<CustomInputPopoverObject {...defaults} {...overrides} />) };
+  return {
+    refInput,
+    ...render(<CustomInputPopoverObject {...defaults} {...overrides} />),
+  };
 };
 
 describe("CustomInputPopoverObject", () => {
@@ -43,7 +46,9 @@ describe("CustomInputPopoverObject", () => {
     it("renders displayValue and wires IME onChange when no selection setters exist", () => {
       const onChange = jest.fn();
       renderPopoverObject({ value: "hello", onChange });
-      const input = screen.getByTestId("popover-object-input") as HTMLInputElement;
+      const input = screen.getByTestId(
+        "popover-object-input",
+      ) as HTMLInputElement;
 
       expect(input.value).toBe("hello");
       expect(input.readOnly).toBe(false);
@@ -60,7 +65,9 @@ describe("CustomInputPopoverObject", () => {
         setSelectedOption: jest.fn(),
         options: baseOptions,
       });
-      const input = screen.getByTestId("popover-object-input") as HTMLInputElement;
+      const input = screen.getByTestId(
+        "popover-object-input",
+      ) as HTMLInputElement;
 
       expect(input.value).toBe("Alpha");
       expect(input.readOnly).toBe(true);
@@ -72,7 +79,9 @@ describe("CustomInputPopoverObject", () => {
         setSelectedOption: jest.fn(),
         options: baseOptions,
       });
-      const input = screen.getByTestId("popover-object-input") as HTMLInputElement;
+      const input = screen.getByTestId(
+        "popover-object-input",
+      ) as HTMLInputElement;
       expect(input.value).toBe("");
     });
 
@@ -84,7 +93,9 @@ describe("CustomInputPopoverObject", () => {
           options: undefined,
         }),
       ).not.toThrow();
-      const input = screen.getByTestId("popover-object-input") as HTMLInputElement;
+      const input = screen.getByTestId(
+        "popover-object-input",
+      ) as HTMLInputElement;
       expect(input.value).toBe("");
     });
   });
@@ -96,7 +107,9 @@ describe("CustomInputPopoverObject", () => {
         setSelectedOptions: jest.fn(),
         options: baseOptions,
       });
-      const input = screen.getByTestId("popover-object-input") as HTMLInputElement;
+      const input = screen.getByTestId(
+        "popover-object-input",
+      ) as HTMLInputElement;
 
       expect(input.value).toBe("Alpha, Bravo");
       expect(input.readOnly).toBe(true);

@@ -33,11 +33,12 @@ export const CursorInput = forwardRef<HTMLInputElement, CursorInputProps>(
   ) => {
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const { displayValue, inputProps } = useIMEInputForOnChange<HTMLInputElement>({
-      value,
-      onChange,
-      inputRef,
-    });
+    const { displayValue, inputProps } =
+      useIMEInputForOnChange<HTMLInputElement>({
+        value,
+        onChange,
+        inputRef,
+      });
 
     const handleInputBlur = () => {
       onBlur?.();
