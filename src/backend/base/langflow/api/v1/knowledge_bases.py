@@ -11,7 +11,9 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
+from lfx.base.knowledge_bases.ingestion_sources import FolderSource
 from lfx.log import logger
+from pydantic import BaseModel, Field
 
 from langflow.api.utils import CurrentActiveUser
 from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
@@ -401,6 +403,124 @@ async def ingest_files_to_knowledge_base(
     except Exception as e:
         await logger.aerror("Error ingesting files to knowledge base: %s", e)
         raise HTTPException(status_code=500, detail="Error ingesting files to knowledge base.") from e
+
+
+class IngestFolderRequest(BaseModel):
+    """Body payload for ``POST /{kb_name}/ingest/folder``.
+
+    Path is expanded (``~`` → user home) and resolved before being
+    checked against the settings allow-list. ``extensions`` and
+    ``max_file_size_bytes`` are optional — unset means "use the
+    FolderSource defaults".
+    """
+
+    path: str = Field(..., description="Absolute or ~-expanded directory to walk.")
+    recursive: bool = Field(default=True, description="Walk subdirectories as well.")
+    extensions: list[str] | None = Field(
+        None,
+        description="Lowercase extensions without dot. None → defaults (txt, md, pdf, docx, …).",
+    )
+    max_file_size_bytes: int | None = Field(None, description="Per-file size cap; None → 25 MB default.")
+    source_name: str = Field("", description="Optional grouping label stamped on every chunk's 'source'.")
+    chunk_size: int = Field(1000, description="Chunk size in characters.")
+    chunk_overlap: int = Field(200, description="Chunk overlap in characters.")
+    separator: str = Field("", description="Custom separator (\\n → newline).")
+
+
+@router.post("/{kb_name}/ingest/folder", status_code=HTTPStatus.OK)
+async def ingest_folder_to_knowledge_base(
+    kb_name: str,
+    current_user: CurrentActiveUser,
+    payload: IngestFolderRequest,
+) -> TaskResponse:
+    """Ingest every matching file from a server-side folder.
+
+    Uses ``FolderSource`` with the allow-list configured in
+    ``settings.kb_allowed_folder_roots`` (defaults to the user's home
+    directory). The resolved path must be equal to or inside one of
+    those roots — symlink escapes are blocked because ``Path.resolve()``
+    is applied before the containment check.
+
+    Returns a ``TaskResponse`` pointing at the ingestion job; track it
+    via ``/task/{id}`` or the ``GET /{kb_name}`` endpoint.
+    """
+    try:
+        settings = get_settings_service().settings
+        allowed_roots = settings.kb_allowed_folder_roots or []
+
+        kb_path = _resolve_kb_path(kb_name, current_user)
+        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=False)
+        if not metadata:
+            raise HTTPException(
+                status_code=400,
+                detail="Knowledge base missing embedding configuration. Please create a new KB or reconfigure it.",
+            )
+
+        embedding_provider = metadata.get("embedding_provider")
+        embedding_model = metadata.get("embedding_model")
+        if not embedding_provider or not embedding_model:
+            raise HTTPException(status_code=400, detail="Invalid embedding configuration")
+
+        asset_id_str = metadata.get("id")
+        asset_id = uuid.UUID(asset_id_str) if asset_id_str else uuid.uuid4()
+
+        # Build + validate the folder source up-front so invalid
+        # configurations surface as a 4xx response before a background
+        # job is spawned.
+        source_config: dict[str, Any] = {
+            "path": payload.path,
+            "recursive": payload.recursive,
+            "allowed_roots": allowed_roots,
+        }
+        if payload.extensions is not None:
+            source_config["extensions"] = payload.extensions
+        if payload.max_file_size_bytes is not None:
+            source_config["max_file_size_bytes"] = payload.max_file_size_bytes
+
+        folder_source = FolderSource(user_id=current_user.id, source_config=source_config)
+        try:
+            await folder_source.validate_config()
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        job_service = get_job_service()
+        job_id = uuid.uuid4()
+
+        await job_service.create_job(
+            job_id=job_id,
+            flow_id=job_id,
+            job_type=JobType.INGESTION,
+            asset_id=asset_id,
+            asset_type="knowledge_base",
+            user_id=current_user.id,
+        )
+
+        task_service = get_task_service()
+        await task_service.fire_and_forget_task(
+            job_service.execute_with_status,
+            job_id=job_id,
+            run_coro_func=KBIngestionHelper.perform_ingestion,
+            kb_name=kb_name,
+            kb_path=kb_path,
+            files_data=None,
+            chunk_size=payload.chunk_size,
+            chunk_overlap=payload.chunk_overlap,
+            separator=payload.separator,
+            source_name=payload.source_name,
+            current_user=current_user,
+            embedding_provider=embedding_provider,
+            embedding_model=embedding_model,
+            task_job_id=job_id,
+            job_service=job_service,
+            source=folder_source,
+        )
+        return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await logger.aerror("Error ingesting folder to knowledge base: %s", e)
+        raise HTTPException(status_code=500, detail="Error ingesting folder to knowledge base.") from e
 
 
 @router.get("", status_code=HTTPStatus.OK)
