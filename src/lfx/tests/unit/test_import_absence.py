@@ -44,7 +44,7 @@ def _assert_modules_absent(import_stmt: str, check: set[str]) -> None:
         raise AssertionError(msg)
 
 
-class TestIMP02NoPandas:
+class TestLfxImportsWithoutPandas:
     """IMP-02: pandas/numpy are not loaded at module scope across the Graph hot path.
 
     Targets three scopes:
@@ -82,7 +82,7 @@ class TestIMP02NoPandas:
         _assert_modules_absent("from lfx.graph.graph.base import Graph", set(self.HEAVY))
 
 
-class TestIMP07NoLangchainCore:
+class TestFieldTypingDefersLangchainCore:
     """IMP-07: importing lfx.field_typing.constants does not pull langchain_core/classic.
 
     Also asserts that the full Graph hot path is clean of langchain_core after
@@ -108,7 +108,7 @@ class TestIMP07NoLangchainCore:
         _assert_modules_absent("from lfx.graph.graph.base import Graph", set(self.HEAVY))
 
 
-class TestIMP03NoPIL:
+class TestLfxImportsWithoutPIL:
     """IMP-03: PIL is not loaded at module scope on the Graph hot path.
 
     PIL was pulled via `lfx.schema.image` (line 5) and `lfx.interface.utils`
