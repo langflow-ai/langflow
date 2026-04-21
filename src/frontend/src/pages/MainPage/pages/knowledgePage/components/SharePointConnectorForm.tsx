@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIngestViaConnector } from "@/controllers/API/queries/knowledge-bases/use-ingest-via-connector";
+import type { DeferredConnectorPayload } from "./connectorPayload";
 
 interface SharePointConnectorFormProps {
-  kbName: string;
+  kbName?: string;
   onSubmitted?: () => void;
+  onPayloadChange?: (payload: DeferredConnectorPayload | null) => void;
 }
 
 /**
@@ -19,6 +21,7 @@ interface SharePointConnectorFormProps {
 const SharePointConnectorForm = ({
   kbName,
   onSubmitted,
+  onPayloadChange,
 }: SharePointConnectorFormProps) => {
   const [siteId, setSiteId] = useState("");
   const [driveId, setDriveId] = useState("");
@@ -37,6 +40,8 @@ const SharePointConnectorForm = ({
     "MICROSOFT_OAUTH_TENANT_ID",
   );
 
+  const deferred = typeof onPayloadChange === "function";
+
   const ingestMutation = useIngestViaConnector();
   const submitting = ingestMutation.isPending;
   const errorMessage = ingestMutation.error
@@ -44,34 +49,58 @@ const SharePointConnectorForm = ({
     : null;
   const canSubmit = siteId.trim().length > 0 && !submitting;
 
+  const buildPayload = (): DeferredConnectorPayload | null => {
+    const trimmedSite = siteId.trim();
+    if (!trimmedSite) return null;
+    return {
+      source_type: "sharepoint",
+      source_config: {
+        site_id: trimmedSite,
+        drive_id: driveId.trim() || undefined,
+        folder_path: folderPath.trim() || undefined,
+        recursive,
+        client_id_variable: clientIdVariable.trim() || undefined,
+        client_secret_variable: clientSecretVariable.trim() || undefined,
+        refresh_token_variable: refreshTokenVariable.trim() || undefined,
+        tenant_id_variable: tenantIdVariable.trim() || undefined,
+      },
+      source_name: `sharepoint:${trimmedSite}${folderPath ? `/${folderPath}` : ""}`,
+    };
+  };
+
+  useEffect(() => {
+    if (deferred) {
+      onPayloadChange?.(buildPayload());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    deferred,
+    siteId,
+    driveId,
+    folderPath,
+    recursive,
+    clientIdVariable,
+    clientSecretVariable,
+    refreshTokenVariable,
+    tenantIdVariable,
+  ]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!kbName) return;
+    const payload = buildPayload();
+    if (!payload) return;
     ingestMutation.mutate(
-      {
-        kb_name: kbName,
-        source_type: "sharepoint",
-        source_config: {
-          site_id: siteId.trim(),
-          drive_id: driveId.trim() || undefined,
-          folder_path: folderPath.trim() || undefined,
-          recursive,
-          client_id_variable: clientIdVariable.trim() || undefined,
-          client_secret_variable: clientSecretVariable.trim() || undefined,
-          refresh_token_variable: refreshTokenVariable.trim() || undefined,
-          tenant_id_variable: tenantIdVariable.trim() || undefined,
-        },
-        source_name: `sharepoint:${siteId.trim()}${folderPath ? `/${folderPath}` : ""}`,
-      },
-      {
-        onSuccess: () => {
-          onSubmitted?.();
-        },
-      },
+      { kb_name: kbName, ...payload },
+      { onSuccess: () => onSubmitted?.() },
     );
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <form
+      onSubmit={deferred ? (e) => e.preventDefault() : handleSubmit}
+      className="flex flex-col gap-3"
+    >
       <Field label="Site ID" required>
         <Input
           value={siteId}
@@ -129,17 +158,19 @@ const SharePointConnectorForm = ({
         </Field>
       </div>
 
-      {errorMessage && (
+      {!deferred && errorMessage && (
         <div className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700">
           {errorMessage}
         </div>
       )}
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={!canSubmit} size="sm">
-          {submitting ? "Starting…" : "Ingest from SharePoint"}
-        </Button>
-      </div>
+      {!deferred && (
+        <div className="flex justify-end">
+          <Button type="submit" disabled={!canSubmit} size="sm">
+            {submitting ? "Starting…" : "Ingest from SharePoint"}
+          </Button>
+        </div>
+      )}
     </form>
   );
 };

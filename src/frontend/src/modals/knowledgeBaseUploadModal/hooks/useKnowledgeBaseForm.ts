@@ -5,7 +5,9 @@ import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { useCreateKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-create-knowledge-base";
 import { useGetIngestionJobStatus } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-job-status";
+import { useIngestViaConnector } from "@/controllers/API/queries/knowledge-bases/use-ingest-via-connector";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import type { DeferredConnectorPayload } from "@/pages/MainPage/pages/knowledgePage/components/connectorPayload";
 import useAlertStore from "@/stores/alertStore";
 import {
   DEFAULT_CHUNK_OVERLAP,
@@ -128,6 +130,17 @@ export function useKnowledgeBaseForm({
   // Async ingestion tracking
   const [ingestionJobId, setIngestionJobId] = useState<string | null>(null);
 
+  // Unified source picker: files (default) or a connector source type.
+  // When a connector is active its inline form emits payload upward via
+  // ``connectorPayload`` — null means "required fields not yet filled".
+  const [activeConnector, setActiveConnector] = useState<string | null>(null);
+  const [connectorPayload, setConnectorPayload] =
+    useState<DeferredConnectorPayload | null>(null);
+
+  // Shared mutation for all connector types. Reused for both the
+  // create-then-ingest flow and add-sources-to-existing-KB flow.
+  const ingestViaConnector = useIngestViaConnector();
+
   // Alert store
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -220,6 +233,20 @@ export function useKnowledgeBaseForm({
     setShowAdvanced(false);
     setIngestionJobId(null);
     setValidationErrors({});
+    setActiveConnector(null);
+    setConnectorPayload(null);
+  }, []);
+
+  // When the user toggles away from a connector, forget its payload —
+  // otherwise stale config from a previous selection would leak into
+  // the next submit.
+  const selectConnector = useCallback((sourceType: string | null) => {
+    setActiveConnector((prev) => {
+      if (prev !== sourceType) {
+        setConnectorPayload(null);
+      }
+      return sourceType;
+    });
   }, []);
 
   const toggleAdvanced = useCallback(() => {
@@ -373,8 +400,10 @@ export function useKnowledgeBaseForm({
         });
       }
 
-      // Simple mode: only name + embedding model, no files or chunk params
-      if (!showAdvanced && !isAddSourcesMode) {
+      // Simple mode: only name + embedding model, no files or chunk params.
+      // A staged connector means the user opened advanced mode and picked
+      // a source — fall through to dispatch the connector ingestion.
+      if (!showAdvanced && !isAddSourcesMode && !activeConnector) {
         const callbackData: KnowledgeBaseFormData = {
           sourceName,
           files: [],
@@ -418,6 +447,36 @@ export function useKnowledgeBaseForm({
               ],
             });
           });
+      }
+
+      // Connector source (S3 / Google Drive / OneDrive / SharePoint).
+      // Same fire-and-forget pattern — status polling is unified with
+      // file ingestion via the KB's ``status`` field.
+      if (activeConnector && connectorPayload) {
+        ingestViaConnector.mutate(
+          {
+            kb_name: kbName,
+            source_type: connectorPayload.source_type,
+            source_config: connectorPayload.source_config,
+            source_name: connectorPayload.source_name,
+            chunk_size: chunkSize || undefined,
+            chunk_overlap: chunkOverlap || undefined,
+            separator: separator || undefined,
+          },
+          {
+            onError: (ingestError) => {
+              const err = ingestError as AxiosError<{ detail?: string }>;
+              setErrorData({
+                title: `Failed to start ingestion for "${sourceName}"`,
+                list: [
+                  err?.response?.data?.detail ||
+                    err?.message ||
+                    "Unknown error",
+                ],
+              });
+            },
+          },
+        );
       }
 
       const callbackData: KnowledgeBaseFormData = {
@@ -559,6 +618,12 @@ export function useKnowledgeBaseForm({
     // Column config
     columnConfig,
     setColumnConfig,
+
+    // Connector picker (unified source selection)
+    activeConnector,
+    selectConnector,
+    connectorPayload,
+    setConnectorPayload,
 
     // Preview
     chunkPreviews,

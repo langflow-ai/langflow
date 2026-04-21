@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIngestViaConnector } from "@/controllers/API/queries/knowledge-bases/use-ingest-via-connector";
+import type { DeferredConnectorPayload } from "./connectorPayload";
 
 interface GoogleDriveConnectorFormProps {
-  kbName: string;
+  kbName?: string;
   onSubmitted?: () => void;
+  onPayloadChange?: (payload: DeferredConnectorPayload | null) => void;
 }
 
 /**
@@ -20,6 +22,7 @@ interface GoogleDriveConnectorFormProps {
 const GoogleDriveConnectorForm = ({
   kbName,
   onSubmitted,
+  onPayloadChange,
 }: GoogleDriveConnectorFormProps) => {
   const [folderId, setFolderId] = useState("");
   const [clientIdVariable, setClientIdVariable] = useState(
@@ -33,6 +36,8 @@ const GoogleDriveConnectorForm = ({
   );
   const [recursive, setRecursive] = useState(true);
 
+  const deferred = typeof onPayloadChange === "function";
+
   const ingestMutation = useIngestViaConnector();
   const submitting = ingestMutation.isPending;
   const errorMessage = ingestMutation.error
@@ -40,31 +45,46 @@ const GoogleDriveConnectorForm = ({
     : null;
   const canSubmit = !submitting;
 
+  const buildPayload = (): DeferredConnectorPayload => ({
+    source_type: "google_drive",
+    source_config: {
+      folder_id: folderId.trim() || undefined,
+      recursive,
+      client_id_variable: clientIdVariable.trim() || undefined,
+      client_secret_variable: clientSecretVariable.trim() || undefined,
+      refresh_token_variable: refreshTokenVariable.trim() || undefined,
+    },
+    source_name: folderId ? `gdrive:${folderId}` : "gdrive:root",
+  });
+
+  useEffect(() => {
+    if (deferred) {
+      onPayloadChange?.(buildPayload());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    deferred,
+    folderId,
+    recursive,
+    clientIdVariable,
+    clientSecretVariable,
+    refreshTokenVariable,
+  ]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!kbName) return;
     ingestMutation.mutate(
-      {
-        kb_name: kbName,
-        source_type: "google_drive",
-        source_config: {
-          folder_id: folderId.trim() || undefined,
-          recursive,
-          client_id_variable: clientIdVariable.trim() || undefined,
-          client_secret_variable: clientSecretVariable.trim() || undefined,
-          refresh_token_variable: refreshTokenVariable.trim() || undefined,
-        },
-        source_name: folderId ? `gdrive:${folderId}` : "gdrive:root",
-      },
-      {
-        onSuccess: () => {
-          onSubmitted?.();
-        },
-      },
+      { kb_name: kbName, ...buildPayload() },
+      { onSuccess: () => onSubmitted?.() },
     );
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <form
+      onSubmit={deferred ? (e) => e.preventDefault() : handleSubmit}
+      className="flex flex-col gap-3"
+    >
       <Field label="Folder ID (optional)">
         <Input
           value={folderId}
@@ -101,17 +121,19 @@ const GoogleDriveConnectorForm = ({
         </Field>
       </div>
 
-      {errorMessage && (
+      {!deferred && errorMessage && (
         <div className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700">
           {errorMessage}
         </div>
       )}
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={!canSubmit} size="sm">
-          {submitting ? "Starting…" : "Ingest from Google Drive"}
-        </Button>
-      </div>
+      {!deferred && (
+        <div className="flex justify-end">
+          <Button type="submit" disabled={!canSubmit} size="sm">
+            {submitting ? "Starting…" : "Ingest from Google Drive"}
+          </Button>
+        </div>
+      )}
     </form>
   );
 };

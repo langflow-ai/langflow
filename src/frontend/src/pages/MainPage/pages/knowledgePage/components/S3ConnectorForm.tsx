@@ -1,11 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIngestViaConnector } from "@/controllers/API/queries/knowledge-bases/use-ingest-via-connector";
+import type { DeferredConnectorPayload } from "./connectorPayload";
 
 interface S3ConnectorFormProps {
-  kbName: string;
+  kbName?: string;
   onSubmitted?: () => void;
+  /**
+   * Deferred mode: when provided, the form stops self-submitting
+   * and emits its validated payload upward on every change (or
+   * ``null`` if required fields are missing). The parent owns the
+   * actual ingestion dispatch. Used by the unified create-KB modal
+   * where the KB doesn't exist yet at the time the user is filling
+   * out source config.
+   */
+  onPayloadChange?: (payload: DeferredConnectorPayload | null) => void;
 }
 
 /**
@@ -16,7 +26,11 @@ interface S3ConnectorFormProps {
  * who hasn't configured the variables yet sees a 400 from the
  * backend on submit (S3Source.validate_config raises early).
  */
-const S3ConnectorForm = ({ kbName, onSubmitted }: S3ConnectorFormProps) => {
+const S3ConnectorForm = ({
+  kbName,
+  onSubmitted,
+  onPayloadChange,
+}: S3ConnectorFormProps) => {
   const [bucket, setBucket] = useState("");
   const [prefix, setPrefix] = useState("");
   const [accessKeyVariable, setAccessKeyVariable] =
@@ -27,6 +41,8 @@ const S3ConnectorForm = ({ kbName, onSubmitted }: S3ConnectorFormProps) => {
   const [regionVariable, setRegionVariable] = useState("");
   const [endpointUrlVariable, setEndpointUrlVariable] = useState("");
 
+  const deferred = typeof onPayloadChange === "function";
+
   const ingestMutation = useIngestViaConnector();
   const submitting = ingestMutation.isPending;
   const errorMessage = ingestMutation.error
@@ -35,32 +51,54 @@ const S3ConnectorForm = ({ kbName, onSubmitted }: S3ConnectorFormProps) => {
 
   const canSubmit = bucket.trim().length > 0 && !submitting;
 
+  const buildPayload = (): DeferredConnectorPayload | null => {
+    const trimmedBucket = bucket.trim();
+    if (!trimmedBucket) return null;
+    return {
+      source_type: "s3",
+      source_config: {
+        bucket: trimmedBucket,
+        prefix: prefix.trim() || undefined,
+        access_key_variable: accessKeyVariable.trim() || undefined,
+        secret_key_variable: secretKeyVariable.trim() || undefined,
+        region_variable: regionVariable.trim() || undefined,
+        endpoint_url_variable: endpointUrlVariable.trim() || undefined,
+      },
+      source_name: `s3://${trimmedBucket}${prefix ? `/${prefix.trim()}` : ""}`,
+    };
+  };
+
+  useEffect(() => {
+    if (deferred) {
+      onPayloadChange?.(buildPayload());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    deferred,
+    bucket,
+    prefix,
+    accessKeyVariable,
+    secretKeyVariable,
+    regionVariable,
+    endpointUrlVariable,
+  ]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!kbName) return;
+    const payload = buildPayload();
+    if (!payload) return;
     ingestMutation.mutate(
-      {
-        kb_name: kbName,
-        source_type: "s3",
-        source_config: {
-          bucket: bucket.trim(),
-          prefix: prefix.trim() || undefined,
-          access_key_variable: accessKeyVariable.trim() || undefined,
-          secret_key_variable: secretKeyVariable.trim() || undefined,
-          region_variable: regionVariable.trim() || undefined,
-          endpoint_url_variable: endpointUrlVariable.trim() || undefined,
-        },
-        source_name: `s3://${bucket.trim()}${prefix ? `/${prefix.trim()}` : ""}`,
-      },
-      {
-        onSuccess: () => {
-          onSubmitted?.();
-        },
-      },
+      { kb_name: kbName, ...payload },
+      { onSuccess: () => onSubmitted?.() },
     );
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <form
+      onSubmit={deferred ? (e) => e.preventDefault() : handleSubmit}
+      className="flex flex-col gap-3"
+    >
       <Field label="Bucket" required>
         <Input
           value={bucket}
@@ -108,17 +146,19 @@ const S3ConnectorForm = ({ kbName, onSubmitted }: S3ConnectorFormProps) => {
         </Field>
       </div>
 
-      {errorMessage && (
+      {!deferred && errorMessage && (
         <div className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700">
           {errorMessage}
         </div>
       )}
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={!canSubmit} size="sm">
-          {submitting ? "Starting…" : "Ingest from S3"}
-        </Button>
-      </div>
+      {!deferred && (
+        <div className="flex justify-end">
+          <Button type="submit" disabled={!canSubmit} size="sm">
+            {submitting ? "Starting…" : "Ingest from S3"}
+          </Button>
+        </div>
+      )}
     </form>
   );
 };

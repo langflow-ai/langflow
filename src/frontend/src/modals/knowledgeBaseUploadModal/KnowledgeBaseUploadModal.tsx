@@ -64,6 +64,9 @@ export default function KnowledgeBaseUploadModal({
             onBackendTypeChange={form.setBackendType}
             backendConfig={form.backendConfig}
             onBackendConfigChange={form.setBackendConfig}
+            activeConnector={form.activeConnector}
+            onSelectConnector={form.selectConnector}
+            onConnectorPayloadChange={form.setConnectorPayload}
           />
         );
 
@@ -122,7 +125,9 @@ export default function KnowledgeBaseUploadModal({
       footer={
         <StepperModalFooter
           currentStep={form.currentStep}
-          totalSteps={!hideAdvanced && form.showAdvanced ? 2 : 1}
+          totalSteps={
+            !hideAdvanced && form.showAdvanced && !form.activeConnector ? 2 : 1
+          }
           onBack={form.handleBack}
           onNext={form.handleNext}
           onSubmit={form.handleSubmit}

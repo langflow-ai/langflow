@@ -7,6 +7,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -18,10 +19,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useGetConnectors } from "@/controllers/API/queries/knowledge-bases/use-get-connectors";
+import type { DeferredConnectorPayload } from "@/pages/MainPage/pages/knowledgePage/components/connectorPayload";
+import GoogleDriveConnectorForm from "@/pages/MainPage/pages/knowledgePage/components/GoogleDriveConnectorForm";
+import OneDriveConnectorForm from "@/pages/MainPage/pages/knowledgePage/components/OneDriveConnectorForm";
+import S3ConnectorForm from "@/pages/MainPage/pages/knowledgePage/components/S3ConnectorForm";
+import SharePointConnectorForm from "@/pages/MainPage/pages/knowledgePage/components/SharePointConnectorForm";
 import { cn } from "@/utils/utils";
 import { ACCEPTED_FILE_TYPES } from "../constants";
 import type { ColumnConfigRow } from "../types";
 import { BackendPicker, type BackendValue } from "./BackendPicker";
+
+const SUPPORTED_CONNECTORS = ["s3", "google_drive", "onedrive", "sharepoint"];
 
 interface StepConfigurationProps {
   isAddSourcesMode: boolean;
@@ -50,6 +59,9 @@ interface StepConfigurationProps {
   onBackendTypeChange: (value: string) => void;
   backendConfig: Record<string, string>;
   onBackendConfigChange: (value: Record<string, string>) => void;
+  activeConnector: string | null;
+  onSelectConnector: (sourceType: string | null) => void;
+  onConnectorPayloadChange: (payload: DeferredConnectorPayload | null) => void;
 }
 
 export function StepConfiguration({
@@ -79,7 +91,18 @@ export function StepConfiguration({
   onBackendTypeChange,
   backendConfig,
   onBackendConfigChange,
+  activeConnector,
+  onSelectConnector,
+  onConnectorPayloadChange,
 }: StepConfigurationProps) {
+  const { data: connectorsCatalog } = useGetConnectors(undefined);
+  const supportedConnectors =
+    connectorsCatalog?.filter((c) =>
+      SUPPORTED_CONNECTORS.includes(c.source_type),
+    ) ?? [];
+  const activeConnectorEntry = connectorsCatalog?.find(
+    (c) => c.source_type === activeConnector,
+  );
   return (
     <div className="relative">
       <div className="flex flex-col">
@@ -251,11 +274,12 @@ export function StepConfiguration({
                         />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[200px]">
+                    <DropdownMenuContent align="start" className="w-[220px]">
                       <DropdownMenuItem
-                        onClick={() =>
-                          document.getElementById("file-input")?.click()
-                        }
+                        onClick={() => {
+                          onSelectConnector(null);
+                          document.getElementById("file-input")?.click();
+                        }}
                       >
                         <ForwardedIconComponent
                           name="FileText"
@@ -264,9 +288,10 @@ export function StepConfiguration({
                         Upload Files
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() =>
-                          document.getElementById("folder-input")?.click()
-                        }
+                        onClick={() => {
+                          onSelectConnector(null);
+                          document.getElementById("folder-input")?.click();
+                        }}
                       >
                         <ForwardedIconComponent
                           name="Folder"
@@ -274,8 +299,70 @@ export function StepConfiguration({
                         />
                         Upload Folder
                       </DropdownMenuItem>
+                      {supportedConnectors.length > 0 && (
+                        <DropdownMenuSeparator />
+                      )}
+                      {supportedConnectors.map((connector) => (
+                        <DropdownMenuItem
+                          key={connector.source_type}
+                          onClick={() =>
+                            onSelectConnector(connector.source_type)
+                          }
+                          data-testid={`kb-connector-${connector.source_type}`}
+                        >
+                          <ForwardedIconComponent
+                            name={connector.icon ?? "Plug"}
+                            className="mr-2 h-4 w-4"
+                          />
+                          {connector.display_name}
+                        </DropdownMenuItem>
+                      ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
+
+                  {activeConnector && (
+                    <div className="mt-3 rounded-md border border-border bg-background p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-medium">
+                          <ForwardedIconComponent
+                            name={activeConnectorEntry?.icon ?? "Plug"}
+                            className="h-3.5 w-3.5"
+                          />
+                          {activeConnectorEntry?.display_name ??
+                            activeConnector}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => onSelectConnector(null)}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                      {activeConnector === "s3" && (
+                        <S3ConnectorForm
+                          onPayloadChange={onConnectorPayloadChange}
+                        />
+                      )}
+                      {activeConnector === "google_drive" && (
+                        <GoogleDriveConnectorForm
+                          onPayloadChange={onConnectorPayloadChange}
+                        />
+                      )}
+                      {activeConnector === "onedrive" && (
+                        <OneDriveConnectorForm
+                          onPayloadChange={onConnectorPayloadChange}
+                        />
+                      )}
+                      {activeConnector === "sharepoint" && (
+                        <SharePointConnectorForm
+                          onPayloadChange={onConnectorPayloadChange}
+                        />
+                      )}
+                    </div>
+                  )}
 
                   {validationErrors.files && (
                     <span className="text-xs text-destructive">
