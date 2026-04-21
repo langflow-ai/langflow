@@ -97,6 +97,38 @@ def to_url(path):
     assert scope["urllib"].request.pathname2url("folder name/file.txt") == "folder%20name/file.txt"
 
 
+def test_prepare_global_scope_supports_aliased_from_imports():
+    """Regression test: `from X import Y as Z` must bind Z in scope, not Y."""
+    module = ast.parse(
+        dedent("""
+from urllib.request import pathname2url as to_url_path
+
+def to_url(path):
+    return to_url_path(path)
+""")
+    )
+    scope = prepare_global_scope(module)
+
+    assert "to_url_path" in scope
+    assert "pathname2url" not in scope
+    assert scope["to_url_path"]("folder name/file.txt") == "folder%20name/file.txt"
+
+
+def test_create_class_supports_aliased_from_imports():
+    """End-to-end: a component using `from X import Y as Z` should load and Z is usable."""
+    code = dedent("""
+from urllib.request import pathname2url as to_url_path
+from lfx.custom import Component
+
+class AliasedImportComponent(Component):
+    def to_url(self, path):
+        return to_url_path(path)
+""")
+    cls = create_class(code, "AliasedImportComponent")
+    assert cls.__name__ == "AliasedImportComponent"
+    assert cls().to_url("folder name/file.txt") == "folder%20name/file.txt"
+
+
 # ---------------------------------------------------------------------------
 # _get_module_fallbacks
 # ---------------------------------------------------------------------------
