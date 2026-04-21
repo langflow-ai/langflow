@@ -1,4 +1,4 @@
-"""Tests for RedisCache service."""
+"""Tests for RedisCache teardown functionality."""
 
 from unittest.mock import AsyncMock, patch
 
@@ -8,80 +8,86 @@ from langflow.services.cache.service import RedisCache
 
 @pytest.mark.asyncio
 class TestRedisCacheTeardown:
-    """Test teardown operations in RedisCache to prevent fork-safety issues."""
+    """Test RedisCache teardown functionality."""
 
-    async def test_teardown_closes_client(self):
-        """Test that teardown properly closes the Redis client connection.
-
-        This test verifies the fix for the fork-safety bug where RedisCache
-        had no teardown() override, causing workers to fork with a shared
-        Redis TCP socket. The teardown() method must close the connection
-        before fork to prevent socket leaks.
-        """
-        # Mock the Redis client to avoid needing a real Redis instance
+    async def test_teardown_closes_redis_client(self):
+        """Test that teardown() calls aclose() on the Redis client."""
+        # Mock the Redis client
         with patch("redis.asyncio.StrictRedis") as mock_redis_class:
             mock_client = AsyncMock()
             mock_redis_class.return_value = mock_client
 
             # Create RedisCache instance
-            cache = RedisCache(
-                host="localhost",
-                port=6379,
-                db=0,
-                expiration_time=3600,
-            )
+            cache = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
 
-            # Verify client was created
-            assert cache._client is not None
+            # Verify the client was created
+            assert cache._client is mock_client
 
             # Call teardown
             await cache.teardown()
 
-            # Verify close() was called on the client
-            mock_client.close.assert_awaited_once()
+            # Verify aclose was called
+            mock_client.aclose.assert_called_once()
 
-    async def test_teardown_handles_close_error(self):
-        """Test that teardown handles errors gracefully during close.
-
-        If the Redis client fails to close (e.g., already closed, network issue),
-        the teardown should log a warning but not raise an exception.
-        """
-        with patch("redis.asyncio.StrictRedis") as mock_redis_class:
-            mock_client = AsyncMock()
-            # Make close() raise an exception
-            mock_client.close.side_effect = Exception("Connection already closed")
-            mock_redis_class.return_value = mock_client
-
-            cache = RedisCache(
-                host="localhost",
-                port=6379,
-                db=0,
-                expiration_time=3600,
-            )
-
-            # Teardown should not raise despite close() error
-            try:
-                await cache.teardown()
-            except Exception as e:
-                pytest.fail(f"teardown() raised an exception: {e}")
-
-            # Verify close() was attempted
-            mock_client.close.assert_awaited_once()
-
-    async def test_teardown_with_url_connection(self):
-        """Test teardown works with URL-based connection."""
+    async def test_teardown_with_url(self):
+        """Test that teardown() works with Redis URL configuration."""
         with patch("redis.asyncio.StrictRedis") as mock_redis_class:
             mock_client = AsyncMock()
             mock_redis_class.from_url.return_value = mock_client
 
-            # Create cache with URL instead of host/port
-            cache = RedisCache(
-                url="redis://localhost:6379/0",
-                expiration_time=3600,
-            )
+            # Create RedisCache instance with URL
+            cache = RedisCache(url="redis://localhost:6379/0", expiration_time=3600)
+
+            # Verify the client was created with from_url
+            mock_redis_class.from_url.assert_called_once_with("redis://localhost:6379/0")
+            assert cache._client is mock_client
 
             # Call teardown
             await cache.teardown()
 
-            # Verify close() was called
-            mock_client.close.assert_awaited_once()
+            # Verify aclose was called
+            mock_client.aclose.assert_called_once()
+
+    async def test_is_external_async_base_cache_service(self):
+        """Test that RedisCache is an instance of ExternalAsyncBaseCacheService."""
+        from langflow.services.cache.base import ExternalAsyncBaseCacheService
+
+        with patch("redis.asyncio.StrictRedis") as mock_redis_class:
+            mock_client = AsyncMock()
+            mock_redis_class.return_value = mock_client
+
+            cache = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+
+            # Verify it's an instance of ExternalAsyncBaseCacheService
+            assert isinstance(cache, ExternalAsyncBaseCacheService)
+
+            # Verify teardown method exists and is callable
+            assert hasattr(cache, "teardown")
+            assert callable(cache.teardown)
+
+            # Clean up
+            await cache.teardown()
+
+    async def test_preload_teardown_pattern(self):
+        """Test the teardown pattern used in preload.py."""
+        from langflow.services.cache.base import ExternalAsyncBaseCacheService
+
+        with patch("redis.asyncio.StrictRedis") as mock_redis_class:
+            mock_client = AsyncMock()
+            mock_redis_class.return_value = mock_client
+
+            cache = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+
+            # Simulate the preload pattern
+            if isinstance(cache, ExternalAsyncBaseCacheService):
+                teardown = getattr(cache, "teardown", None)
+                if callable(teardown):
+                    result = teardown()
+                    # The preload code checks if it's a coroutine
+                    import asyncio
+
+                    if asyncio.iscoroutine(result):
+                        await result
+
+            # Verify aclose was called
+            mock_client.aclose.assert_called_once()
