@@ -61,13 +61,21 @@ async def create_config(
     config: DeploymentConfig,
     user_id: IdLike,
     db: AsyncSession,
+    created_app_ids_journal: list[str] | None = None,
 ) -> str:
-    """Create/update a wxO draft key-value connection config plus runtime credentials."""
+    """Create/update a wxO draft key-value connection config plus runtime credentials.
+
+    When ``created_app_ids_journal`` is provided, ``app_id`` is appended
+    immediately after provider connection creation succeeds so rollback can
+    clean up partially completed creates.
+    """
     app_id = validate_wxo_name(config.name)
     env_var_keys = list((config.environment_variables or {}).keys())
     logger.debug("create_config: app_id='%s', env_var_keys=%s", app_id, env_var_keys)
 
     await asyncio.to_thread(clients.connections.create, payload={"app_id": app_id})
+    if created_app_ids_journal is not None:
+        created_app_ids_journal.append(app_id)
 
     wxo_config = ConnectionConfiguration(
         app_id=app_id,
