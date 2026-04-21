@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 import json
 import uuid
 from datetime import datetime, timezone
@@ -44,7 +43,13 @@ from langflow.services.jobs.service import JobService
 from langflow.services.task.service import TaskService
 from langflow.utils.kb_constants import (
     CHUNK_PREVIEW_MULTIPLIER,
+    MAX_CHUNK_OVERLAP,
+    MAX_CHUNK_SIZE,
+    MAX_MAX_CHUNKS,
+    MIN_CHUNK_OVERLAP,
+    MIN_CHUNK_SIZE,
     MIN_KB_NAME_LENGTH,
+    MIN_MAX_CHUNKS,
 )
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_in_schema=False)
@@ -241,10 +246,14 @@ async def create_knowledge_base(
 async def preview_chunks(
     _current_user: CurrentActiveUser,
     files: Annotated[list[UploadFile], File(description="Files to preview chunking for")],
-    chunk_size: Annotated[int, Form()] = 1000,
-    chunk_overlap: Annotated[int, Form()] = 200,
+    # Upper bounds cap the memory footprint of a preview request.
+    # ``max_chunks * chunk_size * CHUNK_PREVIEW_MULTIPLIER`` is the
+    # largest text slice this endpoint will hold in memory — without
+    # these bounds, an authenticated user can request gigabytes.
+    chunk_size: Annotated[int, Form(ge=MIN_CHUNK_SIZE, le=MAX_CHUNK_SIZE)] = 1000,
+    chunk_overlap: Annotated[int, Form(ge=MIN_CHUNK_OVERLAP, le=MAX_CHUNK_OVERLAP)] = 200,
     separator: Annotated[str, Form()] = "\n",
-    max_chunks: Annotated[int, Form()] = 5,
+    max_chunks: Annotated[int, Form(ge=MIN_MAX_CHUNKS, le=MAX_MAX_CHUNKS)] = 5,
 ) -> dict[str, object]:
     """Preview how files will be chunked without storing anything.
 
@@ -352,8 +361,10 @@ async def ingest_files_to_knowledge_base(
     current_user: CurrentActiveUser,
     files: Annotated[list[UploadFile], File(description="Files to ingest into the knowledge base")],
     source_name: Annotated[str, Form()] = "",
-    chunk_size: Annotated[int, Form()] = 1000,
-    chunk_overlap: Annotated[int, Form()] = 200,
+    # Mirrors the bounds on ``preview_chunks`` so ingestion can't be
+    # used to bypass the memory-footprint cap.
+    chunk_size: Annotated[int, Form(ge=MIN_CHUNK_SIZE, le=MAX_CHUNK_SIZE)] = 1000,
+    chunk_overlap: Annotated[int, Form(ge=MIN_CHUNK_OVERLAP, le=MAX_CHUNK_OVERLAP)] = 200,
     separator: Annotated[str, Form()] = "",
     column_config: Annotated[str, Form()] = "",
 ) -> dict[str, object] | TaskResponse:
@@ -601,7 +612,15 @@ async def list_knowledge_bases(
     """List all available knowledge bases."""
     try:
         kb_root_path = KBStorageHelper.get_root_path()
-        kb_path = kb_root_path / current_user.username
+        # Resolve + containment-check on par with every other path
+        # construction in this file. A username containing path
+        # separators (from a compromised token, or a weird legacy
+        # account) would otherwise escape the root directory.
+        kb_user_path = (kb_root_path / current_user.username).resolve()
+        _validate_kb_path_containment(
+            kb_root_path.resolve(), kb_user_path, current_user.username, current_user.username
+        )
+        kb_path = kb_user_path
 
         if not kb_path.exists():
             return []
@@ -801,6 +820,7 @@ async def get_knowledge_base_chunks(
     """
     kb_path: Path | None = None
     backend = None
+    backend_type_value: str = BackendType.CHROMA.value
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
 
@@ -892,9 +912,17 @@ async def get_knowledge_base_chunks(
         raise HTTPException(status_code=500, detail="Error getting chunks.") from e
     finally:
         if backend is not None:
-            with contextlib.suppress(Exception):
+            try:
                 await backend.teardown()
-        if kb_path is not None:
+            except Exception as teardown_exc:  # noqa: BLE001
+                # Surface at debug level so teardown failures stay
+                # visible without masking the original error path.
+                await logger.adebug("Backend teardown failed: %s", teardown_exc)
+        # ``release_chroma_resources`` clears Chroma's shared
+        # ``SharedSystemClient`` registry entry. Calling it for a
+        # MongoDB/Astra/Postgres-backed KB would mutate that registry
+        # for unrelated Chroma KBs served from the same path.
+        if kb_path is not None and backend_type_value == BackendType.CHROMA.value:
             KBStorageHelper.release_chroma_resources(kb_path)
 
 

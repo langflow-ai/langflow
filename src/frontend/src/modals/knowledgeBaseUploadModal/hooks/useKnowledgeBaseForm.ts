@@ -7,6 +7,7 @@ import { useCreateKnowledgeBase } from "@/controllers/API/queries/knowledge-base
 import { useGetIngestionJobStatus } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-job-status";
 import { useIngestViaConnector } from "@/controllers/API/queries/knowledge-bases/use-ingest-via-connector";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import type { BackendValue } from "@/modals/knowledgeBaseUploadModal/components/BackendPicker";
 import type { DeferredConnectorPayload } from "@/pages/MainPage/pages/knowledgePage/components/connectorPayload";
 import useAlertStore from "@/stores/alertStore";
 import {
@@ -34,7 +35,7 @@ import { formatFileSize } from "../utils";
  * the request ever lands.
  */
 function validateBackendConfig(
-  backendType: string,
+  backendType: BackendValue,
   config: Record<string, string>,
 ): string | null {
   if (backendType === "mongodb") {
@@ -113,7 +114,10 @@ export function useKnowledgeBaseForm({
   >([]);
   // Phase 4 vector-store backend picker. Defaults keep existing KBs
   // on the local Chroma store. Backend is immutable after create.
-  const [backendType, setBackendType] = useState<string>("chroma");
+  // Typed as the ``BackendValue`` union so ``StepConfiguration`` no
+  // longer needs an unsound ``as BackendValue`` cast. Any value that
+  // isn't in ``BACKEND_OPTIONS`` becomes a TypeScript error here.
+  const [backendType, setBackendType] = useState<BackendValue>("chroma");
   const [backendConfig, setBackendConfig] = useState<Record<string, string>>(
     {},
   );
@@ -450,11 +454,14 @@ export function useKnowledgeBaseForm({
       }
 
       // Connector source (S3 / Google Drive / OneDrive / SharePoint).
-      // Same fire-and-forget pattern — status polling is unified with
-      // file ingestion via the KB's ``status`` field.
+      // ``await`` the mutation so we do NOT close the modal with a
+      // misleading "success" toast when the ingestion dispatch fails.
+      // The KB itself was already created above — we keep it, surface
+      // the connector error inline, and leave the modal open so the
+      // user can retry or switch sources.
       if (activeConnector && connectorPayload) {
-        ingestViaConnector.mutate(
-          {
+        try {
+          await ingestViaConnector.mutateAsync({
             kb_name: kbName,
             source_type: connectorPayload.source_type,
             source_config: connectorPayload.source_config,
@@ -462,21 +469,18 @@ export function useKnowledgeBaseForm({
             chunk_size: chunkSize || undefined,
             chunk_overlap: chunkOverlap || undefined,
             separator: separator || undefined,
-          },
-          {
-            onError: (ingestError) => {
-              const err = ingestError as AxiosError<{ detail?: string }>;
-              setErrorData({
-                title: `Failed to start ingestion for "${sourceName}"`,
-                list: [
-                  err?.response?.data?.detail ||
-                    err?.message ||
-                    "Unknown error",
-                ],
-              });
-            },
-          },
-        );
+          });
+        } catch (ingestError: unknown) {
+          const err = ingestError as AxiosError<{ detail?: string }>;
+          setErrorData({
+            title: `Failed to start ingestion for "${sourceName}"`,
+            list: [
+              err?.response?.data?.detail || err?.message || "Unknown error",
+            ],
+          });
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       const callbackData: KnowledgeBaseFormData = {

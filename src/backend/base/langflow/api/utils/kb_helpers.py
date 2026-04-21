@@ -6,7 +6,6 @@ import shutil
 import time
 import uuid
 from datetime import datetime, timezone
-from functools import lru_cache
 from pathlib import Path
 
 import chromadb
@@ -18,7 +17,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
-from lfx.base.knowledge_bases.backends import BackendType, ChromaBackend, create_backend
+from lfx.base.knowledge_bases.backends import BackendType, create_backend
 from lfx.base.knowledge_bases.backends.base import (
     METADATA_KEY_CHUNK_INDEX,
     METADATA_KEY_FILE_NAME,
@@ -28,6 +27,7 @@ from lfx.base.knowledge_bases.backends.base import (
     METADATA_KEY_SOURCE_METADATA,
     METADATA_KEY_SOURCE_TYPE,
     METADATA_KEY_TOTAL_CHUNKS,
+    BaseVectorStoreBackend,
 )
 from lfx.base.knowledge_bases.ingestion_sources import (
     FileUploadSource,
@@ -67,9 +67,15 @@ class KBStorageHelper:
     """Helper class for Knowledge Base storage and path management."""
 
     @staticmethod
-    @lru_cache
     def get_root_path() -> Path:
-        """Lazy load and return the knowledge bases root directory."""
+        """Lazy load and return the knowledge bases root directory.
+
+        Not cached: reading from the settings service is cheap, and a
+        process-wide ``@lru_cache`` would lock in a mis-configured
+        value until restart even when the operator fixes it. Making
+        the read live also keeps the behaviour consistent with other
+        settings-dependent helpers in the codebase.
+        """
         settings = get_settings_service().settings
         knowledge_directory = settings.knowledge_bases_dir
         if not knowledge_directory:
@@ -558,7 +564,11 @@ class KBIngestionHelper:
         )
         await ingestion_run_service.mark_running(run_id)
 
-        backend: ChromaBackend | None = None
+        # ``create_backend`` can return any ``BaseVectorStoreBackend``
+        # subclass. Typing the local as the narrower ``ChromaBackend``
+        # would hide type errors when this code path routes to
+        # MongoDB/Astra/Postgres.
+        backend: BaseVectorStoreBackend | None = None
         final_status = IngestionRunStatus.SUCCEEDED
         final_error: str | None = None
         encoded_metadata_tag = json.dumps(source_metadata) if source_metadata else ""
