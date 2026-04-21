@@ -78,16 +78,17 @@ export default function StepAttachFlows() {
       return;
     seededExistingConnections.current = true;
 
-    const existingConnections: ConnectionItem[] = configsData.configs.map(
-      (cfg) => ({
+    const existingConnections: ConnectionItem[] = configsData.configs
+      .filter((cfg) => cfg.environment !== "live")
+      .map((cfg) => ({
         id: cfg.app_id,
         connectionId: cfg.connection_id,
         name: cfg.app_id,
+        environment: cfg.environment,
         variableCount: 0,
         isNew: false,
         environmentVariables: {},
-      }),
-    );
+      }));
 
     setConnections((prev) => {
       // Avoid duplicates if user already created connections with the same id

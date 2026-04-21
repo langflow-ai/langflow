@@ -34,6 +34,7 @@ from lfx.services.adapters.deployment.schema import (
     ConfigListItem,
     ConfigListResult,
     DeploymentCreateResult,
+    DeploymentListParams,
     DeploymentListResult,
     DeploymentUpdateResult,
     ItemResult,
@@ -566,6 +567,7 @@ class TestListDeploymentsLoadFromProvider:
         mapper = MagicMock()
         expected = MagicMock()
         mapper.shape_deployment_list_result.return_value = expected
+        mapper.resolve_load_from_provider_deployment_list_params.return_value = {"environment": "draft"}
         mock_get_mapper.return_value = mapper
 
         result = await list_deployments(
@@ -581,6 +583,9 @@ class TestListDeploymentsLoadFromProvider:
         assert result is expected
         mock_list_synced.assert_not_awaited()
         adapter.list.assert_awaited_once()
+        list_call_kwargs = adapter.list.await_args.kwargs
+        assert isinstance(list_call_kwargs["params"], DeploymentListParams)
+        assert list_call_kwargs["params"].provider_params == {"environment": "draft"}
         mapper.shape_deployment_list_result.assert_called_once()
 
     @pytest.mark.asyncio
