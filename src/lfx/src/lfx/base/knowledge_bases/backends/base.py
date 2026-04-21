@@ -29,12 +29,27 @@ from uuid import UUID
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
+    import queue as sync_queue
     from collections.abc import AsyncIterator
     from pathlib import Path
 
     from langchain_core.documents import Document
     from langchain_core.embeddings import Embeddings
     from langchain_core.vectorstores import VectorStore
+
+
+def drain_queue_until_sentinel(queue: sync_queue.Queue, sentinel: Any) -> None:
+    """Drain ``queue`` (blocking) until ``sentinel`` is observed.
+
+    Shared helper for the single-worker ``iter_documents`` pattern used by
+    Mongo / Astra / Postgres backends. Callers that set a ``threading.Event``
+    to cancel the worker still need to drain so the worker's final
+    ``put(sentinel)`` unblocks and the worker task can terminate.
+    """
+    while True:
+        item = queue.get()
+        if item is sentinel:
+            return
 
 
 class BackendType(str, Enum):

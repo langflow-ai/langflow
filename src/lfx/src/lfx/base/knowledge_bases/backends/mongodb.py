@@ -27,12 +27,14 @@ from __future__ import annotations
 
 import asyncio
 import queue as sync_queue
+import threading
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
     BackendType,
     BaseVectorStoreBackend,
     IngestedDocument,
+    drain_queue_until_sentinel,
 )
 from lfx.log.logger import logger
 
@@ -159,8 +161,24 @@ class MongoDBBackend(BaseVectorStoreBackend):
         # cursor lifetime (open → iterate → close) on *one* worker
         # thread and stream batches back to the async side via a
         # thread-safe queue. ``maxsize=2`` gives natural backpressure.
+        #
+        # ``cancel_event`` lets an early-exiting caller (e.g. the
+        # retrieval path that only needs embeddings for the top-K
+        # hits) tell the worker to stop iterating the cursor instead
+        # of forcing a full collection scan.
         sentinel = object()
         batch_queue: sync_queue.Queue[Any] = sync_queue.Queue(maxsize=2)
+        cancel_event = threading.Event()
+
+        def _put_cancelable(item: Any) -> bool:
+            """Enqueue ``item`` unless cancellation is observed first."""
+            while not cancel_event.is_set():
+                try:
+                    batch_queue.put(item, timeout=0.05)
+                except sync_queue.Full:
+                    continue
+                return True
+            return False
 
         def _stream_batches() -> None:
             cursor = None
@@ -168,6 +186,8 @@ class MongoDBBackend(BaseVectorStoreBackend):
                 cursor = collection.find({}, projection=projection).batch_size(batch_size)
                 buf: list[IngestedDocument] = []
                 for raw in cursor:
+                    if cancel_event.is_set():
+                        break
                     content = raw.get(text_key) or ""
                     metadata = raw.get("metadata") or {
                         k: v for k, v in raw.items() if k not in {text_key, embedding_key, "_id", "metadata"}
@@ -181,18 +201,24 @@ class MongoDBBackend(BaseVectorStoreBackend):
                         )
                     )
                     if len(buf) >= batch_size:
-                        batch_queue.put(buf)
+                        if not _put_cancelable(buf):
+                            buf = []
+                            break
                         buf = []
-                if buf:
-                    batch_queue.put(buf)
+                if buf and not cancel_event.is_set():
+                    _put_cancelable(buf)
             except Exception as exc:  # noqa: BLE001
-                batch_queue.put(exc)
+                if not cancel_event.is_set():
+                    _put_cancelable(exc)
             finally:
                 if cursor is not None:
                     try:
                         cursor.close()
                     except Exception as exc:  # noqa: BLE001
                         logger.debug("MongoDB cursor close failed: %s", exc)
+                # Block until the sentinel lands. The async consumer's
+                # finally drains the queue, guaranteeing progress here
+                # even if the queue is full at cancel time.
                 batch_queue.put(sentinel)
 
         worker = asyncio.create_task(asyncio.to_thread(_stream_batches))
@@ -205,16 +231,14 @@ class MongoDBBackend(BaseVectorStoreBackend):
                     break
                 if isinstance(item, Exception):
                     logger.debug("MongoDB iter_documents worker failed: %s", item)
-                    sentinel_seen = True
                     await asyncio.to_thread(batch_queue.get)
+                    sentinel_seen = True
                     break
                 yield item
         finally:
+            cancel_event.set()
             if not sentinel_seen:
-                while True:
-                    drained = await asyncio.to_thread(batch_queue.get)
-                    if drained is sentinel:
-                        break
+                await asyncio.to_thread(drain_queue_until_sentinel, batch_queue, sentinel)
             await worker
 
     async def storage_size_bytes(self) -> int:

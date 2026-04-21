@@ -20,12 +20,14 @@ from __future__ import annotations
 
 import asyncio
 import queue as sync_queue
+import threading
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
     BackendType,
     BaseVectorStoreBackend,
     IngestedDocument,
+    drain_queue_until_sentinel,
 )
 from lfx.log.logger import logger
 
@@ -133,15 +135,31 @@ class PostgresBackend(BaseVectorStoreBackend):
         # ``maxsize=2`` gives natural backpressure: the worker
         # blocks on ``queue.put`` once two batches are buffered,
         # matching what the caller is ready to consume.
+        #
+        # ``cancel_event`` lets an early-exiting caller (e.g. the
+        # retrieval path that only needs embeddings for the top-K
+        # hits) tell the worker to stop fetching rows instead of
+        # forcing a full collection scan.
         sentinel = object()
         batch_queue: sync_queue.Queue[Any] = sync_queue.Queue(maxsize=2)
+        cancel_event = threading.Event()
+
+        def _put_cancelable(item: Any) -> bool:
+            """Enqueue ``item`` unless cancellation is observed first."""
+            while not cancel_event.is_set():
+                try:
+                    batch_queue.put(item, timeout=0.05)
+                except sync_queue.Full:
+                    continue
+                return True
+            return False
 
         def _stream_batches() -> None:
             try:
                 with session_maker() as session:
                     query = _select_rows_query(store, include_embeddings=include_embeddings)
                     result = session.execute(query)
-                    while True:
+                    while not cancel_event.is_set():
                         rows = result.fetchmany(batch_size)
                         if not rows:
                             break
@@ -161,11 +179,15 @@ class PostgresBackend(BaseVectorStoreBackend):
                                     embedding=embedding,
                                 )
                             )
-                        if batch:
-                            batch_queue.put(batch)
+                        if batch and not _put_cancelable(batch):
+                            break
             except Exception as exc:  # noqa: BLE001
-                batch_queue.put(exc)
+                if not cancel_event.is_set():
+                    _put_cancelable(exc)
             finally:
+                # Block until the sentinel lands. The async consumer's
+                # finally drains the queue, guaranteeing progress here
+                # even if the queue is full at cancel time.
                 batch_queue.put(sentinel)
 
         worker = asyncio.create_task(asyncio.to_thread(_stream_batches))
@@ -178,21 +200,20 @@ class PostgresBackend(BaseVectorStoreBackend):
                     break
                 if isinstance(item, Exception):
                     logger.debug("Postgres iter_documents worker failed: %s", item)
-                    sentinel_seen = True
                     # Worker has already queued the sentinel before
                     # re-raising — drain it so ``worker`` terminates.
                     await asyncio.to_thread(batch_queue.get)
+                    sentinel_seen = True
                     break
                 yield item
         finally:
-            # If the caller abandoned iteration before the sentinel,
-            # the worker may be blocked in ``queue.put``. Keep
-            # draining until the sentinel arrives so it can exit.
+            # Signal the worker so early-exiting callers don't force a
+            # full collection scan. Only drain when we broke out without
+            # seeing the sentinel — otherwise the main loop already
+            # consumed it and another get() would block forever.
+            cancel_event.set()
             if not sentinel_seen:
-                while True:
-                    drained = await asyncio.to_thread(batch_queue.get)
-                    if drained is sentinel:
-                        break
+                await asyncio.to_thread(drain_queue_until_sentinel, batch_queue, sentinel)
             await worker
 
     async def storage_size_bytes(self) -> int:
