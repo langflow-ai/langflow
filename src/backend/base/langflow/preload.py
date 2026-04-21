@@ -155,10 +155,7 @@ async def _run_master_preload() -> None:
     # is still usable: on first access in a worker it will open a fresh
     # connection pool for that process.
     await logger.adebug("[preload] disposing master DB engine before fork")
-    try:
-        await get_db_service().engine.dispose()
-    except Exception as e:  # noqa: BLE001
-        await logger.awarning(f"[preload] DB engine dispose failed: {e}")
+    await get_db_service().engine.dispose()
 
     # Best-effort: if the cache service holds a socket (e.g. Redis), close it.
     try:
