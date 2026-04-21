@@ -17,6 +17,7 @@ setting ``endpoint_url_variable`` and optionally ``region_variable``.
 
 from __future__ import annotations
 
+import asyncio
 import mimetypes
 from typing import TYPE_CHECKING, Any
 
@@ -141,7 +142,9 @@ class S3Source(KBConnectorSource):
         if endpoint_url:
             client_kwargs["endpoint_url"] = endpoint_url
 
-        return boto3.client("s3", **client_kwargs)
+        # boto3.client construction does disk + config I/O (loading
+        # botocore data, parsing ~/.aws). Run it off the event loop.
+        return await asyncio.to_thread(boto3.client, "s3", **client_kwargs)
 
     def _matches_extension(self, key: str, allowed: tuple[str, ...]) -> bool:
         if "." not in key:
@@ -169,7 +172,21 @@ class S3Source(KBConnectorSource):
 
         client = await self._build_client()
         paginator = client.get_paginator("list_objects_v2")
-        for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+
+        # boto3 paginator is a sync iterable over HTTP calls. Fetch
+        # one page per thread hop so the event loop stays free between
+        # pages.
+        def _fetch_next_page(iterator: Any) -> dict[str, Any] | None:
+            try:
+                return next(iterator)
+            except StopIteration:
+                return None
+
+        page_iter = iter(paginator.paginate(Bucket=bucket, Prefix=prefix))
+        while True:
+            page = await asyncio.to_thread(_fetch_next_page, page_iter)
+            if page is None:
+                break
             for obj in page.get("Contents", []) or []:
                 key = obj.get("Key")
                 if not key or key.endswith("/"):
@@ -198,8 +215,12 @@ class S3Source(KBConnectorSource):
     async def fetch_content(self, item: IngestionItem) -> IngestionItemContent:
         bucket = self.source_config["bucket"]
         client = await self._build_client()
-        response = client.get_object(Bucket=bucket, Key=item.item_id)
-        body = response["Body"].read()
+
+        def _download() -> bytes:
+            response = client.get_object(Bucket=bucket, Key=item.item_id)
+            return response["Body"].read()
+
+        body = await asyncio.to_thread(_download)
         file_name = item.item_id.rsplit("/", 1)[-1] or item.item_id
         return IngestionItemContent(raw_bytes=bytes(body), file_name=file_name)
 

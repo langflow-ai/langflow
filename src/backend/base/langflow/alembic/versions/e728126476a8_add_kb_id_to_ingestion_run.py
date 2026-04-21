@@ -18,6 +18,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "e728126476a8"  # pragma: allowlist secret
@@ -28,36 +29,55 @@ depends_on: str | Sequence[str] | None = None
 TABLE_NAME = "ingestion_run"
 COLUMN_NAME = "kb_id"
 INDEX_NAME = "ix_ingestion_run_kb_id"
+FK_NAME = "fk_ingestion_run_kb_id_knowledge_base"
+REF_TABLE = "knowledge_base"
 
 
 def upgrade() -> None:
     conn = op.get_bind()
-    inspector = sa.inspect(conn)
-    if not inspector.has_table(TABLE_NAME):
+    if not migration.table_exists(TABLE_NAME, conn):
         return
 
-    existing_columns = {col["name"] for col in inspector.get_columns(TABLE_NAME)}
-    if COLUMN_NAME not in existing_columns:
+    if not migration.column_exists(TABLE_NAME, COLUMN_NAME, conn):
         op.add_column(TABLE_NAME, sa.Column(COLUMN_NAME, sa.Uuid(), nullable=True))
 
+    inspector = sa.inspect(conn)
     existing_indexes = {idx["name"] for idx in inspector.get_indexes(TABLE_NAME)}
     if INDEX_NAME not in existing_indexes:
         with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
             batch_op.create_index(batch_op.f(INDEX_NAME), [COLUMN_NAME], unique=False)
 
+    # Enforce referential integrity at the DB layer. ``ON DELETE SET NULL``
+    # keeps run history readable after a KB is deleted (runs show
+    # "deleted KB" rather than disappearing) while guaranteeing no
+    # dangling ``kb_id`` values. Only create when the target table
+    # exists and the FK isn't already present.
+    if migration.table_exists(REF_TABLE, conn) and not migration.foreign_key_exists(TABLE_NAME, FK_NAME, conn):
+        with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
+            batch_op.create_foreign_key(
+                FK_NAME,
+                REF_TABLE,
+                [COLUMN_NAME],
+                ["id"],
+                ondelete="SET NULL",
+            )
+
 
 def downgrade() -> None:
     conn = op.get_bind()
-    inspector = sa.inspect(conn)
-    if not inspector.has_table(TABLE_NAME):
+    if not migration.table_exists(TABLE_NAME, conn):
         return
 
+    if migration.foreign_key_exists(TABLE_NAME, FK_NAME, conn):
+        with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
+            batch_op.drop_constraint(FK_NAME, type_="foreignkey")
+
+    inspector = sa.inspect(conn)
     existing_indexes = {idx["name"] for idx in inspector.get_indexes(TABLE_NAME)}
     if INDEX_NAME in existing_indexes:
         with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
             batch_op.drop_index(batch_op.f(INDEX_NAME))
 
-    existing_columns = {col["name"] for col in inspector.get_columns(TABLE_NAME)}
-    if COLUMN_NAME in existing_columns:
+    if migration.column_exists(TABLE_NAME, COLUMN_NAME, conn):
         with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
             batch_op.drop_column(COLUMN_NAME)

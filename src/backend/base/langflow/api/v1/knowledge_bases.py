@@ -135,7 +135,14 @@ async def create_knowledge_base(
         if request.column_config:
             column_config_dicts = [item.model_dump() for item in request.column_config]
 
-        # Save full embedding metadata to prevent immediate backfill
+        # Save full embedding metadata to prevent immediate backfill.
+        # ``backend_type``/``backend_config`` are persisted here too so
+        # a later ``backfill_from_disk`` reconstructs the correct
+        # backend routing even if the DB write below fails.
+        # ``backend_config`` holds only *variable names* (never raw
+        # secrets) per the credential-indirection contract.
+        backend_type_value = request.backend_type or "chroma"
+        backend_config_value = request.backend_config or {}
         embedding_metadata = {
             "id": str(kb_id),
             "embedding_provider": request.embedding_provider,
@@ -147,6 +154,8 @@ async def create_knowledge_base(
             "avg_chunk_size": 0.0,
             "size": 0,
             "column_config": column_config_dicts,
+            "backend_type": backend_type_value,
+            "backend_config": backend_config_value,
         }
         metadata_path = kb_path / "embedding_metadata.json"
         metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
@@ -160,6 +169,16 @@ async def create_knowledge_base(
         # Dual-write: persist the identity + config to the DB alongside
         # the JSON file so older service versions still see the legacy
         # on-disk view, while new code reads from the DB first.
+        #
+        # For Chroma (the default backend) a missing DB row is recoverable
+        # — the next ``backfill_from_disk`` reads ``embedding_metadata.json``
+        # and upserts the row. For non-default backends (MongoDB, Postgres,
+        # Astra) we now also persist ``backend_type``/``backend_config`` to
+        # the JSON file so the backfill *can* round-trip them, but the DB
+        # remains the source of truth during the lifetime of this request.
+        # Any DB failure would cause the very next call (ingest, chunks)
+        # to fall back to Chroma and silently route to the wrong store,
+        # so we surface it immediately and roll the on-disk state back.
         try:
             await knowledge_base_service.create_record(
                 user_id=current_user.id,
@@ -167,14 +186,31 @@ async def create_knowledge_base(
                 embedding_provider=request.embedding_provider,
                 embedding_model=request.embedding_model,
                 column_config=column_config_dicts or [],
-                backend_type=request.backend_type or "chroma",
-                backend_config=request.backend_config or {},
+                backend_type=backend_type_value,
+                backend_config=backend_config_value,
                 record_id=kb_id,
             )
-        except Exception as exc:  # noqa: BLE001
-            # JSON file is already written; the next backfill on boot
-            # will upsert the missing row. Don't fail the create call
-            # for a DB-side glitch.
+        except Exception as exc:
+            if backend_type_value != "chroma":
+                # Non-default backend: the JSON fallback is insufficient
+                # because downstream code needs ``backend_type`` in the
+                # DB row to route reads/writes. Roll back the filesystem
+                # state and surface a 500 so the caller retries.
+                await logger.aerror(
+                    "KB DB persist failed for non-default backend %s (kb=%s): %s — rolling back",
+                    backend_type_value,
+                    kb_name,
+                    exc,
+                )
+                KBStorageHelper.delete_storage(kb_path, kb_name)
+                raise HTTPException(
+                    status_code=500,
+                    detail=(
+                        f"Failed to persist knowledge base '{kb_name}' with backend "
+                        f"'{backend_type_value}'. Please retry."
+                    ),
+                ) from exc
+            # Chroma fallback path: the next backfill will upsert.
             await logger.awarning("KB DB persist failed for %s; relying on JSON fallback: %s", kb_name, exc)
 
         return KnowledgeBaseInfo(

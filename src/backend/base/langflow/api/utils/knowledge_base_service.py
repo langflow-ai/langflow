@@ -304,6 +304,14 @@ async def backfill_from_disk(
         try:
             model_selection = _normalize_model_selection(metadata.get("model_selection"))
             record_id = _coerce_uuid(metadata.get("id")) or uuid4()
+            # ``backend_type``/``backend_config`` are persisted by
+            # ``create_knowledge_base`` into ``embedding_metadata.json``
+            # precisely so a later backfill can reconstruct the correct
+            # routing. Fall back to "chroma" only when the file
+            # predates the multi-backend change (legacy KBs).
+            backend_type = str(metadata.get("backend_type") or "chroma")
+            backend_config_raw = metadata.get("backend_config") or {}
+            backend_config = backend_config_raw if isinstance(backend_config_raw, dict) else {}
             await create_record(
                 user_id=user_id,
                 name=name,
@@ -314,6 +322,8 @@ async def backfill_from_disk(
                 chunk_overlap=int(metadata.get("chunk_overlap") or 200),
                 separator=metadata.get("separator"),
                 column_config=metadata.get("column_config") or [],
+                backend_type=backend_type,
+                backend_config=backend_config,
                 record_id=record_id,
             )
             inserted += 1
