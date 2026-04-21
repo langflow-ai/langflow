@@ -475,8 +475,7 @@ class MCPToolsComponent(ComponentWithCache):
                         # the oldest entry when over the limit.
                         max_entries = self.SHARED_SERVERS_CACHE_MAX_ENTRIES
                         while (
-                            len(current_servers_cache) >= max_entries
-                            and servers_cache_key not in current_servers_cache
+                            len(current_servers_cache) >= max_entries and servers_cache_key not in current_servers_cache
                         ):
                             oldest_key = next(iter(current_servers_cache))
                             current_servers_cache.pop(oldest_key, None)
@@ -968,4 +967,3 @@ class MCPToolsComponent(ComponentWithCache):
             self._ttl_tool_cache[ttl_key] = (time.monotonic(), tools)
 
         return tools
-
