@@ -345,7 +345,7 @@ async def handle_project_sse(
 
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
-    variables = extract_global_variables_from_headers(request.headers)
+    variables = extract_global_variables_from_headers(request.headers, include_auth_headers=True)
     req_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
@@ -386,7 +386,7 @@ async def _handle_project_sse_messages(
     """Handle POST messages for a project-specific MCP server using SSE transport."""
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
-    variables = extract_global_variables_from_headers(request.headers)
+    variables = extract_global_variables_from_headers(request.headers, include_auth_headers=True)
     req_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
@@ -443,7 +443,7 @@ async def _dispatch_project_streamable_http(
 
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
-    variables = extract_global_variables_from_headers(request.headers)
+    variables = extract_global_variables_from_headers(request.headers, include_auth_headers=True)
     request_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:

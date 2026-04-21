@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
+from langflow.api.utils.core import extract_global_variables_from_headers
 from langflow.api.v1 import mcp_utils
 from lfx.interface.components import component_cache
 
@@ -122,3 +123,80 @@ async def test_handle_list_tools_skips_blocked_custom_flows(monkeypatch):
     tools = await mcp_utils.handle_list_tools()
 
     assert tools == []
+
+
+class TestExtractGlobalVariablesFromHeaders:
+    """Unit tests for ``extract_global_variables_from_headers``.
+
+    Covers the MCP auth-header propagation fix (issue #12529): ``x-api-key``
+    and ``authorization`` should be captured under their lowercase names when
+    (and only when) ``include_auth_headers=True`` is passed. The default
+    behavior must remain backwards-compatible for non-MCP routes, where
+    ``x-api-key`` is Langflow's own auth key and must not leak into the graph
+    context.
+    """
+
+    def test_langflow_global_var_prefix_still_extracted(self):
+        """Regression guard: ``X-LANGFLOW-GLOBAL-VAR-*`` extraction is preserved."""
+        headers = {
+            "X-LANGFLOW-GLOBAL-VAR-API-KEY": "secret-value",
+            "X-LANGFLOW-GLOBAL-VAR-DB-URL": "postgres://host/db",
+            "Content-Type": "application/json",
+        }
+
+        result = extract_global_variables_from_headers(headers)
+
+        assert result == {"API-KEY": "secret-value", "DB-URL": "postgres://host/db"}
+
+    def test_auth_headers_not_extracted_by_default(self):
+        """Non-MCP call sites: ``x-api-key`` / ``authorization`` must not leak through."""
+        headers = {
+            "x-api-key": "langflow-auth-key",
+            "authorization": "Bearer token",
+            "X-LANGFLOW-GLOBAL-VAR-MY-VAR": "value",
+        }
+
+        result = extract_global_variables_from_headers(headers)
+
+        assert "x-api-key" not in result
+        assert "authorization" not in result
+        assert result == {"MY-VAR": "value"}
+
+    def test_auth_headers_extracted_under_lowercase_when_opted_in(self):
+        """MCP call sites: lowercase auth headers are captured when opted in."""
+        headers = {
+            "x-api-key": "api-key-value",
+            "authorization": "Bearer jwt-token",
+        }
+
+        result = extract_global_variables_from_headers(headers, include_auth_headers=True)
+
+        assert result == {"x-api-key": "api-key-value", "authorization": "Bearer jwt-token"}
+
+    def test_auth_header_matching_is_case_insensitive(self):
+        """Headers with mixed or uppercase casing still match (e.g. ``X-Api-Key``, ``AUTHORIZATION``)."""
+        headers = {
+            "X-Api-Key": "mixed-case-value",
+            "AUTHORIZATION": "Bearer UPPER",
+        }
+
+        result = extract_global_variables_from_headers(headers, include_auth_headers=True)
+
+        assert result == {"x-api-key": "mixed-case-value", "authorization": "Bearer UPPER"}
+
+    def test_both_categories_extracted_together(self):
+        """``X-LANGFLOW-GLOBAL-VAR-*`` and auth headers coexist when opted in."""
+        headers = {
+            "X-LANGFLOW-GLOBAL-VAR-API-KEY": "global-secret",
+            "x-api-key": "incoming-mcp-key",
+            "Authorization": "Bearer mcp-token",
+            "Content-Type": "application/json",
+        }
+
+        result = extract_global_variables_from_headers(headers, include_auth_headers=True)
+
+        assert result == {
+            "API-KEY": "global-secret",
+            "x-api-key": "incoming-mcp-key",
+            "authorization": "Bearer mcp-token",
+        }
