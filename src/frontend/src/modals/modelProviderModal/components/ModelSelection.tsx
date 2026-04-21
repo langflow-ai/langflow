@@ -106,6 +106,7 @@ const ModelSelection = ({
   };
 
   const isOllama = providerName?.toLowerCase() === "ollama";
+  const isVllm = providerName?.toLowerCase() === "vllm";
   const noModelsAvailable =
     (modelType === "llm" && llmModels.length === 0) ||
     (modelType === "embeddings" && embeddingModels.length === 0) ||
@@ -140,6 +141,12 @@ const ModelSelection = ({
             Check Ollama Library
           </a>
         </div>
+      ) : isVllm ? (
+        renderModelSection(
+          "Available Models",
+          availableModels,
+          "available",
+        )
       ) : (
         <>
           {modelType === "all" ? (

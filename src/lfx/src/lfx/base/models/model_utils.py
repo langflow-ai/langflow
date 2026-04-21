@@ -368,9 +368,14 @@ def fetch_live_watsonx_models(user_id: UUID | str | None, model_type: str = "llm
 def fetch_live_vllm_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
     """Fetch live models from a vLLM server via OpenAI-compatible /v1/models API.
 
+    vLLM's API does not distinguish between LLM and embedding models, so all
+    available models are returned regardless of the requested model_type. This
+    allows users to select any vLLM-served model in both Language Model and
+    Embedding Model contexts.
+
     Args:
         user_id: The user ID to look up the vLLM base URL and API key
-        model_type: "llm" or "embeddings"
+        model_type: "llm" or "embeddings" — used for tagging only, no filtering
 
     Returns:
         List of model metadata dicts, or empty list if unable to fetch
@@ -379,7 +384,10 @@ def fetch_live_vllm_models(user_id: UUID | str | None, model_type: str = "llm") 
     if not base_url:
         return []
 
-    api_key = get_provider_variable_value(user_id, "VLLM_API_KEY")
+    try:
+        api_key = get_provider_variable_value(user_id, "VLLM_API_KEY")
+    except (ValueError, Exception):  # noqa: BLE001
+        api_key = None  # API key is optional for vLLM
 
     try:
         base_url = base_url.rstrip("/")
