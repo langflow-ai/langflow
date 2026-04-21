@@ -263,6 +263,9 @@ class KnowledgeBaseComponent(Component):
             kb_path=kb_path,
             backend_config=backend_config,
             embedding_function=embedding_function,
+            # Forward for variable_service-based credential resolution on
+            # Mongo/Astra/Postgres backends. Chroma ignores this.
+            user_id=self.user_id,
         )
         try:
             use_scores = bool(self.search_query)
@@ -272,18 +275,21 @@ class KnowledgeBaseComponent(Component):
                 with_scores=use_scores,
             )
 
+            # Build an id → embedding map via the backend-agnostic iterator
+            # rather than reaching into Chroma's private ``_collection`` API
+            # (which Mongo/Astra/Postgres don't expose). Scoped to the KB's
+            # doc ids so the pass stays bounded.
             id_to_embedding: dict[str, list[float]] = {}
             if self.include_embeddings and results:
-                doc_ids = [doc.metadata.get("_id") for doc, _score in results if doc.metadata.get("_id")]
+                doc_ids = {doc.metadata.get("_id") for doc, _score in results if doc.metadata.get("_id")}
                 if doc_ids:
-                    collection = backend.raw_langchain_store()._collection  # noqa: SLF001
-                    embeddings_result = collection.get(
-                        where={"_id": {"$in": doc_ids}},
-                        include=["metadatas", "embeddings"],
-                    )
-                    for i, md in enumerate(embeddings_result.get("metadatas") or []):
-                        if md and "_id" in md:
-                            id_to_embedding[md["_id"]] = embeddings_result["embeddings"][i]
+                    async for batch in backend.iter_documents(include_embeddings=True):
+                        for entry in batch:
+                            doc_id = entry.metadata.get("_id")
+                            if doc_id in doc_ids and entry.embedding is not None:
+                                id_to_embedding[doc_id] = entry.embedding
+                        if len(id_to_embedding) == len(doc_ids):
+                            break
 
             data_list: list[Data] = []
             for doc, score in results:

@@ -15,6 +15,7 @@ import contextlib
 import gc
 import uuid
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 import chromadb
 import chromadb.errors
@@ -48,12 +49,14 @@ class ChromaBackend(BaseVectorStoreBackend):
         kb_path: Path,
         backend_config: dict[str, Any] | None = None,
         embedding_function: Embeddings | None = None,
+        user_id: UUID | str | None = None,
     ) -> None:
         super().__init__(
             kb_name=kb_name,
             kb_path=kb_path,
             backend_config=backend_config,
             embedding_function=embedding_function,
+            user_id=user_id,
         )
         self._client: chromadb.PersistentClient | None = None
 

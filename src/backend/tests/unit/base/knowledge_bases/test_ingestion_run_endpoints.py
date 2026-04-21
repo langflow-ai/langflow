@@ -216,103 +216,110 @@ class TestGetIngestionRun:
 
 
 class TestChunksFilters:
-    """Sanity-check the new metadata filters on the chunks endpoint.
+    """Sanity-check the metadata filters on the chunks endpoint.
 
-    The happy paths are covered by the existing chunks tests; these
-    only guard the query-parameter-to-Chroma-filter translation.
+    The endpoint now streams chunks through the backend abstraction
+    (``backend.iter_documents``) and filters in Python so the behavior
+    is identical across Chroma / Mongo / Astra / Postgres. These tests
+    feed synthetic batches through a mocked backend and assert the
+    correct chunks surface for each filter.
     """
 
+    @staticmethod
+    def _fake_backend(entries):
+        """Build a mock backend whose ``iter_documents`` yields ``entries``.
+
+        ``entries`` is a list of ``(content, metadata)`` tuples. Each
+        entry is wrapped in an ``IngestedDocument`` and yielded as one
+        batch so the endpoint's in-Python filter has data to pass through.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
+        async def _iter_documents(*, batch_size: int = 1000, include_embeddings: bool = False):  # noqa: ARG001
+            yield [IngestedDocument(content=c, metadata=m) for c, m in entries]
+
+        backend = MagicMock()
+        backend.iter_documents = _iter_documents
+        backend.teardown = AsyncMock()
+        return backend
+
     @pytest.mark.parametrize(
-        ("query", "expected_filter"),
+        ("query", "expected_source_types"),
         [
-            ("?source_type=folder", {"source_type": "folder"}),
-            ("?file_name=a.pdf", {"file_name": "a.pdf"}),
-            ("?job_id=deadbeef", {"job_id": "deadbeef"}),
+            ("?source_type=folder", {"folder"}),
+            ("?file_name=a.pdf", {"file_upload"}),
+            ("?job_id=deadbeef", {"file_upload"}),
         ],
     )
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.release_chroma_resources")
-    @patch("langflow.api.v1.knowledge_bases.Chroma")
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
+    @patch("langflow.api.v1.knowledge_bases.create_backend")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_single_metadata_filter_becomes_where_clause(
+    async def test_single_metadata_filter_narrows_results(
         self,
         mock_root,
-        mock_fresh_client,
-        mock_chroma,
+        mock_create_backend,
         mock_release,  # noqa: ARG002
         query,
-        expected_filter,
+        expected_source_types,
         client: AsyncClient,
         logged_in_headers,
         active_user,
         tmp_path,
     ):
-        from unittest.mock import MagicMock
-
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "filter_kb"
         kb_dir.mkdir(parents=True)
         # A dummy chroma.sqlite3 so the "has_data" guard passes.
         (kb_dir / "chroma.sqlite3").write_bytes(b"")
 
-        mock_fresh_client.return_value = MagicMock()
-        collection = MagicMock()
-        collection.get.return_value = {"ids": [], "documents": [], "metadatas": []}
-        collection.count.return_value = 0
-        chroma_inst = MagicMock()
-        chroma_inst._collection = collection
-        mock_chroma.return_value = chroma_inst
+        mock_create_backend.return_value = self._fake_backend(
+            [
+                ("hello", {"source_type": "folder", "file_name": "b.md", "job_id": "cafe"}),
+                ("world", {"source_type": "file_upload", "file_name": "a.pdf", "job_id": "deadbeef"}),
+            ]
+        )
 
         response = await client.get(
             f"api/v1/knowledge_bases/filter_kb/chunks{query}",
             headers=logged_in_headers,
         )
         assert response.status_code == 200
-        # Metadata-filtered path calls get() once with where=<filter>.
-        get_calls = collection.get.call_args_list
-        assert get_calls, "expected chroma.get to be called"
-        assert get_calls[-1].kwargs.get("where") == expected_filter
+        body = response.json()
+        assert {chunk["metadata"]["source_type"] for chunk in body["chunks"]} == expected_source_types
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.release_chroma_resources")
-    @patch("langflow.api.v1.knowledge_bases.Chroma")
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
+    @patch("langflow.api.v1.knowledge_bases.create_backend")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_multiple_filters_combine_with_and(
         self,
         mock_root,
-        mock_fresh_client,
-        mock_chroma,
+        mock_create_backend,
         mock_release,  # noqa: ARG002
         client: AsyncClient,
         logged_in_headers,
         active_user,
         tmp_path,
     ):
-        from unittest.mock import MagicMock
-
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "filter_multi"
         kb_dir.mkdir(parents=True)
         (kb_dir / "chroma.sqlite3").write_bytes(b"")
 
-        mock_fresh_client.return_value = MagicMock()
-        collection = MagicMock()
-        collection.get.return_value = {"ids": [], "documents": [], "metadatas": []}
-        collection.count.return_value = 0
-        chroma_inst = MagicMock()
-        chroma_inst._collection = collection
-        mock_chroma.return_value = chroma_inst
+        mock_create_backend.return_value = self._fake_backend(
+            [
+                ("match", {"source_type": "folder", "file_name": "a.pdf"}),
+                ("wrong-source", {"source_type": "file_upload", "file_name": "a.pdf"}),
+                ("wrong-file", {"source_type": "folder", "file_name": "b.md"}),
+            ]
+        )
 
         response = await client.get(
             "api/v1/knowledge_bases/filter_multi/chunks?source_type=folder&file_name=a.pdf",
             headers=logged_in_headers,
         )
         assert response.status_code == 200
-
-        where = collection.get.call_args_list[-1].kwargs.get("where")
-        assert where == {
-            "$and": [
-                {"source_type": "folder"},
-                {"file_name": "a.pdf"},
-            ]
-        }
+        body = response.json()
+        # Only the row matching BOTH filters should survive.
+        assert [chunk["content"] for chunk in body["chunks"]] == ["match"]

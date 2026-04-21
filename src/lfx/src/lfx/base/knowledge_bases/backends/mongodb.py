@@ -25,7 +25,6 @@ selects this backend without installing the extra.
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
@@ -59,16 +58,24 @@ class MongoDBBackend(BaseVectorStoreBackend):
             raise ValueError(msg)
         return str(value)
 
-    def _resolve_connection_uri(self) -> str:
+    async def _resolve_secrets(self) -> None:
+        """Resolve the Atlas URI via Langflow's variable_service.
+
+        Reads the variable name from ``backend_config`` (defaulting to
+        ``MONGODB_ATLAS_URI``) and looks it up for ``self.user_id``.
+        Falls back to a same-named environment variable when no UI
+        variable is configured — keeps single-user / desktop setups
+        working without forcing a browser roundtrip.
+        """
         variable_name = self.backend_config.get("connection_uri_variable") or DEFAULT_CONNECTION_URI_VARIABLE
-        value = os.environ.get(variable_name)
+        value = await self.resolve_secret(variable_name)
         if not value:
             msg = (
-                f"MongoDBBackend needs the '{variable_name}' Langflow variable "
+                f"MongoDBBackend needs the {variable_name!r} Langflow variable "
                 "(or env var of the same name) populated with the Atlas URI."
             )
             raise ValueError(msg)
-        return value
+        self._resolved_uri = value
 
     def _build_vector_store(self) -> VectorStore:
         # Validate config before touching optional deps so missing
@@ -76,7 +83,10 @@ class MongoDBBackend(BaseVectorStoreBackend):
         # whether the langchain-mongodb extras are installed.
         database = self._required("database")
         collection_name = self._required("collection")
-        uri = self._resolve_connection_uri()
+        uri = getattr(self, "_resolved_uri", None)
+        if not uri:
+            msg = "MongoDBBackend.ensure_ready() must be awaited before _build_vector_store."
+            raise RuntimeError(msg)
         index_name = self.backend_config.get("index_name") or DEFAULT_INDEX_NAME
         text_key = self.backend_config.get("text_key") or DEFAULT_TEXT_KEY
         embedding_key = self.backend_config.get("embedding_key") or DEFAULT_EMBEDDING_KEY
@@ -107,6 +117,7 @@ class MongoDBBackend(BaseVectorStoreBackend):
         # MongoDB collections expose ``estimated_document_count`` for
         # cheap counts; fall back to ``count_documents`` if the driver
         # doesn't surface it.
+        await self.ensure_ready()
         client = getattr(self, "_mongo_client", None)
         if client is None:
             # Force a build so the collection is accessible.
@@ -126,6 +137,7 @@ class MongoDBBackend(BaseVectorStoreBackend):
         include_embeddings: bool = False,
     ) -> AsyncIterator[list[IngestedDocument]]:
         """Paginate the collection via MongoDB's cursor."""
+        await self.ensure_ready()
         client = getattr(self, "_mongo_client", None)
         if client is None:
             _ = self.vector_store

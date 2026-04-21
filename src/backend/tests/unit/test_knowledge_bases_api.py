@@ -651,48 +651,58 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 400
         assert "Invalid embedding configuration" in response.json()["detail"]
 
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    @patch("langflow.api.v1.knowledge_bases.Chroma")
+    @patch("langflow.api.v1.knowledge_bases.create_backend")
     async def test_get_chunks_pagination_and_search(
-        self, mock_chroma, mock_root, mock_fresh_client, client: AsyncClient, logged_in_headers, tmp_path
+        self, mock_create_backend, mock_root, client: AsyncClient, logged_in_headers, tmp_path
     ):
-        mock_fresh_client.return_value = MagicMock()
+        """Chunks endpoint streams through ``backend.iter_documents`` now.
+
+        Old Chroma ``_collection.get`` assertions replaced with a mock
+        backend that yields a fixed set of ``IngestedDocument``s — this
+        keeps the test backend-agnostic and exercises the new filter +
+        paginate-in-Python path that works across Chroma / Mongo /
+        Astra / Postgres.
+        """
+        from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / "activeuser" / "KB1"
         kb_dir.mkdir(parents=True, exist_ok=True)
         (kb_dir / "chroma.sqlite3").write_text("dummy")
 
-        mock_collection = MagicMock()
-        # Set up for page 1 search
-        mock_collection.get.return_value = {
-            "ids": ["1", "2"],
-            "documents": ["content 1", "content 2"],
-            "metadatas": [{}, {}],
-        }
-        mock_chroma.return_value._collection = mock_collection
+        # 25 documents: ids "0" through "24". Two of them contain the
+        # substring "needle"; the rest read as "doc N".
+        documents = [
+            IngestedDocument(
+                content="needle match" if idx in {3, 7} else f"doc {idx}",
+                metadata={"_id": str(idx)},
+            )
+            for idx in range(25)
+        ]
 
-        # Test search
-        response = await client.get("api/v1/knowledge_bases/KB1/chunks?search=content", headers=logged_in_headers)
+        async def _iter_documents(*, batch_size: int = 1000, include_embeddings: bool = False):  # noqa: ARG001
+            yield documents
+
+        backend = MagicMock()
+        backend.iter_documents = _iter_documents
+        backend.teardown = AsyncMock()
+        mock_create_backend.return_value = backend
+
+        # Search filters client-side and finds both "needle" rows.
+        response = await client.get("api/v1/knowledge_bases/KB1/chunks?search=needle", headers=logged_in_headers)
         assert response.status_code == 200
         data = response.json()
-        assert len(data["chunks"]) == 2
-        mock_collection.get.assert_called_with(
-            include=["documents", "metadatas"], where_document={"$contains": "content"}
-        )
+        assert [chunk["content"] for chunk in data["chunks"]] == ["needle match", "needle match"]
+        assert data["total"] == 2
 
-        # Test pagination (page 2)
-        mock_collection.count.return_value = 25
-        mock_collection.get.return_value = {
-            "ids": ["11"],
-            "documents": ["page 2 content"],
-            "metadatas": [{}],
-        }
+        # Pagination: page 2 of 10 returns ids "10" through "19".
         response = await client.get("api/v1/knowledge_bases/KB1/chunks?page=2&limit=10", headers=logged_in_headers)
         assert response.status_code == 200
         data = response.json()
         assert data["page"] == 2
-        mock_collection.get.assert_called_with(include=["documents", "metadatas"], limit=10, offset=10)
+        assert data["total"] == 25
+        assert [chunk["id"] for chunk in data["chunks"]] == [str(i) for i in range(10, 20)]
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_get_chunks_non_existent_kb_returns_404(

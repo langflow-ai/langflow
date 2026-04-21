@@ -278,6 +278,45 @@ class KBAnalysisHelper:
         return metadata
 
     @staticmethod
+    async def update_text_metrics_via_backend(metadata: dict, backend) -> None:
+        """Backend-agnostic metrics refresh.
+
+        Drives ``chunks`` / ``words`` / ``characters`` / ``avg_chunk_size``
+        from the backend's ``count`` + ``iter_documents`` abstraction so
+        every vector-store target (Chroma / Mongo / Astra / Postgres) is
+        covered. Silently tolerates iterator failures — metrics are
+        cosmetic, and raising here would wrongly fail an ingestion whose
+        writes already succeeded.
+        """
+        try:
+            total_chunks = await backend.count()
+        except Exception as exc:  # noqa: BLE001 — backend-level issues are best-effort
+            logger.debug(f"Backend count() failed during metrics refresh: {exc}")
+            total_chunks = 0
+        metadata["chunks"] = total_chunks
+
+        if total_chunks <= 0:
+            return
+
+        total_words = 0
+        total_characters = 0
+        try:
+            async for batch in backend.iter_documents(batch_size=5000):
+                if not batch:
+                    continue
+                source_chunks = pd.DataFrame({"document": [doc.content for doc in batch]})
+                words, characters = KBAnalysisHelper._calculate_text_metrics(source_chunks, ["document"])
+                total_words += words
+                total_characters += characters
+        except Exception as exc:  # noqa: BLE001 — see note above
+            logger.debug(f"Backend iter_documents failed during metrics refresh: {exc}")
+            return
+
+        metadata["words"] = total_words
+        metadata["characters"] = total_characters
+        metadata["avg_chunk_size"] = round(total_characters / total_chunks, 1) if total_chunks > 0 else 0.0
+
+    @staticmethod
     def update_text_metrics(kb_path: Path, metadata: dict, chroma: Chroma | None = None) -> None:
         """Update text metrics (chunks, words, characters) for a knowledge base."""
         created_locally = chroma is None
@@ -542,6 +581,11 @@ class KBIngestionHelper:
                 kb_path=kb_path,
                 backend_config=backend_config,
                 embedding_function=embeddings,
+                # Forward the user id so Mongo/Astra/Postgres backends can
+                # pull their connection URI / tokens from Langflow's
+                # variable_service instead of forcing the server to export
+                # matching env vars.
+                user_id=getattr(current_user, "id", None),
             )
 
             job_id_str = str(task_job_id)
@@ -654,7 +698,11 @@ class KBIngestionHelper:
                 final_status = IngestionRunStatus.SUCCEEDED
 
             metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-            KBAnalysisHelper.update_text_metrics(kb_path, metadata, chroma=backend.raw_langchain_store())
+            # Backend-agnostic metrics refresh — ``raw_langchain_store`` was
+            # Chroma-only and broke Mongo/Astra/Postgres with AttributeError
+            # (which then falsely marked the run failed and rolled back the
+            # chunks we'd just written).
+            await KBAnalysisHelper.update_text_metrics_via_backend(metadata, backend)
             metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
             metadata["chunk_size"] = chunk_size
             metadata["chunk_overlap"] = chunk_overlap
@@ -741,6 +789,7 @@ class KBIngestionHelper:
         kb_name: str,
         backend_type: str | None = None,
         backend_config: dict | None = None,
+        user_id=None,
     ) -> None:
         """Delete every chunk written by ``job_id`` from this KB.
 
@@ -759,6 +808,7 @@ class KBIngestionHelper:
             kb_name=kb_name,
             kb_path=kb_path,
             backend_config=backend_config or {},
+            user_id=user_id,
         )
         try:
             await backend.delete_by({METADATA_KEY_JOB_ID: str(job_id)})

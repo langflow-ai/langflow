@@ -16,7 +16,6 @@ the UI.
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING
 
 from lfx.base.knowledge_bases.backends.base import (
@@ -54,21 +53,22 @@ class AstraBackend(BaseVectorStoreBackend):
             raise ValueError(msg)
         return str(value)
 
-    def _resolve_variable(self, variable_name: str) -> str:
-        value = os.environ.get(variable_name)
-        if not value:
-            msg = f"AstraBackend needs the '{variable_name}' Langflow variable (or env var of the same name) populated."
-            raise ValueError(msg)
-        return value
+    async def _resolve_secrets(self) -> None:
+        """Resolve the Astra API endpoint + app token via variable_service."""
+        api_endpoint_var = self.backend_config.get("api_endpoint_variable") or DEFAULT_API_ENDPOINT_VARIABLE
+        token_var = self.backend_config.get("token_variable") or DEFAULT_TOKEN_VARIABLE
+        self._resolved_api_endpoint = await self.resolve_required_secret(api_endpoint_var)
+        self._resolved_token = await self.resolve_required_secret(token_var)
 
     def _build_vector_store(self) -> VectorStore:
         # Config validation first so missing-field errors are
         # distinguishable from missing-dep errors.
         collection_name = self._required("collection_name")
-        api_endpoint = self._resolve_variable(
-            self.backend_config.get("api_endpoint_variable") or DEFAULT_API_ENDPOINT_VARIABLE
-        )
-        token = self._resolve_variable(self.backend_config.get("token_variable") or DEFAULT_TOKEN_VARIABLE)
+        api_endpoint = getattr(self, "_resolved_api_endpoint", None)
+        token = getattr(self, "_resolved_token", None)
+        if not api_endpoint or not token:
+            msg = "AstraBackend.ensure_ready() must be awaited before _build_vector_store."
+            raise RuntimeError(msg)
         namespace = self.backend_config.get("namespace") or None
 
         try:
@@ -89,6 +89,7 @@ class AstraBackend(BaseVectorStoreBackend):
         )
 
     async def count(self) -> int:
+        await self.ensure_ready()
         store = self.vector_store
         # langchain_astradb exposes the underlying collection on
         # ``.collection``; its ``count_documents`` is a cheap server-
@@ -108,6 +109,7 @@ class AstraBackend(BaseVectorStoreBackend):
         batch_size: int = 5000,
         include_embeddings: bool = False,
     ) -> AsyncIterator[list[IngestedDocument]]:
+        await self.ensure_ready()
         store = self.vector_store
         collection = getattr(store, "collection", None)
         if collection is None:

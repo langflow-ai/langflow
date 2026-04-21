@@ -13,6 +13,7 @@ from lfx.base.knowledge_bases.backends.base import BackendType
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from uuid import UUID
 
     from langchain_core.embeddings import Embeddings
 
@@ -67,12 +68,18 @@ def create_backend(
     *,
     backend_config: dict[str, Any] | None = None,
     embedding_function: Embeddings | None = None,
+    user_id: UUID | str | None = None,
 ) -> BaseVectorStoreBackend:
     """Factory: build a backend instance for ``kb_name``.
 
     Parameters mirror ``BaseVectorStoreBackend.__init__``. Intended as the
     single entry point for KB helper code so swapping the default backend is a
     one-line change in ``kb_helpers``.
+
+    ``user_id`` is forwarded so backends can resolve credential *variables*
+    through Langflow's ``variable_service`` (same pattern as the connector
+    ingestion sources). Legacy call sites that pass ``None`` still work —
+    the backends fall back to ``os.environ`` in that case.
     """
     backend_class = get_backend_class(backend_type)
     return backend_class(
@@ -80,6 +87,7 @@ def create_backend(
         kb_path=kb_path,
         backend_config=backend_config,
         embedding_function=embedding_function,
+        user_id=user_id,
     )
 
 

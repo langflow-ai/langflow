@@ -18,7 +18,6 @@ credentials.
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
@@ -53,16 +52,17 @@ class PostgresBackend(BaseVectorStoreBackend):
             raise ValueError(msg)
         return str(value)
 
-    def _resolve_connection_uri(self) -> str:
+    async def _resolve_secrets(self) -> None:
+        """Resolve the Postgres URL via Langflow's variable_service."""
         variable_name = self.backend_config.get("connection_uri_variable") or DEFAULT_CONNECTION_URI_VARIABLE
-        value = os.environ.get(variable_name)
+        value = await self.resolve_secret(variable_name)
         if not value:
             msg = (
-                f"PostgresBackend needs the '{variable_name}' Langflow variable "
+                f"PostgresBackend needs the {variable_name!r} Langflow variable "
                 "(or env var of the same name) populated with a Postgres URL."
             )
             raise ValueError(msg)
-        return value
+        self._resolved_connection = value
 
     def _build_vector_store(self) -> VectorStore:
         # Validate config before attempting the optional import so
@@ -70,7 +70,10 @@ class PostgresBackend(BaseVectorStoreBackend):
         # ``ValueError`` even on a host that hasn't installed the
         # langchain-postgres extra.
         collection_name = self._required("collection_name")
-        connection = self._resolve_connection_uri()
+        connection = getattr(self, "_resolved_connection", None)
+        if not connection:
+            msg = "PostgresBackend.ensure_ready() must be awaited before _build_vector_store."
+            raise RuntimeError(msg)
 
         try:
             from langchain_postgres import PGVector
@@ -86,6 +89,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         )
 
     async def count(self) -> int:
+        await self.ensure_ready()
         store = self.vector_store
         session_maker = getattr(store, "_session_maker", None) or getattr(store, "session_maker", None)
         if session_maker is None:
@@ -105,6 +109,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         batch_size: int = 5000,
         include_embeddings: bool = False,
     ) -> AsyncIterator[list[IngestedDocument]]:
+        await self.ensure_ready()
         store = self.vector_store
         session_maker = getattr(store, "_session_maker", None) or getattr(store, "session_maker", None)
         if session_maker is None:

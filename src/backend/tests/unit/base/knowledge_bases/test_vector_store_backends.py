@@ -72,8 +72,11 @@ class TestMongoDBBackendValidation:
             kb_path=tmp_path,
             backend_config={"database": "d", "collection": "c"},
         )
+        # The "missing variable" error now surfaces from ``ensure_ready``
+        # — that's where we resolve the Langflow variable (or env fallback)
+        # before handing the URI to ``_build_vector_store``.
         with pytest.raises(ValueError, match="MONGODB_ATLAS_URI"):
-            backend._build_vector_store()
+            await backend.ensure_ready()
 
 
 class TestMongoDBBackendBuild:
@@ -106,6 +109,7 @@ class TestMongoDBBackendBuild:
             },
             embedding_function=MagicMock(),
         )
+        await backend.ensure_ready()
         built = backend._build_vector_store()
 
         pymongo_module.MongoClient.assert_called_once_with("mongodb+srv://demo")
@@ -141,7 +145,7 @@ class TestAstraBackendValidation:
             backend_config={"collection_name": "c"},
         )
         with pytest.raises(ValueError, match="ASTRA_DB_APPLICATION_TOKEN"):
-            backend._build_vector_store()
+            await backend.ensure_ready()
 
 
 class TestAstraBackendBuild:
@@ -160,6 +164,7 @@ class TestAstraBackendBuild:
             backend_config={"collection_name": "c", "namespace": "ns"},
             embedding_function=MagicMock(),
         )
+        await backend.ensure_ready()
         built = backend._build_vector_store()
         assert built is fake_store
         module.AstraDBVectorStore.assert_called_once()
@@ -190,7 +195,7 @@ class TestPostgresBackendValidation:
             backend_config={"collection_name": "c"},
         )
         with pytest.raises(ValueError, match="POSTGRES_CONNECTION_URL"):
-            backend._build_vector_store()
+            await backend.ensure_ready()
 
 
 class TestPostgresBackendBuild:
@@ -208,6 +213,7 @@ class TestPostgresBackendBuild:
             backend_config={"collection_name": "my_kb"},
             embedding_function=MagicMock(),
         )
+        await backend.ensure_ready()
         built = backend._build_vector_store()
         assert built is fake_store
         kwargs = module.PGVector.call_args.kwargs
@@ -248,6 +254,7 @@ class TestMissingOptionalDepsSurfaceHelpfulErrors:
             kb_path=tmp_path,
             backend_config={"database": "d", "collection": "c"},
         )
+        await backend.ensure_ready()
         with pytest.raises(RuntimeError, match="langchain-mongodb"):
             backend._build_vector_store()
 
@@ -256,6 +263,7 @@ class TestMissingOptionalDepsSurfaceHelpfulErrors:
         monkeypatch.setenv("ASTRA_DB_APPLICATION_TOKEN", "tok")
         self._hide_module(monkeypatch, "langchain_astradb")
         backend = AstraBackend(kb_name="kb", kb_path=tmp_path, backend_config={"collection_name": "c"})
+        await backend.ensure_ready()
         with pytest.raises(RuntimeError, match="langchain-astradb"):
             backend._build_vector_store()
 
@@ -263,5 +271,6 @@ class TestMissingOptionalDepsSurfaceHelpfulErrors:
         monkeypatch.setenv("POSTGRES_CONNECTION_URL", "postgresql://demo")
         self._hide_module(monkeypatch, "langchain_postgres")
         backend = PostgresBackend(kb_name="kb", kb_path=tmp_path, backend_config={"collection_name": "c"})
+        await backend.ensure_ready()
         with pytest.raises(RuntimeError, match="langchain-postgres"):
             backend._build_vector_store()

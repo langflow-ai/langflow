@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 import uuid
 from datetime import datetime, timezone
@@ -8,9 +9,9 @@ from typing import Annotated, Any
 
 import chromadb.errors
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
-from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
+from lfx.base.knowledge_bases.backends import BackendType, create_backend
 from lfx.base.knowledge_bases.ingestion_sources import (
     FolderSource,
     SourceType,
@@ -763,105 +764,89 @@ async def get_knowledge_base_chunks(
     produced without pulling the whole collection into memory.
     """
     kb_path: Path | None = None
+    backend = None
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
 
-        # Guard: If no physical chroma data exists, return empty response immediately
-        # This prevents 'readonly database' errors when trying to initialize Chroma on an empty directory
-        has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
-        if not has_data:
-            return PaginatedChunkResponse(
-                chunks=[],
-                total=0,
-                page=page,
-                limit=limit,
-                total_pages=0,
-            )
+        # Look up the KB record so we know which backend to open.
+        # Falls back to Chroma for legacy KBs that only exist on disk
+        # (pre-DB rows); those still have their files under ``kb_path``.
+        kb_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+        backend_type_value = (
+            kb_record.backend_type if kb_record and kb_record.backend_type else BackendType.CHROMA.value
+        )
+        backend_config = (kb_record.backend_config or {}) if kb_record is not None else {}
 
-        # Create vector store
-        client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-        chroma = Chroma(
-            client=client,
-            collection_name=kb_name,
+        # Local-Chroma short-circuit: if the KB lives on disk and has no
+        # files yet, return empty without booting a Chroma client (which
+        # would otherwise hit 'readonly database' on the empty dir).
+        if backend_type_value == BackendType.CHROMA.value:
+            has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
+            if not has_data:
+                return PaginatedChunkResponse(
+                    chunks=[],
+                    total=0,
+                    page=page,
+                    limit=limit,
+                    total_pages=0,
+                )
+
+        backend = create_backend(
+            backend_type_value,
+            kb_name=kb_name,
+            kb_path=kb_path,
+            backend_config=backend_config,
+            user_id=current_user.id,
         )
 
-        # Access the raw collection
-        collection = chroma._collection  # noqa: SLF001
+        search_term = search.strip().lower()
 
-        search_term = search.strip()
+        def matches_filters(metadata: dict[str, Any] | None, content: str) -> bool:
+            meta = metadata or {}
+            if source_type and meta.get("source_type") != source_type:
+                return False
+            if file_name and meta.get("file_name") != file_name:
+                return False
+            if job_id and meta.get("job_id") != job_id:
+                return False
+            return not (search_term and search_term not in (content or "").lower())
 
-        # Assemble the metadata filter. Chroma requires a single
-        # operator at the top level when more than one key is present.
-        metadata_filters: list[dict[str, Any]] = []
-        if source_type:
-            metadata_filters.append({"source_type": source_type})
-        if file_name:
-            metadata_filters.append({"file_name": file_name})
-        if job_id:
-            metadata_filters.append({"job_id": job_id})
-        where_metadata: dict[str, Any] | None
-        if len(metadata_filters) > 1:
-            where_metadata = {"$and": metadata_filters}
-        elif metadata_filters:
-            where_metadata = metadata_filters[0]
-        else:
-            where_metadata = None
+        # Stream through the backend and filter in Python. The vector
+        # stores don't share a filter DSL (Chroma's ``where`` vs Mongo
+        # query documents vs Astra's Data API vs PGVector JSONB), so a
+        # uniform client-side pass is the only path that works for all
+        # four. KB chunk browsers operate on bounded collections — a
+        # full iteration is acceptable here.
+        offset = (page - 1) * limit
+        matched: list[tuple[str, str, dict[str, Any]]] = []
+        matched_count = 0
+        try:
+            async for batch in backend.iter_documents(batch_size=1000):
+                for entry in batch:
+                    if not matches_filters(entry.metadata, entry.content):
+                        continue
+                    entry_id = (
+                        entry.metadata.get("_id") or entry.metadata.get("id") or entry.metadata.get("chunk_id") or ""
+                    )
+                    # Only materialize entries inside the requested page; we
+                    # still have to count past them for ``total_pages``.
+                    if offset <= matched_count < offset + limit:
+                        matched.append((entry_id, entry.content, dict(entry.metadata)))
+                    matched_count += 1
+        except Exception as iter_error:
+            await logger.aerror("iter_documents failed for '%s': %s", kb_name, iter_error)
+            raise HTTPException(status_code=500, detail="Error getting chunks.") from iter_error
 
-        get_kwargs: dict[str, Any] = {"include": ["documents", "metadatas"]}
-        if where_metadata is not None:
-            get_kwargs["where"] = where_metadata
-
-        if search_term:
-            # When searching, fetch all matching docs then paginate in-memory
-            all_results = collection.get(
-                where_document={"$contains": search_term},
-                **get_kwargs,
-            )
-            total_count = len(all_results["ids"])
-            offset = (page - 1) * limit
-            sliced_ids = all_results["ids"][offset : offset + limit]
-            sliced_docs = all_results["documents"][offset : offset + limit]
-            sliced_metas = all_results["metadatas"][offset : offset + limit]
-        elif where_metadata is not None:
-            # Metadata-filtered reads can't use Chroma's paginated
-            # ``count`` shortcut because ``collection.count()`` ignores
-            # the filter. Fetch all matches and slice in-memory.
-            all_results = collection.get(**get_kwargs)
-            total_count = len(all_results["ids"])
-            offset = (page - 1) * limit
-            sliced_ids = all_results["ids"][offset : offset + limit]
-            sliced_docs = all_results["documents"][offset : offset + limit]
-            sliced_metas = all_results["metadatas"][offset : offset + limit]
-        else:
-            # No search - use Chroma's native pagination
-            total_count = collection.count()
-            offset = (page - 1) * limit
-            results = collection.get(
-                include=["documents", "metadatas"],
-                limit=limit,
-                offset=offset,
-            )
-            sliced_ids = results["ids"]
-            sliced_docs = results["documents"]
-            sliced_metas = results["metadatas"]
-
-        chunks = []
-        for doc_id, document, metadata in zip(sliced_ids, sliced_docs, sliced_metas, strict=False):
-            content = document or ""
-            chunks.append(
-                ChunkInfo(
-                    id=doc_id,
-                    content=content,
-                    char_count=len(content),
-                    metadata=metadata,
-                )
-            )
+        chunks = [
+            ChunkInfo(id=doc_id, content=content, char_count=len(content or ""), metadata=metadata)
+            for doc_id, content, metadata in matched
+        ]
         return PaginatedChunkResponse(
             chunks=chunks,
-            total=total_count,
+            total=matched_count,
             page=page,
             limit=limit,
-            total_pages=(total_count + limit - 1) // limit if total_count > 0 else 0,
+            total_pages=(matched_count + limit - 1) // limit if matched_count > 0 else 0,
         )
 
     except HTTPException:
@@ -870,8 +855,9 @@ async def get_knowledge_base_chunks(
         await logger.aerror("Error getting chunks for '%s': %s", kb_name, e)
         raise HTTPException(status_code=500, detail="Error getting chunks.") from e
     finally:
-        client = None
-        chroma = None
+        if backend is not None:
+            with contextlib.suppress(Exception):
+                await backend.teardown()
         if kb_path is not None:
             KBStorageHelper.release_chroma_resources(kb_path)
 

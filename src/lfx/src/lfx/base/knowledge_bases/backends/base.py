@@ -19,10 +19,14 @@ call site is expected to obtain a fresh backend instance and tear it down via
 
 from __future__ import annotations
 
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from uuid import UUID
+
+from lfx.log.logger import logger
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -144,12 +148,104 @@ class BaseVectorStoreBackend(ABC):
         kb_path: Path,
         backend_config: dict[str, Any] | None = None,
         embedding_function: Embeddings | None = None,
+        user_id: UUID | str | None = None,
     ) -> None:
         self.kb_name = kb_name
         self.kb_path = kb_path
         self.backend_config = backend_config or {}
         self.embedding_function = embedding_function
+        self.user_id = user_id
         self._vector_store: VectorStore | None = None
+
+    # ---- credential resolution ------------------------------------------
+
+    def _coerce_user_uuid(self) -> UUID | None:
+        """Turn ``self.user_id`` into a ``UUID`` when possible."""
+        if self.user_id is None:
+            return None
+        if isinstance(self.user_id, UUID):
+            return self.user_id
+        try:
+            return UUID(str(self.user_id))
+        except (ValueError, TypeError, AttributeError):
+            return None
+
+    async def resolve_secret(self, variable_name: str) -> str | None:
+        """Look up ``variable_name`` through Langflow's variable service.
+
+        Resolution order matches the connector ingestion sources
+        (``connector_base.ConnectorIngestionSource.resolve_secret``):
+
+        1. Langflow's ``variable_service`` scoped to ``self.user_id``.
+        2. Process env var of the same name as a fallback for desktop /
+           single-user deployments that skip the UI step.
+
+        Returns ``None`` when neither source has a value; callers
+        decide whether that's fatal. Never raises — ``_build_vector_store``
+        is the right place for hard "credential missing" errors.
+        """
+        if not variable_name:
+            return None
+
+        user_uuid = self._coerce_user_uuid()
+        if user_uuid is not None:
+            try:
+                from lfx.services.deps import get_variable_service, session_scope
+
+                variable_service = get_variable_service()
+                if variable_service is not None:
+                    async with session_scope() as session:
+                        value = await variable_service.get_variable(
+                            user_id=user_uuid,
+                            name=variable_name,
+                            field="",
+                            session=session,
+                        )
+                    if value:
+                        return str(value)
+            except Exception as exc:  # noqa: BLE001 — fall through to env
+                logger.debug("variable_service lookup for %s failed: %s", variable_name, exc)
+
+        env_value = os.environ.get(variable_name)
+        return env_value or None
+
+    async def resolve_required_secret(self, variable_name: str) -> str:
+        """Like ``resolve_secret`` but raises if no value is found."""
+        value = await self.resolve_secret(variable_name)
+        if not value:
+            msg = (
+                f"Required credential variable {variable_name!r} is not "
+                "configured. Set it via Langflow's variable settings or as "
+                "an environment variable on the server."
+            )
+            raise ValueError(msg)
+        return value
+
+    async def _resolve_secrets(self) -> None:
+        """Hook for subclasses to resolve credential variables asynchronously.
+
+        Called once, lazily, from ``ensure_ready`` before ``_build_vector_store``
+        runs. Subclasses that need to translate ``backend_config`` variable
+        names into live secrets override this and stash the values as
+        instance attributes; ``_build_vector_store`` then reads those attrs
+        synchronously.
+
+        Default: no-op. ``ChromaBackend`` has no credentials.
+        """
+        return
+
+    async def ensure_ready(self) -> None:
+        """Resolve async config exactly once before any vector-store access.
+
+        Call sites (``kb_helpers``, ``retrieval.py``) await this after
+        ``create_backend`` and before the first ``add_documents`` /
+        ``similarity_search`` / ``iter_documents`` call. Idempotent so
+        repeat calls are free.
+        """
+        if getattr(self, "_secrets_resolved", False):
+            return
+        await self._resolve_secrets()
+        self._secrets_resolved = True
 
     # ---- subclass surface ------------------------------------------------
 
@@ -169,6 +265,7 @@ class BaseVectorStoreBackend(ABC):
     async def add_documents(self, docs: list[Document]) -> None:
         if not docs:
             return
+        await self.ensure_ready()
         await self.vector_store.aadd_documents(docs)
 
     async def similarity_search(
@@ -179,16 +276,19 @@ class BaseVectorStoreBackend(ABC):
         filter: dict[str, Any] | None = None,  # noqa: A002 — matches LangChain VectorStore API
         with_scores: bool = False,
     ) -> list[tuple[Document, float]]:
+        await self.ensure_ready()
         if with_scores:
             return await self.vector_store.asimilarity_search_with_score(query=query, k=k, filter=filter)
         docs = await self.vector_store.asimilarity_search(query=query, k=k, filter=filter)
         return [(doc, 0.0) for doc in docs]
 
     async def delete_by(self, where: dict[str, Any]) -> None:
+        await self.ensure_ready()
         await self.vector_store.adelete(where=where)
 
     async def count(self) -> int:
         # Default: iterate. Subclasses with a native count should override.
+        await self.ensure_ready()
         total = 0
         async for batch in self.iter_documents(batch_size=5000):
             total += len(batch)
