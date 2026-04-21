@@ -364,6 +364,11 @@ export function StepConfiguration({
                     </div>
                   )}
 
+                  {validationErrors.connector && (
+                    <span className="text-xs text-destructive">
+                      {validationErrors.connector}
+                    </span>
+                  )}
                   {validationErrors.files && (
                     <span className="text-xs text-destructive">
                       {validationErrors.files}

@@ -256,11 +256,18 @@ export function useKnowledgeBaseForm({
   const toggleAdvanced = useCallback(() => {
     setShowAdvanced((prev) => {
       if (prev) {
-        // Hiding advanced: reset chunk settings and close panel
+        // Hiding advanced: reset chunk settings and close the file
+        // panel. Connector state is also cleared here — collapsing
+        // Advanced is meant to *disable* the advanced source path,
+        // not just hide it. Leaving stale ``activeConnector`` around
+        // would let a connector-with-missing-fields state survive
+        // into the simple-submit flow.
         setChunkSize(0);
         setChunkOverlap(0);
         setSeparator("");
         setIsFilePanelOpen(false);
+        setActiveConnector(null);
+        setConnectorPayload(null);
       } else {
         // Showing advanced: apply defaults
         setChunkSize(DEFAULT_CHUNK_SIZE);
@@ -361,6 +368,15 @@ export function useKnowledgeBaseForm({
         errors.backend = backendErrors;
       }
     }
+    // Connector submission gate: if the user picked a connector
+    // (S3 / Google Drive / OneDrive / SharePoint) but the inline
+    // form hasn't emitted a valid payload yet, block submission.
+    // Without this gate, ``handleSubmit`` would create an empty
+    // KB and close the modal with a success toast while silently
+    // skipping the ingestion dispatch.
+    if (activeConnector && !connectorPayload) {
+      errors.connector = `Complete the ${activeConnector} connector configuration before continuing`;
+    }
     const totalBytes = files.reduce((acc, file) => acc + file.size, 0);
     if (totalBytes > MAX_TOTAL_FILE_SIZE) {
       errors.files = "Total file size exceeds the 1 GB limit";
@@ -374,6 +390,8 @@ export function useKnowledgeBaseForm({
     backendConfig,
     files,
     existingKnowledgeBaseNames,
+    activeConnector,
+    connectorPayload,
   ]);
 
   const clearValidationErrors = useCallback(() => {

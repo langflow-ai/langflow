@@ -19,6 +19,7 @@ credentials.
 from __future__ import annotations
 
 import asyncio
+import queue as sync_queue
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
@@ -120,55 +121,79 @@ class PostgresBackend(BaseVectorStoreBackend):
         if session_maker is None:
             return
 
-        # Execute the query and fetch rows off the event loop in
-        # ``batch_size`` chunks via ``result.fetchmany``. The session
-        # stays open across thread hops — this is safe because only
-        # one thread touches it at a time.
-        def _open_session_and_execute() -> tuple[Any, Any]:
-            session = session_maker()
+        # SQLAlchemy ``Session`` and psycopg ``Cursor`` objects are
+        # NOT safe to share across threads — even sequential access
+        # from different threads breaks the DB-API connection state.
+        # ``asyncio.to_thread`` cannot pin subsequent calls to the
+        # same worker thread, so we run the entire session lifetime
+        # (open → iterate → close) inside *one* ``to_thread`` call
+        # and stream batches back to the async side via a thread-
+        # safe ``queue.Queue``.
+        #
+        # ``maxsize=2`` gives natural backpressure: the worker
+        # blocks on ``queue.put`` once two batches are buffered,
+        # matching what the caller is ready to consume.
+        sentinel = object()
+        batch_queue: sync_queue.Queue[Any] = sync_queue.Queue(maxsize=2)
+
+        def _stream_batches() -> None:
             try:
-                query = _select_rows_query(store, include_embeddings=include_embeddings)
-                result = session.execute(query)
-            except Exception:
-                session.close()
-                raise
-            return session, result
+                with session_maker() as session:
+                    query = _select_rows_query(store, include_embeddings=include_embeddings)
+                    result = session.execute(query)
+                    while True:
+                        rows = result.fetchmany(batch_size)
+                        if not rows:
+                            break
+                        batch: list[IngestedDocument] = []
+                        for row in rows:
+                            content = row[0] or ""
+                            metadata = row[1] or {}
+                            embedding: list[float] | None = None
+                            if include_embeddings and len(row) >= _ROWS_WITH_EMBEDDING_COLS:
+                                raw_vec = row[2]
+                                if raw_vec is not None:
+                                    embedding = list(raw_vec)
+                            batch.append(
+                                IngestedDocument(
+                                    content=str(content),
+                                    metadata=dict(metadata) if isinstance(metadata, dict) else {},
+                                    embedding=embedding,
+                                )
+                            )
+                        if batch:
+                            batch_queue.put(batch)
+            except Exception as exc:  # noqa: BLE001
+                batch_queue.put(exc)
+            finally:
+                batch_queue.put(sentinel)
 
-        try:
-            session, result = await asyncio.to_thread(_open_session_and_execute)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("Postgres iter_documents failed to start: %s", exc)
-            return
-
+        worker = asyncio.create_task(asyncio.to_thread(_stream_batches))
+        sentinel_seen = False
         try:
             while True:
-                try:
-                    rows = await asyncio.to_thread(result.fetchmany, batch_size)
-                except Exception as exc:  # noqa: BLE001
-                    logger.debug("Postgres iter_documents fetch failed: %s", exc)
+                item = await asyncio.to_thread(batch_queue.get)
+                if item is sentinel:
+                    sentinel_seen = True
                     break
-                if not rows:
+                if isinstance(item, Exception):
+                    logger.debug("Postgres iter_documents worker failed: %s", item)
+                    sentinel_seen = True
+                    # Worker has already queued the sentinel before
+                    # re-raising — drain it so ``worker`` terminates.
+                    await asyncio.to_thread(batch_queue.get)
                     break
-                batch: list[IngestedDocument] = []
-                for row in rows:
-                    content = row[0] or ""
-                    metadata = row[1] or {}
-                    embedding: list[float] | None = None
-                    if include_embeddings and len(row) >= _ROWS_WITH_EMBEDDING_COLS:
-                        raw_vec = row[2]
-                        if raw_vec is not None:
-                            embedding = list(raw_vec)
-                    batch.append(
-                        IngestedDocument(
-                            content=str(content),
-                            metadata=dict(metadata) if isinstance(metadata, dict) else {},
-                            embedding=embedding,
-                        )
-                    )
-                if batch:
-                    yield batch
+                yield item
         finally:
-            await asyncio.to_thread(session.close)
+            # If the caller abandoned iteration before the sentinel,
+            # the worker may be blocked in ``queue.put``. Keep
+            # draining until the sentinel arrives so it can exit.
+            if not sentinel_seen:
+                while True:
+                    drained = await asyncio.to_thread(batch_queue.get)
+                    if drained is sentinel:
+                        break
+            await worker
 
     async def storage_size_bytes(self) -> int:
         return 0
