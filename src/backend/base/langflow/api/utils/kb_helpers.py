@@ -758,6 +758,7 @@ class KBIngestionHelper:
                 kb_name,
                 backend_type=kb_record.backend_type if kb_record is not None else None,
                 backend_config=kb_record.backend_config if kb_record is not None else None,
+                user_id=getattr(current_user, "id", None),
             )
             return {"message": "Job cancelled", "ingestion_run_id": str(run_id)}
         except Exception as exc:
@@ -770,6 +771,7 @@ class KBIngestionHelper:
                 kb_name,
                 backend_type=kb_record.backend_type if kb_record is not None else None,
                 backend_config=kb_record.backend_config if kb_record is not None else None,
+                user_id=getattr(current_user, "id", None),
             )
             raise
         finally:

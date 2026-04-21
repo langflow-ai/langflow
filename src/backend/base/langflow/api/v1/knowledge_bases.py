@@ -1152,8 +1152,25 @@ async def cancel_ingestion(
         # Update status immediately so background task can see it
         await job_service.update_job_status(job.job_id, JobStatus.CANCELLED)
 
-        # Clean up any partially ingested chunks from this job
-        await KBIngestionHelper.cleanup_chroma_chunks_by_job(job.job_id, kb_path, kb_name)
+        # Clean up any partially ingested chunks from this job. Forward
+        # the KB's configured backend + user_id so non-Chroma KBs
+        # (Mongo/Astra/Postgres) actually find their variable-backed
+        # credentials and delete against the right store — otherwise
+        # cleanup silently falls back to Chroma and remote chunks
+        # written before the cancel stick around.
+        kb_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+        backend_type_value = (
+            kb_record.backend_type if kb_record and kb_record.backend_type else BackendType.CHROMA.value
+        )
+        backend_config = (kb_record.backend_config or {}) if kb_record is not None else {}
+        await KBIngestionHelper.cleanup_chroma_chunks_by_job(
+            job.job_id,
+            kb_path,
+            kb_name,
+            backend_type=backend_type_value,
+            backend_config=backend_config,
+            user_id=current_user.id,
+        )
 
         if revoked:
             message = f"Ingestion job for {job.job_id} cancelled successfully."
