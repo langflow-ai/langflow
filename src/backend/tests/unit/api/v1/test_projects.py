@@ -2,14 +2,24 @@ import io
 import json
 import zipfile
 from unittest.mock import MagicMock, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
 from httpx import AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.services.database.models.deployment.model import Deployment
+from langflow.services.database.models.deployment_provider_account.model import (
+    DeploymentProviderAccount,
+    DeploymentProviderKey,
+)
 from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    FlowVersionDeploymentAttachment,
+)
 from langflow.services.deps import session_scope
+from lfx.services.adapters.deployment.schema import DeploymentType
 
 CYRILLIC_NAME = "Новый проект"
 CYRILLIC_DESC = "Описание проекта с кириллицей"  # noqa: RUF001
@@ -1823,6 +1833,50 @@ async def _create_other_user(client: AsyncClient) -> tuple[str, dict]:
     return created_id, {"Authorization": f"Bearer {token}"}
 
 
+async def _attach_deployment_to_flow(*, user_id: UUID, flow_id: UUID, project_id: UUID) -> None:
+    """Create provider/deployment/version/attachment rows for one flow."""
+    async with session_scope() as session:
+        provider = DeploymentProviderAccount(
+            user_id=user_id,
+            name=f"provider-{flow_id.hex[:8]}",
+            provider_tenant_id="tenant-1",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            provider_url=f"https://provider-{flow_id.hex[:8]}.example.com",
+            api_key="encrypted-value",  # pragma: allowlist secret
+        )
+        session.add(provider)
+        await session.flush()
+
+        deployment = Deployment(
+            user_id=user_id,
+            project_id=project_id,
+            deployment_provider_account_id=provider.id,
+            resource_key=f"rk-{flow_id.hex[:8]}",
+            name=f"deployment-{flow_id.hex[:8]}",
+            deployment_type=DeploymentType.AGENT,
+        )
+        session.add(deployment)
+        await session.flush()
+
+        flow_version = FlowVersion(
+            flow_id=flow_id,
+            user_id=user_id,
+            version_number=1,
+            data={"nodes": [], "edges": []},
+        )
+        session.add(flow_version)
+        await session.flush()
+
+        attachment = FlowVersionDeploymentAttachment(
+            user_id=user_id,
+            flow_version_id=flow_version.id,
+            deployment_id=deployment.id,
+            provider_snapshot_id=f"snapshot-{flow_id.hex[:8]}",
+        )
+        session.add(attachment)
+        await session.commit()
+
+
 async def test_create_project_does_not_reassign_other_users_flows(
     client: AsyncClient,
     logged_in_headers: dict,
@@ -1926,3 +1980,112 @@ async def test_create_project_with_own_flows_assigns_them_correctly(
     assert paginated.status_code == status.HTTP_200_OK
     items = paginated.json().get("flows", {}).get("items", [])
     assert any(item["id"] == flow_id for item in items)
+
+
+async def test_create_project_with_deployed_flow_returns_409_guard(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    active_user,
+):
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "deployed-flow", "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+
+    flow_payload = flow_resp.json()
+    flow_id = UUID(flow_payload["id"])
+    source_project_id = UUID(flow_payload["folder_id"])
+    await _attach_deployment_to_flow(
+        user_id=active_user.id,
+        flow_id=flow_id,
+        project_id=source_project_id,
+    )
+
+    create_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "new-target", "flows_list": [str(flow_id)], "components_list": []},
+        headers=logged_in_headers,
+    )
+    assert create_resp.status_code == status.HTTP_409_CONFLICT
+    assert "cannot be moved to another project" in create_resp.json()["detail"]
+
+
+async def test_update_project_with_deployed_component_returns_409_guard(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    active_user,
+):
+    project_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "component-project", "description": "", "flows_list": [], "components_list": []},
+        headers=logged_in_headers,
+    )
+    assert project_resp.status_code == status.HTTP_201_CREATED
+    project_id = project_resp.json()["id"]
+
+    component_resp = await client.post(
+        "api/v1/flows/",
+        json={
+            "name": "deployed-component",
+            "folder_id": project_id,
+            "is_component": True,
+            "data": {"nodes": [], "edges": []},
+        },
+        headers=logged_in_headers,
+    )
+    assert component_resp.status_code == status.HTTP_201_CREATED
+
+    component_id = UUID(component_resp.json()["id"])
+    await _attach_deployment_to_flow(
+        user_id=active_user.id,
+        flow_id=component_id,
+        project_id=UUID(project_id),
+    )
+
+    update_resp = await client.patch(
+        f"api/v1/projects/{project_id}",
+        json={"name": "component-project-renamed"},
+        headers=logged_in_headers,
+    )
+    assert update_resp.status_code == status.HTTP_409_CONFLICT
+    assert "cannot be moved to another project" in update_resp.json()["detail"]
+
+
+async def test_delete_project_with_deployments_returns_409_project_guard(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    active_user,
+):
+    project_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "delete-guard-project", "description": "", "flows_list": [], "components_list": []},
+        headers=logged_in_headers,
+    )
+    assert project_resp.status_code == status.HTTP_201_CREATED
+    project_id = project_resp.json()["id"]
+
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={
+            "name": "delete-guard-flow",
+            "folder_id": project_id,
+            "data": {"nodes": [], "edges": []},
+        },
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = UUID(flow_resp.json()["id"])
+
+    await _attach_deployment_to_flow(
+        user_id=active_user.id,
+        flow_id=flow_id,
+        project_id=UUID(project_id),
+    )
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert delete_resp.status_code == status.HTTP_409_CONFLICT
+    detail = delete_resp.json()["detail"]
+    assert "project cannot be deleted because it has deployments" in detail.lower()
+    assert "flow cannot be deleted because it has deployed versions" not in detail.lower()

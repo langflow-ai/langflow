@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 from cryptography.fernet import InvalidToken
+from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.models.deployment_provider_account.crud import (
     create_provider_account,
     delete_provider_account,
@@ -360,15 +361,15 @@ async def test_create_provider_account_blank_tenant_id_normalizes_to_none(db, us
 @pytest.mark.asyncio
 async def test_update_provider_account_set_tenant_to_none(db, user):
     acct = await _create_account(db, user, name="set-tenant-none", provider_tenant_id="old-tenant")
-    updated = await update_provider_account(db, provider_account=acct, provider_tenant_id=None)
-    assert updated.provider_tenant_id is None
+    with pytest.raises(DeploymentGuardError, match="cannot be modified"):
+        await update_provider_account(db, provider_account=acct, provider_tenant_id=None)
 
 
 @pytest.mark.asyncio
 async def test_update_provider_account_empty_tenant_normalizes_to_none(db, user):
     acct = await _create_account(db, user, name="empty-tenant", provider_tenant_id="old-tenant")
-    updated = await update_provider_account(db, provider_account=acct, provider_tenant_id="   ")
-    assert updated.provider_tenant_id is None
+    with pytest.raises(DeploymentGuardError, match="cannot be modified"):
+        await update_provider_account(db, provider_account=acct, provider_tenant_id="   ")
 
 
 @pytest.mark.asyncio
