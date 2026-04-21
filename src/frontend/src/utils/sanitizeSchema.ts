@@ -18,6 +18,10 @@ export const markdownSanitizeSchema: Schema = {
     a: ["href", "title", "target", "rel"],
     // Allow image attributes
     img: ["src", "alt", "title", "width", "height"],
+    // Allow video attributes (safe subset)
+    video: ["src", "controls", "width", "height", "poster"],
+    // Allow audio attributes (safe subset)
+    audio: ["src", "controls"],
     // Allow code block attributes
     code: ["className"],
     pre: ["className"],
@@ -28,7 +32,7 @@ export const markdownSanitizeSchema: Schema = {
   // Remove dangerous protocols
   protocols: {
     href: ["http", "https", "mailto"],
-    src: ["http", "https"],
+    src: ["http", "https"], // Used by img, video, audio
   },
   // Strip dangerous tags completely
   strip: ["script", "style"],
@@ -53,6 +57,8 @@ export const markdownSanitizeSchema: Schema = {
     "pre",
     "a",
     "img",
+    "video",
+    "audio",
     "ul",
     "ol",
     "li",

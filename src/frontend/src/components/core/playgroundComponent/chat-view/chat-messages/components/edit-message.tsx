@@ -47,7 +47,10 @@ export const MarkdownField = ({
   useEffect(() => {
     if (markdownRef.current && processedChatMessage && !isEmpty) {
       const textContent = markdownRef.current.textContent?.trim() || "";
-      const hasContent = textContent.length > 0;
+      // Check for media/layout elements that don't have text content
+      const hasMediaElements =
+        markdownRef.current.querySelector("img, hr, video, audio") !== null;
+      const hasContent = textContent.length > 0 || hasMediaElements;
       setShowWarning(!hasContent);
     } else {
       setShowWarning(false);
@@ -56,12 +59,13 @@ export const MarkdownField = ({
 
   return (
     <div className="w-full items-baseline gap-2">
-      {showWarning ? (
-        <div className="text-muted-foreground text-sm p-2 border border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 rounded">
+      {showWarning && (
+        <div className="text-muted-foreground text-sm p-2 border border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 rounded mb-2">
           ⚠️ The response was filtered by security sanitization and cannot be
           displayed.
         </div>
-      ) : (
+      )}
+      {!showWarning && (
         <>
           <div ref={markdownRef}>
             <Markdown
@@ -111,7 +115,7 @@ export const MarkdownField = ({
                     </div>
                   );
                 },
-                code: ({ node, inline, className, children, ...props }) => {
+                code: ({ node, inline, className, children, ...props }: any) => {
                   let content = children as string;
                   if (
                     Array.isArray(children) &&
