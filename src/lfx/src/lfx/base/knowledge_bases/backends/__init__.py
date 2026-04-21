@@ -15,6 +15,7 @@ Public surface:
 Chroma is registered on import so existing call sites keep working.
 """
 
+from lfx.base.knowledge_bases.backends.astra import AstraBackend
 from lfx.base.knowledge_bases.backends.base import (
     BackendType,
     BaseVectorStoreBackend,
@@ -22,6 +23,8 @@ from lfx.base.knowledge_bases.backends.base import (
     VectorStoreBackend,
 )
 from lfx.base.knowledge_bases.backends.chroma import ChromaBackend
+from lfx.base.knowledge_bases.backends.mongodb import MongoDBBackend
+from lfx.base.knowledge_bases.backends.postgres import PostgresBackend
 from lfx.base.knowledge_bases.backends.registry import (
     create_backend,
     get_backend_class,
@@ -31,12 +34,18 @@ from lfx.base.knowledge_bases.backends.registry import (
 
 # Register built-in backends on import.
 register_backend(BackendType.CHROMA, ChromaBackend)
+register_backend(BackendType.MONGODB, MongoDBBackend)
+register_backend(BackendType.ASTRA, AstraBackend)
+register_backend(BackendType.POSTGRES, PostgresBackend)
 
 __all__ = [
+    "AstraBackend",
     "BackendType",
     "BaseVectorStoreBackend",
     "ChromaBackend",
     "IngestedDocument",
+    "MongoDBBackend",
+    "PostgresBackend",
     "VectorStoreBackend",
     "create_backend",
     "get_backend_class",

@@ -1,0 +1,207 @@
+"""Postgres (pgvector) vector-store backend.
+
+Wraps ``langchain_postgres.PGVector``. Connection string comes from
+a Langflow variable so the ``backend_config`` dict stays free of raw
+credentials.
+
+``backend_config`` shape::
+
+    {
+        "connection_uri_variable": "POSTGRES_CONNECTION_URL",
+        "collection_name": "my_kb",
+    }
+
+``collection_name`` becomes the logical partition key inside the
+``langchain_pg_embedding`` table that ``langchain_postgres`` manages
+— one Postgres schema can host many KBs without colliding.
+"""
+
+from __future__ import annotations
+
+import os
+from typing import TYPE_CHECKING, Any
+
+from lfx.base.knowledge_bases.backends.base import (
+    BackendType,
+    BaseVectorStoreBackend,
+    IngestedDocument,
+)
+from lfx.log.logger import logger
+
+# Column count in the ``document, metadata[, embedding]`` projection
+# below. The ``> 2`` check guards the optional embedding column.
+_ROWS_WITH_EMBEDDING_COLS = 3
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from langchain_core.vectorstores import VectorStore
+
+
+DEFAULT_CONNECTION_URI_VARIABLE = "POSTGRES_CONNECTION_URL"
+
+
+class PostgresBackend(BaseVectorStoreBackend):
+    """pgvector-backed Langflow KB via ``langchain_postgres``."""
+
+    backend_type = BackendType.POSTGRES
+
+    def _required(self, key: str) -> str:
+        value = self.backend_config.get(key)
+        if not value:
+            msg = f"PostgresBackend requires '{key}' in backend_config."
+            raise ValueError(msg)
+        return str(value)
+
+    def _resolve_connection_uri(self) -> str:
+        variable_name = self.backend_config.get("connection_uri_variable") or DEFAULT_CONNECTION_URI_VARIABLE
+        value = os.environ.get(variable_name)
+        if not value:
+            msg = (
+                f"PostgresBackend needs the '{variable_name}' Langflow variable "
+                "(or env var of the same name) populated with a Postgres URL."
+            )
+            raise ValueError(msg)
+        return value
+
+    def _build_vector_store(self) -> VectorStore:
+        # Validate config before attempting the optional import so
+        # missing-collection / missing-URI surfaces as a clean
+        # ``ValueError`` even on a host that hasn't installed the
+        # langchain-postgres extra.
+        collection_name = self._required("collection_name")
+        connection = self._resolve_connection_uri()
+
+        try:
+            from langchain_postgres import PGVector
+        except ImportError as exc:
+            msg = "PostgresBackend requires langchain-postgres. Install the 'postgres' extras or add the package."
+            raise RuntimeError(msg) from exc
+
+        return PGVector(
+            embeddings=self.embedding_function,
+            collection_name=collection_name,
+            connection=connection,
+            use_jsonb=True,
+        )
+
+    async def count(self) -> int:
+        store = self.vector_store
+        session_maker = getattr(store, "_session_maker", None) or getattr(store, "session_maker", None)
+        if session_maker is None:
+            return 0
+        try:
+            with session_maker() as session:
+                result = session.execute(_select_count_query(store))
+                row = result.first()
+                return int(row[0]) if row else 0
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Postgres count query failed: %s", exc)
+            return 0
+
+    async def iter_documents(
+        self,
+        *,
+        batch_size: int = 5000,
+        include_embeddings: bool = False,
+    ) -> AsyncIterator[list[IngestedDocument]]:
+        store = self.vector_store
+        session_maker = getattr(store, "_session_maker", None) or getattr(store, "session_maker", None)
+        if session_maker is None:
+            return
+
+        try:
+            with session_maker() as session:
+                query = _select_rows_query(store, include_embeddings=include_embeddings)
+                result = session.execute(query)
+
+                batch: list[IngestedDocument] = []
+                for row in result:
+                    content = row[0] or ""
+                    metadata = row[1] or {}
+                    embedding: list[float] | None = None
+                    if include_embeddings and len(row) >= _ROWS_WITH_EMBEDDING_COLS:
+                        raw_vec = row[2]
+                        if raw_vec is not None:
+                            embedding = list(raw_vec)
+                    batch.append(
+                        IngestedDocument(
+                            content=str(content),
+                            metadata=dict(metadata) if isinstance(metadata, dict) else {},
+                            embedding=embedding,
+                        )
+                    )
+                    if len(batch) >= batch_size:
+                        yield batch
+                        batch = []
+                if batch:
+                    yield batch
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Postgres iter_documents failed: %s", exc)
+            return
+
+    async def storage_size_bytes(self) -> int:
+        return 0
+
+    async def teardown(self) -> None:
+        store = getattr(self, "_vector_store", None)
+        if store is not None:
+            engine = getattr(store, "_engine", None) or getattr(store, "engine", None)
+            if engine is not None and hasattr(engine, "dispose"):
+                try:
+                    engine.dispose()
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug("PGVector engine.dispose failed: %s", exc)
+        self._vector_store = None
+
+    async def delete_collection(self) -> None:
+        store = self.vector_store
+        if hasattr(store, "delete_collection"):
+            try:
+                store.delete_collection()
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("PGVector delete_collection failed: %s", exc)
+
+
+def _select_count_query(store: Any):
+    """Build a COUNT(*) on the embedding table scoped to this collection."""
+    from sqlalchemy import func, select
+
+    embedding_model = _embedding_store_model(store)
+    collection_id = _collection_id(store)
+    return select(func.count()).select_from(embedding_model).where(embedding_model.collection_id == collection_id)
+
+
+def _select_rows_query(store: Any, *, include_embeddings: bool):
+    from sqlalchemy import select
+
+    embedding_model = _embedding_store_model(store)
+    collection_id = _collection_id(store)
+    columns = [embedding_model.document, embedding_model.cmetadata]
+    if include_embeddings:
+        columns.append(embedding_model.embedding)
+    return select(*columns).where(embedding_model.collection_id == collection_id)
+
+
+def _embedding_store_model(store: Any):
+    """Resolve the langchain_postgres EmbeddingStore model class."""
+    for attr in ("EmbeddingStore", "_embedding_store", "embedding_store"):
+        model = getattr(store, attr, None)
+        if model is not None:
+            return model
+    msg = "langchain_postgres.PGVector does not expose an EmbeddingStore model"
+    raise RuntimeError(msg)
+
+
+def _collection_id(store: Any) -> Any:
+    """Resolve the collection row id the store owns."""
+    for attr in ("collection", "_collection"):
+        collection = getattr(store, attr, None)
+        if collection is None:
+            continue
+        for id_attr in ("uuid", "id"):
+            value = getattr(collection, id_attr, None)
+            if value is not None:
+                return value
+    msg = "langchain_postgres.PGVector does not expose a collection row"
+    raise RuntimeError(msg)
