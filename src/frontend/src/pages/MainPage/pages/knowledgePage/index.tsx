@@ -68,6 +68,11 @@ export const KnowledgePage = () => {
   }, [isDrawerOpen]);
 
   const handleKnowledgeBaseSelect = (knowledgeBase: KnowledgeBaseInfo) => {
+    setSelectedKnowledgeBase(knowledgeBase);
+    setIsDrawerOpen(true);
+  };
+
+  const handleViewChunks = (knowledgeBase: KnowledgeBaseInfo) => {
     navigate(`/assets/knowledge-bases/${knowledgeBase.dir_name}/chunks`);
   };
 
@@ -85,6 +90,7 @@ export const KnowledgePage = () => {
     setQuantitySelected: setSelectionCount,
     isShiftPressed,
     onRowClick: handleKnowledgeBaseSelect,
+    onViewChunks: handleViewChunks,
   };
 
   return (
