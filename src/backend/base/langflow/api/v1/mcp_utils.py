@@ -143,8 +143,13 @@ async def handle_list_resources(project_id=None):
             # So the above query for flow files is not enough.
             # So we list all user files for the current user.
             # This is not good. We need to fix this for 1.8.0.
+            #
+            # SECURITY (PVR0754098): user-level files have no project association,
+            # so they must not be exposed through a project-scoped MCP server —
+            # doing so would let a project client enumerate files unrelated to
+            # the project. Only include them on the global (project_id is None) server.
             ###################################################
-            if current_user:  # always true now; kept for clarity
+            if project_id is None:
                 user_files_stmt = select(UserFile).where(UserFile.user_id == current_user.id)
                 user_files = (await session.exec(user_files_stmt)).all()
                 for user_file in user_files:

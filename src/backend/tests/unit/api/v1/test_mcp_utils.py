@@ -244,6 +244,44 @@ async def test_handle_read_resource_denies_user_bucket_under_project_scope(monke
 
 
 @pytest.mark.asyncio
+async def test_handle_list_resources_project_scoped_excludes_user_bucket(monkeypatch):
+    """A project-scoped resources/list must not leak user-bucket files unrelated to the project."""
+    user_id = "user-bob"
+    project_flow = SimpleNamespace(id="flow-in-project", name="Project Flow")
+
+    # If the implementation incorrectly includes user-bucket files, this one would show up.
+    user_files = [
+        SimpleNamespace(
+            name="unrelated.pdf",
+            path=f"{user_id}/unrelated.pdf",
+            provider="File Manager",
+        )
+    ]
+
+    fake_session = FakeSession(flows=[project_flow], user_files=user_files)
+    storage_service = FakeStorageService({"flow-in-project": ["project-doc.txt"]})
+
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(fake_session))
+    monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
+    monkeypatch.setattr(
+        mcp_utils,
+        "get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(host="localhost", port=4000)),
+    )
+
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=user_id))
+    try:
+        resources = await mcp_utils.handle_list_resources(project_id="project-xyz")
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    uris = {str(resource.uri) for resource in resources}
+    assert "http://localhost:4000/api/v1/files/download/flow-in-project/project-doc.txt" in uris
+    # User-bucket file must not leak through a project-scoped server.
+    assert not any("unrelated.pdf" in uri for uri in uris)
+
+
+@pytest.mark.asyncio
 async def test_handle_list_tools_requires_current_user_on_global_server(monkeypatch):
     """Global list_tools must refuse to enumerate flows without a user context."""
     flows = [SimpleNamespace(id="flow-leak", user_id="someone-else", name="Leaked", description=None, data={})]
