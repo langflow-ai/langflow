@@ -16,7 +16,8 @@ the UI.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import asyncio
+from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
     BackendType,
@@ -98,7 +99,7 @@ class AstraBackend(BaseVectorStoreBackend):
         if collection is None:
             return 0
         try:
-            return int(collection.count_documents())
+            return int(await asyncio.to_thread(collection.count_documents))
         except Exception as exc:  # noqa: BLE001
             logger.debug("Astra count_documents failed: %s", exc)
             return 0
@@ -119,29 +120,48 @@ class AstraBackend(BaseVectorStoreBackend):
         if include_embeddings:
             projection["$vector"] = 1
 
-        batch: list[IngestedDocument] = []
         try:
-            cursor = collection.find({}, projection=projection)
+            cursor = await asyncio.to_thread(collection.find, {}, projection=projection)
         except Exception as exc:  # noqa: BLE001
             logger.debug("Astra cursor open failed: %s", exc)
             return
 
-        for raw in cursor:
-            content = raw.get("content") or raw.get("text") or ""
-            metadata = raw.get("metadata") or {}
-            embedding = raw.get("$vector") if include_embeddings else None
-            batch.append(
-                IngestedDocument(
-                    content=str(content),
-                    metadata=dict(metadata) if isinstance(metadata, dict) else {},
-                    embedding=list(embedding) if embedding else None,
-                )
-            )
-            if len(batch) >= batch_size:
-                yield batch
-                batch = []
-        if batch:
-            yield batch
+        def _fetch_chunk(cursor_iter: Any, limit: int) -> list[dict[str, Any]]:
+            collected: list[dict[str, Any]] = []
+            for _ in range(limit):
+                try:
+                    collected.append(next(cursor_iter))
+                except StopIteration:
+                    break
+            return collected
+
+        cursor_iter = iter(cursor)
+        try:
+            while True:
+                raw_docs = await asyncio.to_thread(_fetch_chunk, cursor_iter, batch_size)
+                if not raw_docs:
+                    break
+                batch: list[IngestedDocument] = []
+                for raw in raw_docs:
+                    content = raw.get("content") or raw.get("text") or ""
+                    metadata = raw.get("metadata") or {}
+                    embedding = raw.get("$vector") if include_embeddings else None
+                    batch.append(
+                        IngestedDocument(
+                            content=str(content),
+                            metadata=dict(metadata) if isinstance(metadata, dict) else {},
+                            embedding=list(embedding) if embedding else None,
+                        )
+                    )
+                if batch:
+                    yield batch
+        finally:
+            close = getattr(cursor, "close", None)
+            if callable(close):
+                try:
+                    await asyncio.to_thread(close)
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug("Astra cursor close failed: %s", exc)
 
     async def storage_size_bytes(self) -> int:
         # Astra doesn't surface a simple bytes figure; approximate via
@@ -158,8 +178,8 @@ class AstraBackend(BaseVectorStoreBackend):
         try:
             # langchain_astradb exposes a clear() helper on recent versions.
             if hasattr(store, "clear"):
-                store.clear()
+                await asyncio.to_thread(store.clear)
             elif hasattr(store, "delete_collection"):
-                store.delete_collection()
+                await asyncio.to_thread(store.delete_collection)
         except Exception as exc:  # noqa: BLE001
             logger.debug("Astra clear/delete_collection failed: %s", exc)

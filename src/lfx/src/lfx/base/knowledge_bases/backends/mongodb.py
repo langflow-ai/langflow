@@ -25,6 +25,7 @@ selects this backend without installing the extra.
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
@@ -125,7 +126,7 @@ class MongoDBBackend(BaseVectorStoreBackend):
             client = self._mongo_client
         try:
             collection = client[self._required("database")][self._required("collection")]
-            return int(collection.estimated_document_count())
+            return int(await asyncio.to_thread(collection.estimated_document_count))
         except Exception as exc:  # noqa: BLE001
             logger.debug("MongoDB count() failed for %s: %s", self.kb_name, exc)
             return 0
@@ -151,32 +152,53 @@ class MongoDBBackend(BaseVectorStoreBackend):
         if include_embeddings:
             projection[embedding_key] = 1
 
-        batch: list[IngestedDocument] = []
-        for raw in collection.find({}, projection=projection):
-            content = raw.get(text_key) or ""
-            metadata = raw.get("metadata") or {
-                k: v for k, v in raw.items() if k not in {text_key, embedding_key, "_id", "metadata"}
-            }
-            embedding = raw.get(embedding_key) if include_embeddings else None
-            batch.append(
-                IngestedDocument(
-                    content=str(content),
-                    metadata=dict(metadata) if isinstance(metadata, dict) else {},
-                    embedding=list(embedding) if embedding else None,
-                )
-            )
-            if len(batch) >= batch_size:
-                yield batch
-                batch = []
-        if batch:
-            yield batch
+        # Iterate the sync pymongo cursor off the event loop, fetching
+        # ``batch_size`` documents per hop so we never block the loop
+        # on a full collection scan.
+        def _fetch_chunk(cursor_iter: Any, limit: int) -> list[dict[str, Any]]:
+            collected: list[dict[str, Any]] = []
+            for _ in range(limit):
+                try:
+                    collected.append(next(cursor_iter))
+                except StopIteration:
+                    break
+            return collected
+
+        cursor = collection.find({}, projection=projection).batch_size(batch_size)
+        cursor_iter = iter(cursor)
+        try:
+            while True:
+                raw_docs = await asyncio.to_thread(_fetch_chunk, cursor_iter, batch_size)
+                if not raw_docs:
+                    break
+                batch: list[IngestedDocument] = []
+                for raw in raw_docs:
+                    content = raw.get(text_key) or ""
+                    metadata = raw.get("metadata") or {
+                        k: v for k, v in raw.items() if k not in {text_key, embedding_key, "_id", "metadata"}
+                    }
+                    embedding = raw.get(embedding_key) if include_embeddings else None
+                    batch.append(
+                        IngestedDocument(
+                            content=str(content),
+                            metadata=dict(metadata) if isinstance(metadata, dict) else {},
+                            embedding=list(embedding) if embedding else None,
+                        )
+                    )
+                if batch:
+                    yield batch
+        finally:
+            await asyncio.to_thread(cursor.close)
 
     async def storage_size_bytes(self) -> int:
         client = getattr(self, "_mongo_client", None)
         if client is None:
             return 0
         try:
-            stats = client[self._required("database")].command({"collStats": self._required("collection")})
+            stats = await asyncio.to_thread(
+                client[self._required("database")].command,
+                {"collStats": self._required("collection")},
+            )
             return int(stats.get("size") or 0)
         except Exception as exc:  # noqa: BLE001
             logger.debug("MongoDB collStats failed for %s: %s", self.kb_name, exc)
@@ -186,7 +208,7 @@ class MongoDBBackend(BaseVectorStoreBackend):
         client = getattr(self, "_mongo_client", None)
         if client is not None:
             try:
-                client.close()
+                await asyncio.to_thread(client.close)
             except Exception as exc:  # noqa: BLE001
                 logger.debug("MongoClient.close failed: %s", exc)
         self._mongo_client = None
@@ -199,6 +221,9 @@ class MongoDBBackend(BaseVectorStoreBackend):
             _ = self.vector_store
             client = self._mongo_client
         try:
-            client[self._required("database")].drop_collection(self._required("collection"))
+            await asyncio.to_thread(
+                client[self._required("database")].drop_collection,
+                self._required("collection"),
+            )
         except Exception as exc:  # noqa: BLE001
             logger.debug("MongoDB drop_collection failed: %s", exc)

@@ -29,7 +29,8 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, Column, DateTime
+import sqlalchemy as sa
+from sqlalchemy import JSON, Column, DateTime, ForeignKey
 from sqlmodel import Field, SQLModel
 
 
@@ -55,7 +56,20 @@ class IngestionRunBase(SQLModel):
     # ``kb_name`` is the legacy pointer (kept through an
     # expand-contract transition); ``kb_id`` is the new FK.
     kb_name: str = Field(index=True, nullable=False)
-    kb_id: UUID | None = Field(default=None, index=True, nullable=True)
+    # ``kb_id`` is the FK; ``ON DELETE SET NULL`` is set at the DB
+    # layer so KB deletion does not orphan run history — rows remain
+    # visible with a null kb_id. The physical FK constraint is
+    # created by migration ``e728126476a8``; this ``sa_column`` makes
+    # the ORM aware of it so relationships resolve correctly.
+    kb_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(
+            sa.Uuid(),
+            ForeignKey("knowledge_base.id", ondelete="SET NULL"),
+            index=True,
+            nullable=True,
+        ),
+    )
     user_id: UUID | None = Field(default=None, index=True, nullable=True)
 
     source_type: str = Field(index=True, nullable=False)

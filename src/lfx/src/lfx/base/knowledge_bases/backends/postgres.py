@@ -18,6 +18,7 @@ credentials.
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
@@ -94,14 +95,18 @@ class PostgresBackend(BaseVectorStoreBackend):
         session_maker = getattr(store, "_session_maker", None) or getattr(store, "session_maker", None)
         if session_maker is None:
             return 0
-        try:
-            with session_maker() as session:
-                result = session.execute(_select_count_query(store))
-                row = result.first()
-                return int(row[0]) if row else 0
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("Postgres count query failed: %s", exc)
-            return 0
+
+        def _run() -> int:
+            try:
+                with session_maker() as session:
+                    result = session.execute(_select_count_query(store))
+                    row = result.first()
+                    return int(row[0]) if row else 0
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("Postgres count query failed: %s", exc)
+                return 0
+
+        return await asyncio.to_thread(_run)
 
     async def iter_documents(
         self,
@@ -115,13 +120,37 @@ class PostgresBackend(BaseVectorStoreBackend):
         if session_maker is None:
             return
 
-        try:
-            with session_maker() as session:
+        # Execute the query and fetch rows off the event loop in
+        # ``batch_size`` chunks via ``result.fetchmany``. The session
+        # stays open across thread hops — this is safe because only
+        # one thread touches it at a time.
+        def _open_session_and_execute() -> tuple[Any, Any]:
+            session = session_maker()
+            try:
                 query = _select_rows_query(store, include_embeddings=include_embeddings)
                 result = session.execute(query)
+            except Exception:
+                session.close()
+                raise
+            return session, result
 
+        try:
+            session, result = await asyncio.to_thread(_open_session_and_execute)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Postgres iter_documents failed to start: %s", exc)
+            return
+
+        try:
+            while True:
+                try:
+                    rows = await asyncio.to_thread(result.fetchmany, batch_size)
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug("Postgres iter_documents fetch failed: %s", exc)
+                    break
+                if not rows:
+                    break
                 batch: list[IngestedDocument] = []
-                for row in result:
+                for row in rows:
                     content = row[0] or ""
                     metadata = row[1] or {}
                     embedding: list[float] | None = None
@@ -136,14 +165,10 @@ class PostgresBackend(BaseVectorStoreBackend):
                             embedding=embedding,
                         )
                     )
-                    if len(batch) >= batch_size:
-                        yield batch
-                        batch = []
                 if batch:
                     yield batch
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("Postgres iter_documents failed: %s", exc)
-            return
+        finally:
+            await asyncio.to_thread(session.close)
 
     async def storage_size_bytes(self) -> int:
         return 0
@@ -154,7 +179,7 @@ class PostgresBackend(BaseVectorStoreBackend):
             engine = getattr(store, "_engine", None) or getattr(store, "engine", None)
             if engine is not None and hasattr(engine, "dispose"):
                 try:
-                    engine.dispose()
+                    await asyncio.to_thread(engine.dispose)
                 except Exception as exc:  # noqa: BLE001
                     logger.debug("PGVector engine.dispose failed: %s", exc)
         self._vector_store = None
@@ -163,7 +188,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         store = self.vector_store
         if hasattr(store, "delete_collection"):
             try:
-                store.delete_collection()
+                await asyncio.to_thread(store.delete_collection)
             except Exception as exc:  # noqa: BLE001
                 logger.debug("PGVector delete_collection failed: %s", exc)
 
