@@ -157,21 +157,18 @@ async def _run_master_preload() -> None:
     await logger.adebug("[preload] disposing master DB engine before fork")
     await get_db_service().engine.dispose()
 
-    # Best-effort: if the cache service holds a socket (e.g. Redis), close it.
-    try:
-        from langflow.services.cache.base import ExternalAsyncBaseCacheService
-        from langflow.services.deps import get_service
-        from langflow.services.schema import ServiceType
+    # Close cache service socket (e.g. Redis) to prevent sharing across fork.
+    from langflow.services.cache.base import ExternalAsyncBaseCacheService
+    from langflow.services.deps import get_service
+    from langflow.services.schema import ServiceType
 
-        cache_service = get_service(ServiceType.CACHE_SERVICE)
-        if isinstance(cache_service, ExternalAsyncBaseCacheService):
-            teardown = getattr(cache_service, "teardown", None)
-            if callable(teardown):
-                result = teardown()
-                if asyncio.iscoroutine(result):
-                    await result
-    except Exception as e:  # noqa: BLE001
-        await logger.awarning(f"[preload] cache service teardown skipped: {e}")
+    cache_service = get_service(ServiceType.CACHE_SERVICE)
+    if isinstance(cache_service, ExternalAsyncBaseCacheService):
+        teardown = getattr(cache_service, "teardown", None)
+        if callable(teardown):
+            result = teardown()
+            if asyncio.iscoroutine(result):
+                await result
 
 
 def preload_master() -> None:
