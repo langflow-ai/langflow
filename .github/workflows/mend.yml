@@ -2,23 +2,28 @@ name: "Mend"
 
 on:
   push:
-    branches: ["release-1.9.0", "main"]
+    branches: ["release-*", "main"]
   pull_request:
-    branches: ["release-1.9.0", "main"]
+    branches: ["release-*", "main"]
+
+concurrency:
+  group: mend-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-  NODE_VERSION: "24"
+  NODE_VERSION: "22"
 
 jobs:
-  run-jar:
+  mend-scan:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: read
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js Environment
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -34,18 +39,13 @@ jobs:
           distribution: "semeru"
           java-version: "21"
 
-      - name: Cache Mend Agent
-        id: cache-mend
-        uses: actions/cache@v4
-        with:
-          path: wss-unified-agent.jar
-          key: mend-agent-latest
-
-      - name: Download Mend Unified Agent if missing or outdated
+      - name: Download Mend Unified Agent
         run: |
-          curl -L -z wss-unified-agent.jar -o wss-unified-agent.jar https://unified-agent.s3.amazonaws.com/wss-unified-agent.jar
+          curl --fail --show-error --retry 3 --location -o wss-unified-agent.jar https://unified-agent.s3.amazonaws.com/wss-unified-agent.jar
 
       - name: Run Mend Scan
+        #prevent forks from running mend scans
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         env:
           WS_APIKEY: ${{ secrets.WS_APIKEY }}
           WS_WSS_URL: ${{ secrets.WS_WSS_URL }}
@@ -53,4 +53,4 @@ jobs:
           WS_PRODUCTNAME: ${{ secrets.WS_PRODUCTNAME }}
           WS_PROJECTNAME: ${{ secrets.WS_PROJECTNAME }}
         run: |
-          java -jar wss-unified-agent.jar -d src -logLevel debug
+          java -jar wss-unified-agent.jar -d src -logLevel info
