@@ -26,6 +26,7 @@ selects this backend without installing the extra.
 from __future__ import annotations
 
 import asyncio
+import queue as sync_queue
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
@@ -152,43 +153,69 @@ class MongoDBBackend(BaseVectorStoreBackend):
         if include_embeddings:
             projection[embedding_key] = 1
 
-        # Iterate the sync pymongo cursor off the event loop, fetching
-        # ``batch_size`` documents per hop so we never block the loop
-        # on a full collection scan.
-        def _fetch_chunk(cursor_iter: Any, limit: int) -> list[dict[str, Any]]:
-            collected: list[dict[str, Any]] = []
-            for _ in range(limit):
-                try:
-                    collected.append(next(cursor_iter))
-                except StopIteration:
-                    break
-            return collected
+        # pymongo cursors are NOT thread-safe (client pools are, but
+        # the cursor state is not). ``asyncio.to_thread`` can schedule
+        # successive calls on different workers, so we run the entire
+        # cursor lifetime (open → iterate → close) on *one* worker
+        # thread and stream batches back to the async side via a
+        # thread-safe queue. ``maxsize=2`` gives natural backpressure.
+        sentinel = object()
+        batch_queue: sync_queue.Queue[Any] = sync_queue.Queue(maxsize=2)
 
-        cursor = collection.find({}, projection=projection).batch_size(batch_size)
-        cursor_iter = iter(cursor)
-        try:
-            while True:
-                raw_docs = await asyncio.to_thread(_fetch_chunk, cursor_iter, batch_size)
-                if not raw_docs:
-                    break
-                batch: list[IngestedDocument] = []
-                for raw in raw_docs:
+        def _stream_batches() -> None:
+            cursor = None
+            try:
+                cursor = collection.find({}, projection=projection).batch_size(batch_size)
+                buf: list[IngestedDocument] = []
+                for raw in cursor:
                     content = raw.get(text_key) or ""
                     metadata = raw.get("metadata") or {
                         k: v for k, v in raw.items() if k not in {text_key, embedding_key, "_id", "metadata"}
                     }
                     embedding = raw.get(embedding_key) if include_embeddings else None
-                    batch.append(
+                    buf.append(
                         IngestedDocument(
                             content=str(content),
                             metadata=dict(metadata) if isinstance(metadata, dict) else {},
                             embedding=list(embedding) if embedding else None,
                         )
                     )
-                if batch:
-                    yield batch
+                    if len(buf) >= batch_size:
+                        batch_queue.put(buf)
+                        buf = []
+                if buf:
+                    batch_queue.put(buf)
+            except Exception as exc:  # noqa: BLE001
+                batch_queue.put(exc)
+            finally:
+                if cursor is not None:
+                    try:
+                        cursor.close()
+                    except Exception as exc:  # noqa: BLE001
+                        logger.debug("MongoDB cursor close failed: %s", exc)
+                batch_queue.put(sentinel)
+
+        worker = asyncio.create_task(asyncio.to_thread(_stream_batches))
+        sentinel_seen = False
+        try:
+            while True:
+                item = await asyncio.to_thread(batch_queue.get)
+                if item is sentinel:
+                    sentinel_seen = True
+                    break
+                if isinstance(item, Exception):
+                    logger.debug("MongoDB iter_documents worker failed: %s", item)
+                    sentinel_seen = True
+                    await asyncio.to_thread(batch_queue.get)
+                    break
+                yield item
         finally:
-            await asyncio.to_thread(cursor.close)
+            if not sentinel_seen:
+                while True:
+                    drained = await asyncio.to_thread(batch_queue.get)
+                    if drained is sentinel:
+                        break
+            await worker
 
     async def storage_size_bytes(self) -> int:
         client = getattr(self, "_mongo_client", None)

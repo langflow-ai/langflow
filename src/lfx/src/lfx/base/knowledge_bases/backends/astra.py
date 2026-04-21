@@ -17,6 +17,7 @@ the UI.
 from __future__ import annotations
 
 import asyncio
+import queue as sync_queue
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
@@ -120,48 +121,68 @@ class AstraBackend(BaseVectorStoreBackend):
         if include_embeddings:
             projection["$vector"] = 1
 
-        try:
-            cursor = await asyncio.to_thread(collection.find, {}, projection=projection)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("Astra cursor open failed: %s", exc)
-            return
+        # astrapy cursors hold per-operation state tied to the HTTP
+        # client that opened them. ``asyncio.to_thread`` can schedule
+        # successive calls on different workers, so we run the entire
+        # cursor lifetime (open → iterate → close) on *one* worker
+        # thread and stream batches back via a thread-safe queue.
+        # ``maxsize=2`` gives natural backpressure.
+        sentinel = object()
+        batch_queue: sync_queue.Queue[Any] = sync_queue.Queue(maxsize=2)
 
-        def _fetch_chunk(cursor_iter: Any, limit: int) -> list[dict[str, Any]]:
-            collected: list[dict[str, Any]] = []
-            for _ in range(limit):
-                try:
-                    collected.append(next(cursor_iter))
-                except StopIteration:
-                    break
-            return collected
-
-        cursor_iter = iter(cursor)
-        try:
-            while True:
-                raw_docs = await asyncio.to_thread(_fetch_chunk, cursor_iter, batch_size)
-                if not raw_docs:
-                    break
-                batch: list[IngestedDocument] = []
-                for raw in raw_docs:
+        def _stream_batches() -> None:
+            cursor = None
+            try:
+                cursor = collection.find({}, projection=projection)
+                buf: list[IngestedDocument] = []
+                for raw in cursor:
                     content = raw.get("content") or raw.get("text") or ""
                     metadata = raw.get("metadata") or {}
                     embedding = raw.get("$vector") if include_embeddings else None
-                    batch.append(
+                    buf.append(
                         IngestedDocument(
                             content=str(content),
                             metadata=dict(metadata) if isinstance(metadata, dict) else {},
                             embedding=list(embedding) if embedding else None,
                         )
                     )
-                if batch:
-                    yield batch
+                    if len(buf) >= batch_size:
+                        batch_queue.put(buf)
+                        buf = []
+                if buf:
+                    batch_queue.put(buf)
+            except Exception as exc:  # noqa: BLE001
+                batch_queue.put(exc)
+            finally:
+                close = getattr(cursor, "close", None) if cursor is not None else None
+                if callable(close):
+                    try:
+                        close()
+                    except Exception as exc:  # noqa: BLE001
+                        logger.debug("Astra cursor close failed: %s", exc)
+                batch_queue.put(sentinel)
+
+        worker = asyncio.create_task(asyncio.to_thread(_stream_batches))
+        sentinel_seen = False
+        try:
+            while True:
+                item = await asyncio.to_thread(batch_queue.get)
+                if item is sentinel:
+                    sentinel_seen = True
+                    break
+                if isinstance(item, Exception):
+                    logger.debug("Astra iter_documents worker failed: %s", item)
+                    sentinel_seen = True
+                    await asyncio.to_thread(batch_queue.get)
+                    break
+                yield item
         finally:
-            close = getattr(cursor, "close", None)
-            if callable(close):
-                try:
-                    await asyncio.to_thread(close)
-                except Exception as exc:  # noqa: BLE001
-                    logger.debug("Astra cursor close failed: %s", exc)
+            if not sentinel_seen:
+                while True:
+                    drained = await asyncio.to_thread(batch_queue.get)
+                    if drained is sentinel:
+                        break
+            await worker
 
     async def storage_size_bytes(self) -> int:
         # Astra doesn't surface a simple bytes figure; approximate via
