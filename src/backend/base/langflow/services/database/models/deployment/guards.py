@@ -64,10 +64,11 @@ async def check_flow_has_deployed_versions(db: AsyncSession, *, flow_id: UUID) -
     )
     # log the raw value verbatim so any driver oddity is visible in operator logs
     # rather than silently masked by coercion.
+    pruned_rowcount = pruned_result.rowcount
     await logger.ainfo(
         "Orphan deployment attachment prune for flow %s completed (rowcount=%r)",
         flow_id,
-        pruned_result.rowcount,
+        pruned_rowcount,
     )
 
     attached = (
@@ -80,6 +81,17 @@ async def check_flow_has_deployed_versions(db: AsyncSession, *, flow_id: UUID) -
         )
     ).first()
     if attached is not None:
+        # We're about to raise, so the orphan prune above may be rolled back
+        # depending on how the caller manages its transaction (e.g. the retry
+        # wrapper runs us inside a SAVEPOINT). Surface that explicitly so
+        # operators aren't surprised when orphan rows persist after a blocked
+        # delete attempt.
+        await logger.awarning(
+            "Orphan deployment attachment prune for flow %s may be rolled back by the caller's "
+            "transaction because live attachments still exist (pruned rowcount=%r)",
+            flow_id,
+            pruned_rowcount,
+        )
         raise DeploymentGuardError(
             code="FLOW_HAS_DEPLOYED_VERSIONS",
             technical_detail=(
