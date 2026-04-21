@@ -41,7 +41,8 @@ jest.mock("@/components/core/codeTabsComponent", () => {
 
 // Mock utility functions
 jest.mock("@/utils/utils", () => ({
-  cn: (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" "),
+  cn: (...classes: (string | boolean | undefined)[]) =>
+    classes.filter(Boolean).join(" "),
 }));
 
 // Mock translation hook
@@ -225,19 +226,19 @@ describe("MarkdownField XSS Security", () => {
     it("should allow media elements in sanitization schema", () => {
       // Test: Verify that video, audio, img, and hr tags are in the allowlist
       const { markdownSanitizeSchema } = require("@/utils/sanitizeSchema");
-      
+
       expect(markdownSanitizeSchema.tagNames).toContain("img");
       expect(markdownSanitizeSchema.tagNames).toContain("video");
       expect(markdownSanitizeSchema.tagNames).toContain("audio");
       expect(markdownSanitizeSchema.tagNames).toContain("hr");
-      
+
       // Verify safe attributes are allowed
       expect(markdownSanitizeSchema.attributes.img).toContain("src");
       expect(markdownSanitizeSchema.attributes.video).toContain("src");
       expect(markdownSanitizeSchema.attributes.video).toContain("controls");
       expect(markdownSanitizeSchema.attributes.audio).toContain("src");
       expect(markdownSanitizeSchema.attributes.audio).toContain("controls");
-      
+
       // Verify only safe protocols are allowed
       expect(markdownSanitizeSchema.protocols.src).toEqual(["http", "https"]);
     });
