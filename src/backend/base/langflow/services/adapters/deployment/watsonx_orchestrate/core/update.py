@@ -25,7 +25,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.shared impor
     OrderedUniqueStrs,
     RawConnectionCreatePlan,
     RawToolCreatePlan,
-    create_connection_with_conflict_mapping,
     create_raw_tools_with_bindings,
     log_batch_errors,
     resolve_connections_for_operations,
@@ -449,6 +448,9 @@ async def apply_provider_update_plan_with_rollback(
     # - referenced_snapshot_bindings: full operation correlation set.
     # - final_update_payload: outbound agent patch payload (spec + tools).
     # - rollback_agent_payload: best-effort restore payload for agent rollback.
+    # - created_app_ids_journal: app_ids recorded immediately after successful
+    #     provider connection creation; used to ensure rollback sees partial
+    #     successes even if create later fails before returning.
     resolved_connections: dict[str, str] = {}
     operation_to_provider_app_id: dict[str, str] = {app_id: app_id for app_id in plan.existing_app_ids}
     created_snapshot_ids: list[str] = []
@@ -456,6 +458,7 @@ async def apply_provider_update_plan_with_rollback(
     created_snapshot_bindings: list[WatsonxResultToolRefBinding] = []
     final_update_payload = dict(update_payload)
     rollback_agent_payload: dict[str, Any] = {}
+    created_app_ids_journal: list[str] = []
 
     # Pre-seed resolved_connections with bindings already attached to the
     # agent's existing tools.  This lets new tools reuse the same connections
@@ -499,7 +502,7 @@ async def apply_provider_update_plan_with_rollback(
                 raw_connections_to_create=plan.raw_connections_to_create,
                 error_prefix=ErrorPrefix.UPDATE.value,
                 validate_connection_fn=validate_connection,
-                create_connection_fn=create_connection_with_conflict_mapping,
+                created_app_ids_journal=created_app_ids_journal,
             )
             operation_to_provider_app_id.update(connection_result.operation_to_provider_app_id)
             resolved_connections.update(connection_result.resolved_connections)
