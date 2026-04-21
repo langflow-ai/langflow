@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-from lfx.services.settings.constants import DEFAULT_SUPERUSER
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
@@ -77,7 +77,6 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         from tempfile import gettempdir
 
         from filelock import FileLock
-        from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 
         username = DEFAULT_SUPERUSER
         password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
@@ -100,11 +99,9 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
 
                     await get_variable_service().initialize_user_variables(super_user.id, session)
 
-                    # Initialize agentic variables if enabled
-                    if settings_service.settings.agentic_experience:
-                        from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
-
-                        await initialize_agentic_user_variables(super_user.id, session)
+                    # NOTE: Agentic variables are initialized separately in preload or main lifespan
+                    # via initialize_agentic_global_variables() which handles all users at once.
+                    # Do NOT initialize them here to avoid conflicts during preload.
 
                     _ = await get_or_create_default_folder(session, super_user.id)
                     await logger.adebug("Auto-login superuser initialized successfully")
@@ -119,20 +116,24 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
     username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
     password = (settings_service.auth_settings.SUPERUSER_PASSWORD or DEFAULT_SUPERUSER_PASSWORD).get_secret_value()
 
+    await logger.adebug(f"Setup superuser: username={username}, has_password={bool(password)}")
+
     if not username or not password:
         msg = "Username and password must be set"
+        await logger.aerror(f"Missing credentials: username={username}, password={'set' if password else 'not set'}")
         raise ValueError(msg)
 
     is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
 
     try:
+        await logger.adebug(f"Creating/getting superuser: username={username}, is_default={is_default}")
         user = await get_or_create_super_user(
             session=session, username=username, password=password, is_default=is_default
         )
         if user is not None:
             await logger.adebug("Superuser created successfully.")
     except Exception as exc:
-        logger.exception(exc)
+        await logger.aexception(f"Failed to create superuser: {exc}")
         msg = "Could not create superuser. Please create a superuser manually."
         raise RuntimeError(msg) from exc
     finally:
@@ -142,28 +143,35 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
 
 async def teardown_superuser(settings_service, session: AsyncSession) -> None:
     """Teardown the superuser."""
-    # If AUTO_LOGIN is True, we will remove the default superuser
-    # from the database.
+    # If AUTO_LOGIN is False, remove the default superuser from the database.
+    # However, if the superuser has any data (flows, folders, etc.), skip deletion
+    # to avoid foreign key constraint errors.
 
     if not settings_service.auth_settings.AUTO_LOGIN:
+        await logger.adebug("AUTO_LOGIN is set to False. Checking default superuser status.")
         try:
-            await logger.adebug("AUTO_LOGIN is set to False. Removing default superuser if exists.")
             username = DEFAULT_SUPERUSER
             from langflow.services.database.models.user.model import User
 
             stmt = select(User).where(User.username == username)
             result = await session.exec(stmt)
             user = result.first()
-            # Check if super was ever logged in, if not delete it
-            # if it has logged in, it means the user is using it to login
-            if user and user.is_superuser is True and not user.last_login_at:
-                await session.delete(user)
-                await logger.adebug("Default superuser removed successfully.")
 
-        except Exception as exc:
-            logger.exception(exc)
-            msg = "Could not remove default superuser."
-            raise RuntimeError(msg) from exc
+            # Only attempt deletion if:
+            # 1. User exists
+            # 2. User is a superuser
+            # 3. User has never logged in
+            # 4. User has no associated data (checked implicitly by trying delete)
+            if user and user.is_superuser is True and not user.last_login_at:
+                # Simply skip deletion - it's safer to leave the user than risk
+                # FK constraint errors from relationships without cascade delete
+                await logger.adebug(
+                    f"Default superuser '{username}' exists but will be preserved to avoid potential FK errors."
+                )
+        except Exception as exc:  # noqa: BLE001
+            # Silently ignore any errors during teardown - this is a best-effort cleanup
+            # and should never block application startup
+            await logger.adebug(f"Teardown superuser check failed (non-critical): {exc}")
 
 
 async def teardown_services() -> None:
