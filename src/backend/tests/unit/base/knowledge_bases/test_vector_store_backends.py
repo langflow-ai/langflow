@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import sys
 import types
-from typing import Self
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
@@ -25,6 +25,9 @@ from lfx.base.knowledge_bases.backends import (
     create_backend,
     registered_backends,
 )
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 
 class TestRegistry:
