@@ -153,7 +153,7 @@ def get_lifespan(*, fix_migration=False, version=None):
     async def lifespan(_app: FastAPI):
         from lfx.interface.components import get_and_cache_all_types_dict
 
-        from langflow.preload import get_preloaded_temp_dirs, is_master, is_preloaded
+        from langflow.preload import _STATE, get_preloaded_temp_dirs, is_master, is_preloaded
 
         preloaded = is_preloaded()
         running_in_master = is_master()
@@ -208,7 +208,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             setup_llm_caching()
             await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            if not preloaded:
+            if not preloaded or not _STATE.profile_pictures_copied:
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Copying profile pictures")
                 await copy_profile_pictures()
@@ -225,10 +225,8 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await logger.adebug("Initializing super user")
                 await initialize_auto_login_default_superuser()
                 await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
-            else:
-                await logger.adebug(
-                    "Skipping profile-picture copy and super user setup: master already ran them during preload"
-                )
+            elif _STATE.profile_pictures_copied:
+                await logger.adebug("Skipping profile-picture copy: master already completed it during preload")
 
             if get_settings_service().settings.prometheus_enabled:
                 try:
@@ -255,7 +253,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             telemetry_service = get_telemetry_service()
 
-            if preloaded:
+            if preloaded and _STATE.starter_projects_created:
                 # Inherit bundle paths and types dict from master via COW.
                 # Only the master owns the bundle temp dirs; workers must NOT
                 # add them to their own cleanup list, or shutdown would delete
@@ -299,7 +297,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                     )
 
                 # Initialize agentic global variables early (before MCP server and flows)
-                if get_settings_service().settings.agentic_experience:
+                if get_settings_service().settings.agentic_experience and not _STATE.agentic_globals_initialized:
                     from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
 
                     current_time = asyncio.get_event_loop().time()
@@ -328,8 +326,8 @@ def get_lifespan(*, fix_migration=False, version=None):
             )
 
             # Auto-configure Agentic MCP server if enabled (after variables are initialized).
-            # Skipped when preloaded: the master already seeded this into the DB.
-            if get_settings_service().settings.agentic_experience and not preloaded:
+            # Skipped when the master already completed this during preload.
+            if get_settings_service().settings.agentic_experience and not _STATE.agentic_mcp_configured:
                 from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
 
                 current_time = asyncio.get_event_loop().time()
@@ -344,9 +342,11 @@ def get_lifespan(*, fix_migration=False, version=None):
                     await logger.awarning(f"Failed to configure agentic MCP server: {e}")
 
             current_time = asyncio.get_event_loop().time()
-            if not preloaded:
+            if not _STATE.flows_loaded:
                 await logger.adebug("Loading flows")
                 await load_flows_from_directory()
+            else:
+                await logger.adebug("Skipping flows load: master already completed it during preload")
             # ``sync_flows_from_fs`` and the queue service MUST be started
             # per-worker: they create asyncio tasks bound to this event loop.
             sync_flows_from_fs_task = asyncio.create_task(sync_flows_from_fs())

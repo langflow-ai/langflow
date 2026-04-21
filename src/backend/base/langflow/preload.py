@@ -46,6 +46,12 @@ class _PreloadState:
     master_pid: int | None = None
     temp_dirs: list[TemporaryDirectory] = field(default_factory=list)
     bundles_components_paths: list[str] = field(default_factory=list)
+    # Per-step completion flags to prevent silent data loss
+    profile_pictures_copied: bool = False
+    starter_projects_created: bool = False
+    agentic_globals_initialized: bool = False
+    agentic_mcp_configured: bool = False
+    flows_loaded: bool = False
 
 
 _STATE = _PreloadState()
@@ -106,6 +112,7 @@ async def _run_master_preload() -> None:
     await logger.adebug("[preload] copying profile pictures")
     try:
         await copy_profile_pictures()
+        _STATE.profile_pictures_copied = True
     except Exception as e:  # noqa: BLE001
         await logger.awarning(f"[preload] copy_profile_pictures failed: {e}")
 
@@ -123,6 +130,7 @@ async def _run_master_preload() -> None:
         await logger.adebug("[preload] creating/updating starter projects")
         try:
             await create_or_update_starter_projects(all_types_dict)
+            _STATE.starter_projects_created = True
         except Exception as e:  # noqa: BLE001
             await logger.awarning(f"[preload] starter projects init failed: {e}")
 
@@ -136,15 +144,19 @@ async def _run_master_preload() -> None:
             await logger.adebug("[preload] initializing agentic global variables")
             async with session_scope() as session:
                 await initialize_agentic_global_variables(session)
+            _STATE.agentic_globals_initialized = True
+
             await logger.adebug("[preload] auto-configuring agentic MCP server")
             async with session_scope() as session:
                 await auto_configure_agentic_mcp_server(session)
+            _STATE.agentic_mcp_configured = True
         except Exception as e:  # noqa: BLE001
             await logger.awarning(f"[preload] agentic MCP init failed: {e}")
 
     await logger.adebug("[preload] loading flows from directory")
     try:
         await load_flows_from_directory()
+        _STATE.flows_loaded = True
     except Exception as e:  # noqa: BLE001
         await logger.awarning(f"[preload] load_flows_from_directory failed: {e}")
 
