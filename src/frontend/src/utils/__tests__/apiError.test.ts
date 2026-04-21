@@ -2,7 +2,9 @@ import { extractApiErrorMessages } from "../apiError";
 
 describe("extractApiErrorMessages", () => {
   it("returns a default message for non-object errors", () => {
-    expect(extractApiErrorMessages(null)).toEqual(["An unknown error occurred"]);
+    expect(extractApiErrorMessages(null)).toEqual([
+      "An unknown error occurred",
+    ]);
     expect(extractApiErrorMessages(undefined)).toEqual([
       "An unknown error occurred",
     ]);

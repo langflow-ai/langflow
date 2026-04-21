@@ -81,7 +81,12 @@ jest.mock("@/stores/alertStore", () => ({
 
 let memories: MemoryInfo[] = [
   makeMemoryInfo({ id: "m1", name: "First", description: "alpha" }),
-  makeMemoryInfo({ id: "m2", name: "Second", description: "beta", is_active: false }),
+  makeMemoryInfo({
+    id: "m2",
+    name: "Second",
+    description: "beta",
+    is_active: false,
+  }),
 ];
 
 // Override to simulate multiple pages; undefined means use the default single-page shape.
@@ -205,7 +210,12 @@ describe("useMemoriesData", () => {
     memoriesPages = undefined;
     memories = [
       makeMemoryInfo({ id: "m1", name: "First", description: "alpha" }),
-      makeMemoryInfo({ id: "m2", name: "Second", description: "beta", is_active: false }),
+      makeMemoryInfo({
+        id: "m2",
+        name: "Second",
+        description: "beta",
+        is_active: false,
+      }),
     ];
     memoryQueryData = makeMemoryInfo({ id: "m1", name: "First" });
     memoryQueryIsLoading = false;
