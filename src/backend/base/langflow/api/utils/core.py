@@ -398,34 +398,44 @@ def custom_params(
     return Params(page=page or MIN_PAGE_SIZE, size=size or MAX_PAGE_SIZE)
 
 
-# Well-known authentication headers that should be propagated to nested MCP calls
-# when present in the incoming request. These are stored under their lowercase
-# header names so that nested server configs can reference them directly,
-# e.g. {"x-api-key": "x-api-key"} in the MCP server headers config.
+# Well-known authentication headers that can be propagated to nested MCP calls
+# when ``include_auth_headers=True`` is passed. These are stored under their
+# lowercase header names so that nested server configs can reference them
+# directly, e.g. ``{"x-api-key": "x-api-key"}`` in the MCP server headers config.
 _AUTH_HEADERS_TO_PROPAGATE = frozenset({"x-api-key", "authorization"})
 
 
-def extract_global_variables_from_headers(headers) -> dict[str, str]:
+def extract_global_variables_from_headers(headers, *, include_auth_headers: bool = False) -> dict[str, str]:
     """Extract global variables from HTTP headers.
 
-    Extracts two categories of headers:
-    1. Headers with the ``X-LANGFLOW-GLOBAL-VAR-*`` prefix — stored with an
-       uppercased variable name, e.g. ``X-LANGFLOW-GLOBAL-VAR-MY-KEY`` →
-       ``{"MY_KEY": "<value>"}``.
-    2. Well-known authentication headers (``x-api-key``, ``authorization``) —
-       stored under their lowercase name so that nested MCP server configs can
-       reference them directly, e.g. ``{"x-api-key": "x-api-key"}``.
+    By default, only headers with the ``X-LANGFLOW-GLOBAL-VAR-*`` prefix are
+    extracted. When ``include_auth_headers=True``, the well-known authentication
+    headers ``x-api-key`` and ``authorization`` are additionally captured under
+    their lowercase names so that nested MCP server configs can reference them
+    directly (e.g. ``{"x-api-key": "x-api-key"}``).
+
+    SECURITY NOTE: Only pass ``include_auth_headers=True`` from MCP call sites
+    (see ``api/v1/mcp_projects.py``). On non-MCP routes such as ``/run`` and
+    ``/workflow``, ``x-api-key`` is Langflow's own authentication key — exposing
+    it in ``request_variables`` would make it readable by any component that
+    reads the graph context.
 
     Args:
-        headers: HTTP headers object (e.g., from FastAPI Request.headers)
+        headers: HTTP headers object (e.g., from FastAPI Request.headers).
+        include_auth_headers: When True, also extract well-known authentication
+            headers (``x-api-key``, ``authorization``) under their lowercase
+            names. Should only be set by MCP request handlers that need to
+            propagate these values to nested MCP calls.
 
     Returns:
-        Dictionary mapping variable names to their values
+        Dictionary mapping variable names to their values.
 
     Example:
         headers = {"X-LANGFLOW-GLOBAL-VAR-API-KEY": "secret", "x-api-key": "mykey"}
-        result = extract_global_variables_from_headers(headers)
-        # Returns: {"API_KEY": "secret", "x-api-key": "mykey"}
+        extract_global_variables_from_headers(headers)
+        # Returns: {"API-KEY": "secret"}
+        extract_global_variables_from_headers(headers, include_auth_headers=True)
+        # Returns: {"API-KEY": "secret", "x-api-key": "mykey"}
     """
     variables: dict[str, str] = {}
 
@@ -435,7 +445,7 @@ def extract_global_variables_from_headers(headers) -> dict[str, str]:
             if header_lower.startswith(LANGFLOW_GLOBAL_VAR_HEADER_PREFIX):
                 var_name = header_lower[len(LANGFLOW_GLOBAL_VAR_HEADER_PREFIX) :].upper()
                 variables[var_name] = header_value
-            elif header_lower in _AUTH_HEADERS_TO_PROPAGATE:
+            elif include_auth_headers and header_lower in _AUTH_HEADERS_TO_PROPAGATE:
                 variables[header_lower] = header_value
     except Exception as exc:  # noqa: BLE001
         # Log the error but don't raise - we want to continue execution
