@@ -3,9 +3,6 @@ from collections import Counter
 from pathlib import Path
 from uuid import UUID
 
-from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import session_scope
-
 
 def compute_tfidf(documents: list[str], query_terms: list[str]) -> list[float]:
     """Compute TF-IDF scores for query terms across a collection of documents.
@@ -117,6 +114,15 @@ async def get_knowledge_bases(kb_root: Path, user_id: UUID | str) -> list[str]:
     """
     if not kb_root.exists():
         return []
+
+    # Lazy imports: langflow's DB models aren't part of the lfx
+    # standalone install, and lfx's validate-rewrite layer can't
+    # substitute ``lfx.services.database.models.user.crud`` (no such
+    # module). Deferring the import to call time keeps this module
+    # importable under ``lfx run <starter>.json``, which is exercised
+    # by the starter-projects smoke test.
+    from langflow.services.database.models.user.crud import get_user_by_id
+    from langflow.services.deps import session_scope
 
     # Get the current user
     async with session_scope() as db:
