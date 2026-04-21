@@ -53,8 +53,6 @@ from langflow.services.utils import initialize_services, initialize_settings_ser
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
 if TYPE_CHECKING:
-    from tempfile import TemporaryDirectory
-
     from lfx.services.mcp_composer.service import MCPComposerService
 
 # Ignore Pydantic deprecation warnings from Langchain
@@ -153,10 +151,9 @@ def get_lifespan(*, fix_migration=False, version=None):
     async def lifespan(_app: FastAPI):
         from lfx.interface.components import get_and_cache_all_types_dict
 
-        from langflow.preload import _STATE, get_preloaded_temp_dirs, is_master, is_preloaded
+        from langflow.preload import _STATE, get_owned_temp_dirs, is_preloaded
 
         preloaded = is_preloaded()
-        running_in_master = is_master()
 
         configure()
 
@@ -166,7 +163,6 @@ def get_lifespan(*, fix_migration=False, version=None):
         else:
             await logger.adebug("Starting Langflow...")
 
-        temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
         mcp_init_task = None
 
@@ -255,11 +251,10 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             if preloaded and _STATE.starter_projects_created:
                 # Inherit bundle paths and types dict from master via COW.
-                # Only the master owns the bundle temp dirs; workers must NOT
-                # add them to their own cleanup list, or shutdown would delete
-                # files that other workers (and the master) still expect.
-                if running_in_master:
-                    temp_dirs = get_preloaded_temp_dirs()
+                # get_owned_temp_dirs() returns the preloaded dirs if this is
+                # the master, or an empty list if this is a worker (workers
+                # must NOT clean up the master's temp_dirs).
+                temp_dirs = get_owned_temp_dirs()
                 await logger.adebug("Skipping bundle load, types cache and starter projects: inherited from master")
             else:
                 current_time = asyncio.get_event_loop().time()

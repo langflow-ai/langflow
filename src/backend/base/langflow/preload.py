@@ -81,6 +81,23 @@ def get_preloaded_temp_dirs() -> list[TemporaryDirectory]:
     return _STATE.temp_dirs
 
 
+def get_owned_temp_dirs() -> list[TemporaryDirectory]:
+    """Return temp_dirs that the current process owns and should clean up.
+
+    When preloaded:
+      - Master returns the preloaded temp_dirs (it owns them)
+      - Workers return an empty list (they must NOT clean up master's temp_dirs)
+    When not preloaded:
+      - Returns an empty list (will be populated by load_bundles later)
+
+    This encodes the master-only ownership rule so callers don't need
+    to check is_master() themselves.
+    """
+    if _STATE.preloaded and is_master():
+        return _STATE.temp_dirs
+    return []
+
+
 async def _run_master_preload() -> None:
     """Run fork-safe one-time initialization inside an asyncio event loop.
 
