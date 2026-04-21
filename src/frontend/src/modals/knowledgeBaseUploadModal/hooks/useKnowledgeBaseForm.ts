@@ -24,6 +24,30 @@ import type {
 } from "../types";
 import { formatFileSize } from "../utils";
 
+/**
+ * Per-backend required-field check. Returns ``null`` when the config
+ * is acceptable, or a human-readable message otherwise. Mirrors the
+ * server-side validation in each Phase 4 backend's
+ * ``_build_vector_store`` so the user sees the problem inline before
+ * the request ever lands.
+ */
+function validateBackendConfig(
+  backendType: string,
+  config: Record<string, string>,
+): string | null {
+  if (backendType === "mongodb") {
+    if (!config.database?.trim()) return "MongoDB requires a database name";
+    if (!config.collection?.trim()) return "MongoDB requires a collection name";
+  } else if (backendType === "astra") {
+    if (!config.collection_name?.trim())
+      return "Astra requires a collection_name";
+  } else if (backendType === "postgres") {
+    if (!config.collection_name?.trim())
+      return "Postgres requires a collection_name";
+  }
+  return null;
+}
+
 export function useKnowledgeBaseForm({
   open,
   setOpen,
@@ -85,6 +109,12 @@ export function useKnowledgeBaseForm({
   const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState<
     ModelOption[]
   >([]);
+  // Phase 4 vector-store backend picker. Defaults keep existing KBs
+  // on the local Chroma store. Backend is immutable after create.
+  const [backendType, setBackendType] = useState<string>("chroma");
+  const [backendConfig, setBackendConfig] = useState<Record<string, string>>(
+    {},
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
@@ -180,6 +210,8 @@ export function useKnowledgeBaseForm({
       { column_name: "text", vectorize: true, identifier: true },
     ]);
     setSelectedEmbeddingModel([]);
+    setBackendType("chroma");
+    setBackendConfig({});
     setChunkPreviews([]);
     setCurrentChunkIndex(0);
     setSelectedPreviewFileIndex(0);
@@ -292,6 +324,12 @@ export function useKnowledgeBaseForm({
     if (!isAddSourcesMode && selectedEmbeddingModel.length === 0) {
       errors.embeddingModel = "Embedding model is required";
     }
+    if (!isAddSourcesMode) {
+      const backendErrors = validateBackendConfig(backendType, backendConfig);
+      if (backendErrors) {
+        errors.backend = backendErrors;
+      }
+    }
     const totalBytes = files.reduce((acc, file) => acc + file.size, 0);
     if (totalBytes > MAX_TOTAL_FILE_SIZE) {
       errors.files = "Total file size exceeds the 1 GB limit";
@@ -301,6 +339,8 @@ export function useKnowledgeBaseForm({
     sourceName,
     isAddSourcesMode,
     selectedEmbeddingModel,
+    backendType,
+    backendConfig,
     files,
     existingKnowledgeBaseNames,
   ]);
@@ -328,6 +368,8 @@ export function useKnowledgeBaseForm({
           embedding_provider: selectedModel.provider || "Unknown",
           embedding_model: selectedModel.id || selectedModel.name,
           column_config: columnConfig,
+          backend_type: backendType,
+          backend_config: backendConfig,
         });
       }
 
@@ -499,6 +541,10 @@ export function useKnowledgeBaseForm({
     selectedEmbeddingModel,
     setSelectedEmbeddingModel,
     embeddingModelOptions,
+    backendType,
+    setBackendType,
+    backendConfig,
+    setBackendConfig,
 
     // Validation
     validationErrors,

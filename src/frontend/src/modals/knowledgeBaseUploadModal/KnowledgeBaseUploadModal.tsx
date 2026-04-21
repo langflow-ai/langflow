@@ -60,6 +60,10 @@ export default function KnowledgeBaseUploadModal({
             onFieldChange={form.clearValidationErrors}
             columnConfig={form.columnConfig}
             onColumnConfigChange={form.setColumnConfig}
+            backendType={form.backendType}
+            onBackendTypeChange={form.setBackendType}
+            backendConfig={form.backendConfig}
+            onBackendConfigChange={form.setBackendConfig}
           />
         );
 

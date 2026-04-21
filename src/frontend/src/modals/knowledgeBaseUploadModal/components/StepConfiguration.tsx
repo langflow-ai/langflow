@@ -21,7 +21,7 @@ import {
 import { cn } from "@/utils/utils";
 import { ACCEPTED_FILE_TYPES } from "../constants";
 import type { ColumnConfigRow } from "../types";
-import { ColumnConfig } from "./columnConfig/ColumnConfig";
+import { BackendPicker, type BackendValue } from "./BackendPicker";
 
 interface StepConfigurationProps {
   isAddSourcesMode: boolean;
@@ -46,6 +46,10 @@ interface StepConfigurationProps {
   onFieldChange?: () => void;
   columnConfig: ColumnConfigRow[];
   onColumnConfigChange: (value: ColumnConfigRow[]) => void;
+  backendType: string;
+  onBackendTypeChange: (value: string) => void;
+  backendConfig: Record<string, string>;
+  onBackendConfigChange: (value: Record<string, string>) => void;
 }
 
 export function StepConfiguration({
@@ -71,6 +75,10 @@ export function StepConfiguration({
   onFieldChange,
   columnConfig,
   onColumnConfigChange,
+  backendType,
+  onBackendTypeChange,
+  backendConfig,
+  onBackendConfigChange,
 }: StepConfigurationProps) {
   return (
     <div className="relative">
@@ -143,6 +151,30 @@ export function StepConfiguration({
             </span>
           )}
         </div>
+
+        {/* Vector Store Backend (Phase 4) — immutable once the KB
+            is created, so we hide it in add-sources mode. */}
+        {!isAddSourcesMode && (
+          <div className="flex flex-col gap-2 pt-4">
+            <BackendPicker
+              value={backendType as BackendValue}
+              onValueChange={(v) => {
+                onBackendTypeChange(v);
+                onFieldChange?.();
+              }}
+              config={backendConfig}
+              onConfigChange={(c) => {
+                onBackendConfigChange(c);
+                onFieldChange?.();
+              }}
+            />
+            {validationErrors.backend && (
+              <span className="text-xs text-destructive">
+                {validationErrors.backend}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Hidden file inputs */}
         <input
