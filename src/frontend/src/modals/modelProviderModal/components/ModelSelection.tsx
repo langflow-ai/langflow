@@ -142,11 +142,7 @@ const ModelSelection = ({
           </a>
         </div>
       ) : isVllm ? (
-        renderModelSection(
-          "Available Models",
-          availableModels,
-          "available",
-        )
+        renderModelSection("Available Models", availableModels, "available")
       ) : (
         <>
           {modelType === "all" ? (
