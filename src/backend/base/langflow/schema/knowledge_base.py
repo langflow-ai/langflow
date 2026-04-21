@@ -40,6 +40,9 @@ class CreateKnowledgeBaseRequest(BaseModel):
     embedding_provider: str
     embedding_model: str
     column_config: list[ColumnConfigItem] | None = None
+    # Phase 4 additions. Default keeps existing KBs on Chroma.
+    backend_type: str = "chroma"
+    backend_config: dict[str, Any] = {}
 
 
 class AddSourceRequest(BaseModel):

@@ -272,7 +272,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
                 return_value=MagicMock(),
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval.ChromaBackend",
+                "lfx.components.files_and_knowledge.retrieval.create_backend",
                 return_value=backend_instance,
             ),
         ):
@@ -326,7 +326,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
                 return_value=MagicMock(),
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval.ChromaBackend",
+                "lfx.components.files_and_knowledge.retrieval.create_backend",
                 return_value=backend_instance,
             ),
         ):
@@ -371,7 +371,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
                 return_value=MagicMock(),
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval.ChromaBackend",
+                "lfx.components.files_and_knowledge.retrieval.create_backend",
                 return_value=backend_instance,
             ),
         ):
@@ -416,7 +416,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
                 return_value=MagicMock(),
             ) as mock_get_embeddings,
             patch(
-                "lfx.components.files_and_knowledge.retrieval.ChromaBackend",
+                "lfx.components.files_and_knowledge.retrieval.create_backend",
                 return_value=backend_instance,
             ),
         ):

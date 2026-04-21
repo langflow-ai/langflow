@@ -166,6 +166,8 @@ async def create_knowledge_base(
                 embedding_provider=request.embedding_provider,
                 embedding_model=request.embedding_model,
                 column_config=column_config_dicts or [],
+                backend_type=request.backend_type or "chroma",
+                backend_config=request.backend_config or {},
                 record_id=kb_id,
             )
         except Exception as exc:  # noqa: BLE001

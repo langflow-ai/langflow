@@ -18,7 +18,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
-from lfx.base.knowledge_bases.backends import ChromaBackend
+from lfx.base.knowledge_bases.backends import BackendType, ChromaBackend, create_backend
 from lfx.base.knowledge_bases.backends.base import (
     METADATA_KEY_CHUNK_INDEX,
     METADATA_KEY_FILE_NAME,
@@ -532,7 +532,17 @@ class KBIngestionHelper:
             text_splitter = RecursiveCharacterTextSplitter(**splitter_kwargs)
 
             embeddings = await KBIngestionHelper._build_embeddings(embedding_provider, embedding_model, current_user)
-            backend = ChromaBackend(kb_name=kb_name, kb_path=kb_path, embedding_function=embeddings)
+            backend_type_value = (
+                kb_record.backend_type if kb_record and kb_record.backend_type else BackendType.CHROMA.value
+            )
+            backend_config = (kb_record.backend_config or {}) if kb_record is not None else {}
+            backend = create_backend(
+                backend_type_value,
+                kb_name=kb_name,
+                kb_path=kb_path,
+                backend_config=backend_config,
+                embedding_function=embeddings,
+            )
 
             job_id_str = str(task_job_id)
 
@@ -694,13 +704,25 @@ class KBIngestionHelper:
             final_status = IngestionRunStatus.CANCELLED
             final_error = "ingestion cancelled by user"
             await logger.awarning("Ingestion job %s was cancelled; rolling back partial data.", task_job_id)
-            await KBIngestionHelper.cleanup_chroma_chunks_by_job(task_job_id, kb_path, kb_name)
+            await KBIngestionHelper.cleanup_chroma_chunks_by_job(
+                task_job_id,
+                kb_path,
+                kb_name,
+                backend_type=kb_record.backend_type if kb_record is not None else None,
+                backend_config=kb_record.backend_config if kb_record is not None else None,
+            )
             return {"message": "Job cancelled", "ingestion_run_id": str(run_id)}
         except Exception as exc:
             final_status = IngestionRunStatus.FAILED
             final_error = str(exc)
             await logger.aerror("Error in background ingestion: %s. Initiating rollback.", exc)
-            await KBIngestionHelper.cleanup_chroma_chunks_by_job(task_job_id, kb_path, kb_name)
+            await KBIngestionHelper.cleanup_chroma_chunks_by_job(
+                task_job_id,
+                kb_path,
+                kb_name,
+                backend_type=kb_record.backend_type if kb_record is not None else None,
+                backend_config=kb_record.backend_config if kb_record is not None else None,
+            )
             raise
         finally:
             if backend is not None:
@@ -717,6 +739,8 @@ class KBIngestionHelper:
         job_id: uuid.UUID,
         kb_path: Path,
         kb_name: str,
+        backend_type: str | None = None,
+        backend_config: dict | None = None,
     ) -> None:
         """Delete every chunk written by ``job_id`` from this KB.
 
@@ -724,8 +748,18 @@ class KBIngestionHelper:
         backend-level filter keyed on ``METADATA_KEY_JOB_ID`` is what makes
         rollbacks safe even when multiple concurrent jobs write to the same
         collection.
+
+        Name kept for backward compatibility — the cleanup now runs through
+        whichever backend the KB is configured with, not just Chroma.
+        Defaults to Chroma so existing callers still work.
         """
-        backend = ChromaBackend(kb_name=kb_name, kb_path=kb_path)
+        effective_type = backend_type or BackendType.CHROMA.value
+        backend = create_backend(
+            effective_type,
+            kb_name=kb_name,
+            kb_path=kb_path,
+            backend_config=backend_config or {},
+        )
         try:
             await backend.delete_by({METADATA_KEY_JOB_ID: str(job_id)})
             await logger.ainfo(f"Cleaned up chunks for job {job_id} in knowledge base '{kb_name}'")

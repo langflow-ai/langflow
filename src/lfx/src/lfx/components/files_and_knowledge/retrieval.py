@@ -19,7 +19,7 @@ from typing import Any
 
 from langflow.services.database.models.user.crud import get_user_by_id
 
-from lfx.base.knowledge_bases.backends import ChromaBackend
+from lfx.base.knowledge_bases.backends import BackendType, create_backend
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
 from lfx.custom import Component
@@ -148,6 +148,33 @@ class KnowledgeBaseComponent(Component):
             logger.error(f"Error decoding JSON from {metadata_file}")
             return {}
 
+    async def _resolve_backend(self, *, kb_user: str) -> tuple[str, dict[str, Any]]:  # noqa: ARG002 — reserved for path-scoped fallback
+        """Return ``(backend_type, backend_config)`` for this KB.
+
+        Prefers the DB row written at create time (Phase 1.5) so the
+        configured backend (Chroma / Mongo / Astra / Postgres) is
+        honored. Falls back to Chroma for legacy KBs that only exist
+        on disk — those ingestions still work because the Chroma
+        files live next to ``embedding_metadata.json``.
+        """
+        try:
+            from langflow.api.utils import knowledge_base_service
+
+            user_uuid = self._user_uuid
+            if user_uuid is None:
+                return BackendType.CHROMA.value, {}
+            record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
+        except Exception as exc:  # noqa: BLE001 — service hiccups fall through to Chroma
+            logger.debug("KB record lookup failed: %s", exc)
+            return BackendType.CHROMA.value, {}
+
+        if record is None:
+            return BackendType.CHROMA.value, {}
+        return (
+            record.backend_type or BackendType.CHROMA.value,
+            record.backend_config or {},
+        )
+
     def _resolve_model_selection(self, metadata: dict[str, Any]) -> list[dict[str, Any]]:
         """Resolve the ``get_embeddings``-compatible model selection from metadata.
 
@@ -225,9 +252,12 @@ class KnowledgeBaseComponent(Component):
             chunk_size=chunk_size,
         )
 
-        backend = ChromaBackend(
+        backend_type, backend_config = await self._resolve_backend(kb_user=kb_user)
+        backend = create_backend(
+            backend_type,
             kb_name=self.knowledge_base,
             kb_path=kb_path,
+            backend_config=backend_config,
             embedding_function=embedding_function,
         )
         try:

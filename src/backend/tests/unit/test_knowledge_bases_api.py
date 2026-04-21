@@ -715,7 +715,7 @@ class TestPerformIngestionTask:
     @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
-    @patch("langflow.api.utils.kb_helpers.ChromaBackend")
+    @patch("langflow.api.utils.kb_helpers.create_backend")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper._build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
@@ -794,7 +794,7 @@ class TestPerformIngestionTask:
     @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
-    @patch("langflow.api.utils.kb_helpers.ChromaBackend")
+    @patch("langflow.api.utils.kb_helpers.create_backend")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper._build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.cleanup_chroma_chunks_by_job", new_callable=AsyncMock)
     async def test_perform_ingestion_rollback(
@@ -838,7 +838,11 @@ class TestPerformIngestionTask:
             )
 
         mock_build.assert_called_once()
-        mock_cleanup.assert_called_once_with(job_id, mock_kb_path, "test_kb")
+        # Rollback now threads optional backend info through so
+        # non-Chroma backends can clean up; assert by positional tuple.
+        mock_cleanup.assert_called_once()
+        call_args = mock_cleanup.call_args
+        assert call_args.args == (job_id, mock_kb_path, "test_kb")
         mock_backend.teardown.assert_awaited()
         # The run row must still be finalized even on error so the
         # visibility UI doesn't show stuck RUNNING rows.
