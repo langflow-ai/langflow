@@ -193,16 +193,17 @@ async def _count_provider_deployments_after_reconciliation(
     try:
         deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
         deployment_mapper = get_deployment_mapper(provider_account.provider_key)
-        _, deployment_count = await list_deployments_synced(
-            deployment_adapter=deployment_adapter,
-            deployment_mapper=deployment_mapper,
-            user_id=user_id,
-            provider_id=provider_account.id,
-            db=session,
-            page=1,
-            size=deployment_count,
-            deployment_type=None,
-        )
+        with deployment_provider_scope(provider_account.id):
+            _, deployment_count = await list_deployments_synced(
+                deployment_adapter=deployment_adapter,
+                deployment_mapper=deployment_mapper,
+                user_id=user_id,
+                provider_id=provider_account.id,
+                db=session,
+                page=1,
+                size=deployment_count,
+                deployment_type=None,
+            )
     except Exception:  # noqa: BLE001
         logger.warning(
             "Failed to reconcile deployments before deleting provider account %s; falling back to local count.",

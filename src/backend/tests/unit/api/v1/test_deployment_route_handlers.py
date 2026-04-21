@@ -1538,6 +1538,141 @@ class TestProviderAccountRoutes:
             provider_account=existing_account,
         )
 
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 0))
+    @patch(f"{ROUTES_MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_delete_provider_account_sets_deployment_provider_scope_for_reconciliation(
+        self,
+        mock_get_provider_account,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_count_deployments,  # noqa: ARG002
+        mock_list_synced,
+        mock_delete_provider_account,  # noqa: ARG002
+    ):
+        """Reconciliation must run inside ``deployment_provider_scope`` so adapters can resolve credentials.
+
+        Regression test: without the scope, the WxO adapter raises
+        ``CredentialResolutionError("Deployment account context is not available...")``
+        with status 401, the reconciliation is silently dropped, and the stale local
+        count blocks every provider-account delete with a 409.
+        """
+        from langflow.api.v1.deployments import delete_provider_account
+        from langflow.services.adapters.deployment.context import DeploymentProviderIDContext
+
+        existing_account = _fake_provider_account()
+        mock_get_provider_account.return_value = existing_account
+        mock_get_mapper.return_value = MagicMock()
+        mock_resolve_adapter.return_value = AsyncMock()
+
+        observed_provider_ids: list[object] = []
+
+        async def capture_scope(*_args, **_kwargs):
+            current = DeploymentProviderIDContext.get_current()
+            observed_provider_ids.append(None if current is None else current.provider_id)
+            return ([], 0)
+
+        mock_list_synced.side_effect = capture_scope
+
+        response = await delete_provider_account(
+            provider_id=existing_account.id,
+            session=AsyncMock(),
+            current_user=_fake_user(),
+        )
+
+        assert response.status_code == 204
+        assert observed_provider_ids == [existing_account.id], (
+            "list_deployments_synced must run inside deployment_provider_scope(provider_account.id) "
+            "so the adapter can resolve credentials from DeploymentProviderIDContext."
+        )
+        # And the scope must not leak after the handler returns.
+        assert DeploymentProviderIDContext.get_current() is None
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_delete_provider_account_falls_back_to_local_count_when_reconciliation_raises(
+        self,
+        mock_get_provider_account,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_count_deployments,
+        mock_list_synced,
+        mock_delete_provider_account,
+    ):
+        """If reconciliation fails (e.g. adapter credential error), fall back to the local count.
+
+        The handler must surface the safe 409 (rather than crash) and must NOT delete the
+        provider account row while local deployments are still tracked.
+        """
+        from langflow.api.v1.deployments import delete_provider_account
+        from lfx.services.adapters.deployment.exceptions import CredentialResolutionError
+
+        existing_account = _fake_provider_account()
+        mock_get_provider_account.return_value = existing_account
+        mock_get_mapper.return_value = MagicMock()
+        mock_resolve_adapter.return_value = AsyncMock()
+        mock_list_synced.side_effect = CredentialResolutionError(
+            message="Deployment account context is not available for adapter resolution."
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_provider_account(
+                provider_id=existing_account.id,
+                session=AsyncMock(),
+                current_user=_fake_user(),
+            )
+
+        assert exc_info.value.status_code == 409
+        mock_count_deployments.assert_awaited_once()
+        mock_list_synced.assert_awaited_once()
+        mock_delete_provider_account.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=0)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_delete_provider_account_skips_reconciliation_when_no_local_deployments(
+        self,
+        mock_get_provider_account,
+        mock_get_mapper,  # noqa: ARG002
+        mock_resolve_adapter,  # noqa: ARG002
+        mock_count_deployments,
+        mock_list_synced,
+        mock_delete_provider_account,
+    ):
+        """When the local count is 0 we must not hit the provider; just delete the row."""
+        from langflow.api.v1.deployments import delete_provider_account
+
+        existing_account = _fake_provider_account()
+        mock_get_provider_account.return_value = existing_account
+        session = AsyncMock()
+
+        response = await delete_provider_account(
+            provider_id=existing_account.id,
+            session=session,
+            current_user=_fake_user(),
+        )
+
+        assert response.status_code == 204
+        mock_count_deployments.assert_awaited_once()
+        mock_list_synced.assert_not_awaited()
+        mock_delete_provider_account.assert_awaited_once_with(
+            session,
+            provider_account=existing_account,
+        )
+
 
 # ---------------------------------------------------------------------------
 # update_deployment: rollback on commit failure
