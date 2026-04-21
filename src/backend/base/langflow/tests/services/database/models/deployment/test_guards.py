@@ -12,8 +12,9 @@ from langflow.services.database.models.deployment.guards import (
 
 
 class _ExecResult:
-    def __init__(self, value):
+    def __init__(self, value, rowcount: int = 0):
         self._value = value
+        self.rowcount = rowcount
 
     def first(self):
         return self._value
@@ -25,15 +26,27 @@ class _ExecResult:
 @pytest.mark.asyncio
 async def test_check_flow_has_deployed_versions_allows_when_no_attachments() -> None:
     db = AsyncMock()
-    db.exec = AsyncMock(side_effect=[_ExecResult(None), _ExecResult([])])
+    db.exec = AsyncMock(
+        side_effect=[
+            _ExecResult(None, rowcount=0),  # prune orphan attachments (no-op)
+            _ExecResult(None),  # live deployment attachment lookup
+        ]
+    )
 
     await check_flow_has_deployed_versions(db, flow_id=uuid4())
+
+    assert db.exec.await_count == 2
 
 
 @pytest.mark.asyncio
 async def test_check_flow_has_deployed_versions_raises_guard_when_attached() -> None:
     db = AsyncMock()
-    db.exec = AsyncMock(return_value=_ExecResult(uuid4()))
+    db.exec = AsyncMock(
+        side_effect=[
+            _ExecResult(None, rowcount=0),  # prune orphan attachments (no-op)
+            _ExecResult(uuid4()),  # live deployment attachment lookup
+        ]
+    )
 
     with pytest.raises(DeploymentGuardError) as exc_info:
         await check_flow_has_deployed_versions(db, flow_id=uuid4())
@@ -47,19 +60,37 @@ async def test_check_flow_has_deployed_versions_raises_guard_when_attached() -> 
 
 @pytest.mark.asyncio
 async def test_check_flow_has_deployed_versions_prunes_orphan_attachments() -> None:
-    stale_id = uuid4()
     db = AsyncMock()
     db.exec = AsyncMock(
         side_effect=[
+            _ExecResult(None, rowcount=1),  # prune orphan attachments (one row pruned)
             _ExecResult(None),  # live deployment attachment lookup
-            _ExecResult([stale_id]),  # stale attachment id lookup
-            _ExecResult(None),  # delete stale attachments
         ]
     )
 
     await check_flow_has_deployed_versions(db, flow_id=uuid4())
 
-    assert db.exec.await_count == 3
+    assert db.exec.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_check_flow_has_deployed_versions_prunes_orphans_even_when_attached() -> None:
+    """Prune step must run before the live-attachment check.
+
+    This ensures flows with both orphan and live attachments still get their orphans cleaned up.
+    """
+    db = AsyncMock()
+    db.exec = AsyncMock(
+        side_effect=[
+            _ExecResult(None, rowcount=2),  # prune orphan attachments
+            _ExecResult(uuid4()),  # live deployment attachment lookup -> raises
+        ]
+    )
+
+    with pytest.raises(DeploymentGuardError):
+        await check_flow_has_deployed_versions(db, flow_id=uuid4())
+
+    assert db.exec.await_count == 2
 
 
 @pytest.mark.asyncio

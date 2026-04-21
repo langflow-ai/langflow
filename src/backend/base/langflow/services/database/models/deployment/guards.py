@@ -45,6 +45,31 @@ async def check_flow_has_deployed_versions(db: AsyncSession, *, flow_id: UUID) -
     SQLite foreign key cascades were not enforced), this guard prunes them for
     the target flow so they don't permanently block deletion.
     """
+    # Prune stale orphan attachments first via a single DELETE-with-subquery.
+    # Doing the write before any SELECT means the connection takes a writer
+    # lock straight away on SQLite and avoids the SHARED -> RESERVED upgrade
+    # trap that can surface as `OperationalError: database is locked`.
+    stale_subquery = (
+        select(FlowVersionDeploymentAttachment.id)
+        .join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id)
+        .outerjoin(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
+        .where(
+            FlowVersion.flow_id == flow_id,
+            Deployment.id.is_(None),  # deployment no longer exists
+        )
+        .scalar_subquery()
+    )
+    pruned_result = await db.exec(
+        delete(FlowVersionDeploymentAttachment).where(col(FlowVersionDeploymentAttachment.id).in_(stale_subquery))
+    )
+    # log the raw value verbatim so any driver oddity is visible in operator logs
+    # rather than silently masked by coercion.
+    await logger.ainfo(
+        "Orphan deployment attachment prune for flow %s completed (rowcount=%r)",
+        flow_id,
+        pruned_result.rowcount,
+    )
+
     attached = (
         await db.exec(
             select(FlowVersionDeploymentAttachment.id)
@@ -63,29 +88,6 @@ async def check_flow_has_deployed_versions(db: AsyncSession, *, flow_id: UUID) -
             ),
             detail=get_friendly_guard_detail("FLOW_HAS_DEPLOYED_VERSIONS"),
         )
-
-    stale_attachment_ids = (
-        await db.exec(
-            select(FlowVersionDeploymentAttachment.id)
-            .join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id)
-            .outerjoin(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
-            .where(
-                FlowVersion.flow_id == flow_id,
-                Deployment.id.is_(None),  # deployment no longer exists
-            )
-        )
-    ).all()
-    if not stale_attachment_ids:
-        return
-
-    await db.exec(
-        delete(FlowVersionDeploymentAttachment).where(col(FlowVersionDeploymentAttachment.id).in_(stale_attachment_ids))
-    )
-    await logger.ainfo(
-        "Pruned %d orphan deployment attachment(s) for flow %s",
-        len(stale_attachment_ids),
-        flow_id,
-    )
 
 
 async def check_project_has_deployments(db: AsyncSession, *, project_id: UUID) -> None:
