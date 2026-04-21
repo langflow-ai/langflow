@@ -409,17 +409,27 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 raise ValueError(msg)
 
             base_url = base_url.rstrip("/")
+            models_url = f"{base_url}/models" if base_url.endswith("/v1") else f"{base_url}/v1/models"
             headers = {}
             api_key = variables.get("VLLM_API_KEY")
             if api_key:
                 headers["Authorization"] = f"Bearer {api_key}"
 
-            response = requests.get(f"{base_url}/v1/models", headers=headers, timeout=5)
-            if response.status_code in (401, 403):
-                msg = "Authentication failed for vLLM server. Check VLLM_API_KEY."
+            try:
+                response = requests.get(models_url, headers=headers, timeout=5)
+                if response.status_code in (401, 403):
+                    msg = "Authentication failed for vLLM server. Check VLLM_API_KEY."
+                    logger.error(msg)
+                    raise ValueError(msg)
+                response.raise_for_status()
+            except requests.ConnectionError:
+                msg = f"Could not connect to vLLM server at {base_url}. Please check that the server is running and the URL is correct."
                 logger.error(msg)
                 raise ValueError(msg)
-            response.raise_for_status()
+            except requests.Timeout:
+                msg = f"Connection to vLLM server at {base_url} timed out. Please check that the server is running and responsive."
+                logger.error(msg)
+                raise ValueError(msg)
 
         elif provider == "Ollama":
             import requests
@@ -473,8 +483,8 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             raise ValueError(msg) from e
 
         if provider == "vLLM":
-            msg = "Invalid vLLM API base URL"
-            logger.error(f"{msg}: {e}")
+            msg = f"Failed to validate vLLM server: {e}"
+            logger.error(msg)
             raise ValueError(msg) from e
 
         # For others, log and return (allow saving despite minor errors)
