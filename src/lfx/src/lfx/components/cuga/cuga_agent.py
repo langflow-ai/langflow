@@ -282,7 +282,7 @@ class CugaComponent(ToolCallingAgentComponent):
                 async for event in cuga_agent.run_task_generic_yield(
                     eval_mode=False, goal=current_input, chat_messages=lc_messages
                 ):
-                    logger.debug(f"[CUGA] recieved event {event}")
+                    logger.debug(f"[CUGA] received event {event}")
                     if last_event is not None and tool_run_id is not None:
                         logger.debug(f"[CUGA] last event {last_event}")
                         try:
