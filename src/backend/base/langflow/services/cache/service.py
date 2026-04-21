@@ -286,6 +286,14 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             return False
         return bool(await self._client.exists(str(key)))
 
+    @override
+    async def teardown(self) -> None:
+        """Close the Redis connection to prevent socket leak across fork."""
+        try:
+            await self._client.close()
+        except Exception as e:  # noqa: BLE001
+            await logger.awarning(f"RedisCache teardown failed: {e}")
+
     def __repr__(self) -> str:
         """Return a string representation of the RedisCache instance."""
         return f"RedisCache(expiration_time={self.expiration_time})"
