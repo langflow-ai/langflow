@@ -1249,7 +1249,7 @@ class ProjectMCPServer:
         @self.server.read_resource()
         async def handle_read_project_resource(uri: str) -> bytes:
             """Handle resource read requests for this specific project."""
-            return await handle_read_resource(uri=uri)
+            return await handle_read_resource(uri=uri, project_id=self.project_id)
 
         @self.server.call_tool()
         @handle_mcp_errors
