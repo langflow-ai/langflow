@@ -1234,6 +1234,12 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
 
 
 async def initialize_auto_login_default_superuser() -> None:
+    """Initialize the default superuser for AUTO_LOGIN mode.
+
+    Note: In production, this is called indirectly via setup_superuser() during
+    initialize_services(), which includes file lock protection for multi-worker
+    environments. This standalone function is kept for testing and CLI usage.
+    """
     settings_service = get_settings_service()
     if not settings_service.auth_settings.AUTO_LOGIN:
         return

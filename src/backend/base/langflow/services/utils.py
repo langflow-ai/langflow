@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import asyncio
 from importlib import import_module
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from lfx.services.settings.constants import DEFAULT_SUPERUSER
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
@@ -71,16 +72,52 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
 
 async def setup_superuser(settings_service: SettingsService, session: AsyncSession) -> None:
     if settings_service.auth_settings.AUTO_LOGIN:
-        await logger.adebug("AUTO_LOGIN is set to True. Creating default superuser.")
+        await logger.adebug("AUTO_LOGIN is set to True. Creating default superuser with full initialization.")
+        # Use file lock to prevent race conditions in multi-worker environments
+        from tempfile import gettempdir
+
+        from filelock import FileLock
+        from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+
         username = DEFAULT_SUPERUSER
         password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
-    else:
-        # Remove the default superuser if it exists
-        await teardown_superuser(settings_service, session)
-        # If AUTO_LOGIN is disabled, attempt to use configured credentials
-        # or fall back to default credentials if none are provided.
-        username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
-        password = (settings_service.auth_settings.SUPERUSER_PASSWORD or DEFAULT_SUPERUSER_PASSWORD).get_secret_value()
+
+        if not username or not password:
+            msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
+            raise ValueError(msg)
+
+        # Use file lock similar to starter projects
+        lock_file = Path(gettempdir()) / "langflow_auto_login_superuser.lock"
+        lock = FileLock(lock_file, timeout=5)
+
+        try:
+            with lock:
+                # Create user and initialize all related resources
+                super_user = await get_or_create_super_user(session, username, password, is_default=True)
+                if super_user:  # Only initialize if user was created
+                    from langflow.initial_setup.setup import get_or_create_default_folder
+                    from langflow.services.deps import get_variable_service
+
+                    await get_variable_service().initialize_user_variables(super_user.id, session)
+
+                    # Initialize agentic variables if enabled
+                    if settings_service.settings.agentic_experience:
+                        from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
+
+                        await initialize_agentic_user_variables(super_user.id, session)
+
+                    _ = await get_or_create_default_folder(session, super_user.id)
+                    await logger.adebug("Auto-login superuser initialized successfully")
+        except TimeoutError:
+            # Another worker is handling it - all operations are idempotent
+            await logger.adebug("Another worker is initializing auto-login superuser, skipping")
+        return
+    # Remove the default superuser if it exists
+    await teardown_superuser(settings_service, session)
+    # If AUTO_LOGIN is disabled, attempt to use configured credentials
+    # or fall back to default credentials if none are provided.
+    username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+    password = (settings_service.auth_settings.SUPERUSER_PASSWORD or DEFAULT_SUPERUSER_PASSWORD).get_secret_value()
 
     if not username or not password:
         msg = "Username and password must be set"
