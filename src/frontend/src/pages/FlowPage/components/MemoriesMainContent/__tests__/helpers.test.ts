@@ -1,9 +1,4 @@
-import {
-  formatDate,
-  formatTimestamp,
-  statusBgColors,
-  statusColors,
-} from "../helpers";
+import { formatDate, formatTimestamp } from "../helpers";
 
 describe("Memories helpers", () => {
   const originalToLocaleString = Date.prototype.toLocaleString;
@@ -43,10 +38,5 @@ describe("Memories helpers", () => {
 
     expect(date).toBe("Jan 15, 10:30");
     expect(timestamp).toBe("Jan 15, 10:30:00");
-  });
-
-  it("exposes expected status color mappings", () => {
-    expect(statusColors.failed).toBe("text-destructive");
-    expect(statusBgColors.generating).toBe("bg-primary/10");
   });
 });

@@ -4,6 +4,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 import type { MemorySessionInfo } from "./types";
+import { ensureRequiredParam } from "./validation";
 
 export interface GetMemorySessionsParams {
   memoryId: string;
@@ -16,9 +17,7 @@ export const useGetMemorySessions: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getSessionsFn = async (): Promise<MemorySessionInfo[]> => {
-    if (!params?.memoryId) {
-      throw new Error("memoryId is required");
-    }
+    ensureRequiredParam(params?.memoryId, "memoryId");
 
     const { data } = await api.get<{ items: MemorySessionInfo[] }>(
       `${getURL("MEMORIES")}/${params.memoryId}/sessions`,
@@ -27,7 +26,7 @@ export const useGetMemorySessions: useQueryFunctionType<
     return Array.isArray(data.items) ? data.items : [];
   };
 
-  const queryResult: UseQueryResult<MemorySessionInfo[], any> = query(
+  const queryResult: UseQueryResult<MemorySessionInfo[], Error> = query(
     ["useGetMemorySessions", params?.memoryId],
     getSessionsFn,
     {

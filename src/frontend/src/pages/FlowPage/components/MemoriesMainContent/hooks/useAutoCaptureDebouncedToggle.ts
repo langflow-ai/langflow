@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { UpdateMemoryParams } from "@/controllers/API/queries/memories/types";
 import type { MemoryInfo } from "@/controllers/API/queries/memories/types";
+import { AUTO_CAPTURE_DEBOUNCE_MS } from "../MemoriesMainContent.constants";
 
 type UpdateMemoryMutation = {
   mutate: (
@@ -20,7 +21,7 @@ type NextIsActive = boolean | ((prevIsActive: boolean) => boolean);
 export const useAutoCaptureDebouncedToggle = ({
   memory,
   updateMemoryMutation,
-  debounceMs = 300,
+  debounceMs = AUTO_CAPTURE_DEBOUNCE_MS,
 }: UseAutoCaptureDebouncedToggleArgs) => {
   const autoCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,

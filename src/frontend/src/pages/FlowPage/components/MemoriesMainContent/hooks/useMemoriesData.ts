@@ -12,6 +12,8 @@ import type {
 import { useMemorySessionResolver } from "./useMemorySessionResolver";
 import { useAutoCaptureDebouncedToggle } from "./useAutoCaptureDebouncedToggle";
 import { useMemoryDocuments } from "./useMemoryDocuments";
+import { AUTO_CAPTURE_DEBOUNCE_MS } from "../MemoriesMainContent.constants";
+import { extractApiErrorMessages } from "@/utils/apiError";
 
 const EMPTY_MEMORIES: MemoryInfo[] = [];
 
@@ -21,21 +23,6 @@ export function useMemoriesData({
   onSelectMemory,
 }: UseMemoriesDataProps) {
   const { setErrorData, setSuccessData } = useAlertStore();
-
-  const getErrorMessage = (error: unknown) => {
-    if (error && typeof error === "object") {
-      const maybeAny = error as {
-        message?: unknown;
-        response?: { data?: { detail?: unknown } };
-      };
-      const detail = maybeAny.response?.data?.detail;
-      if (typeof detail === "string" && detail) return detail;
-      if (typeof maybeAny.message === "string" && maybeAny.message) {
-        return maybeAny.message;
-      }
-    }
-    return "Unknown error";
-  };
 
   const [memoriesSearch, setMemoriesSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -115,7 +102,7 @@ export function useMemoriesData({
     onError: (error: unknown) =>
       setErrorData({
         title: "Failed to delete memory",
-        list: [getErrorMessage(error)],
+        list: extractApiErrorMessages(error),
       }),
   });
 
@@ -123,7 +110,7 @@ export function useMemoriesData({
     onError: (error: unknown) =>
       setErrorData({
         title: "Failed to update memory",
-        list: [getErrorMessage(error)],
+        list: extractApiErrorMessages(error),
       }),
   });
 
@@ -131,7 +118,7 @@ export function useMemoriesData({
     useAutoCaptureDebouncedToggle({
       memory,
       updateMemoryMutation,
-      debounceMs: 300,
+      debounceMs: AUTO_CAPTURE_DEBOUNCE_MS,
     });
 
   const {

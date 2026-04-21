@@ -5,6 +5,7 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 import type { GetMemoryParams, MemoryApiDTO, MemoryInfo } from "./types";
 import { mapMemoryApiToMemoryInfo } from "./mappers";
+import { ensureRequiredParam } from "./validation";
 
 export const useGetMemory: useQueryFunctionType<GetMemoryParams, MemoryInfo> = (
   params,
@@ -13,9 +14,7 @@ export const useGetMemory: useQueryFunctionType<GetMemoryParams, MemoryInfo> = (
   const { query } = UseRequestProcessor();
 
   const getMemoryFn = async (): Promise<MemoryInfo> => {
-    if (!params?.memoryId) {
-      throw new Error("memoryId is required");
-    }
+    ensureRequiredParam(params?.memoryId, "memoryId");
 
     const res = await api.get<MemoryApiDTO>(
       `${getURL("MEMORIES")}/${params.memoryId}`,
@@ -23,7 +22,7 @@ export const useGetMemory: useQueryFunctionType<GetMemoryParams, MemoryInfo> = (
     return mapMemoryApiToMemoryInfo(res.data);
   };
 
-  const queryResult: UseQueryResult<MemoryInfo, any> = query(
+  const queryResult: UseQueryResult<MemoryInfo, Error> = query(
     ["useGetMemory", params?.memoryId],
     getMemoryFn,
     {
