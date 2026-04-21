@@ -55,8 +55,8 @@ interface StepConfigurationProps {
   onFieldChange?: () => void;
   columnConfig: ColumnConfigRow[];
   onColumnConfigChange: (value: ColumnConfigRow[]) => void;
-  backendType: string;
-  onBackendTypeChange: (value: string) => void;
+  backendType: BackendValue;
+  onBackendTypeChange: (value: BackendValue) => void;
   backendConfig: Record<string, string>;
   onBackendConfigChange: (value: Record<string, string>) => void;
   activeConnector: string | null;
@@ -180,7 +180,7 @@ export function StepConfiguration({
         {!isAddSourcesMode && (
           <div className="flex flex-col gap-2 pt-4">
             <BackendPicker
-              value={backendType as BackendValue}
+              value={backendType}
               onValueChange={(v) => {
                 onBackendTypeChange(v);
                 onFieldChange?.();

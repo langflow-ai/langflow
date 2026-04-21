@@ -167,13 +167,17 @@ class OAuthConnectorBase(KBConnectorSource):
     # Subclass must override.
     token_endpoint: str = ""
     # Default cache: most providers issue 1-hour tokens; refresh 5
-    # minutes before expiry to give clock skew a margin.
-    token_ttl_seconds: int = 55 * 60
+    # minutes before expiry to give clock skew a margin. This is the
+    # *class-level default* only — each instance stores its own
+    # ``token_ttl_seconds`` on ``self`` so a provider-reported
+    # ``expires_in`` tune-up never mutates shared state.
+    default_token_ttl_seconds: int = 55 * 60
 
-    def __init__(self, user_id, source_config) -> None:
+    def __init__(self, user_id: UUID | str | None, source_config: dict[str, Any]) -> None:
         super().__init__(user_id=user_id, source_config=source_config)
         self._cached_access_token: str | None = None
         self._cached_token_expires_at: float = 0.0
+        self.token_ttl_seconds: int = self.default_token_ttl_seconds
 
     async def get_access_token(self) -> str:
         """Return a currently-valid access token, refreshing if needed.
