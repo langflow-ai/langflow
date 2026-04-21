@@ -17,6 +17,14 @@ started here. Each worker continues to set those up in its own FastAPI
 ``lifespan`` after fork, so workers remain fully independent and can
 each serve any request on their own.
 
+Failure contract:
+    Fork-safety-critical steps (DB engine disposal, cache service teardown)
+    that fail will propagate their exception and abort preload. Best-effort
+    steps (profile pictures, starter projects, agentic MCP, flows) that fail
+    will log a warning, clear their completion flag, and allow preload to
+    continue so workers inherit partial progress. Workers re-run any
+    incomplete step during their lifespan.
+
 Notes on CPython and copy-on-write:
     CPython mutates ``ob_refcnt`` on every attribute access, which
     triggers 4 KB page copies even for "shared" objects. Preloading
@@ -152,23 +160,26 @@ async def _run_master_preload() -> None:
             await logger.awarning(f"[preload] starter projects init failed: {e}")
 
     if settings_service.settings.agentic_experience:
-        try:
-            from langflow.api.utils.mcp.agentic_mcp import (
-                auto_configure_agentic_mcp_server,
-                initialize_agentic_global_variables,
-            )
+        from langflow.api.utils.mcp.agentic_mcp import (
+            auto_configure_agentic_mcp_server,
+            initialize_agentic_global_variables,
+        )
 
-            await logger.adebug("[preload] initializing agentic global variables")
+        await logger.adebug("[preload] initializing agentic global variables")
+        try:
             async with session_scope() as session:
                 await initialize_agentic_global_variables(session)
             _STATE.agentic_globals_initialized = True
+        except Exception as e:  # noqa: BLE001
+            await logger.awarning(f"[preload] initialize agentic global variables failed: {e}")
 
-            await logger.adebug("[preload] auto-configuring agentic MCP server")
+        await logger.adebug("[preload] auto-configuring agentic MCP server")
+        try:
             async with session_scope() as session:
                 await auto_configure_agentic_mcp_server(session)
             _STATE.agentic_mcp_configured = True
         except Exception as e:  # noqa: BLE001
-            await logger.awarning(f"[preload] agentic MCP init failed: {e}")
+            await logger.awarning(f"[preload] auto-configure agentic MCP server failed: {e}")
 
     await logger.adebug("[preload] loading flows from directory")
     try:
