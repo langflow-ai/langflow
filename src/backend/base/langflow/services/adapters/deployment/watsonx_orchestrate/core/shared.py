@@ -14,6 +14,7 @@ from lfx.services.adapters.deployment.exceptions import InvalidContentError, Res
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import create_config, validate_connection
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
     delete_config_if_exists,
+    retry_create,
     retry_rollback,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
@@ -137,7 +138,8 @@ async def create_connection_with_conflict_mapping(
         provider_config=payload.provider_config,
     )
     try:
-        return await create_config(
+        return await retry_create(
+            create_config,
             clients=clients,
             config=config_payload,
             user_id=user_id,
@@ -185,7 +187,7 @@ async def resolve_connections_for_operations(
 
     if existing_app_ids:
         existing_connections: list[object] = await asyncio.gather(
-            *(validate_connection_fn(clients.connections, app_id=app_id) for app_id in existing_app_ids)
+            *(retry_create(validate_connection_fn, clients.connections, app_id=app_id) for app_id in existing_app_ids)
         )
         for app_id, connection in zip(existing_app_ids, existing_connections, strict=True):
             resolved_connections[app_id] = connection.connection_id  # type: ignore[attr-defined]
@@ -238,7 +240,8 @@ async def resolve_connections_for_operations(
     try:
         validated_created_connections: list[object] = await asyncio.gather(
             *(
-                validate_connection_fn(
+                retry_create(
+                    validate_connection_fn,
                     clients.connections,
                     app_id=create_plan.provider_app_id,
                 )

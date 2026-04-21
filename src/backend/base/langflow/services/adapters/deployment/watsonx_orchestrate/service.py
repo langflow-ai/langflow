@@ -82,6 +82,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.models impor
     fetch_models_adapter,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
+    retry_create,
     rollback_created_resources,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import (
@@ -471,7 +472,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 if not update_payload:
                     msg = "provider_data is required when update operations do not include spec changes."
                     raise InvalidContentError(message=msg)
-                await asyncio.to_thread(
+                await retry_create(
+                    asyncio.to_thread,
                     clients.agent.update,
                     agent_id,
                     update_payload,

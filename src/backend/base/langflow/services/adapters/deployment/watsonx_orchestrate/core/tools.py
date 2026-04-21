@@ -24,6 +24,7 @@ from lfx.services.adapters.deployment.exceptions import (
 from lfx.utils.flow_requirements import generate_requirements_from_flow
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_create
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxFlowArtifactProviderData,
     WatsonxToolRefBinding,
@@ -174,7 +175,10 @@ async def update_existing_tool_connection_bindings(
         tool_updates.append((tool_id, writable_tool))
 
     await asyncio.gather(
-        *(asyncio.to_thread(clients.tool.update, tool_id, writable_tool) for tool_id, writable_tool in tool_updates)
+        *(
+            retry_create(asyncio.to_thread, clients.tool.update, tool_id, writable_tool)
+            for tool_id, writable_tool in tool_updates
+        )
     )
 
 
@@ -401,7 +405,7 @@ async def upload_wxo_flow_tool(
 ) -> str:
     tool_name = tool_payload.get("name")
     try:
-        tool_response = await asyncio.to_thread(clients.tool.create, tool_payload)
+        tool_response = await retry_create(asyncio.to_thread, clients.tool.create, tool_payload)
     except (ClientAPIException, HTTPException) as exc:
         raise_as_deployment_error(
             exc,
@@ -418,7 +422,8 @@ async def upload_wxo_flow_tool(
         created_tool_ids_journal.append(tool_id)
 
     try:
-        await asyncio.to_thread(
+        await retry_create(
+            asyncio.to_thread,
             upload_tool_artifact_bytes,
             clients,
             tool_id=tool_id,

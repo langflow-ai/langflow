@@ -4734,27 +4734,136 @@ async def test_verify_tools_by_ids_rejects_mixed_connections_payload():
 # ---------------------------------------------------------------------------
 
 
-def test_is_retryable_rollback_exception_non_retryable_status_codes():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import _is_retryable_rollback_exception
+@pytest.mark.anyio
+async def test_retry_with_backoff_succeeds_on_first_try():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_with_backoff
+
+    call_count = 0
+
+    async def op():
+        nonlocal call_count
+        call_count += 1
+        return "ok"
+
+    result = await retry_with_backoff(op, max_attempts=3)
+    assert result == "ok"
+    assert call_count == 1
+
+
+@pytest.mark.anyio
+async def test_retry_with_backoff_forwards_args_and_kwargs():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_with_backoff
+
+    received: list[tuple[str, str]] = []
+
+    async def op(prefix: str, *, suffix: str) -> str:
+        received.append((prefix, suffix))
+        return f"{prefix}-{suffix}"
+
+    result = await retry_with_backoff(op, 3, "left", suffix="right")
+    assert result == "left-right"
+    assert received == [("left", "right")]
+
+
+@pytest.mark.anyio
+async def test_retry_create_with_to_thread_forwards_kwargs():
+    import asyncio
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_create
+
+    def sync_add(a: int, *, b: int) -> int:
+        return a + b
+
+    result = await retry_create(asyncio.to_thread, sync_add, 2, b=5)
+    assert result == 7
+
+
+@pytest.mark.anyio
+async def test_retry_with_backoff_retries_then_succeeds():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_with_backoff
+
+    call_count = 0
+
+    async def op():
+        nonlocal call_count
+        call_count += 1
+        if call_count < 3:
+            msg = "transient"
+            raise RuntimeError(msg)
+        return "ok"
+
+    result = await retry_with_backoff(op, max_attempts=3)
+    assert result == "ok"
+    assert call_count == 3
+
+
+@pytest.mark.anyio
+async def test_retry_with_backoff_gives_up_after_max_attempts():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_with_backoff
+
+    call_count = 0
+
+    async def op():
+        nonlocal call_count
+        call_count += 1
+        msg = "always fails"
+        raise RuntimeError(msg)
+
+    with pytest.raises(RuntimeError, match="always fails"):
+        await retry_with_backoff(op, max_attempts=3)
+    assert call_count == 3
+
+
+@pytest.mark.anyio
+async def test_retry_with_backoff_respects_should_retry_predicate():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_with_backoff
+
+    call_count = 0
+
+    async def op():
+        nonlocal call_count
+        call_count += 1
+        msg = "non-retryable"
+        raise ValueError(msg)
+
+    with pytest.raises(ValueError, match="non-retryable"):
+        await retry_with_backoff(
+            op,
+            max_attempts=5,
+            should_retry=lambda exc: not isinstance(exc, ValueError),
+        )
+    assert call_count == 1
+
+
+def test_is_retryable_create_exception_non_retryable_status_codes():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import is_retryable_create_exception
 
     non_retryable = {400, 401, 403, 404, 409, 422}
     for code in non_retryable:
         exc = HTTPException(status_code=code)
-        assert _is_retryable_rollback_exception(exc) is False, f"status {code} should not be retryable"
+        assert is_retryable_create_exception(exc) is False, f"status {code} should not be retryable"
 
 
-def test_is_retryable_rollback_exception_retryable_status_codes():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import _is_retryable_rollback_exception
+def test_is_retryable_create_exception_retryable_status_codes():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import is_retryable_create_exception
 
     for code in (500, 502, 503, 429):
         exc = HTTPException(status_code=code)
-        assert _is_retryable_rollback_exception(exc) is True, f"status {code} should be retryable"
+        assert is_retryable_create_exception(exc) is True, f"status {code} should be retryable"
 
 
-def test_is_retryable_rollback_exception_generic_exception_is_retryable():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import _is_retryable_rollback_exception
+def test_is_retryable_create_exception_domain_exceptions_not_retryable():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import is_retryable_create_exception
 
-    assert _is_retryable_rollback_exception(RuntimeError("boom")) is True
+    assert is_retryable_create_exception(ResourceConflictError()) is False
+    assert is_retryable_create_exception(InvalidContentError()) is False
+    assert is_retryable_create_exception(InvalidDeploymentOperationError()) is False
+
+
+def test_is_retryable_create_exception_generic_exception_is_retryable():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import is_retryable_create_exception
+
+    assert is_retryable_create_exception(RuntimeError("boom")) is True
 
 
 @pytest.mark.anyio
@@ -6169,27 +6278,33 @@ async def test_get_agent_run_empty_response_raises(monkeypatch):
 
 
 def test_retry_rollback_uses_retryable_filter():
-    """retry_rollback should use _is_retryable_rollback_exception to skip non-retryable errors.
+    """retry_rollback should use is_retryable_create_exception to skip non-retryable errors.
 
     Validates that the filter correctly identifies non-retryable HTTP status codes
-    (via HTTPException, which is checked by _is_retryable_rollback_exception).
+    (via HTTPException, which is checked by is_retryable_create_exception).
     """
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import _is_retryable_rollback_exception
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import is_retryable_create_exception
 
     # Non-retryable status codes should not be retried
     for code in [400, 401, 403, 404, 409, 422]:
-        assert not _is_retryable_rollback_exception(HTTPException(status_code=code)), (
+        assert not is_retryable_create_exception(HTTPException(status_code=code)), (
             f"HTTPException with status {code} should NOT be retryable"
         )
 
     # Retryable status codes should be retried
     for code in [500, 502, 503, 504]:
-        assert _is_retryable_rollback_exception(HTTPException(status_code=code)), (
+        assert is_retryable_create_exception(HTTPException(status_code=code)), (
             f"HTTPException with status {code} should be retryable"
         )
 
+    # Domain exceptions that are non-retryable
+    from lfx.services.adapters.deployment.exceptions import InvalidContentError, ResourceConflictError
+
+    assert not is_retryable_create_exception(ResourceConflictError())
+    assert not is_retryable_create_exception(InvalidContentError())
+
     # Generic exceptions are retryable (e.g. transient network errors)
-    assert _is_retryable_rollback_exception(RuntimeError("transient"))
+    assert is_retryable_create_exception(RuntimeError("transient"))
 
 
 @pytest.mark.anyio

@@ -1,15 +1,4 @@
-"""Rollback helpers for the Watsonx Orchestrate adapter.
-
-Forward operations (create/update) currently run without retries so that
-failures surface immediately to the caller. Only rollback/cleanup paths
-use ``retry_rollback``.
-
-TODO: Add retries for transient server-side errors (5xx, timeouts, etc.)
-on forward create/update operations across the adapter (create.py,
-update.py, shared.py, tools.py, service.py, and the frontend
-use-post-deployment hook). For now we fail fast so users get prompt
-feedback on failures.
-"""
+"""Retry/backoff and rollback logic for the Watsonx Orchestrate adapter."""
 
 from __future__ import annotations
 
@@ -21,10 +10,18 @@ from typing import TYPE_CHECKING, Any, TypeVar
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.log.logger import logger
+from lfx.services.adapters.deployment.exceptions import (
+    InvalidContentError,
+    InvalidDeploymentOperationError,
+    InvalidDeploymentTypeError,
+    ResourceConflictError,
+)
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
-    ROLLBACK_INITIAL_DELAY_SECONDS,
+    CREATE_MAX_RETRIES,
+    RETRY_INITIAL_DELAY_SECONDS,
     ROLLBACK_MAX_RETRIES,
+    UPDATE_MAX_RETRIES,
 )
 
 if TYPE_CHECKING:
@@ -35,15 +32,14 @@ Operation = Callable[..., Awaitable[T]]
 ShouldRetry = Callable[[Exception], bool]
 
 
-async def _retry_with_backoff(
+async def retry_with_backoff(
     operation: Operation[T],
     max_attempts: int,
     *args: Any,
     should_retry: ShouldRetry | None = None,
     **kwargs: Any,
 ) -> T:
-    """Retry an async operation with exponential backoff (used only for rollbacks)."""
-    delay_seconds = ROLLBACK_INITIAL_DELAY_SECONDS
+    delay_seconds = RETRY_INITIAL_DELAY_SECONDS
     for attempt in range(1, max_attempts + 1):
         try:
             return await operation(*args, **kwargs)
@@ -61,8 +57,38 @@ async def _retry_with_backoff(
     raise RuntimeError(msg)
 
 
-def _is_retryable_rollback_exception(exc: Exception) -> bool:
-    """Determine whether a rollback operation should be retried."""
+async def retry_create(operation: Operation[T], *args: Any, **kwargs: Any) -> T:
+    return await retry_with_backoff(
+        operation,
+        CREATE_MAX_RETRIES,
+        *args,
+        should_retry=is_retryable_create_exception,
+        **kwargs,
+    )
+
+
+async def retry_update(operation: Operation[T], *args: Any, **kwargs: Any) -> T:
+    """Retry write/update operations with the standard provider retry policy."""
+    return await retry_with_backoff(
+        operation,
+        UPDATE_MAX_RETRIES,
+        *args,
+        should_retry=is_retryable_create_exception,
+        **kwargs,
+    )
+
+
+async def retry_rollback(operation: Operation[T], *args: Any, **kwargs: Any) -> T:
+    return await retry_with_backoff(
+        operation,
+        ROLLBACK_MAX_RETRIES,
+        *args,
+        should_retry=is_retryable_create_exception,
+        **kwargs,
+    )
+
+
+def is_retryable_create_exception(exc: Exception) -> bool:
     non_retryable_status_codes = {
         status.HTTP_400_BAD_REQUEST,
         status.HTTP_401_UNAUTHORIZED,
@@ -75,17 +101,14 @@ def _is_retryable_rollback_exception(exc: Exception) -> bool:
         return exc.response.status_code not in non_retryable_status_codes
     if isinstance(exc, HTTPException):
         return exc.status_code not in non_retryable_status_codes
-    return True
-
-
-async def retry_rollback(operation: Operation[T], *args: Any, **kwargs: Any) -> T:
-    """Retry a rollback/cleanup operation with exponential backoff."""
-    return await _retry_with_backoff(
-        operation,
-        ROLLBACK_MAX_RETRIES,
-        *args,
-        should_retry=_is_retryable_rollback_exception,
-        **kwargs,
+    return not isinstance(
+        exc,
+        (
+            ResourceConflictError,
+            InvalidContentError,
+            InvalidDeploymentOperationError,
+            InvalidDeploymentTypeError,
+        ),
     )
 
 
