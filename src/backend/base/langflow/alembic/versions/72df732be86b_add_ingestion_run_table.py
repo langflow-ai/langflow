@@ -41,7 +41,7 @@ def upgrade() -> None:
         sa.Column("source_type", AutoString(), nullable=False),
         sa.Column("source_config", sa.JSON(), nullable=False),
         sa.Column("status", AutoString(), nullable=False, server_default="pending"),
-        sa.Column("error_message", sa.Text(), nullable=True),
+        sa.Column("error_message", AutoString(), nullable=True),
         sa.Column("total_items", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("succeeded", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("failed", sa.Integer(), nullable=False, server_default="0"),

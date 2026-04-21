@@ -34,7 +34,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, Column, DateTime, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, Column, DateTime, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -78,7 +78,12 @@ class KnowledgeBaseRecordBase(SQLModel):
     chunks: int = Field(default=0, nullable=False)
     words: int = Field(default=0, nullable=False)
     characters: int = Field(default=0, nullable=False)
-    size_bytes: int = Field(default=0, nullable=False)
+    size_bytes: int = Field(
+        default=0,
+        # BigInteger matches the migration: a cloud-backed KB with
+        # millions of chunks can blow past int32's ~2GB cap.
+        sa_column=Column(BigInteger, nullable=False, server_default="0"),
+    )
     source_types: list[str] = Field(
         default_factory=list,
         sa_column=Column(JSON, nullable=False),

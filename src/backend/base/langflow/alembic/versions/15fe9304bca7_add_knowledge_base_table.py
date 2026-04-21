@@ -55,7 +55,7 @@ def upgrade() -> None:
         sa.Column("size_bytes", sa.BigInteger(), nullable=False, server_default="0"),
         sa.Column("source_types", sa.JSON(), nullable=False),
         sa.Column("status", AutoString(), nullable=False, server_default="ready"),
-        sa.Column("failure_reason", sa.Text(), nullable=True),
+        sa.Column("failure_reason", AutoString(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_knowledge_base")),
