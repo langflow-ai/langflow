@@ -17,8 +17,6 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from langflow.services.database.models.user.crud import get_user_by_id
-
 from lfx.base.knowledge_bases.backends import BackendType, create_backend
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
@@ -223,6 +221,12 @@ class KnowledgeBaseComponent(Component):
         4. Open a ``ChromaBackend`` against the KB and run the query.
         """
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
+
+        # Lazy import: langflow's user/DB models aren't part of lfx's
+        # standalone install, so ``lfx run <starter>.json`` can't
+        # resolve this symbol at module import time. Deferring to use
+        # keeps the component importable in both environments.
+        from langflow.services.database.models.user.crud import get_user_by_id
 
         async with session_scope() as db:
             if not self.user_id:

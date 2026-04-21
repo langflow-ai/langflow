@@ -222,7 +222,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         with (
             patch("lfx.components.files_and_knowledge.retrieval.session_scope") as mock_session_scope,
             patch(
-                "lfx.components.files_and_knowledge.retrieval.get_user_by_id",
+                "langflow.services.database.models.user.crud.get_user_by_id",
                 return_value=None,
             ),
         ):
@@ -260,7 +260,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         with (
             patch("lfx.components.files_and_knowledge.retrieval.session_scope") as mock_session_scope,
             patch(
-                "lfx.components.files_and_knowledge.retrieval.get_user_by_id",
+                "langflow.services.database.models.user.crud.get_user_by_id",
                 return_value=user_record,
             ),
             patch(
@@ -314,7 +314,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         with (
             patch("lfx.components.files_and_knowledge.retrieval.session_scope") as mock_session_scope,
             patch(
-                "lfx.components.files_and_knowledge.retrieval.get_user_by_id",
+                "langflow.services.database.models.user.crud.get_user_by_id",
                 return_value=user_record,
             ),
             patch(
@@ -359,7 +359,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         with (
             patch("lfx.components.files_and_knowledge.retrieval.session_scope") as mock_session_scope,
             patch(
-                "lfx.components.files_and_knowledge.retrieval.get_user_by_id",
+                "langflow.services.database.models.user.crud.get_user_by_id",
                 return_value=user_record,
             ),
             patch(
@@ -404,7 +404,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         with (
             patch("lfx.components.files_and_knowledge.retrieval.session_scope") as mock_session_scope,
             patch(
-                "lfx.components.files_and_knowledge.retrieval.get_user_by_id",
+                "langflow.services.database.models.user.crud.get_user_by_id",
                 return_value=user_record,
             ),
             patch(
