@@ -7,6 +7,7 @@ This allows agents like OpenDsStar to use the DataFrame natively with
 """
 
 import pandas as pd
+import pytest
 from lfx.base.tools.component_tool import ComponentToolkit
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import MessageTextInput
@@ -37,6 +38,25 @@ class DataFrameProducerComponent(Component):
 
     def get_text(self) -> Message:
         return Message(text=f"query was: {self.query}")
+
+
+class AsyncTextComponent(Component):
+    """Test component with an async output method."""
+
+    display_name = "Async Text"
+    description = "Returns text asynchronously."
+    name = "AsyncTextComponent"
+
+    inputs = [
+        MessageTextInput(name="query", display_name="Query", tool_mode=True),
+    ]
+
+    outputs = [
+        Output(display_name="Text", name="text", method="get_text"),
+    ]
+
+    async def get_text(self) -> Message:
+        return Message(text=f"async query was: {self.query}")
 
 
 def test_tool_returns_dataframe_not_list():
@@ -103,3 +123,19 @@ def test_tool_handles_positional_args():
 
     assert isinstance(result, str)
     assert "my_query" in result
+
+
+@pytest.mark.asyncio
+async def test_tool_handles_positional_args_async():
+    """Async tool must accept positional args by mapping them to tool_mode input names."""
+    component = AsyncTextComponent()
+    toolkit = ComponentToolkit(component=component)
+    tools = toolkit.get_tools()
+
+    text_tool = next(t for t in tools if t.name == "get_text")
+
+    # Invoke the async coroutine with a positional arg
+    result = await text_tool.coroutine("my_async_query")
+
+    assert isinstance(result, str)
+    assert "my_async_query" in result

@@ -21,6 +21,23 @@ class OpenDsStarAgentRunnable(Runnable):
         super().__init__()
         self.agent = agent
 
+    def _build_graph_input(self, query: str, agent: Any | None = None) -> dict[str, Any]:
+        """Build the input dict for the underlying LangGraph graph.
+
+        Centralizes the state dict so all call sites (invoke, astream,
+        astream_events, run_agent) stay in sync when fields change.
+        """
+        a = agent or self.agent
+        return {
+            "user_query": query,
+            "max_steps": a.max_steps,
+            "code_mode": a.code_mode,
+            "output_max_length": a.output_max_length,
+            "logs_max_length": a.logs_max_length,
+            "tools": a._graph.tools,  # noqa: SLF001
+            "max_debug_tries": a.max_debug_tries,
+        }
+
     def invoke(
         self,
         input_value: dict[str, Any] | str,
@@ -41,15 +58,7 @@ class OpenDsStarAgentRunnable(Runnable):
             merged_config.update(config)
 
         return self.agent._graph.graph.invoke(  # noqa: SLF001
-            {
-                "user_query": query,
-                "max_steps": self.agent.max_steps,
-                "code_mode": self.agent.code_mode,
-                "output_max_length": self.agent.output_max_length,
-                "logs_max_length": self.agent.logs_max_length,
-                "tools": self.agent._graph.tools,  # noqa: SLF001
-                "max_debug_tries": self.agent.max_debug_tries,
-            },
+            self._build_graph_input(query),
             config=merged_config,
         )
 
@@ -82,15 +91,7 @@ class OpenDsStarAgentRunnable(Runnable):
         if config:
             merged_config.update(config)
         stream_gen: Iterator[dict[str, Any]] = self.agent._graph.graph.stream(  # noqa: SLF001
-            {
-                "user_query": query,
-                "max_steps": self.agent.max_steps,
-                "code_mode": self.agent.code_mode,
-                "output_max_length": self.agent.output_max_length,
-                "logs_max_length": self.agent.logs_max_length,
-                "tools": self.agent._graph.tools,  # noqa: SLF001
-                "max_debug_tries": self.agent.max_debug_tries,
-            },
+            self._build_graph_input(query),
             config=merged_config,
         )
 
@@ -179,15 +180,7 @@ class OpenDsStarAgentRunnable(Runnable):
         def _stream_graph():
             """Synchronous generator that streams from the graph."""
             return self.agent._graph.graph.stream(  # noqa: SLF001
-                {
-                    "user_query": query,
-                    "max_steps": self.agent.max_steps,
-                    "code_mode": self.agent.code_mode,
-                    "output_max_length": self.agent.output_max_length,
-                    "logs_max_length": self.agent.logs_max_length,
-                    "tools": self.agent._graph.tools,  # noqa: SLF001
-                    "max_debug_tries": self.agent.max_debug_tries,
-                },
+                self._build_graph_input(query),
                 config=graph_config,
                 stream_mode="values",  # Get full state after each node
             )
@@ -479,23 +472,18 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
 
             try:
                 from agents.ds_star.ds_star_execute_env import set_main_event_loop
-
-                set_main_event_loop(asyncio.get_running_loop())
-            except Exception:  # noqa: BLE001
-                logger.debug("Could not set main event loop for ds_star_execute_env", exc_info=True)
+            except ImportError:
+                logger.debug("ds_star_execute_env not available")
+            else:
+                try:
+                    set_main_event_loop(asyncio.get_running_loop())
+                except Exception:  # noqa: BLE001
+                    logger.warning("Failed to set main event loop", exc_info=True)
 
             # Stream from the graph directly
             recursion_limit = max(100, actual_agent.max_steps * 10)
             stream_gen = actual_agent._graph.graph.stream(  # noqa: SLF001
-                {
-                    "user_query": input_text,
-                    "max_steps": actual_agent.max_steps,
-                    "code_mode": actual_agent.code_mode,
-                    "output_max_length": actual_agent.output_max_length,
-                    "logs_max_length": actual_agent.logs_max_length,
-                    "tools": actual_agent._graph.tools,  # noqa: SLF001
-                    "max_debug_tries": actual_agent.max_debug_tries,
-                },
+                agent._build_graph_input(input_text, actual_agent),  # noqa: SLF001
                 config={"recursion_limit": recursion_limit},
                 stream_mode="values",
             )

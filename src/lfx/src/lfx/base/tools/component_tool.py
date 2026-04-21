@@ -150,8 +150,15 @@ def _build_output_async_function(
     output_name: str = TOOL_OUTPUT_NAME,
 ):
     method_name = output_method.__name__
+    # Capture tool_mode input names so positional args can be mapped to kwargs
+    _tool_input_names = [inp.name for inp in component.inputs if getattr(inp, "tool_mode", False)]
 
     async def output_function(*args, **kwargs):
+        # Map positional args to keyword args using tool_mode input names
+        if args:
+            for i, val in enumerate(args):
+                if i < len(_tool_input_names) and _tool_input_names[i] not in kwargs:
+                    kwargs[_tool_input_names[i]] = val
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
@@ -164,7 +171,7 @@ def _build_output_async_function(
                 build_started = True
             comp.set_event_manager(event_manager)
             comp.set_current_output(output_name)
-            comp.set(*args, **kwargs)
+            comp.set(**kwargs)
             result = await local_method()
         except Exception as e:
             logger.error(

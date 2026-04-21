@@ -226,10 +226,11 @@ class FileDescriptionGeneratorComponent(Component):
             start_time = time.monotonic()
             stderr_buf = ""
 
-            # Check if select() is usable (not available with StringIO in tests)
+            # Check if select() is usable: not available with StringIO in tests,
+            # and on Windows select() only works with sockets, not pipes.
             try:
                 proc.stderr.fileno()
-                use_select = True
+                use_select = sys.platform != "win32"
             except Exception:  # noqa: BLE001
                 use_select = False
 

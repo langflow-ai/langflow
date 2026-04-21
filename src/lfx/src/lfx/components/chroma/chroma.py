@@ -113,6 +113,8 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         # Check persist_directory and expand it if it is a relative path
         persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None
 
+        from chromadb.errors import ChromaError
+
         try:
             chroma = Chroma(
                 persist_directory=persist_directory,
@@ -121,8 +123,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
                 collection_name=self.collection_name,
             )
         except Exception as e:
-            from chromadb.errors import ChromaError
-
             if isinstance(e, ChromaError):
                 if not persist_directory and client is None:
                     msg = "Chroma DB failed to initialize. Please set a 'Persist Directory' path (e.g., './chroma_db')."

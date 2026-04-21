@@ -459,15 +459,11 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
 
         except Exception as e:
             error_msg = str(e)
-            # Suppress spurious 30-second timeout errors from smolagents' LocalPythonInterpreter.
-            # The smolagents executor enforces a default 30s timeout per code cell, but the
-            # code may have already produced valid output before the timeout fires.  When our
-            # code_timeout setting is higher (user-configurable, default 30s), the real work
-            # completes fine and this exception is a false positive.
-            if "exceeded the maximum execution time of 30 seconds" in error_msg.lower():
-                logger.warning("Ignoring spurious 30-second timeout error - code executed successfully")
-                # Complete the message successfully without error
-                agent_message.text = final_answer if final_answer else ""
+            # Suppress timeout errors from smolagents' LocalPythonInterpreter only when
+            # the agent already produced a valid answer before the timeout fired.
+            if "exceeded the maximum execution time" in error_msg.lower() and final_answer:
+                logger.warning("Ignoring timeout error — agent already produced output")
+                agent_message.text = final_answer
                 agent_message.properties.state = "complete"
                 agent_message = await self.send_message(message=agent_message)
             else:

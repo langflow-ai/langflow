@@ -416,16 +416,17 @@ class TestAccumulateUsage:
         assert result.output_tokens == 50
         assert result.total_tokens == 150
 
-    def test_accumulates_multiple_chunks(self):
+    def test_merges_cumulative_chunks_via_max(self):
+        """OpenAI sends cumulative totals — max picks the latest value."""
         chunk1 = Usage(input_tokens=10, output_tokens=20, total_tokens=30)
         chunk2 = Usage(input_tokens=30, output_tokens=40, total_tokens=70)
 
         result = accumulate_usage(None, chunk1)
         result = accumulate_usage(result, chunk2)
 
-        assert result.input_tokens == 40
-        assert result.output_tokens == 60
-        assert result.total_tokens == 100
+        assert result.input_tokens == 30
+        assert result.output_tokens == 40
+        assert result.total_tokens == 70
 
     def test_handles_none_values_in_new(self):
         existing = Usage(input_tokens=100, output_tokens=0, total_tokens=100)
@@ -441,8 +442,9 @@ class TestAccumulateUsage:
 class TestStreamingTokenAccumulation:
     """Tests for streaming token accumulation across multiple chunks."""
 
-    def test_accumulates_openai_format_chunks(self):
-        # Simulate OpenAI streaming where usage arrives in response_metadata.token_usage
+    def test_openai_cumulative_chunks_use_max(self):
+        # Simulate OpenAI streaming where each chunk carries cumulative totals.
+        # max-based merge picks the latest (largest) value without double-counting.
         chunks = [
             SimpleNamespace(
                 content="Hello",
@@ -467,9 +469,9 @@ class TestStreamingTokenAccumulation:
             usage_data = accumulate_usage(usage_data, chunk_usage)
 
         assert usage_data is not None
-        assert usage_data.input_tokens == 30
-        assert usage_data.output_tokens == 30
-        assert usage_data.total_tokens == 60
+        assert usage_data.input_tokens == 10
+        assert usage_data.output_tokens == 15
+        assert usage_data.total_tokens == 25
 
     def test_accumulates_anthropic_format_chunks(self):
         # Simulate Anthropic streaming where input comes first, then output
@@ -491,8 +493,9 @@ class TestStreamingTokenAccumulation:
         assert usage_data.input_tokens == 100
         assert usage_data.output_tokens == 50
 
-    def test_accumulates_usage_metadata_chunks(self):
-        # Simulate standard LangChain usage_metadata format
+    def test_usage_metadata_chunks_use_max(self):
+        # Simulate standard LangChain usage_metadata format with cumulative values.
+        # max-based merge picks the highest value per field.
         chunks = [
             SimpleNamespace(
                 content="part1",
@@ -512,9 +515,9 @@ class TestStreamingTokenAccumulation:
             usage_data = accumulate_usage(usage_data, chunk_usage)
 
         assert usage_data is not None
-        assert usage_data.input_tokens == 10
-        assert usage_data.output_tokens == 10
-        assert usage_data.total_tokens == 20
+        assert usage_data.input_tokens == 5
+        assert usage_data.output_tokens == 7
+        assert usage_data.total_tokens == 12
 
     def test_skips_chunks_without_usage_data(self):
         # Intermediate streaming chunks typically have no usage — only the last chunk does

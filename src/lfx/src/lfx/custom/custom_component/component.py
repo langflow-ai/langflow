@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
+import logging
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
@@ -56,6 +57,8 @@ if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
     from lfx.schema.log import LoggableType
 
+
+logger = logging.getLogger(__name__)
 
 _ComponentToolkit = None
 
@@ -406,13 +409,26 @@ class Component(CustomComponent):
                 # Attempt to deepcopy the entire input object
                 new_inputs[k] = deepcopy(v, memo)
             except Exception:  # noqa: BLE001
-                # If deepcopy fails (e.g. due to RLock), handle the value carefully
-                # Pydantic's model_copy(deep=False) creates a shallow copy
+                # If deepcopy fails (e.g. due to RLock), handle the value carefully.
+                # Pydantic's model_copy(deep=False) creates a shallow copy.
+                logger.warning(
+                    "deepcopy failed for input '%s' on %s — falling back to shallow copy",
+                    k,
+                    type(self).__name__,
+                    exc_info=True,
+                )
                 input_copy = v.model_copy()
                 try:
                     input_copy.value = deepcopy(v.value, memo)
                 except Exception:  # noqa: BLE001
-                    # Keep the original value (shallow copy) if it can't be deepcopied
+                    # Keep the original value (shallow copy) if it can't be deepcopied.
+                    # WARNING: this shares a mutable reference between original and copy.
+                    logger.warning(
+                        "deepcopy failed for input '%s'.value on %s — sharing mutable reference",
+                        k,
+                        type(self).__name__,
+                        exc_info=True,
+                    )
                     input_copy.value = v.value
                 new_inputs[k] = input_copy
 
