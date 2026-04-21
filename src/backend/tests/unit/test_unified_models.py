@@ -701,7 +701,7 @@ def test_get_embeddings_watsonx_error_wraps_message(mock_get_vars, mock_get_clas
 
 
 def test_handle_model_input_update_hides_all_provider_fields_by_default():
-    """Provider-specific fields should be hidden when no model is selected (except api_key which is always visible)."""
+    """Provider-specific fields should be hidden when no model is selected."""
     component = _make_mock_component()
     provider_fields = _get_all_provider_mapped_fields()
 
@@ -717,12 +717,75 @@ def test_handle_model_input_update_hides_all_provider_fields_by_default():
     )
 
     for f in provider_fields:
-        if f == "api_key":
-            # api_key is always forced visible at the end of handle_model_input_update
-            assert result[f]["show"] is True
-        else:
-            assert result[f]["show"] is False
+        assert result[f]["show"] is False, f"Field {f} should be hidden when no model is selected"
         assert result[f]["required"] is False
+
+
+def test_handle_model_input_update_ollama_hides_and_clears_api_key():
+    """Selecting Ollama (which has no api_key variable) must hide AND clear api_key.
+
+    Regression test: api_key was previously forced visible for every provider,
+    leaving a stale cross-provider credential (e.g. ``OPENAI_API_KEY``) sitting
+    behind the hidden field when switching to Ollama.
+    """
+    component = _make_mock_component()
+    selected_model = [{"name": "llama3", "provider": "Ollama", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "api_key": {
+            "show": True,
+            "required": False,
+            "value": "OPENAI_API_KEY",
+            "load_from_db": True,
+            "_input_type": "SecretStrInput",
+        },
+        "ollama_base_url": {
+            "show": False,
+            "required": False,
+            "value": "",
+            "_input_type": "StrInput",
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value=selected_model,
+        field_name="model",
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["api_key"]["show"] is False, "api_key must be hidden for Ollama"
+    assert result["api_key"]["value"] == "", "stale cross-provider api_key must be cleared for Ollama"
+    assert result["api_key"]["load_from_db"] is False, "load_from_db must be reset when clearing api_key"
+    # Ollama's own variable is shown and configured.
+    assert result["ollama_base_url"]["show"] is True
+
+
+def test_handle_model_input_update_openai_keeps_api_key_visible():
+    """Providers that map a variable to api_key must keep it visible."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "api_key": {
+            "show": False,  # start hidden to prove apply_provider_... re-shows it
+            "required": False,
+            "value": "",
+            "load_from_db": False,
+            "_input_type": "SecretStrInput",
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value=selected_model,
+        field_name="model",
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["api_key"]["show"] is True, "api_key must stay visible for OpenAI"
 
 
 def test_handle_model_input_update_uses_language_model_options_by_default():

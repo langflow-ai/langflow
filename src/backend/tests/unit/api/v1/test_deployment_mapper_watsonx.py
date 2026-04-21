@@ -896,6 +896,16 @@ def test_watsonx_mapper_create_result_from_existing_update_normalizes_slot_paylo
     }
 
 
+def test_watsonx_mapper_create_result_from_existing_resource_includes_empty_payload() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    create_result = mapper.util_create_result_from_existing_resource(existing_resource_key="existing-agent-1")
+
+    assert create_result.id == "existing-agent-1"
+    assert isinstance(create_result.provider_result, dict)
+    assert create_result.provider_result.get("app_ids") == []
+    assert create_result.provider_result.get("tools_with_refs") == []
+
+
 def test_watsonx_mapper_resolve_verify_credentials_for_update_returns_none_without_provider_data() -> None:
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 

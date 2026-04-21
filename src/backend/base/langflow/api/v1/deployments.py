@@ -485,10 +485,14 @@ async def create_deployment(
                 db=session,
             )
     else:
+        # Existing-resource create starts as DB-only onboarding: no provider
+        # mutation is performed and created_* response fields stay empty.
         provider_create_result = deployment_mapper.util_create_result_from_existing_resource(
             existing_resource_key=str(existing_resource_key),
         )
         if should_mutate_existing_resource:
+            # When create payload includes add_flows/upsert_tools, run provider
+            # update and normalize the update result into create-style created_*.
             adapter_payload = await deployment_mapper.resolve_deployment_update_for_existing_create(
                 user_id=current_user.id,
                 project_id=project_id,

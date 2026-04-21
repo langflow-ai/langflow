@@ -1622,6 +1622,125 @@ async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with
 
 
 @pytest.mark.anyio
+async def test_resolve_connections_for_operations_normalizes_provider_app_id_and_uses_created_id_for_validation(
+    monkeypatch,
+):
+    raw_payload = payloads_module.WatsonxConnectionRawPayload.model_validate(
+        {"app_id": "cfg-s-003", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}}
+    )
+    raw_connections_to_create = [
+        shared_core_module.RawConnectionCreatePlan(
+            operation_app_id="cfg-s-003",
+            provider_app_id="cfg-s-003",
+            payload=raw_payload,
+        )
+    ]
+    fake_clients = SimpleNamespace(connections=FakeConnectionsClient())
+    validated_app_ids: list[str] = []
+
+    async def mock_create_connection_with_conflict_mapping(
+        *,
+        clients,
+        app_id,
+        payload,
+        user_id,
+        db,
+        error_prefix,
+        created_app_ids_journal=None,
+    ):
+        _ = clients, app_id, payload, user_id, db, error_prefix
+        created_id = "cfg_s_003"
+        if created_app_ids_journal is not None:
+            created_app_ids_journal.append(created_id)
+        return created_id
+
+    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+        validated_app_ids.append(app_id)
+        return SimpleNamespace(connection_id=f"conn-{app_id}")
+
+    monkeypatch.setattr(
+        shared_core_module,
+        "create_connection_with_conflict_mapping",
+        mock_create_connection_with_conflict_mapping,
+    )
+
+    result = await shared_core_module.resolve_connections_for_operations(
+        clients=fake_clients,
+        user_id="user-1",
+        db=object(),
+        existing_app_ids=[],
+        raw_connections_to_create=raw_connections_to_create,
+        error_prefix="CREATE",
+        validate_connection_fn=mock_validate_connection,
+    )
+
+    assert raw_connections_to_create[0].provider_app_id == "cfg_s_003"
+    assert validated_app_ids == ["cfg_s_003"]
+    assert result.operation_to_provider_app_id == {"cfg-s-003": "cfg_s_003"}
+    assert result.resolved_connections == {"cfg_s_003": "conn-cfg_s_003"}
+    assert result.created_app_ids == ["cfg_s_003"]
+
+
+@pytest.mark.anyio
+async def test_resolve_connections_for_operations_wraps_validation_failure_with_rollback_metadata(monkeypatch):
+    raw_payload = payloads_module.WatsonxConnectionRawPayload.model_validate(
+        {"app_id": "cfg-s-003", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}}
+    )
+    raw_connections_to_create = [
+        shared_core_module.RawConnectionCreatePlan(
+            operation_app_id="cfg-s-003",
+            provider_app_id="cfg-s-003",
+            payload=raw_payload,
+        )
+    ]
+    fake_clients = SimpleNamespace(connections=FakeConnectionsClient())
+    created_app_ids_journal: list[str] = []
+
+    async def mock_create_connection_with_conflict_mapping(
+        *,
+        clients,
+        app_id,
+        payload,
+        user_id,
+        db,
+        error_prefix,
+        created_app_ids_journal=None,
+    ):
+        _ = clients, app_id, payload, user_id, db, error_prefix
+        created_id = "cfg_s_003"
+        if created_app_ids_journal is not None:
+            created_app_ids_journal.append(created_id)
+        return created_id
+
+    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+        msg = f"Connection '{app_id}' not found. Ensure the connection exists with a draft configuration."
+        raise InvalidContentError(message=msg)
+
+    monkeypatch.setattr(
+        shared_core_module,
+        "create_connection_with_conflict_mapping",
+        mock_create_connection_with_conflict_mapping,
+    )
+
+    with pytest.raises(shared_core_module.ConnectionCreateBatchError) as exc_info:
+        await shared_core_module.resolve_connections_for_operations(
+            clients=fake_clients,
+            user_id="user-1",
+            db=object(),
+            existing_app_ids=[],
+            raw_connections_to_create=raw_connections_to_create,
+            error_prefix="CREATE",
+            validate_connection_fn=mock_validate_connection,
+            created_app_ids_journal=created_app_ids_journal,
+        )
+
+    assert created_app_ids_journal == ["cfg_s_003"]
+    assert exc_info.value.created_app_ids == ["cfg_s_003"]
+    assert len(exc_info.value.errors) == 1
+    assert isinstance(exc_info.value.errors[0], InvalidContentError)
+
+
+@pytest.mark.anyio
 async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_connections_on_partial_batch_failure(
     monkeypatch,
 ):
@@ -1651,7 +1770,17 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
     fake_clients = SimpleNamespace(connections=FakeConnectionsClient())
     captured: dict[str, Any] = {}
 
-    async def mock_create_connection_with_conflict_mapping(*, clients, app_id, payload, user_id, db, error_prefix):  # noqa: ARG001
+    async def mock_create_connection_with_conflict_mapping(
+        *,
+        clients,
+        app_id,
+        payload,
+        user_id,
+        db,
+        error_prefix,
+        created_app_ids_journal=None,
+    ):
+        _ = clients, payload, user_id, db, error_prefix, created_app_ids_journal
         if app_id.endswith("cfg-a"):
             return app_id
         msg = "boom-create-connection"
@@ -1661,7 +1790,7 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
         captured["rollback_app_ids"] = list(app_ids or [])
 
     monkeypatch.setattr(
-        create_core_module,
+        shared_core_module,
         "create_connection_with_conflict_mapping",
         mock_create_connection_with_conflict_mapping,
     )
@@ -1714,7 +1843,17 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
     fake_clients = SimpleNamespace(connections=FakeConnectionsClient())
     captured: dict[str, Any] = {}
 
-    async def mock_create_connection_with_conflict_mapping(*, clients, app_id, payload, user_id, db, error_prefix):  # noqa: ARG001
+    async def mock_create_connection_with_conflict_mapping(
+        *,
+        clients,
+        app_id,
+        payload,
+        user_id,
+        db,
+        error_prefix,
+        created_app_ids_journal=None,
+    ):
+        _ = clients, payload, user_id, db, error_prefix, created_app_ids_journal
         if app_id.endswith("cfg-c"):
             msg = "boom-create-connection"
             raise RuntimeError(msg)
@@ -1724,7 +1863,7 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
         captured["rollback_app_ids"] = list(app_ids or [])
 
     monkeypatch.setattr(
-        create_core_module,
+        shared_core_module,
         "create_connection_with_conflict_mapping",
         mock_create_connection_with_conflict_mapping,
     )
@@ -1744,6 +1883,77 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
         )
 
     assert captured["rollback_app_ids"] == ["cfg-a", "cfg-b"]
+
+
+@pytest.mark.anyio
+async def test_apply_provider_create_plan_rolls_back_journaled_app_ids_when_create_fails_after_provider_create(
+    monkeypatch,
+):
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "tools": {},
+            "connections": {
+                "raw_payloads": [
+                    {"app_id": "cfg-a", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}},
+                ]
+            },
+            "llm": TEST_WXO_LLM,
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"tool_id_with_ref": _tool_ref("tool-existing-1")},
+                    "app_ids": ["cfg-a"],
+                },
+            ],
+        }
+    )
+    plan = create_core_module.build_provider_create_plan(
+        deployment_name="my deployment",
+        provider_create=provider_create,
+    )
+    fake_clients = SimpleNamespace(connections=FakeConnectionsClient())
+    captured: dict[str, Any] = {}
+
+    async def mock_create_connection_with_conflict_mapping(
+        *,
+        clients,
+        app_id,
+        payload,
+        user_id,
+        db,
+        error_prefix,
+        created_app_ids_journal=None,
+    ):
+        _ = clients, payload, user_id, db, error_prefix
+        if created_app_ids_journal is not None:
+            created_app_ids_journal.append(app_id)
+        msg = "boom-after-provider-create"
+        raise RuntimeError(msg)
+
+    async def mock_rollback_created_resources(*, clients, agent_id, tool_ids, app_ids=None):  # noqa: ARG001
+        captured["rollback_app_ids"] = list(app_ids or [])
+
+    monkeypatch.setattr(
+        shared_core_module,
+        "create_connection_with_conflict_mapping",
+        mock_create_connection_with_conflict_mapping,
+    )
+    monkeypatch.setattr(create_core_module, "rollback_created_resources", mock_rollback_created_resources)
+
+    with pytest.raises(RuntimeError, match="boom-after-provider-create"):
+        await create_core_module.apply_provider_create_plan_with_rollback(
+            clients=fake_clients,
+            user_id="user-1",
+            db=object(),
+            deployment_spec=BaseDeploymentData(
+                name="my deployment",
+                description="desc",
+                type=DeploymentType.AGENT,
+            ),
+            plan=plan,
+        )
+
+    assert captured["rollback_app_ids"] == ["cfg-a"]
 
 
 @pytest.mark.anyio
@@ -1780,7 +1990,17 @@ async def test_apply_provider_update_plan_rolls_back_successfully_created_raw_co
     )
     captured: dict[str, Any] = {}
 
-    async def mock_create_connection_with_conflict_mapping(*, clients, app_id, payload, user_id, db, error_prefix):  # noqa: ARG001
+    async def mock_create_connection_with_conflict_mapping(
+        *,
+        clients,
+        app_id,
+        payload,
+        user_id,
+        db,
+        error_prefix,
+        created_app_ids_journal=None,
+    ):
+        _ = clients, payload, user_id, db, error_prefix, created_app_ids_journal
         if app_id.endswith("cfg-a"):
             return app_id
         msg = "boom-update-connection"
@@ -1793,7 +2013,7 @@ async def test_apply_provider_update_plan_rolls_back_successfully_created_raw_co
         captured["rolled_back_app_ids"] = list(created_app_ids)
 
     monkeypatch.setattr(
-        update_core_module,
+        shared_core_module,
         "create_connection_with_conflict_mapping",
         mock_create_connection_with_conflict_mapping,
     )
@@ -1849,7 +2069,17 @@ async def test_apply_provider_update_plan_rolls_back_all_journaled_raw_connectio
     )
     captured: dict[str, Any] = {}
 
-    async def mock_create_connection_with_conflict_mapping(*, clients, app_id, payload, user_id, db, error_prefix):  # noqa: ARG001
+    async def mock_create_connection_with_conflict_mapping(
+        *,
+        clients,
+        app_id,
+        payload,
+        user_id,
+        db,
+        error_prefix,
+        created_app_ids_journal=None,
+    ):
+        _ = clients, payload, user_id, db, error_prefix, created_app_ids_journal
         if app_id.endswith("cfg-c"):
             msg = "boom-update-connection"
             raise RuntimeError(msg)
@@ -1862,7 +2092,7 @@ async def test_apply_provider_update_plan_rolls_back_all_journaled_raw_connectio
         captured["rolled_back_app_ids"] = list(created_app_ids)
 
     monkeypatch.setattr(
-        update_core_module,
+        shared_core_module,
         "create_connection_with_conflict_mapping",
         mock_create_connection_with_conflict_mapping,
     )
@@ -1881,6 +2111,83 @@ async def test_apply_provider_update_plan_rolls_back_all_journaled_raw_connectio
         )
 
     assert captured["rolled_back_app_ids"] == ["cfg-a", "cfg-b"]
+
+
+@pytest.mark.anyio
+async def test_apply_provider_update_plan_rolls_back_journaled_app_ids_when_create_fails_after_provider_create(
+    monkeypatch,
+):
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+        {
+            "tools": {},
+            "connections": {
+                "raw_payloads": [
+                    {"app_id": "cfg-a", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}},
+                ]
+            },
+            "llm": TEST_WXO_LLM,
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"tool_id_with_ref": _tool_ref("tool-existing-1")},
+                    "app_ids": ["cfg-a"],
+                },
+            ],
+        }
+    )
+    plan = update_core_module.build_provider_update_plan(
+        agent={"id": "dep-1", "tools": ["tool-existing-1"]},
+        provider_update=provider_update,
+    )
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-existing-1"]}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+    captured: dict[str, Any] = {}
+
+    async def mock_create_connection_with_conflict_mapping(
+        *,
+        clients,
+        app_id,
+        payload,
+        user_id,
+        db,
+        error_prefix,
+        created_app_ids_journal=None,
+    ):
+        _ = clients, payload, user_id, db, error_prefix
+        if created_app_ids_journal is not None:
+            created_app_ids_journal.append(app_id)
+        msg = "boom-after-provider-create"
+        raise RuntimeError(msg)
+
+    async def mock_rollback_update_resources(*, clients, created_tool_ids, created_app_id, original_tools):  # noqa: ARG001
+        _ = (created_tool_ids, created_app_id, original_tools)
+
+    async def mock_rollback_created_app_ids(*, clients, created_app_ids):  # noqa: ARG001
+        captured["rolled_back_app_ids"] = list(created_app_ids)
+
+    monkeypatch.setattr(
+        shared_core_module,
+        "create_connection_with_conflict_mapping",
+        mock_create_connection_with_conflict_mapping,
+    )
+    monkeypatch.setattr(update_core_module, "rollback_update_resources", mock_rollback_update_resources)
+    monkeypatch.setattr(update_core_module, "rollback_created_app_ids", mock_rollback_created_app_ids)
+
+    with pytest.raises(RuntimeError, match="boom-after-provider-create"):
+        await update_core_module.apply_provider_update_plan_with_rollback(
+            clients=fake_clients,
+            user_id="user-1",
+            db=object(),
+            agent_id="dep-1",
+            agent={"id": "dep-1", "tools": ["tool-existing-1"]},
+            update_payload={},
+            plan=plan,
+        )
+
+    assert captured["rolled_back_app_ids"] == ["cfg-a"]
 
 
 @pytest.mark.anyio
@@ -2351,7 +2658,19 @@ async def test_create_provider_data_rolls_back_partially_created_raw_tools(monke
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
         return fake_clients
 
-    async def mock_create_connection_with_conflict_mapping(*, clients, app_id, payload, user_id, db, error_prefix):  # noqa: ARG001
+    async def mock_create_connection_with_conflict_mapping(
+        *,
+        clients,
+        app_id,
+        payload,
+        user_id,
+        db,
+        error_prefix,  # noqa: ARG001
+        created_app_ids_journal=None,
+    ):
+        _ = clients, payload, user_id, db
+        if created_app_ids_journal is not None:
+            created_app_ids_journal.append(app_id)
         fake_connections._connections_by_app_id[app_id] = f"conn-{app_id}"
         return app_id
 
@@ -2368,7 +2687,7 @@ async def test_create_provider_data_rolls_back_partially_created_raw_tools(monke
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
     monkeypatch.setattr(
-        create_core_module,
+        shared_core_module,
         "create_connection_with_conflict_mapping",
         mock_create_connection_with_conflict_mapping,
     )
