@@ -1978,7 +1978,6 @@ class TestGetDeploymentSync:
                     return None
                 sanitized_provider_data = dict(provider_data)
                 sanitized_provider_data.pop("tool_ids", None)
-                sanitized_provider_data.pop("environment", None)
                 return sanitized_provider_data or None
 
         created_at = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
@@ -2002,7 +2001,6 @@ class TestGetDeploymentSync:
             "provider_data": {
                 "llm": "virtual-model/bedrock/openai.gpt-oss-120b-1:0",
                 "tool_ids": ["tool-1", "tool-2"],
-                "environment": "draft",
             }
         }
         adapter.get.return_value = provider_deployment
@@ -2018,7 +2016,6 @@ class TestGetDeploymentSync:
         assert result.created_at == created_at
         assert result.updated_at == updated_at
         assert "tool_ids" not in result.provider_data
-        assert "environment" not in result.provider_data
         assert result.provider_data == {"llm": "virtual-model/bedrock/openai.gpt-oss-120b-1:0"}
 
     @pytest.mark.asyncio

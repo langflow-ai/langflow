@@ -905,7 +905,6 @@ def test_watsonx_mapper_shape_deployment_get_data_hides_internal_sync_fields():
         {
             "llm": "my-llm",
             "tool_ids": ["tool-1", "tool-2"],
-            "environment": "draft",
         }
     )
 
