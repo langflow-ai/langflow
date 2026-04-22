@@ -120,6 +120,7 @@ export type OutputFieldType = {
   group_outputs?: boolean;
   method?: string;
   display_name: string;
+  info?: string;
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
   allows_loop?: boolean;

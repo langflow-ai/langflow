@@ -1397,23 +1397,35 @@ export function syncNodeTranslations(): void {
 
     if (!freshDef) return node;
 
-    // Update input field display_names
+    // Update input field display_names, info (tooltips), and placeholders
     const updatedTemplate = { ...node.data.node!.template };
     for (const fieldName of Object.keys(updatedTemplate)) {
-      if (freshDef.template?.[fieldName]?.display_name !== undefined) {
+      const freshField = freshDef.template?.[fieldName];
+      if (freshField?.display_name !== undefined) {
         updatedTemplate[fieldName] = {
           ...updatedTemplate[fieldName],
-          display_name: freshDef.template[fieldName].display_name,
+          display_name: freshField.display_name,
+          ...(freshField.info !== undefined && { info: freshField.info }),
+          ...(freshField.placeholder !== undefined && {
+            placeholder: freshField.placeholder,
+          }),
         };
       }
     }
 
-    // Update output display_names
-    const updatedOutputs = node.data.node!.outputs?.map((output, i) =>
-      freshDef.outputs?.[i]?.display_name !== undefined
-        ? { ...output, display_name: freshDef.outputs[i].display_name }
-        : output,
-    );
+    // Update output display_names and info
+    const updatedOutputs = node.data.node!.outputs?.map((output, i) => {
+      const freshOut = freshDef.outputs?.[i];
+      return freshOut
+        ? {
+            ...output,
+            ...(freshOut.display_name !== undefined && {
+              display_name: freshOut.display_name,
+            }),
+            ...(freshOut.info !== undefined && { info: freshOut.info }),
+          }
+        : output;
+    });
 
     return {
       ...node,
