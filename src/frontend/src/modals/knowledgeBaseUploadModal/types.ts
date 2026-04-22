@@ -12,6 +12,8 @@ export interface KnowledgeBaseUploadModalProps {
     chunkOverlap?: number;
     separator?: string;
     columnConfig?: ColumnConfigRow[];
+    backendType?: string;
+    backendConfig?: Record<string, unknown>;
   };
   hideAdvanced?: boolean;
   existingKnowledgeBaseNames?: string[];
@@ -32,6 +34,8 @@ export interface KnowledgeBaseFormData {
   separator?: string;
   columnConfig?: ColumnConfigRow[];
   chunkCount?: number;
+  backendType?: string;
+  backendConfig?: Record<string, unknown>;
 }
 
 export interface ChunkPreview {

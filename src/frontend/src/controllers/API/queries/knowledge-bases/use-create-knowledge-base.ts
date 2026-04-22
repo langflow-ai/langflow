@@ -28,6 +28,8 @@ export interface CreateKnowledgeBaseRequest {
    * - ``"astra"``: ``{ api_endpoint_variable?, token_variable?,
    *   collection_name, namespace? }``
    * - ``"postgres"``: ``{ connection_uri_variable?, collection_name }``
+   * - ``"opensearch"``: ``{ url_variable?, username_variable?,
+   *   password_variable?, index_name, vector_field?, text_field? }``
    *
    * Credentials are referenced by Langflow-variable *name*, never
    * embedded as raw secrets.

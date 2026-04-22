@@ -43,6 +43,12 @@ export const BACKEND_OPTIONS = [
     label: "Postgres (pgvector)",
     description: "Self-hosted Postgres with the pgvector extension.",
   },
+  {
+    value: "opensearch",
+    label: "OpenSearch",
+    description:
+      "OpenSearch k-NN vector index for self-hosted or managed clusters.",
+  },
 ] as const;
 
 export type BackendValue = (typeof BACKEND_OPTIONS)[number]["value"];
@@ -70,8 +76,8 @@ export interface BackendPickerProps {
 /**
  * Vector-store backend picker for the KB creation dialog.
  *
- * Renders a dropdown to choose between the four registered backends
- * (Chroma / MongoDB / Astra / Postgres) plus a compact per-backend
+ * Renders a dropdown to choose between the registered backends
+ * (Chroma / MongoDB / Astra / Postgres / OpenSearch) plus a compact per-backend
  * config form. Every credential field accepts a *variable name*,
  * not a raw secret — the actual value lives in Langflow's variable
  * settings.
@@ -107,9 +113,9 @@ export function BackendPicker({
               </TooltipTrigger>
               <TooltipContent className="max-w-[300px]">
                 Where this KB's vectors live. Chroma stores them on disk next to
-                Langflow. MongoDB / Astra / Postgres send them to an external
-                service you've configured. The choice is immutable after
-                creation.
+                Langflow. MongoDB / Astra / Postgres / OpenSearch send them to
+                an external service you've configured. The choice is immutable
+                after creation.
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -219,6 +225,54 @@ export function BackendPicker({
             value={config.collection_name ?? ""}
             onChange={(v) => setField("collection_name", v)}
             required
+            disabled={disabled}
+          />
+        </BackendConfigSection>
+      )}
+
+      {value === "opensearch" && (
+        <BackendConfigSection>
+          <FieldInput
+            label="Cluster URL variable"
+            placeholder="OPENSEARCH_URL"
+            value={config.url_variable ?? ""}
+            onChange={(v) => setField("url_variable", v)}
+            disabled={disabled}
+          />
+          <FieldInput
+            label="Username variable"
+            placeholder="OPENSEARCH_USERNAME"
+            value={config.username_variable ?? ""}
+            onChange={(v) => setField("username_variable", v)}
+            disabled={disabled}
+          />
+          <FieldInput
+            label="Password variable"
+            placeholder="OPENSEARCH_PASSWORD"
+            value={config.password_variable ?? ""}
+            onChange={(v) => setField("password_variable", v)}
+            disabled={disabled}
+          />
+          <FieldInput
+            label="Index name"
+            placeholder="my_kb_index"
+            value={config.index_name ?? ""}
+            onChange={(v) => setField("index_name", v)}
+            required
+            disabled={disabled}
+          />
+          <FieldInput
+            label="Vector field"
+            placeholder="vector_field"
+            value={config.vector_field ?? ""}
+            onChange={(v) => setField("vector_field", v)}
+            disabled={disabled}
+          />
+          <FieldInput
+            label="Text field"
+            placeholder="text"
+            value={config.text_field ?? ""}
+            onChange={(v) => setField("text_field", v)}
             disabled={disabled}
           />
         </BackendConfigSection>

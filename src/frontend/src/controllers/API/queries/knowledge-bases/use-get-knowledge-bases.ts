@@ -26,6 +26,8 @@ export interface KnowledgeBaseInfo {
     vectorize: boolean;
     identifier: boolean;
   }>;
+  backend_type?: string;
+  backend_config?: Record<string, unknown>;
 }
 
 export const useGetKnowledgeBases: useQueryFunctionType<
@@ -39,7 +41,7 @@ export const useGetKnowledgeBases: useQueryFunctionType<
     return res.data;
   };
 
-  const queryResult: UseQueryResult<KnowledgeBaseInfo[], any> = query(
+  const queryResult: UseQueryResult<KnowledgeBaseInfo[], Error> = query(
     ["useGetKnowledgeBases"],
     getKnowledgeBasesFn,
     {

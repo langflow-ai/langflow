@@ -47,6 +47,8 @@ function validateBackendConfig(
   } else if (backendType === "postgres") {
     if (!config.collection_name?.trim())
       return "Postgres requires a collection_name";
+  } else if (backendType === "opensearch") {
+    if (!config.index_name?.trim()) return "OpenSearch requires an index_name";
   }
   return null;
 }
@@ -214,6 +216,13 @@ export function useKnowledgeBaseForm({
       ) {
         setColumnConfig(existingKnowledgeBase.columnConfig);
       }
+      setBackendType(
+        (existingKnowledgeBase.backendType as BackendValue | undefined) ||
+          "chroma",
+      );
+      setBackendConfig(
+        (existingKnowledgeBase.backendConfig as Record<string, string>) || {},
+      );
     }
   }, [existingKnowledgeBase, open, embeddingModelOptions]);
 
@@ -431,6 +440,8 @@ export function useKnowledgeBaseForm({
           files: [],
           embeddingModel: selectedEmbeddingModel,
           columnConfig,
+          backendType,
+          backendConfig,
         };
 
         setSuccessData({
@@ -509,6 +520,8 @@ export function useKnowledgeBaseForm({
         chunkOverlap,
         separator,
         columnConfig,
+        backendType,
+        backendConfig,
       };
 
       if (isAddSourcesMode) {
