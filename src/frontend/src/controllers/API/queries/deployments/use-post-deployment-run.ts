@@ -47,5 +47,6 @@ export const usePostDeploymentRun: useMutationFunctionType<
     return res.data;
   };
 
-  return mutate(["usePostDeploymentRun"], fn, options);
+  // TODO: Add retries for transient server-side errors (5xx, timeouts).
+  return mutate(["usePostDeploymentRun"], fn, { ...options, retry: false });
 };

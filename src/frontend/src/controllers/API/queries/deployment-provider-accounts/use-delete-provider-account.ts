@@ -19,8 +19,10 @@ export const useDeleteProviderAccount: useMutationFunctionType<
     );
   };
 
+  // TODO: Add retries for transient server-side errors (5xx, timeouts).
   return mutate(["useDeleteProviderAccount"], fn, {
     ...options,
+    retry: false,
     onSuccess: (...args) => {
       queryClient.refetchQueries({ queryKey: ["useGetProviderAccounts"] });
       options?.onSuccess?.(...args);
