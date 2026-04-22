@@ -147,8 +147,11 @@ override-dependencies = [
     "dynaconf>=3.2.13",
     "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
     "aiohttp>=3.13.4",
-    "litellm>=1.83.0",
+    "litellm>=1.83.11",
     "playwright>=1.58.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
+    "python-dotenv>=1.1.0",
+    "openai>=2.26.0",
+    "aiohttp>=3.13.5"
 ]
 
 [project.scripts]
