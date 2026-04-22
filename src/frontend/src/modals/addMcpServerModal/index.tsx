@@ -255,7 +255,9 @@ export default function AddMcpServerModal({
         ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH),
       }));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : t("mcp.modal.errorNoServerFound"));
+      setError(
+        e instanceof Error ? e.message : t("mcp.modal.errorNoServerFound"),
+      );
       return;
     }
     if (servers.length === 0) {
@@ -306,7 +308,9 @@ export default function AddMcpServerModal({
                 className="h-4 w-4 text-primary"
                 aria-hidden="true"
               />
-              {initialData ? t("mcp.modal.updateTitle") : t("mcp.modal.addTitle")}
+              {initialData
+                ? t("mcp.modal.updateTitle")
+                : t("mcp.modal.addTitle")}
             </div>
             <span className="text-mmd font-normal text-muted-foreground">
               {isOnMcpSettingsPage ? (
@@ -369,7 +373,9 @@ export default function AddMcpServerModal({
                 </div>
               )}
               <TabsContent value="JSON" className="flex flex-col p-0 m-0">
-                <Label className="!text-mmd mb-2">{t("mcp.modal.jsonTabLabel")}</Label>
+                <Label className="!text-mmd mb-2">
+                  {t("mcp.modal.jsonTabLabel")}
+                </Label>
                 <Textarea
                   value={jsonValue}
                   data-testid="json-input"
@@ -386,7 +392,8 @@ export default function AddMcpServerModal({
                 <div className="flex h-full flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
-                      {t("mcp.modal.fieldName")} <span className="text-destructive">*</span>
+                      {t("mcp.modal.fieldName")}{" "}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={stdioName}
@@ -398,7 +405,8 @@ export default function AddMcpServerModal({
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
-                      {t("mcp.modal.fieldCommand")}<span className="text-destructive">*</span>
+                      {t("mcp.modal.fieldCommand")}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={stdioCommand}
@@ -409,7 +417,9 @@ export default function AddMcpServerModal({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">{t("mcp.modal.fieldArguments")}</Label>
+                    <Label className="!text-mmd">
+                      {t("mcp.modal.fieldArguments")}
+                    </Label>
                     <InputListComponent
                       value={stdioArgs}
                       handleOnNewValue={({ value }) => setStdioArgs(value)}
@@ -422,7 +432,9 @@ export default function AddMcpServerModal({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">{t("mcp.modal.fieldEnvironmentVariables")}</Label>
+                    <Label className="!text-mmd">
+                      {t("mcp.modal.fieldEnvironmentVariables")}
+                    </Label>
                     <IOKeyPairInput
                       value={stdioEnv}
                       onChange={setStdioEnv}
@@ -441,7 +453,8 @@ export default function AddMcpServerModal({
                 <div className="flex h-full flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
-                      {t("mcp.modal.fieldName")}<span className="text-destructive">*</span>
+                      {t("mcp.modal.fieldName")}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={httpName}
@@ -465,7 +478,9 @@ export default function AddMcpServerModal({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">{t("mcp.modal.fieldHeaders")}</Label>
+                    <Label className="!text-mmd">
+                      {t("mcp.modal.fieldHeaders")}
+                    </Label>
                     <IOKeyPairInputWithVariables
                       value={httpHeaders}
                       onChange={setHttpHeaders}
@@ -477,7 +492,9 @@ export default function AddMcpServerModal({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">{t("mcp.modal.fieldEnvironmentVariables")}</Label>
+                    <Label className="!text-mmd">
+                      {t("mcp.modal.fieldEnvironmentVariables")}
+                    </Label>
                     <IOKeyPairInput
                       value={httpEnv}
                       onChange={setHttpEnv}
@@ -494,7 +511,9 @@ export default function AddMcpServerModal({
         </div>
         <div className="flex shrink-0 justify-end gap-2 p-4">
           <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-            <span className="text-mmd font-normal">{t("mcp.modal.cancelButton")}</span>
+            <span className="text-mmd font-normal">
+              {t("mcp.modal.cancelButton")}
+            </span>
           </Button>
           <Button
             size="sm"
@@ -503,7 +522,9 @@ export default function AddMcpServerModal({
             loading={isPending}
           >
             <span className="text-mmd">
-              {initialData ? t("mcp.modal.updateServerButton") : t("mcp.modal.addServerButton")}
+              {initialData
+                ? t("mcp.modal.updateServerButton")
+                : t("mcp.modal.addServerButton")}
             </span>
           </Button>
         </div>

@@ -42,7 +42,9 @@ export default function ProfilePictureChooserComponent({
         Object.keys(profilePictures!).map((folder, index) => (
           <div className="flex flex-col gap-2" key={index}>
             <div className="edit-flow-arrangement">
-              <span className="font-normal">{t(`settings.profilePictureCategory.${folder}`, folder)}</span>
+              <span className="font-normal">
+                {t(`settings.profilePictureCategory.${folder}`, folder)}
+              </span>
             </div>
             <div className="block overflow-hidden">
               <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-muted px-1 custom-scroll">

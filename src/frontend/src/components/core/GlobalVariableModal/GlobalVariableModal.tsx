@@ -203,7 +203,9 @@ export default function GlobalVariableModal({
           className="h-6 w-6 pr-1 text-primary"
           aria-hidden="true"
         />
-        {initialData ? t("globalVars.modal.updateTitle") : t("globalVars.modal.createTitle")}
+        {initialData
+          ? t("globalVars.modal.updateTitle")
+          : t("globalVars.modal.createTitle")}
       </BaseModal.Header>
       <BaseModal.Trigger disable={disabled} asChild={asChild}>
         {children}
@@ -284,7 +286,9 @@ export default function GlobalVariableModal({
       </BaseModal.Content>
       <BaseModal.Footer
         submit={{
-          label: initialData ? t("globalVars.modal.updateButton") : t("globalVars.modal.saveButton"),
+          label: initialData
+            ? t("globalVars.modal.updateButton")
+            : t("globalVars.modal.saveButton"),
           dataTestId: "save-variable-btn",
           disabled: !key || (!value && !(initialData && type === "Credential")),
         }}

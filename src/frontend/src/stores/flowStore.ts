@@ -1358,7 +1358,9 @@ export function syncNodeTranslations(): void {
   // This lets us find "Prompt Template" in the registry when nodeType is "PromptTemplate".
   const normalizedToRegistryKey: Record<string, string> = {};
   for (const category of Object.values(typesData)) {
-    for (const registryKey of Object.keys(category as Record<string, unknown>)) {
+    for (const registryKey of Object.keys(
+      category as Record<string, unknown>,
+    )) {
       normalizedToRegistryKey[normalizeComponentKey(registryKey)] = registryKey;
     }
   }
@@ -1375,19 +1377,21 @@ export function syncNodeTranslations(): void {
 
     // Resolve category: try exact match first, then normalized match
     const category =
-      types[nodeType] ?? types[normalizedToRegistryKey[normalizeComponentKey(nodeType)] ?? ""];
+      types[nodeType] ??
+      types[normalizedToRegistryKey[normalizeComponentKey(nodeType)] ?? ""];
 
     // Resolve registry key: exact match first, then normalized match
     const registryKey =
       typesData[category]?.[nodeType] !== undefined
         ? nodeType
-        : (normalizedToRegistryKey[normalizeComponentKey(nodeType)] ?? nodeType);
+        : (normalizedToRegistryKey[normalizeComponentKey(nodeType)] ??
+          nodeType);
 
     // Resolve definition: normal path first, then fall back to templates which
     // has legacy aliases pre-resolved (e.g. "Prompt" → Prompt Template definition,
     // "parser" → ParserComponent definition).
     const freshDef =
-      (category && typesData[category]?.[registryKey])
+      category && typesData[category]?.[registryKey]
         ? typesData[category][registryKey]
         : templates[nodeType];
 
@@ -1434,7 +1438,9 @@ export function syncNodeTranslations(): void {
  * Called from NoteNode when note_translations endpoint data arrives.
  * translations is a map of node_id → translated markdown text.
  */
-export function syncNoteTranslations(translations: Record<string, string>): void {
+export function syncNoteTranslations(
+  translations: Record<string, string>,
+): void {
   const { nodes } = useFlowStore.getState();
   const updatedNodes = nodes.map((node) => {
     if (node.type !== "noteNode") return node;

@@ -206,13 +206,20 @@ const AuthModal = ({
                       {t("authModal.apiKey.settings")}
                     </CustomLink>{" "}
                     {t("authModal.apiKey.descriptionMiddle")}{" "}
-                    <span className="font-semibold">{t("authModal.apiKey.installJson")}</span>
+                    <span className="font-semibold">
+                      {t("authModal.apiKey.installJson")}
+                    </span>
                     {t("authModal.apiKey.descriptionOr")}
-                    <span className="font-semibold">{t("authModal.apiKey.jsonTab")}</span>.
+                    <span className="font-semibold">
+                      {t("authModal.apiKey.jsonTab")}
+                    </span>
+                    .
                   </p>
                   {autoInstall && (
                     <p>
-                      <span className="font-semibold">{t("authModal.apiKey.autoInstallBold")}</span>{" "}
+                      <span className="font-semibold">
+                        {t("authModal.apiKey.autoInstallBold")}
+                      </span>{" "}
                       {t("authModal.apiKey.autoInstall")}
                     </p>
                   )}
@@ -426,7 +433,9 @@ const AuthModal = ({
           <span className="text-mmd text-muted-foreground">
             {installedClients && installedClients.length > 0
               ? t("authModal.reinstallWarningClients", {
-                  clients: installedClients.map((client) => toSpaceCase(client)).join(", "),
+                  clients: installedClients
+                    .map((client) => toSpaceCase(client))
+                    .join(", "),
                 })
               : t("authModal.reinstallWarning")}
           </span>

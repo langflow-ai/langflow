@@ -35,7 +35,9 @@ const ModelProviderModal = ({
       <DialogContent className="flex flex-col overflow-hidden rounded-xl p-0 max-w-[768px] h-[560px] gap-0">
         <DialogHeader className="flex w-full border-b px-4 py-3">
           <div className="flex justify-start items-center gap-3">
-            <div className="text-[13px] font-semibold">{t("modelProviders.title")}</div>
+            <div className="text-[13px] font-semibold">
+              {t("modelProviders.title")}
+            </div>
           </div>
         </DialogHeader>
 

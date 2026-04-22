@@ -151,7 +151,10 @@ export default function DragFilesComponent({
         if (filesIds.length > 0) {
           onUpload(filesIds);
           setSuccessData({
-            title: filesIds.length > 1 ? t("fileManager.filesUploadedSuccessfully") : t("fileManager.fileUploadedSuccessfully"),
+            title:
+              filesIds.length > 1
+                ? t("fileManager.filesUploadedSuccessfully")
+                : t("fileManager.fileUploadedSuccessfully"),
           });
         }
       } catch (error: any) {
@@ -199,7 +202,10 @@ export default function DragFilesComponent({
       if (filesIds.length > 0) {
         onUpload(filesIds);
         setSuccessData({
-          title: filesIds.length > 1 ? t("fileManager.filesUploadedSuccessfully") : t("fileManager.fileUploadedSuccessfully"),
+          title:
+            filesIds.length > 1
+              ? t("fileManager.filesUploadedSuccessfully")
+              : t("fileManager.fileUploadedSuccessfully"),
         });
       }
     } catch (error: any) {
@@ -216,7 +222,10 @@ export default function DragFilesComponent({
       if (filesIds.length > 0) {
         onUpload(filesIds);
         setSuccessData({
-          title: filesIds.length > 1 ? t("fileManager.filesUploadedSuccessfully") : t("fileManager.fileUploadedSuccessfully"),
+          title:
+            filesIds.length > 1
+              ? t("fileManager.filesUploadedSuccessfully")
+              : t("fileManager.fileUploadedSuccessfully"),
         });
       }
     } catch (error: any) {

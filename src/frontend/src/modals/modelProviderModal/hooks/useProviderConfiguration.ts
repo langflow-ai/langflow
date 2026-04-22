@@ -418,7 +418,9 @@ export const useProviderConfiguration = ({
       );
 
       // All succeeded — defer toast and value clear until after models refetch
-      pendingSuccessTitleRef.current = t("modelProviders.configurationSaved", { provider: selectedProvider.provider });
+      pendingSuccessTitleRef.current = t("modelProviders.configurationSaved", {
+        provider: selectedProvider.provider,
+      });
       setIsFetchingAfterSave(true);
       clearValuesAfterFetchRef.current = true;
       invalidateProviderQueries();
@@ -427,8 +429,7 @@ export const useProviderConfiguration = ({
       setErrorData({
         title: t("modelProviders.errorSavingConfiguration"),
         list: [
-          error?.response?.data?.detail ||
-            t("modelProviders.errorUnexpected"),
+          error?.response?.data?.detail || t("modelProviders.errorUnexpected"),
         ],
       });
     } finally {
@@ -460,7 +461,9 @@ export const useProviderConfiguration = ({
       setErrorData({
         title: t("modelProviders.errorInvalidProvider"),
         list: [
-          t("modelProviders.errorInvalidProviderMessage", { provider: syncedSelectedProvider.provider }),
+          t("modelProviders.errorInvalidProviderMessage", {
+            provider: syncedSelectedProvider.provider,
+          }),
         ],
       });
       return;
@@ -488,14 +491,17 @@ export const useProviderConfiguration = ({
         });
       }
 
-      setSuccessData({ title: t("modelProviders.providerActivated", { provider: syncedSelectedProvider.provider }) });
+      setSuccessData({
+        title: t("modelProviders.providerActivated", {
+          provider: syncedSelectedProvider.provider,
+        }),
+      });
       invalidateProviderQueries();
     } catch (error: any) {
       setErrorData({
         title: t("modelProviders.errorActivatingProvider"),
         list: [
-          error?.response?.data?.detail ||
-            t("modelProviders.errorUnexpected"),
+          error?.response?.data?.detail || t("modelProviders.errorUnexpected"),
         ],
       });
     }
@@ -527,7 +533,9 @@ export const useProviderConfiguration = ({
       await deleteGlobalVariable({ id: existingVariable.id });
 
       setSuccessData({
-        title: t("modelProviders.providerDisconnected", { provider: syncedSelectedProvider.provider }),
+        title: t("modelProviders.providerDisconnected", {
+          provider: syncedSelectedProvider.provider,
+        }),
       });
       setIsFetchingAfterDisconnect(true);
       invalidateProviderQueries();
@@ -535,8 +543,7 @@ export const useProviderConfiguration = ({
       setErrorData({
         title: t("modelProviders.errorDisconnectingProvider"),
         list: [
-          error?.response?.data?.detail ||
-            t("modelProviders.errorUnexpected"),
+          error?.response?.data?.detail || t("modelProviders.errorUnexpected"),
         ],
       });
     }
