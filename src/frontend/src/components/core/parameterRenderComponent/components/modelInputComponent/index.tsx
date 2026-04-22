@@ -189,10 +189,14 @@ export default function ModelInputComponent({
           // Only include models whose declared type matches this component.
           // Older metadata without ``model_type`` is allowed through so we
           // don't regress providers that haven't adopted the tag yet.
+          // vLLM models skip type filtering — vLLM API doesn't distinguish
+          // between LLM and embedding models.
+          const isVllmProvider = providerName.toLowerCase() === "vllm";
           const modelMetadataType = (
             model.metadata as Record<string, unknown> | undefined
           )?.model_type;
           if (
+            !isVllmProvider &&
             typeof modelMetadataType === "string" &&
             modelMetadataType !== modelType
           ) {

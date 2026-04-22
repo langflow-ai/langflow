@@ -408,6 +408,8 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 logger.error(msg)
                 raise ValueError(msg)
 
+            # Validate URL format only — server may not be reachable at config time
+            # (e.g. running inside Docker where host network differs)
             base_url = base_url.rstrip("/")
             models_url = f"{base_url}/models" if base_url.endswith("/v1") else f"{base_url}/v1/models"
             headers = {}
@@ -482,7 +484,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             logger.error(f"Invalid API key for {provider}: {e}")
             raise ValueError(msg) from e
 
-        # Rethrow specific Ollama/vLLM errors with a user-facing message
+        # Rethrow specific Ollama errors with a user-facing message
         if provider == "Ollama":
             msg = "Invalid Ollama base URL"
             logger.error(msg)

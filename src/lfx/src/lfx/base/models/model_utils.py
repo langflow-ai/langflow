@@ -400,7 +400,14 @@ def fetch_live_vllm_models(user_id: UUID | str | None, model_type: str = "llm") 
         response.raise_for_status()
         data = response.json()
 
-        model_names = sorted(m.get("id", "") for m in data.get("data", []) if m.get("id"))
+        # Support both OpenAI-compatible format {"data": [{"id": "..."}]}
+        # and simple list format ["model1", "model2"]
+        if isinstance(data, list):
+            model_names = sorted(str(m) for m in data if m)
+        elif isinstance(data, dict) and "data" in data:
+            model_names = sorted(m.get("id", "") for m in data["data"] if m.get("id"))
+        else:
+            model_names = []
 
         return [
             create_model_metadata(
@@ -483,7 +490,11 @@ def replace_with_live_models(
         if provider not in enabled_providers:
             continue
 
-        if model_type is None:
+        if provider == "vLLM":
+            # vLLM returns all models regardless of type (no type distinction),
+            # so fetch once to avoid duplicates
+            live_models = get_live_models_for_provider(user_id, provider, model_type or "llm")
+        elif model_type is None:
             live_llm = get_live_models_for_provider(user_id, provider, "llm")
             live_emb = get_live_models_for_provider(user_id, provider, "embeddings")
             live_models = live_llm + live_emb
