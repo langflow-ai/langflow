@@ -69,7 +69,11 @@ class TestRedisCacheTeardown:
             await cache.teardown()
 
     async def test_preload_teardown_pattern(self):
-        """Test the teardown pattern used in preload.py."""
+        """Test the teardown pattern used in preload.py.
+
+        ``teardown`` is now an abstract method on ``ExternalAsyncBaseCacheService``,
+        so preload can call it directly without ``getattr`` fallbacks.
+        """
         from langflow.services.cache.base import ExternalAsyncBaseCacheService
 
         with patch("redis.asyncio.StrictRedis") as mock_redis_class:
@@ -78,16 +82,7 @@ class TestRedisCacheTeardown:
 
             cache = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
 
-            # Simulate the preload pattern
             if isinstance(cache, ExternalAsyncBaseCacheService):
-                teardown = getattr(cache, "teardown", None)
-                if callable(teardown):
-                    result = teardown()
-                    # The preload code checks if it's a coroutine
-                    import asyncio
+                await cache.teardown()
 
-                    if asyncio.iscoroutine(result):
-                        await result
-
-            # Verify aclose was called
             mock_client.aclose.assert_called_once()

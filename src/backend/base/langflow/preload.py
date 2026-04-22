@@ -56,10 +56,33 @@ class _PreloadState:
     bundles_components_paths: list[str] = field(default_factory=list)
     # Per-step completion flags to prevent silent data loss
     profile_pictures_copied: bool = False
+    bundles_loaded: bool = False
+    types_cached: bool = False
     starter_projects_created: bool = False
     agentic_globals_initialized: bool = False
     agentic_mcp_configured: bool = False
     flows_loaded: bool = False
+
+    def reset(self) -> None:
+        """Restore all fields to their default values.
+
+        Called from the outer failure handler in ``preload_master()`` so that
+        a partially-completed preload never leaves inconsistent state behind
+        (e.g. ``master_pid`` set while ``preloaded`` is False, or best-effort
+        completion flags set for steps that ran before the failure point).
+        After reset, workers take the full non-preload code path.
+        """
+        self.preloaded = False
+        self.master_pid = None
+        self.temp_dirs = []
+        self.bundles_components_paths = []
+        self.profile_pictures_copied = False
+        self.bundles_loaded = False
+        self.types_cached = False
+        self.starter_projects_created = False
+        self.agentic_globals_initialized = False
+        self.agentic_mcp_configured = False
+        self.flows_loaded = False
 
 
 _STATE = _PreloadState()
@@ -77,16 +100,6 @@ def is_preloaded() -> bool:
 def is_master() -> bool:
     """Return True if the current process is the gunicorn master that ran preload."""
     return _STATE.master_pid is not None and os.getpid() == _STATE.master_pid
-
-
-def get_preloaded_temp_dirs() -> list[TemporaryDirectory]:
-    """Return the list of bundle ``TemporaryDirectory`` objects created during preload.
-
-    Only the master should clean these up on shutdown; workers must not
-    call ``.cleanup()`` on them or they would delete files the master
-    still expects to own.
-    """
-    return _STATE.temp_dirs
 
 
 def get_owned_temp_dirs() -> list[TemporaryDirectory]:
@@ -146,9 +159,11 @@ async def _run_master_preload() -> None:
     _STATE.temp_dirs = list(temp_dirs)
     _STATE.bundles_components_paths = list(bundles_components_paths)
     settings_service.settings.components_path.extend(bundles_components_paths)
+    _STATE.bundles_loaded = True
 
     await logger.ainfo("[preload] building component types cache")
     await get_and_cache_all_types_dict(settings_service, get_telemetry_service())
+    _STATE.types_cached = True
 
     all_types_dict = component_cache.all_types_dict
     if all_types_dict is not None:
@@ -198,17 +213,16 @@ async def _run_master_preload() -> None:
     await get_db_service().engine.dispose()
 
     # Close cache service socket (e.g. Redis) to prevent sharing across fork.
+    # ExternalAsyncBaseCacheService declares teardown() abstract, so any
+    # concrete implementation is guaranteed to have it. A failure here is
+    # fork-safety-critical and must propagate (no try/except).
     from langflow.services.cache.base import ExternalAsyncBaseCacheService
     from langflow.services.deps import get_service
     from langflow.services.schema import ServiceType
 
     cache_service = get_service(ServiceType.CACHE_SERVICE)
     if isinstance(cache_service, ExternalAsyncBaseCacheService):
-        teardown = getattr(cache_service, "teardown", None)
-        if callable(teardown):
-            result = teardown()
-            if asyncio.iscoroutine(result):
-                await result
+        await cache_service.teardown()
 
 
 def preload_master() -> None:
@@ -228,6 +242,9 @@ def preload_master() -> None:
         asyncio.run(_run_master_preload())
     except Exception:  # noqa: BLE001
         logger.exception("[preload] master preload failed; falling back to per-worker init")
+        # Clear any partial state so workers take the full non-preload path
+        # and is_master() / is_preloaded() stay mutually consistent.
+        _STATE.reset()
         return
 
     _STATE.preloaded = True

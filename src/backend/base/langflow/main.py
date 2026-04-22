@@ -236,8 +236,8 @@ def get_lifespan(*, fix_migration=False, version=None):
             telemetry_service = get_telemetry_service()
 
             # Gate: Load bundles
-            if _STATE.starter_projects_created:
-                # Inherit bundle paths and types dict from master via COW.
+            if _STATE.bundles_loaded:
+                # Inherit bundle paths from master via COW.
                 # get_owned_temp_dirs() returns the preloaded dirs if this is
                 # the master, or an empty list if this is a worker (workers
                 # must NOT clean up the master's temp_dirs).
@@ -251,7 +251,11 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             # Gate: Cache component types
-            if _STATE.starter_projects_created:
+            # When types_cached is True, the types dict is inherited via COW and
+            # the local ``all_types_dict`` is intentionally not assigned: the
+            # only consumer below (create_or_update_starter_projects) is gated
+            # on starter_projects_created, which implies types_cached.
+            if _STATE.types_cached:
                 await logger.adebug("Skipping types cache: inherited from master")
             else:
                 current_time = asyncio.get_event_loop().time()
