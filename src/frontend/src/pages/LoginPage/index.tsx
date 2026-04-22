@@ -79,7 +79,7 @@ export default function LoginPage(): JSX.Element {
             title="Langflow logo"
             className="mb-4 h-10 w-10 scale-[1.5]"
           />
-          <span className="mb-6 text-2xl font-semibold text-primary">
+          <span className="mb-6 text-2xl font-semibold text-primary text-center">
             {t("auth.loginTitle")}
           </span>
           <div className="mb-3 w-full">
