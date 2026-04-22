@@ -28,6 +28,10 @@ To use the **Ollama** component in a flow, connect Langflow to your locally runn
 
     To refresh the server's list of models, click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh**.
 
+    :::tip
+    Large models require significant system memory to run locally. If you see an error like `model requires more system memory than is available`, your machine does not have enough RAM to load the selected model. Try selecting a smaller model, or run Ollama on a machine with more available memory.
+    :::
+
 4. Optional: To configure additional parameters, such as temperature or max tokens, click the component to open the [component inspection panel](/concepts-components#component-menus).
 
 5. Connect the **Ollama** component to other components in the flow, depending on how you want to use the model.
