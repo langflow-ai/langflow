@@ -60,8 +60,7 @@ def test_ttl_cleanup(tmp_path):
 
     time.sleep(0.15)
 
-    # Force re-append to reset TTL for the key, then read
-    # Actually just read -- the key should have expired via diskcache expire
+    # The event should have expired from the shared SQLite store.
     events, _ = svc.get_since("flow-1", 0.0)
     assert len(events) == 0
 
@@ -129,7 +128,7 @@ def test_max_events_per_flow_cap(tmp_path):
 def test_cross_worker_visibility(tmp_path):
     """Two separate service instances sharing the same cache dir can see each other's events.
 
-    This simulates two uvicorn/gunicorn workers writing and reading from the same disk cache.
+    This simulates two uvicorn/gunicorn workers writing and reading from the same on-disk store.
     """
     shared_dir = tmp_path / "shared_cache"
 
