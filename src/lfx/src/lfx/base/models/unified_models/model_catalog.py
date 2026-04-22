@@ -300,6 +300,17 @@ def get_embedding_model_options(
             "request_timeout": "request_timeout",
             "model_kwargs": "model_kwargs",
         },
+        "vLLM Embeddings": {
+            "model": "model",
+            "api_key": "api_key",
+            "api_base": "base_url",
+            "dimensions": "dimensions",
+            "chunk_size": "chunk_size",
+            "request_timeout": "timeout",
+            "max_retries": "max_retries",
+            "show_progress_bar": "show_progress_bar",
+            "model_kwargs": "model_kwargs",
+        },
         "IBM WatsonX": {
             "model_id": "model_id",
             "url": "url",
