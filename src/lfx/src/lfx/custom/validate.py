@@ -341,7 +341,8 @@ def _resolve_attribute(imported_module, module_name, attr_name):
 def _handle_module_attributes(imported_module, node, module_name, exec_globals):
     """Handle importing specific attributes from a module."""
     for alias in node.names:
-        exec_globals[alias.name] = _resolve_attribute(imported_module, module_name, alias.name)
+        key = alias.asname or alias.name
+        exec_globals[key] = _resolve_attribute(imported_module, module_name, alias.name)
 
 
 class _MissingModulePlaceholder:

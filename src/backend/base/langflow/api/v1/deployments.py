@@ -25,7 +25,6 @@ from langflow.api.v1.mappers.deployments.helpers import (
     apply_flow_version_patch_attachments,
     attach_flow_versions,
     deployment_pagination_params,
-    fetch_provider_snapshot_keys,
     flow_version_ids_for_flows,
     get_deployment_row_or_404,
     get_owned_provider_account_or_404,
@@ -43,7 +42,6 @@ from langflow.api.v1.mappers.deployments.helpers import (
     resolve_snapshot_map_for_create,
     rollback_provider_create,
     rollback_provider_update,
-    sync_attachment_snapshot_ids,
     validate_project_scoped_flow_version_ids,
 )
 from langflow.api.v1.schemas.deployments import (
@@ -104,6 +102,7 @@ from langflow.services.database.models.deployment_provider_account.crud import (
 )
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     AttachmentConflictError,
+    delete_unbound_attachments,
     get_attachment_by_provider_snapshot_id,
     list_deployment_attachments,
     list_deployment_attachments_for_flow_version_ids,
@@ -194,16 +193,17 @@ async def _count_provider_deployments_after_reconciliation(
     try:
         deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
         deployment_mapper = get_deployment_mapper(provider_account.provider_key)
-        _, deployment_count = await list_deployments_synced(
-            deployment_adapter=deployment_adapter,
-            deployment_mapper=deployment_mapper,
-            user_id=user_id,
-            provider_id=provider_account.id,
-            db=session,
-            page=1,
-            size=deployment_count,
-            deployment_type=None,
-        )
+        with deployment_provider_scope(provider_account.id):
+            _, deployment_count = await list_deployments_synced(
+                deployment_adapter=deployment_adapter,
+                deployment_mapper=deployment_mapper,
+                user_id=user_id,
+                provider_id=provider_account.id,
+                db=session,
+                page=1,
+                size=deployment_count,
+                deployment_type=None,
+            )
     except Exception:  # noqa: BLE001
         logger.warning(
             "Failed to reconcile deployments before deleting provider account %s; falling back to local count.",
@@ -485,10 +485,14 @@ async def create_deployment(
                 db=session,
             )
     else:
+        # Existing-resource create starts as DB-only onboarding: no provider
+        # mutation is performed and created_* response fields stay empty.
         provider_create_result = deployment_mapper.util_create_result_from_existing_resource(
             existing_resource_key=str(existing_resource_key),
         )
         if should_mutate_existing_resource:
+            # When create payload includes add_flows/upsert_tools, run provider
+            # update and normalize the update result into create-style created_*.
             adapter_payload = await deployment_mapper.resolve_deployment_update_for_existing_create(
                 user_id=current_user.id,
                 project_id=project_id,
@@ -644,9 +648,7 @@ async def list_deployments(
     if flow_ids:
         resolved = await flow_version_ids_for_flows(session, flow_ids=flow_ids, user_id=current_user.id)
         if not resolved:
-            return DeploymentListResponse(
-                deployments=[], page=params.page, size=params.size, total=0, deployment_type=deployment_type
-            )
+            return DeploymentListResponse(deployments=[], page=params.page, size=params.size, total=0)
         effective_flow_version_ids = resolved
 
     provider_account = await get_owned_provider_account_or_404(
@@ -655,11 +657,13 @@ async def list_deployments(
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     if load_from_provider:
+        provider_list_params = deployment_mapper.resolve_load_from_provider_deployment_list_params()
+        adapter_params = DeploymentListParams(provider_params=provider_list_params) if provider_list_params else None
         with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
             provider_view = await deployment_adapter.list(
                 user_id=current_user.id,
                 db=session,
-                params=None if deployment_type is None else DeploymentListParams(deployment_types=[deployment_type]),
+                params=adapter_params,
             )
         return deployment_mapper.shape_deployment_list_result(provider_view)
 
@@ -689,6 +693,9 @@ async def list_deployments(
         page=params.page,
         size=params.size,
         total=total,
+        # if we reach here, then load_from_provider is False,
+        # therefore, top-level provider_data must be excluded from the response.
+        # for this, we set it to None, and set response_model_exclude_none to True.
         provider_data=None,
     )
 
@@ -1146,37 +1153,40 @@ async def get_deployment(
                 detail=exc.message,
             ) from exc
 
-        # Snapshot-level sync: verify that tracked provider_snapshot_ids still exist.
-        # Best-effort — a provider outage should not block the GET response.
+        # Snapshot-level sync: reconcile tracked attachments against provider
+        # binding state for this deployment.
         try:
+            try:
+                bindings = deployment_mapper.extract_snapshot_bindings_for_get(
+                    deployment,
+                    resource_key=deployment_row.resource_key,
+                )
+            except NotImplementedError:
+                logger.debug(
+                    "Mapper for provider %s does not support binding-aware GET sync; "
+                    "returning unverified attachment count for deployment %s",
+                    provider_key,
+                    deployment_row.id,
+                )
+                bindings = None
+
+            if bindings is not None:
+                async with session.begin_nested():
+                    await delete_unbound_attachments(
+                        db=session,
+                        user_id=current_user.id,
+                        provider_account_id=deployment_row.deployment_provider_account_id,
+                        deployment_ids=[deployment_row.id],
+                        bindings=bindings,
+                    )
+
             attachments = await list_deployment_attachments(
                 session, user_id=current_user.id, deployment_id=deployment_row.id
             )
-            snapshot_ids_to_verify = deployment_mapper.util_snapshot_ids_to_verify(attachments)
-            if snapshot_ids_to_verify:
-                known_snapshots = await fetch_provider_snapshot_keys(
-                    deployment_adapter=deployment_adapter,
-                    user_id=current_user.id,
-                    provider_id=deployment_row.deployment_provider_account_id,
-                    db=session,
-                    snapshot_ids=snapshot_ids_to_verify,
-                )
-                corrected_counts = await sync_attachment_snapshot_ids(
-                    user_id=current_user.id,
-                    deployment_ids=[deployment_row.id],
-                    attachments=attachments,
-                    known_snapshot_ids=known_snapshots,
-                    db=session,
-                )
-                attached_count = corrected_counts[deployment_row.id]
-            else:
-                # No attachments carry a provider-verifiable snapshot ID, so
-                # there is nothing to check against the provider.  The raw
-                # DB attachment count is used as-is.
-                attached_count = len(attachments)
+            attached_count = len(attachments)
         except Exception:  # noqa: BLE001
             logger.warning(
-                "Snapshot-level sync failed for deployment %s; returning unverified attachment count",
+                "Binding-aware sync failed for deployment %s; returning unverified attachment count",
                 deployment_row.id,
                 exc_info=True,
             )
@@ -1196,7 +1206,7 @@ async def get_deployment(
 
     payload = deployment.model_dump(exclude_unset=True)
     raw_provider_data = payload.get("provider_data")
-    provider_data = raw_provider_data if isinstance(raw_provider_data, dict) and raw_provider_data else None
+    provider_data = deployment_mapper.shape_deployment_get_data(raw_provider_data)
     return DeploymentGetResponse(
         id=deployment_row.id,
         provider_id=deployment_row.deployment_provider_account_id,
@@ -1423,7 +1433,6 @@ async def list_deployment_flow_versions(
     ):
         rows, total, snapshot_result = await list_deployment_flow_versions_synced(
             deployment_adapter=deployment_adapter,
-            deployment_mapper=deployment_mapper,
             user_id=current_user.id,
             provider_id=deployment_row.deployment_provider_account_id,
             deployment_id=deployment_row.id,

@@ -51,6 +51,13 @@ class UpdateSnapshotBindings(BaseModel):
         return {binding.source_ref: binding.snapshot_id for binding in self.snapshot_bindings}
 
 
+class ProviderSnapshotBinding(BaseModel):
+    """A snapshot currently bound to a deployment on the provider."""
+
+    resource_key: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    snapshot_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
 class CreatedSnapshotIds(BaseModel):
     """Normalized created snapshot ids emitted by mapper reconciliation."""
 

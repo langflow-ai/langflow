@@ -365,8 +365,8 @@ gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
 # SDKs for IBM watsonx Orchestrate deployment adapter.
 ibm-watsonx-clients = [
     "ibm-cloud-sdk-core~=3.24.4",
-    "ibm-watsonx-orchestrate-core~=2.7.0; python_version >= '3.11'",
-    "ibm-watsonx-orchestrate-clients~=2.7.0; python_version >= '3.11'",
+    "ibm-watsonx-orchestrate-core~=2.8.0; python_version >= '3.11'",
+    "ibm-watsonx-orchestrate-clients~=2.8.0; python_version >= '3.11'",
 ]
 
 complete = [

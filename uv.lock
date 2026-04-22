@@ -4745,29 +4745,29 @@ wheels = [
 
 [[package]]
 name = "ibm-watsonx-orchestrate-clients"
-version = "2.7.0"
+version = "2.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ibm-cloud-sdk-core", marker = "python_full_version >= '3.11'" },
     { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
     { name = "websocket-client", marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/df/b4/de4617db62ec12bc846fe671ef95c469b4429658c7d07cbf9a191ef6fddc/ibm_watsonx_orchestrate_clients-2.7.0.tar.gz", hash = "sha256:9c664eb87b16cfaf1e94dc8c36b14d126bdb1af9b4017f05176fd3b656a68528", size = 1880, upload-time = "2026-03-27T23:14:47.305Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/02/6b/73365345e2564fff78d612bff1289dac7d3ff00058e3064fa9aaf2c2691e/ibm_watsonx_orchestrate_clients-2.8.0.tar.gz", hash = "sha256:3d36113ed3190d5be7dae647b86937522b5af0711aa4011c13c898ee4d859938", size = 1878, upload-time = "2026-04-14T18:58:40.961Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b9/cd/d80c16678aebd90c72000c72393bdf523a2027f86d12dc7815e7594a5dad/ibm_watsonx_orchestrate_clients-2.7.0-py3-none-any.whl", hash = "sha256:d671ebc066e9706dc73f4ee7b0dc87cb23395dde619fb763f04a8614f0447193", size = 52424, upload-time = "2026-03-27T23:14:41.612Z" },
+    { url = "https://files.pythonhosted.org/packages/99/c2/4bc2865cec3a503beb79b7d918d75e7cc51ddabdcbbc73d923f54462917b/ibm_watsonx_orchestrate_clients-2.8.0-py3-none-any.whl", hash = "sha256:43f2811ffdabeaa21fbc0779ab1108534a45099f6560a5f1b3be10dd4430e1b4", size = 54115, upload-time = "2026-04-14T18:58:36.479Z" },
 ]
 
 [[package]]
 name = "ibm-watsonx-orchestrate-core"
-version = "2.7.0"
+version = "2.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic", marker = "python_full_version >= '3.11'" },
     { name = "pyyaml", marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c9/5c/7ac8c059044a0e02c46c310d68b8fdf73c644bbdc499eadc3644f9a659f2/ibm_watsonx_orchestrate_core-2.7.0.tar.gz", hash = "sha256:c14e7a1f578e27d57b266bd4baeee82c849186d502083efd71e2c69552177cdd", size = 1216, upload-time = "2026-03-27T23:14:47.843Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/50/9f/df367b888da6a11c3fc3bc675c215a6fbc71a83cd7e2396c7a7cbcdd8cd0/ibm_watsonx_orchestrate_core-2.8.0.tar.gz", hash = "sha256:3e47c5add6b94d762f90654f72b8d29181afcae32714ab190b4066c457ff3d17", size = 1216, upload-time = "2026-04-14T18:58:41.963Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/55/cd/9799eca2e276cab69a4368f3bbb0d46de7de104f4791444ec3fbd4f726ed/ibm_watsonx_orchestrate_core-2.7.0-py3-none-any.whl", hash = "sha256:d263e3a2588fa09323e06aa2df84dd4b06f2c4f1d03102d9022e7dc9587359cc", size = 39985, upload-time = "2026-03-27T23:14:43.032Z" },
+    { url = "https://files.pythonhosted.org/packages/be/45/aff80b59f3b362519b1ab35feac61b6593d6fad65aa3a1cb38d3bfeb656c/ibm_watsonx_orchestrate_core-2.8.0-py3-none-any.whl", hash = "sha256:a534d1767096396ab7afbc12192b82782970c6765eeee442c09aa0e3060bf13c", size = 45236, upload-time = "2026-04-14T18:58:37.287Z" },
 ]
 
 [[package]]
@@ -7026,8 +7026,8 @@ requires-dist = [
     { name = "huggingface-hub", extras = ["inference"], marker = "extra == 'huggingface'", specifier = ">=0.23.2,<1.0.0" },
     { name = "ibm-cloud-sdk-core", marker = "extra == 'ibm-watsonx-clients'", specifier = "~=3.24.4" },
     { name = "ibm-watsonx-ai", specifier = ">=1.3.1,<2.0.0" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and extra == 'ibm-watsonx-clients'", specifier = "~=2.7.0" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and extra == 'ibm-watsonx-clients'", specifier = "~=2.7.0" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and extra == 'ibm-watsonx-clients'", specifier = "~=2.8.0" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and extra == 'ibm-watsonx-clients'", specifier = "~=2.8.0" },
     { name = "jaraco-context", specifier = ">=6.1.0" },
     { name = "jigsawstack", marker = "extra == 'jigsawstack'", specifier = "==0.2.7" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
