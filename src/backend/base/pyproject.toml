@@ -100,6 +100,7 @@ dependencies = [
     "dynaconf>=3.2.13,<4.0.0",
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
+    "transformers>=5.6.0,<6.0.0",
 ]
 
 [tool.uv]
@@ -270,7 +271,7 @@ nltk = ["nltk>=3.9.4"]
 lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
-huggingface = ["huggingface-hub[inference]>=0.23.2,<1.0.0"]
+huggingface = ["huggingface-hub[inference]>=1.0.0,<2.0.0"]
 metaphor = ["metaphor-python==0.1.23"]
 metal = ["metal_sdk==2.5.1"]
 markup = ["MarkupSafe==3.0.2"]
