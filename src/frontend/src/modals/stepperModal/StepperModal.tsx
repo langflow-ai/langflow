@@ -14,6 +14,7 @@ import {
   DEFAULT_SHOW_PROGRESS,
   DEFAULT_SIDE_PANEL_OPEN,
   DEFAULT_SIZE,
+  SIDE_PANEL_WIDTH_PX,
 } from "./constants";
 import { StepperContext } from "./hooks/useStepperContext";
 import type { StepperModalProps } from "./types";
@@ -43,6 +44,7 @@ export function StepperModal({
   const heightStyle = isNumericHeight
     ? { height: `${customHeight}px` }
     : undefined;
+  const isPanelOpen = Boolean(sidePanel) && sidePanelOpen;
 
   return (
     <StepperContext.Provider
@@ -50,12 +52,15 @@ export function StepperModal({
     >
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          style={heightStyle}
+          style={{
+            ...heightStyle,
+            translate: isPanelOpen ? `${-SIDE_PANEL_WIDTH_PX / 2}px 0` : "0 0",
+          }}
           className={cn(
-            "flex max-h-[85vh] flex-col gap-0 overflow-visible border bg-background p-0 shadow-lg transition-[height,width,border-radius,opacity] duration-300 ease-in-out",
+            "flex max-h-[85vh] flex-col gap-0 overflow-visible border bg-background p-0 shadow-lg transition-[height,width,border-radius,opacity,translate] duration-300 ease-in-out",
             customWidth ? `${customWidth} !max-w-none` : minWidth,
             heightClass,
-            sidePanel && sidePanelOpen
+            isPanelOpen
               ? "rounded-l-xl rounded-r-none border-r-0"
               : "rounded-xl",
             className,
