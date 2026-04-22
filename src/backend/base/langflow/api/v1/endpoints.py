@@ -989,13 +989,28 @@ async def get_task_status(_task_id: str) -> TaskStatusResponse:
 async def create_upload_file(
     file: UploadFile,
     flow: Annotated[Flow, Depends(get_flow)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
     """Upload a file for a specific flow (Deprecated).
 
     This endpoint is deprecated and will be removed in a future version.
     Authorization is handled by the ``get_flow`` dependency, which requires an
-    authenticated user and verifies flow ownership.
+    authenticated user and verifies flow ownership.  Mirrors the
+    ``max_file_size_upload`` guard on the non-deprecated twin at
+    ``/api/v1/files/upload/{flow_id}`` so authenticated callers can't fill
+    disk through this route either.
     """
+    try:
+        max_file_size_upload = settings_service.settings.max_file_size_upload
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if file.size is not None and file.size > max_file_size_upload * 1024 * 1024:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File size is larger than the maximum file size {max_file_size_upload}MB.",
+        )
+
     try:
         flow_id_str = str(flow.id)
         file_path = await asyncio.to_thread(save_uploaded_file, file, folder_name=flow_id_str)

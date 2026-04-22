@@ -362,3 +362,29 @@ async def test_deprecated_upload_authenticated_succeeds(client: AsyncClient, log
     )
     body = response.json()
     assert body["flowId"] == str(flow.id)
+
+
+async def test_deprecated_upload_enforces_max_file_size(
+    client: AsyncClient, logged_in_headers: dict, flow, monkeypatch
+):
+    """Regression: the deprecated upload route must honor ``max_file_size_upload``.
+
+    Without this guard, an authenticated user could still fill disk through
+    this route by uploading arbitrarily large files, bypassing the limit the
+    non-deprecated twin at /api/v1/files/upload/{flow_id} already enforces.
+    """
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "max_file_size_upload", 1)  # 1 MB
+    oversized = b"x" * (2 * 1024 * 1024)  # 2 MB, exceeds the limit
+
+    response = await client.post(
+        f"api/v1/upload/{flow.id}",
+        files={"file": ("big.bin", oversized)},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, (
+        f"Expected 413 for oversized upload, got {response.status_code}: {response.text}"
+    )
