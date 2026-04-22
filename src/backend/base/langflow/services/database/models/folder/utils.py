@@ -4,6 +4,7 @@ from sqlmodel import and_, select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.initial_setup.setup import get_or_create_default_folder
+from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
 from langflow.services.database.models.flow.model import Flow
 
 from .constants import DEFAULT_FOLDER_DESCRIPTION, DEFAULT_FOLDER_NAME
@@ -22,6 +23,24 @@ async def create_default_folder_if_it_doesnt_exist(session: AsyncSession, user_i
         session.add(folder)
         await session.flush()
         await session.refresh(folder)
+        flow_folder_pairs = [
+            (flow_id, old_folder_id)
+            for flow_id, old_folder_id in (
+                await session.exec(
+                    select(Flow.id, Flow.folder_id).where(
+                        and_(
+                            Flow.folder_id.is_(None),
+                            Flow.user_id == user_id,
+                        )
+                    ),
+                )
+            ).all()
+        ]
+        await ensure_flow_moves_allowed(
+            db=session,
+            flow_folder_pairs=flow_folder_pairs,
+            new_folder_id=folder.id,
+        )
         await session.exec(
             update(Flow)
             .where(

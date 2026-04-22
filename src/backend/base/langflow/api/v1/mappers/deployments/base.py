@@ -39,6 +39,7 @@ from lfx.services.adapters.deployment.schema import (
     ConfigListParams,
     ConfigListResult,
     DeploymentCreateResult,
+    DeploymentGetResult,
     DeploymentListLlmsResult,
     DeploymentListResult,
     DeploymentUpdateResult,
@@ -55,7 +56,7 @@ from lfx.services.adapters.deployment.schema import (
 from lfx.services.adapters.deployment.schema import (
     DeploymentUpdate as AdapterDeploymentUpdate,
 )
-from lfx.services.adapters.payload import PayloadSlot
+from lfx.services.adapters.payload import AdapterPayload, PayloadSlot
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentConfigListResponse,
@@ -82,6 +83,7 @@ from .contracts import (
     CreateFlowArtifactProviderData,
     CreateSnapshotBindings,
     FlowVersionPatch,
+    ProviderSnapshotBinding,
     UpdateSnapshotBindings,
 )
 from .helpers import page_offset
@@ -647,24 +649,41 @@ class BaseDeploymentMapper:
         _ = payload
         return FlowVersionPatch()
 
-    def util_snapshot_ids_to_verify(
+    def extract_snapshot_bindings(
         self,
-        attachments: list[Any],
-    ) -> list[str]:
-        """Extract provider snapshot IDs that should be verified against the provider.
+        provider_view: DeploymentListResult,
+    ) -> list[ProviderSnapshotBinding]:
+        """Extract per-deployment snapshot bindings from an already-fetched provider list response.
 
-        Called by read-path snapshot-level sync to determine which attachments
-        carry a provider-trackable snapshot identity.  The route passes the
-        returned IDs to the adapter's ``list_snapshots`` by-IDs mode and
-        deletes DB rows whose IDs are no longer present on the provider.
+        Returns a flat list of (resource_key, snapshot_id) pairs representing
+        the authoritative binding state on the provider. Deployments absent
+        from the response (e.g. deleted) produce no entries.
 
-        The base implementation returns an empty list, meaning snapshot-level
-        sync is a no-op for providers that do not track snapshots separately.
-        Provider mappers that assign ``provider_snapshot_id`` on attachments
-        must override this to extract those IDs.
+        Base returns empty — providers that don't track per-deployment
+        snapshot bindings get a no-op attachment sync.
         """
-        _ = attachments
+        _ = provider_view
         return []
+
+    def extract_snapshot_bindings_for_get(
+        self,
+        get_result: DeploymentGetResult,
+        *,
+        resource_key: str,
+    ) -> list[ProviderSnapshotBinding]:
+        """Extract bindings from a single-deployment provider GET payload.
+
+        Provider mappers that support binding-aware sync for ``get_deployment``
+        must override this method. The base implementation raises intentionally
+        so callers never interpret an implicit empty-list fallback as
+        "delete all attachments for this deployment."
+        """
+        _ = get_result, resource_key
+        msg = (
+            "BaseDeploymentMapper does not implement extract_snapshot_bindings_for_get; "
+            "Must be implemented by subclasses. (e.g. watsonx_orchestrate)"
+        )
+        raise NotImplementedError(msg)
 
     async def resolve_rollback_update(
         self,
@@ -827,6 +846,16 @@ class BaseDeploymentMapper:
 
     def shape_deployment_item_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_data
+
+    def shape_deployment_get_data(self, provider_data: AdapterPayload | None) -> dict[str, Any] | None:
+        """Shape provider_data for single-deployment GET responses."""
+        _ = provider_data
+        msg = (
+            "BaseDeploymentMapper does not implement shape_deployment_get_data; "
+            "must be implemented by subclasses (e.g. watsonx_orchestrate). "
+            "GET provider_data shaping is unavailable for this provider."
+        )
+        raise NotImplementedError(msg)
 
     def shape_deployment_status_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_data

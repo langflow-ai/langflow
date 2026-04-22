@@ -365,6 +365,12 @@ def test_base_mapper_shapers_passthrough_provider_payload(method_name: str) -> N
     assert shaped is payload
 
 
+def test_base_mapper_shape_deployment_get_data_raises_not_implemented() -> None:
+    mapper = BaseDeploymentMapper()
+    with pytest.raises(NotImplementedError, match="shape_deployment_get_data"):
+        mapper.shape_deployment_get_data({"ok": True})
+
+
 def test_base_mapper_shapes_deployment_create_result() -> None:
     mapper = BaseDeploymentMapper()
     timestamp = datetime.now(tz=timezone.utc)

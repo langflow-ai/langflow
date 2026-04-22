@@ -9,6 +9,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select
 
 from langflow.services.database.models.deployment.model import Deployment
+from langflow.services.database.models.deployment.orm_guards import ensure_deployment_immutable_fields
+from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
@@ -130,6 +132,19 @@ async def update_deployment(
     deployment_type: DeploymentType | object = _UNSET,
     description: str | None | object = _UNSET,
 ) -> Deployment:
+    next_project_id = project_id if project_id is not None else deployment.project_id
+    next_deployment_type = deployment.deployment_type if deployment_type is _UNSET else deployment_type
+    ensure_deployment_immutable_fields(
+        old_project_id=deployment.project_id,
+        new_project_id=next_project_id,
+        old_deployment_type=deployment.deployment_type,
+        new_deployment_type=next_deployment_type,
+        old_resource_key=deployment.resource_key,
+        new_resource_key=deployment.resource_key,
+        old_provider_account_id=deployment.deployment_provider_account_id,
+        new_provider_account_id=deployment.deployment_provider_account_id,
+    )
+
     if name is not None:
         deployment.name = _strip_or_raise(name, "name")
     if project_id is not None:
@@ -178,6 +193,12 @@ async def list_deployments_page(
         select(
             col(FlowVersionDeploymentAttachment.deployment_id).label("deployment_id"),
             func.count(func.distinct(FlowVersionDeploymentAttachment.flow_version_id)).label("attached_count"),
+        )
+        # Join FlowVersion so stale attachment rows with missing version parent
+        # do not inflate attached_count in deployment list responses.
+        .join(
+            FlowVersion,
+            FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
         )
         .where(FlowVersionDeploymentAttachment.user_id == user_id)
         .group_by(FlowVersionDeploymentAttachment.deployment_id)
@@ -247,6 +268,84 @@ async def list_deployments_page(
     ]
 
 
+async def list_deployments_for_flows_with_provider_info(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    flow_ids: list[UUID],
+    provider_account_id: UUID | None = None,
+) -> list[tuple[Deployment, str]]:
+    """Return distinct deployments linked to any flow in *flow_ids* with provider key."""
+    if not flow_ids:
+        return []
+
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
+    deployment_ids_subquery = (
+        select(FlowVersionDeploymentAttachment.deployment_id)
+        .join(
+            FlowVersion,
+            FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
+        )
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersion.flow_id.in_(flow_ids),
+        )
+        .distinct()
+        .subquery()
+    )
+
+    stmt = (
+        select(Deployment, DeploymentProviderAccount.provider_key)
+        .join(deployment_ids_subquery, deployment_ids_subquery.c.deployment_id == Deployment.id)
+        .join(
+            DeploymentProviderAccount,
+            DeploymentProviderAccount.id == Deployment.deployment_provider_account_id,
+        )
+        .where(Deployment.user_id == user_id)
+        .order_by(
+            Deployment.deployment_provider_account_id,
+            DeploymentProviderAccount.provider_key,
+            Deployment.id,
+        )
+    )
+    if provider_account_id is not None:
+        stmt = stmt.where(Deployment.deployment_provider_account_id == provider_account_id)
+    return list((await db.exec(stmt)).all())
+
+
+async def list_project_deployments_with_provider_info(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    project_id: UUID,
+    provider_account_id: UUID | None = None,
+) -> list[tuple[Deployment, str]]:
+    """Return project deployments with provider key for provider-scoped sync."""
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+
+    stmt = (
+        select(Deployment, DeploymentProviderAccount.provider_key)
+        .join(
+            DeploymentProviderAccount,
+            DeploymentProviderAccount.id == Deployment.deployment_provider_account_id,
+        )
+        .where(
+            Deployment.user_id == user_id,
+            Deployment.project_id == project_id,
+        )
+        .order_by(
+            Deployment.deployment_provider_account_id,
+            DeploymentProviderAccount.provider_key,
+            Deployment.id,
+        )
+    )
+    if provider_account_id is not None:
+        stmt = stmt.where(Deployment.deployment_provider_account_id == provider_account_id)
+    return list((await db.exec(stmt)).all())
+
+
 async def count_deployments_by_provider(
     db: AsyncSession,
     *,
@@ -285,10 +384,31 @@ async def delete_deployment_by_resource_key(
     deployment_provider_account_id: UUID,
     resource_key: str,
 ) -> int:
+    resource_key_s = resource_key.strip()
+    # Delete attachment rows explicitly before deleting the deployment.
+    # This keeps behavior correct even when DB-level FK cascades are disabled
+    # (for example, SQLite with foreign_keys=OFF), avoiding orphan attachments.
+    deployment_id = (
+        await db.exec(
+            select(Deployment.id).where(
+                Deployment.user_id == user_id,
+                Deployment.deployment_provider_account_id == deployment_provider_account_id,
+                Deployment.resource_key == resource_key_s,
+            )
+        )
+    ).first()
+    if deployment_id is not None:
+        await db.exec(
+            delete(FlowVersionDeploymentAttachment).where(
+                FlowVersionDeploymentAttachment.user_id == user_id,
+                FlowVersionDeploymentAttachment.deployment_id == deployment_id,
+            )
+        )
+
     stmt = delete(Deployment).where(
         Deployment.user_id == user_id,
         Deployment.deployment_provider_account_id == deployment_provider_account_id,
-        Deployment.resource_key == resource_key.strip(),
+        Deployment.resource_key == resource_key_s,
     )
     result = await db.exec(stmt)
     if result.rowcount is None:
@@ -307,6 +427,16 @@ async def delete_deployment_by_id(
     deployment_id: UUID | str,
 ) -> int:
     deployment_uuid = parse_uuid(deployment_id, field_name="deployment_id")
+    # Delete attachment rows explicitly before deleting the deployment.
+    # This keeps behavior correct even when DB-level FK cascades are disabled
+    # (for example, SQLite with foreign_keys=OFF), avoiding orphan attachments.
+    await db.exec(
+        delete(FlowVersionDeploymentAttachment).where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.deployment_id == deployment_uuid,
+        )
+    )
+
     stmt = delete(Deployment).where(
         Deployment.user_id == user_id,
         Deployment.id == deployment_uuid,
@@ -317,5 +447,38 @@ async def delete_deployment_by_id(
             "DELETE rowcount was None for deployment id=%s -- "
             "database driver may not support rowcount for DELETE statements",
             deployment_uuid,
+        )
+    return int(result.rowcount or 0)
+
+
+async def delete_deployments_by_ids(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_ids: list[UUID],
+) -> int:
+    """Delete multiple deployments (and their attachments) in two batched statements."""
+    if not deployment_ids:
+        return 0
+    # Delete attachment rows explicitly before deleting the deployments, mirroring
+    # delete_deployment_by_id so behavior stays correct when DB-level FK cascades
+    # are disabled (for example, SQLite with foreign_keys=OFF).
+    await db.exec(
+        delete(FlowVersionDeploymentAttachment).where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+        )
+    )
+
+    stmt = delete(Deployment).where(
+        Deployment.user_id == user_id,
+        col(Deployment.id).in_(deployment_ids),
+    )
+    result = await db.exec(stmt)
+    if result.rowcount is None:
+        await logger.aerror(
+            "DELETE rowcount was None for deployments=%s -- "
+            "database driver may not support rowcount for DELETE statements",
+            deployment_ids,
         )
     return int(result.rowcount or 0)
