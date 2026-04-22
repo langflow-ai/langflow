@@ -104,3 +104,62 @@ This output can only connect to a `VectorStore` input port, and it was intended 
 The **OpenSearch** component doesn't require a separate Graph RAG component because OpenSearch instances support Graph traversal through built-in RAG functionality and plugins.
 
 </details>
+
+## OpenSearch (Multi-Model Multi-Embedding)
+
+The **OpenSearch (Multi-Model Multi-Embedding)** component reads and writes to OpenSearch.
+It is different from the OpenSearch component because it supports multiple embedding models within the same index.
+It creates dynamic embedding fields per model, detects which models are available in the index, and combines semantic and keyword search for hybrid retrieval.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+### OpenSearch (Multi-Model Multi-Embedding) parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [OpenSearch documentation](https://opensearch.org/platform/search/vector-database.html) or inspect [component code](/concepts-components#component-code).
+
+| Name | Type | Description |
+|------|------|-------------|
+| docs_metadata | Table | Input parameter. Additional metadata key-value pairs to attach to every ingested document. |
+| opensearch_url | String | Input parameter. URL for the OpenSearch cluster. Default: `http://localhost:9200`. |
+| index_name | String | Input parameter. Name of the index to create or query. Default: `langflow`. |
+| engine | String | Input parameter. Vector engine to use. Options are `nmslib`, `faiss`, `lucene`, or `jvector` (default). |
+| space_type | String | Input parameter. Distance metric for vector similarity. Options are `l2` (default), `l1`, `cosinesimil`, `linf`, or `innerproduct`. |
+| ef_construction | Integer | Input parameter. HNSW index-construction candidate list size. Default: `512`. |
+| m | Integer | Input parameter. HNSW graph connection count. Default: `16`. |
+| num_candidates | Integer | Input parameter. Approximate-nearest-neighbor candidate pool size for KNN search. Set to `0` to disable it. Default: `1000`. |
+| ingest_data | JSON | Input parameter. Data to ingest into the vector store. |
+| search_query | String | Input parameter. Query string used by `search_documents`. Leave empty to ingest without searching. |
+| should_cache_vector_store | Boolean | Input parameter. If `true`, the component caches the vector store for the current build. Default: Enabled (`true`). |
+| embedding | Embeddings | Input parameter. One or more embedding components used for ingestion and search. |
+| embedding_model_name | String | Input parameter. Selects which embedding model to use for ingestion. If omitted, the component uses the first available embedding. |
+| vector_field | String | Input parameter. Legacy vector field name used for backward compatibility. Default: `chunk_embedding`. |
+| number_of_results | Integer | Input parameter. Default maximum number of search results to return. Default: `10`. |
+| filter_expression | String | Input parameter. JSON filter, limit, and score-threshold configuration for search and raw search. |
+| auth_mode | String | Input parameter. Authentication mode. Options are `basic` or `jwt`. Default: `jwt`. |
+| username | String | Input parameter. Username for basic authentication. Default: `admin`. |
+| password | SecretString | Input parameter. Password for basic authentication. Default: `admin`. |
+| jwt_token | SecretString | Input parameter. JWT token for token-based authentication. |
+| jwt_header | String | Input parameter. Header name used for JWT authentication. Default: `Authorization`. |
+| bearer_prefix | Boolean | Input parameter. If enabled, prefixes the JWT token with `Bearer `. Default: Disabled (`false`). |
+| use_ssl | Boolean | Input parameter. Whether to use SSL/TLS for the connection. Default: Enabled (`true`). |
+| verify_certs | Boolean | Input parameter. Whether to verify SSL certificates. Default: Disabled (`false`). |
+| request_timeout | String | Input parameter. Timeout in seconds for OpenSearch requests. Default: `60`. |
+| max_retries | String | Input parameter. Number of retries for failed requests. Default: `3`. |
+
+### OpenSearch (Multi-Model Multi-Embedding) output
+
+The component exposes:
+
+- `search_results`: Returns hybrid search results as a table of documents and metadata.
+- `raw_search`: Executes a raw OpenSearch query or a text query and returns the raw response.
