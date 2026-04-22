@@ -2,16 +2,14 @@
 
 import uuid
 
-import pytest
 from fastapi import status
 from httpx import AsyncClient
-
 from langflow.utils.i18n import _safe_flow_key, translate_flow_notes
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_note_node(node_id: str, description: str, i18n_key: str | None = None) -> dict:
     node_data: dict = {"description": description}
@@ -35,6 +33,7 @@ def _make_generic_node(node_id: str) -> dict:
 # ---------------------------------------------------------------------------
 # Unit tests — translate_flow_notes()
 # ---------------------------------------------------------------------------
+
 
 class TestTranslateFlowNotes:
     def test_translates_description_when_key_is_baked_in(self, monkeypatch):
@@ -66,7 +65,7 @@ class TestTranslateFlowNotes:
         assert result[0]["data"]["node"]["description"] == "Original text"
 
     def test_node_without_i18n_key_is_passed_through_unchanged(self, monkeypatch):
-        """noteNodes without i18n_key (e.g. user-created) are left untouched."""
+        """NoteNodes without i18n_key (e.g. user-created) are left untouched."""
         monkeypatch.setattr("langflow.utils.i18n._translations", {"fr": {}})
         node = _make_note_node("n1", "User note")  # no i18n_key
         result = translate_flow_notes([node], "fr")
@@ -125,6 +124,7 @@ class TestTranslateFlowNotes:
 # Unit tests — _safe_flow_key()
 # ---------------------------------------------------------------------------
 
+
 class TestSafeFlowKey:
     def test_lowercases_and_replaces_spaces(self):
         assert _safe_flow_key("Simple Agent") == "simple_agent"
@@ -142,6 +142,7 @@ class TestSafeFlowKey:
 # ---------------------------------------------------------------------------
 # Integration tests — GET /flows/{id}/note_translations
 # ---------------------------------------------------------------------------
+
 
 async def test_note_translations_returns_empty_for_user_flow(client: AsyncClient, logged_in_headers):
     """A flow without i18n_key on its noteNodes returns an empty map."""
@@ -199,9 +200,7 @@ async def test_note_translations_returns_translated_text_for_baked_node(
     assert "Bonjour" in translations.values()
 
 
-async def test_note_translations_returns_404_equivalent_for_missing_flow(
-    client: AsyncClient, logged_in_headers
-):
+async def test_note_translations_returns_404_equivalent_for_missing_flow(client: AsyncClient, logged_in_headers):
     """Non-existent flow returns empty dict (endpoint returns {} not 404)."""
     fake_id = str(uuid.uuid4())
     resp = await client.get(f"api/v1/flows/{fake_id}/note_translations", headers=logged_in_headers)

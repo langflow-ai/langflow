@@ -303,7 +303,6 @@ async def _new_flow(
         flow.user_id = user_id
         flow.name = await _deduplicate_flow_name(session, flow.name, user_id)
 
-
         if flow.endpoint_name:
             flow.endpoint_name = await _deduplicate_endpoint_name(
                 session, flow.endpoint_name, user_id, fail_on_conflict=fail_on_endpoint_conflict

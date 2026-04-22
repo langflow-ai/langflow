@@ -513,9 +513,7 @@ async def read_basic_examples(
         cached_flow_reads = _starter_flows_cache.get("starter_flows")
         if cached_flow_reads is CACHE_MISS:
             try:
-                starter_folder = (
-                    await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))
-                ).first()
+                starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
 
                 if not starter_folder:
                     return compress_response([])
@@ -533,9 +531,7 @@ async def read_basic_examples(
                 import logging as _logging
 
                 _logging.getLogger(__name__).exception("Error loading basic examples")
-                raise HTTPException(
-                    status_code=500, detail="An internal error occurred while loading examples."
-                ) from e
+                raise HTTPException(status_code=500, detail="An internal error occurred while loading examples.") from e
 
         # Translate once per locale and cache the result
         # Why: cached uncompressed so the same result can be re-compressed per

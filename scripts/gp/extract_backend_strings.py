@@ -34,8 +34,11 @@ from pathlib import Path
 
 from langflow.utils.i18n_keys import (
     component_field_key as _component_field_key,
-    content_hash as _content_hash,
+)
+from langflow.utils.i18n_keys import (
     normalize_component_key as _normalize_component_key,
+)
+from langflow.utils.i18n_keys import (
     safe_flow_key as _safe_key,
 )
 
@@ -103,11 +106,15 @@ def collect_strings() -> dict[str, str]:
                 field_placeholder = getattr(inp, "placeholder", None)
                 if isinstance(field_name, str) and field_name:
                     if isinstance(field_display, str) and field_display:
-                        flat[_component_field_key(norm_key, f"inputs.{field_name}.display_name", field_display)] = field_display
+                        flat[_component_field_key(norm_key, f"inputs.{field_name}.display_name", field_display)] = (
+                            field_display
+                        )
                     if isinstance(field_info, str) and field_info:
                         flat[_component_field_key(norm_key, f"inputs.{field_name}.info", field_info)] = field_info
                     if isinstance(field_placeholder, str) and field_placeholder:
-                        flat[_component_field_key(norm_key, f"inputs.{field_name}.placeholder", field_placeholder)] = field_placeholder
+                        flat[_component_field_key(norm_key, f"inputs.{field_name}.placeholder", field_placeholder)] = (
+                            field_placeholder
+                        )
 
             # Tier 2 — output display_names and info
             for out in getattr(cls, "outputs", []) or []:
@@ -116,7 +123,9 @@ def collect_strings() -> dict[str, str]:
                 out_info = getattr(out, "info", None)
                 if isinstance(out_name, str) and out_name:
                     if isinstance(out_display, str) and out_display:
-                        flat[_component_field_key(norm_key, f"outputs.{out_name}.display_name", out_display)] = out_display
+                        flat[_component_field_key(norm_key, f"outputs.{out_name}.display_name", out_display)] = (
+                            out_display
+                        )
                     if isinstance(out_info, str) and out_info:
                         flat[_component_field_key(norm_key, f"outputs.{out_name}.info", out_info)] = out_info
 
