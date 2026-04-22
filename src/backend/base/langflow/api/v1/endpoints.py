@@ -6,7 +6,7 @@ import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import orjson
 import sqlalchemy as sa
@@ -34,6 +34,7 @@ from lfx.utils.flow_validation import (
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
+from langflow.api.v1.files import get_flow
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -987,14 +988,16 @@ async def get_task_status(_task_id: str) -> TaskStatusResponse:
 )
 async def create_upload_file(
     file: UploadFile,
-    flow_id: UUID,
+    flow: Annotated[Flow, Depends(get_flow)],
 ) -> UploadFileResponse:
     """Upload a file for a specific flow (Deprecated).
 
     This endpoint is deprecated and will be removed in a future version.
+    Authorization is handled by the ``get_flow`` dependency, which requires an
+    authenticated user and verifies flow ownership.
     """
     try:
-        flow_id_str = str(flow_id)
+        flow_id_str = str(flow.id)
         file_path = await asyncio.to_thread(save_uploaded_file, file, folder_name=flow_id_str)
 
         return UploadFileResponse(

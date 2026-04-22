@@ -329,3 +329,36 @@ async def test_get_config_mcp_base_url_from_settings(client: AsyncClient, logged
     result = response.json()
     assert response.status_code == status.HTTP_200_OK
     assert result["mcp_base_url"] == "https://langflow.example.com"
+
+
+async def test_deprecated_upload_rejects_unauthenticated(client: AsyncClient, flow):
+    """Regression: the deprecated /api/v1/upload/{flow_id} must require auth.
+
+    Previously this endpoint accepted uploads without any credentials, letting
+    anonymous callers write arbitrary files into a flow's cache folder.
+    """
+    response = await client.post(
+        f"api/v1/upload/{flow.id}",
+        files={"file": ("test.txt", b"test content")},
+    )
+    assert response.status_code != status.HTTP_201_CREATED, (
+        "Deprecated upload endpoint must reject unauthenticated requests"
+    )
+    assert response.status_code in {
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+    }, f"Expected 401/403, got {response.status_code}: {response.text}"
+
+
+async def test_deprecated_upload_authenticated_succeeds(client: AsyncClient, logged_in_headers: dict, flow):
+    """The deprecated endpoint still works for the flow's owner."""
+    response = await client.post(
+        f"api/v1/upload/{flow.id}",
+        files={"file": ("test.txt", b"test content")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED, (
+        f"Expected 201 for authenticated owner, got {response.status_code}: {response.text}"
+    )
+    body = response.json()
+    assert body["flowId"] == str(flow.id)
