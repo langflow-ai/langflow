@@ -7,19 +7,20 @@
   },
   "overrides": {
     "tar": "^7.5.7",
-    "tar-fs": ">=2.1.4",
+    "tar-fs": "^2.1.4",
     "glob": "^11.1.0",
     "test-exclude": "^7.0.0",
-    "picomatch": ">=4.0.4",
+    "picomatch": "^4.0.4",
     "jest-util": {
-      "picomatch": ">=4.0.4"
+      "picomatch": "^4.0.4"
     },
     "jest-message-util": {
-      "picomatch": ">=4.0.4"
+      "picomatch": "^4.0.4"
     },
     "playwright": "^1.59.1",
-    "brace-expansion": ">=5.0.5",
-    "handlebars": ">=4.7.9"
+    "brace-expansion": "^5.0.5",
+    "handlebars": "^4.7.9",
+    "minimatch": "^10.2.5"
   },
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
