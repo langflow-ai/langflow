@@ -110,6 +110,16 @@ The **Add Column** operation allows you to add a new column to the `Table` with 
 The parameters are **New Column Name** (`new_column_name`) and **New Column Value** (`new_column_value`).
 
 </TabItem>
+<TabItem value="concatenate" label="Concatenate">
+
+The **Concatenate** operation combines multiple input `Table` objects into a single `Table` by stacking their rows vertically.
+For example, if you have Table A and Table B, they are combined into one table with all rows from Table A, and then all rows from Table B.
+
+This operation uses the **Table** (`df`) input.
+Connect multiple `Table` outputs to the same input to concatenate them.
+The output is a single `Table` containing the combined rows from all connected inputs.
+
+</TabItem>
 <TabItem value="dropcolumn" label="Drop Column">
 
 The **Drop Column** operation allows you to remove a column from the `Table`, specified by **Column Name** (`column_name`).
@@ -133,6 +143,21 @@ The **Head** operation allows you to retrieve the first `n` rows of the `Table`,
 The default is `5`.
 
 The output is a `Table` containing only the selected rows.
+
+</TabItem>
+<TabItem value="merge" label="Merge">
+
+The **Merge** operation combines two input `Table` objects by matching rows that share the same value in a selected column.
+For example, if one table has `id` and `name`, and another has `id` and `department`, you can merge both tables on `id` to produce one table with `id`, `name`, and `department`.
+
+Provide the following parameters:
+
+* **Left Table** (`left_dataframe`): The primary table in the merge.
+* **Right Table** (`right_dataframe`): The secondary table in the merge.
+* **Merge On Column** (`merge_on_column`): The shared column used to match rows. This column must exist in both tables.
+* **Merge Type** (`merge_how`): Controls which matched and unmatched rows are kept in the output. Use `inner` to keep only matching rows, `left` to keep all rows from the left table, `right` to keep all rows from the right table, or `outer` to keep all rows from both tables.
+
+The output is a `Table` containing matched records from both inputs.
 
 </TabItem>
 <TabItem value="renamecolumn" label="Rename Column">
@@ -194,4 +219,3 @@ The output is a `Table` containing all columns from the original `Table`, but on
 
 </TabItem>
 </Tabs>
-
