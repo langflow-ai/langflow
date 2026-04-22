@@ -972,3 +972,84 @@ async def test_openai_responses_response_schema_has_usage_field(client: AsyncCli
         assert "id" in json_response
         assert "output" in json_response
         assert "usage" in json_response  # usage field should always be present (can be None)
+
+
+async def test_openai_responses_rejects_cross_user_flow_access(
+    client: AsyncClient,
+    simple_api_test,
+    created_api_key,  # noqa: ARG001 - used only to establish the owner's API key
+):
+    """Regression (LE-639): authenticated user cannot execute another user's flow.
+
+    Reproduces the IDOR PoC from the Jira ticket: a user with a valid API key
+    passes a flow UUID owned by a different user in the ``model`` field.  The
+    pre-fix behavior was that the endpoint executed the victim's flow and
+    returned 200 with real output; after the fix the helper resolves to
+    flow_not_found because UUID lookups now enforce user scope.
+    """
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.api_key.model import ApiKey
+    from langflow.services.database.models.user.model import User
+    from lfx.services.deps import session_scope
+    from sqlmodel import select
+
+    attacker_api_key = "attacker_random_key"  # pragma: allowlist secret
+    attacker_username = "idor_attacker_user"
+
+    # Create a second, unrelated user + API key inline.  Kept local to this
+    # test rather than promoted to a shared fixture to minimize blast radius.
+    async with session_scope() as session:
+        existing = (await session.exec(select(User).where(User.username == attacker_username))).first()
+        if existing is None:
+            attacker = User(
+                username=attacker_username,
+                password=get_password_hash("testpassword"),
+                is_active=True,
+                is_superuser=False,
+            )
+            session.add(attacker)
+            await session.flush()
+            await session.refresh(attacker)
+        else:
+            attacker = existing
+        existing_key = (await session.exec(select(ApiKey).where(ApiKey.api_key == attacker_api_key))).first()
+        if existing_key is None:
+            key = ApiKey(
+                name="idor_attacker_key",
+                user_id=attacker.id,
+                api_key=attacker_api_key,
+                hashed_api_key=get_password_hash(attacker_api_key),
+            )
+            session.add(key)
+            await session.flush()
+        attacker_id = attacker.id
+
+    try:
+        victim_flow_id = simple_api_test["id"]  # owned by active_user via logged_in_headers
+        payload = {
+            "model": victim_flow_id,
+            "input": "Hello",
+            "stream": False,
+        }
+        response = await client.post(
+            "/api/v1/responses",
+            json=payload,
+            headers={"x-api-key": attacker_api_key},
+        )
+
+        # The endpoint returns 200 with an OpenAI-style error body on flow-not-found
+        # (matches test_openai_responses_nonexistent_flow_uuid behavior).
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert "error" in body, f"Expected flow_not_found error for cross-user access, got: {body}"
+        assert body["error"]["code"] == "flow_not_found", (
+            f"Expected flow_not_found for cross-user access, got code: {body['error'].get('code')}"
+        )
+    finally:
+        # Clean up the second user + key we created for this test.
+        async with session_scope() as session:
+            for api_key_row in (await session.exec(select(ApiKey).where(ApiKey.user_id == attacker_id))).all():
+                await session.delete(api_key_row)
+            user = await session.get(User, attacker_id)
+            if user:
+                await session.delete(user)
