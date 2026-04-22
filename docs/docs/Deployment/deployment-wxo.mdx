@@ -30,7 +30,6 @@ The **Provider** pane opens.
 
 3. Enter the **Name**, **Service Instance URL**, and **API Key** from your IBM watsonx Orchestrate instance.
 These values are found in the **Settings** page of your IBM watsonx Orchestrate instance.
-The values look similar to the example below.
 
    - **Name**: `YOUR_DEPLOYMENT_NAME`
    - **Service Instance URL**: `https://api.dl.watson-orchestrate.ibm.com/instances/80194572-4421-6735-91ab-55c0d8e4f962`
@@ -43,56 +42,67 @@ The values look similar to the example below.
    The **Deployment Type** pane opens.
 5. Enter a **Type**, **Agent Name**, **Model**, and **Description**.
 
-    * The **Type** is always **Agent**. The deployed flow is an IBM watsonx Orchestrate agent with your flow available as a tool the agent can call.
-    * The **Model** list is populated from the connected watsonx Orchestrate instance, not Langflow.
+    The **Type** is always **Agent**. The deployed flow is an IBM watsonx Orchestrate agent with your flow available as a tool the agent can call.
 
-6. In the **Attach Flows** pane, select a flow and a version of that flow to deploy.
-7. In the **Create Connections** pane, you can either select an available connection to bind to the flow, or create a new connection.
-   To create a new connection, enter a **Connection Name**, and include any environment variables the flow requires, such as the `OPENAI_API_KEY`.
-   Langflow auto-detects global variables from the flow JSON file, but additional variables can be manually added.
-8. To add the new connection to the list of available connections, click **Create Connection**.
-9. In the list of available connections, select the new connection, and then click **Attach Connection to Flow**.
+    The **Model** list is populated from the connected watsonx Orchestrate instance, not Langflow.
+
+6. In the **Attach Flows** pane, select a flow and flow version to deploy.
+7. In the **Create Connections** pane, you can create a new connection or select an existing connection to bind to the flow.
+
+   To create a new connection, do the following:
+   
+       1. Enter a **Connection Name** and any environment variables the flow requires, such as the `OPENAI_API_KEY`. Langflow auto-detects global variables from the flow JSON file, and you can add additional variables.
+
+      2. To add the new connection to the list of available connections, click **Create Connection**.
+
+      3. In the list of available connections, select the new connection, and then click **Attach Connection to Flow**.
 
    :::tip
    To bind the connection to the flow **without** environment variable binding, click **Skip**, and then click **Next**.
    :::
 
    For more information, see [Build flows](../Flows/concepts-flows.mdx#save-and-restore-flow-versions).
-10. To continue to the **Review & Confirm** pane, click **Next**.
-11. Confirm the deployment values are correct, and then click <Icon name="Rocket" aria-hidden="true"/> **Deploy**.
+8. Click **Next*. The **Review & Confirm** pane opens.
+9. Confirm the deployment values are correct, and then click <Icon name="Rocket" aria-hidden="true"/> **Deploy**.
 
     Langflow installs any required extra dependencies on your watsonx Orchestrate tenant automatically.
 
     In the Langflow UI, `Deployment successful` indicates your deployment succeeded.
 
     :::tip
-    If you get an error that the tool name already exists on your deployment, click the <Icon name="Pencil" aria-hidden="true"/> icon to change the tool name.
+    If you get an error that the tool name already exists on your deployment, click <Icon name="Pencil" aria-hidden="true"/> **Edit** to change the tool name.
     :::
 
-12. Click **Test** to open a chat window with your agent on Orchestrate.
+10. Click **Test** to open a chat window with your agent on watsonx Orchestrate.
     Enter a question, and the agent responds using the connected flow as a tool.
-13. Navigate to your IBM watsonx Orchestrate deployment, and confirm that your Langflow flow is listed as an agent.
+11. Navigate to your IBM watsonx Orchestrate deployment, and then confirm that your Langflow flow is listed as an agent.
 
 ## Manage deployments in Langflow
 
 From the **Projects** page, click **Deployments** to open the deployment management screen.
 
-A **deployment** is a published watsonx Orchestrate agent created from a specific Langflow flow version. The deployment records the agent name, type, attached flows, model, and the IBM watsonx Orchestrate environment it belongs to.
+* **Deployments**:
 
-Use the **Deployments** tab to create, update, list, and delete flow deployments in Langflow.
+   A **Deployment** is a published watsonx Orchestrate agent created from a specific Langflow flow version. Deployment details include the agent name, type, attached flows, model, and the IBM watsonx Orchestrate environment it belongs to.
 
-A **Deployment Environment** is a saved watsonx Orchestrate target that Langflow can deploy to. An environment stores the connection details for a watsonx Orchestrate tenant.
+   Use the **Deployments** tab to create, update, view, and delete flow deployments in Langflow.
 
-Use the **Deployment Environments** tab to add, list, and delete IBM watsonx Orchestrate environments in Langflow.
-To manage the tenant itself, use the IBM watsonx Orchestrate dashboard.
+* **Deployment Environments**:
+
+   A **Deployment Environment** is a saved watsonx Orchestrate target that Langflow can deploy to. An environment stores the connection details for a watsonx Orchestrate tenant.
+
+   Use the **Deployment Environments** tab to connect, view, and disconnect IBM watsonx Orchestrate environments in Langflow.
+
+   To manage the tenant itself, use the IBM watsonx Orchestrate dashboard.
 
 ## Send requests to your flow
 
 After you deploy your flow to IBM watsonx Orchestrate, you can connect to it through the Langflow deployment run endpoints.
 
-The standard Langflow endpoint is `/run`, but for flows deployed to IBM watsonx Orchestrate, use `POST /api/v1/deployments/{deployment_id}/runs` to start a run, and `GET /api/v1/deployments/{deployment_id}/runs/{run_id}` to check its status.
+Don't use the `/run` endpoint for flows deployed to IBM watsonx Orchestrate.
+Instead use `POST /api/v1/deployments/{deployment_id}/runs` to start a run, and `GET /api/v1/deployments/{deployment_id}/runs/{run_id}` to check its status.
 
-Prefix the following paths with your Langflow server URL, such as `http://localhost:7860`.
+Endpoint paths must be prefixed with your Langflow server URL, such as `http://localhost:7860`.
 
 ### Create deployment run endpoint
 
