@@ -13,6 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useTranslation } from "react-i18next";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import {
   usePatchFolders,
@@ -40,7 +41,6 @@ import type { FolderType } from "../../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../../stores/foldersStore";
-import { useUtilityStore } from "../../../../../stores/utilityStore";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
 import { cn } from "../../../../../utils/utils";
 import useFileDrop from "../../hooks/use-on-file-drop";
@@ -80,13 +80,13 @@ const SideBarFoldersButtonsComponent = ({
     return currentFolder.includes(itemId);
   };
 
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const isMobile = useIsMobile({ maxWidth: 1024 });
   const folderIdDragging = useFolderStore((state) => state.folderIdDragging);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-  const defaultFolderName = useUtilityStore((state) => state.defaultFolderName);
 
   const folderId = useParams().folderId ?? myCollectionId ?? "";
 
@@ -135,37 +135,53 @@ const SideBarFoldersButtonsComponent = ({
         return;
       }
 
-      getObjectsFromFilelist<any>(files).then((objects) => {
-        if (objects.every((flow) => flow.data?.nodes)) {
-          uploadFlow({ files }).then(() => {
-            setSuccessData({
-              title: "Uploaded successfully",
+      getObjectsFromFilelist<any>(files)
+        .then((objects) => {
+          if (objects.every((flow) => flow.data?.nodes)) {
+            uploadFlow({ files })
+              .then(() => {
+                setSuccessData({
+                  title: t("sidebar.uploadSuccess"),
+                });
+              })
+              .catch((error) => {
+                setErrorData({
+                  title: t("errors.upload"),
+                  list: [
+                    error instanceof Error ? error.message : String(error),
+                  ],
+                });
+              });
+          } else {
+            files.forEach((folder) => {
+              const formData = new FormData();
+              formData.append("file", folder);
+              mutate(
+                { formData },
+                {
+                  onSuccess: () => {
+                    setSuccessData({
+                      title: t("sidebar.projectUploadSuccess"),
+                    });
+                  },
+                  onError: (err) => {
+                    console.error(err);
+                    setErrorData({
+                      title: t("sidebar.projectUploadError"),
+                      list: [err["response"]["data"]["message"]],
+                    });
+                  },
+                },
+              );
             });
+          }
+        })
+        .catch((error) => {
+          setErrorData({
+            title: t("errors.upload"),
+            list: [error instanceof Error ? error.message : String(error)],
           });
-        } else {
-          files.forEach((folder) => {
-            const formData = new FormData();
-            formData.append("file", folder);
-            mutate(
-              { formData },
-              {
-                onSuccess: () => {
-                  setSuccessData({
-                    title: "Project uploaded successfully.",
-                  });
-                },
-                onError: (err) => {
-                  console.error(err);
-                  setErrorData({
-                    title: `Error on uploading your project, try dragging it into an existing project.`,
-                    list: [err["response"]["data"]["message"]],
-                  });
-                },
-              },
-            );
-          });
-        }
-      });
+        });
     });
   };
 
@@ -180,7 +196,7 @@ const SideBarFoldersButtonsComponent = ({
         },
         onError: (e) => {
           setErrorData({
-            title: `An error occurred while downloading your project.`,
+            title: t("sidebar.downloadError"),
           });
         },
       },
@@ -276,10 +292,6 @@ const SideBarFoldersButtonsComponent = ({
   };
 
   const handleDoubleClick = (event, item) => {
-    if (item.name === defaultFolderName) {
-      return;
-    }
-
     event.stopPropagation();
     event.preventDefault();
 
@@ -382,82 +394,87 @@ const SideBarFoldersButtonsComponent = ({
           <SidebarGroupContent>
             <SidebarMenu>
               {!loading ? (
-                folders.map((item, index) => {
-                  const editFolderName = editFolders?.filter(
-                    (folder) => folder.name === item.name,
-                  )[0];
-                  return (
-                    <SidebarMenuItem
-                      key={index}
-                      className="group/menu-button"
-                      onMouseEnter={() => setHoveredFolderId(item.id!)}
-                      onMouseLeave={() => setHoveredFolderId(null)}
-                    >
-                      <div className="relative flex w-full">
-                        <SidebarMenuButton
-                          size="md"
-                          onDragOver={(e) => dragOver(e, item.id!)}
-                          onDragEnter={(e) => dragEnter(e, item.id!)}
-                          onDragLeave={dragLeave}
-                          onDrop={(e) => onDrop(e, item.id!)}
-                          key={item.id}
-                          data-testid={`sidebar-nav-${item.name}`}
-                          id={`sidebar-nav-${item.name}`}
-                          isActive={checkPathName(item.id!)}
-                          onClick={() => handleChangeFolder!(item.id!)}
-                          className={cn(
-                            "flex-grow pr-8",
-                            hoveredFolderId === item.id && "bg-accent",
-                            checkHoveringFolder(item.id!),
-                          )}
-                        >
-                          <div
-                            onDoubleClick={(event) => {
-                              handleDoubleClick(event, item);
-                            }}
-                            className="flex w-full items-center justify-between gap-2"
+                folders.length === 0 ? (
+                  <div className="px-2 py-5 text-center text-sm text-muted-foreground">
+                    {t("sidebar.emptyMessage")}
+                  </div>
+                ) : (
+                  folders.map((item, index) => {
+                    const editFolderName = editFolders?.filter(
+                      (folder) => folder.name === item.name,
+                    )[0];
+                    return (
+                      <SidebarMenuItem
+                        key={index}
+                        className="group/menu-button"
+                        onMouseEnter={() => setHoveredFolderId(item.id!)}
+                        onMouseLeave={() => setHoveredFolderId(null)}
+                      >
+                        <div className="relative flex w-full">
+                          <SidebarMenuButton
+                            size="md"
+                            onDragOver={(e) => dragOver(e, item.id!)}
+                            onDragEnter={(e) => dragEnter(e, item.id!)}
+                            onDragLeave={dragLeave}
+                            onDrop={(e) => onDrop(e, item.id!)}
+                            key={item.id}
+                            data-testid={`sidebar-nav-${item.name}`}
+                            id={`sidebar-nav-${item.name}`}
+                            isActive={checkPathName(item.id!)}
+                            onClick={() => handleChangeFolder!(item.id!)}
+                            className={cn(
+                              "flex-grow pr-8",
+                              hoveredFolderId === item.id && "bg-accent",
+                              checkHoveringFolder(item.id!),
+                            )}
                           >
-                            <div className="flex flex-1 items-center gap-2">
-                              {editFolderName?.edit && !isUpdatingFolder ? (
-                                <InputEditFolderName
-                                  handleEditFolderName={handleEditFolderName}
-                                  item={item}
-                                  refInput={refInput}
-                                  handleKeyDownFn={handleKeyDownFn}
-                                  handleEditNameFolder={handleEditNameFolder}
-                                  editFolderName={editFolderName}
-                                  foldersNames={foldersNames}
-                                  handleKeyDown={handleKeyDown}
-                                />
-                              ) : (
-                                <span className="block w-0 grow truncate text-sm opacity-100">
-                                  {item.name}
-                                </span>
-                              )}
+                            <div
+                              onDoubleClick={(event) => {
+                                handleDoubleClick(event, item);
+                              }}
+                              className="flex w-full items-center justify-between gap-2"
+                            >
+                              <div className="flex flex-1 items-center gap-2">
+                                {editFolderName?.edit && !isUpdatingFolder ? (
+                                  <InputEditFolderName
+                                    handleEditFolderName={handleEditFolderName}
+                                    item={item}
+                                    refInput={refInput}
+                                    handleKeyDownFn={handleKeyDownFn}
+                                    handleEditNameFolder={handleEditNameFolder}
+                                    editFolderName={editFolderName}
+                                    foldersNames={foldersNames}
+                                    handleKeyDown={handleKeyDown}
+                                  />
+                                ) : (
+                                  <span className="block w-0 grow truncate text-sm opacity-100">
+                                    {item.name}
+                                  </span>
+                                )}
+                              </div>
                             </div>
+                          </SidebarMenuButton>
+                          <div
+                            className="absolute right-2 top-[0.45rem] flex items-center hover:text-foreground"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <SelectOptions
+                              item={item}
+                              handleDeleteFolder={handleDeleteFolder}
+                              handleDownloadFolder={() =>
+                                handleDownloadFolder(item.id!, item.name)
+                              }
+                              handleSelectFolderToRename={
+                                handleSelectFolderToRename
+                              }
+                              checkPathName={checkPathName}
+                            />
                           </div>
-                        </SidebarMenuButton>
-                        <div
-                          className="absolute right-2 top-[0.45rem] flex items-center hover:text-foreground"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <SelectOptions
-                            item={item}
-                            index={index}
-                            handleDeleteFolder={handleDeleteFolder}
-                            handleDownloadFolder={() =>
-                              handleDownloadFolder(item.id!, item.name)
-                            }
-                            handleSelectFolderToRename={
-                              handleSelectFolderToRename
-                            }
-                            checkPathName={checkPathName}
-                          />
                         </div>
-                      </div>
-                    </SidebarMenuItem>
-                  );
-                })
+                      </SidebarMenuItem>
+                    );
+                  })
+                )
               ) : (
                 <>
                   <SidebarFolderSkeleton />
@@ -487,7 +504,7 @@ const SideBarFoldersButtonsComponent = ({
                 className="text-sm"
               >
                 <ForwardedIconComponent name="Library" className="h-4 w-4" />
-                Knowledge
+                {t("sidebar.knowledge")}
               </SidebarMenuButton>
             )}
             <SidebarMenuButton
@@ -496,7 +513,7 @@ const SideBarFoldersButtonsComponent = ({
               className="text-sm"
             >
               <ForwardedIconComponent name="File" className="h-4 w-4" />
-              My Files
+              {t("sidebar.myFiles")}
             </SidebarMenuButton>
           </div>
         </SidebarFooter>

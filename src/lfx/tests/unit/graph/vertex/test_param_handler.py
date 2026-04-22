@@ -191,3 +191,50 @@ class TestParameterHandlerTableLoadFromDb:
 
         assert set(load_from_db_columns) == {"col1", "col2"}
         assert "table:table_field" in self.handler.load_from_db_fields
+
+
+class TestParameterHandlerDictField:
+    """Tests for _handle_dict_field in ParameterHandler."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.mock_vertex = MagicMock()
+        self.mock_vertex.data = {"node": {"template": {}}}
+        self.handler = ParameterHandler(self.mock_vertex, storage_service=None)
+
+    def test_handle_dict_field_with_key_value_list(self):
+        """Test that a list of {"key": k, "value": v} pairs is converted to a flat dict."""
+        val = [
+            {"key": "header1", "value": "value1"},
+            {"key": "header2", "value": "value2"},
+        ]
+        params = {}
+        result = self.handler._handle_dict_field("headers", val, params)
+        assert result["headers"] == {"header1": "value1", "header2": "value2"}
+
+    def test_handle_dict_field_with_single_key_value_item(self):
+        """Test a single-item key-value list."""
+        val = [{"key": "auth", "value": "token123"}]
+        params = {}
+        result = self.handler._handle_dict_field("headers", val, params)
+        assert result["headers"] == {"auth": "token123"}
+
+    def test_handle_dict_field_with_flat_dict(self):
+        """Test that a plain dict is passed through as-is."""
+        val = {"header1": "value1", "header2": "value2"}
+        params = {}
+        result = self.handler._handle_dict_field("headers", val, params)
+        assert result["headers"] == {"header1": "value1", "header2": "value2"}
+
+    def test_handle_dict_field_with_empty_list(self):
+        """Test that an empty list produces an empty dict."""
+        params = {}
+        result = self.handler._handle_dict_field("headers", [], params)
+        assert result["headers"] == {}
+
+    def test_handle_dict_field_with_generic_list_of_dicts(self):
+        """Test that a list of dicts without the key/value pattern merges them."""
+        val = [{"a": 1}, {"b": 2}]
+        params = {}
+        result = self.handler._handle_dict_field("data", val, params)
+        assert result["data"] == {"a": 1, "b": 2}

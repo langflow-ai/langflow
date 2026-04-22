@@ -1,9 +1,11 @@
 import importlib
+import io
 import re
 
 import requests
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
+from markitdown import MarkItDown
 
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
@@ -13,6 +15,7 @@ from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.utils.request_utils import get_user_agent
+from lfx.utils.ssrf_protection import SSRFProtectionError, validate_url_for_ssrf
 
 # Constants
 DEFAULT_TIMEOUT = 30
@@ -61,7 +64,7 @@ class URLComponent(Component):
             tool_mode=True,
             placeholder="Enter a URL...",
             list_add_label="Add URL",
-            input_types=[],
+            input_types=["Message"],
         ),
         SliderInput(
             name="max_depth",
@@ -107,8 +110,12 @@ class URLComponent(Component):
         DropdownInput(
             name="format",
             display_name="Output Format",
-            info="Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.",
-            options=["Text", "HTML"],
+            info=(
+                "Output Format. Use 'Text' to extract the text from the HTML, "
+                "'Markdown' to parse the HTML into Markdown format, or 'HTML' "
+                "for the raw HTML content."
+            ),
+            options=["Text", "HTML", "Markdown"],
             value=DEFAULT_FORMAT,
             advanced=True,
         ),
@@ -140,7 +147,7 @@ class URLComponent(Component):
             ],
             value=[{"key": "User-Agent", "value": USER_AGENT}],
             advanced=True,
-            input_types=["DataFrame"],
+            input_types=["DataFrame", "Table"],
         ),
         BoolInput(
             name="filter_text_html",
@@ -182,6 +189,23 @@ class URLComponent(Component):
     ]
 
     @staticmethod
+    def _html_extractor(x: str) -> str:
+        """Extract raw HTML content."""
+        return x
+
+    @staticmethod
+    def _text_extractor(x: str) -> str:
+        """Extract clean text from HTML."""
+        return BeautifulSoup(x, "lxml").get_text()
+
+    @staticmethod
+    def _markdown_extractor(x: str) -> str:
+        """Convert HTML to Markdown format."""
+        stream = io.BytesIO(x.encode("utf-8"))
+        result = MarkItDown(enable_plugins=False).convert_stream(stream)
+        return result.markdown
+
+    @staticmethod
     def validate_url(url: str) -> bool:
         """Validates if the given string matches URL pattern.
 
@@ -203,7 +227,7 @@ class URLComponent(Component):
             str: The normalized URL
 
         Raises:
-            ValueError: If the URL is invalid
+            ValueError: If the URL is invalid or blocked by SSRF protection
         """
         url = url.strip()
         if not url.startswith(("http://", "https://")):
@@ -212,6 +236,15 @@ class URLComponent(Component):
         if not self.validate_url(url):
             msg = f"Invalid URL: {url}"
             raise ValueError(msg)
+
+        # SSRF Protection: Validate URL to prevent access to internal resources
+        # Blocks requests to private IPs, localhost, and cloud metadata endpoints
+        # when LANGFLOW_SSRF_PROTECTION_ENABLED=true
+        try:
+            validate_url_for_ssrf(url, warn_only=False)
+        except SSRFProtectionError as e:
+            msg = f"SSRF Protection: {e}"
+            raise ValueError(msg) from e
 
         return url
 
@@ -225,7 +258,12 @@ class URLComponent(Component):
             RecursiveUrlLoader: Configured loader instance
         """
         headers_dict = {header["key"]: header["value"] for header in self.headers if header["value"] is not None}
-        extractor = (lambda x: x) if self.format == "HTML" else (lambda x: BeautifulSoup(x, "lxml").get_text())
+        extractors = {
+            "HTML": self._html_extractor,
+            "Markdown": self._markdown_extractor,
+            "Text": self._text_extractor,
+        }
+        extractor = extractors.get(self.format, self._text_extractor)
 
         return RecursiveUrlLoader(
             url=url,

@@ -8,17 +8,37 @@ from lfx.schema.dataframe import DataFrame
 
 
 class DataFrameOperationsComponent(Component):
-    display_name = "DataFrame Operations"
-    description = "Perform various operations on a DataFrame."
+    display_name = "Table Operations"
+    description = "Perform various operations on a Table."
     documentation: str = "https://docs.langflow.org/dataframe-operations"
     icon = "table"
     name = "DataFrameOperations"
+    metadata = {
+        "keywords": [
+            "dataframe",
+            "dataframe operations",
+            "table",
+            "table operations",
+            "filter",
+            "sort",
+            "merge",
+            "concatenate",
+            "drop column",
+            "rename column",
+            "add column",
+            "select columns",
+            "replace value",
+            "drop duplicates",
+        ],
+    }
 
     OPERATION_CHOICES = [
         "Add Column",
+        "Concatenate",
         "Drop Column",
         "Filter",
         "Head",
+        "Merge",
         "Rename Column",
         "Replace Value",
         "Select Columns",
@@ -30,9 +50,10 @@ class DataFrameOperationsComponent(Component):
     inputs = [
         DataFrameInput(
             name="df",
-            display_name="DataFrame",
-            info="The input DataFrame to operate on.",
+            display_name="Table",
+            info="The input DataFrame to operate on. Connect multiple DataFrames for merge or concatenate operations.",
             required=True,
+            is_list=True,
         ),
         SortableListInput(
             name="operation",
@@ -41,9 +62,11 @@ class DataFrameOperationsComponent(Component):
             info="Select the DataFrame operation to perform.",
             options=[
                 {"name": "Add Column", "icon": "plus"},
+                {"name": "Concatenate", "icon": "combine"},
                 {"name": "Drop Column", "icon": "minus"},
                 {"name": "Filter", "icon": "filter"},
                 {"name": "Head", "icon": "arrow-up"},
+                {"name": "Merge", "icon": "merge"},
                 {"name": "Rename Column", "icon": "pencil"},
                 {"name": "Replace Value", "icon": "replace"},
                 {"name": "Select Columns", "icon": "columns"},
@@ -138,11 +161,43 @@ class DataFrameOperationsComponent(Component):
             dynamic=True,
             show=False,
         ),
+        DataFrameInput(
+            name="left_dataframe",
+            display_name="Left Table",
+            info="The left (primary) DataFrame for merge operations. "
+            "In a left merge, all rows from this table are preserved.",
+            dynamic=True,
+            show=False,
+        ),
+        DataFrameInput(
+            name="right_dataframe",
+            display_name="Right Table",
+            info="The right (secondary) DataFrame for merge operations. "
+            "In a right merge, all rows from this table are preserved.",
+            dynamic=True,
+            show=False,
+        ),
+        StrInput(
+            name="merge_on_column",
+            display_name="Merge On Column",
+            info="The column name to merge DataFrames on. Must exist in both DataFrames.",
+            dynamic=True,
+            show=False,
+        ),
+        DropdownInput(
+            name="merge_how",
+            display_name="Merge Type",
+            options=["inner", "outer", "left", "right"],
+            value="inner",
+            info="Type of merge: inner (intersection), outer (union), left, or right.",
+            dynamic=True,
+            show=False,
+        ),
     ]
 
     outputs = [
         Output(
-            display_name="DataFrame",
+            display_name="Table",
             name="output",
             method="perform_operation",
             info="The resulting DataFrame after the operation.",
@@ -161,6 +216,10 @@ class DataFrameOperationsComponent(Component):
             "num_rows",
             "replace_value",
             "replacement_value",
+            "left_dataframe",
+            "right_dataframe",
+            "merge_on_column",
+            "merge_how",
         ]
         for field in dynamic_fields:
             build_config[field]["show"] = False
@@ -201,18 +260,35 @@ class DataFrameOperationsComponent(Component):
                 build_config["replacement_value"]["show"] = True
             elif operation_name == "Drop Duplicates":
                 build_config["column_name"]["show"] = True
+            elif operation_name == "Merge":
+                build_config["left_dataframe"]["show"] = True
+                build_config["right_dataframe"]["show"] = True
+                build_config["merge_on_column"]["show"] = True
+                build_config["merge_how"]["show"] = True
 
         return build_config
 
-    def perform_operation(self) -> DataFrame:
-        df_copy = self.df.copy()
+    def _get_primary_dataframe(self) -> DataFrame:
+        """Get the first DataFrame from input (handles both single and list inputs)."""
+        if isinstance(self.df, list):
+            return self.df[0].copy() if self.df else DataFrame()
+        return self.df.copy()
 
-        # Handle SortableListInput format for operation
+    def perform_operation(self) -> DataFrame:
+        # Handle SortableListInput format for operation (also supports legacy string format)
         operation_input = getattr(self, "operation", [])
-        if isinstance(operation_input, list) and len(operation_input) > 0:
-            op = operation_input[0].get("name", "")
+        if isinstance(operation_input, list):
+            op = operation_input[0].get("name", "") if operation_input else ""
         else:
-            op = ""
+            op = operation_input or ""
+
+        # Merge and Concatenate use their own inputs, not the primary df
+        if op == "Merge":
+            return self.merge_dataframes()
+        if op == "Concatenate":
+            return self.concatenate_dataframes()
+
+        df_copy = self._get_primary_dataframe()
 
         # If no operation selected, return original DataFrame
         if not op:
@@ -311,3 +387,64 @@ class DataFrameOperationsComponent(Component):
 
     def drop_duplicates(self, df: DataFrame) -> DataFrame:
         return DataFrame(df.drop_duplicates(subset=self.column_name))
+
+    def concatenate_dataframes(self) -> DataFrame:
+        """Concatenate multiple DataFrames vertically (stack rows)."""
+        if not isinstance(self.df, list) or len(self.df) == 0:
+            return self.df.copy() if self.df is not None else DataFrame()
+
+        # If only one DataFrame, return it
+        if len(self.df) == 1:
+            return self.df[0].copy()
+
+        # Concatenate all DataFrames vertically
+        concatenated = pd.concat(self.df, ignore_index=True)
+        return DataFrame(concatenated)
+
+    def merge_dataframes(self) -> DataFrame:
+        """Merge two DataFrames based on a common column (join operation).
+
+        Uses explicit left_dataframe and right_dataframe inputs to give the user
+        deterministic control over which DataFrame is primary (left) and which
+        is secondary (right) in the merge.
+        """
+        left_df = getattr(self, "left_dataframe", None)
+        right_df = getattr(self, "right_dataframe", None)
+
+        if left_df is None:
+            return DataFrame()
+
+        if right_df is None:
+            return left_df.copy()
+
+        df_left = left_df.copy()
+        df_right = right_df.copy()
+
+        merge_on = getattr(self, "merge_on_column", None)
+        merge_how = getattr(self, "merge_how", "inner")
+
+        if merge_on:
+            if merge_on not in df_left.columns:
+                msg = f"Column '{merge_on}' not found in left DataFrame. Available: {list(df_left.columns)}"
+                raise ValueError(msg)
+            if merge_on not in df_right.columns:
+                msg = f"Column '{merge_on}' not found in right DataFrame. Available: {list(df_right.columns)}"
+                raise ValueError(msg)
+
+            merged = df_left.merge(df_right, on=merge_on, how=merge_how, suffixes=("", "_right"))
+        else:
+            merged = df_left.merge(df_right, left_index=True, right_index=True, how=merge_how, suffixes=("", "_right"))
+
+        # Combine duplicate columns: use left value if exists, otherwise right value
+        cols_to_drop = []
+        for col in merged.columns:
+            if col.endswith("_right"):
+                original_col = col[:-6]  # Remove "_right" suffix
+                if original_col in merged.columns:
+                    merged[original_col] = merged[original_col].combine_first(merged[col])
+                    cols_to_drop.append(col)
+
+        if cols_to_drop:
+            merged = merged.drop(columns=cols_to_drop)
+
+        return DataFrame(merged)

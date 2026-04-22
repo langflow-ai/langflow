@@ -10,6 +10,8 @@ export interface ModelProviderInfo {
     metadata: Record<string, any>;
   }>;
   is_enabled: boolean;
+  is_configured?: boolean;
+  api_docs_url?: string;
 }
 
 export interface ModelProviderWithStatus extends ModelProviderInfo {
@@ -28,32 +30,28 @@ export const useGetModelProviders: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getModelProvidersFn = async (): Promise<ModelProviderWithStatus[]> => {
-    try {
-      // Build query params
-      const queryParams = new URLSearchParams();
-      if (params?.includeDeprecated) {
-        queryParams.append("include_deprecated", "true");
-      }
-      if (params?.includeUnsupported) {
-        queryParams.append("include_unsupported", "true");
-      }
-
-      const url = `${getURL("MODELS")}${
-        queryParams.toString() ? `?${queryParams.toString()}` : ""
-      }`;
-
-      // Fetch the models with provider information including is_enabled status from server
-      const response = await api.get<ModelProviderInfo[]>(url);
-      const providersData = response.data;
-
-      return providersData.map((providerInfo) => ({
-        ...providerInfo,
-        icon: getProviderIcon(providerInfo.provider),
-      }));
-    } catch (error) {
-      console.error("Error fetching model providers:", error);
-      return [];
+    // Build query params
+    const queryParams = new URLSearchParams();
+    if (params?.includeDeprecated) {
+      queryParams.append("include_deprecated", "true");
     }
+    if (params?.includeUnsupported) {
+      queryParams.append("include_unsupported", "true");
+    }
+
+    const url = `${getURL("MODELS")}${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+
+    // Fetch the models with provider information including is_enabled status from server
+    // Let errors propagate so React Query can retry and preserve stale data
+    const response = await api.get<ModelProviderInfo[]>(url);
+    const providersData = response.data;
+
+    return providersData.map((providerInfo) => ({
+      ...providerInfo,
+      icon: getProviderIcon(providerInfo.provider),
+    }));
   };
 
   const queryResult = query(
@@ -78,7 +76,7 @@ const getProviderIcon = (providerName: string): string => {
   const iconMap: Record<string, string> = {
     OpenAI: "OpenAI",
     Anthropic: "Anthropic",
-    "Google Generative AI": "Google",
+    "Google Generative AI": "GoogleGenerativeAI",
     Groq: "Groq",
     "Amazon Bedrock": "Bedrock",
     NVIDIA: "NVIDIA",
@@ -86,6 +84,8 @@ const getProviderIcon = (providerName: string): string => {
     "Azure OpenAI": "AzureOpenAI",
     SambaNova: "SambaNova",
     Ollama: "Ollama",
+    "IBM WatsonX": "IBM",
+    "IBM watsonx.ai": "IBM",
   };
 
   return iconMap[providerName] || "Bot";

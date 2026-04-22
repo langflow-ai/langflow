@@ -4,11 +4,13 @@ import type {
   SelectionChangedEvent,
   ValueFormatterParams,
 } from "ag-grid-community";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import Dropdown from "@/components/core/dropdownComponent";
 import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVariableModal";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
@@ -22,6 +24,7 @@ import { Button } from "../../../../components/ui/button";
 import useAlertStore from "../../../../stores/alertStore";
 
 export default function GlobalVariablesPage() {
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openModal, setOpenModal] = useState(false);
   const initialData = useRef<GlobalVariable | undefined>(undefined);
@@ -47,12 +50,12 @@ export default function GlobalVariablesPage() {
   // Column Definitions: Defines the columns to be displayed.
   const colDefs: ColDef[] = [
     {
-      headerName: "Variable Name",
+      headerName: t("globalVars.columnVariableName"),
       field: "name",
       flex: 2,
     }, //This column will be twice as wide as the others
     {
-      headerName: "Type",
+      headerName: t("globalVars.columnType"),
       field: "type",
       cellRenderer: BadgeRenderer,
       cellEditor: DropdownEditor,
@@ -73,7 +76,7 @@ export default function GlobalVariablesPage() {
       },
     },
     {
-      headerName: "Apply To Fields",
+      headerName: t("globalVars.columnApplyToFields"),
       field: "default_fields",
       valueFormatter: (params) => {
         return params.value?.join(", ") ?? "";
@@ -88,6 +91,61 @@ export default function GlobalVariablesPage() {
   const { data: globalVariables } = useGetGlobalVariables();
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
 
+  // Get list of provider variable names to identify provider credentials
+  const providerVariableNames = useMemo(
+    () => new Set(Object.values(PROVIDER_VARIABLE_MAPPING)),
+    [],
+  );
+
+  // Filter out invalid provider credentials
+  const validGlobalVariables = useMemo(() => {
+    if (!globalVariables) return [];
+
+    return globalVariables.filter((variable) => {
+      // Check if this is a provider credential variable
+      const isProviderCredential =
+        variable.type === "Credential" &&
+        providerVariableNames.has(variable.name);
+
+      if (isProviderCredential) {
+        // If validation failed (is_valid === false), filter it out
+        if (variable.is_valid === false) {
+          return false; // Filter out invalid provider credentials
+        }
+      }
+
+      return true; // Keep all other variables and valid provider credentials
+    });
+  }, [globalVariables, providerVariableNames]);
+
+  // Show validation errors for invalid provider credentials (only once when detected)
+  useEffect(() => {
+    if (!globalVariables) return;
+
+    const invalidProviderVars = globalVariables.filter(
+      (variable) =>
+        variable.type === "Credential" &&
+        providerVariableNames.has(variable.name) &&
+        variable.is_valid === false,
+    );
+
+    if (invalidProviderVars.length > 0) {
+      const errorMessages = invalidProviderVars.map(
+        (variable) =>
+          `${variable.name}: ${variable.validation_error || "Invalid API key"}`,
+      );
+      setErrorData({
+        title: t("globalVars.invalidCredentialsTitle"),
+        list: [
+          t("globalVars.invalidCredentialsHidden", {
+            count: invalidProviderVars.length,
+          }),
+          ...errorMessages,
+        ],
+      });
+    }
+  }, [globalVariables, providerVariableNames, setErrorData]);
+
   async function removeVariables() {
     selectedRows.map(async (row) => {
       const id = globalVariables?.find((variable) => variable.name === row)?.id;
@@ -96,8 +154,8 @@ export default function GlobalVariablesPage() {
         {
           onError: () => {
             setErrorData({
-              title: `Error deleting variable`,
-              list: [`ID not found for variable: ${row}`],
+              title: t("globalVars.errorDeletingVariable"),
+              list: [t("globalVars.errorIdNotFound", { name: row })],
             });
           },
         },
@@ -118,21 +176,21 @@ export default function GlobalVariablesPage() {
             className="flex items-center text-lg font-semibold tracking-tight"
             data-testid="settings_menu_header"
           >
-            Global Variables
+            {t("globalVars.pageTitle")}
             <ForwardedIconComponent
               name="Globe"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Manage global variables and assign them to fields.
+            {t("globalVars.pageDescription")}
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
           <GlobalVariableModal asChild>
             <Button data-testid="api-key-button-store" variant="primary">
               <IconComponent name="Plus" className="w-4" />
-              Add New
+              {t("globalVars.addNew")}
             </Button>
           </GlobalVariableModal>
         </div>
@@ -141,7 +199,7 @@ export default function GlobalVariablesPage() {
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
           key={"globalVariables"}
-          overlayNoRowsTemplate="No data available"
+          overlayNoRowsTemplate={t("globalVars.noDataAvailable")}
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
           }}
@@ -150,7 +208,7 @@ export default function GlobalVariablesPage() {
           suppressRowClickSelection={true}
           pagination={true}
           columnDefs={colDefs}
-          rowData={globalVariables ?? []}
+          rowData={validGlobalVariables ?? []}
           onDelete={removeVariables}
         />
         {initialData.current && (

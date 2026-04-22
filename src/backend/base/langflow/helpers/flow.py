@@ -396,7 +396,7 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
     ]
 
 
-async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> FlowRead | None:
+async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> FlowRead:
     async with session_scope() as session:
         endpoint_name = None
         try:
@@ -454,7 +454,7 @@ def json_schema_from_flow(flow: Flow) -> dict:
         template = node_data["template"]
 
         for field_name, field_data in template.items():
-            if field_data != "Component" and field_data.get("show", False) and not field_data.get("advanced", False):
+            if isinstance(field_data, dict) and field_data.get("show", False) and not field_data.get("advanced", False):
                 field_type = field_data.get("type", "string")
                 properties[field_name] = {
                     "type": field_type,

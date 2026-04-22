@@ -74,7 +74,7 @@ describe("ModelSelection", () => {
       render(<ModelSelection {...defaultProps} />);
 
       expect(screen.getByTestId("llm-models-section")).toBeInTheDocument();
-      expect(screen.getByText("LLM Models")).toBeInTheDocument();
+      expect(screen.getByText("Language Models")).toBeInTheDocument();
     });
 
     it("should render Embeddings section when modelType is all", () => {
@@ -147,6 +147,29 @@ describe("ModelSelection", () => {
 
       expect(onModelToggle).toHaveBeenCalledWith("gpt-4", expect.any(Boolean));
     });
+
+    it("should not bubble toggle clicks to parent containers", async () => {
+      const onModelToggle = jest.fn();
+      const onParentClick = jest.fn();
+      const user = userEvent.setup();
+
+      render(
+        <div onClick={onParentClick}>
+          <ModelSelection {...defaultProps} onModelToggle={onModelToggle} />
+        </div>,
+      );
+
+      const toggle = screen.getByTestId(
+        "embeddings-toggle-text-embedding-ada-002",
+      );
+      await user.click(toggle);
+
+      expect(onModelToggle).toHaveBeenCalledWith(
+        "text-embedding-ada-002",
+        expect.any(Boolean),
+      );
+      expect(onParentClick).not.toHaveBeenCalled();
+    });
   });
 
   describe("Empty States", () => {
@@ -171,6 +194,25 @@ describe("ModelSelection", () => {
       expect(
         screen.queryByTestId("embeddings-models-section"),
       ).not.toBeInTheDocument();
+    });
+
+    it("should show empty state message for Ollama when no models are available", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          providerName="Ollama"
+          availableModels={[]}
+          isEnabledModel={true}
+        />,
+      );
+
+      expect(screen.getByText("No models available")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /models installed for Ollama. Please pull the models you want to use./i,
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Check Ollama Library")).toBeInTheDocument();
     });
   });
 });

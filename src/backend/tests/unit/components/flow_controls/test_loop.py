@@ -12,10 +12,7 @@ from lfx.components.input_output import ChatOutput
 from lfx.components.llm_operations import StructuredOutputComponent
 from lfx.components.models_and_agents import PromptComponent
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent
-from lfx.components.processing import (
-    ParserComponent,
-    SplitTextComponent,
-)
+from lfx.components.processing import ParserComponent, SplitTextComponent
 from lfx.graph import Graph
 from lfx.schema.data import Data
 
@@ -248,3 +245,377 @@ async def test_loop_flow():
     results = [result async for result in flow.async_start()]
     result_order = [result.vertex.id.split("-")[0] for result in results if hasattr(result, "vertex")]
     assert result_order == expected_execution_order
+
+
+class TestLoopComponentSubgraphExecution:
+    """Tests for the new subgraph-based loop execution implementation."""
+
+    def test_loop_component_initialization(self):
+        """Test that LoopComponent initializes correctly with data."""
+        from lfx.schema.dataframe import DataFrame
+
+        data_list = [Data(text="item1"), Data(text="item2"), Data(text="item3")]
+        loop = LoopComponent()
+        loop.set(data=DataFrame(data_list))
+
+        assert hasattr(loop, "initialize_data")
+        assert hasattr(loop, "get_loop_body_vertices")
+
+    def test_validate_data_with_dataframe(self):
+        """Test that _validate_data correctly handles DataFrame input."""
+        from lfx.schema.dataframe import DataFrame
+
+        data_list = [Data(text="item1"), Data(text="item2")]
+        df = DataFrame(data_list)
+
+        loop = LoopComponent()
+        validated = loop._validate_data(df)
+
+        assert isinstance(validated, list)
+        assert len(validated) == 2
+        assert all(isinstance(item, Data) for item in validated)
+
+    def test_validate_data_with_single_data(self):
+        """Test that _validate_data correctly handles single Data input."""
+        single_data = Data(text="single item")
+
+        loop = LoopComponent()
+        validated = loop._validate_data(single_data)
+
+        assert isinstance(validated, list)
+        assert len(validated) == 1
+        assert validated[0] == single_data
+
+    def test_validate_data_with_list(self):
+        """Test that _validate_data correctly handles list of Data input."""
+        data_list = [Data(text="item1"), Data(text="item2")]
+
+        loop = LoopComponent()
+        validated = loop._validate_data(data_list)
+
+        assert isinstance(validated, list)
+        assert len(validated) == 2
+        assert validated == data_list
+
+    def test_validate_data_with_invalid_input(self):
+        """Test that _validate_data raises TypeError for invalid input."""
+        loop = LoopComponent()
+
+        with pytest.raises(TypeError, match="must be a DataFrame"):
+            loop._validate_data("invalid input")
+
+        with pytest.raises(TypeError, match="must be a DataFrame"):
+            loop._validate_data([1, 2, 3])
+
+    def test_get_loop_body_vertices_without_vertex(self):
+        """Test that get_loop_body_vertices returns empty set when no vertex context."""
+        loop = LoopComponent()
+
+        # Without _vertex attribute, should return empty set
+        result = loop.get_loop_body_vertices()
+
+        assert result == set()
+
+    def test_get_loop_body_start_vertex_without_vertex(self):
+        """Test that _get_loop_body_start_vertex returns None when no vertex context."""
+        loop = LoopComponent()
+
+        # Without _vertex attribute, should return None
+        result = loop._get_loop_body_start_vertex()
+
+        assert result is None
+
+    def test_extract_loop_output_with_empty_results(self):
+        """Test that _extract_loop_output handles empty results."""
+        from unittest.mock import patch
+
+        loop = LoopComponent()
+
+        # Mock get_incoming_edge_by_target_param to return None
+        with patch.object(loop, "get_incoming_edge_by_target_param", return_value=None):
+            result = loop._extract_loop_output([])
+
+            assert isinstance(result, Data)
+            assert result.text == ""
+
+    def test_component_has_subgraph_methods(self):
+        """Test that LoopComponent has the new subgraph execution methods."""
+        loop = LoopComponent()
+
+        # Check that new methods exist
+        assert hasattr(loop, "get_loop_body_vertices")
+        assert hasattr(loop, "execute_loop_body")
+        assert hasattr(loop, "_get_loop_body_start_vertex")
+        assert hasattr(loop, "_extract_loop_output")
+
+        # Check that methods are callable
+        assert callable(loop.get_loop_body_vertices)
+        assert callable(loop.execute_loop_body)
+        assert callable(loop._get_loop_body_start_vertex)
+        assert callable(loop._extract_loop_output)
+
+    async def test_event_manager_passed_to_subgraph(self):
+        """Test that event_manager is properly passed to subgraph execution."""
+        from contextlib import asynccontextmanager
+        from unittest.mock import MagicMock, patch
+
+        from lfx.schema.dataframe import DataFrame
+
+        # Create a mock event manager
+        mock_event_manager = MagicMock()
+
+        # Create loop component with data
+        loop = LoopComponent()
+        data_list = [Data(text="item1"), Data(text="item2")]
+        loop.set(data=DataFrame(data_list))
+        loop._id = "test_loop"
+
+        # Mock the graph and vertex to simulate proper context
+        mock_graph = MagicMock()
+        mock_vertex = MagicMock()
+        mock_vertex.outgoing_edges = []
+        loop._vertex = mock_vertex
+        loop._graph = mock_graph
+
+        # Mock get_loop_body_vertices to return empty set (no loop body)
+        with patch.object(loop, "get_loop_body_vertices", return_value=set()):
+            result = await loop.execute_loop_body(data_list, event_manager=mock_event_manager)
+
+            # Should return empty list when no loop body vertices
+            assert result == []
+
+        # Now test with actual loop body vertices
+        # Track whether event_manager was passed correctly
+        event_manager_received = []
+
+        # Create an async generator that yields mock results
+        async def mock_async_start(event_manager=None):
+            event_manager_received.append(event_manager)
+            yield MagicMock(valid=True, result_dict={"outputs": {}})
+
+        mock_subgraph = MagicMock()
+        mock_subgraph.prepare = MagicMock()
+        mock_subgraph.async_start = mock_async_start
+        mock_subgraph._vertices = []  # Empty list for iteration
+        mock_subgraph.get_vertex = MagicMock(return_value=MagicMock(update_raw_params=MagicMock()))
+
+        # Create async context manager for create_subgraph
+        @asynccontextmanager
+        async def mock_create_subgraph(vertex_ids):  # noqa: ARG001
+            yield mock_subgraph
+
+        with (
+            patch.object(loop, "get_loop_body_vertices", return_value={"vertex1"}),
+            patch.object(loop, "_get_loop_body_start_vertex", return_value="vertex1"),
+            patch.object(loop.graph, "create_subgraph", mock_create_subgraph),
+        ):
+            result = await loop.execute_loop_body(data_list, event_manager=mock_event_manager)
+
+            # Should have processed all items (one call per item)
+            assert len(event_manager_received) == 2
+            # Verify event_manager was passed correctly to each iteration
+            assert all(em is mock_event_manager for em in event_manager_received)
+
+    async def test_done_output_passes_event_manager(self):
+        """Test that done_output properly passes event_manager to execute_loop_body."""
+        from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+
+        from lfx.schema.dataframe import DataFrame
+
+        # Create a mock event manager
+        mock_event_manager = MagicMock()
+
+        # Create loop component
+        loop = LoopComponent()
+        data_list = [Data(text="item1")]
+        loop.set(data=DataFrame(data_list))
+        loop._id = "test_loop"
+        # Set the event manager as an instance attribute (this is how it's accessed in done_output)
+        loop._event_manager = mock_event_manager
+
+        # Mock execute_loop_body to return expected data
+        mock_execute = AsyncMock(return_value=[Data(text="result")])
+
+        # Mock initialize_data to set up the context with data
+        def mock_initialize_data():
+            # Simulate what initialize_data does - set up context with data
+            pass
+
+        # Create a mock context that returns data_list when get is called
+        mock_ctx = MagicMock()
+        mock_ctx.get = MagicMock(
+            side_effect=lambda key, default=None: data_list if key == f"{loop._id}_data" else default
+        )
+
+        with (
+            patch.object(loop, "execute_loop_body", mock_execute),
+            patch.object(loop, "initialize_data", mock_initialize_data),
+            patch.object(type(loop), "ctx", new_callable=PropertyMock, return_value=mock_ctx),
+        ):
+            result = await loop.done_output()
+
+            # Verify execute_loop_body was called with the event_manager
+            mock_execute.assert_called_once()
+            call_args = mock_execute.call_args
+
+            # Check that event_manager was passed as keyword argument
+            assert "event_manager" in call_args.kwargs
+            assert call_args.kwargs["event_manager"] is mock_event_manager
+            assert isinstance(result, DataFrame)
+
+    def test_get_loop_body_vertices_simple_loop(self):
+        """Test get_loop_body_vertices with a simple loop structure."""
+        from unittest.mock import MagicMock, PropertyMock, patch
+
+        # Create loop component
+        loop = LoopComponent()
+
+        # Mock the vertex and graph structure for a simple loop:
+        # Loop -> ComponentA -> ComponentB -> back to Loop
+        mock_vertex = MagicMock()
+        mock_edge = MagicMock()
+        mock_edge.source_handle.name = "item"
+        mock_edge.target_id = "component_a"
+        mock_vertex.outgoing_edges = [mock_edge]
+
+        mock_graph = MagicMock()
+        mock_graph.successor_map = {"component_a": ["component_b"], "component_b": ["loop_end"], "loop_end": []}
+
+        loop._vertex = mock_vertex
+
+        # Mock get_incoming_edge_by_target_param to return the end vertex
+        with (
+            patch.object(loop, "get_incoming_edge_by_target_param", return_value="loop_end"),
+            patch.object(type(loop), "graph", new_callable=PropertyMock, return_value=mock_graph),
+        ):
+            result = loop.get_loop_body_vertices()
+
+            # Should include all vertices in the loop body
+            assert "component_a" in result
+            assert "component_b" in result
+            assert "loop_end" in result
+            assert len(result) == 3
+
+    def test_get_loop_body_vertices_complex_loop(self):
+        """Test get_loop_body_vertices with a complex loop structure with branches."""
+        from unittest.mock import MagicMock, PropertyMock, patch
+
+        # Create loop component
+        loop = LoopComponent()
+
+        # Mock a complex loop structure:
+        # Loop -> A -> B -> D -> End
+        #           -> C -> D
+        mock_vertex = MagicMock()
+        mock_edge = MagicMock()
+        mock_edge.source_handle.name = "item"
+        mock_edge.target_id = "component_a"
+        mock_vertex.outgoing_edges = [mock_edge]
+
+        mock_graph = MagicMock()
+        mock_graph.successor_map = {
+            "component_a": ["component_b", "component_c"],
+            "component_b": ["component_d"],
+            "component_c": ["component_d"],
+            "component_d": ["loop_end"],
+            "loop_end": [],
+        }
+
+        loop._vertex = mock_vertex
+
+        # Mock get_incoming_edge_by_target_param to return the end vertex
+        with (
+            patch.object(loop, "get_incoming_edge_by_target_param", return_value="loop_end"),
+            patch.object(type(loop), "graph", new_callable=PropertyMock, return_value=mock_graph),
+        ):
+            result = loop.get_loop_body_vertices()
+
+            # Should include all vertices in the loop body including branches
+            assert "component_a" in result
+            assert "component_b" in result
+            assert "component_c" in result
+            assert "component_d" in result
+            assert "loop_end" in result
+            assert len(result) == 5
+
+    def test_get_loop_body_vertices_no_outgoing_edges(self):
+        """Test get_loop_body_vertices when loop has no outgoing edges."""
+        from unittest.mock import MagicMock
+
+        # Create loop component
+        loop = LoopComponent()
+
+        # Mock vertex with no outgoing edges
+        mock_vertex = MagicMock()
+        mock_vertex.outgoing_edges = []
+
+        loop._vertex = mock_vertex
+
+        result = loop.get_loop_body_vertices()
+
+        # Should return empty set
+        assert result == set()
+
+    def test_get_loop_body_vertices_no_end_vertex(self):
+        """Test get_loop_body_vertices when there's no vertex feeding back to item input."""
+        from unittest.mock import MagicMock, patch
+
+        # Create loop component
+        loop = LoopComponent()
+
+        # Mock vertex with outgoing edges
+        mock_vertex = MagicMock()
+        mock_edge = MagicMock()
+        mock_edge.source_handle.name = "item"
+        mock_edge.target_id = "component_a"
+        mock_vertex.outgoing_edges = [mock_edge]
+
+        loop._vertex = mock_vertex
+
+        # Mock get_incoming_edge_by_target_param to return None (no end vertex)
+        with patch.object(loop, "get_incoming_edge_by_target_param", return_value=None):
+            result = loop.get_loop_body_vertices()
+
+            # Should return empty set
+            assert result == set()
+
+    def test_get_loop_body_vertices_with_cycle(self):
+        """Test get_loop_body_vertices with a cycle in the loop body."""
+        from unittest.mock import MagicMock, PropertyMock, patch
+
+        # Create loop component
+        loop = LoopComponent()
+
+        # Mock a loop structure with internal cycle:
+        # Loop -> A -> B -> C -> B (cycle) -> D -> End
+        mock_vertex = MagicMock()
+        mock_edge = MagicMock()
+        mock_edge.source_handle.name = "item"
+        mock_edge.target_id = "component_a"
+        mock_vertex.outgoing_edges = [mock_edge]
+
+        mock_graph = MagicMock()
+        mock_graph.successor_map = {
+            "component_a": ["component_b"],
+            "component_b": ["component_c"],
+            "component_c": ["component_b", "component_d"],  # Cycle back to B
+            "component_d": ["loop_end"],
+            "loop_end": [],
+        }
+
+        loop._vertex = mock_vertex
+
+        # Mock get_incoming_edge_by_target_param to return the end vertex
+        with (
+            patch.object(loop, "get_incoming_edge_by_target_param", return_value="loop_end"),
+            patch.object(type(loop), "graph", new_callable=PropertyMock, return_value=mock_graph),
+        ):
+            result = loop.get_loop_body_vertices()
+
+            # Should handle cycle correctly and include all vertices
+            assert "component_a" in result
+            assert "component_b" in result
+            assert "component_c" in result
+            assert "component_d" in result
+            assert "loop_end" in result
+            assert len(result) == 5

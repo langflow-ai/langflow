@@ -15,9 +15,11 @@ Strategies to reduce mocking:
 
 import json
 from io import StringIO
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from lfx.interface.components import component_cache
 from lfx.run.base import RunError, output_error, run_flow
 
 
@@ -178,7 +180,7 @@ class TestRunFlowJsonInput:
             mock_graph.edges = []
             mock_graph.prepare = MagicMock()
 
-            async def mock_async_start(_inputs):
+            async def mock_async_start(_inputs, **_kwargs):
                 yield
 
             mock_graph.async_start = mock_async_start
@@ -191,6 +193,50 @@ class TestRunFlowJsonInput:
             # The function should have loaded from JSON successfully
             mock_load.assert_called_once()
             assert result["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_custom_component_validation_errors_surface_as_run_error(self):
+        blocked_flow = json.dumps(
+            {
+                "data": {
+                    "nodes": [
+                        {
+                            "id": "node-1",
+                            "data": {
+                                "id": "node-1",
+                                "type": "TotallyCustom",
+                                "node": {
+                                    "display_name": "Blocked Node",
+                                    "template": {
+                                        "code": {"value": "print('blocked')"},
+                                    },
+                                },
+                            },
+                        }
+                    ],
+                    "edges": [],
+                }
+            }
+        )
+
+        settings_service = SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False))
+
+        with (
+            patch(
+                "lfx.services.deps.get_settings_service",
+                return_value=settings_service,
+            ),
+            patch(
+                "lfx.utils.flow_validation.ensure_component_hash_lookups_loaded",
+                new=AsyncMock(return_value={"ChatInput": {"knownhash1234"}}),
+            ),
+            patch.object(component_cache, "type_to_current_hash", {"ChatInput": {"knownhash1234"}}),
+            pytest.raises(
+                RunError,
+                match="custom components are not allowed",
+            ),
+        ):
+            await run_flow(flow_json=blocked_flow)
 
 
 class TestRunFlowStdinInput:
@@ -266,7 +312,7 @@ class TestRunFlowGlobalVariables:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -307,7 +353,7 @@ graph = Graph(chat_input, chat_output)
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -348,7 +394,7 @@ class TestRunFlowOutputFormats:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -461,7 +507,7 @@ class TestRunFlowTiming:
         mock_result.vertex.display_name = "TestComponent"
         mock_result.vertex.id = "test-id-123"
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield mock_result
 
         mock_graph.async_start = mock_async_start
@@ -656,7 +702,7 @@ class TestRunFlowVariableValidation:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -692,7 +738,7 @@ class TestRunFlowInputValueHandling:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -730,7 +776,7 @@ class TestRunFlowInputValueHandling:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -787,7 +833,7 @@ class TestRunFlowJsonFileExecution:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -887,7 +933,7 @@ class TestRunFlowExecutionErrors:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def failing_async_start(_inputs):
+        async def failing_async_start(_inputs, **_kwargs):
             msg = "Execution failed"
             raise ValueError(msg)
             yield  # Required to make it an async generator

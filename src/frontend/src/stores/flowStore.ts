@@ -9,9 +9,11 @@ import {
 import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
-import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
-import { BROKEN_EDGES_WARNING } from "@/constants/constants";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import i18n from "../i18n";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_INSPECTION_PANEL,
+} from "@/customization/feature-flags";
 import {
   track,
   trackDataLoaded,
@@ -37,6 +39,7 @@ import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
   buildPositionDictionary,
   checkChatInput,
+  checkWebhookInput,
   cleanEdges,
   getConnectedSubgraph,
   getHandleId,
@@ -53,8 +56,61 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
+import { filterSingletonComponent } from "./helpers/filter-singleton-component";
 import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
+import { useUtilityStore } from "./utilityStore";
+
+// Tracks in-progress node update operations (e.g. validateComponentCode calls).
+// buildFlow awaits these so "Run" doesn't race against a pending "Update".
+const pendingNodeUpdates = new Map<
+  string,
+  { promise: Promise<void>; resolve: () => void }
+>();
+
+export function registerNodeUpdate(nodeId: string): void {
+  // If there's already a pending update for this node, leave it
+  if (pendingNodeUpdates.has(nodeId)) return;
+  let resolveRef: () => void;
+  const promise = new Promise<void>((r) => {
+    resolveRef = r;
+  });
+  pendingNodeUpdates.set(nodeId, { promise, resolve: resolveRef! });
+}
+
+export function completeNodeUpdate(nodeId: string): void {
+  const entry = pendingNodeUpdates.get(nodeId);
+  if (entry) {
+    entry.resolve();
+    pendingNodeUpdates.delete(nodeId);
+  }
+}
+
+export async function waitForNodeUpdates(
+  timeoutMs: number = 10_000,
+): Promise<void> {
+  if (pendingNodeUpdates.size === 0) return;
+  const pendingIds = Array.from(pendingNodeUpdates.keys());
+  const promises = Array.from(pendingNodeUpdates.values()).map(
+    (e) => e.promise,
+  );
+  let timedOut = false;
+  await Promise.race([
+    Promise.all(promises),
+    new Promise<void>((resolve) =>
+      setTimeout(() => {
+        timedOut = true;
+        resolve();
+      }, timeoutMs),
+    ),
+  ]);
+  if (timedOut) {
+    console.warn(
+      `waitForNodeUpdates timed out after ${timeoutMs}ms. ` +
+        `${pendingNodeUpdates.size} updates still pending: ${pendingIds.join(", ")}`,
+    );
+  }
+}
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
@@ -90,15 +146,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateComponentsToUpdate: (nodes) => {
     const outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
+    const allowCustomComponents =
+      useUtilityStore.getState().allowCustomComponents;
     nodes.forEach((node) => {
       if (node.type === "genericNode") {
-        const codeValidity = checkCodeValidity(node.data, templates);
-        if (codeValidity && codeValidity.outdated)
+        const codeValidity = checkCodeValidity(
+          node.data,
+          templates,
+          allowCustomComponents,
+        );
+        if (codeValidity && (codeValidity.outdated || codeValidity.blocked))
           outdatedNodes.push({
             id: node.id,
             icon: node.data.node?.icon,
             display_name: node.data.node?.display_name,
             outdated: codeValidity.outdated,
+            blocked: codeValidity.blocked,
             breakingChange: codeValidity.breakingChange,
             userEdited: codeValidity.userEdited,
           });
@@ -113,6 +176,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilding: false,
+  buildStartTime: null,
+  buildDuration: null,
+  buildingFlowId: null,
+  buildingSessionId: null,
   stopBuilding: () => {
     get().buildController.abort();
     get().updateEdgesRunningByNodes(
@@ -165,12 +232,58 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => {
-    const newFlowPool = cloneDeep({ ...get().flowPool });
-    if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
-    else {
-      newFlowPool[nodeId].push(data);
-    }
+    const prevPool = get().flowPool;
+    const prevEntries = prevPool[nodeId];
+    const newFlowPool = {
+      ...prevPool,
+      [nodeId]: prevEntries ? [...prevEntries, data] : [data],
+    };
     get().setFlowPool(newFlowPool);
+  },
+  appendLogToFlowPool: (
+    nodeId: string,
+    outputName: string,
+    log: LogsLogType,
+  ) => {
+    const prevPool = get().flowPool;
+    const prevEntries = prevPool[nodeId];
+    if (!prevEntries || prevEntries.length === 0) {
+      const newEntry: VertexBuildTypeAPI = {
+        id: nodeId,
+        inactivated_vertices: null,
+        next_vertices_ids: [],
+        top_level_vertices: [],
+        valid: true,
+        data: {
+          results: {},
+          outputs: {},
+          logs: { [outputName]: [log] },
+          messages: [],
+        },
+        timestamp: new Date().toISOString(),
+        params: null,
+        messages: [],
+        artifacts: null,
+      };
+      get().setFlowPool({ ...prevPool, [nodeId]: [newEntry] });
+    } else {
+      const latest = prevEntries[prevEntries.length - 1];
+      const existingLogs: LogsLogType[] = latest.data.logs[outputName] ?? [];
+      const updatedEntry: VertexBuildTypeAPI = {
+        ...latest,
+        data: {
+          ...latest.data,
+          logs: {
+            ...latest.data.logs,
+            [outputName]: [...existingLogs, log],
+          },
+        },
+      };
+      get().setFlowPool({
+        ...prevPool,
+        [nodeId]: [...prevEntries.slice(0, -1), updatedEntry],
+      });
+    }
   },
   getNodePosition: (nodeId: string) => {
     const node = get().nodes.find((node) => node.id === nodeId);
@@ -215,7 +328,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     if (brokenEdges.length > 0) {
       useAlertStore.getState().setErrorData({
-        title: BROKEN_EDGES_WARNING,
+        title: i18n.t("flow.brokenEdgesWarning"),
         list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
       });
     }
@@ -248,7 +361,27 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   setIsBuilding: (isBuilding) => {
-    set({ isBuilding });
+    const current = get();
+    set({
+      isBuilding,
+      // Reset buildStartTime and buildDuration when a new build begins
+      buildStartTime:
+        isBuilding && !current.isBuilding ? null : current.buildStartTime,
+      buildDuration:
+        isBuilding && !current.isBuilding ? null : current.buildDuration,
+      // Clear building session when build ends
+      buildingFlowId: !isBuilding ? null : current.buildingFlowId,
+      buildingSessionId: !isBuilding ? null : current.buildingSessionId,
+    });
+  },
+  setBuildStartTime: (time) => {
+    set({ buildStartTime: time });
+  },
+  setBuildDuration: (duration) => {
+    set({ buildDuration: duration });
+  },
+  setBuildingSession: (flowId, sessionId) => {
+    set({ buildingFlowId: flowId, buildingSessionId: sessionId });
   },
   setFlowState: (flowState) => {
     const newFlowState =
@@ -420,22 +553,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       selection.edges = selection.edges.concat(existingEdgesToCopy);
     }
 
-    if (
-      selection.nodes.some((node) => node.data.type === "ChatInput") &&
-      checkChatInput(get().nodes)
-    ) {
-      useAlertStore.getState().setNoticeData({
-        title: "You can only have one Chat Input component in a flow.",
-      });
-      selection.nodes = selection.nodes.filter(
-        (node) => node.data.type !== "ChatInput",
-      );
-      selection.edges = selection.edges.filter(
-        (edge) =>
-          selection.nodes.some((node) => edge.source === node.id) &&
-          selection.nodes.some((node) => edge.target === node.id),
-      );
-    }
+    filterSingletonComponent(
+      selection,
+      "ChatInput",
+      checkChatInput(get().nodes),
+      "You can only have one Chat Input component in a flow.",
+    );
+
+    filterSingletonComponent(
+      selection,
+      "Webhook",
+      checkWebhookInput(get().nodes),
+      "You can only have one Webhook component in a flow.",
+    );
 
     let minimumX = Infinity;
     let minimumY = Infinity;
@@ -486,6 +616,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           ...cloneDeep(node.data),
           id: newId,
         },
+        // Preserve width and height for noteNodes (sticky notes)
+        ...(node.width !== undefined && { width: node.width }),
+        ...(node.height !== undefined && { height: node.height }),
       } as AllNodeType;
 
       updateGroupRecursion(
@@ -729,7 +862,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     errors = errors.concat(errorsObjs.flatMap((obj) => obj.errors));
     if (errors.length > 0) {
       setErrorData({
-        title: MISSED_ERROR_ALERT,
+        title: i18n.t("errors.missedFields"),
         list: errors,
       });
       const ids = errorsObjs.flatMap((obj) => obj.id);
@@ -737,6 +870,56 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       get().setIsBuilding(false);
       throw new Error("Invalid components");
+    }
+
+    // Wait for any in-progress component updates (e.g. user clicked "Update"
+    // then immediately clicked "Run") before checking outdated state.
+    await waitForNodeUpdates();
+
+    // Block build when custom components are disabled and there are outdated components
+    // Recalculate from current nodes to avoid stale componentsToUpdate
+    // (setNode does not trigger updateComponentsToUpdate, only setNodes does)
+    get().updateComponentsToUpdate(get().nodes);
+    const allowCustomComponents =
+      useUtilityStore.getState().allowCustomComponents;
+    if (!allowCustomComponents && get().componentsToUpdate.length > 0) {
+      const blockedComponents = get().componentsToUpdate.filter(
+        (component) => component.blocked,
+      );
+      const outdatedComponents = get().componentsToUpdate.filter(
+        (component) => component.outdated,
+      );
+      const errorList: string[] = [];
+
+      if (blockedComponents.length > 0) {
+        errorList.push(
+          `The following custom components cannot run while custom components are disabled: ${blockedComponents
+            .map((component) => component.display_name ?? component.id)
+            .join(", ")}`,
+        );
+      }
+
+      if (outdatedComponents.length > 0) {
+        errorList.push(
+          `The following components are outdated and must be updated: ${outdatedComponents
+            .map((component) => component.display_name ?? component.id)
+            .join(", ")}`,
+        );
+      }
+
+      setErrorData({
+        title:
+          blockedComponents.length > 0
+            ? "Custom components are blocked while custom components are disabled"
+            : "Outdated components must be updated before building",
+        list: errorList,
+      });
+      get().setIsBuilding(false);
+      throw new Error(
+        blockedComponents.length > 0
+          ? "Custom components are blocked while custom components are disabled"
+          : "Outdated components must be updated",
+      );
     }
 
     function validateSubgraph() {}
@@ -872,10 +1055,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             ?.map((element) => element.id)
             .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
-        if (get().componentsToUpdate.length > 0)
+        const isCustomComponentBlocked = list.some((msg) =>
+          msg.toLowerCase().includes("custom components are not allowed"),
+        );
+        if (!isCustomComponentBlocked && get().componentsToUpdate.length > 0)
           setErrorData({
             title:
-              "There are outdated components in the flow. The error could be related to them.",
+              "There are blocked or outdated components in the flow. The error could be related to them.",
           });
         get().updateEdgesRunningByNodes(
           get().nodes.map((n) => n.id),
@@ -960,6 +1146,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       set({ edges: newEdges });
       resolve();
     });
+  },
+  clearAndSetEdgesRunning: (nextIds?: string[]) => {
+    const edges = get().edges;
+    const stopNodeId = get().stopNodeId;
+    const nextIdSet = nextIds ? new Set(nextIds) : null;
+
+    const newEdges = edges.map((edge) => {
+      const sourceId = edge.data?.sourceHandle?.id ?? "";
+      if (nextIdSet && nextIdSet.has(sourceId) && sourceId !== stopNodeId) {
+        return { ...edge, animated: true, className: "running" };
+      }
+      return { ...edge, animated: false, className: "" };
+    });
+    set({ edges: newEdges });
   },
   updateVerticesBuild: (
     vertices: {
@@ -1114,6 +1314,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setHelperLineEnabled: (helperLineEnabled: boolean) => {
     set({ helperLineEnabled });
   },
+  inspectionPanelVisible: ENABLE_INSPECTION_PANEL
+    ? localStorage.getItem("inspectionPanelVisible") !== null
+      ? localStorage.getItem("inspectionPanelVisible") === "true"
+      : true
+    : false,
+  setInspectionPanelVisible: (visible: boolean) => {
+    if (!ENABLE_INSPECTION_PANEL) return;
+    localStorage.setItem("inspectionPanelVisible", String(visible));
+    set({ inspectionPanelVisible: visible });
+  },
   setNewChatOnPlayground: (newChat: boolean) => {
     set({ newChatOnPlayground: newChat });
   },
@@ -1123,5 +1333,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ stopNodeId: nodeId });
   },
 }));
+
+export function recomputeComponentsToUpdateIfNeeded(): void {
+  const { nodes, updateComponentsToUpdate } = useFlowStore.getState();
+  if (nodes.length > 0) {
+    updateComponentsToUpdate(nodes);
+  }
+}
 
 export default useFlowStore;

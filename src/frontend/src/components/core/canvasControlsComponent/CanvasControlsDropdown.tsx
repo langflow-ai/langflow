@@ -9,6 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import useFlowStore from "@/stores/flowStore";
+import { AllNodeType } from "@/types/flow";
 import DropdownControlButton from "./DropdownControlButton";
 import { formatZoomPercentage, reactFlowSelector } from "./utils/canvasUtils";
 
@@ -19,13 +21,21 @@ export const KEYBOARD_SHORTCUTS = {
   RESET_ZOOM: { key: "0", code: "Digit0" },
 } as const;
 
-const CanvasControlsDropdown = () => {
+const CanvasControlsDropdown = ({
+  selectedNode,
+}: {
+  selectedNode: AllNodeType | null;
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const { fitView, zoomIn, zoomOut, zoomTo } = useReactFlow();
 
   const { minZoomReached, maxZoomReached, zoom } = useStore(
     reactFlowSelector,
     shallow,
+  );
+
+  const inspectionPanelVisible = useFlowStore(
+    (state) => state.inspectionPanelVisible,
   );
 
   useEffect(() => {
@@ -71,8 +81,14 @@ const CanvasControlsDropdown = () => {
   }, [zoomOut]);
 
   const handleFitView = useCallback(() => {
-    fitView();
-  }, [fitView]);
+    fitView({
+      padding: {
+        left: "20px",
+        right: inspectionPanelVisible && selectedNode ? "340px" : "20px",
+        top: "80px",
+      },
+    });
+  }, [fitView, selectedNode]);
 
   const handleResetZoom = useCallback(() => {
     zoomTo(1);
@@ -84,25 +100,25 @@ const CanvasControlsDropdown = () => {
         <Button
           variant="ghost"
           data-testid="canvas_controls_dropdown"
-          className="group rounded-none px-2 py-2 hover:bg-muted"
+          className="group flex h-8 items-center justify-center rounded-md px-0.5 hover:bg-muted"
           unstyled
           title="Canvas Controls"
         >
-          <div className="flex items-center justify-center ">
-            <div className="text-sm pr-1 text-muted-foreground">
+          <div className="flex items-center justify-center gap-0.5">
+            <div className="w-11 text-center text-sm text-muted-foreground group-hover:text-foreground">
               {formatZoomPercentage(zoom)}
             </div>
             <IconComponent
               name={isOpen ? "ChevronDown" : "ChevronUp"}
               aria-hidden="true"
-              className="text-muted-foreground group-hover:text-primary !h-5 !w-5"
+              className="text-muted-foreground group-hover:text-foreground !h-5 !w-5"
             />
           </div>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         side="top"
-        align="end"
+        align="center"
         className="flex flex-col w-full"
       >
         <DropdownControlButton

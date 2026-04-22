@@ -62,8 +62,8 @@ from langflow.api.v1.schemas import (
     MCPProjectUpdateRequest,
     MCPSettings,
 )
+from langflow.services.auth.constants import AUTO_LOGIN_WARNING
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
-from langflow.services.auth.utils import AUTO_LOGIN_WARNING
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import check_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
@@ -135,7 +135,7 @@ async def verify_project_auth(
     # For MCP endpoints, always fall back to username lookup when no API key is provided
     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
     if result:
-        await logger.awarning(AUTO_LOGIN_WARNING)
+        logger.warning(AUTO_LOGIN_WARNING)
         return result
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -312,8 +312,8 @@ async def list_project_tools(
 @router.head(
     "/{project_id}/sse",
     response_class=HTMLResponse,
-    include_in_schema=False,
     dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    include_in_schema=False,
 )
 async def im_alive(project_id: str):  # noqa: ARG001
     return Response()
@@ -323,6 +323,7 @@ async def im_alive(project_id: str):  # noqa: ARG001
     "/{project_id}/sse",
     response_class=HTMLResponse,
     dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    include_in_schema=False,
 )
 async def handle_project_sse(
     project_id: UUID,
@@ -400,8 +401,16 @@ async def _handle_project_sse_messages(
         current_request_variables_ctx.reset(req_vars_token)
 
 
-@router.post("/{project_id}", dependencies=[Depends(raise_error_if_astra_cloud_env)])
-@router.post("/{project_id}/", dependencies=[Depends(raise_error_if_astra_cloud_env)])
+@router.post(
+    "/{project_id}",
+    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    include_in_schema=False,
+)
+@router.post(
+    "/{project_id}/",
+    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    include_in_schema=False,
+)
 async def handle_project_messages(
     project_id: UUID,
     request: Request,
@@ -455,6 +464,7 @@ async def _dispatch_project_streamable_http(
 streamable_http_route_config = {
     "methods": ["GET", "POST", "DELETE"],
     "response_class": ResponseNoOp,
+    "include_in_schema": False,
 }
 
 
@@ -1014,6 +1024,13 @@ async def check_installed_mcp_servers(
                                 project_sse_url,
                                 list(config_data.get("mcpServers", {}).keys()),
                             )
+                    except FileNotFoundError:
+                        await logger.adebug(
+                            "%s config file not found at %s (directory exists, app installed but not configured)",
+                            client_name,
+                            config_path,
+                        )
+                        # available stays True, installed stays False — app is installed but not yet configured
                     except json.JSONDecodeError:
                         await logger.awarning("Failed to parse %s config JSON at: %s", client_name, config_path)
                         # available is True but installed remains False due to parse error
@@ -1297,7 +1314,7 @@ class ProjectTaskGroup:
     otherwise Asyncio will raise a RuntimeError.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._started = False
         self._start_stop_lock = anyio.Lock()
         self._task_group: TaskGroup | None = None

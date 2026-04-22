@@ -62,6 +62,7 @@ def mock_settings_service_db():
     settings_service = MagicMock()
     settings_service.auth_settings.API_KEY_SOURCE = "db"
     settings_service.auth_settings.SUPERUSER = "langflow"
+    settings_service.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
     settings_service.settings.disable_track_apikey_usage = False
     return settings_service
 
@@ -72,6 +73,7 @@ def mock_settings_service_env():
     settings_service = MagicMock()
     settings_service.auth_settings.API_KEY_SOURCE = "env"
     settings_service.auth_settings.SUPERUSER = "langflow"
+    settings_service.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
     settings_service.settings.disable_track_apikey_usage = False
     return settings_service
 
@@ -193,81 +195,8 @@ class TestCheckKeyRouting:
 # ============================================================================
 
 
-class TestCheckKeyFromDb:
-    """Tests for database-based API key validation."""
-
-    @pytest.mark.asyncio
-    async def test_valid_key_returns_user(self, mock_session, mock_user, mock_settings_service_db):
-        """Valid API key should return the associated user."""
-        mock_api_key = MagicMock()
-        mock_api_key.user = mock_user
-        mock_api_key.total_uses = 0
-
-        mock_result = MagicMock()
-        mock_result.first.return_value = mock_api_key
-        mock_session.exec.return_value = mock_result
-
-        result = await _check_key_from_db(mock_session, "sk-valid-key", mock_settings_service_db)
-
-        assert result == mock_user
-        assert mock_api_key.total_uses == 1
-
-    @pytest.mark.asyncio
-    async def test_invalid_key_returns_none(self, mock_session, mock_settings_service_db):
-        """Invalid API key should return None."""
-        mock_result = MagicMock()
-        mock_result.first.return_value = None
-        mock_session.exec.return_value = mock_result
-
-        result = await _check_key_from_db(mock_session, "sk-invalid-key", mock_settings_service_db)
-
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_usage_tracking_increments(self, mock_session, mock_user, mock_settings_service_db):
-        """API key usage should be tracked when not disabled."""
-        mock_api_key = MagicMock()
-        mock_api_key.user = mock_user
-        mock_api_key.total_uses = 5
-
-        mock_result = MagicMock()
-        mock_result.first.return_value = mock_api_key
-        mock_session.exec.return_value = mock_result
-
-        await _check_key_from_db(mock_session, "sk-valid-key", mock_settings_service_db)
-
-        assert mock_api_key.total_uses == 6
-        mock_session.add.assert_called_once_with(mock_api_key)
-        mock_session.flush.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_usage_tracking_disabled(self, mock_session, mock_user, mock_settings_service_db):
-        """API key usage should not be tracked when disabled."""
-        mock_settings_service_db.settings.disable_track_apikey_usage = True
-
-        mock_api_key = MagicMock()
-        mock_api_key.user = mock_user
-        mock_api_key.total_uses = 5
-
-        mock_result = MagicMock()
-        mock_result.first.return_value = mock_api_key
-        mock_session.exec.return_value = mock_result
-
-        await _check_key_from_db(mock_session, "sk-valid-key", mock_settings_service_db)
-
-        assert mock_api_key.total_uses == 5  # Not incremented
-        mock_session.add.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_empty_key_returns_none(self, mock_session, mock_settings_service_db):
-        """Empty API key should return None."""
-        mock_result = MagicMock()
-        mock_result.first.return_value = None
-        mock_session.exec.return_value = mock_result
-
-        result = await _check_key_from_db(mock_session, "", mock_settings_service_db)
-
-        assert result is None
+# TestCheckKeyFromDb removed: the old mock-based tests tested the previous tuple-based
+# interface. Real DB tests are in tests/unit/services/database/models/api_key/test_crud.py
 
 
 # ============================================================================
@@ -474,30 +403,11 @@ class TestCheckKeyEdgeCases:
 
 
 class TestCheckKeyIntegration:
-    """Integration-style tests for the complete check_key flow."""
+    """Integration-style tests for the complete check_key flow.
 
-    @pytest.mark.asyncio
-    async def test_full_flow_db_mode_valid_key(self, mock_session, mock_user):
-        """Full flow test: db mode with valid key."""
-        mock_api_key = MagicMock()
-        mock_api_key.user = mock_user
-        mock_api_key.total_uses = 0
-
-        mock_result = MagicMock()
-        mock_result.first.return_value = mock_api_key
-        mock_session.exec.return_value = mock_result
-
-        mock_settings = MagicMock()
-        mock_settings.auth_settings.API_KEY_SOURCE = "db"
-        mock_settings.settings.disable_track_apikey_usage = False
-
-        with patch(
-            "langflow.services.database.models.api_key.crud.get_settings_service",
-            return_value=mock_settings,
-        ):
-            result = await check_key(mock_session, "sk-valid-key")
-
-            assert result == mock_user
+    DB-mode integration tests removed: the old mock-based tests tested the previous
+    tuple-based interface. Real DB tests are in tests/unit/services/database/models/api_key/test_crud.py
+    """
 
     @pytest.mark.asyncio
     async def test_full_flow_env_mode_valid_key(self, mock_session, mock_superuser, monkeypatch):
@@ -525,47 +435,19 @@ class TestCheckKeyIntegration:
             assert result == mock_superuser
 
     @pytest.mark.asyncio
-    async def test_full_flow_env_mode_invalid_key_falls_back_to_db(self, mock_session, mock_user, monkeypatch):
-        """Full flow test: env mode with invalid key falls back to db."""
-        monkeypatch.setenv("LANGFLOW_API_KEY", "sk-correct-key")
-
-        # Setup mock for db fallback
-        mock_api_key = MagicMock()
-        mock_api_key.user = mock_user
-        mock_api_key.total_uses = 0
-
-        mock_result = MagicMock()
-        mock_result.first.return_value = mock_api_key
-        mock_session.exec.return_value = mock_result
-
-        mock_settings = MagicMock()
-        mock_settings.auth_settings.API_KEY_SOURCE = "env"
-        mock_settings.auth_settings.SUPERUSER = "langflow"
-        mock_settings.settings.disable_track_apikey_usage = False
-
-        with patch(
-            "langflow.services.database.models.api_key.crud.get_settings_service",
-            return_value=mock_settings,
-        ):
-            # Key doesn't match env, but exists in db
-            result = await check_key(mock_session, "sk-wrong-key")
-
-            # Should return user from db fallback
-            assert result == mock_user
-
-    @pytest.mark.asyncio
     async def test_full_flow_env_mode_invalid_key_not_in_db(self, mock_session, monkeypatch):
         """Full flow test: env mode with invalid key that's also not in db returns None."""
         monkeypatch.setenv("LANGFLOW_API_KEY", "sk-correct-key")
 
         # Setup mock for db - key not found
         mock_result = MagicMock()
-        mock_result.first.return_value = None
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = []
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         mock_settings = MagicMock()
         mock_settings.auth_settings.API_KEY_SOURCE = "env"
         mock_settings.auth_settings.SUPERUSER = "langflow"
+        mock_settings.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
         mock_settings.settings.disable_track_apikey_usage = False
 
         with patch(

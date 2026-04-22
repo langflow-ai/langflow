@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.8.0"
+version = "1.9.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,154 +17,21 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base~=0.8.0",
-    "beautifulsoup4==4.12.3",
-    "google-search-results>=2.4.1,<3.0.0",
-    "google-api-python-client==2.154.0",
-    "huggingface-hub[inference]>=0.23.2,<1.0.0",
-    "networkx==3.4.2",
-    "fake-useragent==1.5.1",
-    "pyarrow==19.0.0",
-    "wikipedia==1.4.0",
-    "qdrant-client==1.9.2",
-    "weaviate-client>=4.10.2,<5.0.0",
-    "faiss-cpu==1.9.0.post1",
-    "types-cachetools>=5.5.0.20240820,<6.0.0",
-    "pymongo==4.10.1",
-    "supabase>=2.6.0,<3.0.0",
-    "certifi>=2023.11.17,<2025.0.0",
-    'fastavro==1.9.7; python_version < "3.13"',
-    'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
-    "redis>=5.2.1,<6.0.0",
-    "metaphor-python==0.1.23",
-    'pywin32>=307,<400; sys_platform == "win32"',
-    "langfuse==2.53.9",
-    "metal_sdk==2.5.1",
-    "MarkupSafe==3.0.2",
-    "boto3>=1.34.162,<2.0.0",
-    "numexpr==2.10.2",
-    "qianfan==0.3.5",
-    "pgvector==0.3.6",
-    "langchain==0.3.23",
-    "elasticsearch==8.16.0",
-    "pytube==15.0.0",
-    "dspy-ai==2.5.41",
-    "datasets>2.14.7,<4.0.0",
-    "assemblyai==0.35.1",
-    "litellm>=1.60.2,<2.0.0",
-    "chromadb>=1.0.0,<2.0.0",
-    "zep-python==2.0.2",
-    "youtube-transcript-api>=1.0.0,<2.0.0",
-    "Markdown==3.7",
-    "upstash-vector==0.6.0",
-    "GitPython==3.1.43",
-    "kubernetes==31.0.0",
-    "json_repair==0.30.3",
-    "langwatch>=0.2.11,<0.3.0",
-    "langsmith>=0.3.42,<1.0.0",
-    "yfinance==0.2.50",
-    "wolframalpha==5.1.3",
-    "astra-assistants[tools]>=2.2.13,<3.0.0",
-    "composio==0.9.2",
-    "composio-langchain==0.9.2",
-    "spider-client==0.1.24",
-    "nltk==3.9.1",
-    "lark==1.2.2",
-    "jq==1.8.0",
-    "pydantic-settings>=2.2.0,<3.0.0",
-    "duckduckgo_search==7.2.1",
-    "opensearch-py==2.8.0",
-    "langchain-google-genai==2.0.6",
-    "langchain-cohere>=0.3.3,<1.0.0",
-    "langchain-huggingface==0.3.1",
-    "langchain-anthropic==0.3.14",
-    "langchain-astradb>=0.6.1,<1.0.0",
-    "langchain-openai>=0.2.12,<1.0.0",
-    "langchain-google-vertexai>=2.0.7,<3.0.0",
-    "langchain-groq==0.2.1",
-    "langchain-pinecone>=0.2.8,<1.0.0",
-    "langchain-mistralai==0.2.3",
-    "langchain-chroma>=0.2.6,<1.0.0",
-    "langchain-aws>=0.2.33,<1.0.0",
-    "langchain-unstructured==0.1.5",
-    "langchain-milvus==0.1.7",
-    "langchain-mongodb==0.7.0",
-    "langchain-nvidia-ai-endpoints==0.3.8",
-    "langchain-google-calendar-tools==0.0.1",
-    "langchain-google-community>=2.0.3,<3.0.0",
-    "langchain-elasticsearch>=0.3.0,<1.0.0",
-    "langchain-ollama==0.3.10",
-    "langchain-sambanova==0.1.0",
-    "langchain-community>=0.3.21,<1.0.0",
-    "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
-    "atlassian-python-api==3.41.16",
-    "mem0ai==0.1.34",
-    "needle-python>=0.4.0,<1.0.0",
-    "aiofile>=3.9.0,<4.0.0",
-    "sseclient-py==1.8.0",
-    "arize-phoenix-otel>=0.6.1,<1.0.0",
-    "openinference-instrumentation-langchain>=0.1.29,<0.1.52",
-    # "crewai>=0.126.0",
-    "fastmcp==2.13.0",
-    "mcp>=1.17.0,<2.0.0",
-    "uv==0.7.20",
-    "scipy>=1.14.1,<1.16.2",
-    "scrapegraph-py>=1.12.0,<2.0.0",
-    "pydantic-ai>=0.0.19,<1.0.0",
-    "smolagents>=1.8.0,<2.0.0",
-    "apify-client>=1.8.1,<2.0.0",
-    "langchain-graph-retriever==0.8.0",
-    "graph-retriever==0.8.0",
-    "ibm-watsonx-ai>=1.3.1,<2.0.0",
-    "langchain-ibm>=0.3.8",
-    "opik>=1.6.3,<2.0.0",
-    "openai>=1.68.2,<2.0.0",
-    "cleanlab-tlm>=1.1.2,<2.0.0",
-    "gassist>=0.0.1; sys_platform == 'win32'",
-    "twelvelabs>=0.4.7,<1.0.0",
-    "docling-core>=2.36.1,<3.0.0",
-    "docling>=2.36.1,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
-    "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
-    "mlx-vlm==0.3.3; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
-    "easyocr>=1.7.2,<2.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
-    "filelock>=3.18.0,<4.0.0",
-    "jigsawstack==0.2.7",
-    "structlog>=25.4.0,<26.0.0",
-    "cryptography>=43.0.1,<44.0.0",
-    "aiosqlite==0.21.0",
-    "fastparquet>=2024.11.0,<2025.0.0",
-    "traceloop-sdk>=0.43.1,<1.0.0",
-    "vlmrun[all]>=0.2.0",
-    "cuga~=0.2.6",
-    "langchain-mcp-adapters>=0.1.14,<0.2.0",  # Pin to avoid incompatibility with langchain-core<1.0.0
-    "agent-lifecycle-toolkit~=0.4.4",
-    "astrapy>=2.1.0,<3.0.0",
-    "aioboto3>=15.2.0,<16.0.0",
-    "ag-ui-protocol>=0.1.10",
+    "langflow-base[complete]>=0.9.0",
 ]
 
 
 [dependency-groups]
 dev = [
     "pytest-instafail>=0.5.0",
-    "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
-    "mypy>=1.11.0",
-    "ruff>=0.12.7",
+    "ruff~=0.13.1",
     "httpx>=0.28.1",
     "pytest>=8.2.0",
-    "types-requests>=2.32.0",
-    "requests>=2.32.0",
+    "requests>=2.33.0",
     "pytest-cov>=5.0.0",
-    "pandas-stubs>=2.1.4.231227",
-    "types-pillow>=10.2.0.20240213",
-    "types-pyyaml>=6.0.12.8",
-    "types-python-jose>=3.3.4.8",
-    "types-passlib>=1.7.7.13",
     "pytest-mock>=3.14.0",
     "pytest-xdist>=3.6.0",
-    "types-pywin32>=306.0.0.4",
-    "types-google-cloud-ndb>=2.2.0.0",
     "pytest-sugar>=1.0.0",
     "respx>=0.21.1",
     "pytest-asyncio>=0.23.0",
@@ -174,7 +41,6 @@ dev = [
     "dictdiffer>=0.9.0",
     "pytest-split>=0.9.0",
     "pytest-flakefinder>=1.1.0",
-    "types-markdown>=3.7.0.20240822",
     "packaging>=24.1,<25.0",
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
@@ -185,25 +51,35 @@ dev = [
     "locust~=2.40.5",
     "pytest-rerunfailures>=15.0",
     "scrapegraph-py>=1.10.2",
-    "pydantic-ai>=0.0.19",
     'elevenlabs==1.58.1; python_version == "3.12"',
     'elevenlabs>=1.52.0; python_version != "3.12"',
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
+    "mcp-server-fetch>=2025.1.17",
+    "onnxruntime>=1.20,<1.24" # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
+langflow-sdk = { workspace = true }
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
 
 [tool.uv.workspace]
 members = [
     "src/backend/base",
     ".",
     "src/lfx",
+    "src/sdk",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -219,6 +95,11 @@ docling = [
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
+    # CPU-only PyTorch required for docling features
+    # Loose version ranges intentionally used to avoid conflicts with transitive dependencies (e.g., altk)
+    # Updated to 2.6.0+ to address CVE: RCE vulnerability in torch.load() with weights_only=True
+    "torch>=2.6.0",
+    "torchvision>=0.21.0",  # torchvision 0.21+ is compatible with PyTorch 2.6+
 ]
 
 audio = [
@@ -242,12 +123,8 @@ clickhouse-connect = [
 ]
 
 nv-ingest = [
-    # NOTE: These must be removed in order to run `uv lock --upgrade` or `uv sync --upgrade`
-    # due to incompatibility with <3.12 and how uv handles lockfile creation.
-    # If upgrading, ensure `uv lock` and `uv sync` are run after upgrade with these,
-    # and that afterward, the lockfile contains nv-ingest.
-    "nv-ingest-api==25.6.2,<26.0.0 ; python_version >= '3.12'",
-    "nv-ingest-client==25.6.3,<26.0.0 ; python_version >= '3.12'",
+    "nv-ingest-api>=26.1.0,<27.0.0 ; python_version >= '3.12'",
+    "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'",
 ]
 
 postgresql = [
@@ -259,6 +136,19 @@ postgresql = [
 override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
+    # z3-solver 4.15.7 dropped Linux wheels, pin until codeflash is removed
+    "z3-solver<4.15.7",
+    # Security: Force upgraded versions to prevent transitive deps from pulling older vulnerable versions
+    "orjson>=3.11.6",
+    "gunicorn>=25.3.0",
+    "pypdf>=6.10.0",  # Force pypdf 6.10+ to prevent vulnerable 6.6.x versions
+    "nltk>=3.9.4",
+    "Markdown>=3.8.0",
+    "dynaconf>=3.2.13",
+    "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
+    "aiohttp>=3.13.4",
+    "litellm>=1.83.0",
+    "playwright>=1.58.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
 ]
 
 [project.scripts]
@@ -287,7 +177,8 @@ markers = [
     "benchmark",
     "unit: Unit tests",
     "integration: Integration tests",
-    "slow: Slow-running tests"
+    "slow: Slow-running tests",
+    "security: Security regression tests (IDOR, auth, access control)"
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
@@ -316,7 +207,12 @@ directory = "coverage"
 
 [tool.ruff]
 target-version = "py310"
-exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*", "src/lfx/src/lfx/_assets/component_index.json"]
+exclude = [
+    "src/backend/base/langflow/alembic/*",
+    "src/frontend/tests/assets/*",
+    "src/lfx/src/lfx/_assets/component_index.json",
+    "docs/**/API-Reference/python-examples/**",
+]
 line-length = 120
 
 [tool.ruff.lint]
@@ -359,6 +255,13 @@ external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
+"scripts/gp/tests/*" = [
+    "D1",      # Missing docstrings
+    "PLR2004", # Magic value comparisons
+    "S101",    # Use of assert (required for pytest)
+    "TRY003",  # Long exception messages
+    "EM101",   # String literals in exceptions
+]
 "src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]
 "src/backend/base/langflow/custom/__init__.py" = [
     "I001",  # Import order affects initialization - must import custom module first
@@ -380,6 +283,11 @@ external = ["RUF027"]
 ]
 "src/lfx/src/lfx/base/curl/parse.py" = [
     "S105",  # False positive: 'token' variable name, not a password
+]
+"src/lfx/src/lfx/services/auth/service.py" = [
+    "ARG002",  # No-op impl: unused args required by interface
+    "EM101",  # NotImplementedError messages as literals
+    "TC003",  # Type-only imports used in signatures
 ]
 "src/lfx/src/lfx/base/mcp/util.py" = [
     "SLF001",  # MCP library private member access
@@ -430,6 +338,46 @@ external = ["RUF027"]
 ]
 "src/lfx/src/lfx/inputs/input_mixin.py" = [
     "S105",  # False positive: PASSWORD is a type constant
+]
+"src/lfx/src/lfx/__main__.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_setup_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_authoring_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_running_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_remote_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/backend/base/langflow/api/utils/*" = [
+    "TCH",  # Imports are used at runtime (FastAPI deps, SQLAlchemy queries, model constructors)
+]
+"src/sdk/src/langflow_sdk/_http.py" = [
+    "TCH",  # httpx is used at runtime (response object methods)
+]
+"src/sdk/src/langflow_sdk/environments.py" = [
+    "TRY003", # Contextual error messages are necessary here
+    "EM102",  # f-string messages assigned before raise where possible
+]
+"src/sdk/tests/*" = [
+    "S101",   # assert is the standard pytest assertion style
+    "INP001", # Not a package namespace issue in tests
+    "TC003",  # pytest fixture type hints are evaluated at runtime
 ]
 "src/lfx/src/lfx/schema/table.py" = [
     "S105",  # False positive: PASSWORD is a formatter type
@@ -492,14 +440,6 @@ external = ["RUF027"]
 
 [tool.ruff.lint.flake8-builtins]
 builtins-allowed-modules = [ "io", "logging", "socket"]
-
-[tool.mypy]
-plugins = ["pydantic.mypy"]
-follow_imports = "skip"
-disable_error_code = ["type-var"]
-namespace_packages = true
-mypy_path = "langflow"
-ignore_missing_imports = true
 
 [build-system]
 requires = ["hatchling"]

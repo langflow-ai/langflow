@@ -24,15 +24,15 @@ jobs:
           ref: ${{ inputs.branch || github.ref }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: yarn
-          cache-dependency-path: ./docs/yarn.lock
+          cache: npm
+          cache-dependency-path: ./docs/package-lock.json
 
       - name: Install dependencies
-        run: cd docs && yarn install --frozen-lockfile
+        run: cd docs && npm install
 
       - name: Build docs
-        run: cd docs && yarn build
+        run: cd docs && npm run build

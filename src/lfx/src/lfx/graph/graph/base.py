@@ -6,6 +6,7 @@ import contextvars
 import copy
 import json
 import queue
+import sys
 import threading
 import traceback
 import uuid
@@ -17,7 +18,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 from ag_ui.core import RunFinishedEvent, RunStartedEvent
 
-from lfx.events.observability.lifecycle_events import observable
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
 from lfx.graph.graph.constants import Finish, lazy_load_vertex_dict
@@ -45,7 +45,7 @@ from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable
+    from collections.abc import AsyncIterator, Callable, Generator, Iterable
     from typing import Any
 
     from lfx.custom.custom_component.component import Component
@@ -130,6 +130,7 @@ class Graph:
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
+        self._is_subgraph = False
 
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
@@ -361,9 +362,13 @@ class Graph:
         *,
         reset_output_values: bool = True,
     ):
-        self.prepare()
+        # Preserve start_component_id from constructor if available
+        start_component_id = self._start.get_id() if self._start else None
+        self.prepare(start_component_id=start_component_id)
         if reset_output_values:
             self._reset_all_output_values()
+
+        await self.initialize_run()
 
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
@@ -380,6 +385,20 @@ class Graph:
                 return
             if hasattr(result, "vertex"):
                 yielded_counts[result.vertex.id] += 1
+                # Emit on_end_vertex event for each completed vertex
+                if event_manager is not None:
+                    result_data_dict = None
+                    if hasattr(result, "result_dict") and result.result_dict:
+                        try:
+                            result_data_dict = result.result_dict.model_dump()
+                        except (AttributeError, TypeError):
+                            result_data_dict = result.result_dict
+                    build_data = {
+                        "id": result.vertex.id,
+                        "valid": result.valid if hasattr(result, "valid") else True,
+                        "data": result_data_dict,
+                    }
+                    event_manager.on_end_vertex(data={"build_data": build_data})
 
         msg = "Max iterations reached"
         raise ValueError(msg)
@@ -652,9 +671,13 @@ class Graph:
                 run_name=run_name,
                 user_id=self.user_id,
                 session_id=self.session_id,
+                flow_id=self.flow_id,
             )
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
+        # Subgraphs don't end traces - the parent graph owns the trace lifecycle
+        if self._is_subgraph:
+            return
         task = asyncio.create_task(self.end_all_traces(outputs, error))
         self._end_trace_tasks.add(task)
         task.add_done_callback(self._end_trace_tasks.discard)
@@ -668,7 +691,15 @@ class Graph:
         context = contextvars.copy_context()
 
         async def async_end_traces_func():
-            await asyncio.create_task(self.end_all_traces(outputs, error), context=context)
+            coro = self.end_all_traces(outputs, error)
+            if sys.version_info >= (3, 11):
+                await asyncio.create_task(coro, context=context)
+            else:
+                # Python 3.10's asyncio.create_task does not accept context=.
+                # Invoke create_task inside the captured context so the new
+                # Task copies it as its current context.
+                task = context.run(asyncio.create_task, coro)
+                await task
 
         return async_end_traces_func
 
@@ -731,7 +762,6 @@ class Graph:
                 raise ValueError(msg)
             vertex.update_raw_params(inputs, overwrite=True)
 
-    @observable
     async def _run(
         self,
         *,
@@ -1144,8 +1174,17 @@ class Graph:
         Returns:
             Graph: The created graph.
         """
+        from lfx.utils.flow_validation import validate_flow_for_current_settings
+
         if "data" in payload:
             payload = payload["data"]
+        # Defense-in-depth: validate here so that no code path can construct
+        # a graph with blocked/custom components, even if an API endpoint
+        # forgets its own pre-check. Ideally this would live only at the API
+        # boundary (middleware or endpoint dependency) so from_payload stays
+        # pure deserialization, but a missed endpoint means arbitrary code
+        # execution, so we keep this as a safety net.
+        validate_flow_for_current_settings(payload)
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
@@ -1413,6 +1452,11 @@ class Graph:
         if not vertex_id:
             msg = "No vertex to run"
             raise ValueError(msg)
+
+        # Emit build_start event before building vertex
+        if event_manager is not None:
+            event_manager.on_build_start(data={"id": vertex_id})
+
         chat_service = get_chat_service()
 
         # Provide fallback cache functions if chat service is unavailable
@@ -1422,7 +1466,7 @@ class Graph:
         else:
             # Fallback no-op cache functions for tests or when service unavailable
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
-                return None
+                return CacheMiss()
 
             async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
                 return True
@@ -1647,10 +1691,10 @@ class Graph:
         else:
             # Fallback no-op cache functions for tests or when service unavailable
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
-                return None
+                return CacheMiss()
 
-            async def set_cache_func(*args, **kwargs):
-                pass
+            async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
+                return True
 
         await self.initialize_run()
         lock = asyncio.Lock()
@@ -1777,6 +1821,7 @@ class Graph:
             params=params,
             data=result_data_response,
             artifacts={},
+            job_id=self._run_id if self._run_id else None,
         )
 
     async def _execute_tasks(
@@ -1789,9 +1834,13 @@ class Graph:
             lock: Async lock for synchronization
             has_webhook_component: Whether the graph has a webhook component
         """
+        from lfx.graph.utils import emit_vertex_build_event
+
         results = []
         completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
         vertices: list[Vertex] = []
+        # Store build results for SSE emission after calculating next_runnable_vertices
+        build_results: dict[str, VertexBuildResult] = {}
 
         for i, result in enumerate(completed_tasks):
             task_name = tasks[i].get_name()
@@ -1815,7 +1864,10 @@ class Graph:
                         params=result.params,
                         data=result.result_dict,
                         artifacts=result.artifacts,
+                        job_id=self._run_id if self._run_id else None,
                     )
+                    # Store for SSE emission later
+                    build_results[result.vertex.id] = result
 
                 vertices.append(result.vertex)
             else:
@@ -1833,6 +1885,27 @@ class Graph:
         for v in vertices:
             next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
             results.extend(next_runnable_vertices)
+
+            # Emit SSE event with complete data including next_vertices_ids
+            if self.flow_id is not None and v.id in build_results:
+                build_result = build_results[v.id]
+                # Get top level vertices for these next runnable vertices
+                top_level = self.get_top_level_vertices(next_runnable_vertices)
+                # Get inactivated vertices
+                inactivated = list(self.inactivated_vertices.union(self.conditionally_excluded_vertices))
+
+                await emit_vertex_build_event(
+                    flow_id=self.flow_id,
+                    vertex_id=v.id,
+                    valid=build_result.valid,
+                    params=build_result.params,
+                    data_dict=build_result.result_dict,
+                    artifacts_dict=build_result.artifacts,
+                    next_vertices_ids=next_runnable_vertices,
+                    top_level_vertices=top_level,
+                    inactivated_vertices=inactivated,
+                )
+
         return list(set(results))
 
     def topological_sort(self) -> list[Vertex]:
@@ -2293,6 +2366,55 @@ class Graph:
             if vertex.id not in in_degree:
                 in_degree[vertex.id] = 0
         return in_degree
+
+    @contextlib.asynccontextmanager
+    async def create_subgraph(self, vertex_ids: set[str]) -> AsyncIterator[Graph]:
+        """Create an isolated subgraph containing only specified vertices.
+
+        This creates a new Graph instance with only the vertices and edges
+        that connect the specified vertices. The subgraph shares the same
+        flow_id and user_id but gets its own context copy.
+
+        Must be used as an async context manager to ensure proper cleanup
+        of any pending trace tasks when the subgraph execution completes.
+
+        Args:
+            vertex_ids: Set of vertex IDs to include in the subgraph
+
+        Yields:
+            A new Graph instance containing only the specified vertices
+
+        Example:
+            async with graph.create_subgraph(vertex_ids) as subgraph:
+                subgraph.prepare()
+                async for result in subgraph.async_start():
+                    process(result)
+        """
+        # Filter nodes to only include specified vertex IDs
+        subgraph_nodes = [n for n in self._vertices if n["id"] in vertex_ids]
+
+        # Filter edges to only include those connecting vertices in the subgraph
+        subgraph_edges = [e for e in self._edges if e["source"] in vertex_ids and e["target"] in vertex_ids]
+
+        # Create new graph instance with copied context
+        subgraph = Graph(
+            flow_id=self.flow_id,
+            flow_name=f"{self.flow_name}_subgraph" if self.flow_name else "subgraph",
+            user_id=self.user_id,
+            context=dict(self.context) if self.context else None,
+        )
+
+        # Inherit parent's tracing context - subgraph is an extension of parent's execution
+        subgraph._tracing_service = self._tracing_service
+        subgraph._tracing_service_initialized = True
+        subgraph._run_id = self._run_id
+        subgraph.session_id = self.session_id
+        subgraph._is_subgraph = True
+
+        # Add the filtered nodes and edges
+        subgraph.add_nodes_and_edges(subgraph_nodes, subgraph_edges)
+
+        yield subgraph
 
     @staticmethod
     def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:

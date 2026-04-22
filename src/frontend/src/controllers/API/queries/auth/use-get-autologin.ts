@@ -6,19 +6,21 @@ import {
   IS_AUTO_LOGIN,
 } from "@/constants/constants";
 import { AuthContext } from "@/contexts/authContext";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import type { Users, useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import { useLogout } from "./use-post-logout";
 
 export interface AutoLoginResponse {
   frontend_timeout: number;
   auto_saving: boolean;
   auto_saving_interval: number;
   health_check_max_retries: number;
+}
+
+export interface AutoLoginErrorResponse {
+  auto_login?: boolean;
 }
 
 export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
@@ -29,14 +31,18 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoginPage = location.pathname.includes("login");
-  const navigate = useCustomNavigate();
-  const { mutateAsync: mutationLogout } = useLogout();
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   async function getAutoLoginFn(): Promise<null> {
+    // Skip auto-login API call if user is already authenticated (e.g., after manual login)
+    const currentAuthState = useAuthStore.getState();
+    if (currentAuthState.isAuthenticated) {
+      return null;
+    }
+
     try {
       const response = await api.get<Users>(`${getURL("AUTOLOGIN")}`);
       const user = response.data;
@@ -48,10 +54,13 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
         resetTimer();
       }
     } catch (e) {
-      const error = e as AxiosError;
+      const error = e as AxiosError<AutoLoginErrorResponse>;
       if (error.name !== "CanceledError") {
         setAutoLogin(false);
-        if (!isLoginPage) {
+        // Don't retry if backend explicitly says auto-login is disabled
+        const autoLoginDisabledByBackend =
+          error.response?.data?.auto_login === false;
+        if (!isLoginPage && !autoLoginDisabledByBackend) {
           await handleAutoLoginError();
         }
       }
@@ -68,23 +77,15 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   };
 
   const handleAutoLoginError = async () => {
-    const manualLoginNotAuthenticated =
-      (!isAuthenticated && !IS_AUTO_LOGIN) ||
-      (!isAuthenticated && autoLogin !== undefined && !autoLogin);
-
+    // Get current state from store to avoid stale closure values
+    const currentAuthState = useAuthStore.getState();
     const autoLoginNotAuthenticated =
-      (!isAuthenticated && IS_AUTO_LOGIN) ||
-      (!isAuthenticated && autoLogin !== undefined && autoLogin);
+      (!currentAuthState.isAuthenticated && IS_AUTO_LOGIN) ||
+      (!currentAuthState.isAuthenticated &&
+        currentAuthState.autoLogin !== undefined &&
+        currentAuthState.autoLogin);
 
-    if (manualLoginNotAuthenticated) {
-      await mutationLogout();
-      const currentPath = window.location.pathname;
-      const isHomePath = currentPath === "/" || currentPath === "/flows";
-      navigate(
-        "/login" +
-          (!isHomePath && !isLoginPage ? "?redirect=" + currentPath : ""),
-      );
-    } else if (autoLoginNotAuthenticated) {
+    if (autoLoginNotAuthenticated) {
       const retryCount = retryCountRef.current;
       const delay = Math.min(
         AUTO_LOGIN_RETRY_DELAY * 2 ** retryCount,
@@ -105,10 +106,20 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
     }
   };
 
+  // Determine if query should be enabled:
+  // - Don't run if user is already authenticated
+  // - Respect the enabled option from caller
+  // Note: We don't skip based on autoLogin === false because the frontend may
+  // connect to different backends with different configurations
+  const shouldBeEnabled = !isAuthenticated && (options?.enabled ?? true);
+
   const queryResult = query(["useGetAutoLogin"], getAutoLoginFn, {
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    staleTime: Infinity,
     retry: false,
     ...options,
+    enabled: shouldBeEnabled,
   });
 
   return queryResult;

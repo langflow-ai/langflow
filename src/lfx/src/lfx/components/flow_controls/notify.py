@@ -24,7 +24,7 @@ class NotifyComponent(Component):
             display_name="Input Data",
             info="The data to store.",
             required=False,
-            input_types=["Data", "Message", "DataFrame"],
+            input_types=["Data", "JSON", "Message", "DataFrame", "Table"],
         ),
         BoolInput(
             name="append",
@@ -37,7 +37,7 @@ class NotifyComponent(Component):
 
     outputs = [
         Output(
-            display_name="Data",
+            display_name="JSON",
             name="result",
             method="notify_components",
             cache=False,

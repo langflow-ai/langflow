@@ -1,0 +1,32 @@
+---
+title: Policies (Beta)
+slug: /policies
+---
+
+The **Policies** component leverages [ToolGuard](https://github.com/AgentToolkit/toolguard) to automatically generate guard code that validates tool execution against defined business policies.
+
+With this component, developers define business policies in natural language and integrate policy enforcement into agent workflows. It automatically generates validation code for tools from those policies, protects tool execution by enforcing policy compliance at runtime, and caches generated guard code for better performance.
+
+The component supports **Generate** activity, which runs ToolGuard’s buildtime flow to produce new guard code from policies, and **Guard** activity, which reuses previously generated guard code for faster runs.
+
+## Use the component in a flow
+
+When `enabled` is `true`, you must supply at least one policy before generating guards.
+Generated guard code is written under `tmp_toolguard/{project_name}/`, with **Step 1** producing guard specifications from policies in `Step_1/`, and **Step 2** turning those specifications into executable guard code in `Step_2/`.
+If you switch to **Guard** (apply cached guards), the project directory must already contain valid generated guard code. The component handles module caching and cleanup automatically.
+
+For more information, see the [ToolGuard GitHub repository](https://github.com/AgentToolkit/toolguard).
+
+## Policies parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| enabled | Boolean | Input parameter. If `true`, ToolGuard runs before tool execution; if `false`, policy validation is skipped. |
+| mode | String | Input parameter. **Activity**: **Generate** runs buildtime to create guard code, or **Guard** loads existing guards from the project folder. |
+| project | String | Input parameter. Folder name for generated code under `tmp_toolguard/` (default `my_project`). |
+| in_tools | List[Tool] | Input parameter. Tools the agent can use; they are wrapped with policy guards when enabled. |
+| policies | List[String] | Input parameter. One or more clear, self-contained business policy strings. Required when generating guards. |
+| model | Model | Input parameter. LLM used for Policies buildtime; Anthropic Claude Sonnet is recommended. Required when generating guards. |
+| api_key | String | Input parameter. Model provider API key (advanced). Required when generating guards. |
+| guarded_tools | List[Tool] | Output parameter. Tools with policy enforcement applied. Returns the original tools when the component is disabled. |
+

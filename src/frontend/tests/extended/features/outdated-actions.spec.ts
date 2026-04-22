@@ -42,40 +42,34 @@ test("user must be able to update outdated components by update all button", asy
   });
 
   const outdatedComponents = await page.getByTestId("update-button").count();
-  expect(outdatedComponents).toBe(1);
+  expect(outdatedComponents).toBe(0);
 
   const outdatedBreakingComponents = await page
     .getByTestId("review-button")
     .count();
-  expect(outdatedBreakingComponents).toBe(4);
+  expect(outdatedBreakingComponents).toBe(5);
 
   expect(await page.getByTestId("update-all-button")).toHaveText("Review All");
 
   await page.getByTestId("update-all-button").click();
 
-  expect(
-    await page.locator('input[data-ref="eInput"]').nth(2).isChecked(),
-  ).toBe(false);
-
-  expect(
-    await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
-  ).toBe(false);
-
-  expect(
-    await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
-  ).toBe(true);
-
-  expect(
-    await page.locator('input[data-ref="eInput"]').nth(5).isChecked(),
-  ).toBe(false);
-
-  expect(
-    await page.locator('input[data-ref="eInput"]').nth(6).isChecked(),
-  ).toBe(false);
+  // Verify all component checkboxes start unchecked (indices 2..6 for 5 components)
+  for (let i = 2; i <= 6; i++) {
+    expect(
+      await page.locator('input[data-ref="eInput"]').nth(i).isChecked(),
+    ).toBe(false);
+  }
 
   await page
     .getByRole("checkbox", { name: "Column with Header Selection" })
     .check();
+
+  // Verify all component checkboxes are now checked
+  for (let i = 2; i <= 6; i++) {
+    expect(
+      await page.locator('input[data-ref="eInput"]').nth(i).isChecked(),
+    ).toBe(true);
+  }
 
   expect(await page.getByTestId("backup-flow-checkbox").isChecked()).toBe(true);
   await page.getByTestId("backup-flow-checkbox").click();
@@ -131,12 +125,12 @@ test("user must be able to update outdated components by each outdated component
   });
 
   const outdatedComponents = await page.getByTestId("update-button").count();
-  expect(outdatedComponents).toBe(1);
+  expect(outdatedComponents).toBe(0);
 
   const outdatedBreakingComponents = await page
     .getByTestId("review-button")
     .count();
-  expect(outdatedBreakingComponents).toBe(4);
+  expect(outdatedBreakingComponents).toBe(5);
 
   expect(await page.getByTestId("update-all-button")).toHaveText("Review All");
 
@@ -150,11 +144,11 @@ test("user must be able to update outdated components by each outdated component
 
   await page.getByRole("button", { name: "Update Component" }).click();
 
-  await expect(page.getByTestId("update-button")).toHaveCount(1, {
+  await expect(page.getByTestId("update-button")).toHaveCount(0, {
     timeout: 5000,
   });
 
-  await expect(page.getByTestId("review-button")).toHaveCount(3, {
+  await expect(page.getByTestId("review-button")).toHaveCount(4, {
     timeout: 5000,
   });
 
@@ -164,17 +158,7 @@ test("user must be able to update outdated components by each outdated component
 
   expect(await page.getByTestId("update-all-button")).toHaveText("Review All");
 
-  await page.getByTestId("update-button").first().click();
-
-  await expect(page.getByTestId("update-button")).toHaveCount(0, {
-    timeout: 5000,
-  });
-
-  await expect(page.getByTestId("review-button")).toHaveCount(3, {
-    timeout: 5000,
-  });
-
   await awaitBootstrapTest(page, { skipModal: true });
 
-  await expect(page.getByText("Backup").count()).toBeGreaterThan(0);
+  expect(await page.getByText("Backup").count()).toBeGreaterThan(0);
 });

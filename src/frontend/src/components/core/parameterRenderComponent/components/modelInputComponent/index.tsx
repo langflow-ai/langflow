@@ -1,48 +1,32 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
-import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
+import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import { useTypesStore } from "@/stores/typesStore";
 import type { APIClassType } from "@/types/api";
-import { scapedJSONStringfy } from "@/utils/reactflowUtils";
-import { cn, groupByFamily } from "@/utils/utils";
+import type { NodeDataType } from "@/types/flow";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import {
-  Command,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "../../../../ui/command";
+import { Command } from "../../../../ui/command";
 import {
   Popover,
+  PopoverContent,
   PopoverContentWithoutPortal,
-  PopoverTrigger,
 } from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
-
-/** Represents a single model option in the dropdown */
-export interface ModelOption {
-  id?: string;
-  name: string;
-  icon: string;
-  provider: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface ModelInputComponentType {
-  options?: ModelOption[];
-  placeholder?: string;
-  externalOptions?: any;
-}
-
-export type SelectedModel = ModelOption;
+import ModelList from "./components/ModelList";
+import ModelTrigger from "./components/ModelTrigger";
+import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
+import type {
+  ModelInputComponentType,
+  ModelOption,
+  SelectedModel,
+} from "./types";
 
 export default function ModelInputComponent({
   id,
@@ -55,19 +39,49 @@ export default function ModelInputComponent({
   nodeClass,
   handleNodeClass,
   externalOptions,
-}: BaseInputProps<any> & ModelInputComponentType): JSX.Element {
+  showParameter = true,
+  editNode,
+  inspectionPanel,
+  showEmptyState = false,
+}: BaseInputProps<SelectedModel[]> &
+  ModelInputComponentType): JSX.Element | null {
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const [refreshOptions, setRefreshOptions] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(
-    null,
-  );
   const [openManageProvidersDialog, setOpenManageProvidersDialog] =
     useState(false);
+  const [isRefreshingAfterClose, setIsRefreshingAfterClose] = useState(false);
+  const [refreshOptions, setRefreshOptions] = useState(false);
+
+  // Connection mode: local state for reactivity, persisted in node data for reload
+  const [isConnectionMode, setIsConnectionMode] = useState(() => {
+    if (!nodeId) return false;
+    const node = useFlowStore.getState().nodes.find((n) => n.id === nodeId);
+    const data = node?.data as { _connectionMode?: boolean } | undefined;
+    return data?._connectionMode === true;
+  });
+
+  const setConnectionMode = useCallback(
+    (enabled: boolean) => {
+      setIsConnectionMode(enabled);
+      if (!nodeId) return;
+      const store = useFlowStore.getState();
+      store.setNode(
+        nodeId,
+        (node) => ({
+          ...node,
+          data: { ...node.data, _connectionMode: enabled },
+        }),
+        false,
+      );
+    },
+    [nodeId],
+  );
+
+  const { refreshAllModelInputs } = useRefreshModelInputs();
 
   // Ref to track if we've already processed the empty options state
-  // Prevents infinite loop when no models are available
+  // prevents infinite loop when no models are available
   const hasProcessedEmptyRef = useRef(false);
 
   const postTemplateValue = usePostTemplateValue({
@@ -76,29 +90,159 @@ export default function ModelInputComponent({
     node: (nodeClass as APIClassType) || null,
   });
 
+  const { handleExternalOptions } = useModelConnectionLogic({
+    nodeId: nodeId || "",
+    closePopover: () => setOpen(false),
+    clearSelection: () => {
+      // Only set the _connectionMode flag on the node data.
+      // Don't call handleOnNewValue — it triggers a backend round-trip
+      // that tries to resolve __default_language_model__ and fails.
+      // The credential fields are cleared by useModelConnectionLogic
+      // directly in the node template via setNode.
+      setConnectionMode(true);
+    },
+  });
+
   const modelType =
     nodeClass?.template?.model?.model_type === "language"
       ? "llm"
       : "embeddings";
 
-  const { data: providersData = [] } = useGetModelProviders({});
+  const {
+    data: providersData = [],
+    isLoading: isLoadingProviders,
+    isFetching: isFetchingProviders,
+  } = useGetModelProviders({});
+  const { data: enabledModelsData, isLoading: isLoadingEnabledModels } =
+    useGetEnabledModels();
 
-  // Determines if we should show the model selector or the "Setup Provider" button
+  const isLoading = isLoadingProviders || isLoadingEnabledModels;
+
   const hasEnabledProviders = useMemo(() => {
-    return providersData?.some((provider) => provider.is_enabled);
+    return providersData?.some(
+      (provider) => provider.is_enabled || provider.is_configured,
+    );
   }, [providersData]);
 
   // Groups models by their provider name for sectioned display in dropdown.
-  // Filters out models from disabled providers.
+  // Filters out models from disabled providers AND disabled models, then
+  // augments with any enabled models from `providersData` that weren't in the
+  // component's saved `options` (e.g. after importing a flow whose exporter
+  // only had a subset of the current user's enabled providers).
   const groupedOptions = useMemo(() => {
     const grouped: Record<string, ModelOption[]> = {};
+    const seen = new Set<string>();
+
     for (const option of options) {
       if (option.metadata?.is_disabled_provider) continue;
       const provider = option.provider || "Unknown";
-      (grouped[provider] ??= []).push(option);
+
+      // Backend sticky-default: options tagged with `not_enabled_locally` are
+      // the user's saved selection injected into the options list by the
+      // unified-models build_config helper even though they aren't in the
+      // enabled list. They must always pass the client-side filter so the
+      // selection stays visible and selectable in the dropdown.
+      const isStickyNotEnabled = option.metadata?.not_enabled_locally === true;
+
+      // Filter against client-side enabled models data. This is the source of
+      // truth for what the current user has enabled — stale `options` saved in
+      // an imported flow may include models from providers the current user
+      // hasn't enabled (e.g. WatsonX). When the provider is tracked in
+      // enabled_models, the model must be explicitly enabled (=== true); a
+      // `false` or missing entry means the model should be hidden.
+      if (!isStickyNotEnabled && enabledModelsData?.enabled_models) {
+        const providerModels = enabledModelsData.enabled_models[provider];
+        if (providerModels && providerModels[option.name] !== true) {
+          continue;
+        }
+      }
+
+      if (!grouped[provider]) {
+        grouped[provider] = [];
+      }
+      grouped[provider].push(option);
+      seen.add(`${provider}::${option.name}`);
     }
+
+    // Augment with models the user has enabled that were not in the saved
+    // `options` (the saved list reflects only what the exporter had available).
+    // This ensures importing a flow shows the importing user's full enabled
+    // list rather than the intersection of the two sets.
+    //
+    // Cross-type guard: `providersData` from ``GET /api/v1/models`` is NOT
+    // filtered by ``model_type`` (the hook doesn't pass one), and the merged
+    // ``enabled_models`` map treats llm + embeddings as a single flat
+    // provider→name→bool record.  Without this check, text-embedding models
+    // leak into the language-model dropdown (and vice versa) whenever their
+    // provider has both kinds enabled.  Filter by each model's own
+    // ``model_type`` metadata so the component only shows its own type.
+    if (enabledModelsData?.enabled_models && providersData) {
+      for (const providerInfo of providersData) {
+        const providerName = providerInfo.provider;
+        const providerModels = enabledModelsData.enabled_models[providerName];
+        if (!providerModels) continue;
+
+        for (const model of providerInfo.models ?? []) {
+          const modelName = model.model_name;
+          if (providerModels[modelName] !== true) continue;
+
+          // Only include models whose declared type matches this component.
+          // Older metadata without ``model_type`` is allowed through so we
+          // don't regress providers that haven't adopted the tag yet.
+          const modelMetadataType = (
+            model.metadata as Record<string, unknown> | undefined
+          )?.model_type;
+          if (
+            typeof modelMetadataType === "string" &&
+            modelMetadataType !== modelType
+          ) {
+            continue;
+          }
+
+          const key = `${providerName}::${modelName}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          if (!grouped[providerName]) {
+            grouped[providerName] = [];
+          }
+          grouped[providerName].push({
+            name: modelName,
+            icon: providerInfo.icon || "Bot",
+            provider: providerName,
+            metadata: (model.metadata ?? {}) as Record<string, unknown>,
+          });
+        }
+      }
+    }
+
+    // Zero-provider import fallback: if the user has no providers configured
+    // locally but an imported flow carries a saved model, inject that saved
+    // selection as the only dropdown entry so the trigger renders the model
+    // (with the Configure wrench) instead of the "Setup Provider" button.
+    // Without this, ``flatOptions`` would be empty and ``ModelTrigger`` would
+    // swap the dropdown for the setup CTA, visually losing the imported
+    // selection.
+    const hasAnyGrouped = Object.keys(grouped).length > 0;
+    const savedValue = value?.[0];
+    if (!hasAnyGrouped && savedValue?.name) {
+      const providerName = savedValue.provider || "Unknown";
+      grouped[providerName] = [
+        {
+          ...(savedValue.id && { id: savedValue.id }),
+          name: savedValue.name,
+          icon: savedValue.icon || "Bot",
+          provider: providerName,
+          metadata: {
+            ...(savedValue.metadata ?? {}),
+            not_enabled_locally: true,
+          },
+        } as ModelOption,
+      ];
+    }
+
     return grouped;
-  }, [options]);
+  }, [options, enabledModelsData, providersData, modelType, value]);
 
   // Flattened array of all enabled options for efficient lookups by name
   const flatOptions = useMemo(
@@ -106,48 +250,70 @@ export default function ModelInputComponent({
     [groupedOptions],
   );
 
-  // Sync local selectedModel state with the external value prop and available options.
-  // Handles three cases: no available models (clear selection), current value exists in options (keep it),
-  // or current value is invalid/missing (select first available model).
-  useEffect(() => {
-    // Skip auto-selection when in connection mode (value is "connect_other_models" string)
-    if (value === "connect_other_models") {
-      return;
+  // Derive the currently selected model from the value prop
+  const selectedModel = useMemo(() => {
+    // If we're in connection mode, show the connection option as selected
+    if (isConnectionMode) {
+      return {
+        name:
+          externalOptions?.fields?.data?.node?.display_name ||
+          "Connect other models",
+        icon: externalOptions?.fields?.data?.node?.icon || "CornerDownLeft",
+        provider: "",
+      } as SelectedModel;
     }
 
-    const availableOptions = flatOptions;
     const currentName = value?.[0]?.name;
-
-    // No available models: clear selection/value
-    if (!availableOptions || availableOptions.length === 0) {
-      // Only process empty state once to prevent infinite loop
-      if (!hasProcessedEmptyRef.current) {
-        hasProcessedEmptyRef.current = true;
-        // Only call handleOnNewValue if value is not already empty
-        if (value && Array.isArray(value) && value.length > 0) {
-          handleOnNewValue({ value: [] });
-        }
+    if (!currentName) {
+      // Logic to auto-select the first model if none is selected
+      // We only do this check if we have options available
+      if (flatOptions.length > 0 && !hasProcessedEmptyRef.current) {
+        // If we haven't processed empty state yet, we render the first one
+        return flatOptions[0];
       }
-      setSelectedModel(null);
-      return;
+      return null;
     }
 
-    // Reset the empty state flag when we have options
-    hasProcessedEmptyRef.current = false;
+    const match = flatOptions.find((option) => option.name === currentName);
+    if (match) return match;
 
-    // If current value exists in refreshed options, keep it
-    if (currentName) {
-      const existingModel = availableOptions.find(
-        (option) => option.name === currentName,
-      );
-      if (existingModel) {
-        setSelectedModel(existingModel);
-        return;
-      }
+    // Saved name isn't in the filtered options list — typically because the
+    // flow was imported via drag-drop (no backend sticky-default round-trip)
+    // or because an outdated component was upgraded and the fresh template
+    // lacks the sticky-default metadata. Preserve the saved selection in the
+    // trigger so it doesn't visually "snap" to the user's first enabled
+    // model. The wrench affordance in the dropdown handles configuration.
+    const saved = value?.[0];
+    if (saved) {
+      return {
+        ...(saved.id && { id: saved.id }),
+        name: saved.name,
+        icon: saved.icon || "Bot",
+        provider: saved.provider || "Unknown",
+        metadata: {
+          ...(saved.metadata ?? {}),
+          not_enabled_locally: true,
+        },
+      } as SelectedModel;
     }
 
-    // Otherwise select the first available model
-    const firstOption = availableOptions[0];
+    return flatOptions.length > 0 ? flatOptions[0] : null;
+  }, [value, flatOptions, isConnectionMode, externalOptions]);
+
+  useEffect(() => {
+    if (flatOptions.length === 0 || isConnectionMode) return;
+    if (hasProcessedEmptyRef.current) return;
+
+    const isEmpty = !value || value.length === 0;
+    // Sticky-default: if the component has a saved value, keep it as-is. The
+    // backend injects any selection that isn't in the user's enabled list
+    // back into `options` tagged with `not_enabled_locally`, so the saved
+    // value remains visible and runnable. Only auto-select the first option
+    // when there's no saved value at all.
+    if (!isEmpty) return;
+
+    const firstOption = flatOptions[0];
+    // Construct the new value object
     const newValue = [
       {
         ...(firstOption.id && { id: firstOption.id }),
@@ -157,18 +323,46 @@ export default function ModelInputComponent({
         metadata: firstOption.metadata ?? {},
       },
     ];
-
     handleOnNewValue({ value: newValue });
-    setSelectedModel(firstOption);
-  }, [flatOptions, value, handleOnNewValue]);
+    hasProcessedEmptyRef.current = true;
+  }, [flatOptions, value, handleOnNewValue, isConnectionMode]);
 
   /**
    * Handles model selection from the dropdown.
-   * Constructs a normalized value object and propagates it to the parent.
-   * The value is wrapped in an array to match the expected format.
    */
   const handleModelSelect = useCallback(
     (modelName: string) => {
+      setConnectionMode(false);
+      // Clear the _connection_mode flag from the model field template
+      // so the backend resumes normal update_build_config behavior.
+      if (nodeId) {
+        const store = useFlowStore.getState();
+        const node = store.getNode(nodeId);
+        const nodeData = node?.data as NodeDataType | undefined;
+        if (nodeData?.node?.template?.model?._connection_mode) {
+          store.setNode(
+            nodeId,
+            (prev) => ({
+              ...prev,
+              data: {
+                ...prev.data,
+                _connectionMode: false,
+                node: {
+                  ...(prev.data as NodeDataType).node,
+                  template: {
+                    ...(prev.data as NodeDataType).node.template,
+                    model: {
+                      ...(prev.data as NodeDataType).node.template.model,
+                      _connection_mode: false,
+                    },
+                  },
+                },
+              } as NodeDataType,
+            }),
+            false,
+          );
+        }
+      }
       const selectedOption = flatOptions.find(
         (option) => option.name === modelName,
       );
@@ -186,140 +380,52 @@ export default function ModelInputComponent({
       ];
 
       handleOnNewValue({ value: newValue });
-      setSelectedModel(selectedOption);
+      setOpen(false);
     },
     [flatOptions, handleOnNewValue],
   );
 
-  /**
-   * Triggers a refresh of available model options from the backend.
-   * Shows loading state for 2 seconds to provide visual feedback.
-   */
   const handleRefreshButtonPress = useCallback(async () => {
-    setRefreshOptions(true);
     setOpen(false);
-
-    // mutateTemplate triggers a backend call to refresh the template options
-    await mutateTemplate(
-      value,
-      nodeId!,
-      nodeClass!,
-      handleNodeClass!,
-      postTemplateValue,
-      setErrorData,
-    );
-    // Brief delay before hiding loading state for better UX
-    setTimeout(() => setRefreshOptions(false), 2000);
-  }, [
-    value,
-    nodeId,
-    nodeClass,
-    handleNodeClass,
-    postTemplateValue,
-    setErrorData,
-  ]);
+    setRefreshOptions(true);
+    try {
+      await refreshAllModelInputs({ silent: true });
+    } catch {
+      // refreshAllModelInputs handles its own error notifications via alertStore
+    } finally {
+      setRefreshOptions(false);
+    }
+  }, [refreshAllModelInputs]);
 
   const handleManageProvidersDialogClose = useCallback(() => {
     setOpenManageProvidersDialog(false);
-    handleRefreshButtonPress();
-  }, [handleRefreshButtonPress]);
+    setIsRefreshingAfterClose(true);
+  }, []);
 
-  const handleExternalOptions = useCallback(
-    async (optionValue: string) => {
-      setOpen(false);
+  // Clear the refreshing indicator after the providers query completes a full
+  // refetch cycle (isFetchingProviders: false → true → false). We track whether
+  // we've seen the fetch start so we don't clear prematurely before the
+  // invalidation has even been triggered by refreshAllModelInputs.
+  const hasSeenFetchStartRef = useRef(false);
+  useEffect(() => {
+    if (!isRefreshingAfterClose) {
+      hasSeenFetchStartRef.current = false;
+      return;
+    }
+    if (isFetchingProviders) {
+      hasSeenFetchStartRef.current = true;
+    } else if (hasSeenFetchStartRef.current) {
+      setIsRefreshingAfterClose(false);
+    }
+  }, [isRefreshingAfterClose, isFetchingProviders]);
 
-      // Clear the current selection UI state
-      setSelectedModel(null);
-
-      // Pass the optionValue ("connect_other_models") as both the field value and to mutateTemplate
-      // This way the backend knows we're in connection mode
-      handleOnNewValue({ value: optionValue });
-
-      await mutateTemplate(
-        optionValue,
-        nodeId!,
-        nodeClass!,
-        handleNodeClass!,
-        postTemplateValue,
-        setErrorData,
-        "model",
-        () => {
-          // Enable connection mode for connect_other_models AFTER mutation completes
-          try {
-            if (optionValue === "connect_other_models") {
-              const store = useFlowStore.getState();
-              const node = store.getNode(nodeId!);
-              const templateField = node?.data?.node?.template?.["model"];
-              if (!templateField) {
-                return;
-              }
-
-              const inputTypes: string[] =
-                (Array.isArray(templateField.input_types)
-                  ? templateField.input_types
-                  : []) || [];
-              const effectiveInputTypes =
-                inputTypes.length > 0 ? inputTypes : ["LanguageModel"];
-
-              const tooltipTitle: string =
-                (inputTypes && inputTypes.length > 0
-                  ? inputTypes.join("\n")
-                  : templateField.type) || "";
-
-              const myId = scapedJSONStringfy({
-                inputTypes: effectiveInputTypes,
-                type: templateField.type,
-                id: nodeId,
-                fieldName: "model",
-                proxy: templateField.proxy,
-              });
-
-              const typesData = useTypesStore.getState().data;
-              const grouped = groupByFamily(
-                typesData,
-                (effectiveInputTypes && effectiveInputTypes.length > 0
-                  ? effectiveInputTypes.join("\n")
-                  : tooltipTitle) || "",
-                true,
-                store.nodes,
-              );
-
-              // Build a pseudo source so compatible target handles (left side) glow
-              const pseudoSourceHandle = scapedJSONStringfy({
-                fieldName: "model",
-                id: nodeId,
-                inputTypes: effectiveInputTypes,
-                type: "str",
-              });
-
-              const filterObj = {
-                source: undefined,
-                sourceHandle: undefined,
-                target: nodeId,
-                targetHandle: pseudoSourceHandle,
-                type: "LanguageModel",
-                color: "datatype-fuchsia",
-              } as any;
-
-              // Show compatible handles glow
-              store.setFilterEdge(grouped);
-              store.setFilterType(filterObj);
-            }
-          } catch (error) {
-            console.warn("Error setting up connection mode:", error);
-          }
-        },
-      );
-    },
-    [
-      nodeId,
-      nodeClass,
-      handleNodeClass,
-      postTemplateValue,
-      setErrorData,
-      handleOnNewValue,
-    ],
-  );
+  // Safety timeout: clear loading even if no refetch cycle is detected
+  // (e.g. no model nodes on canvas, or the refresh was a no-op)
+  useEffect(() => {
+    if (!isRefreshingAfterClose) return;
+    const timeout = setTimeout(() => setIsRefreshingAfterClose(false), 5000);
+    return () => clearTimeout(timeout);
+  }, [isRefreshingAfterClose]);
 
   const renderLoadingButton = () => (
     <Button
@@ -332,84 +438,6 @@ export default function ModelInputComponent({
     </Button>
   );
 
-  const renderSelectedIcon = () => {
-    if (disabled || options.length === 0) {
-      return null;
-    }
-
-    return selectedModel?.icon ? (
-      <ForwardedIconComponent
-        name={selectedModel.icon || "Bot"}
-        className="h-4 w-4 flex-shrink-0"
-      />
-    ) : null;
-  };
-
-  // Renders either a "Setup Provider" button (no providers) or the model selector dropdown trigger
-  const renderTriggerButton = () =>
-    !hasEnabledProviders ? (
-      <Button
-        variant="default"
-        size="sm"
-        className="w-full"
-        onClick={() => setOpenManageProvidersDialog(true)}
-      >
-        <ForwardedIconComponent name="Brain" className="h-4 w-4" />
-        <div className="text-[13px]">{placeholder || "Setup Provider"}</div>
-      </Button>
-    ) : (
-      <div className="flex w-full flex-col">
-        <PopoverTrigger asChild>
-          <Button
-            disabled={disabled || options.length === 0}
-            variant="primary"
-            size="xs"
-            role="combobox"
-            ref={refButton}
-            aria-expanded={open}
-            data-testid={id}
-            className={cn(
-              "dropdown-component-false-outline py-2",
-              "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
-            )}
-          >
-            <span
-              className="flex w-full items-center gap-2 overflow-hidden"
-              data-testid={`value-dropdown-${id}`}
-            >
-              {renderSelectedIcon()}
-              <span className="truncate">
-                {disabled ? (
-                  RECEIVING_INPUT_VALUE
-                ) : (
-                  <div
-                    className={cn(
-                      "truncate",
-                      !selectedModel?.name && "text-muted-foreground",
-                    )}
-                  >
-                    {selectedModel?.name || "Select a model"}
-                  </div>
-                )}
-              </span>
-            </span>
-            <ForwardedIconComponent
-              name={disabled ? "Lock" : "ChevronsUpDown"}
-              className={cn(
-                "ml-2 h-4 w-4 shrink-0 text-foreground",
-                disabled
-                  ? "text-placeholder-foreground hover:text-placeholder-foreground"
-                  : "hover:text-foreground",
-              )}
-            />
-          </Button>
-        </PopoverTrigger>
-      </div>
-    );
-
-  const footerButtonClass =
-    "w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group";
-
   const renderFooterButton = (
     label: string,
     icon: string,
@@ -417,7 +445,7 @@ export default function ModelInputComponent({
     testId?: string,
   ) => (
     <Button
-      className={footerButtonClass}
+      className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group"
       unstyled
       data-testid={testId}
       onClick={onClick}
@@ -432,113 +460,110 @@ export default function ModelInputComponent({
     </Button>
   );
 
-  const renderOptionsList = () => (
-    <CommandList className="max-h-[300px] overflow-y-auto">
-      {Object.entries(groupedOptions).map(([provider, models]) => (
-        <CommandGroup className="p-0" key={provider}>
-          <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center justify-between pr-4">
-            <div className="flex items-center">{provider}</div>
-          </div>
-          {models.map((data) => (
-            <CommandItem
-              key={data.name}
-              value={data.name}
-              onSelect={() => {
-                handleModelSelect(data.name);
-                setOpen(false);
-              }}
-              className="w-full items-center rounded-none"
-              data-testid={`${data.name}-option`}
-            >
-              <div className="flex w-full items-center gap-2">
-                <ForwardedIconComponent
-                  name={data.icon || "Bot"}
-                  className="h-4 w-4 shrink-0 text-primary ml-2"
-                />
-                <div className="truncate text-[13px]">{data.name}</div>
-                <div className="pl-2 ml-auto">
-                  <ForwardedIconComponent
-                    name="Check"
-                    className={cn(
-                      "h-4 w-4 shrink-0 text-primary",
-                      selectedModel?.name === data.name
-                        ? "opacity-100"
-                        : "opacity-0",
-                    )}
-                  />
-                </div>
-              </div>
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      ))}
-    </CommandList>
-  );
-
   const renderManageProvidersButton = () => (
-    <div className="sticky bottom-0 bg-background">
-      {renderFooterButton(
-        "Refresh List",
-        "RefreshCw",
-        handleRefreshButtonPress,
-        "external-option-button",
-      )}
-
+    <div className="bottom-0 bg-background">
       {renderFooterButton(
         "Manage Model Providers",
         "Settings",
         () => setOpenManageProvidersDialog(true),
         "manage-model-providers",
       )}
-
-      {externalOptions?.fields?.data?.node &&
-        renderFooterButton(
-          externalOptions.fields.data.node.display_name,
-          externalOptions.fields.data.node.icon || "Box",
-          () =>
-            handleExternalOptions(externalOptions.fields.data.node.name || ""),
-          "external-option-button",
-        )}
     </div>
   );
 
-  const renderNoProviders = () => (
-    <CommandList className="max-h-[300px] overflow-y-auto">
-      <CommandItem
-        disabled
-        className="w-full px-4 py-2 text-[13px] text-muted-foreground"
+  const renderPopoverContent = () => {
+    const PopoverContentInput =
+      editNode || inspectionPanel
+        ? PopoverContent
+        : PopoverContentWithoutPortal;
+    return (
+      <PopoverContentInput
+        side="bottom"
+        avoidCollisions={true}
+        className="noflow nowheel nopan nodelete nodrag p-0"
+        style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
-        No Models Enabled
-      </CommandItem>
-    </CommandList>
-  );
+        <Command className="flex flex-col">
+          <ModelList
+            groupedOptions={groupedOptions}
+            selectedModel={selectedModel}
+            onSelect={handleModelSelect}
+          />
+          {renderFooterButton(
+            "Refresh List",
+            "RotateCw",
+            handleRefreshButtonPress,
+            "refresh-model-list",
+          )}
+          {renderManageProvidersButton()}
+          {externalOptions?.fields?.data?.node && (
+            <div className="border-t bg-background">
+              {renderFooterButton(
+                externalOptions.fields.data.node.display_name ||
+                  "Connect other models",
+                externalOptions.fields.data.node.icon || "CornerDownLeft",
+                () => handleExternalOptions("connect_other_models"),
+                "connect-other-models",
+              )}
+            </div>
+          )}
+        </Command>
+      </PopoverContentInput>
+    );
+  };
 
-  const renderPopoverContent = () => (
-    <PopoverContentWithoutPortal
-      side="bottom"
-      avoidCollisions={true}
-      className="noflow nowheel nopan nodelete nodrag p-0"
-      style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
-    >
-      <Command className="flex flex-col">
-        {Object.keys(groupedOptions).length > 0
-          ? renderOptionsList()
-          : renderNoProviders()}
-        {renderManageProvidersButton()}
-      </Command>
-    </PopoverContentWithoutPortal>
-  );
+  if (!showParameter) {
+    return null;
+  }
 
-  // Loading state
-  if (!options || options.length === 0 || refreshOptions) {
+  // Show loading indicator only when actually loading data, not when options are genuinely empty
+  if (isLoading || isRefreshingAfterClose || refreshOptions) {
     return <div className="w-full">{renderLoadingButton()}</div>;
   }
+
+  // Show a small "Configure" wrench next to the trigger when the currently
+  // selected model was injected by the backend as a sticky default — i.e.
+  // the user's saved selection isn't in their current enabled_models list.
+  // Clicking it jumps straight to the provider manager so the user can
+  // enable the provider without losing their selection.
+  const showConfigureAffordance =
+    selectedModel?.metadata?.not_enabled_locally === true;
 
   // Main render
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
-        <div className="w-full truncate">{renderTriggerButton()}</div>
+        <div className="flex w-full items-center gap-2">
+          <div className="min-w-0 flex-1 truncate">
+            <ModelTrigger
+              open={open}
+              disabled={disabled}
+              options={flatOptions}
+              selectedModel={selectedModel}
+              placeholder={placeholder}
+              hasEnabledProviders={hasEnabledProviders ?? false}
+              onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
+              id={id}
+              refButton={refButton}
+              showEmptyState={showEmptyState}
+            />
+          </div>
+          {showConfigureAffordance && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setOpenManageProvidersDialog(true);
+              }}
+              data-testid={`${id}-configure`}
+              aria-label="Configure this model's provider"
+              title="This model isn't enabled for your user. Click to configure its provider."
+              className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-primary"
+            >
+              <ForwardedIconComponent name="Wrench" className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
         {renderPopoverContent()}
       </Popover>
 

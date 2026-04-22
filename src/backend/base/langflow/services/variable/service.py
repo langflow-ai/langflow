@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from lfx.log.logger import logger
 from sqlmodel import select
@@ -15,7 +16,6 @@ from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from uuid import UUID
 
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -32,13 +32,21 @@ class DatabaseVariableService(VariableService, Service):
 
         # Import the provider mapping to set default_fields for known providers
         try:
-            from lfx.base.models.unified_models import get_model_provider_variable_mapping
+            from lfx.base.models.unified_models import get_model_provider_metadata
 
-            provider_mapping = get_model_provider_variable_mapping()
-            # Reverse the mapping to go from variable name to provider
-            var_to_provider = {var_name: provider for provider, var_name in provider_mapping.items()}
+            # Build var_to_provider from all variables in metadata (not just primary)
+            var_to_provider = {}
+            var_to_info = {}  # Maps variable_key to its full info (including is_secret)
+            metadata = get_model_provider_metadata()
+            for provider, meta in metadata.items():
+                for var in meta.get("variables", []):
+                    var_key = var.get("variable_key")
+                    if var_key:
+                        var_to_provider[var_key] = provider
+                        var_to_info[var_key] = var
         except Exception:  # noqa: BLE001
             var_to_provider = {}
+            var_to_info = {}
 
         for var_name in self.settings_service.settings.variables_to_get_from_environment:
             # Check if session is still usable before processing each variable
@@ -54,8 +62,11 @@ class DatabaseVariableService(VariableService, Service):
 
                 # Skip placeholder/test values like "dummy" for API key variables only
                 # This prevents test environments from overwriting user-configured model provider keys
-                is_api_key_variable = var_name in var_to_provider
-                if is_api_key_variable and value.lower() == "dummy":
+                is_provider_variable = var_name in var_to_provider
+                var_info = var_to_info.get(var_name, {})
+                is_secret_variable = var_info.get("is_secret", False)
+
+                if is_provider_variable and is_secret_variable and value.lower() == "dummy":
                     await logger.adebug(
                         f"Skipping API key variable {var_name} with placeholder value 'dummy' "
                         "to preserve user configuration"
@@ -66,9 +77,32 @@ class DatabaseVariableService(VariableService, Service):
                 # Set default_fields if this is a known provider variable
                 default_fields = []
                 try:
-                    if is_api_key_variable:
+                    if is_provider_variable:
                         provider_name = var_to_provider[var_name]
-                        default_fields = [provider_name, "api_key"]
+                        # Get the variable type from metadata
+                        var_display_name = var_info.get("variable_name", "api_key")
+
+                        # Validate secret variables (API keys) before setting default_fields
+                        # This prevents invalid keys from enabling providers during migration
+                        if is_secret_variable:
+                            try:
+                                from lfx.base.models.unified_models import validate_model_provider_key
+
+                                validate_model_provider_key(provider_name, {var_name: value})
+                                # Only set default_fields if validation passes
+                                default_fields = [provider_name, var_display_name]
+                                await logger.adebug(f"Validated {var_name} - provider will be enabled")
+                            except (ValueError, Exception) as validation_error:  # noqa: BLE001
+                                # Validation failed - don't set default_fields
+                                # This prevents the provider from appearing as "Enabled"
+                                default_fields = []
+                                await logger.adebug(
+                                    f"Skipping default_fields for {var_name} - validation failed: {validation_error!s}"
+                                )
+                        else:
+                            # Non-secret variables (like project_id, url) don't need validation
+                            default_fields = [provider_name, var_display_name]
+                            await logger.adebug(f"Set default_fields for non-secret variable {var_name}")
                     existing = (await session.exec(query)).first()
                 except Exception as e:  # noqa: BLE001
                     await logger.aexception(f"Error querying {var_name} variable: {e!s}")
@@ -176,29 +210,67 @@ class DatabaseVariableService(VariableService, Service):
             )
             raise TypeError(msg)
 
-        # we decrypt the value
-        return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+        # Only decrypt CREDENTIAL type variables; GENERIC variables are stored as plain text
+        if variable.type == CREDENTIAL_TYPE:
+            return auth_utils.decrypt_api_key(variable.value)
+        # GENERIC type - return as-is
+        return variable.value
 
     async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
         stmt = select(Variable).where(Variable.user_id == user_id)
         variables = list((await session.exec(stmt)).all())
-        # For variables of type 'Generic', attempt to decrypt the value.
-        # If decryption fails, assume the value is already plaintext.
         variables_read = []
         for variable in variables:
             value = None
             if variable.type == GENERIC_TYPE:
-                try:
-                    value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
-                except Exception as e:  # noqa: BLE001
-                    await logger.adebug(
-                        f"Decryption of {variable.type} failed for variable '{variable.name}': {e}. Assuming plaintext."
-                    )
-                    value = variable.value
+                value = auth_utils.decrypt_api_key(variable.value)
+                if not value:
+                    # If decryption fails (likely due to encryption by different key), skip this variable
+                    continue
+
+            # Model validate will set value to None if credential type
             variable_read = VariableRead.model_validate(variable, from_attributes=True)
-            variable_read.value = value
+            if variable.type == GENERIC_TYPE:
+                variable_read.value = value
+
             variables_read.append(variable_read)
         return variables_read
+
+    async def get_all_decrypted_variables(
+        self,
+        user_id: UUID | str,
+        session: AsyncSession,
+    ) -> dict[str, str]:
+        """Get all variables for a user with decrypted values.
+
+        Args:
+            user_id: The user ID to get variables for
+            session: Database session
+
+        Returns:
+            Dictionary mapping variable names to decrypted values
+        """
+        # Convert string to UUID if needed for SQLAlchemy query
+        user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+        stmt = select(Variable).where(Variable.user_id == user_id_uuid)
+        variables = (await session.exec(stmt)).all()
+
+        result = {}
+        for var in variables:
+            if var.name and var.value:
+                try:
+                    decrypted_value = auth_utils.decrypt_api_key(var.value)
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Decryption failed for variable '{var.name}': {e}. Skipping")
+                    continue
+
+                if not decrypted_value:
+                    await logger.awarning(f"Decryption returned empty for variable '{var.name}'. Skipping")
+                    continue
+
+                result[var.name] = decrypted_value
+
+        return result
 
     async def get_variable_by_id(
         self,
@@ -229,6 +301,15 @@ class DatabaseVariableService(VariableService, Service):
         if not variable:
             msg = f"{name} variable not found."
             raise ValueError(msg)
+
+        # Validate that GENERIC variables don't start with Fernet signature
+        if variable.type == GENERIC_TYPE and value.startswith("gAAAAA"):
+            msg = (
+                f"Generic variable '{name}' cannot start with 'gAAAAA' as this is reserved "
+                "for encrypted values. Please use a different value."
+            )
+            raise ValueError(msg)
+
         # Only encrypt CREDENTIAL_TYPE variables
         if variable.type == CREDENTIAL_TYPE:
             variable.value = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
@@ -251,16 +332,22 @@ class DatabaseVariableService(VariableService, Service):
         db_variable = (await session.exec(query)).one()
         db_variable.updated_at = datetime.now(timezone.utc)
 
-        # Use the variable's type if provided, otherwise use the db_variable's type
-        variable_type = variable.type or db_variable.type
-
-        # Only process value if it's actually provided (not None)
+        # Handle value encryption based on variable type (consistent with update_variable and create_variable)
         if variable.value is not None:
-            # Handle empty string as valid value
-            value_to_store = variable.value
+            variable_type = variable.type if variable.type is not None else db_variable.type
+
+            # Validate that GENERIC variables don't start with Fernet signature
+            if variable_type == GENERIC_TYPE and variable.value.startswith("gAAAAA"):
+                msg = (
+                    f"Generic variable '{db_variable.name}' cannot start with 'gAAAAA' as this is reserved "
+                    "for encrypted values. Please use a different value."
+                )
+                raise ValueError(msg)
+
+            # Only encrypt CREDENTIAL_TYPE variables (consistent with update_variable and create_variable)
             if variable_type == CREDENTIAL_TYPE:
-                encrypted = auth_utils.encrypt_api_key(value_to_store, settings_service=self.settings_service)
-                variable.value = encrypted
+                variable.value = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
+            # GENERIC_TYPE variables are stored as plain text
 
         variable_data = variable.model_dump(exclude_unset=True)
         for key, value in variable_data.items():
@@ -302,12 +389,16 @@ class DatabaseVariableService(VariableService, Service):
         type_: str = CREDENTIAL_TYPE,
         session: AsyncSession,
     ):
+        # Validate that GENERIC variables don't start with Fernet signature
+        if type_ == GENERIC_TYPE and value.startswith("gAAAAA"):
+            msg = (
+                f"Generic variable '{name}' cannot start with 'gAAAAA' as this is reserved "
+                "for encrypted values. Please use a different value."
+            )
+            raise ValueError(msg)
+
         # Only encrypt CREDENTIAL_TYPE variables
-        encrypted_value = (
-            auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
-            if type_ == CREDENTIAL_TYPE
-            else value
-        )
+        encrypted_value = auth_utils.encrypt_api_key(value) if type_ == CREDENTIAL_TYPE else value
         variable_base = VariableCreate(
             name=name,
             type=type_,

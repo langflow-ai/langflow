@@ -186,14 +186,14 @@ const CustomInputPopover = ({
   commandWidth,
   blockAddNewGlobalVariable,
   hasRefreshButton,
+  inspectionPanel,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [cursor, setCursor] = useState<number | null>(null);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
-  const PopoverContentInput = editNode
-    ? PopoverContent
-    : PopoverContentWithoutPortal;
+  const PopoverContentInput =
+    editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
   // Restore cursor position after value changes
   useEffect(() => {
@@ -332,6 +332,7 @@ const CustomInputPopover = ({
           minWidth: refInput?.current?.clientWidth ?? "200px",
           width: popoverWidth ?? null,
         }}
+        avoidCollisions={inspectionPanel || editNode}
         side="bottom"
         align="start"
       >

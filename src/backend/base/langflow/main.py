@@ -2,9 +2,10 @@ import asyncio
 import json
 import os
 import re
+import sys
 import tempfile
 import warnings
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -26,7 +27,8 @@ from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from langflow.api import health_check_router, log_router, router
+from langflow.api import health_check_router, log_router
+from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
@@ -37,6 +39,8 @@ from langflow.initial_setup.setup import (
     sync_flows_from_fs,
 )
 from langflow.middleware import ContentSizeLimitMiddleware
+from langflow.plugin_routes import load_plugin_routes
+from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
     get_queue_service,
     get_service,
@@ -314,6 +318,18 @@ def get_lifespan(*, fix_migration=False, version=None):
             yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
+        except UnsupportedPostgreSQLVersionError:
+            # Normally caught by the pre-flight check in __main__.py
+            # before the server starts.  If we get here anyway (e.g.
+            # direct uvicorn invocation via ``make backend``), exit
+            # immediately and tell the parent (reloader) to stop.
+            import signal
+
+            sys.stdout.flush()
+            sys.stderr.flush()
+            with suppress(ProcessLookupError, PermissionError):
+                os.kill(os.getppid(), signal.SIGTERM)
+            os._exit(3)
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
                 logger.exception(exc)
@@ -416,18 +432,20 @@ def create_app():
     __version__ = get_version_info()["version"]
     configure()
     lifespan = get_lifespan(version=__version__)
+
+    settings = get_settings_service().settings
+
     app = FastAPI(
         title="Langflow",
         version=__version__,
         lifespan=lifespan,
+        root_path=settings.root_path,
     )
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
 
     setup_sentry(app)
-
-    settings = get_settings_service().settings
 
     # Warn about future CORS changes
     warn_about_future_cors_changes(settings)
@@ -483,6 +501,28 @@ def create_app():
         return await call_next(request)
 
     @app.middleware("http")
+    async def forwarded_prefix_middleware(request: Request, call_next):
+        """Honour X-Forwarded-Prefix set by a reverse proxy.
+
+        When a reverse proxy (e.g. Nginx) strips a URL prefix before forwarding
+        the request, it can advertise the original prefix via X-Forwarded-Prefix.
+        We propagate this into the ASGI ``root_path`` so that transports like
+        MCP SSE include the prefix in the POST-back URLs they hand to clients.
+
+        This middleware is only active when ``root_path`` is configured in
+        settings (i.e. the operator has explicitly opted into reverse-proxy
+        mode).  The header value takes precedence over the static setting
+        because the proxy is the runtime source of truth for the prefix.
+        """
+        if not settings.root_path:
+            return await call_next(request)
+
+        prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
+        if prefix and prefix.startswith("/") and "://" not in prefix and "?" not in prefix and "#" not in prefix:
+            request.scope["root_path"] = prefix
+        return await call_next(request)
+
+    @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
         flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
@@ -516,6 +556,9 @@ def create_app():
     app.include_router(router)
     app.include_router(health_check_router)
     app.include_router(log_router)
+
+    # Discover and register additional routers from plugins (langflow.plugins entry-point)
+    load_plugin_routes(app)
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
@@ -570,6 +613,15 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):
+        # Return JSON for all API endpoints to prevent HTML responses
+        if _request.url.path.startswith("/api"):
+            # Extract detail from HTTPException if available
+            detail = _exc.detail if isinstance(_exc, HTTPException) else "Not Found"
+            return JSONResponse(
+                status_code=404,
+                content=detail if isinstance(detail, dict) else {"detail": detail},
+            )
+
         path = anyio.Path(static_files_dir) / "index.html"
 
         if not await path.exists():

@@ -12,6 +12,8 @@ class DirectoryComponent(Component):
     documentation: str = "https://docs.langflow.org/directory"
     icon = "folder"
     name = "Directory"
+    legacy = True
+    replacement = ["data.File"]
 
     inputs = [
         MessageTextInput(

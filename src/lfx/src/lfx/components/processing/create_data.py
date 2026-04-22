@@ -41,7 +41,7 @@ class CreateDataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="build_data"),
+        Output(display_name="JSON", name="data", method="build_data"),
     ]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -75,7 +75,7 @@ class CreateDataComponent(Component):
                         display_name=f"Field {i}",
                         name=key,
                         info=f"Key for field {i}.",
-                        input_types=["Message", "Data"],
+                        input_types=["Message", "Data", "JSON"],
                     )
                     build_config[field.name] = field.to_dict()
 

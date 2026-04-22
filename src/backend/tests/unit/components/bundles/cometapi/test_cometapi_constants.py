@@ -38,3 +38,18 @@ class TestCometAPIConstants:
     def test_specific_model_in_list(self, model_name):
         """Parametrized test for specific models."""
         assert model_name in COMETAPI_MODELS
+
+    def test_should_not_expose_fictional_gpt53_ids_in_cometapi_models(self):
+        """Bug: fictional gpt-5.3 ids in COMETAPI_MODELS cause 404 at runtime.
+
+        gpt-5.3-instant is a ChatGPT product name, not an API model id; gpt-5.3 has no
+        base variant — only gpt-5.3-chat-latest and gpt-5.3-codex exist. Selecting
+        either of the removed entries causes 404 model_not_found at runtime.
+        """
+        fictional_ids = {"gpt-5.3", "gpt-5.3-instant"}
+        leaked = fictional_ids & set(COMETAPI_MODELS)
+
+        assert not leaked, (
+            f"Fictional OpenAI model IDs exposed in COMETAPI_MODELS: {sorted(leaked)}. "
+            f"These IDs are not real API models and trigger 404 model_not_found at runtime."
+        )

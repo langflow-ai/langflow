@@ -3,24 +3,26 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
+from types import UnionType
+from typing import Any, get_args, get_origin
 
 from langchain_core.tools import StructuredTool  # noqa: TC002
+from pydantic import BaseModel
 
 from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
 from lfx.base.mcp.util import (
     MCPStdioClient,
     MCPStreamableHttpClient,
-    create_input_schema_from_json_schema,
     update_tools,
 )
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import InputTypes  # noqa: TC001
 from lfx.io import BoolInput, DictInput, DropdownInput, McpInput, MessageTextInput, Output
-from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
+from lfx.io.schema import schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-from lfx.services.deps import get_settings_service, get_storage_service, session_scope
+from lfx.services.deps import get_storage_service, session_scope
 
 
 def resolve_mcp_config(
@@ -143,6 +145,7 @@ class MCPToolsComponent(ComponentWithCache):
             show=False,
             required=True,
             real_time_refresh=True,
+            refresh_button=True,
         ),
         MessageTextInput(
             name="tool_placeholder",
@@ -165,8 +168,7 @@ class MCPToolsComponent(ComponentWithCache):
                 msg = "Invalid tool object or missing input schema"
                 raise ValueError(msg)
 
-            flat_schema = flatten_schema(tool_obj.args_schema.schema())
-            input_schema = create_input_schema_from_json_schema(flat_schema)
+            input_schema = tool_obj.args_schema
             if not input_schema:
                 msg = f"Empty input schema for tool '{tool_obj.name}'"
                 raise ValueError(msg)
@@ -231,6 +233,8 @@ class MCPToolsComponent(ComponentWithCache):
             try:
                 from langflow.api.v2.mcp import get_server
                 from langflow.services.database.models.user.crud import get_user_by_id
+
+                from lfx.services.deps import get_settings_service
             except ImportError as e:
                 msg = (
                     "Langflow MCP server functionality is not available. "
@@ -294,12 +298,33 @@ class MCPToolsComponent(ComponentWithCache):
                         existing_headers = existing_dict
                     merged_headers = {**existing_headers, **component_headers_dict}
                     server_config["headers"] = merged_headers
+            # Get request_variables from graph context for global variable resolution
+            request_variables = None
+            if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
+                request_variables = self.graph.context.get("request_variables")
+
+            # Only load global variables from database if we have headers that might use them
+            # This avoids unnecessary database queries when headers are empty
+            has_headers = server_config.get("headers") and len(server_config.get("headers", {})) > 0
+            if not request_variables and has_headers:
+                try:
+                    from lfx.services.deps import get_variable_service
+
+                    variable_service = get_variable_service()
+                    if variable_service:
+                        async with session_scope() as db:
+                            request_variables = await variable_service.get_all_decrypted_variables(
+                                user_id=self.user_id, session=db
+                            )
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to load global variables for MCP component: {e}")
 
             _, tool_list, tool_cache = await update_tools(
                 server_name=server_name,
                 server_config=server_config,
                 mcp_stdio_client=self.stdio_client,
                 mcp_streamable_http_client=self.streamable_http_client,
+                request_variables=request_variables,
             )
 
             self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
@@ -396,7 +421,10 @@ class MCPToolsComponent(ComponentWithCache):
 
                 current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
                 _last_selected_server = safe_cache_get(self._shared_component_cache, "last_selected_server", "")
-                server_changed = current_server_name != _last_selected_server
+                # Only treat as a server change if there was a previous server selection.
+                # Cold cache (_last_selected_server="") on initial flow load is NOT a server change —
+                # the user didn't switch anything, the backend just hasn't seen this component yet.
+                server_changed = bool(_last_selected_server and current_server_name != _last_selected_server)
 
                 # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
                 is_in_tool_mode = build_config["tools_metadata"]["show"]
@@ -405,15 +433,17 @@ class MCPToolsComponent(ComponentWithCache):
                 use_cache = getattr(self, "use_cache", False)
 
                 # Fast path: if server didn't change and we already have options, keep them as-is
-                # BUT only if caching is enabled or we're in tool mode
+                # BUT only if caching is enabled, we're in tool mode, or it's the initial load
                 existing_options = build_config.get("tool", {}).get("options") or []
                 if not server_changed and existing_options:
                     # In non-tool mode with cache disabled, skip the fast path to force refresh
-                    if not is_in_tool_mode and not use_cache:
-                        pass  # Continue to refresh logic below
+                    # BUT on initial load (cold cache), always preserve saved options from the flow
+                    if not is_in_tool_mode and not use_cache and _last_selected_server:
+                        pass  # Continue to refresh logic below (user-initiated with cache disabled)
                     else:
                         if not is_in_tool_mode:
                             build_config["tool"]["show"] = True
+                        safe_cache_set(self._shared_component_cache, "last_selected_server", current_server_name)
                         return build_config
 
                 # To avoid unnecessary updates, only proceed if the server has actually changed
@@ -477,14 +507,29 @@ class MCPToolsComponent(ComponentWithCache):
                         build_config["tool"]["options"] = [tool.name for tool in cached_tools]
                         build_config["tool"]["placeholder"] = "Select a tool"
                     else:
-                        # Show loading state only when we need to fetch tools
-                        build_config["tool"]["placeholder"] = "Loading tools..."
-                        build_config["tool"]["options"] = []
-                    # Force a value refresh when:
-                    # 1. Server changed
-                    # 2. We don't have cached tools
-                    # 3. Cache is disabled (to force refresh on config changes)
-                    if server_changed or not cached_tools or not use_cache:
+                        # Actually fetch tools now instead of deferring to a frontend callback.
+                        # The frontend has no reliable mechanism to trigger a second
+                        # update_build_config call for the "tool" field after this response,
+                        # so we must populate the options here.
+                        try:
+                            self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list(
+                                mcp_server_value=field_value
+                            )
+                            build_config["tool"]["options"] = [tool.name for tool in self.tools]
+                            build_config["tool"]["placeholder"] = "Select a tool"
+                        except (TimeoutError, asyncio.TimeoutError) as e:
+                            msg = f"Timeout loading tools for MCP server: {e!s}"
+                            await logger.awarning(msg)
+                            build_config["tool"]["options"] = []
+                            build_config["tool"]["placeholder"] = "Timeout on MCP server"
+                        except (ValueError, ImportError, ConnectionError, OSError, RuntimeError) as e:
+                            msg = f"Error loading tools for MCP server: {e!s}"
+                            await logger.awarning(msg)
+                            build_config["tool"]["options"] = []
+                            build_config["tool"]["placeholder"] = "Error on MCP Server"
+                    # Force a value refresh only when the user genuinely switched servers.
+                    # server_changed is only True for real user-initiated changes (not initial load).
+                    if server_changed:
                         build_config["tool"]["value"] = uuid.uuid4()
                 else:
                     # Keep the tool dropdown hidden if in tool_mode
@@ -500,9 +545,22 @@ class MCPToolsComponent(ComponentWithCache):
                     self._not_load_actions = True
                 else:
                     build_config["tool"]["value"] = uuid.uuid4()
-                    build_config["tool"]["options"] = []
                     build_config["tool"]["show"] = True
-                    build_config["tool"]["placeholder"] = "Loading tools..."
+                    # Fetch tools immediately instead of showing "Loading tools..."
+                    try:
+                        self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
+                        build_config["tool"]["options"] = [tool.name for tool in self.tools]
+                        build_config["tool"]["placeholder"] = "Select a tool"
+                    except (TimeoutError, asyncio.TimeoutError) as e:
+                        msg = f"Timeout loading tools when toggling tool mode: {e!s}"
+                        await logger.awarning(msg)
+                        build_config["tool"]["options"] = []
+                        build_config["tool"]["placeholder"] = "Timeout on MCP server"
+                    except (ValueError, ImportError, ConnectionError, OSError, RuntimeError) as e:
+                        msg = f"Error loading tools when toggling tool mode: {e!s}"
+                        await logger.awarning(msg)
+                        build_config["tool"]["options"] = []
+                        build_config["tool"]["placeholder"] = "Error on MCP Server"
             elif field_name == "tools_metadata":
                 self._not_load_actions = False
 
@@ -513,6 +571,61 @@ class MCPToolsComponent(ComponentWithCache):
         else:
             return build_config
 
+    @staticmethod
+    def _unwrap_optional_annotation(annotation: Any) -> Any:
+        """Remove a single None branch from a union annotation."""
+        if isinstance(annotation, UnionType):
+            non_none = [item for item in get_args(annotation) if item is not type(None)]
+            if len(non_none) == 1:
+                return non_none[0]
+            return annotation
+
+        if get_origin(annotation) is None:
+            return annotation
+
+        non_none = [item for item in get_args(annotation) if item is not type(None)]
+        if len(non_none) == 1 and len(non_none) != len(get_args(annotation)):
+            return non_none[0]
+        return annotation
+
+    @classmethod
+    def _is_object_like_annotation(cls, annotation: Any) -> bool:
+        """Return True when the annotation represents a dict-like payload."""
+        annotation = cls._unwrap_optional_annotation(annotation)
+        origin = get_origin(annotation)
+        if origin is dict:
+            return True
+        return annotation is dict or (isinstance(annotation, type) and issubclass(annotation, BaseModel))
+
+    @classmethod
+    def _should_include_tool_argument(cls, model_field: Any, value: Any) -> bool:
+        """Omit blank optional values so MCP server defaults remain intact."""
+        if value is None:
+            return False
+
+        if model_field.is_required():
+            return True
+
+        if isinstance(value, str) and value == "":
+            return False
+
+        return not (
+            value == {} and model_field.default is None and cls._is_object_like_annotation(model_field.annotation)
+        )
+
+    def _build_tool_kwargs(self, args_schema: type[BaseModel]) -> dict[str, Any]:
+        """Collect tool kwargs from component inputs, omitting blank optional values."""
+        kwargs: dict[str, Any] = {}
+        for arg_name, model_field in args_schema.model_fields.items():
+            value = getattr(self, arg_name, None)
+            if isinstance(value, Message):
+                value = value.text
+
+            if self._should_include_tool_argument(model_field, value):
+                kwargs[arg_name] = value
+
+        return kwargs
+
     def get_inputs_for_all_tools(self, tools: list) -> dict:
         """Get input schemas for all tools."""
         inputs = {}
@@ -520,9 +633,7 @@ class MCPToolsComponent(ComponentWithCache):
             if not tool or not hasattr(tool, "name"):
                 continue
             try:
-                flat_schema = flatten_schema(tool.args_schema.schema())
-                input_schema = create_input_schema_from_json_schema(flat_schema)
-                langflow_inputs = schema_to_langflow_inputs(input_schema)
+                langflow_inputs = schema_to_langflow_inputs(tool.args_schema)
                 inputs[tool.name] = langflow_inputs
             except (AttributeError, ValueError, TypeError, KeyError) as e:
                 msg = f"Error getting inputs for tool {getattr(tool, 'name', 'unknown')}: {e!s}"
@@ -613,16 +724,7 @@ class MCPToolsComponent(ComponentWithCache):
                     self.stdio_client.set_session_context(session_context)
                     self.streamable_http_client.set_session_context(session_context)
                 exec_tool = self._tool_cache[self.tool]
-                tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
-                kwargs = {}
-                for arg in tool_args:
-                    value = getattr(self, arg.name, None)
-                    if value is not None:
-                        if isinstance(value, Message):
-                            kwargs[arg.name] = value.text
-                        else:
-                            kwargs[arg.name] = value
-
+                kwargs = self._build_tool_kwargs(exec_tool.args_schema)
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
 
                 output = await exec_tool.coroutine(**unflattened_kwargs)

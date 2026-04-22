@@ -5,21 +5,26 @@ import json
 import os
 import platform
 import re
+import shlex
 import shutil
+import subprocess
 import unicodedata
 from collections.abc import Awaitable, Callable
-from typing import Any
+from types import UnionType
+from typing import Any, Union, get_args, get_origin
 from urllib.parse import urlparse
 from uuid import UUID
 
 import httpx
 from anyio import ClosedResourceError
 from httpx import codes as httpx_codes
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import StructuredTool
 from mcp import ClientSession
 from mcp.shared.exceptions import McpError
 from pydantic import BaseModel
 
+from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.log.logger import logger
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
@@ -286,6 +291,169 @@ def _convert_camel_case_to_snake_case(provided_args: dict[str, Any], arg_schema:
     return converted_args
 
 
+def _resolve_expected_type(annotation: Any) -> type | None:
+    """Resolve the effective expected type from a Pydantic field annotation.
+
+    Handles Union, UnionType (X | None), list, list[X]. Returns the primary
+    type (dict, list, int, float, bool, str) or None if not one we normalize.
+    """
+    ann = annotation
+    origin = get_origin(ann)
+    if origin is UnionType or origin is Union:
+        args = get_args(ann)
+        non_none = [a for a in args if a is not type(None)]
+        if non_none:
+            ann = non_none[0]
+            origin = get_origin(ann)
+    if origin is list or ann is list:
+        return list
+    if origin is dict or ann is dict:
+        return dict
+    if ann in (int, float, bool, str):
+        return ann
+    return None
+
+
+def _annotation_accepts_none(annotation: Any) -> bool:
+    """Check if annotation accepts None (e.g. Union[X, None], X | None)."""
+    origin = get_origin(annotation)
+    if origin is UnionType or origin is Union:
+        args = get_args(annotation)
+        return type(None) in args
+    return False
+
+
+def _is_pydantic_model_type(annotation: Any) -> bool:
+    """Check if annotation refers to a Pydantic BaseModel (possibly in Union with None)."""
+    ann = annotation
+    origin = get_origin(ann)
+    if origin is UnionType or origin is Union:
+        args = get_args(ann)
+        non_none = [a for a in args if a is not type(None)]
+        if non_none:
+            ann = non_none[0]
+    return isinstance(ann, type) and issubclass(ann, BaseModel)
+
+
+def _try_convert_value(value: Any, expected_type: type, field_name: str, tool_name: str) -> Any:
+    """Try to convert value to expected type. Raise ValueError with clear message on failure."""
+
+    def _err(type_desc: str, detail: str) -> ValueError:
+        msg = f"Tool '{tool_name}': Parameter '{field_name}' expects {type_desc} {detail}"
+        return ValueError(msg)
+
+    expected_type_desc = expected_type.__name__
+
+    if value is None and expected_type in (int, float, bool, dict, list):
+        raise _err(expected_type_desc, "but received None.")
+
+    # return correctly typed value, but handle the
+    # special case of bool as this is a subclass of int
+    # we'll NOT return but raise an error
+    if isinstance(value, expected_type) and not (expected_type is int and isinstance(value, bool)):
+        return value
+
+    # return custom classes as is
+    if expected_type not in (dict, list, int, float, bool):
+        return value
+
+    if expected_type in (dict, list):
+        expected_type_desc = "object (dict)" if expected_type is dict else "array (list)"
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+            except json.JSONDecodeError as e:
+                raise _err(expected_type_desc, f"but received invalid JSON string {value!r}; {e}") from e
+            if not isinstance(parsed, expected_type):
+                raise _err(expected_type_desc, f"but JSON parsed to {type(parsed).__name__}.")
+            return parsed
+
+    elif expected_type is int:
+        expected_type_desc = "integer (int)"
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        if isinstance(value, str):
+            try:
+                return int(value)
+            except ValueError as e:
+                raise _err(expected_type_desc, f"but received string: {value!r}; could not convert.") from e
+
+    elif expected_type is float:
+        expected_type_desc = "number (float)"
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except ValueError as e:
+                raise _err(expected_type_desc, f"but received string: {value!r}; could not convert.") from e
+
+    elif expected_type is bool and isinstance(value, str):
+        expected_type_desc = "boolean (bool)"
+        lower = value.strip().lower()
+        if lower in ("true", "1", "yes"):
+            return True
+        if lower in ("false", "0", "no"):
+            return False
+
+    detail = f"but received {type(value).__name__}: {value!r}; could not convert."
+    raise _err(expected_type_desc, detail)
+
+
+def _normalize_arguments_for_mcp(
+    arguments: dict[str, Any], arg_schema: type[BaseModel], tool_name: str
+) -> dict[str, Any]:
+    """Normalize tool arguments for MCP: try-convert when value type != schema expected type.
+
+    Uses schema from MCP server (no guessing). On conversion failure, raises
+    ValueError with clear user-facing message.
+    """
+    result: dict[str, Any] = {}
+    schema_field_names = set(arg_schema.model_fields.keys())
+    for field_name, model_field in arg_schema.model_fields.items():
+        value = arguments.get(field_name)
+        if value is None:
+            if not (model_field.is_required() or field_name in arguments):
+                continue
+            expected = _resolve_expected_type(model_field.annotation)
+            if expected in (list, dict, str) and model_field.is_required():
+                result[field_name] = [] if expected is list else ({} if expected is dict else "")
+            elif expected in (list, dict, str) and _annotation_accepts_none(model_field.annotation):
+                result[field_name] = None
+            else:
+                result[field_name] = value
+            continue
+        expected = _resolve_expected_type(model_field.annotation)
+        if expected is None:
+            # Nested Pydantic model (object with properties): UI/API often sends as JSON string
+            if _is_pydantic_model_type(model_field.annotation) and isinstance(value, str):
+                try:
+                    parsed = json.loads(value)
+                except json.JSONDecodeError as e:
+                    msg = (
+                        f"Tool '{tool_name}': Parameter '{field_name}' expects object "
+                        f"but received invalid JSON string {value!r}; {e}"
+                    )
+                    raise ValueError(msg) from e
+                if not isinstance(parsed, dict):
+                    msg = (
+                        f"Tool '{tool_name}': Parameter '{field_name}' expects object "
+                        f"but JSON parsed to {type(parsed).__name__}."
+                    )
+                    raise ValueError(msg)
+                result[field_name] = parsed
+            else:
+                result[field_name] = value
+            continue
+        if expected is str:
+            result[field_name] = value
+            continue
+        result[field_name] = _try_convert_value(value, expected, field_name, tool_name)
+    # Preserve extra keys so Pydantic validation can report them
+    result.update({k: v for k, v in arguments.items() if k not in schema_field_names})
+    return result
+
+
 def _handle_tool_validation_error(
     e: Exception, tool_name: str, provided_args: dict[str, Any], arg_schema: type[BaseModel]
 ) -> None:
@@ -304,6 +472,72 @@ def _handle_tool_validation_error(
     raise ValueError(msg) from e
 
 
+def _strip_none_recursive(obj: Any) -> Any:
+    """Recursively remove None values from dicts (including inside lists).
+
+    ``model_dump(exclude_none=True)`` handles top-level and nested-model
+    None fields, but when LLMs explicitly send ``null`` for fields inside
+    arrays of objects the serialised dict may still contain ``None``.
+    This helper guarantees a clean payload before it reaches the MCP server.
+    """
+    if isinstance(obj, dict):
+        return {k: _strip_none_recursive(v) for k, v in obj.items() if v is not None}
+    if isinstance(obj, list):
+        return [_strip_none_recursive(item) for item in obj]
+    return obj
+
+
+def _convert_mcp_result(result: Any) -> Any:
+    """Convert a CallToolResult into a format LangChain agents can consume.
+
+    - Text-only results → plain string (backward compatible).
+    - Results containing images or unsupported blocks → list of LangChain
+      content blocks so that vision-capable LLMs receive proper multimodal
+      input instead of a raw base64 string (fixes issue #11812).
+    - Unsupported block types (resource, resource_link, audio, etc.) are
+      serialised as ``{"type": "text", "text": json.dumps(block)}`` so no
+      content is silently dropped on the agent path.
+    - Only collapses back to a plain string when every block is plain text.
+    """
+    if result is None:
+        return ""
+
+    content = getattr(result, "content", None)
+    if not content:
+        return ""
+
+    needs_list = any(getattr(block, "type", None) != "text" for block in content)
+
+    if not needs_list:
+        # Text-only: join all text blocks into a single string (backward compat)
+        return "\n".join(getattr(block, "text", "") for block in content if getattr(block, "type", None) == "text")
+
+    # Mixed or non-text: build a list of LangChain content blocks
+    blocks: list[dict] = []
+    for block in content:
+        block_type = getattr(block, "type", None)
+        if block_type == "text":
+            blocks.append({"type": "text", "text": getattr(block, "text", "")})
+        elif block_type == "image":
+            mime = getattr(block, "mimeType", None) or "image/png"
+            data = getattr(block, "data", "")
+            blocks.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime};base64,{data}"},
+                }
+            )
+        else:
+            # Unsupported block type (resource, resource_link, audio, …):
+            # serialise to JSON text so no content is lost on the agent path.
+            try:
+                raw_text = json.dumps(block.model_dump(), ensure_ascii=False)
+            except AttributeError:
+                raw_text = json.dumps({"type": block_type, "raw": str(block)}, ensure_ascii=False)
+            blocks.append({"type": "text", "text": raw_text})
+    return blocks
+
+
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
@@ -318,14 +552,17 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
         # Merge in keyword arguments
         provided_args.update(kwargs)
         provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
+        original_args = provided_args
+        provided_args = _normalize_arguments_for_mcp(provided_args, arg_schema, tool_name)
         # Validate input and fill defaults for missing optional fields
         try:
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:  # noqa: BLE001
-            _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
+            _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
-            return await client.run_tool(tool_name, arguments=validated.model_dump())
+            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
+            return await client.run_tool(tool_name, arguments=arguments)
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -346,13 +583,16 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
             provided_args[field_names[i]] = arg
         provided_args.update(kwargs)
         provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
+        original_args = provided_args
+        provided_args = _normalize_arguments_for_mcp(provided_args, arg_schema, tool_name)
         try:
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:  # noqa: BLE001
-            _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
+            _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
-            return run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
+            arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
+            return run_until_complete(client.run_tool(tool_name, arguments=arguments))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -405,18 +645,20 @@ def _is_valid_key_value_item(item: Any) -> bool:
     return isinstance(item, dict) and "key" in item and "value" in item
 
 
-def _process_headers(headers: Any) -> dict:
-    """Process the headers input into a valid dictionary.
+def _process_headers(headers: Any, request_variables: dict[str, str] | None = None) -> dict:
+    """Process the headers input into a valid dictionary and resolve global variables.
 
     Args:
         headers: The headers to process, can be dict, str, or list
+        request_variables: Optional dict of global variables to resolve header values
     Returns:
-        Processed and validated dictionary
+        Processed and validated dictionary with resolved global variable values
     """
     if headers is None:
         return {}
     if isinstance(headers, dict):
-        return validate_headers(headers)
+        resolved_headers = _resolve_global_variables_in_headers(headers, request_variables)
+        return validate_headers(resolved_headers)
     if isinstance(headers, list):
         processed_headers = {}
         try:
@@ -428,8 +670,32 @@ def _process_headers(headers: Any) -> dict:
                 processed_headers[key] = value
         except (KeyError, TypeError, ValueError):
             return {}  # Return empty dictionary instead of None
-        return validate_headers(processed_headers)
+        resolved_headers = _resolve_global_variables_in_headers(processed_headers, request_variables)
+        return validate_headers(resolved_headers)
     return {}
+
+
+def _resolve_global_variables_in_headers(headers: dict, request_variables: dict[str, str] | None) -> dict:
+    """Resolve global variable names in header values to their actual values.
+
+    Args:
+        headers: Dictionary of headers where values might be global variable names
+        request_variables: Dictionary of global variables from request context
+
+    Returns:
+        Dictionary with resolved header values
+    """
+    if not request_variables:
+        return headers
+
+    resolved = {}
+    for key, value in headers.items():
+        # If the value matches a global variable name, replace it with the actual value
+        if isinstance(value, str) and value in request_variables:
+            resolved[key] = request_variables[value]
+        else:
+            resolved[key] = value
+    return resolved
 
 
 def _validate_node_installation(command: str) -> str:
@@ -1027,10 +1293,26 @@ class MCPStdioClient:
         self._component_cache = component_cache
 
     async def _connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
-        """Connect to MCP server using stdio transport (SDK style)."""
+        """Connect to MCP server using stdio transport (SDK style).
+
+        .. todo:: Remove the ``bash -c`` / ``cmd /c`` shell wrapper and pass
+           command + args directly to ``StdioServerParameters`` (i.e.
+           ``shell=False`` semantics).  This would eliminate an entire class of
+           injection vectors (shell metacharacters, IFS manipulation,
+           BASH_ENV/BASH_FUNC_* startup injection) and allow removing several
+           entries from ``DANGEROUS_ENV_VARS`` in ``schemas.py``.  Requires:
+           1. Changing the signature to accept ``(command, args)`` separately.
+           2. Updating ``update_tools()`` to stop joining into a shell string.
+           3. Handling multi-word ``command`` config values (e.g.
+              ``"uvx mcp-server-fetch"``) by splitting at the caller.
+           4. Verifying Windows PATH resolution works without ``cmd /c``
+              (e.g. ``.cmd`` wrapper scripts like ``npx.cmd``).
+           5. Replacing the ``|| echo 'Command failed…'`` error-reporting
+              pattern with proper exit-code handling from ``anyio.open_process``.
+        """
         from mcp import StdioServerParameters
 
-        command = command_str.split(" ")
+        command = shlex.split(command_str)
         env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env or {})}
 
         if platform.system() == "Windows":
@@ -1038,7 +1320,7 @@ class MCPStdioClient:
                 command="cmd",
                 args=[
                     "/c",
-                    f"{command[0]} {' '.join(command[1:])} || echo Command failed with exit code %errorlevel% 1>&2",
+                    f"{subprocess.list2cmdline(command)} || echo Command failed with exit code %errorlevel% 1>&2",
                 ],
                 env=env_data,
             )
@@ -1517,8 +1799,18 @@ async def update_tools(
     mcp_stdio_client: MCPStdioClient | None = None,
     mcp_streamable_http_client: MCPStreamableHttpClient | None = None,
     mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
+    request_variables: dict[str, str] | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
-    """Fetch server config and update available tools."""
+    """Fetch server config and update available tools.
+
+    Args:
+        server_name: Name of the MCP server
+        server_config: Server configuration dictionary
+        mcp_stdio_client: Optional stdio client instance
+        mcp_streamable_http_client: Optional streamable HTTP client instance
+        mcp_sse_client: Optional SSE client instance (backward compatibility)
+        request_variables: Optional dict of global variables to resolve in headers
+    """
     if server_config is None:
         server_config = {}
     if not server_name:
@@ -1539,7 +1831,7 @@ async def update_tools(
     command = server_config.get("command", "")
     url = server_config.get("url", "")
     tools = []
-    headers = _process_headers(server_config.get("headers", {}))
+    headers = _process_headers(server_config.get("headers", {}), request_variables)
 
     try:
         await _validate_connection_params(mode, command, url)
@@ -1550,10 +1842,52 @@ async def update_tools(
     # Determine connection type and parameters
     client: MCPStdioClient | MCPStreamableHttpClient | None = None
     if mode == "Stdio":
-        # Stdio connection
-        args = server_config.get("args", [])
+        args = list(server_config.get("args", []))
         env = server_config.get("env", {})
-        full_command = " ".join([command, *args])
+        # For stdio mode, inject component headers as --headers CLI args.
+        # This enables passing headers through proxy tools like mcp-proxy
+        # that forward them to the upstream HTTP server.
+        if headers:
+            extra_args = []
+            for key, value in headers.items():
+                extra_args.extend(["--headers", key, str(value)])
+            if "--headers" in args:
+                # Insert before the existing --headers flag so all header
+                # flags are grouped together
+                idx = args.index("--headers")
+                for i, arg in enumerate(extra_args):
+                    args.insert(idx + i, arg)
+            else:
+                # No existing --headers flag; try to insert before the last
+                # positional arg (typically the URL in mcp-proxy commands).
+                # Scan args to find the last true positional token by skipping
+                # flag+value pairs so we don't mistake a flag's value for a
+                # positional argument (e.g. "--port 8080").
+                last_positional_idx: int | None = None
+                i = 0
+                while i < len(args):
+                    if args[i].startswith("-"):
+                        # Skip the flag and its value (assumes each flag
+                        # takes at most one value argument; boolean flags
+                        # are handled correctly since the next token will
+                        # start with '-' or be a URL-like positional).
+                        i += 1
+                        if (
+                            i < len(args)
+                            and not args[i].startswith("-")
+                            and not args[i].startswith("http://")
+                            and not args[i].startswith("https://")
+                        ):
+                            i += 1
+                    else:
+                        last_positional_idx = i
+                        i += 1
+
+                if last_positional_idx is not None:
+                    args = args[:last_positional_idx] + extra_args + args[last_positional_idx:]
+                else:
+                    args.extend(extra_args)
+        full_command = shlex.join([*shlex.split(command), *args])
         tools = await mcp_stdio_client.connect_to_server(full_command, env)
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:
@@ -1582,9 +1916,12 @@ async def update_tools(
 
             # Create a custom StructuredTool that bypasses schema validation
             class MCPStructuredTool(StructuredTool):
-                def run(self, tool_input: str | dict, config=None, **kwargs):
-                    """Override the main run method to handle parameter conversion before validation."""
-                    # Parse tool_input if it's a string
+                _tool_call_id_key = "_lf_tool_call_id"
+
+                def _to_args_and_kwargs(
+                    self, tool_input: str | dict, tool_call_id: str | None
+                ) -> tuple[tuple, dict[str, Any]]:
+                    """Normalize MCP tool input before LangChain validates it."""
                     if isinstance(tool_input, str):
                         try:
                             parsed_input = json.loads(tool_input)
@@ -1593,28 +1930,27 @@ async def update_tools(
                     else:
                         parsed_input = tool_input or {}
 
-                    # Convert camelCase parameters to snake_case
                     converted_input = self._convert_parameters(parsed_input)
+                    tool_args, tool_kwargs = super()._to_args_and_kwargs(converted_input, tool_call_id)
+                    if tool_call_id is not None:
+                        tool_kwargs[self._tool_call_id_key] = tool_call_id
+                    return tool_args, tool_kwargs
 
-                    # Call the parent run method with converted parameters
-                    return super().run(converted_input, config=config, **kwargs)
+                def _run(self, *args: Any, config: RunnableConfig, run_manager=None, **kwargs: Any) -> tuple[Any, Any]:
+                    """Return converted content plus the raw MCP result as artifact."""
+                    tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                    raw = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
+                    content = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                    return content, raw
 
-                async def arun(self, tool_input: str | dict, config=None, **kwargs):
-                    """Override the main arun method to handle parameter conversion before validation."""
-                    # Parse tool_input if it's a string
-                    if isinstance(tool_input, str):
-                        try:
-                            parsed_input = json.loads(tool_input)
-                        except json.JSONDecodeError:
-                            parsed_input = {"input": tool_input}
-                    else:
-                        parsed_input = tool_input or {}
-
-                    # Convert camelCase parameters to snake_case
-                    converted_input = self._convert_parameters(parsed_input)
-
-                    # Call the parent arun method with converted parameters
-                    return await super().arun(converted_input, config=config, **kwargs)
+                async def _arun(
+                    self, *args: Any, config: RunnableConfig, run_manager=None, **kwargs: Any
+                ) -> tuple[Any, Any]:
+                    """Return converted content plus the raw MCP result as artifact."""
+                    tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                    raw = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+                    content = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                    return content, raw
 
                 def _convert_parameters(self, input_dict):
                     if not input_dict or not isinstance(input_dict, dict):
@@ -1633,10 +1969,18 @@ async def update_tools(
                             if snake_key in original_fields:
                                 converted_dict[snake_key] = value
                             else:
-                                # Keep original key
+                                # Keep original key (may be flattened e.g. params.search)
                                 converted_dict[key] = value
 
-                    return converted_dict
+                    unflattened = maybe_unflatten_dict(converted_dict)
+                    # Normalize: convert JSON strings to dict for nested model params
+                    normalized = _normalize_arguments_for_mcp(unflattened, self.args_schema, self.name)
+                    # Preserve extra keys not in schema (e.g. flattened keys)
+                    schema_fields = set(self.args_schema.model_fields.keys())
+                    for key, value in unflattened.items():
+                        if key not in schema_fields and key not in normalized:
+                            normalized[key] = value
+                    return normalized
 
             tool_obj = MCPStructuredTool(
                 name=tool.name,
@@ -1645,7 +1989,8 @@ async def update_tools(
                 func=create_tool_func(tool.name, args_schema, client),
                 coroutine=create_tool_coroutine(tool.name, args_schema, client),
                 tags=[tool.name],
-                metadata={"server_name": server_name},
+                metadata={"server_name": server_name, "output_schema": getattr(tool, "outputSchema", None)},
+                response_format="content_and_artifact",
             )
 
             tool_list.append(tool_obj)
@@ -1654,6 +1999,14 @@ async def update_tools(
             logger.error(f"Failed to create tool '{tool.name}' from server '{server_name}': {e}")
             msg = f"Failed to create tool '{tool.name}' from server '{server_name}': {e}"
             raise ValueError(msg) from e
+        except (TypeError, AttributeError, KeyError, NameError, RecursionError) as e:
+            # Per-tool resilience (#11229): isolate one bad schema, keep the rest of the toolset.
+            logger.exception(
+                f"Skipping tool '{getattr(tool, 'name', '<unknown>')}' from MCP server "
+                f"'{server_name}' due to schema-processing error: "
+                f"{type(e).__name__}: {e}. inputSchema={getattr(tool, 'inputSchema', None)!r}"
+            )
+            continue
 
     logger.info(f"Successfully loaded {len(tool_list)} tools from MCP server '{server_name}'")
     return mode, tool_list, tool_cache

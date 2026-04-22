@@ -160,6 +160,8 @@ class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
 
 
 class TransactionReadResponse(TransactionBase):
+    model_config = {"populate_by_name": True, "from_attributes": True}
+
     id: UUID = Field(alias="transaction_id")
     flow_id: UUID
 

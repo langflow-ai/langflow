@@ -60,7 +60,7 @@ test(
     await toolCallingAgentInput.hover();
     await page.mouse.up();
 
-    expect(await page.locator(".react-flow__edge-interaction").count()).toBe(2);
+    await expect(page.locator(".react-flow__edge-interaction")).toHaveCount(2);
   },
 );
 
@@ -125,6 +125,6 @@ test(
     await page.getByTestId("context-menu-item-destructive").click();
 
     const edgeContextMenu = page.getByTestId("edge-context-menu-trigger");
-    expect(edgeContextMenu).toHaveCount(0);
+    await expect(edgeContextMenu).toHaveCount(0);
   },
 );

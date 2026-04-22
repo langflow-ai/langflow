@@ -16,6 +16,7 @@ interface IPostAddFlow {
   icon: string | undefined;
   gradient: string | undefined;
   tags: string[] | undefined;
+  locked?: boolean | null;
   mcp_enabled: boolean | undefined;
 }
 
@@ -37,6 +38,7 @@ export const usePostAddFlow: useMutationFunctionType<
       gradient: payload.gradient || null,
       endpoint_name: payload.endpoint_name || null,
       tags: payload.tags || null,
+      locked: payload.locked ?? null,
       mcp_enabled: payload.mcp_enabled || null,
     });
     return response.data;

@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProvidersContent from "./components/ModelProvidersContent";
 
 interface ModelProviderModalProps {
@@ -12,8 +14,18 @@ const ModelProviderModal = ({
   onClose,
   modelType,
 }: ModelProviderModalProps) => {
-  const handleClose = () => {
+  const { refreshAllModelInputs } = useRefreshModelInputs();
+  const flushRef = useRef<(() => Promise<void>) | null>(null);
+
+  const handleClose = async () => {
+    // Capture the flush promise BEFORE onClose unmounts the modal content.
+    // flushPendingChanges sends any pending model toggle mutations via
+    // mutateAsync and awaits the backend response, so the DB is up-to-date
+    // by the time we refresh nodes below.
+    const flushPromise = flushRef.current?.();
     onClose();
+    await flushPromise;
+    refreshAllModelInputs({ silent: true });
   };
 
   return (
@@ -26,7 +38,7 @@ const ModelProviderModal = ({
         </DialogHeader>
 
         <div className="h-[513px] overflow-hidden">
-          <ModelProvidersContent modelType={modelType} onClose={handleClose} />
+          <ModelProvidersContent modelType={modelType} onFlushRef={flushRef} />
         </div>
       </DialogContent>
     </Dialog>

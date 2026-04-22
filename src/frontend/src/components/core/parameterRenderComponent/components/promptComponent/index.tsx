@@ -24,7 +24,8 @@ export default function PromptAreaComponent({
   editNode = false,
   id = "",
   readonly = false,
-}: InputProps<string, PromptAreaComponentType>): JSX.Element {
+  showParameter = true,
+}: InputProps<string, PromptAreaComponentType>): JSX.Element | null {
   const coloredContent = (typeof value === "string" ? value : "")
     // escape HTML first
     .replace(/</g, "&lt;")
@@ -91,6 +92,10 @@ export default function PromptAreaComponent({
     ) : (
       <></>
     );
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div

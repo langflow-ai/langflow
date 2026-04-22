@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Add community label
         if: github.event.pull_request.author_association != 'MEMBER' && github.event.pull_request.author_association != 'OWNER' && github.event.pull_request.author_association != 'COLLABORATOR'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const pullRequestNumber = context.payload.pull_request.number;

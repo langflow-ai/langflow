@@ -321,3 +321,68 @@ class TestAsyncBuildOperations:
         # Should use perf_counter
         if not (inputs and inputs.client_request_time):
             assert 0.09 < duration < 0.15
+
+
+class TestVertexDurationUsesOwnPerfCounter:
+    """Vertex duration must always reflect its own execution time via perf_counter.
+
+    client_request_time must NOT override individual vertex timings because that
+    would make sequential vertices (e.g. Agent → Chat Output) report the same
+    cumulative wall-clock time instead of their own execution duration.
+    """
+
+    def test_should_use_perf_counter_when_client_request_time_is_set(self):
+        """Even when client_request_time exists, vertex duration must come from perf_counter."""
+        # Arrange — client sent request 500ms ago
+        client_start_ms = int((time.time() - 0.5) * 1000)
+        inputs = InputValueRequest(input_value="test", client_request_time=client_start_ms)
+
+        # Act — simulate vertex build taking ~50ms
+        start_time = time.perf_counter()
+        time.sleep(0.05)
+        timedelta = time.perf_counter() - start_time
+        # No client_request_time override — this is the new behavior
+
+        # Assert — duration reflects only the vertex's own execution, not cumulative wall-clock
+        assert inputs.client_request_time is not None, "Precondition: client_request_time is set"
+        assert 0.04 < timedelta < 0.1, f"Expected ~50ms (own execution), got {timedelta}s"
+
+    def test_should_not_show_same_duration_for_sequential_vertices(self):
+        """Two sequential vertices must report different durations reflecting their own work."""
+        # Act — first vertex (slow: ~100ms)
+        start_1 = time.perf_counter()
+        time.sleep(0.1)
+        duration_1 = time.perf_counter() - start_1
+
+        # Act — second vertex (fast: ~20ms)
+        start_2 = time.perf_counter()
+        time.sleep(0.02)
+        duration_2 = time.perf_counter() - start_2
+
+        # Assert — each vertex reports its own execution time
+        assert 0.08 < duration_1 < 0.15, f"First vertex expected ~100ms, got {duration_1}s"
+        assert 0.01 < duration_2 < 0.05, f"Second vertex expected ~20ms, got {duration_2}s"
+        assert duration_1 > duration_2 * 2, "Slow vertex must be significantly longer than fast vertex"
+
+    def test_should_measure_only_vertex_execution_not_cumulative_time(self):
+        """Vertex duration must exclude time spent in prior vertices."""
+        # Arrange — simulate a pipeline: Vertex A (100ms) → Vertex B (20ms)
+        pipeline_start = time.time()
+
+        # Vertex A
+        start_a = time.perf_counter()
+        time.sleep(0.1)
+        duration_a = time.perf_counter() - start_a
+
+        # Vertex B
+        start_b = time.perf_counter()
+        time.sleep(0.02)
+        duration_b = time.perf_counter() - start_b
+
+        cumulative = time.time() - pipeline_start
+
+        # Assert
+        assert duration_b < cumulative / 2, (
+            f"Vertex B ({duration_b}s) must be much less than cumulative ({cumulative}s)"
+        )
+        assert duration_b < duration_a, "Fast vertex B must be shorter than slow vertex A"

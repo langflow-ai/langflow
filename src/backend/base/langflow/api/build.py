@@ -69,8 +69,25 @@ async def start_flow_build(
     current_user: CurrentActiveUser,
     queue_service: JobQueueService,
     flow_name: str | None = None,
+    source_flow_id: uuid.UUID | None = None,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
+
+    Args:
+        flow_id: The flow ID used for tracking, sessions, and messages.
+        background_tasks: FastAPI background tasks for async operations.
+        inputs: Optional input values for the flow.
+        data: Optional flow data request.
+        files: Optional list of file paths.
+        stop_component_id: Optional component ID to stop at.
+        start_component_id: Optional component ID to start from.
+        log_builds: Whether to log build events.
+        current_user: The currently authenticated user.
+        queue_service: The job queue service instance.
+        flow_name: Optional flow name override.
+        source_flow_id: If provided, the actual flow ID to load from DB.
+            Used by public flows where flow_id is a virtual UUID for session isolation
+            but the flow data must be loaded from the original flow in the database.
 
     Returns:
         the job_id.
@@ -90,6 +107,7 @@ async def start_flow_build(
             log_builds=log_builds,
             current_user=current_user,
             flow_name=flow_name,
+            source_flow_id=source_flow_id,
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
@@ -209,6 +227,7 @@ async def generate_flow_events(
     log_builds: bool,
     current_user: CurrentActiveUser,
     flow_name: str | None = None,
+    source_flow_id: uuid.UUID | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -253,7 +272,7 @@ async def generate_flow_events(
 
             if "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
-            await logger.aexception("Error checking build status")
+            await logger.aexception("Error checking build status: " + str(exc))
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         return first_layer, vertices_to_run, graph
 
@@ -283,13 +302,19 @@ async def generate_flow_events(
             effective_session_id = flow_id_str
 
         if not data:
-            return await build_graph_from_db(
-                flow_id=flow_id,
+            # For public flows, source_flow_id is the real DB ID, flow_id is virtual.
+            # Load from DB using the real ID, then override graph.flow_id with virtual.
+            db_flow_id = source_flow_id if source_flow_id is not None else flow_id
+            graph = await build_graph_from_db(
+                flow_id=db_flow_id,
                 session=fresh_session,
                 chat_service=chat_service,
                 user_id=str(current_user.id),
                 session_id=effective_session_id,
             )
+            if source_flow_id is not None:
+                graph.flow_id = str(flow_id)
+            return graph
 
         if not flow_name:
             result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
@@ -373,13 +398,6 @@ async def generate_flow_events(
 
             timedelta = time.perf_counter() - start_time
 
-            # Use client_request_time if available for accurate end-to-end duration
-            if inputs and inputs.client_request_time:
-                # Convert client timestamp (ms) to seconds and calculate elapsed time
-                client_start_seconds = inputs.client_request_time / 1000
-                current_time_seconds = time.time()
-                timedelta = current_time_seconds - client_start_seconds
-
             duration = format_elapsed_time(timedelta)
             result_data_response.duration = duration
             result_data_response.timedelta = timedelta
@@ -454,6 +472,7 @@ async def generate_flow_events(
         vertex_id: str,
         graph: Graph,
         event_manager: EventManager,
+        vertex_timedeltas: list[float],
     ) -> None:
         """Build vertices and handle their events.
 
@@ -461,12 +480,17 @@ async def generate_flow_events(
             vertex_id: The ID of the vertex to build
             graph: The graph instance
             event_manager: Manager for handling events
+            vertex_timedeltas: Shared list to accumulate each vertex's timedelta
         """
         try:
             vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
         except asyncio.CancelledError as exc:
             await logger.ainfo(f"Build cancelled: {exc}")
             raise
+
+        # Accumulate the vertex timedelta
+        if vertex_build_response.data.timedelta is not None:
+            vertex_timedeltas.append(vertex_build_response.data.timedelta)
 
         # send built event or error event
         try:
@@ -486,6 +510,7 @@ async def generate_flow_events(
                         next_vertex_id,
                         graph,
                         event_manager,
+                        vertex_timedeltas,
                     )
                 )
                 tasks.append(task)
@@ -497,15 +522,18 @@ async def generate_flow_events(
         error_message = ErrorMessage(
             flow_id=flow_id,
             exception=e,
+            session_id=inputs.session,
         )
         event_manager.on_error(data=error_message.data)
         raise
 
     event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
 
+    vertex_timedeltas: list[float] = []
+    event_manager.on_build_start(data={})
     tasks = []
     for vertex_id in ids:
-        task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager))
+        task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager, vertex_timedeltas))
         tasks.append(task)
     try:
         await asyncio.gather(*tasks)
@@ -525,7 +553,8 @@ async def generate_flow_events(
         event_manager.on_error(data=error_message.data)
         raise
 
-    event_manager.on_end(data={})
+    build_duration = sum(vertex_timedeltas)
+    event_manager.on_end(data={"build_duration": build_duration})
     await graph.end_all_traces()
     await event_manager.queue.put((None, None, time.time()))
 

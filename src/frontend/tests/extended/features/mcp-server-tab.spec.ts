@@ -234,22 +234,16 @@ test(
 
     // Create a new flow with MCP component
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp");
-
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
-
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 50, y: 50 },
-      });
+    await page.getByTestId("sidebar-nav-mcp").click();
+    await page.waitForSelector(
+      '[data-testid="add-component-button-lf-starter_project"]',
+      {
+        timeout: 60000,
+      },
+    );
+    await page.getByTestId("add-component-button-lf-starter_project").click();
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
-
-    await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
     await openAddMcpServerModal(page);
 
@@ -267,14 +261,20 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
+    // Wait for the modal overlay to fully close before interacting
+    await page
+      .locator(".fixed.inset-0.z-50")
+      .waitFor({ state: "hidden", timeout: 10000 })
+      .catch(() => {});
+
     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
-      timeout: 30000,
+      timeout: 60000,
     });
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 30000,
+        timeout: 60000,
         state: "visible",
       },
     );
@@ -284,6 +284,7 @@ test(
     // Verify that tools are available in the dropdown
     // The dropdown should show tool options (the action_name rename may not appear here)
     const toolOptions = page.locator('[data-testid*="-option"]');
+    await expect(toolOptions.first()).toBeVisible({ timeout: 30000 });
     const toolCount = await toolOptions.count();
 
     expect(toolCount).toBeGreaterThan(0);

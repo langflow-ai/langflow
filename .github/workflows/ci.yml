@@ -58,7 +58,7 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
-          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+          - '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
         default: ubuntu-latest
   pull_request:
     types: [opened, synchronize, labeled]
@@ -212,9 +212,9 @@ jobs:
         with:
           filters: ./.github/changes-filter.yaml
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: "3.12"
       - name: Install deps for coverage check
         run: |
           python -m pip install --upgrade pip
@@ -237,11 +237,15 @@ jobs:
       always() &&
       !cancelled() &&
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
-      (inputs.run-all-tests || needs.path-filter.outputs.python == 'true')
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
-      runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+      runs-on: ${{ inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
       ref: ${{ inputs.ref || github.ref }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
@@ -255,7 +259,11 @@ jobs:
       always() &&
       !cancelled() &&
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
-      (inputs.run-all-tests || needs.path-filter.outputs.frontend == 'true')
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
     uses: ./.github/workflows/jest_test.yml
     with:
       ref: ${{ inputs.ref || github.ref }}
@@ -269,27 +277,22 @@ jobs:
       always() &&
       !cancelled() &&
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
-      (inputs.run-all-tests || needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' || needs.path-filter.outputs.starter-projects == 'true' || needs.path-filter.outputs.components == 'true' || needs.path-filter.outputs.workspace == 'true' || needs.path-filter.outputs.api == 'true' || needs.path-filter.outputs.database == 'true')
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
       release: ${{ inputs.release || false }}
-      runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+      runs-on: ${{ inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
       ref: ${{ inputs.ref || github.ref }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
       TAVILY_API_KEY: "${{ secrets.TAVILY_API_KEY }}"
-
-  lint-backend:
-    needs: path-filter
-    if: |
-      always() &&
-      !cancelled() &&
-      (inputs.run-all-tests || needs.path-filter.outputs.python == 'true')
-    name: Lint Backend
-    uses: ./.github/workflows/lint-py.yml
 
   test-docs-build:
     needs: path-filter
@@ -316,7 +319,7 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.12
 
@@ -342,6 +345,61 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
+  merge-frontend-coverage:
+    name: Merge Frontend Jest + Playwright Coverage Reports
+    needs: [path-filter, set-ci-condition, test-frontend-unit, test-frontend]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download Jest Coverage
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: jest-coverage
+          path: coverage/jest
+
+      - name: Download Playwright Coverage
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: playwright-coverage-*
+          path: coverage/playwright
+          merge-multiple: true
+
+      - name: Merge Coverage
+        run: |
+          mkdir -p coverage/combined
+          npx nyc merge coverage/playwright/individual-test coverage/combined/playwright.json || echo "Failed to merge Playwright coverage"
+          npx nyc merge coverage/jest coverage/combined/jest.json || echo "Failed to merge Jest coverage"
+          npx nyc merge coverage/combined coverage/combined/total-frontend-coverage.json || echo "Failed to combine Playwright + Jest coverage"
+
+      - name: Generate Combined Report
+        run: |
+          npx nyc report \
+            --reporter=html \
+            --reporter=text \
+            --temp-dir coverage/combined \
+            --report-dir coverage/final
+
+      - name: Upload Merged Frontend Coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/combined/total-frontend-coverage.json
+          flags: frontend
+          fail_ci_if_error: true
+
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
@@ -350,13 +408,13 @@ jobs:
         test-backend,
         test-frontend-unit,
         test-frontend,
-        lint-backend,
         test-docs-build,
         test-templates,
         test-docker,
         set-ci-condition,
         path-filter,
         check-nightly-status,
+        merge-frontend-coverage,
       ]
 
     if: ${{ always() }}
@@ -368,7 +426,7 @@ jobs:
       DOCS_ONLY: ${{ needs.path-filter.outputs.docs-only }}
       EXIT_CODE: ${{ (contains(needs.*.result, 'failure') ||
         contains(needs.*.result, 'cancelled') ||
-        (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && needs.path-filter.outputs.docs-only != 'true'))
+        (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && github.event_name != 'merge_group' && needs.path-filter.outputs.docs-only != 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-nightly-check')))
         && '1' || '0' }}
     steps:
       - name: "CI Success"
@@ -401,8 +459,6 @@ jobs:
                   "  - Frontend Unit Tests: Check React components and unit test logic"
                 elif $job == "test-frontend" then
                   "  - Frontend E2E Tests: Check integration tests and UI functionality"
-                elif $job == "lint-backend" then
-                  "  - Backend Linting: Run '\''make format_backend'\'' then '\''make lint'\'' to fix code style issues"
                 elif $job == "test-docs-build" then
                   "  - Documentation Build: Check documentation syntax and build process"
                 elif $job == "test-templates" then
