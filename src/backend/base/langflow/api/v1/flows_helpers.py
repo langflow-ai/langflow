@@ -23,6 +23,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import normalize_flow_for_export, remove_api_keys
 from langflow.services.database.models.base import orjson_dumps
+from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
 from langflow.services.database.models.flow.model import (
     Flow,
     FlowCreate,
@@ -257,15 +258,27 @@ async def _validate_and_assign_folder(
     Falls back to the default folder when the current ``folder_id`` is
     ``None`` or references a non-existent / other-user's folder.
     """
-    if db_flow.folder_id is not None:
-        folder_exists = (
-            await session.exec(select(Folder).where(Folder.id == db_flow.folder_id, Folder.user_id == user_id))
-        ).first()
-        if not folder_exists:
-            db_flow.folder_id = None
+    old_folder_id = db_flow.folder_id
+    # no_autoflush prevents the guard query (ensure_flow_move_allowed)
+    # from flushing the in-progress folder_id mutation before the guard
+    # has validated it.
+    with session.no_autoflush:
+        if db_flow.folder_id is not None:
+            folder_exists = (
+                await session.exec(select(Folder).where(Folder.id == db_flow.folder_id, Folder.user_id == user_id))
+            ).first()
+            if not folder_exists:
+                db_flow.folder_id = None
 
-    if db_flow.folder_id is None:
-        db_flow.folder_id = await get_default_folder_id(session, user_id)
+        if db_flow.folder_id is None:
+            db_flow.folder_id = await get_default_folder_id(session, user_id)
+
+        await ensure_flow_move_allowed(
+            session,
+            flow_id=db_flow.id,
+            old_folder_id=old_folder_id,
+            new_folder_id=db_flow.folder_id,
+        )
 
 
 async def _new_flow(
@@ -404,7 +417,7 @@ async def _update_existing_flow(
         if endpoint_conflict:
             raise HTTPException(status_code=409, detail="Endpoint name must be unique")
 
-    # Build update data
+    # None-valued inputs are treated as omitted by default for updates.
     update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
     # Preserve the existing endpoint unless the request explicitly clears it.
@@ -418,6 +431,13 @@ async def _update_existing_flow(
     # If folder_id not provided, keep existing
     if "folder_id" not in update_data or update_data.get("folder_id") is None:
         update_data.pop("folder_id", None)
+    elif update_data["folder_id"] != existing_flow.folder_id:
+        await ensure_flow_move_allowed(
+            session,
+            flow_id=existing_flow.id,
+            old_folder_id=existing_flow.folder_id,
+            new_folder_id=update_data["folder_id"],
+        )
 
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
@@ -447,11 +467,21 @@ async def _patch_flow(
     """Apply a partial update (PATCH) to an existing flow and return a FlowRead."""
     settings_service = get_settings_service()
 
+    # PATCH follows the same rule: None-valued fields are omitted unless
+    # explicitly reintroduced below (for example endpoint_name clear).
     update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
     # Preserve the existing endpoint unless the request explicitly clears it.
     if _endpoint_name_was_explicitly_cleared(flow):
         update_data["endpoint_name"] = None
+
+    if "folder_id" in update_data and update_data["folder_id"] != db_flow.folder_id:
+        await ensure_flow_move_allowed(
+            session,
+            flow_id=db_flow.id,
+            old_folder_id=db_flow.folder_id,
+            new_folder_id=update_data["folder_id"],
+        )
 
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)

@@ -423,9 +423,15 @@ def handle_model_input_update(
             if "input_text" in build_config:
                 build_config["input_text"]["show"] = is_watsonx
 
-    # Ensure the API key field is always visible regardless of provider selection
-    if "api_key" in build_config:
-        build_config["api_key"]["show"] = True
+    # Hide and clear the API key field when the selected provider doesn't use one
+    # (e.g. Ollama). ``apply_provider_variable_config_to_build_config`` already
+    # sets ``show=True`` for providers whose metadata maps a variable to the
+    # ``api_key`` field; if it wasn't shown, the provider has no api_key
+    # variable and the previous provider's credential must not leak across
+    # the switch.
+    if "api_key" in build_config and not build_config["api_key"].get("show", False):
+        build_config["api_key"]["value"] = ""
+        build_config["api_key"]["load_from_db"] = False
 
     return build_config
 

@@ -45,6 +45,8 @@ dev = [
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
     "blockbuster>=1.5.20,<1.6",
+    "types-aiofiles>=24.1.0.20240626",
+    "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
     "locust~=2.40.5",
     "pytest-rerunfailures>=15.0",
@@ -164,7 +166,13 @@ timeout_method = "signal"
 minversion = "6.0"
 testpaths = ["src/backend/tests", "src/lfx/tests"]
 console_output_style = "progress"
-filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::ResourceWarning",
+    "ignore:Skipped unsupported reflection:sqlalchemy.exc.SAWarning",
+    "ignore:.*SQL-parsed foreign key constraint:sqlalchemy.exc.SAWarning",
+    "ignore:autogenerate skipping metadata-specified expression-based index:UserWarning",
+]
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"

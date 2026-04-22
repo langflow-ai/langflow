@@ -40,6 +40,7 @@ from langflow.initial_setup.setup import (
 )
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
+from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
     get_queue_service,
@@ -559,6 +560,13 @@ def create_app():
 
     # Discover and register additional routers from plugins (langflow.plugins entry-point)
     load_plugin_routes(app)
+
+    @app.exception_handler(DeploymentGuardError)
+    async def deployment_guard_exception_handler(_request: Request, exc: DeploymentGuardError):
+        return JSONResponse(
+            status_code=HTTPStatus.CONFLICT,
+            content={"detail": exc.detail},
+        )
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
