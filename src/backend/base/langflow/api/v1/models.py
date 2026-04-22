@@ -216,14 +216,16 @@ async def list_models(
             is_configured = provider_configured_status.get(prov_name, False)
             prov_models_status = enabled_models_map.get(prov_name, {})
             has_active_model = any(prov_models_status.values())
-            filtered_models.append({
-                "provider": prov_name,
-                "icon": meta.get("icon", prov_name),
-                "models": [],
-                "api_docs_url": meta.get("api_docs_url", ""),
-                "is_configured": is_configured,
-                "is_enabled": has_active_model,
-            })
+            filtered_models.append(
+                {
+                    "provider": prov_name,
+                    "icon": meta.get("icon", prov_name),
+                    "models": [],
+                    "api_docs_url": meta.get("api_docs_url", ""),
+                    "is_configured": is_configured,
+                    "is_enabled": has_active_model,
+                }
+            )
 
     # Replace static models with live models for providers that support it
     configured_providers = {p for p, configured in provider_configured_status.items() if configured}
