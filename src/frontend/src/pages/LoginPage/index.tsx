@@ -6,6 +6,7 @@ import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -74,7 +75,7 @@ export default function LoginPage(): JSX.Element {
       className="h-screen w-full"
     >
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
-        <div className="flex w-72 flex-col items-center justify-center gap-2">
+        <div className="flex w-full max-w-xs flex-col items-center justify-center gap-2">
           <LangflowLogo
             title="Langflow logo"
             className="mb-4 h-10 w-10 scale-[1.5]"
@@ -84,9 +85,9 @@ export default function LoginPage(): JSX.Element {
           </span>
           <div className="mb-3 w-full">
             <Form.Field name="username">
-              <Form.Label className="data-[invalid]:label-invalid">
-                {t("auth.usernameLabel")}{" "}
-                <span className="font-medium text-destructive">*</span>
+              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+                <span className="truncate">{t("auth.usernameLabel")}</span>
+                <span className="shrink-0 font-medium text-destructive">*</span>
               </Form.Label>
 
               <Form.Control asChild>
@@ -109,9 +110,9 @@ export default function LoginPage(): JSX.Element {
           </div>
           <div className="mb-3 w-full">
             <Form.Field name="password">
-              <Form.Label className="data-[invalid]:label-invalid">
-                {t("auth.passwordLabel")}{" "}
-                <span className="font-medium text-destructive">*</span>
+              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+                <span className="truncate">{t("auth.passwordLabel")}</span>
+                <span className="shrink-0 font-medium text-destructive">*</span>
               </Form.Label>
 
               <InputComponent
@@ -140,9 +141,16 @@ export default function LoginPage(): JSX.Element {
           </div>
           <div className="w-full">
             <CustomLink to="/signup">
-              <Button className="w-full" variant="outline" type="button">
-                {t("auth.noAccount")}&nbsp;<b>{t("auth.signUpLink")}</b>
-              </Button>
+              <ShadTooltip
+                content={`${t("auth.noAccount")} ${t("auth.signUpLink")}`}
+                styleClasses="z-50"
+              >
+                <Button className="w-full overflow-hidden" variant="outline" type="button">
+                  <span className="truncate">
+                    {t("auth.noAccount")}&nbsp;<b>{t("auth.signUpLink")}</b>
+                  </span>
+                </Button>
+              </ShadTooltip>
             </CustomLink>
           </div>
         </div>
