@@ -1,11 +1,15 @@
 """Unit tests for driver --verify mode (compare_against_thresholds).
 
-Four cases per task 4 of plan 01-05:
+Cases:
   A. FAIL: current mean 50% above baseline -> non-zero exit + regression_comment.md.
   B. PASS: current mean 10% above baseline (below 15% allowed) -> exit 0 + no comment.
-  C. Sentinel: baseline mean_ms=0 (Path B sentinel) -> non-zero + regression_comment.md.
+  C. Sentinel: baseline mean_ms=0 with prior runs (intentionally zeroed) -> non-zero
+     + regression_comment.md.
   D. Mode mismatch: thresholds.measurement_mode != driver.MEASUREMENT_MODE -> stderr warning
      but NOT a failure by itself (still exits 0 when within threshold).
+  E. Unanchored: baseline mean_ms=0 AND runs=0 (placeholder for a scenario that has
+     never been snapshotted) -> exit 0 + no comment; the current number is recorded
+     for visibility but does not gate the PR.
 
 No mocks (user global rule). The verify helper is directly callable with dict inputs.
 """
@@ -29,6 +33,7 @@ def _write_thresholds(
     mean_ms: float,
     measurement_mode: str = "bytecode_compile_delta",
     allowed_pct: int = 15,
+    runs: int = 10,
 ) -> None:
     """Helper: write a minimal thresholds.json at `path` with one lfx_bare entry."""
     payload = {
@@ -40,7 +45,7 @@ def _write_thresholds(
         "python_version": "3.13.0",
         "allowed_regression_pct": allowed_pct,
         "scenarios": {
-            "lfx_bare": {"mean_ms": mean_ms, "stddev_ms": 50.0, "runs": 10},
+            "lfx_bare": {"mean_ms": mean_ms, "stddev_ms": 50.0, "runs": runs},
         },
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
@@ -94,6 +99,21 @@ def test_verify_sentinel_baseline_always_trips(tmp_path: Path) -> None:
     assert rc != 0, "sentinel baseline (mean_ms=0) must trip the gate"
     comment = output_dir / "regression_comment.md"
     assert comment.exists(), "sentinel trip must write regression_comment.md"
+
+
+def test_verify_unanchored_baseline_skips(tmp_path: Path) -> None:
+    """E: baseline mean_ms=0 AND runs=0 (unanchored placeholder) does NOT trip the gate."""
+    thresholds_path = tmp_path / "thresholds.json"
+    output_dir = tmp_path / "reports"
+    output_dir.mkdir()
+    _write_thresholds(thresholds_path, mean_ms=0.0, runs=0)
+
+    current = {"lfx_bare": {"mean_ms": 22183.74, "stddev_ms": 246.06, "runs": 5}}
+    rc = driver.compare_against_thresholds(current, thresholds_path, output_dir)
+
+    assert rc == 0, "unanchored baseline (runs=0) must NOT trip the gate"
+    comment = output_dir / "regression_comment.md"
+    assert not comment.exists(), "unanchored skip must NOT write regression_comment.md"
 
 
 def test_verify_measurement_mode_mismatch_warns_not_fails(
