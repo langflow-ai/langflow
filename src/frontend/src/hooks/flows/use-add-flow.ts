@@ -1,5 +1,4 @@
 import { cloneDeep } from "lodash";
-import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { UUID_PARSING_ERROR } from "@/constants/constants";
 import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
@@ -44,8 +43,6 @@ const useAddFlow = () => {
   );
   const isOnboarding =
     !hideGettingStartedProgress && !userData?.optins?.dialog_dismissed;
-  const { t } = useTranslation();
-
   const unavailableFields = useGlobalVariablesStore(
     (state) => state.unavailableFields,
   );
@@ -88,8 +85,8 @@ const useAddFlow = () => {
     if (!folder_id && (!folders || folders.length === 0)) {
       try {
         const projectName = isOnboarding
-          ? t("project.starterName")
-          : t("project.newName");
+          ? "Starter Project"
+          : "New Project";
         const newFolder = await postAddFolder({
           data: {
             name: projectName,
