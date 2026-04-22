@@ -160,7 +160,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.2.27"
                   },
                   {
                     "name": "pydantic",
@@ -392,7 +392,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.2.27"
                   },
                   {
                     "name": "pydantic",
@@ -590,10 +590,10 @@
             "description": "### 💡 Add your Apify API key here ",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.social_media_agent.15789e48",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.social_media_agent.15789e48"
+            }
           },
           "type": "note"
         },
@@ -617,10 +617,10 @@
             "description": "### 💡 Add your Apify API key here ",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.social_media_agent.15789e48",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.social_media_agent.15789e48"
+            }
           },
           "type": "note"
         },
@@ -647,10 +647,10 @@
             "description": "# 📖 README\nExtract data with **Apify Actors** and analyze the data with an **Agent**.\n\n## Prerequisites\n\n* An [Apify API token](https://docs.apify.com/platform/integrations/api#api-token)\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. Enter your **Apify** API token in the **Apify Token** fields of the **Apify Actors** components.\n3. Open the **Playground** and chat with the agent. For example, task it with retrieving a profile bio and the latest video by using this prompt:  \n   ```\n   Find the TikTok profile of the company OpenAI using Google search, then show me the profile bio and their latest video.\n   ```",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.social_media_agent.501213ba",
             "template": {
               "backgroundColor": "amber"
-            },
-            "i18n_key": "template_notes.social_media_agent.501213ba"
+            }
           },
           "type": "note"
         },
@@ -1234,10 +1234,10 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.social_media_agent.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.social_media_agent.cd87cff6"
+            }
           },
           "type": "note"
         },
@@ -1305,7 +1305,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.2.27"
                   }
                 ],
                 "total_dependencies": 3

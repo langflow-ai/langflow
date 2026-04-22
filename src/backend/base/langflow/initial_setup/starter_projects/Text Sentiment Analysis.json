@@ -773,8 +773,8 @@
             "description": "# 📖 README\nThis flow processes text data, analyzes sentiment, and provides structured insights.  \n\n## Prerequisite\n\n* [OpenAI API key](https://platform.openai.com/docs/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. In the **File Component**, load text data in `.txt`, `.csv`, or `.json` formats.\n3. Open the **Playground** to see the analysis and recommendation the flow constructs.\n\n## How It Works  \n\n1. The **Data to Message** component converts raw data into structured messages. \n\n2. The **NLP expert** prompt provides sentiment analysis, while the **Analyzing messages** prompt summarizes messages from a discussion board.\n\n3. The final **Prompt Component** creates a structured recommendation prompt to ensure that the AI model receives well-formatted input.  \n\n4. The **OpenAI Model Component** processes the text and classifies the sentiment as **Positive, Neutral, or Negative**.  \n\n",
             "display_name": "",
             "documentation": "",
-            "template": {},
-            "i18n_key": "template_notes.text_sentiment_analysis.07dc31be"
+            "i18n_key": "template_notes.text_sentiment_analysis.07dc31be",
+            "template": {}
           },
           "type": "note"
         },
@@ -1365,10 +1365,10 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.text_sentiment_analysis.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.text_sentiment_analysis.cd87cff6"
+            }
           },
           "type": "note"
         },
@@ -1395,10 +1395,10 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.text_sentiment_analysis.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.text_sentiment_analysis.cd87cff6"
+            }
           },
           "type": "note"
         },
@@ -1425,10 +1425,10 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.text_sentiment_analysis.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.text_sentiment_analysis.cd87cff6"
+            }
           },
           "type": "note"
         },
@@ -2637,7 +2637,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.2.27"
                   },
                   {
                     "name": "pydantic",
@@ -2645,7 +2645,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.194.0"
+                    "version": "2.193.0"
                   }
                 ],
                 "total_dependencies": 4

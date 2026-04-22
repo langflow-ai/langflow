@@ -126,10 +126,10 @@
             "description": "# 📖 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.simple_agent.89c2ae6b",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.simple_agent.89c2ae6b"
+            }
           },
           "type": "note"
         },
@@ -153,10 +153,10 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.simple_agent.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.simple_agent.cd87cff6"
+            }
           },
           "type": "note"
         },
@@ -953,7 +953,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.2.27"
                   }
                 ],
                 "total_dependencies": 3

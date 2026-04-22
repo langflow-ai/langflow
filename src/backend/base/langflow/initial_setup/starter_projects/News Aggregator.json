@@ -130,10 +130,10 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.news_aggregator.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.news_aggregator.cd87cff6"
+            }
           },
           "type": "note"
         },
@@ -157,10 +157,10 @@
             "description": "### Add your AgentQL API key here",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.news_aggregator.c93afbb2",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.news_aggregator.c93afbb2"
+            }
           },
           "type": "note"
         },
@@ -835,10 +835,10 @@
             "description": "# 📖 README\nThis flow extracts structured data from a URL and saves it into a JSON file.\n\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n3. Click **Playground** and enter a question.\n\nThe **Agent** component populates the **AgentQL** component's **URL** and **Query** fields, and returns a structured response to your question. Then the extracted data is saved into a JSON file `news-aggregated.json`, which can be found in your current project directory.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.news_aggregator.85a46aa0",
             "template": {
               "backgroundColor": "amber"
-            },
-            "i18n_key": "template_notes.news_aggregator.85a46aa0"
+            }
           },
           "type": "note"
         },
@@ -1189,7 +1189,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.2.27"
                   }
                 ],
                 "total_dependencies": 3
@@ -1784,7 +1784,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.194.0"
+                    "version": "2.193.0"
                   }
                 ],
                 "total_dependencies": 7

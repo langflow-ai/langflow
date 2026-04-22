@@ -667,8 +667,8 @@
             "description": "# 📖 README\nThis flow loads a file and uses an LLM to answer questions based on content from the loaded document. \n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2.  In the **File** component, select a file  you want to load.\n3. Open the **Playground** and chat with your document.",
             "display_name": "",
             "documentation": "",
-            "template": {},
-            "i18n_key": "template_notes.document_q_a.6585acf3"
+            "i18n_key": "template_notes.document_q_a.6585acf3",
+            "template": {}
           },
           "type": "note"
         },
@@ -1320,7 +1320,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.2.27"
                   },
                   {
                     "name": "pydantic",
@@ -1328,7 +1328,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.194.0"
+                    "version": "2.193.0"
                   }
                 ],
                 "total_dependencies": 4

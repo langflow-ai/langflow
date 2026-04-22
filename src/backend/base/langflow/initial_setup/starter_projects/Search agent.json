@@ -826,8 +826,8 @@
             "description": "# � README\nThis template connects the **Search Point** endpoint from [ScrapeGraphAI](https://scrapegraphai.com) to an **Agent** component.\n\n## Prerequisites\n\n* [OpenAI API key](https://platform.openai.com/docs/overview)\n* [ScrapeGraphAI API key](https://dashboard.scrapegraphai.com)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n\n2. Add your **ScrapeGraphAI API key** to the **ScrapeGraphSearchApi** component.\n\n3. Open the **Playground** and ask your Agent a question. The Agent uses ScrapeGraph as a tool to answer you.",
             "display_name": "",
             "documentation": "",
-            "template": {},
-            "i18n_key": "template_notes.search_agent.c93b5067"
+            "i18n_key": "template_notes.search_agent.c93b5067",
+            "template": {}
           },
           "type": "note"
         },
@@ -854,10 +854,10 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.search_agent.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.search_agent.cd87cff6"
+            }
           },
           "type": "note"
         },
@@ -881,10 +881,10 @@
             "description": "### Add your ScrapeGraphAI API key here 👇",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.search_agent.dd9e880e",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.search_agent.dd9e880e"
+            }
           },
           "type": "note"
         },
@@ -955,7 +955,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.2.27"
                   }
                 ],
                 "total_dependencies": 3

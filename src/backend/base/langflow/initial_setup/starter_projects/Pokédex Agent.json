@@ -654,10 +654,10 @@
             "description": "## Open the playground and ask anything about a Pokémon! ⚡ 🐹",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.pok_dex_agent.5ee09434",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.pok_dex_agent.5ee09434"
+            }
           },
           "type": "note"
         },
@@ -684,8 +684,8 @@
             "description": "# 📖 README\nCollect research on Pokémon with a specialized **Agent** and the Pokédex API.\n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2.  Click **Playground** and ask about your favorite Pokémon.\nThe **Agent** queries the Pokedex API and returns a formatted entry.",
             "display_name": "",
             "documentation": "",
-            "template": {},
-            "i18n_key": "template_notes.pok_dex_agent.e977aa45"
+            "i18n_key": "template_notes.pok_dex_agent.e977aa45",
+            "template": {}
           },
           "type": "note"
         },
@@ -712,10 +712,10 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.pok_dex_agent.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.pok_dex_agent.cd87cff6"
+            }
           },
           "type": "note"
         },
@@ -1254,7 +1254,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.2.27"
                   }
                 ],
                 "total_dependencies": 3

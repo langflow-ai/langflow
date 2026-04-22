@@ -587,10 +587,10 @@
             "description": "### 💡 Upload your resume here",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.portfolio_website_code_generator.b008c1ce",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.portfolio_website_code_generator.b008c1ce"
+            }
           },
           "type": "note"
         },
@@ -617,8 +617,8 @@
             "description": "# 📖 README\nYour uploaded resume is parsed into a structured format, and output as HTML/CSS code for your own resume website!\n\n✅ **Accepted Formats:** PDF or TXT  \n✅ To ensure readability, provide clear headings, bullet points, and proper formatting. \n### 📌 Structured output fields:\n1. 🏷 **Full Name** - Candidate's full name  \n2. 📧 **Email** - A valid email address  \n3. 📞 **Phone Number** - Contact number  \n4. 🔗 **LinkedIn** - LinkedIn profile URL  \n5. 🖥 **GitHub** - GitHub profile URL (if applicable)  \n6. 🌐 **Portfolio** - Personal website or portfolio URL  \n7. 🛂 **Visa Status** - Work authorization details (if applicable)  \n8. 📝 **Summary** - A brief professional summary or objective statement  \n9. 💼 **Experience** - Work experience details (in dictionary format)  \n10. 🎓 **Education** - Education details (in dictionary format)  \n11. 🛠 **Skills** - Skills mentioned in the resume (comma-separated)  \n12. 🚀 **Projects** - Titles, descriptions, and details of projects.",
             "display_name": "",
             "documentation": "",
-            "template": {},
-            "i18n_key": "template_notes.portfolio_website_code_generator.4f048927"
+            "i18n_key": "template_notes.portfolio_website_code_generator.4f048927",
+            "template": {}
           },
           "type": "note"
         },
@@ -645,10 +645,10 @@
             "description": "### 💡 Click Open table to view the schema",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.portfolio_website_code_generator.5c287e01",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.portfolio_website_code_generator.5c287e01"
+            }
           },
           "type": "note"
         },
@@ -675,10 +675,10 @@
             "description": "### 💡 Add your Anthropic API key here",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.portfolio_website_code_generator.e5de3e32",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.portfolio_website_code_generator.e5de3e32"
+            }
           },
           "type": "note"
         },
@@ -945,7 +945,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.2.27"
                   },
                   {
                     "name": "pydantic",
@@ -953,7 +953,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.194.0"
+                    "version": "2.193.0"
                   }
                 ],
                 "total_dependencies": 4
@@ -1965,10 +1965,10 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.portfolio_website_code_generator.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.portfolio_website_code_generator.cd87cff6"
+            }
           },
           "type": "note"
         },

@@ -122,10 +122,10 @@
             "description": "# 📖 README\nLeverage the **Needle Search API** and an **Agent** to gather and summarize your invoice data quickly and accurately.\n\n## Prerequisites\n\n* A **Collection** and an **API Key** from your [Needle.ai](https://needle-ai.com) deployment\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n\n2. Load your invoices into your Needle Collection. \n\n3. In the **Needle Search** tool, add your **Needle Collection ID** and **Needle API Key**.\n\n4. Open the **Playground** and query your invoices. The **Agent** component determines the correct query and search size for data retrieval.\n",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.invoice_summarizer.b5ab0aab",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.invoice_summarizer.b5ab0aab"
+            }
           },
           "type": "note"
         },
@@ -601,10 +601,10 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.invoice_summarizer.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.invoice_summarizer.cd87cff6"
+            }
           },
           "type": "note"
         },
@@ -628,10 +628,10 @@
             "description": "### Add your Needle Search API key here 👇",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.invoice_summarizer.c3786403",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.invoice_summarizer.c3786403"
+            }
           },
           "type": "note"
         },
@@ -715,7 +715,7 @@
               }
             ],
             "pinned": false,
-            "score": 7.568328950209746e-06,
+            "score": 7.568328950209746e-6,
             "template": {
               "_type": "Component",
               "code": {
@@ -1195,7 +1195,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.2.27"
                   }
                 ],
                 "total_dependencies": 3

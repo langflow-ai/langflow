@@ -972,10 +972,10 @@
             "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.vector_store_rag.f8f85922",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.vector_store_rag.f8f85922"
+            }
           },
           "type": "note"
         },
@@ -1010,10 +1010,10 @@
             "description": "# 📖 README\n  Retrieval Augmented Generation (RAG) is a way of providing additional context to a Large Language Model (LLM) by preloading a vector store with embeddings for relevant content. When a user chats with the LLM, a _similarity search_ retrieves relevant content by comparing an embedding for the user's query against the embeddings in the vector\n  store.\n  For example, a RAG chatbot could be pre-loaded with product data, and then it can help customers find specific products based on their queries.\n  This template has two sub-flows. One flow loads data into your knowledge base, and the other is the user-driven chat flow that compares a new query against the existing\n  content in your knowledge base.\n\n  ## Quick start\n  1. Configure your **Model Provider** with your API credentials.\n  2. Select a database or create a new one using the **Knowledge Ingestion** component.\n\n  ## Run the flows\n  1. Load your data into the knowledge base with the 📚 **Load Data** flow. Select a file to upload in the **File** component, and then click **Play** ▶️  on the **Knowledge\n  Ingestion** component to run the **Load Data** flow.\n  2. Open the **Playground** to start a chat with the 🐕 **Retriever** flow.\n\n  Only run the **Load Data** flow when you need to populate your knowledge base with baseline content, such as product data.\n  The **Retriever** flow is the user-facing chat flow. This flow generates an embedding from chat input, runs a similarity search against the knowledge base to retrieve relevant\n   content, and then passes the original query and the retrieved content to the LLM, which produces the chat response sent to the user.\n\n  ## Next steps\n  Experiment by changing the prompt and the loaded data to see how the LLM's responses change.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.vector_store_rag.e0f1d4b1",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.vector_store_rag.e0f1d4b1"
+            }
           },
           "type": "note"
         },
@@ -1328,10 +1328,10 @@
             "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick **Run component** on the **Knowledge Ingestion** component to load your data.\n\n\n### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.vector_store_rag.e69c13bd",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.vector_store_rag.e69c13bd"
+            }
           },
           "type": "note"
         },
@@ -1366,10 +1366,10 @@
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.vector_store_rag.ec099fc5",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.vector_store_rag.ec099fc5"
+            }
           },
           "type": "note"
         },
@@ -1639,7 +1639,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.2.27"
                   },
                   {
                     "name": "pydantic",
@@ -1647,7 +1647,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.194.0"
+                    "version": "2.193.0"
                   }
                 ],
                 "total_dependencies": 4
@@ -2691,7 +2691,7 @@
                   },
                   {
                     "name": "cryptography",
-                    "version": "46.0.7"
+                    "version": "46.0.6"
                   },
                   {
                     "name": "langchain_chroma",
@@ -2711,7 +2711,7 @@
                   },
                   {
                     "name": "chromadb",
-                    "version": "1.5.7"
+                    "version": "1.5.6"
                   }
                 ],
                 "total_dependencies": 7
@@ -3057,11 +3057,11 @@
                 "dependencies": [
                   {
                     "name": "chromadb",
-                    "version": "1.5.7"
+                    "version": "1.5.6"
                   },
                   {
                     "name": "cryptography",
-                    "version": "46.0.7"
+                    "version": "46.0.6"
                   },
                   {
                     "name": "langchain_chroma",
@@ -3081,7 +3081,7 @@
                   },
                   {
                     "name": "langchain_openai",
-                    "version": "1.1.13"
+                    "version": "1.1.9"
                   },
                   {
                     "name": "langchain_huggingface",
