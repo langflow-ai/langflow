@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import sys
 import types
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -21,6 +21,7 @@ from lfx.base.knowledge_bases.backends import (
     AstraBackend,
     BackendType,
     MongoDBBackend,
+    OpenSearchBackend,
     PostgresBackend,
     create_backend,
     registered_backends,
@@ -39,6 +40,7 @@ class TestRegistry:
         assert BackendType.MONGODB in registered
         assert BackendType.ASTRA in registered
         assert BackendType.POSTGRES in registered
+        assert BackendType.OPENSEARCH in registered
 
     def test_create_backend_dispatches_by_string(self, tmp_path):
         # String dispatch makes DB rows and API payloads round-trip
@@ -51,6 +53,9 @@ class TestRegistry:
 
         pg = create_backend("postgres", kb_name="kb", kb_path=tmp_path)
         assert isinstance(pg, PostgresBackend)
+
+        opensearch = create_backend("opensearch", kb_name="kb", kb_path=tmp_path)
+        assert isinstance(opensearch, OpenSearchBackend)
 
 
 # --------------------------------------------------------------------
@@ -277,6 +282,20 @@ class TestMissingOptionalDepsSurfaceHelpfulErrors:
         backend = PostgresBackend(kb_name="kb", kb_path=tmp_path, backend_config={"collection_name": "c"})
         await backend.ensure_ready()
         with pytest.raises(RuntimeError, match="langchain-postgres"):
+            backend._build_vector_store()
+
+    async def test_opensearch_missing_dep_raises_runtime_error(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("OPENSEARCH_URL", "https://demo:9200")
+        self._hide_module(monkeypatch, "langchain_community")
+        self._hide_module(monkeypatch, "langchain_community.vectorstores")
+        self._hide_module(monkeypatch, "opensearchpy")
+        backend = OpenSearchBackend(
+            kb_name="kb",
+            kb_path=tmp_path,
+            backend_config={"index_name": "idx"},
+        )
+        await backend.ensure_ready()
+        with pytest.raises(RuntimeError, match="langchain-community"):
             backend._build_vector_store()
 
 
@@ -550,3 +569,143 @@ class TestPostgresIterDocumentsCancellation:
 
         assert total == 25
         assert result.rows_yielded == 25
+
+
+# --------------------------------------------------------------------
+# OpenSearch
+# --------------------------------------------------------------------
+
+
+class TestOpenSearchBackendValidation:
+    async def test_missing_index_raises(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("OPENSEARCH_URL", "https://demo:9200")
+        backend = OpenSearchBackend(kb_name="kb", kb_path=tmp_path, backend_config={})
+        await backend.ensure_ready()
+        with pytest.raises(ValueError, match="'index_name'"):
+            backend._build_vector_store()
+
+    async def test_missing_url_variable_raises(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("OPENSEARCH_URL", raising=False)
+        backend = OpenSearchBackend(
+            kb_name="kb",
+            kb_path=tmp_path,
+            backend_config={"index_name": "idx"},
+        )
+        with pytest.raises(ValueError, match="OPENSEARCH_URL"):
+            await backend.ensure_ready()
+
+
+def _install_opensearch_stubs(
+    monkeypatch,
+    *,
+    client_instance: MagicMock,
+    store_instance: MagicMock,
+    helpers_scan: Any = None,
+) -> tuple[MagicMock, MagicMock]:
+    """Shared ``sys.modules`` stubs for OpenSearch-backed tests."""
+    os_module = types.ModuleType("opensearchpy")
+    os_module.OpenSearch = MagicMock(return_value=client_instance)
+    helpers_module = types.ModuleType("opensearchpy.helpers")
+    helpers_module.scan = helpers_scan or (lambda *_a, **_kw: iter(()))
+    # ``from opensearchpy import helpers`` resolves ``helpers`` as an
+    # attribute on the package, so bind it both ways.
+    os_module.helpers = helpers_module
+
+    langchain_community = types.ModuleType("langchain_community")
+    vectorstores_module = types.ModuleType("langchain_community.vectorstores")
+    vectorstores_module.OpenSearchVectorSearch = MagicMock(return_value=store_instance)
+    langchain_community.vectorstores = vectorstores_module
+
+    monkeypatch.setitem(sys.modules, "opensearchpy", os_module)
+    monkeypatch.setitem(sys.modules, "opensearchpy.helpers", helpers_module)
+    monkeypatch.setitem(sys.modules, "langchain_community", langchain_community)
+    monkeypatch.setitem(sys.modules, "langchain_community.vectorstores", vectorstores_module)
+    return os_module.OpenSearch, vectorstores_module.OpenSearchVectorSearch
+
+
+class TestOpenSearchBackendBuild:
+    async def test_build_instantiates_langchain_wrapper(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("OPENSEARCH_URL", "https://demo:9200")
+        monkeypatch.setenv("OPENSEARCH_USERNAME", "user")
+        monkeypatch.setenv("OPENSEARCH_PASSWORD", "pw")  # pragma: allowlist secret
+
+        client = MagicMock(name="os_client")
+        store = MagicMock(name="os_vector_store")
+        os_ctor, wrapper_ctor = _install_opensearch_stubs(monkeypatch, client_instance=client, store_instance=store)
+
+        backend = OpenSearchBackend(
+            kb_name="kb",
+            kb_path=tmp_path,
+            backend_config={"index_name": "my_idx", "engine": "lucene"},
+            embedding_function=MagicMock(),
+        )
+        await backend.ensure_ready()
+        built = backend._build_vector_store()
+
+        os_ctor.assert_called_once()
+        wrapper_ctor.assert_called_once()
+        kwargs = wrapper_ctor.call_args.kwargs
+        assert kwargs["opensearch_url"] == "https://demo:9200"
+        assert kwargs["index_name"] == "my_idx"
+        assert kwargs["http_auth"] == ("user", "pw")
+        assert kwargs["engine"] == "lucene"
+        assert built is store
+        # Teardown must close the raw client.
+        await backend.teardown()
+        client.close.assert_called_once()
+
+
+class TestOpenSearchIterDocumentsCancellation:
+    async def _build_backend_with_rows(self, tmp_path, monkeypatch, rows: list[dict]):
+        monkeypatch.setenv("OPENSEARCH_URL", "https://demo:9200")
+
+        yielded = {"count": 0}
+
+        def scan(_client, **_kwargs):
+            # Generator lets us observe how many rows were drained before
+            # the async consumer cancelled the worker.
+            for row in rows:
+                yielded["count"] += 1
+                yield row
+
+        client = MagicMock(name="os_client")
+        store = MagicMock(name="os_vector_store")
+        _install_opensearch_stubs(monkeypatch, client_instance=client, store_instance=store, helpers_scan=scan)
+
+        backend = OpenSearchBackend(
+            kb_name="kb",
+            kb_path=tmp_path,
+            backend_config={"index_name": "idx"},
+            embedding_function=MagicMock(),
+        )
+        await backend.ensure_ready()
+        _ = backend.vector_store  # populate ``_os_client``
+        return backend, yielded
+
+    async def test_early_break_stops_scroll(self, tmp_path, monkeypatch):
+        rows = [{"_source": {"text": f"doc {i}", "metadata": {"i": i}}} for i in range(200)]
+        backend, yielded = await self._build_backend_with_rows(tmp_path, monkeypatch, rows)
+
+        first_batch = None
+        agen = backend.iter_documents(batch_size=10)
+        try:
+            async for batch in agen:
+                first_batch = batch
+                break
+        finally:
+            await agen.aclose()
+
+        assert first_batch is not None
+        assert len(first_batch) == 10
+        assert yielded["count"] < 50, f"Expected early break to cancel scroll; got {yielded['count']} rows iterated"
+
+    async def test_full_drain_reads_all_rows(self, tmp_path, monkeypatch):
+        rows = [{"_source": {"text": f"doc {i}", "metadata": {"i": i}}} for i in range(25)]
+        backend, yielded = await self._build_backend_with_rows(tmp_path, monkeypatch, rows)
+
+        total = 0
+        async for batch in backend.iter_documents(batch_size=10):
+            total += len(batch)
+
+        assert total == 25
+        assert yielded["count"] == 25

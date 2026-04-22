@@ -62,6 +62,7 @@ class BackendType(str, Enum):
     MONGODB = "mongodb"
     ASTRA = "astra"
     POSTGRES = "postgres"
+    OPENSEARCH = "opensearch"
 
 
 # Keys Langflow always writes into ``Document.metadata`` for every chunk.

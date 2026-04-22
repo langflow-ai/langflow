@@ -24,6 +24,7 @@ from lfx.base.knowledge_bases.backends.base import (
 )
 from lfx.base.knowledge_bases.backends.chroma import ChromaBackend
 from lfx.base.knowledge_bases.backends.mongodb import MongoDBBackend
+from lfx.base.knowledge_bases.backends.opensearch import OpenSearchBackend
 from lfx.base.knowledge_bases.backends.postgres import PostgresBackend
 from lfx.base.knowledge_bases.backends.registry import (
     create_backend,
@@ -37,6 +38,7 @@ register_backend(BackendType.CHROMA, ChromaBackend)
 register_backend(BackendType.MONGODB, MongoDBBackend)
 register_backend(BackendType.ASTRA, AstraBackend)
 register_backend(BackendType.POSTGRES, PostgresBackend)
+register_backend(BackendType.OPENSEARCH, OpenSearchBackend)
 
 __all__ = [
     "AstraBackend",
@@ -45,6 +47,7 @@ __all__ = [
     "ChromaBackend",
     "IngestedDocument",
     "MongoDBBackend",
+    "OpenSearchBackend",
     "PostgresBackend",
     "VectorStoreBackend",
     "create_backend",
