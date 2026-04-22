@@ -37,8 +37,22 @@ RUN uv venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
 
+# Mirror the `[tool.uv] override-dependencies` from the workspace pyproject.toml so that
+# `uv pip install` (which doesn't read those overrides) can resolve around upstream
+# packages that exact-pin transitive deps — notably litellm 1.83.5+ pinning
+# `click==8.1.8` and `aiohttp==3.13.3` (BerriAI/litellm#26154), which conflict with
+# cuga's `aiohttp>=3.13.5` requirement.
+RUN printf '%s\n' \
+        "litellm>=1.83.11" \
+        "python-dotenv>=1.1.0" \
+        "openai>=2.26.0" \
+        "aiohttp>=3.13.5" \
+        "click>=8.3.0" \
+        > /tmp/uv-overrides.txt
+
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install ./src/sdk ./src/lfx "./src/backend/base[complete,postgresql]"
+    uv pip install --overrides /tmp/uv-overrides.txt \
+        ./src/sdk ./src/lfx "./src/backend/base[complete,postgresql]"
 
 ################################
 # RUNTIME
