@@ -717,20 +717,26 @@ async def test_user_can_run_own_flow(client: AsyncClient, simple_api_test, creat
 
 @pytest.mark.benchmark
 async def test_user_cannot_run_other_users_flow(client: AsyncClient, simple_api_test, user_two_api_key):
-    """Test that a user cannot run another user's flow - should return 403 Forbidden."""
+    """Test that a user cannot run another user's flow.
+
+    LE-639: post-fix behavior is 404 (not 403) so we don't leak flow existence
+    via a 403-vs-404 oracle.  See ``get_flow_for_api_key_user`` in
+    ``api/v1/endpoints.py``.
+    """
     # simple_api_test belongs to active_user, but we're using user_two's API key
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
 
     response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
-    assert "You do not have permission to run this flow" in response.text
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+    # Must not leak that the flow exists under another user's account.
+    assert "permission" not in response.text.lower()
 
 
 @pytest.mark.benchmark
 async def test_user_cannot_run_other_users_flow_with_payload(client: AsyncClient, simple_api_test, user_two_api_key):
-    """Test that a user cannot run another user's flow even with valid payload."""
+    """Test that a user cannot run another user's flow even with valid payload (LE-639)."""
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -741,8 +747,8 @@ async def test_user_cannot_run_other_users_flow_with_payload(client: AsyncClient
 
     response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
-    assert "You do not have permission to run this flow" in response.text
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+    assert "permission" not in response.text.lower()
 
 
 @pytest.mark.benchmark
@@ -763,7 +769,7 @@ async def test_user_can_run_own_flow_with_streaming(client: AsyncClient, simple_
 
 @pytest.mark.benchmark
 async def test_user_cannot_run_other_users_flow_with_streaming(client: AsyncClient, simple_api_test, user_two_api_key):
-    """Test that a user cannot run another user's flow with streaming."""
+    """Test that a user cannot run another user's flow with streaming (LE-639)."""
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -774,8 +780,8 @@ async def test_user_cannot_run_other_users_flow_with_streaming(client: AsyncClie
 
     response = await client.post(f"/api/v1/run/{flow_id}?stream=true", headers=headers, json=payload)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
-    assert "You do not have permission to run this flow" in response.text
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+    assert "permission" not in response.text.lower()
 
 
 @pytest.mark.benchmark
@@ -802,7 +808,7 @@ async def test_user_can_run_own_flow_advanced_endpoint(client: AsyncClient, simp
 async def test_user_cannot_run_other_users_flow_advanced_endpoint(
     client: AsyncClient, simple_api_test, user_two_api_key
 ):
-    """Test that a user cannot run another user's flow using the advanced endpoint."""
+    """Test that a user cannot run another user's flow using the advanced endpoint (LE-639)."""
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -814,8 +820,94 @@ async def test_user_cannot_run_other_users_flow_advanced_endpoint(
 
     response = await client.post(f"/api/v1/run/advanced/{flow_id}", headers=headers, json=payload)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
-    assert "You do not have permission to run this flow" in response.text
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+    assert "permission" not in response.text.lower()
+
+
+@pytest.mark.benchmark
+async def test_user_cannot_run_other_users_flow_session_endpoint(
+    client: AsyncClient, simple_api_test, logged_in_headers, monkeypatch
+):
+    """LE-639 regression: cross-user access on /run/session/{flow_id} returns 404.
+
+    ``simplified_run_flow_session`` is feature-flagged behind
+    ``agentic_experience`` and uses session auth (``CurrentActiveUser``).
+    We flip the flag on via monkeypatch and log in as ``active_super_user``
+    (a different user than ``active_user`` who owns ``simple_api_test``) to
+    exercise the session-auth variant of the wrapper dependency.
+    """
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.user.model import User
+    from langflow.services.deps import get_settings_service
+    from lfx.services.deps import session_scope
+    from sqlmodel import select
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "agentic_experience", True)
+
+    # Create a second user with session credentials and log in.
+    other_username = "le639_session_user"
+    other_password = "testpassword"  # noqa: S105  # pragma: allowlist secret
+    async with session_scope() as session:
+        existing = (await session.exec(select(User).where(User.username == other_username))).first()
+        if existing is None:
+            session.add(
+                User(
+                    username=other_username,
+                    password=get_password_hash(other_password),
+                    is_active=True,
+                    is_superuser=False,
+                )
+            )
+    try:
+        login_response = await client.post(
+            "api/v1/login",
+            data={"username": other_username, "password": other_password},
+        )
+        assert login_response.status_code == 200
+        other_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+        flow_id = simple_api_test["id"]  # owned by active_user via logged_in_headers
+        response = await client.post(f"/api/v1/run/session/{flow_id}", headers=other_headers)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+        assert "permission" not in response.text.lower()
+    finally:
+        async with session_scope() as session:
+            user = (await session.exec(select(User).where(User.username == other_username))).first()
+            if user is not None:
+                await session.delete(user)
+
+    # Silence the unused-fixture warning -- we depend on logged_in_headers to
+    # ensure active_user (the flow owner) exists before we attack as a peer.
+    _ = logged_in_headers
+
+
+@pytest.mark.benchmark
+async def test_run_rejects_malformed_user_id_query_param(client: AsyncClient, simple_api_test, created_api_key):
+    """LE-639 regression: a malformed ``?user_id=`` query param returns 404, not 500.
+
+    FastAPI exposes ``user_id`` as a free query parameter on routes that
+    previously used ``Depends(get_flow_by_id_or_endpoint_name)``.  The auth-aware
+    wrapper ignores the query value entirely (it derives user_id from the
+    authenticated caller), and the helper itself converts a malformed UUID
+    into 404 rather than a 500.  Both defenses must hold.
+    """
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+
+    for bad in ("not-a-uuid", "", "12345"):
+        response = await client.post(
+            f"/api/v1/run/{flow_id}",
+            headers=headers,
+            params={"user_id": bad},
+        )
+        # Same user owns the flow, so the wrapper resolves the flow
+        # successfully regardless of the junk query param; the run itself
+        # returns 200 (the flow executes) rather than leaking a 500.
+        assert response.status_code != status.HTTP_500_INTERNAL_SERVER_ERROR, (
+            f"Malformed user_id={bad!r} triggered 500: {response.text}"
+        )
 
 
 @pytest.mark.benchmark
@@ -842,7 +934,13 @@ async def test_permission_check_with_invalid_flow_id(client: AsyncClient, create
 
 @pytest.mark.benchmark
 async def test_permission_check_blocks_before_execution(client: AsyncClient, simple_api_test, user_two_api_key):
-    """Test that permission check happens before flow execution to prevent resource usage."""
+    """Test that permission check happens before flow execution to prevent resource usage.
+
+    LE-639: post-fix behavior is 404 from the helper rather than 403 from
+    ``check_flow_user_permission`` so we avoid the 403-vs-404 existence oracle.
+    The "block before execution" guarantee still holds -- we short-circuit
+    earlier now, not later.
+    """
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -852,11 +950,11 @@ async def test_permission_check_blocks_before_execution(client: AsyncClient, sim
         "tweaks": {},
     }
 
-    # This should fail immediately at permission check, not during execution
+    # This should fail immediately at the flow-lookup dependency, not during execution
     response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
-    assert "You do not have permission to run this flow" in response.text
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+    assert "permission" not in response.text.lower()
 
 
 @pytest.mark.benchmark

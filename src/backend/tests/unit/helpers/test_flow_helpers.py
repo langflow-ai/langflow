@@ -432,3 +432,27 @@ class TestGetFlowByIdOrEndpointName:
                 await get_flow_by_id_or_endpoint_name(str(uuid4()), owner_id)
         finally:
             patcher.stop()
+
+    @pytest.mark.parametrize("bad_user_id", ["not-a-uuid", "", "12345-not-a-real-uuid"])
+    @pytest.mark.asyncio
+    async def test_malformed_user_id_raises_404_not_500(self, bad_user_id):
+        """Malformed user_id (e.g. ``?user_id=foo``) must fail closed with 404.
+
+        Previously the eager ``UUID(user_id)`` normalization raised a raw
+        ``ValueError`` that surfaced as a 500 to the client.  The helper now
+        converts that into the same 404 we'd return for "flow not found" so
+        that a malformed caller identity can never be used to enumerate or
+        exfiltrate flows, and doesn't give attackers a new error signal.
+        """
+        mock_session = MagicMock()
+        mock_session.get = AsyncMock(return_value=None)
+
+        patcher = self._patch_session(mock_session)
+        try:
+            with pytest.raises(HTTPException) as exc_info:
+                await get_flow_by_id_or_endpoint_name(str(uuid4()), bad_user_id)
+            assert exc_info.value.status_code == 404
+            # Session lookup should never happen if user_id couldn't be parsed.
+            mock_session.get.assert_not_awaited()
+        finally:
+            patcher.stop()

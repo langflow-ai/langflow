@@ -410,7 +410,17 @@ async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | U
         # another user's flow.
         uuid_user_id: UUID | None = None
         if user_id is not None:
-            uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+            # Malformed user_id -- e.g. ``?user_id=foo`` on a legacy Depends
+            # route -- previously raised a raw ValueError (500 to the client).
+            # Fail closed: convert to 404 so we never disclose a flow to a
+            # caller whose identity we can't resolve.
+            try:
+                uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+            except (ValueError, AttributeError) as exc:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Flow identifier {flow_id_or_name} not found",
+                ) from exc
         try:
             flow_id = UUID(flow_id_or_name)
             flow = await session.get(Flow, flow_id)
