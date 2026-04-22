@@ -172,13 +172,11 @@ jobs:
           - lfx_bare
           - lfx_with_flow
           - lfx_with_flow_prebaked
-          # langflow_run_http_ready now uses TCP-probe readiness, but its
-          # thresholds.json entry is still the `mean_ms: 0` sentinel until a
-          # run-benchmark-snapshot captures a real baseline. Until then it stays
-          # non-blocking (see continue-on-error below) so sentinel-trip fails do
-          # not mark the workflow red. langflow_run_no_change_restart keeps the
-          # non-blocking treatment until its measurement shape is stable under
-          # CI load.
+          # langflow_run_no_change_restart stays non-blocking until its
+          # self_measuring dispatch shape is stable under CI load; its
+          # thresholds.json entry is carried over from the 2026-04-20 snapshot
+          # because recent runs produce ~1ms garbage (harness bug, not a real
+          # measurement).
           - langflow_run_http_ready
           - langflow_run_no_change_restart
           - lfx_reference_image
@@ -192,14 +190,10 @@ jobs:
     #   - all others: 20 min.
     timeout-minutes: ${{ matrix.scenario == 'langflow_run_http_ready' && 10 || (matrix.scenario == 'langflow_run_no_change_restart' && 15 || 20) }}
     # Matrix-entry-level continue-on-error:
-    #   - langflow_run_http_ready: stays non-blocking until a
-    #     run-benchmark-snapshot replaces the `mean_ms: 0` sentinel in
-    #     thresholds.json with a real baseline. After that, drop it from this
-    #     expression so regressions gate the workflow.
     #   - langflow_run_no_change_restart: stays non-blocking until its
-    #     measurement shape is stable under CI load.
+    #     self_measuring dispatch is fixed (currently produces ~1ms garbage).
     #   - lfx_reference_image: stays non-blocking per D-12 amendment.
-    continue-on-error: ${{ matrix.scenario == 'langflow_run_http_ready' || matrix.scenario == 'langflow_run_no_change_restart' || matrix.scenario == 'lfx_reference_image' }}
+    continue-on-error: ${{ matrix.scenario == 'langflow_run_no_change_restart' || matrix.scenario == 'lfx_reference_image' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -239,7 +233,7 @@ jobs:
 
       - name: Run scenario
         id: bench
-        continue-on-error: ${{ matrix.scenario == 'langflow_run_http_ready' || matrix.scenario == 'langflow_run_no_change_restart' || matrix.scenario == 'lfx_reference_image' }}
+        continue-on-error: ${{ matrix.scenario == 'langflow_run_no_change_restart' || matrix.scenario == 'lfx_reference_image' }}
         env:
           CONTAINER_CMD: docker
         run: |
@@ -269,7 +263,6 @@ jobs:
         if: >-
           failure() &&
           github.event.pull_request &&
-          matrix.scenario != 'langflow_run_http_ready' &&
           matrix.scenario != 'langflow_run_no_change_restart' &&
           matrix.scenario != 'lfx_reference_image'
         env:

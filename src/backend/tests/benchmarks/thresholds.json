@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
   "measurement_mode": "bytecode_compile_delta",
-  "captured_on": "2026-04-20",
-  "captured_ref": "12750/merge@eb2272ccc711768ecb11a3c0982aa419852bb17a",
+  "captured_on": "2026-04-22",
+  "captured_ref": "12798/merge@93c8aa1089ea04abeff5e5e1b14cc456460b9ac3",
   "captured_runner": "ubuntu-latest (GitHub Actions)",
   "python_version": "3.13",
   "allowed_regression_pct": 15,
-  "_note": "Captured on Linux CI via the cold-start-benchmark matrix workflow. langflow_run_http_ready may be sentinel if its supervisor marker is still unresolved. measurement_mode is bytecode_compile_delta per D-11a.",
+  "_note": "Captured on Linux CI via the cold-start-benchmark matrix workflow. measurement_mode is bytecode_compile_delta. langflow_run_no_change_restart retained from the 2026-04-20 baseline because this snapshot re-captured 0.85ms for it, which is the known self_measuring dispatch bug documented on PR #12788 comments, not a real measurement.",
   "scenarios": {
     "lfx_bare": {
-      "mean_ms": 10549.93,
-      "stddev_ms": 98.96,
+      "mean_ms": 9881.35,
+      "stddev_ms": 50.77,
       "runs": 10
     },
     "lfx_with_flow": {
-      "mean_ms": 16012.93,
-      "stddev_ms": 228.58,
+      "mean_ms": 15406.8,
+      "stddev_ms": 124.33,
       "runs": 10
     },
     "lfx_with_flow_prebaked": {
-      "mean_ms": 8424.65,
-      "stddev_ms": 99.93,
+      "mean_ms": 8334.93,
+      "stddev_ms": 125.7,
       "runs": 10
     },
     "langflow_run_http_ready": {
-      "mean_ms": 0,
-      "stddev_ms": 0,
-      "runs": 0
+      "mean_ms": 22183.74,
+      "stddev_ms": 246.06,
+      "runs": 5
     },
     "langflow_run_no_change_restart": {
       "mean_ms": 11324.7,
@@ -34,8 +34,8 @@
       "runs": 5
     },
     "lfx_reference_image": {
-      "mean_ms": 2404.12,
-      "stddev_ms": 20.93,
+      "mean_ms": 2424.53,
+      "stddev_ms": 25.27,
       "runs": 10
     }
   }
