@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class FeatureFlags(BaseSettings):
-    wxo_deployments: bool = False
+    wxo_deployments: bool = True
     """
     Enable Watsonx Orchestrate deployments.
     """

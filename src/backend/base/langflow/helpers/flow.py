@@ -398,15 +398,38 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
 
 async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> FlowRead:
     async with session_scope() as session:
-        endpoint_name = None
+        # SECURITY (LE-639): previously the UUID branch below called
+        # ``session.get(Flow, flow_id)`` with no ownership check, so any
+        # authenticated caller could resolve any other user's flow by UUID.
+        # The endpoint_name branch scoped by ``user_id`` only when a truthy
+        # value was passed, so callers using this as a FastAPI ``Depends``
+        # (which resolves ``user_id`` from a query param that no one sets) had
+        # the same hole on both branches.  Normalize ``user_id`` once and
+        # enforce it on both branches -- returning None on cross-user lookup
+        # so the shared 404 below fires and we don't disclose existence of
+        # another user's flow.
+        uuid_user_id: UUID | None = None
+        if user_id is not None:
+            # Malformed user_id -- e.g. ``?user_id=foo`` on a legacy Depends
+            # route -- previously raised a raw ValueError (500 to the client).
+            # Fail closed: convert to 404 so we never disclose a flow to a
+            # caller whose identity we can't resolve.
+            try:
+                uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+            except (ValueError, AttributeError) as exc:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Flow identifier {flow_id_or_name} not found",
+                ) from exc
         try:
             flow_id = UUID(flow_id_or_name)
             flow = await session.get(Flow, flow_id)
+            if flow is not None and uuid_user_id is not None and flow.user_id != uuid_user_id:
+                flow = None
         except ValueError:
             endpoint_name = flow_id_or_name
             stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
-            if user_id:
-                uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+            if uuid_user_id is not None:
                 stmt = stmt.where(Flow.user_id == uuid_user_id)
             flow = (await session.exec(stmt)).first()
         if flow is None:
