@@ -123,9 +123,9 @@ class TestCORSConfiguration:
             assert settings.cors_origins == ["https://app.example.com"]
             assert settings.cors_allow_credentials is True
 
-    @patch("langflow.main.setup_sentry")  # Mock Sentry setup
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
     @patch("langflow.main.get_settings_service")
-    def test_cors_middleware_configuration(self, mock_get_settings, mock_setup_sentry):
+    def test_cors_middleware_configuration(self, mock_get_settings, mock_add_sentry_middleware):
         """Test that CORS middleware is configured correctly in the app."""
         from langflow.main import create_app
 
@@ -141,7 +141,7 @@ class TestCORSConfiguration:
         mock_get_settings.return_value = mock_settings
 
         # Create app
-        mock_setup_sentry.return_value = None  # Use the mock
+        mock_add_sentry_middleware.return_value = None  # Use the mock
         app = create_app()
 
         # Find CORS middleware
@@ -157,11 +157,11 @@ class TestCORSConfiguration:
         assert cors_middleware.kwargs["allow_methods"] == ["GET", "POST"]
         assert cors_middleware.kwargs["allow_headers"] == ["Content-Type"]
 
-    @patch("langflow.main.setup_sentry")  # Mock Sentry setup
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
     @patch("langflow.main.get_settings_service")
     @patch("langflow.main.logger")
     def test_cors_wildcard_credentials_runtime_check_current_behavior(
-        self, mock_logger, mock_get_settings, mock_setup_sentry
+        self, mock_logger, mock_get_settings, mock_add_sentry_middleware
     ):
         """Test runtime validation prevents wildcard with credentials (current behavior)."""
         from langflow.main import create_app
@@ -178,7 +178,7 @@ class TestCORSConfiguration:
         mock_get_settings.return_value = mock_settings
 
         # Create app
-        mock_setup_sentry.return_value = None  # Use the mock
+        mock_add_sentry_middleware.return_value = None  # Use the mock
         app = create_app()
 
         # Check that warning was logged about deprecation/security
@@ -280,6 +280,7 @@ class TestRefreshTokenSecurity:
         """Test that valid refresh tokens work correctly."""
         from uuid import uuid4
 
+        from langflow.services.auth.service import AuthService
         from langflow.services.auth.utils import create_refresh_token
 
         mock_db = AsyncMock()
@@ -288,7 +289,14 @@ class TestRefreshTokenSecurity:
         user_id = uuid4()
         mock_user.id = user_id
 
-        with patch("langflow.services.auth.service.jwt.decode") as mock_decode:
+        # Create a langflow AuthService instance (not lfx) with mocked settings
+        mock_settings_service = MagicMock()
+        auth_service = AuthService(mock_settings_service)
+
+        with (
+            patch("langflow.services.auth.utils._auth_service", return_value=auth_service),
+            patch("langflow.services.auth.service.jwt.decode") as mock_decode,
+        ):
             mock_decode.return_value = {"sub": str(user_id), "type": "refresh"}  # Correct type
 
             with patch("langflow.services.auth.utils.get_jwt_verification_key") as mock_verification_key:
@@ -297,9 +305,7 @@ class TestRefreshTokenSecurity:
                 with patch("langflow.services.auth.service.get_user_by_id", new_callable=AsyncMock) as mock_get_user:
                     mock_get_user.return_value = mock_user
 
-                    with patch(
-                        "langflow.services.auth.service.AuthService.create_user_tokens", new_callable=AsyncMock
-                    ) as mock_create_tokens:
+                    with patch.object(auth_service, "create_user_tokens", new_callable=AsyncMock) as mock_create_tokens:
                         expected_access = "new-access-token"
                         expected_refresh = "new-refresh-token"
                         mock_create_tokens.return_value = {
@@ -348,8 +354,8 @@ class TestCORSIntegration:
     """Integration tests for CORS with actual HTTP requests."""
 
     @pytest.mark.asyncio
-    @patch("langflow.main.setup_sentry")  # Mock Sentry setup
-    async def test_cors_headers_in_response_current_behavior(self, mock_setup_sentry):
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    async def test_cors_headers_in_response_current_behavior(self, mock_add_sentry_middleware):
         """Test that CORS headers are properly set in responses (current behavior)."""
         from fastapi.testclient import TestClient
 
@@ -362,11 +368,12 @@ class TestCORSIntegration:
             mock_settings.settings.prometheus_enabled = False
             mock_settings.settings.mcp_server_enabled = False
             mock_settings.settings.sentry_dsn = None  # Disable Sentry
+            mock_settings.settings.root_path = ""
             mock_get_settings.return_value = mock_settings
 
             from langflow.main import create_app
 
-            mock_setup_sentry.return_value = None  # Use the mock
+            mock_add_sentry_middleware.return_value = None  # Use the mock
             app = create_app()
             client = TestClient(app)
 
@@ -396,8 +403,8 @@ class TestCORSIntegration:
         # This test represents the behavior we want in v1.7 with secure defaults
 
     @pytest.mark.asyncio
-    @patch("langflow.main.setup_sentry")  # Mock Sentry setup
-    async def test_cors_blocks_unauthorized_origin_current_behavior(self, mock_setup_sentry):
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    async def test_cors_blocks_unauthorized_origin_current_behavior(self, mock_add_sentry_middleware):
         """Test that CORS blocks requests from unauthorized origins."""
         from fastapi.testclient import TestClient
 
@@ -410,11 +417,12 @@ class TestCORSIntegration:
             mock_settings.settings.prometheus_enabled = False
             mock_settings.settings.mcp_server_enabled = False
             mock_settings.settings.sentry_dsn = None  # Disable Sentry
+            mock_settings.settings.root_path = ""
             mock_get_settings.return_value = mock_settings
 
             from langflow.main import create_app
 
-            mock_setup_sentry.return_value = None  # Use the mock
+            mock_add_sentry_middleware.return_value = None  # Use the mock
             app = create_app()
             client = TestClient(app)
 

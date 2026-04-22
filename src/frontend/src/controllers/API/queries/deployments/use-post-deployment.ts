@@ -35,6 +35,7 @@ export interface DeploymentCreateProviderData {
 
 export interface DeploymentCreateRequest {
   provider_id: string;
+  project_id?: string;
   name: string;
   description: string;
   type: string;
@@ -54,6 +55,7 @@ export const usePostDeployment: useMutationFunctionType<
 
   return mutate(["usePostDeployment"], fn, {
     ...options,
+    retry: 1,
     onSuccess: () => {
       return queryClient.refetchQueries({ queryKey: ["useGetDeployments"] });
     },

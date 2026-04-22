@@ -92,6 +92,34 @@ class Settings(BaseSettings):
     If not provided, a hash of the database URL will be used. Useful when multiple Langflow
     instances share the same database and need coordinated migration locking."""
 
+    root_path: str = ""
+    """ASGI root_path for deployments behind a reverse proxy that strips a URL
+    prefix (e.g. '/langflow').  When set, the MCP SSE transport includes this
+    prefix in the POST-back URL so clients can reach the correct endpoint.
+    Can also be set via the LANGFLOW_ROOT_PATH environment variable."""
+
+    @field_validator("root_path", mode="before")
+    @classmethod
+    def validate_root_path(cls, value: Any) -> str:
+        if value is None:
+            return ""
+        if not isinstance(value, str):
+            msg = "root_path must be a string"
+            raise TypeError(msg)
+
+        value = value.strip()
+        if not value or value == "/":
+            return ""
+
+        if "://" in value or "?" in value or "#" in value:
+            msg = "root_path must be an ASGI path prefix only, without scheme, query string, or fragment"
+            raise ValueError(msg)
+
+        if not value.startswith("/"):
+            value = f"/{value}"
+
+        return value.rstrip("/")
+
     mcp_base_url: str = ""
     """External base URL used to build MCP server URLs in the UI configuration JSON
     (e.g. 'https://langflow.example.com'). When empty, the frontend falls back to

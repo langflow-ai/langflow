@@ -113,6 +113,43 @@ async def create_provider_account(
     provider_url: str,
     api_key: str,
 ) -> DeploymentProviderAccount:
+    return await _create_provider_account_internal(
+        db=db,
+        user_id=user_id,
+        name=name,
+        provider_tenant_id=provider_tenant_id,
+        provider_key=provider_key,
+        provider_url=provider_url,
+        api_key=api_key,
+    )
+
+
+async def create_provider_account_from_model(
+    db: AsyncSession,
+    *,
+    provider_account: DeploymentProviderAccount,
+) -> DeploymentProviderAccount:
+    return await _create_provider_account_internal(
+        db=db,
+        user_id=provider_account.user_id,
+        name=provider_account.name,
+        provider_tenant_id=provider_account.provider_tenant_id,
+        provider_key=provider_account.provider_key,
+        provider_url=provider_account.provider_url,
+        api_key=provider_account.api_key,
+    )
+
+
+async def _create_provider_account_internal(
+    db: AsyncSession,
+    *,
+    user_id: UUID | str,
+    name: str,
+    provider_tenant_id: str | None,
+    provider_key: str | DeploymentProviderKey,
+    provider_url: str,
+    api_key: str,
+) -> DeploymentProviderAccount:
     user_uuid = parse_uuid(user_id, field_name="user_id")
 
     # The model has its own field validators, but pre-checking here gives

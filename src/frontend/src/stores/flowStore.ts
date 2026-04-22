@@ -240,6 +240,51 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     };
     get().setFlowPool(newFlowPool);
   },
+  appendLogToFlowPool: (
+    nodeId: string,
+    outputName: string,
+    log: LogsLogType,
+  ) => {
+    const prevPool = get().flowPool;
+    const prevEntries = prevPool[nodeId];
+    if (!prevEntries || prevEntries.length === 0) {
+      const newEntry: VertexBuildTypeAPI = {
+        id: nodeId,
+        inactivated_vertices: null,
+        next_vertices_ids: [],
+        top_level_vertices: [],
+        valid: true,
+        data: {
+          results: {},
+          outputs: {},
+          logs: { [outputName]: [log] },
+          messages: [],
+        },
+        timestamp: new Date().toISOString(),
+        params: null,
+        messages: [],
+        artifacts: null,
+      };
+      get().setFlowPool({ ...prevPool, [nodeId]: [newEntry] });
+    } else {
+      const latest = prevEntries[prevEntries.length - 1];
+      const existingLogs: LogsLogType[] = latest.data.logs[outputName] ?? [];
+      const updatedEntry: VertexBuildTypeAPI = {
+        ...latest,
+        data: {
+          ...latest.data,
+          logs: {
+            ...latest.data.logs,
+            [outputName]: [...existingLogs, log],
+          },
+        },
+      };
+      get().setFlowPool({
+        ...prevPool,
+        [nodeId]: [...prevEntries.slice(0, -1), updatedEntry],
+      });
+    }
+  },
   getNodePosition: (nodeId: string) => {
     const node = get().nodes.find((node) => node.id === nodeId);
     return node?.position || { x: 0, y: 0 };

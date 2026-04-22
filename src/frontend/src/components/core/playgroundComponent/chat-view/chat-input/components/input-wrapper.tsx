@@ -68,6 +68,11 @@ const InputWrapper = ({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    // Don't handle keyboard events that originate from the textarea
+    if (target.closest("textarea")) {
+      return;
+    }
     if (e.key !== "Enter" && e.key !== " ") {
       return;
     }

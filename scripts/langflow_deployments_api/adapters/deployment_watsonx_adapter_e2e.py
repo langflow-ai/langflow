@@ -82,7 +82,7 @@ Live update-matrix scenarios:
   in provider_data (expects InvalidContentError).
 - `upd_missing_add_id_fails`: rejects unknown bind.tool.tool_id_with_ref in provider_data (expects InvalidContentError).
 - `upd_config_raw_payload_conflict`: detects conflict when creating duplicate provider_data
-  raw connection app id (expects DeploymentConflictError).
+  raw connection app id (expects ResourceConflictError).
 - `upd_not_found_deployment`: update unknown deployment id returns not found (expects DeploymentNotFoundError).
 - `upd_put_tools_replaces_tool_list`: uses put_tools to declaratively replace
   the agent's tool list with a subset (expects Success).
@@ -94,7 +94,7 @@ Live update-matrix scenarios:
 Failpoint scenarios:
 - `fp_retry_create_config_then_success`: injects transient config-create failures; retries
   then succeeds (expects Success).
-- `fp_non_retryable_create_agent_conflict`: injects non-retryable agent conflict (expects DeploymentConflictError).
+- `fp_non_retryable_create_agent_conflict`: injects non-retryable agent conflict (expects ResourceConflictError).
 - `fp_create_agent_failure_triggers_rollback`: injects repeated agent-create failure and
   checks rollback (expects DeploymentError).
 - `fp_update_bindings_failure_triggers_rollback`: injects update-stage binding failure
@@ -141,12 +141,12 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxFlowArtifactProviderData,
 )
 from lfx.services.adapters.deployment.exceptions import (
-    DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
     InvalidContentError,
     InvalidDeploymentOperationError,
     InvalidDeploymentTypeError,
+    ResourceConflictError,
 )
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
@@ -164,7 +164,7 @@ from lfx.services.adapters.deployment.schema import (
 
 OUTCOME_SUCCESS = "Success"
 OUTCOME_INVALID_OPERATION = "InvalidDeploymentOperationError"
-OUTCOME_CONFLICT = "DeploymentConflictError"
+OUTCOME_CONFLICT = "ResourceConflictError"
 OUTCOME_INVALID_CONTENT = "InvalidContentError"
 OUTCOME_FAILURE = "DeploymentError"
 OUTCOME_NOT_FOUND = "DeploymentNotFoundError"
@@ -428,7 +428,7 @@ class WatsonxAdapterDirectE2E:
                 self._apply_injections(inject, originals)
 
             result = await self.service.create(user_id=self.user_id, payload=payload, db=self.db)
-        except DeploymentConflictError as exc:
+        except ResourceConflictError as exc:
             return OUTCOME_CONFLICT, exc.message, None
         except InvalidContentError as exc:
             return OUTCOME_INVALID_CONTENT, exc.message, None
@@ -456,7 +456,7 @@ class WatsonxAdapterDirectE2E:
             result = await self.service.list(user_id=self.user_id, db=self.db, params=params)
         except DeploymentNotFoundError as exc:
             return OUTCOME_NOT_FOUND, str(exc), None
-        except DeploymentConflictError as exc:
+        except ResourceConflictError as exc:
             return OUTCOME_CONFLICT, exc.message, None
         except InvalidContentError as exc:
             return OUTCOME_INVALID_CONTENT, exc.message, None
@@ -476,7 +476,7 @@ class WatsonxAdapterDirectE2E:
             result = await self.service.get(user_id=self.user_id, deployment_id=deployment_id, db=self.db)
         except DeploymentNotFoundError as exc:
             return OUTCOME_NOT_FOUND, str(exc), None
-        except DeploymentConflictError as exc:
+        except ResourceConflictError as exc:
             return OUTCOME_CONFLICT, exc.message, None
         except InvalidContentError as exc:
             return OUTCOME_INVALID_CONTENT, exc.message, None
@@ -510,7 +510,7 @@ class WatsonxAdapterDirectE2E:
             )
         except DeploymentNotFoundError as exc:
             return OUTCOME_NOT_FOUND, str(exc), None
-        except DeploymentConflictError as exc:
+        except ResourceConflictError as exc:
             return OUTCOME_CONFLICT, exc.message, None
         except InvalidContentError as exc:
             return OUTCOME_INVALID_CONTENT, exc.message, None
@@ -538,7 +538,7 @@ class WatsonxAdapterDirectE2E:
             )
         except DeploymentNotFoundError as exc:
             return OUTCOME_NOT_FOUND, str(exc), None
-        except DeploymentConflictError as exc:
+        except ResourceConflictError as exc:
             return OUTCOME_CONFLICT, exc.message, None
         except InvalidContentError as exc:
             return OUTCOME_INVALID_CONTENT, exc.message, None
@@ -562,7 +562,7 @@ class WatsonxAdapterDirectE2E:
             )
         except DeploymentNotFoundError as exc:
             return OUTCOME_NOT_FOUND, str(exc), None
-        except DeploymentConflictError as exc:
+        except ResourceConflictError as exc:
             return OUTCOME_CONFLICT, exc.message, None
         except InvalidContentError as exc:
             return OUTCOME_INVALID_CONTENT, exc.message, None
@@ -586,7 +586,7 @@ class WatsonxAdapterDirectE2E:
             )
         except DeploymentNotFoundError as exc:
             return OUTCOME_NOT_FOUND, str(exc), None
-        except DeploymentConflictError as exc:
+        except ResourceConflictError as exc:
             return OUTCOME_CONFLICT, exc.message, None
         except InvalidContentError as exc:
             return OUTCOME_INVALID_CONTENT, exc.message, None
@@ -606,7 +606,7 @@ class WatsonxAdapterDirectE2E:
             result = await self.service.get_status(user_id=self.user_id, deployment_id=deployment_id, db=self.db)
         except DeploymentNotFoundError as exc:
             return OUTCOME_NOT_FOUND, str(exc), None
-        except DeploymentConflictError as exc:
+        except ResourceConflictError as exc:
             return OUTCOME_CONFLICT, exc.message, None
         except InvalidContentError as exc:
             return OUTCOME_INVALID_CONTENT, exc.message, None
@@ -635,7 +635,7 @@ class WatsonxAdapterDirectE2E:
             )
         except DeploymentNotFoundError as exc:
             return OUTCOME_NOT_FOUND, str(exc), None
-        except DeploymentConflictError as exc:
+        except ResourceConflictError as exc:
             return OUTCOME_CONFLICT, exc.message, None
         except InvalidContentError as exc:
             return OUTCOME_INVALID_CONTENT, exc.message, None
@@ -655,7 +655,7 @@ class WatsonxAdapterDirectE2E:
             result = await self.service.get_execution(user_id=self.user_id, execution_id=execution_id, db=self.db)
         except DeploymentNotFoundError as exc:
             return OUTCOME_NOT_FOUND, str(exc), None
-        except DeploymentConflictError as exc:
+        except ResourceConflictError as exc:
             return OUTCOME_CONFLICT, exc.message, None
         except InvalidContentError as exc:
             return OUTCOME_INVALID_CONTENT, exc.message, None
@@ -695,7 +695,7 @@ class WatsonxAdapterDirectE2E:
             result = await self.service.delete(user_id=self.user_id, deployment_id=deployment_id, db=self.db)
         except DeploymentNotFoundError as exc:
             return OUTCOME_NOT_FOUND, str(exc), None
-        except DeploymentConflictError as exc:
+        except ResourceConflictError as exc:
             return OUTCOME_CONFLICT, exc.message, None
         except InvalidContentError as exc:
             return OUTCOME_INVALID_CONTENT, exc.message, None
@@ -2793,7 +2793,7 @@ class WatsonxAdapterDirectE2E:
                     __ctr["value"] += 1
                     if __ctr["value"] <= __n:
                         if __type == "domain_conflict":
-                            raise DeploymentConflictError(message=__msg)
+                            raise ResourceConflictError(message=__msg)
                         if __type == "domain_not_found":
                             raise DeploymentNotFoundError(message=__msg)
                         if __type == "domain_invalid_content":
@@ -2821,7 +2821,7 @@ class WatsonxAdapterDirectE2E:
                 __ctr["value"] += 1
                 if __ctr["value"] <= __n:
                     if __type == "domain_conflict":
-                        raise DeploymentConflictError(message=__msg)
+                        raise ResourceConflictError(message=__msg)
                     if __type == "domain_not_found":
                         raise DeploymentNotFoundError(message=__msg)
                     if __type == "domain_invalid_content":

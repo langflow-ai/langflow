@@ -41,7 +41,7 @@ export function useTestDeploymentModal(): TestDeploymentModal {
 
   const handleTestDeployment = useCallback((deployment: Deployment) => {
     setTestTarget(deployment);
-    setTestProviderId(deployment.provider_account_id ?? "");
+    setTestProviderId(deployment.provider_id ?? "");
   }, []);
 
   const handleTestFromStepper = useCallback(

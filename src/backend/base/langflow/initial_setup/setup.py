@@ -675,10 +675,30 @@ def get_project_data(project):
 
 
 async def update_project_file(project_path: anyio.Path, project: dict, updated_project_data) -> None:
+    """Update starter project JSON file with new data.
+
+    This function attempts to write updated project data back to the source file.
+    In containerized environments with read-only filesystems (e.g., Kubernetes with
+    readOnlyRootFilesystem: true), the write will fail gracefully since the database
+    is the source of truth for project data.
+
+    Args:
+        project_path: Path to the project JSON file
+        project: Project dictionary to update
+        updated_project_data: New project data to write
+    """
     project["data"] = updated_project_data
-    async with aiofiles.open(str(project_path), "w", encoding="utf-8") as f:
-        await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
-    await logger.adebug(f"Updated starter project {project['name']} file")
+    try:
+        async with aiofiles.open(str(project_path), "w", encoding="utf-8") as f:
+            await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
+        await logger.adebug(f"Updated starter project {project['name']} file")
+    except OSError as e:
+        # Handle read-only filesystem (common in containerized environments)
+        # The database update is the important part - file updates are optional
+        await logger.adebug(
+            f"Could not update starter project file {project['name']} (read-only filesystem): {e}. "
+            "This is expected in containerized environments with read-only root filesystem."
+        )
 
 
 def update_existing_project(
@@ -1249,6 +1269,12 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
 
     This implementation avoids an external distributed lock and works with both SQLite and PostgreSQL.
 
+    The function only creates a new default folder on first initialization (when the user has no
+    folders at all). If the user has already been through initial setup and has at least one folder
+    — even if they renamed the default or only kept other folders — the existing folder is returned
+    instead of creating a new "Starter Project". This prevents a phantom default folder from being
+    forced back into the UI every time the user logs in or the server restarts.
+
     Args:
         session (AsyncSession): The active database session.
         user_id (UUID): The ID of the user who owns the folder.
@@ -1290,7 +1316,18 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
                     await session.rollback()
                     break
 
-    # If no existing folder found, create a new one
+    # Respect prior user intent: if the user already has folders (e.g. they renamed the
+    # default folder to something like "My Flows"), do not force a new "Starter Project" back
+    # into their UI on every login/server restart. Return any existing folder instead.
+    any_folder_stmt = (
+        select(Folder).where(Folder.user_id == user_id).order_by(Folder.id).limit(1)  # type: ignore[arg-type]
+    )
+    any_folder = (await session.exec(any_folder_stmt)).first()
+    if any_folder:
+        return FolderRead.model_validate(any_folder, from_attributes=True)
+
+    # No existing folder found for this user — this is the first-time setup path.
+    # Create the default folder.
     try:
         folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME, description=DEFAULT_FOLDER_DESCRIPTION)
         session.add(folder_obj)

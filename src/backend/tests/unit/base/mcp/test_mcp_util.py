@@ -6,11 +6,14 @@ This test suite validates the MCP utility functions including:
 - Utility functions for name sanitization and schema conversion
 """
 
+import asyncio
 import re
 import shutil
 import sys
+from contextlib import suppress
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from lfx.base.mcp import util
 from lfx.base.mcp.util import (
@@ -18,7 +21,9 @@ from lfx.base.mcp.util import (
     MCPSseClient,
     MCPStdioClient,
     MCPStreamableHttpClient,
+    _is_transient_streamable_http_error,
     _process_headers,
+    _should_attempt_sse_after_streamable_failure,
     update_tools,
     validate_headers,
 )
@@ -620,6 +625,112 @@ class TestUpdateToolsStdioHeaders:
 
         # Original list should be unchanged
         assert original_args == ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
+
+
+class TestUpdateToolsPerToolResilience:
+    """update_tools must isolate per-tool schema-parsing failures (#11229)."""
+
+    @staticmethod
+    def _make_tool(name: str, schema: dict) -> MagicMock:
+        tool = MagicMock()
+        tool.name = name
+        tool.description = f"{name} description"
+        tool.inputSchema = schema
+        tool.outputSchema = None
+        return tool
+
+    @pytest.mark.asyncio
+    async def test_one_bad_tool_does_not_drop_the_other_tools_issue_11229(self):
+        """One bad schema must not abort the listing; the bad tool must be logged by name."""
+        good_tool_a = self._make_tool(
+            "good_a",
+            {"type": "object", "properties": {"q": {"type": "string"}}, "required": ["q"]},
+        )
+        bad_tool = self._make_tool(
+            "bad_linear_like",
+            {"type": "object", "properties": {"x": {"type": "string"}}},
+        )
+        good_tool_b = self._make_tool(
+            "good_b",
+            {"type": "object", "properties": {"n": {"type": "integer"}}, "required": ["n"]},
+        )
+
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = [good_tool_a, bad_tool, good_tool_b]
+        mock_stdio._connected = True
+
+        from lfx.schema.json_schema import create_input_schema_from_json_schema as real_converter
+
+        def selective_converter(schema):
+            if schema is bad_tool.inputSchema:
+                msg = "unhashable type: 'list'"
+                raise TypeError(msg)
+            return real_converter(schema)
+
+        with (
+            patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=selective_converter),
+            patch("lfx.base.mcp.util.logger") as mock_logger,
+        ):
+            mode, tool_list, tool_cache = await update_tools(
+                server_name="linear-like",
+                server_config={"command": "fake-cmd", "args": []},
+                mcp_stdio_client=mock_stdio,
+            )
+
+        loaded_names = [t.name for t in tool_list]
+        assert "good_a" in loaded_names
+        assert "good_b" in loaded_names
+        assert "bad_linear_like" not in loaded_names
+        assert set(tool_cache.keys()) == {"good_a", "good_b"}
+        assert mode == "Stdio"
+
+        all_log_calls = (
+            mock_logger.error.call_args_list + mock_logger.warning.call_args_list + mock_logger.exception.call_args_list
+        )
+        joined = " | ".join(str(call) for call in all_log_calls)
+        assert "bad_linear_like" in joined, f"failing tool name must appear in log; got: {joined!r}"
+
+    @pytest.mark.asyncio
+    async def test_resilience_under_many_mixed_tools(self):
+        """Stress: 20 tools, 10 healthy + 10 broken with varied error types — all 10 good survive."""
+        from lfx.schema.json_schema import create_input_schema_from_json_schema as real_converter
+
+        error_types = [TypeError, AttributeError, KeyError, NameError, RecursionError]
+        tools = []
+        bad_schemas: dict[int, type[Exception]] = {}
+        for i in range(20):
+            schema = {
+                "type": "object",
+                "properties": {"k": {"type": "string"}},
+                "required": ["k"],
+            }
+            tool = self._make_tool(f"tool_{i:02d}", schema)
+            tools.append(tool)
+            if i % 2 == 1:  # 10 odd indices fail with rotated error types
+                bad_schemas[id(schema)] = error_types[(i // 2) % len(error_types)]
+
+        def selective_converter(schema):
+            err_cls = bad_schemas.get(id(schema))
+            if err_cls is not None:
+                msg = f"simulated {err_cls.__name__}"
+                raise err_cls(msg)
+            return real_converter(schema)
+
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = tools
+        mock_stdio._connected = True
+
+        with patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=selective_converter):
+            _, tool_list, tool_cache = await update_tools(
+                server_name="stress",
+                server_config={"command": "fake-cmd", "args": []},
+                mcp_stdio_client=mock_stdio,
+            )
+
+        loaded = {t.name for t in tool_list}
+        expected_good = {f"tool_{i:02d}" for i in range(20) if i % 2 == 0}
+        assert loaded == expected_good, f"expected exactly the 10 healthy tools, got {loaded}"
+        assert set(tool_cache.keys()) == expected_good
 
 
 class TestFieldNameConversion:
@@ -1224,6 +1335,193 @@ class TestMCPUtilityFunctions:
         deep_result = deep_validated.model_dump()
         assert deep_result["msg"] == {"level1": {"level2": {"level3": "value"}}}
 
+    def test_nested_dict_preservation_with_declared_properties_issue_10975(self):
+        """Nested dicts must survive when the object also declares properties (#9881, #10975)."""
+        # FHIR-MCP shape from #10975: searchParam declared as object with one property,
+        # additionalProperties not explicitly forbidden.
+        fhir_schema = {
+            "type": "object",
+            "required": ["type", "searchParam"],
+            "properties": {
+                "type": {"type": "string"},
+                "searchParam": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        fhir_model = util.create_input_schema_from_json_schema(fhir_schema)
+        fhir_input = {
+            "type": "Observation",
+            "searchParam": {
+                "component-reference-gene.component-code-value-concept": "48018-6$BRCA2",
+            },
+        }
+        fhir_dump = fhir_model.model_validate(fhir_input).model_dump(exclude_none=True)
+        assert fhir_dump["searchParam"] == {
+            "component-reference-gene.component-code-value-concept": "48018-6$BRCA2",
+        }, "FHIR-MCP nested searchParam dict was stripped (issue #10975)"
+
+        # ROS-MCP shape from #9881: msg declared as object with a placeholder property.
+        ros_schema = {
+            "type": "object",
+            "required": ["msg", "msg_type", "topic"],
+            "properties": {
+                "topic": {"type": "string"},
+                "msg_type": {"type": "string"},
+                "msg": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        ros_model = util.create_input_schema_from_json_schema(ros_schema)
+        ros_input = {
+            "topic": "/turtle1/cmd_vel",
+            "msg_type": "geometry_msgs/msg/Twist",
+            "msg": {
+                "linear": {"x": 1, "y": 0, "z": 0},
+                "angular": {"x": 0, "y": 0, "z": 0},
+            },
+        }
+        ros_dump = ros_model.model_validate(ros_input).model_dump(exclude_none=True)
+        assert ros_dump["msg"] == {
+            "linear": {"x": 1, "y": 0, "z": 0},
+            "angular": {"x": 0, "y": 0, "z": 0},
+        }, "ROS-MCP nested msg dict was stripped (issue #9881)"
+        # Sibling primitive fields must continue to round-trip unchanged.
+        assert ros_dump["topic"] == "/turtle1/cmd_vel"
+        assert ros_dump["msg_type"] == "geometry_msgs/msg/Twist"
+
+    def test_object_with_additional_properties_false_still_drops_extras(self):
+        """additionalProperties:false must keep stripping extras after the #9881/#10975 fix."""
+        strict_schema = {
+            "type": "object",
+            "properties": {
+                "filter": {
+                    "type": "object",
+                    "properties": {"id": {"type": "string"}},
+                    "additionalProperties": False,
+                },
+            },
+        }
+        strict_model = util.create_input_schema_from_json_schema(strict_schema)
+        dumped = strict_model.model_validate({"filter": {"id": "abc", "rogue": "x"}}).model_dump(
+            exclude_none=True,
+        )
+        assert dumped["filter"].get("id") == "abc"
+        assert "rogue" not in dumped["filter"]
+
+    def test_top_level_extras_preserved_when_root_does_not_forbid(self):
+        """Root schema with no additionalProperties must pass top-level extras through (PR #12601 review)."""
+        # JSON Schema spec: additionalProperties defaults to true at any depth, including root.
+        # The fix in _build_model handles nested objects; this test guards the symmetric behaviour
+        # for the top-level create_model("InputSchema", ...).
+        schema = {
+            "type": "object",
+            "properties": {"declared": {"type": "string"}},
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        dumped = model.model_validate({"declared": "ok", "extra": "preserved"}).model_dump(exclude_none=True)
+        assert dumped == {"declared": "ok", "extra": "preserved"}
+
+    def test_top_level_strict_mode_when_root_forbids_additional_properties(self):
+        """Root schema with additionalProperties:false must still strip top-level extras."""
+        schema = {
+            "type": "object",
+            "properties": {"declared": {"type": "string"}},
+            "additionalProperties": False,
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        dumped = model.model_validate({"declared": "ok", "rogue": "x"}).model_dump(exclude_none=True)
+        assert dumped == {"declared": "ok"}
+        assert "rogue" not in dumped
+
+    def test_deeply_nested_dict_round_trip_preserves_all_levels(self):
+        """4-level nested dict under a permissive object must round-trip intact."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "envelope": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+            "required": ["envelope"],
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        deep = {
+            "envelope": {
+                "level1": {"level2": {"level3": {"level4": {"leaf": "value", "n": 42}}}},
+            },
+        }
+        out = model.model_validate(deep).model_dump(exclude_none=True)
+        assert out["envelope"]["level1"]["level2"]["level3"]["level4"]["leaf"] == "value"
+        assert out["envelope"]["level1"]["level2"]["level3"]["level4"]["n"] == 42
+
+    def test_array_of_objects_extras_are_preserved(self):
+        """Extras inside objects nested in arrays must also survive validation."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {"role": {"type": "string"}},
+                    },
+                },
+            },
+            "required": ["messages"],
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        payload = {
+            "messages": [
+                {"role": "user", "content": "hi", "metadata": {"lang": "pt-BR"}},
+                {"role": "assistant", "content": "olá", "tool_calls": [{"id": "x"}]},
+            ],
+        }
+        out = model.model_validate(payload).model_dump(exclude_none=True)
+        assert out["messages"][0]["content"] == "hi"
+        assert out["messages"][0]["metadata"] == {"lang": "pt-BR"}
+        assert out["messages"][1]["tool_calls"] == [{"id": "x"}]
+
+    def test_additional_properties_typed_schema_still_preserves_extras(self):
+        """additionalProperties:{type:...} is permissive — extras must survive."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "headers": {
+                    "type": "object",
+                    "properties": {"known": {"type": "string"}},
+                    "additionalProperties": {"type": "string"},
+                },
+            },
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        out = model.model_validate(
+            {"headers": {"x-custom-1": "a", "x-custom-2": "b"}},
+        ).model_dump(exclude_none=True)
+        assert out["headers"]["x-custom-1"] == "a"
+        assert out["headers"]["x-custom-2"] == "b"
+
+    def test_nested_object_with_none_or_empty_does_not_crash(self):
+        """None and {} for permissive nested object must round-trip cleanly."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        out_none = model.model_validate({"msg": None}).model_dump(exclude_none=True)
+        assert "msg" not in out_none
+        out_empty = model.model_validate({"msg": {}}).model_dump(exclude_none=True)
+        assert out_empty == {"msg": {}}
+
     @pytest.mark.asyncio
     async def test_validate_connection_params(self):
         """Test connection parameter validation."""
@@ -1688,7 +1986,9 @@ class TestMCPSseClientUnit:
             patch.object(sse_client, "_get_or_create_session", side_effect=mock_get_session_side_effect),
             patch.object(sse_client, "_get_session_manager") as mock_get_manager,
         ):
-            mock_manager = AsyncMock()
+            mock_manager = MagicMock()
+            mock_manager.invalidate_server_key = AsyncMock()
+            mock_manager._get_server_key = MagicMock(return_value="streamable_http_testkey")
             mock_get_manager.return_value = mock_manager
 
             result = await sse_client.run_tool("test_tool", {"param": "value"})
@@ -1696,8 +1996,7 @@ class TestMCPSseClientUnit:
             # Should have retried and succeeded on second attempt
             assert call_count == 2
             assert result is not None
-            # Should have cleaned up the failed session
-            mock_manager._cleanup_session.assert_called_once_with("test_context")
+            mock_manager.invalidate_server_key.assert_called_once_with("streamable_http_testkey")
 
 
 class TestMCPStructuredTool:
@@ -1731,13 +2030,15 @@ class TestMCPStructuredTool:
 
         # Import the MCPStructuredTool class from the actual code
         # We need to recreate it here since it's defined inline in the update_tools function
+        from langchain_core.runnables import RunnableConfig
         from langchain_core.tools import StructuredTool
         from lfx.base.mcp.util import create_tool_coroutine, create_tool_func
 
         class MCPStructuredTool(StructuredTool):
-            def run(self, tool_input: str | dict, config=None, **kwargs):
-                """Override the main run method to handle parameter conversion before validation."""
-                # Parse tool_input if it's a string
+            _tool_call_id_key = "_lf_tool_call_id"
+
+            def _to_args_and_kwargs(self, tool_input: str | dict, tool_call_id: str | None):
+                """Normalize MCP tool input before LangChain validates it."""
                 if isinstance(tool_input, str):
                     try:
                         parsed_input = json.loads(tool_input)
@@ -1746,28 +2047,27 @@ class TestMCPStructuredTool:
                 else:
                     parsed_input = tool_input or {}
 
-                # Convert camelCase parameters to snake_case
                 converted_input = self._convert_parameters(parsed_input)
+                tool_args, tool_kwargs = super()._to_args_and_kwargs(converted_input, tool_call_id)
+                if tool_call_id is not None:
+                    tool_kwargs[self._tool_call_id_key] = tool_call_id
+                return tool_args, tool_kwargs
 
-                # Call the parent run method with converted parameters
-                return super().run(converted_input, config=config, **kwargs)
+            def _run(self, *args, config: RunnableConfig, run_manager=None, **kwargs):
+                from lfx.base.mcp.util import _convert_mcp_result
 
-            async def arun(self, tool_input: str | dict, config=None, **kwargs):
-                """Override the main arun method to handle parameter conversion before validation."""
-                # Parse tool_input if it's a string
-                if isinstance(tool_input, str):
-                    try:
-                        parsed_input = json.loads(tool_input)
-                    except json.JSONDecodeError:
-                        parsed_input = {"input": tool_input}
-                else:
-                    parsed_input = tool_input or {}
+                tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                raw = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
+                converted = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                return converted, raw
 
-                # Convert camelCase parameters to snake_case
-                converted_input = self._convert_parameters(parsed_input)
+            async def _arun(self, *args, config: RunnableConfig, run_manager=None, **kwargs):
+                from lfx.base.mcp.util import _convert_mcp_result
 
-                # Call the parent arun method with converted parameters
-                return await super().arun(converted_input, config=config, **kwargs)
+                tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                raw = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+                converted = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                return converted, raw
 
             def _convert_parameters(self, input_dict):
                 if not input_dict or not isinstance(input_dict, dict):
@@ -1800,6 +2100,7 @@ class TestMCPStructuredTool:
             args_schema=test_schema,
             func=create_tool_func("test_tool", test_schema, mock_client),
             coroutine=create_tool_coroutine("test_tool", test_schema, mock_client),
+            response_format="content_and_artifact",
         )
 
     def test_convert_parameters_exact_match(self, mcp_tool):
@@ -2682,3 +2983,483 @@ class TestStripNoneRecursive:
 
         # Assert — None items in list preserved (stripping applies to dict keys only)
         assert result == [1, None, "hello", None]
+
+
+class TestConvertMcpResult:
+    """Tests for _convert_mcp_result.
+
+    Ensures MCP CallToolResult objects are properly converted into formats
+    that LangChain agents can consume, including multimodal image support.
+
+    Bug: MCP tools returning image content were passing the raw
+    CallToolResult Python object as a string to the LLM instead of
+    converting it to the image_url format required for vision models.
+    Fixes issue #11812.
+    """
+
+    def _make_text_block(self, text: str):
+        block = MagicMock()
+        block.type = "text"
+        block.text = text
+        return block
+
+    def _make_image_block(self, data: str = "abc123", mime: str = "image/png"):
+        block = MagicMock()
+        block.type = "image"
+        block.data = data
+        block.mimeType = mime
+        return block
+
+    def _make_result(self, content):
+        result = MagicMock()
+        result.content = content
+        return result
+
+    def test_should_return_empty_string_for_none_result(self):
+        """None result must return empty string without raising."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        assert _convert_mcp_result(None) == ""
+
+    def test_should_return_empty_string_for_empty_content(self):
+        """Result with empty content list must return empty string."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result([])
+        assert _convert_mcp_result(result) == ""
+
+    def test_should_return_empty_string_for_missing_content_attr(self):
+        """Result without a content attribute must return empty string."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = MagicMock(spec=[])  # no attributes
+        assert _convert_mcp_result(result) == ""
+
+    def test_should_return_plain_string_for_single_text_block(self):
+        """Single text block must return a plain string (backward compatible)."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result([self._make_text_block("hello world")])
+        assert _convert_mcp_result(result) == "hello world"
+
+    def test_should_join_multiple_text_blocks_with_newline(self):
+        """Multiple text blocks must be joined with newline."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result(
+            [
+                self._make_text_block("first"),
+                self._make_text_block("second"),
+            ]
+        )
+        assert _convert_mcp_result(result) == "first\nsecond"
+
+    def test_should_convert_image_block_to_image_url_format(self):
+        """Image content must be converted to LangChain image_url format."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        # Arrange — reproduces the exact scenario from issue #11812
+        b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg=="
+        result = self._make_result([self._make_image_block(data=b64, mime="image/png")])
+
+        # Act
+        converted = _convert_mcp_result(result)
+
+        # Assert — must be a list with a single image_url block
+        assert isinstance(converted, list)
+        assert len(converted) == 1
+        assert converted[0]["type"] == "image_url"
+        assert converted[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+    def test_should_handle_mixed_text_and_image_blocks(self):
+        """Mixed text + image content must return a list preserving order."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        b64 = "abc123=="
+        result = self._make_result(
+            [
+                self._make_text_block("Here is the screenshot:"),
+                self._make_image_block(data=b64, mime="image/jpeg"),
+            ]
+        )
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 2
+        assert converted[0] == {"type": "text", "text": "Here is the screenshot:"}
+        assert converted[1] == {
+            "type": "image_url",
+            "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+        }
+
+    def test_should_default_mime_type_to_image_png_when_missing(self):
+        """Image block with no mimeType must default to image/png."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        block = MagicMock()
+        block.type = "image"
+        block.data = "xyz=="
+        block.mimeType = None  # missing MIME
+
+        result = self._make_result([block])
+        converted = _convert_mcp_result(result)
+
+        assert converted[0]["image_url"]["url"].startswith("data:image/png;base64,")
+
+    def test_should_handle_multiple_image_blocks(self):
+        """Multiple image blocks must all be converted."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result(
+            [
+                self._make_image_block(data="img1==", mime="image/png"),
+                self._make_image_block(data="img2==", mime="image/jpeg"),
+            ]
+        )
+
+        converted = _convert_mcp_result(result)
+
+        assert len(converted) == 2
+        assert converted[0]["image_url"]["url"] == "data:image/png;base64,img1=="
+        assert converted[1]["image_url"]["url"] == "data:image/jpeg;base64,img2=="
+
+    def _make_resource_block(self, uri: str = "file:///data.csv", mime: str = "text/csv"):
+        block = MagicMock()
+        block.type = "resource"
+        block.model_dump.return_value = {"type": "resource", "uri": uri, "mimeType": mime}
+        return block
+
+    def test_should_serialise_resource_only_result_as_text_block(self):
+        """A resource-only result must not be dropped — serialised as JSON text block."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        resource = self._make_resource_block()
+        result = self._make_result([resource])
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 1
+        assert converted[0]["type"] == "text"
+        parsed = json.loads(converted[0]["text"])
+        assert parsed["type"] == "resource"
+        assert "uri" in parsed
+
+    def test_should_preserve_all_blocks_in_mixed_image_and_resource_result(self):
+        """Mixed image + resource must produce a list with both blocks, nothing dropped."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        b64 = "abc123=="
+        image = self._make_image_block(data=b64, mime="image/png")
+        resource = self._make_resource_block(uri="file:///chart.csv")
+        result = self._make_result([image, resource])
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 2
+
+        # First block: image
+        assert converted[0]["type"] == "image_url"
+        assert converted[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+        # Second block: resource serialised as text
+        assert converted[1]["type"] == "text"
+        parsed = json.loads(converted[1]["text"])
+        assert parsed["type"] == "resource"
+        assert parsed["uri"] == "file:///chart.csv"
+
+    def test_should_handle_unknown_block_type_without_model_dump(self):
+        """Block without model_dump must still produce a text fallback, not raise."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        block = MagicMock(spec=[])  # no model_dump attribute
+        block.type = "audio"
+
+        result = self._make_result([block])
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert converted[0]["type"] == "text"
+        # Must be valid JSON
+        json.loads(converted[0]["text"])
+
+
+class TestMCPStructuredToolToolCallId:
+    """Tests for the tool_call_id branching inside MCPStructuredTool.
+
+    Uses update_tools() with a mocked stdio client so the real MCPStructuredTool
+    class (defined inline in update_tools) is exercised instead of a local copy.
+
+    When tool_call_id is absent the tool must return the raw CallToolResult
+    (preserving backward compatibility for mcp_component and ToolInvoker).
+    When tool_call_id is present it must return a ToolMessage whose content
+    is multimodal-ready and whose artifact holds the original CallToolResult.
+    """
+
+    def _make_raw_result(self, text: str = "ok", image_data: str | None = None):
+        """Build a minimal CallToolResult-like mock."""
+        text_block = MagicMock()
+        text_block.type = "text"
+        text_block.text = text
+
+        content = [text_block]
+        if image_data:
+            img_block = MagicMock()
+            img_block.type = "image"
+            img_block.data = image_data
+            img_block.mimeType = "image/png"
+            content.append(img_block)
+
+        result = MagicMock()
+        result.content = content
+        result.structuredContent = None
+        return result
+
+    async def _build_tool_via_update_tools(self, raw_result):
+        """Get a real MCPStructuredTool from update_tools() with a mocked client."""
+        mock_tool = MagicMock()
+        mock_tool.name = "get_image"
+        mock_tool.description = "Returns content"
+        mock_tool.inputSchema = {"type": "object", "properties": {}, "required": []}
+        mock_tool.outputSchema = None
+
+        mock_client = AsyncMock(spec=MCPStdioClient)
+        mock_client.connect_to_server = AsyncMock(return_value=[mock_tool])
+        mock_client.run_tool = AsyncMock(return_value=raw_result)
+        mock_client._connected = True
+
+        server_config = {"command": "fake-server"}
+        _, tools, _ = await update_tools("test-server", server_config, mcp_stdio_client=mock_client)
+        assert tools, "update_tools() must return at least one tool"
+        return tools[0]
+
+    @pytest.mark.asyncio
+    async def test_no_tool_call_id_returns_raw_result(self):
+        """Without tool_call_id the raw CallToolResult must be returned (mcp_component compat)."""
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({})
+
+        assert result is raw
+
+    @pytest.mark.asyncio
+    async def test_with_tool_call_id_returns_tool_message(self):
+        """With tool_call_id the result must be a ToolMessage."""
+        from langchain_core.messages import ToolMessage
+
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-abc-123")
+
+        assert isinstance(result, ToolMessage)
+        assert result.name == "get_image"
+        assert result.tool_call_id == "call-abc-123"
+
+    @pytest.mark.asyncio
+    async def test_tool_message_artifact_holds_raw_call_tool_result(self):
+        """The artifact on the returned ToolMessage must be the original raw result."""
+        from langchain_core.messages import ToolMessage
+
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-abc-123")
+
+        assert isinstance(result, ToolMessage)
+        assert result.artifact is raw
+
+    @pytest.mark.asyncio
+    async def test_image_content_converted_in_tool_message(self):
+        """Image blocks must appear as image_url inside the ToolMessage content."""
+        from langchain_core.messages import ToolMessage
+
+        b64 = "abc123=="
+        raw = self._make_raw_result(image_data=b64)
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-img-001")
+
+        assert isinstance(result, ToolMessage)
+        content = result.content
+        assert isinstance(content, list)
+        image_blocks = [b for b in content if b.get("type") == "image_url"]
+        assert len(image_blocks) == 1
+        assert image_blocks[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+    @pytest.mark.asyncio
+    async def test_tool_call_id_is_preserved_for_callbacks(self):
+        """Callbacks must still see tool_call_id and the formatted ToolMessage output."""
+        from langchain_core.callbacks.base import AsyncCallbackHandler
+        from langchain_core.messages import ToolMessage
+
+        class RecordingHandler(AsyncCallbackHandler):
+            def __init__(self):
+                self.tool_call_ids = []
+                self.outputs = []
+
+            async def on_tool_start(
+                self,
+                serialized,
+                input_str,
+                *,
+                run_id,
+                parent_run_id=None,
+                tags=None,
+                metadata=None,
+                inputs=None,
+                **kwargs,
+            ):
+                _ = (serialized, input_str, run_id, parent_run_id, tags, metadata, inputs)
+                self.tool_call_ids.append(kwargs.get("tool_call_id"))
+
+            async def on_tool_end(self, output, *, run_id, parent_run_id=None, **kwargs):
+                _ = (run_id, parent_run_id, kwargs)
+                self.outputs.append(output)
+
+        raw = self._make_raw_result(image_data="abc123==")
+        tool = await self._build_tool_via_update_tools(raw)
+        handler = RecordingHandler()
+
+        result = await tool.arun({}, tool_call_id="call-img-001", callbacks=[handler])
+
+        assert handler.tool_call_ids == ["call-img-001"]
+        assert len(handler.outputs) == 1
+        assert isinstance(handler.outputs[0], ToolMessage)
+        assert handler.outputs[0].name == "get_image"
+        assert handler.outputs[0].artifact is raw
+        assert result.name == "get_image"
+
+
+class TestStreamableHttpTransportPolicy:
+    """Mocked streamable HTTP vs SSE: reconnect policy and fallback classification."""
+
+    def _connection_params(self):
+        return {
+            "url": "http://test-mcp.example/mcp",
+            "headers": {},
+            "timeout_seconds": 30,
+            "verify_ssl": True,
+        }
+
+    def _fake_client_session(self):
+        inst = MagicMock()
+        inst.initialize = AsyncMock()
+        inst.__aenter__ = AsyncMock(return_value=inst)
+        inst.__aexit__ = AsyncMock(return_value=None)
+        return inst
+
+    @pytest.mark.asyncio
+    async def test_streamable_success_sse_not_invoked(self):
+        manager = MCPSessionManager()
+        try:
+            fake = self._fake_client_session()
+            stream_cm = MagicMock()
+            stream_cm.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock(), None))
+            stream_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            with (
+                patch("lfx.base.mcp.util.ClientSession", return_value=fake),
+                patch("mcp.client.streamable_http.streamablehttp_client", stream_cm),
+                patch("mcp.client.sse.sse_client") as sse_cm,
+            ):
+                session, task, transport, sse_lock = await manager._create_streamable_http_session(
+                    "test_sess", self._connection_params(), None
+                )
+                assert transport == "streamable_http"
+                assert sse_lock is False
+                assert session is fake
+                sse_cm.assert_not_called()
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        finally:
+            await manager.cleanup_all()
+
+    @pytest.mark.asyncio
+    async def test_transient_streamable_failure_no_sse_fallback(self):
+        manager = MCPSessionManager()
+        try:
+            fake = self._fake_client_session()
+            stream_cm = MagicMock()
+            stream_cm.return_value.__aenter__ = AsyncMock(side_effect=ConnectionError("connection refused"))
+            stream_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            with (
+                patch("lfx.base.mcp.util.ClientSession", return_value=fake),
+                patch("mcp.client.streamable_http.streamablehttp_client", stream_cm),
+                patch("mcp.client.sse.sse_client") as sse_cm,
+            ):
+                with pytest.raises(ConnectionError, match="connection refused"):
+                    await manager._create_streamable_http_session("test_sess", self._connection_params(), None)
+                sse_cm.assert_not_called()
+        finally:
+            await manager.cleanup_all()
+
+    @pytest.mark.asyncio
+    async def test_streamable_404_triggers_sse(self):
+        manager = MCPSessionManager()
+        try:
+            req = httpx.Request("GET", "http://test-mcp.example/mcp")
+            resp = httpx.Response(404, request=req)
+            err404 = httpx.HTTPStatusError("not found", request=req, response=resp)
+            fake_stream = self._fake_client_session()
+            fake_sse = self._fake_client_session()
+            sessions = iter([fake_stream, fake_sse])
+
+            def client_session_factory(_r, _w, *_args):
+                return next(sessions)
+
+            stream_cm = MagicMock()
+            stream_cm.return_value.__aenter__ = AsyncMock(side_effect=err404)
+            stream_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            sse_cm = MagicMock()
+            sse_cm.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+            sse_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            with (
+                patch("lfx.base.mcp.util.ClientSession", side_effect=client_session_factory),
+                patch("mcp.client.streamable_http.streamablehttp_client", stream_cm),
+                patch("mcp.client.sse.sse_client", sse_cm),
+            ):
+                _session, task, transport, sse_lock = await manager._create_streamable_http_session(
+                    "test_sess", self._connection_params(), None
+                )
+                assert transport == "sse"
+                assert sse_lock is True
+                sse_cm.assert_called_once()
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        finally:
+            await manager.cleanup_all()
+
+    @pytest.mark.asyncio
+    async def test_validate_connectivity_mcp_session_terminated_returns_false(self):
+        manager = MCPSessionManager()
+        try:
+            mock_session = AsyncMock()
+            mock_session.list_tools = AsyncMock(side_effect=RuntimeError("Session terminated"))
+            assert await manager._validate_session_connectivity(mock_session) is False
+        finally:
+            await manager.cleanup_all()
+
+    def test_classify_transient_includes_connection_and_taskgroup_hints(self):
+        assert _is_transient_streamable_http_error(ConnectionError("x")) is True
+        assert _is_transient_streamable_http_error(RuntimeError("unhandled errors in a TaskGroup")) is True
+        req = httpx.Request("GET", "http://x")
+        resp_404 = httpx.Response(404, request=req)
+        assert _is_transient_streamable_http_error(httpx.HTTPStatusError("x", request=req, response=resp_404)) is False
+
+    def test_sse_fallback_after_404(self):
+        req = httpx.Request("GET", "http://x")
+        resp_404 = httpx.Response(404, request=req)
+        e = httpx.HTTPStatusError("x", request=req, response=resp_404)
+        assert _should_attempt_sse_after_streamable_failure(e) is True
+        assert _should_attempt_sse_after_streamable_failure(ConnectionError("x")) is False

@@ -34,7 +34,12 @@ def handle_auth_settings_update(
         # Explicitly set to None - clear auth settings
         existing_project.auth_settings = None
         # If we were using OAuth, stop the composer
-        return {"should_start_composer": False, "should_stop_composer": current_auth_type == "oauth"}
+        return {
+            "should_start_composer": False,
+            "should_stop_composer": current_auth_type == "oauth",
+            "should_handle_composer": current_auth_type == "oauth",
+            "new_auth_type": None,
+        }
 
     # Handle different input types (dict vs Pydantic model)
     if isinstance(new_auth_settings, dict):
@@ -72,4 +77,5 @@ def handle_auth_settings_update(
         "should_start_composer": should_start_composer,
         "should_stop_composer": should_stop_composer,
         "should_handle_composer": should_handle_composer,
+        "new_auth_type": new_auth_type,
     }

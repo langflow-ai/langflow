@@ -1,8 +1,19 @@
 import { memo } from "react";
+import VersionLabel from "@/components/common/versionLabelComponent";
 import { Badge } from "@/components/ui/badge";
 import type { FlowType } from "@/types/flow";
 import type { FlowVersionEntry } from "@/types/flow/version";
 import { cn } from "@/utils/utils";
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
 
 export const VersionPanel = memo(function VersionPanel({
   selectedFlow,
@@ -35,15 +46,19 @@ export const VersionPanel = memo(function VersionPanel({
       <div className="flex flex-1 flex-col overflow-hidden px-4 py-2">
         <h3 className="py-2 text-lg font-semibold">{selectedFlow.name}</h3>
         <div className="flex-1 space-y-3 overflow-y-auto py-3">
-          {isLoadingVersions ? (
+          {isLoadingVersions && (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
               Loading versions...
             </div>
-          ) : versions.length === 0 ? (
+          )}
+
+          {!isLoadingVersions && versions.length === 0 && (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
               No versions found
             </div>
-          ) : (
+          )}
+
+          {!isLoadingVersions &&
             versions.map((version) => {
               const isAttachedVersion = attachedEntry?.versionId === version.id;
               return (
@@ -59,28 +74,30 @@ export const VersionPanel = memo(function VersionPanel({
                       : "border-transparent bg-muted hover:border-border",
                   )}
                 >
-                  <span className="flex flex-col">
+                  <span className="flex min-w-0 flex-1 flex-col gap-1">
                     <span className="flex items-center gap-2 text-sm font-medium leading-tight">
-                      {version.version_tag}
+                      <VersionLabel
+                        versionTag={version.version_tag}
+                        description={version.description}
+                        className="truncate"
+                      />
                       {isAttachedVersion && (
                         <Badge
                           variant="secondaryStatic"
                           size="tag"
-                          className="bg-accent-blue-muted text-accent-blue-muted-foreground"
+                          className="shrink-0 bg-accent-blue-muted text-accent-blue-muted-foreground"
                         >
                           ATTACHED
                         </Badge>
                       )}
                     </span>
-                    <span className="text-sm leading-tight text-muted-foreground">
-                      Created:{" "}
-                      {new Date(version.created_at).toLocaleDateString()}
+                    <span className="text-xxs leading-tight text-muted-foreground">
+                      Created: {formatDate(version.created_at)}
                     </span>
                   </span>
                 </button>
               );
-            })
-          )}
+            })}
         </div>
       </div>
     </>

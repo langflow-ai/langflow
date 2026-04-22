@@ -2,6 +2,7 @@ from types import UnionType
 from typing import Any, Literal, Union, get_args, get_origin
 
 from pydantic import BaseModel, Field, create_model
+from pydantic.fields import PydanticUndefined
 
 from lfx.inputs.input_mixin import FieldTypes
 from lfx.inputs.inputs import (
@@ -12,6 +13,7 @@ from lfx.inputs.inputs import (
     InputTypes,
     IntInput,
     MessageTextInput,
+    NestedDictInput,
 )
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
@@ -46,6 +48,72 @@ _convert_type_to_field_type = {
     dict: DictInput,
     list: MessageTextInput,
 }
+
+
+def _resolve_input_type(annotation: Any, *, required: bool) -> tuple[type[InputTypes], bool, list[Any] | None]:
+    """Resolve a Pydantic annotation into a Langflow input type."""
+    ann = annotation
+
+    if isinstance(ann, UnionType):
+        non_none_types = [t for t in get_args(ann) if t is not type(None)]
+        if len(non_none_types) == 1:
+            ann = non_none_types[0]
+
+    is_list = False
+
+    # Handle unparameterized list (e.g., coming from nullable array schemas)
+    # Treat it as a list of strings for input purposes.
+    if ann is list:
+        is_list = True
+        ann = str
+
+    if get_origin(ann) is list:
+        is_list = True
+        ann = get_args(ann)[0]
+
+    options: list[Any] | None = None
+    if get_origin(ann) is Literal:
+        options = list(get_args(ann))
+        if options:
+            ann = type(options[0])
+
+    if get_origin(ann) is Union:
+        non_none = [t for t in get_args(ann) if t is not type(None)]
+        if len(non_none) == 1:
+            ann = non_none[0]
+
+    if get_origin(ann) is dict:
+        ann = dict
+
+    if isinstance(ann, type) and issubclass(ann, BaseModel):
+        return NestedDictInput, is_list, options
+
+    if ann is dict and not required:
+        return NestedDictInput, is_list, options
+
+    if options is not None:
+        return DropdownInput, is_list, options
+
+    if ann is Any:
+        return MessageTextInput, is_list, options
+
+    try:
+        return _convert_type_to_field_type[ann], is_list, options
+    except KeyError as err:
+        msg = f"Unsupported field type: {ann}"
+        raise TypeError(msg) from err
+
+
+def _get_langflow_input_default(model_field: Any, input_cls: type[InputTypes]) -> Any:
+    """Return a Langflow-safe default value for a Pydantic model field."""
+    default = model_field.default
+    if default is PydanticUndefined:
+        return PydanticUndefined
+
+    if default is None and input_cls is not NestedDictInput:
+        return PydanticUndefined
+
+    return default
 
 
 def flatten_schema(root_schema: dict[str, Any]) -> dict[str, Any]:
@@ -158,78 +226,24 @@ def schema_to_langflow_inputs(schema: type[BaseModel]) -> list[InputTypes]:
     inputs: list[InputTypes] = []
 
     for field_name, model_field in schema.model_fields.items():
-        ann = model_field.annotation
-        if isinstance(ann, UnionType):
-            # Extract non-None types from Union
-            non_none_types = [t for t in get_args(ann) if t is not type(None)]
-            if len(non_none_types) == 1:
-                ann = non_none_types[0]
+        required = model_field.is_required()
+        lf_cls, is_list, options = _resolve_input_type(model_field.annotation, required=required)
+        input_kwargs = {
+            "display_name": model_field.title or field_name.replace("_", " ").title(),
+            "name": field_name,
+            "info": model_field.description or "",
+            "required": required,
+            "is_list": is_list,
+        }
 
-        is_list = False
+        default = _get_langflow_input_default(model_field, lf_cls)
+        if default is not PydanticUndefined:
+            input_kwargs["value"] = default
 
-        # Handle unparameterized list (e.g., coming from nullable array schemas)
-        # Treat it as a list of strings for input purposes
-        if ann is list:
-            is_list = True
-            ann = str
-
-        if get_origin(ann) is list:
-            is_list = True
-            ann = get_args(ann)[0]
-
-        options: list[Any] | None = None
-        if get_origin(ann) is Literal:
-            options = list(get_args(ann))
-            if options:
-                ann = type(options[0])
-
-        if get_origin(ann) is Union:
-            non_none = [t for t in get_args(ann) if t is not type(None)]
-            if len(non_none) == 1:
-                ann = non_none[0]
-
-        # 2) Enumerated choices
         if options is not None:
-            inputs.append(
-                DropdownInput(
-                    display_name=model_field.title or field_name.replace("_", " ").title(),
-                    name=field_name,
-                    info=model_field.description or "",
-                    required=model_field.is_required(),
-                    is_list=is_list,
-                    options=options,
-                )
-            )
-            continue
+            input_kwargs["options"] = options
 
-        # 3) "Any" fallback → text
-        if ann is Any:
-            inputs.append(
-                MessageTextInput(
-                    display_name=model_field.title or field_name.replace("_", " ").title(),
-                    name=field_name,
-                    info=model_field.description or "",
-                    required=model_field.is_required(),
-                    is_list=is_list,
-                )
-            )
-            continue
-
-        # 4) Primitive via your mapping
-        try:
-            lf_cls = _convert_type_to_field_type[ann]
-        except KeyError as err:
-            msg = f"Unsupported field type: {ann}"
-            raise TypeError(msg) from err
-        inputs.append(
-            lf_cls(
-                display_name=model_field.title or field_name.replace("_", " ").title(),
-                name=field_name,
-                info=model_field.description or "",
-                required=model_field.is_required(),
-                is_list=is_list,
-            )
-        )
+        inputs.append(lf_cls(**input_kwargs))
 
     return inputs
 

@@ -43,7 +43,7 @@ export default function DeploymentDetailsModal({
       { enabled: open && !!deploymentId, refetchOnWindowFocus: false },
     );
 
-  const providerId = deployment?.provider_account_id ?? "";
+  const providerId = details?.provider_id ?? deployment?.provider_id ?? "";
 
   const { data: configsData, isFetching: isFetchingConfigs } =
     useGetDeploymentConfigs(

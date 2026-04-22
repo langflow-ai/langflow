@@ -148,7 +148,6 @@ def warn_about_future_cors_changes(settings):
 
 def get_lifespan(*, fix_migration=False, version=None):
     initialize_settings_service()
-    telemetry_service = get_telemetry_service()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -168,6 +167,26 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         try:
             start_time = asyncio.get_event_loop().time()
+
+            if get_settings_service().settings.sentry_dsn:
+                try:
+                    import sentry_sdk
+                except ImportError:
+                    await logger.awarning(
+                        "LANGFLOW_SENTRY_DSN is set but sentry-sdk is not installed; "
+                        "Sentry will not be initialized. Install it with: pip install sentry-sdk"
+                    )
+                else:
+                    try:
+                        sentry_settings = get_settings_service().settings
+                        sentry_sdk.init(
+                            dsn=sentry_settings.sentry_dsn,
+                            traces_sample_rate=sentry_settings.sentry_traces_sample_rate,
+                            profiles_sample_rate=sentry_settings.sentry_profiles_sample_rate,
+                        )
+                        await logger.adebug("Sentry SDK initialized in worker")
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"Failed to initialize Sentry SDK (check LANGFLOW_SENTRY_DSN): {e}")
 
             await logger.adebug("Initializing services")
             await initialize_services(fix_migration=fix_migration)
@@ -195,11 +214,36 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_auto_login_default_superuser()
             await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            if get_settings_service().settings.prometheus_enabled:
+                try:
+                    from prometheus_client import start_http_server
+
+                    start_http_server(get_settings_service().settings.prometheus_port)
+                    await logger.adebug(
+                        f"Started Prometheus server on port {get_settings_service().settings.prometheus_port}"
+                    )
+                except ImportError:
+                    await logger.aerror(
+                        "prometheus_client is not installed. Install it with: pip install prometheus-client"
+                    )
+                except OSError as e:
+                    import errno
+
+                    if e.errno == errno.EADDRINUSE:
+                        await logger.adebug(
+                            f"Prometheus port {get_settings_service().settings.prometheus_port} already in use "
+                            "(may be running in another worker)"
+                        )
+                    else:
+                        await logger.awarning(f"Failed to start Prometheus server: {e}")
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading bundles")
             temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
             get_settings_service().settings.components_path.extend(bundles_components_paths)
             await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            telemetry_service = get_telemetry_service()
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Caching types")
@@ -432,18 +476,20 @@ def create_app():
     __version__ = get_version_info()["version"]
     configure()
     lifespan = get_lifespan(version=__version__)
+
+    settings = get_settings_service().settings
+
     app = FastAPI(
         title="Langflow",
         version=__version__,
         lifespan=lifespan,
+        root_path=settings.root_path,
     )
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
 
-    setup_sentry(app)
-
-    settings = get_settings_service().settings
+    add_sentry_middleware(app)
 
     # Warn about future CORS changes
     warn_about_future_cors_changes(settings)
@@ -499,6 +545,28 @@ def create_app():
         return await call_next(request)
 
     @app.middleware("http")
+    async def forwarded_prefix_middleware(request: Request, call_next):
+        """Honour X-Forwarded-Prefix set by a reverse proxy.
+
+        When a reverse proxy (e.g. Nginx) strips a URL prefix before forwarding
+        the request, it can advertise the original prefix via X-Forwarded-Prefix.
+        We propagate this into the ASGI ``root_path`` so that transports like
+        MCP SSE include the prefix in the POST-back URLs they hand to clients.
+
+        This middleware is only active when ``root_path`` is configured in
+        settings (i.e. the operator has explicitly opted into reverse-proxy
+        mode).  The header value takes precedence over the static setting
+        because the proxy is the runtime source of truth for the prefix.
+        """
+        if not settings.root_path:
+            return await call_next(request)
+
+        prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
+        if prefix and prefix.startswith("/") and "://" not in prefix and "?" not in prefix and "#" not in prefix:
+            request.scope["root_path"] = prefix
+        return await call_next(request)
+
+    @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
         flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
@@ -537,18 +605,13 @@ def create_app():
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
-        if prome_port > 0 or prome_port < MAX_PORT:
-            logger.debug(f"Starting Prometheus server on port {prome_port}...")
+        if prome_port > 0 and prome_port < MAX_PORT:
+            logger.debug(f"Prometheus server port configured as {prome_port}...")
             settings.prometheus_enabled = True
             settings.prometheus_port = prome_port
         else:
             msg = f"Invalid port number {prome_port_str}"
             raise ValueError(msg)
-
-    if settings.prometheus_enabled:
-        from prometheus_client import start_http_server
-
-        start_http_server(settings.prometheus_port)
 
     if settings.mcp_server_enabled:
         from langflow.api.v1 import mcp_router
@@ -586,17 +649,27 @@ def create_app():
     return app
 
 
-def setup_sentry(app: FastAPI) -> None:
+def add_sentry_middleware(app: FastAPI) -> None:
+    """Attach SentryAsgiMiddleware to the app.
+
+    Only the ASGI middleware is registered here so it is available at request time.
+    The actual ``sentry_sdk.init()`` call is deferred to the worker lifespan
+    (see ``get_lifespan``) to avoid ghost transactions across pre-fork workers.
+    """
     settings = get_settings_service().settings
     if settings.sentry_dsn:
-        import sentry_sdk
-        from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+        try:
+            from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+        except ImportError:
+            logger.warning(
+                "LANGFLOW_SENTRY_DSN is set but sentry-sdk is not installed; "
+                "SentryAsgiMiddleware will not be added. Install it with: pip install sentry-sdk"
+            )
+            return
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Failed to import SentryAsgiMiddleware: {e}")
+            return
 
-        sentry_sdk.init(
-            dsn=settings.sentry_dsn,
-            traces_sample_rate=settings.sentry_traces_sample_rate,
-            profiles_sample_rate=settings.sentry_profiles_sample_rate,
-        )
         app.add_middleware(SentryAsgiMiddleware)
 
 

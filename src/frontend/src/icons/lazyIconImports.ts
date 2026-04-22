@@ -290,6 +290,10 @@ export const lazyIconsMapping = {
     import("@/icons/IBM").then((mod) => ({
       default: mod.WatsonxAiIcon,
     })),
+  WatsonxOrchestrate: () =>
+    import("@/icons/IBM").then((mod) => ({
+      default: mod.WatsonxOrchestrateIcon,
+    })),
   Icosa: () =>
     import("@/icons/Icosa").then((mod) => ({ default: mod.IcosaIcon })),
   IFixIt: () =>

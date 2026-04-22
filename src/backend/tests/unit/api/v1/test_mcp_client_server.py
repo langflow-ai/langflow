@@ -707,13 +707,9 @@ class TestValidateFlow:
         await mcp_server_module.connect_components(created["id"], c1["id"], "message", c2["id"], "input_value")
 
         result = await mcp_server_module.validate_flow(created["id"])
-        # Must return structured result with these keys
-        assert "valid" in result
-        assert isinstance(result["valid"], bool)
-        if "component_count" in result:
-            assert result["component_count"] >= 2
-        if "errors" in result:
-            assert isinstance(result["errors"], list)
+        assert result["valid"] is True
+        assert result["component_count"] == 2
+        assert result["errors"] == []
 
     async def test_validate_empty_flow(self):
         """An empty flow should validate as valid (no components to fail)."""

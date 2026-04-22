@@ -1,22 +1,27 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
+import time
 import uuid
+from types import UnionType
+from typing import Any, get_args, get_origin
 
 from langchain_core.tools import StructuredTool  # noqa: TC002
+from pydantic import BaseModel
 
 from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
 from lfx.base.mcp.util import (
     MCPStdioClient,
     MCPStreamableHttpClient,
-    create_input_schema_from_json_schema,
     update_tools,
 )
+from lfx.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import InputTypes  # noqa: TC001
 from lfx.io import BoolInput, DictInput, DropdownInput, McpInput, MessageTextInput, Output
-from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
+from lfx.io.schema import schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
@@ -49,6 +54,37 @@ def resolve_mcp_config(
 
 
 class MCPToolsComponent(ComponentWithCache):
+    """MCP Tools component.
+
+    Behaviour notes:
+    - Stale agent tools vs server were caused by Langflow caching the Toolset output
+      (``Output.cache=True`` plus the persisted ``output.value`` in saved flow JSON), not
+      only by the user-facing "Use Cached Server" (``use_cache``) toggle. ``_build_tool_output``
+      declares the Toolset output with ``cache=False`` and ``map_outputs`` overrides the
+      persisted value for existing flows so every run resolves a fresh tool list.
+    - ``update_tool_list`` is serialized with an ``asyncio.Lock`` so concurrent calls do not
+      share the same Streamable HTTP client session; overlapping POST/DELETE cycles otherwise
+      surface as HTTP 404 and the MCP SDK reports ``Session terminated``.
+    - All diagnostic logs are at DEBUG level to avoid swamping logs on hot paths (an agent
+      may call ``_get_tools`` per step). Header values are never logged; only header *keys*.
+    """
+
+    # Short-lived in-memory cache window (seconds) for ``_get_tools``. When the
+    # same header-hash key is requested again within this window the cached tool
+    # list is reused so parallel agent runs that share identical auth don't
+    # each pay for a fresh MCP round-trip. Set to ``0`` to disable. This is
+    # distinct from the "Use Cached Server" (``use_cache``) toggle which only
+    # controls the shared cross-request server cache.
+    TOOL_TTL_SECS: int = 30
+    # Upper bound on the per-instance TTL cache. Oldest entries are evicted
+    # when the cap is reached. Keeps memory bounded for flows where the same
+    # component handles many rotating auth contexts (e.g. per-tenant tokens).
+    TOOL_TTL_MAX_ENTRIES: int = 32
+    # Upper bound on the shared cross-request ``servers`` cache. Each
+    # (server_name, header-hash) pair is a distinct entry; without a bound a
+    # tenant that rotates session tokens would grow this map without limit.
+    SHARED_SERVERS_CACHE_MAX_ENTRIES: int = 64
+
     schema_inputs: list = []
     tools: list[StructuredTool] = []
     _not_load_actions: bool = False
@@ -65,6 +101,14 @@ class MCPToolsComponent(ComponentWithCache):
         self.streamable_http_client: MCPStreamableHttpClient = MCPStreamableHttpClient(
             component_cache=self._shared_component_cache
         )
+        # One MCP stdio/streamable client pair per component; concurrent update_tool_list calls
+        # otherwise race (session DELETE vs POST) and the MCP SDK surfaces HTTP 404 as "Session terminated".
+        self._update_tool_list_lock = asyncio.Lock()
+        # Per-instance TTL cache for ``_get_tools``: {cache_key: (monotonic_ts, tools)}.
+        # Declared here (not at class scope) so every component gets its own dict —
+        # a class-level dict would be shared across every MCPToolsComponent in the process,
+        # leaking tool lists across tenants that happen to hash to the same key.
+        self._ttl_tool_cache: dict[str, tuple[float, list]] = {}
 
     def _ensure_cache_structure(self):
         """Ensure the cache has the required structure."""
@@ -77,6 +121,55 @@ class MCPToolsComponent(ComponentWithCache):
         last_server_value = safe_cache_get(self._shared_component_cache, "last_selected_server")
         if last_server_value is None:
             safe_cache_set(self._shared_component_cache, "last_selected_server", "")
+
+    def _normalized_headers_for_cache(self) -> dict[str, str]:
+        """Component headers as a dict for stable cache keying (auth / tweaks)."""
+        component_headers = getattr(self, "headers", None) or []
+        if isinstance(component_headers, list):
+            return {
+                str(item["key"]): str(item["value"])
+                for item in component_headers
+                if isinstance(item, dict) and "key" in item and "value" in item
+            }
+        if isinstance(component_headers, dict):
+            return {str(k): str(v) for k, v in component_headers.items()}
+        return {}
+
+    def _mcp_servers_cache_key(self, server_name: str) -> str:
+        """Cache key for shared servers map; includes headers so auth/tweak changes get distinct entries."""
+        if not server_name:
+            return ""
+        hdrs = self._normalized_headers_for_cache()
+        if not hdrs:
+            return server_name
+        payload = json.dumps(hdrs, sort_keys=True)
+        digest = hashlib.sha256(payload.encode()).hexdigest()[:16]
+        return f"{server_name}:{digest}"
+
+    def _build_tool_output(self) -> Output:
+        # Do not cache Toolset output. This is separate from the MCP "Use Cached Server" (use_cache)
+        # toggle: Langflow's Output.cache defaults to True and was memoizing the first to_toolkit()
+        # result, so per-request tweaks/headers never refreshed bound tools even when use_cache=False.
+        return Output(
+            name=TOOL_OUTPUT_NAME,
+            display_name=TOOL_OUTPUT_DISPLAY_NAME,
+            method="to_toolkit",
+            types=["Tool"],
+            cache=False,
+        )
+
+    def map_outputs(self) -> None:
+        """Override the persisted ``component_as_tool`` cache flag from saved flow JSON.
+
+        ``_build_tool_output`` already returns the output with ``cache=False``, but the
+        flow JSON for existing flows often stores ``cache: true`` for ``component_as_tool``
+        and that persisted value wins over the declaration. Forcing ``cache=False`` here
+        guarantees saved flows also bypass Output memoization and get a fresh tool list
+        on every run.
+        """
+        super().map_outputs()
+        if TOOL_OUTPUT_NAME in self._outputs_map:
+            self._outputs_map[TOOL_OUTPUT_NAME].cache = False
 
     default_keys: list[str] = [
         "code",
@@ -166,8 +259,7 @@ class MCPToolsComponent(ComponentWithCache):
                 msg = "Invalid tool object or missing input schema"
                 raise ValueError(msg)
 
-            flat_schema = flatten_schema(tool_obj.args_schema.schema())
-            input_schema = create_input_schema_from_json_schema(flat_schema)
+            input_schema = tool_obj.args_schema
             if not input_schema:
                 msg = f"Empty input schema for tool '{tool_obj.name}'"
                 raise ValueError(msg)
@@ -197,164 +289,218 @@ class MCPToolsComponent(ComponentWithCache):
             server_name = mcp_server
         if not server_name:
             self.tools = []
+            await logger.adebug("MCP update_tool_list: empty server_name, clearing tools")
             return [], {"name": server_name, "config": server_config_from_value}
+
+        servers_cache_key = self._mcp_servers_cache_key(server_name)
 
         # Check if caching is enabled, default to False
         use_cache = getattr(self, "use_cache", False)
+        header_keys = sorted(self._normalized_headers_for_cache().keys())
+        await logger.adebug(
+            "MCP update_tool_list: start server=%r use_cache=%s shared_cache_key=%r header_keys=%s",
+            server_name,
+            use_cache,
+            servers_cache_key,
+            header_keys,
+        )
 
-        # Use shared cache if available and caching is enabled
-        cached = None
-        if use_cache:
-            servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
-            cached = servers_cache.get(server_name) if isinstance(servers_cache, dict) else None
-
-        if cached is not None:
-            try:
-                self.tools = cached["tools"]
-                self.tool_names = cached["tool_names"]
-                self._tool_cache = cached["tool_cache"]
-                server_config_from_value = cached["config"]
-            except (TypeError, KeyError, AttributeError) as e:
-                # Handle corrupted cache data by clearing it and continuing to fetch fresh tools
-                msg = f"Unable to use cached data for MCP Server{server_name}: {e}"
-                await logger.awarning(msg)
-                # Clear the corrupted cache entry
-                current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
-                if isinstance(current_servers_cache, dict) and server_name in current_servers_cache:
-                    current_servers_cache.pop(server_name)
-                    safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
-            else:
-                return self.tools, {"name": server_name, "config": server_config_from_value}
-
-        try:
-            # Try to fetch from database first to ensure we have the latest config
-            # This ensures database updates (like editing a server) take effect
-            try:
-                from langflow.api.v2.mcp import get_server
-                from langflow.services.database.models.user.crud import get_user_by_id
-
-                from lfx.services.deps import get_settings_service
-            except ImportError as e:
-                msg = (
-                    "Langflow MCP server functionality is not available. "
-                    "This feature requires the full Langflow installation."
-                )
-                raise ImportError(msg) from e
-
-            server_config_from_db = None
-            async with session_scope() as db:
-                if not self.user_id:
-                    msg = "User ID is required for fetching MCP tools."
-                    raise ValueError(msg)
-                current_user = await get_user_by_id(db, self.user_id)
-
-                # Try to get server config from DB/API
-                server_config_from_db = await get_server(
-                    server_name,
-                    current_user,
-                    db,
-                    storage_service=get_storage_service(),
-                    settings_service=get_settings_service(),
-                )
-
-            # Resolve config with proper precedence: DB takes priority, falls back to value
-            server_config = resolve_mcp_config(
-                server_name=server_name,
-                server_config_from_value=server_config_from_value,
-                server_config_from_db=server_config_from_db,
-            )
-
-            if not server_config:
-                self.tools = []
-                return [], {"name": server_name, "config": server_config}
-
-            # Add verify_ssl option to server config if not present
-            if "verify_ssl" not in server_config:
-                verify_ssl = getattr(self, "verify_ssl", True)
-                server_config["verify_ssl"] = verify_ssl
-
-            # Merge headers from component input with server config headers
-            # Component headers take precedence over server config headers
-            component_headers = getattr(self, "headers", None) or []
-            if component_headers:
-                # Convert list of {"key": k, "value": v} to dict
-                component_headers_dict = {}
-                if isinstance(component_headers, list):
-                    for item in component_headers:
-                        if isinstance(item, dict) and "key" in item and "value" in item:
-                            component_headers_dict[item["key"]] = item["value"]
-                elif isinstance(component_headers, dict):
-                    component_headers_dict = component_headers
-
-                if component_headers_dict:
-                    existing_headers = server_config.get("headers", {}) or {}
-                    # Ensure existing_headers is a dict (convert from list if needed)
-                    if isinstance(existing_headers, list):
-                        existing_dict = {}
-                        for item in existing_headers:
-                            if isinstance(item, dict) and "key" in item and "value" in item:
-                                existing_dict[item["key"]] = item["value"]
-                        existing_headers = existing_dict
-                    merged_headers = {**existing_headers, **component_headers_dict}
-                    server_config["headers"] = merged_headers
-            # Get request_variables from graph context for global variable resolution
-            request_variables = None
-            if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
-                request_variables = self.graph.context.get("request_variables")
-
-            # Only load global variables from database if we have headers that might use them
-            # This avoids unnecessary database queries when headers are empty
-            has_headers = server_config.get("headers") and len(server_config.get("headers", {})) > 0
-            if not request_variables and has_headers:
-                try:
-                    from lfx.services.deps import get_variable_service
-
-                    variable_service = get_variable_service()
-                    if variable_service:
-                        async with session_scope() as db:
-                            request_variables = await variable_service.get_all_decrypted_variables(
-                                user_id=self.user_id, session=db
-                            )
-                except Exception as e:  # noqa: BLE001
-                    await logger.awarning(f"Failed to load global variables for MCP component: {e}")
-
-            _, tool_list, tool_cache = await update_tools(
-                server_name=server_name,
-                server_config=server_config,
-                mcp_stdio_client=self.stdio_client,
-                mcp_streamable_http_client=self.streamable_http_client,
-                request_variables=request_variables,
-            )
-
-            self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
-            self._tool_cache = tool_cache
-            self.tools = tool_list
-
-            # Cache the result only if caching is enabled
+        async with self._update_tool_list_lock:
+            # Use shared cache if available and caching is enabled
+            cached = None
             if use_cache:
-                cache_data = {
-                    "tools": tool_list,
-                    "tool_names": self.tool_names,
-                    "tool_cache": tool_cache,
-                    "config": server_config,
-                }
+                servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                cached = servers_cache.get(servers_cache_key) if isinstance(servers_cache, dict) else None
 
-                # Safely update the servers cache
-                current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
-                if isinstance(current_servers_cache, dict):
-                    current_servers_cache[server_name] = cache_data
-                    safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
+            if cached is not None:
+                try:
+                    tools_from_cache = cached["tools"]
+                    server_config_from_value = cached["config"]
+                except (TypeError, KeyError, AttributeError) as e:
+                    # Handle corrupted cache data by clearing it and continuing to fetch fresh tools
+                    msg = f"Unable to use cached data for MCP Server{server_name}: {e}"
+                    await logger.awarning(msg)
+                    # Clear the corrupted cache entry
+                    current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                    if isinstance(current_servers_cache, dict) and servers_cache_key in current_servers_cache:
+                        current_servers_cache.pop(servers_cache_key)
+                        safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
+                else:
+                    self.tools = tools_from_cache
+                    self.tool_names = [t.name for t in self.tools if hasattr(t, "name")]
+                    self._tool_cache = cached["tool_cache"]
+                    await logger.adebug(
+                        "MCP update_tool_list: shared_servers_cache HIT count=%d server=%r",
+                        len(self.tools),
+                        server_name,
+                    )
+                    return self.tools, {"name": server_name, "config": server_config_from_value}
 
-        except (TimeoutError, asyncio.TimeoutError) as e:
-            msg = f"Timeout updating tool list: {e!s}"
-            await logger.aexception(msg)
-            raise TimeoutError(msg) from e
-        except Exception as e:
-            msg = f"Error updating tool list: {e!s}"
-            await logger.aexception(msg)
-            raise ValueError(msg) from e
-        else:
-            return tool_list, {"name": server_name, "config": server_config}
+            try:
+                # Try to fetch from database first to ensure we have the latest config
+                # This ensures database updates (like editing a server) take effect
+                try:
+                    from langflow.api.v2.mcp import get_server
+                    from langflow.services.database.models.user.crud import get_user_by_id
+
+                    from lfx.services.deps import get_settings_service
+                except ImportError as e:
+                    msg = (
+                        "Langflow MCP server functionality is not available. "
+                        "This feature requires the full Langflow installation."
+                    )
+                    raise ImportError(msg) from e
+
+                server_config_from_db = None
+                async with session_scope() as db:
+                    if not self.user_id:
+                        msg = "User ID is required for fetching MCP tools."
+                        raise ValueError(msg)
+                    current_user = await get_user_by_id(db, self.user_id)
+
+                    # Try to get server config from DB/API
+                    server_config_from_db = await get_server(
+                        server_name,
+                        current_user,
+                        db,
+                        storage_service=get_storage_service(),
+                        settings_service=get_settings_service(),
+                    )
+
+                # Resolve config with proper precedence: DB takes priority, falls back to value
+                server_config = resolve_mcp_config(
+                    server_name=server_name,
+                    server_config_from_value=server_config_from_value,
+                    server_config_from_db=server_config_from_db,
+                )
+
+                if not server_config:
+                    self.tools = []
+                    await logger.awarning(
+                        "MCP update_tool_list: no server_config after resolve server=%r",
+                        server_name,
+                    )
+                    return [], {"name": server_name, "config": server_config}
+
+                # Add verify_ssl option to server config if not present
+                if "verify_ssl" not in server_config:
+                    verify_ssl = getattr(self, "verify_ssl", True)
+                    server_config["verify_ssl"] = verify_ssl
+
+                # Merge headers from component input with server config headers
+                # Component headers take precedence over server config headers
+                component_headers = getattr(self, "headers", None) or []
+                if component_headers:
+                    # Convert list of {"key": k, "value": v} to dict
+                    component_headers_dict = {}
+                    if isinstance(component_headers, list):
+                        for item in component_headers:
+                            if isinstance(item, dict) and "key" in item and "value" in item:
+                                component_headers_dict[item["key"]] = item["value"]
+                    elif isinstance(component_headers, dict):
+                        component_headers_dict = component_headers
+
+                    if component_headers_dict:
+                        existing_headers = server_config.get("headers", {}) or {}
+                        # Ensure existing_headers is a dict (convert from list if needed)
+                        if isinstance(existing_headers, list):
+                            existing_dict = {}
+                            for item in existing_headers:
+                                if isinstance(item, dict) and "key" in item and "value" in item:
+                                    existing_dict[item["key"]] = item["value"]
+                            existing_headers = existing_dict
+                        merged_headers = {**existing_headers, **component_headers_dict}
+                        server_config["headers"] = merged_headers
+                # Get request_variables from graph context for global variable resolution
+                request_variables = None
+                if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
+                    request_variables = self.graph.context.get("request_variables")
+
+                # Only load global variables from database if we have headers that might use them
+                # This avoids unnecessary database queries when headers are empty
+                has_headers = server_config.get("headers") and len(server_config.get("headers", {})) > 0
+                if not request_variables and has_headers:
+                    try:
+                        from lfx.services.deps import get_variable_service
+
+                        variable_service = get_variable_service()
+                        if variable_service:
+                            async with session_scope() as db:
+                                request_variables = await variable_service.get_all_decrypted_variables(
+                                    user_id=self.user_id, session=db
+                                )
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"Failed to load global variables for MCP component: {e}")
+
+                await logger.adebug(
+                    "MCP update_tool_list: calling update_tools server=%r mode_headers=%s",
+                    server_name,
+                    sorted((server_config.get("headers") or {}).keys())
+                    if isinstance(server_config.get("headers"), dict)
+                    else "list-or-empty",
+                )
+
+                _, tool_list, tool_cache = await update_tools(
+                    server_name=server_name,
+                    server_config=server_config,
+                    mcp_stdio_client=self.stdio_client,
+                    mcp_streamable_http_client=self.streamable_http_client,
+                    request_variables=request_variables,
+                )
+
+                self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
+                self._tool_cache = tool_cache
+                self.tools = tool_list
+
+                await logger.adebug(
+                    "MCP update_tool_list: fetched from MCP count=%d server=%r",
+                    len(tool_list),
+                    server_name,
+                )
+
+                # Cache the result only if caching is enabled
+                if use_cache:
+                    cache_data = {
+                        "tools": tool_list,
+                        "tool_names": self.tool_names,
+                        "tool_cache": tool_cache,
+                        "config": server_config,
+                    }
+
+                    # Safely update the servers cache with bounded size (FIFO eviction).
+                    current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                    if isinstance(current_servers_cache, dict):
+                        # Because the cache key now includes a header hash, a tenant that
+                        # rotates session tokens would grow this map without bound. Drop
+                        # the oldest entry when over the limit.
+                        max_entries = self.SHARED_SERVERS_CACHE_MAX_ENTRIES
+                        while (
+                            len(current_servers_cache) >= max_entries and servers_cache_key not in current_servers_cache
+                        ):
+                            oldest_key = next(iter(current_servers_cache))
+                            current_servers_cache.pop(oldest_key, None)
+                        current_servers_cache[servers_cache_key] = cache_data
+                        safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
+                        await logger.adebug(
+                            "MCP update_tool_list: wrote shared_servers_cache key=%r size=%d",
+                            servers_cache_key,
+                            len(current_servers_cache),
+                        )
+
+            except (TimeoutError, asyncio.TimeoutError) as e:
+                msg = (
+                    f"Timeout updating tool list: {e!s}. "
+                    "Raise ``LANGFLOW_MCP_SERVER_TIMEOUT`` for the deployment if the MCP "
+                    "server legitimately needs more time to respond."
+                )
+                await logger.aexception(msg)
+                raise TimeoutError(msg) from e
+            except Exception as e:
+                msg = f"Error updating tool list: {e!s}"
+                await logger.aexception(msg)
+                raise ValueError(msg) from e
+            else:
+                return tool_list, {"name": server_name, "config": server_config}
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Toggle the visibility of connection-specific fields based on the selected mode."""
@@ -419,6 +565,7 @@ class MCPToolsComponent(ComponentWithCache):
                 build_config["tool_placeholder"]["tool_mode"] = True
 
                 current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
+                servers_cache_key_ui = self._mcp_servers_cache_key(current_server_name) if current_server_name else ""
                 _last_selected_server = safe_cache_get(self._shared_component_cache, "last_selected_server", "")
                 # Only treat as a server change if there was a previous server selection.
                 # Cold cache (_last_selected_server="") on initial flow load is NOT a server change —
@@ -451,7 +598,7 @@ class MCPToolsComponent(ComponentWithCache):
                     if current_server_name:
                         servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
                         if isinstance(servers_cache, dict):
-                            cached = servers_cache.get(current_server_name)
+                            cached = servers_cache.get(servers_cache_key_ui)
                             if cached is not None and cached.get("tool_names"):
                                 cached_tools = cached["tool_names"]
                                 current_tools = build_config["tool"]["options"]
@@ -465,8 +612,8 @@ class MCPToolsComponent(ComponentWithCache):
                 # This ensures we always fetch fresh data from the database
                 if not use_cache and current_server_name:
                     servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
-                    if isinstance(servers_cache, dict) and current_server_name in servers_cache:
-                        servers_cache.pop(current_server_name)
+                    if isinstance(servers_cache, dict) and servers_cache_key_ui in servers_cache:
+                        servers_cache.pop(servers_cache_key_ui)
                         safe_cache_set(self._shared_component_cache, "servers", servers_cache)
 
                 # Check if tools are already cached for this server before clearing
@@ -570,6 +717,61 @@ class MCPToolsComponent(ComponentWithCache):
         else:
             return build_config
 
+    @staticmethod
+    def _unwrap_optional_annotation(annotation: Any) -> Any:
+        """Remove a single None branch from a union annotation."""
+        if isinstance(annotation, UnionType):
+            non_none = [item for item in get_args(annotation) if item is not type(None)]
+            if len(non_none) == 1:
+                return non_none[0]
+            return annotation
+
+        if get_origin(annotation) is None:
+            return annotation
+
+        non_none = [item for item in get_args(annotation) if item is not type(None)]
+        if len(non_none) == 1 and len(non_none) != len(get_args(annotation)):
+            return non_none[0]
+        return annotation
+
+    @classmethod
+    def _is_object_like_annotation(cls, annotation: Any) -> bool:
+        """Return True when the annotation represents a dict-like payload."""
+        annotation = cls._unwrap_optional_annotation(annotation)
+        origin = get_origin(annotation)
+        if origin is dict:
+            return True
+        return annotation is dict or (isinstance(annotation, type) and issubclass(annotation, BaseModel))
+
+    @classmethod
+    def _should_include_tool_argument(cls, model_field: Any, value: Any) -> bool:
+        """Omit blank optional values so MCP server defaults remain intact."""
+        if value is None:
+            return False
+
+        if model_field.is_required():
+            return True
+
+        if isinstance(value, str) and value == "":
+            return False
+
+        return not (
+            value == {} and model_field.default is None and cls._is_object_like_annotation(model_field.annotation)
+        )
+
+    def _build_tool_kwargs(self, args_schema: type[BaseModel]) -> dict[str, Any]:
+        """Collect tool kwargs from component inputs, omitting blank optional values."""
+        kwargs: dict[str, Any] = {}
+        for arg_name, model_field in args_schema.model_fields.items():
+            value = getattr(self, arg_name, None)
+            if isinstance(value, Message):
+                value = value.text
+
+            if self._should_include_tool_argument(model_field, value):
+                kwargs[arg_name] = value
+
+        return kwargs
+
     def get_inputs_for_all_tools(self, tools: list) -> dict:
         """Get input schemas for all tools."""
         inputs = {}
@@ -577,9 +779,7 @@ class MCPToolsComponent(ComponentWithCache):
             if not tool or not hasattr(tool, "name"):
                 continue
             try:
-                flat_schema = flatten_schema(tool.args_schema.schema())
-                input_schema = create_input_schema_from_json_schema(flat_schema)
-                langflow_inputs = schema_to_langflow_inputs(input_schema)
+                langflow_inputs = schema_to_langflow_inputs(tool.args_schema)
                 inputs[tool.name] = langflow_inputs
             except (AttributeError, ValueError, TypeError, KeyError) as e:
                 msg = f"Error getting inputs for tool {getattr(tool, 'name', 'unknown')}: {e!s}"
@@ -670,16 +870,7 @@ class MCPToolsComponent(ComponentWithCache):
                     self.stdio_client.set_session_context(session_context)
                     self.streamable_http_client.set_session_context(session_context)
                 exec_tool = self._tool_cache[self.tool]
-                tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
-                kwargs = {}
-                for arg in tool_args:
-                    value = getattr(self, arg.name, None)
-                    if value is not None:
-                        if isinstance(value, Message):
-                            kwargs[arg.name] = value.text
-                        else:
-                            kwargs[arg.name] = value
-
+                kwargs = self._build_tool_kwargs(exec_tool.args_schema)
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
 
                 output = await exec_tool.coroutine(**unflattened_kwargs)
@@ -729,9 +920,50 @@ class MCPToolsComponent(ComponentWithCache):
         return None
 
     async def _get_tools(self):
-        """Get cached tools or update if necessary."""
+        """Load tools for the agent toolkit; always refresh from ``update_tool_list``.
+
+        ``_not_load_actions`` only applies to UI build_config flows (tool dropdown). Agent
+        runs must always bind the current tool list (including after header/tweak changes).
+
+        A short-lived TTL cache (``TOOL_TTL_SECS``, header-hash-keyed) skips the MCP
+        round-trip when the same auth context is re-queried quickly (e.g. parallel agent
+        steps sharing the same tweaked headers). The cache is per component instance and
+        bounded by ``TOOL_TTL_MAX_ENTRIES``; it is distinct from the "Use Cached Server"
+        (``use_cache``) toggle which controls the shared cross-request cache.
+        """
         mcp_server = getattr(self, "mcp_server", None)
-        if not self._not_load_actions:
-            tools, _ = await self.update_tool_list(mcp_server)
-            return tools
-        return []
+        srv = mcp_server.get("name") if isinstance(mcp_server, dict) else mcp_server
+
+        ttl = self.TOOL_TTL_SECS
+        ttl_key = self._mcp_servers_cache_key(srv or "") if ttl > 0 and srv else ""
+
+        # TTL cache lookup + expired-entry eviction.
+        if ttl > 0 and ttl_key:
+            cached = self._ttl_tool_cache.get(ttl_key)
+            if cached is not None:
+                ts, cached_tools = cached
+                age = time.monotonic() - ts
+                if age < ttl:
+                    await logger.adebug(
+                        "MCP _get_tools: TTL cache hit count=%d age=%.1fs server=%r",
+                        len(cached_tools),
+                        age,
+                        srv,
+                    )
+                    return cached_tools
+                # Stale — drop it so the size check below stays tight.
+                self._ttl_tool_cache.pop(ttl_key, None)
+
+        await logger.adebug("MCP _get_tools: fetching tool list server=%r", srv)
+        tools, _ = await self.update_tool_list(mcp_server)
+        await logger.adebug("MCP _get_tools: fetched %d tools server=%r", len(tools), srv)
+
+        # TTL cache store with bounded size (FIFO eviction of the oldest entry).
+        if ttl > 0 and ttl_key and tools:
+            if len(self._ttl_tool_cache) >= self.TOOL_TTL_MAX_ENTRIES:
+                # dict preserves insertion order — pop the oldest entry.
+                oldest_key = next(iter(self._ttl_tool_cache))
+                self._ttl_tool_cache.pop(oldest_key, None)
+            self._ttl_tool_cache[ttl_key] = (time.monotonic(), tools)
+
+        return tools

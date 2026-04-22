@@ -21,7 +21,7 @@ import { usePatchMCPServer } from "@/controllers/API/queries/mcp/use-patch-mcp-s
 import { CustomLink } from "@/customization/components/custom-link";
 import BaseModal from "@/modals/baseModal";
 import IOKeyPairInput, {
-  KeyPairRow,
+  type KeyPairRow,
 } from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
 import IOKeyPairInputWithVariables from "@/modals/IOModal/components/IOFieldView/components/key-pair-input-with-variables";
 import type { MCPServerType } from "@/types/mcp";
@@ -294,7 +294,7 @@ export default function AddMcpServerModal({
       setOpen={setOpen}
       size="x-small-h-full"
       onSubmit={submitForm}
-      className="!p-0 min-h-[250px] flex-grow"
+      className="!p-0 min-h-[250px] max-h-[75vh] flex-grow"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content className="flex flex-1 flex-col overflow-hidden min-h-0">
@@ -360,7 +360,7 @@ export default function AddMcpServerModal({
               </TabsList>
             </div>
             <div
-              className="flex w-full flex-1 flex-col border-y p-4 min-h-0"
+              className="flex w-full flex-1 flex-col overflow-y-auto border-y p-4 min-h-0"
               id="global-variable-modal-inputs"
             >
               {error && (
@@ -492,7 +492,7 @@ export default function AddMcpServerModal({
             </div>
           </Tabs>
         </div>
-        <div className="flex justify-end gap-2 p-4">
+        <div className="flex shrink-0 justify-end gap-2 p-4">
           <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
             <span className="text-mmd font-normal">{t("mcp.modal.cancelButton")}</span>
           </Button>
