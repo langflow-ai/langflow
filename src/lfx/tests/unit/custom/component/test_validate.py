@@ -42,7 +42,8 @@ class TestLoggingComponent(Component):
 def test_create_class_future_annotations_with_type_checking():
     """Regression test for issue #12776: `from __future__ import annotations` must act as a
     compiler directive so that TYPE_CHECKING-only imports don't raise NameError at class
-    definition time."""
+    definition time.
+    """
     code = dedent("""
 from __future__ import annotations
 from typing import TYPE_CHECKING

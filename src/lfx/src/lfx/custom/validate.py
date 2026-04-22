@@ -272,9 +272,7 @@ def create_class(code, class_name):
         module = ast.parse(code)
         exec_globals = prepare_global_scope(module)
 
-        future_imports = [
-            n for n in module.body if isinstance(n, ast.ImportFrom) and n.module == "__future__"
-        ]
+        future_imports = [n for n in module.body if isinstance(n, ast.ImportFrom) and n.module == "__future__"]
         class_code = extract_class_code(module, class_name)
         compiled_class = compile_class_code(class_code, future_imports)
 
