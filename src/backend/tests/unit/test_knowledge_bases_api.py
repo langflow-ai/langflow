@@ -206,11 +206,15 @@ class TestKnowledgeBaseAPI:
                 "name": kb_name,
                 "embedding_provider": "OpenAI",
                 "embedding_model": "text-embedding-3-small",
+                "backend_type": "opensearch",
+                "backend_config": {"index_name": "new_kb_index"},
             },
         )
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "New KB"
+        assert data["backend_type"] == "opensearch"
+        assert data["backend_config"] == {"index_name": "new_kb_index"}
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_kb_path_traversal_single_level(
@@ -388,6 +392,8 @@ class TestKnowledgeBaseAPI:
             "size": 1024,
             "source_types": [],
             "column_config": None,
+            "backend_type": "opensearch",
+            "backend_config": {"index_name": "kb1_index"},
         }
 
         mock_job_service_inst = MagicMock()
@@ -398,6 +404,9 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 200
         data = response.json()
         assert len(data) >= 1
+        assert any(
+            kb["backend_type"] == "opensearch" and kb["backend_config"] == {"index_name": "kb1_index"} for kb in data
+        )
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_get_knowledge_base_detail(self, mock_root, client: AsyncClient, logged_in_headers, tmp_path):
@@ -414,6 +423,8 @@ class TestKnowledgeBaseAPI:
             "embedding_model": "model",
             "id": "uuid",
             "size": 100,
+            "backend_type": "postgres",
+            "backend_config": {"collection_name": "detail_kb"},
         }
         (kb_path / "embedding_metadata.json").write_text(json.dumps(meta))
 
@@ -422,17 +433,41 @@ class TestKnowledgeBaseAPI:
         data = response.json()
         assert data["chunks"] == 5
         assert data["name"] == "Detail KB"
+        assert data["backend_type"] == "postgres"
+        assert data["backend_config"] == {"collection_name": "detail_kb"}
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
+    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_delete_knowledge_base(
-        self, mock_root, mock_delete, client: AsyncClient, logged_in_headers, tmp_path
+        self,
+        mock_root,
+        mock_get_record,
+        mock_create_backend,
+        mock_delete,
+        client: AsyncClient,
+        logged_in_headers,
+        tmp_path,
     ):
         mock_root.return_value = tmp_path
         (tmp_path / "activeuser" / "To_Delete").mkdir(parents=True, exist_ok=True)
+        mock_get_record.return_value = MagicMock(
+            backend_type="opensearch",
+            backend_config={"index_name": "to_delete_index"},
+        )
+        backend = MagicMock()
+        backend.ensure_ready = AsyncMock()
+        backend.delete_collection = AsyncMock()
+        backend.teardown = AsyncMock()
+        mock_create_backend.return_value = backend
 
         response = await client.delete("api/v1/knowledge_bases/To_Delete", headers=logged_in_headers)
         assert response.status_code == 200
+        mock_create_backend.assert_called_once()
+        backend.ensure_ready.assert_awaited_once()
+        backend.delete_collection.assert_awaited_once()
+        backend.teardown.assert_awaited_once()
         mock_delete.assert_called_once()
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)

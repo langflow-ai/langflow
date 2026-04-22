@@ -234,6 +234,8 @@ class KBAnalysisHelper:
             "chunk_size": None,
             "chunk_overlap": None,
             "separator": None,
+            "backend_type": BackendType.CHROMA.value,
+            "backend_config": {},
         }
 
         metadata = {}
@@ -250,6 +252,7 @@ class KBAnalysisHelper:
         # the metrics (e.g. via the KnowledgeIngestionComponent before the fix).
         has_chroma_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
         stale_chunks = metadata.get("chunks", 0) == 0 and has_chroma_data
+        directory_size: int | None = None
 
         if fast and not missing_keys and not stale_chunks:
             return metadata
@@ -260,9 +263,13 @@ class KBAnalysisHelper:
             for key, default_val in defaults.items():
                 if key not in metadata or (key == "id" and not metadata[key]):
                     metadata[key] = default_val
+            if not isinstance(metadata.get("backend_config"), dict):
+                metadata["backend_config"] = {}
 
             try:
-                metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
+                if directory_size is None:
+                    directory_size = KBStorageHelper.get_directory_size(kb_path)
+                metadata["size"] = directory_size
                 if metadata.get("embedding_provider") == "Unknown":
                     metadata["embedding_provider"] = KBAnalysisHelper._detect_embedding_provider(kb_path)
                 if metadata.get("embedding_model") == "Unknown":
@@ -276,7 +283,9 @@ class KBAnalysisHelper:
         if stale_chunks:
             try:
                 KBAnalysisHelper.update_text_metrics(kb_path, metadata)
-                metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
+                if directory_size is None:
+                    directory_size = KBStorageHelper.get_directory_size(kb_path)
+                metadata["size"] = directory_size
                 metadata_file.write_text(json.dumps(metadata, indent=2))
             except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
                 logger.debug(f"Stale metrics recount failed for {kb_path}: {e}")

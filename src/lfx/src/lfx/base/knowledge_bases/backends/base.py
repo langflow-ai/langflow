@@ -143,6 +143,10 @@ class VectorStoreBackend(Protocol):
         """Approximate on-disk / cluster-side size for dashboard display."""
         ...
 
+    async def delete_collection(self) -> None:
+        """Delete the backend-owned collection/index for this KB."""
+        ...
+
     async def teardown(self) -> None:
         """Release all backend resources. Must be idempotent."""
         ...
@@ -323,6 +327,10 @@ class BaseVectorStoreBackend(ABC):
     async def storage_size_bytes(self) -> int:  # pragma: no cover
         """Default: unknown. Subclasses override where meaningful."""
         return 0
+
+    async def delete_collection(self) -> None:  # pragma: no cover
+        """Default: no-op. Concrete backends override when supported."""
+        return
 
     async def teardown(self) -> None:  # pragma: no cover
         """Default: drop the LangChain reference and let GC handle the rest."""

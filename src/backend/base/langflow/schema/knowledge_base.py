@@ -23,6 +23,8 @@ class KnowledgeBaseInfo(BaseModel):
     last_job_id: str | None = None
     source_types: list[str] = []
     column_config: list[dict] | None = None
+    backend_type: str = "chroma"
+    backend_config: dict[str, Any] = {}
 
 
 class BulkDeleteRequest(BaseModel):

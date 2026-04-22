@@ -94,6 +94,104 @@ def _resolve_kb_path(kb_name: str, current_user: CurrentActiveUser) -> Path:
     return kb_path
 
 
+def _coerce_backend_config(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _build_kb_info(
+    *,
+    kb_name: str,
+    dir_name: str,
+    metadata: dict[str, Any],
+    size: int | None = None,
+) -> KnowledgeBaseInfo:
+    chunks_count = metadata.get("chunks") or 0
+    return KnowledgeBaseInfo(
+        id=str(metadata.get("id") or dir_name),
+        dir_name=dir_name,
+        name=kb_name,
+        embedding_provider=metadata.get("embedding_provider") or "Unknown",
+        embedding_model=metadata.get("embedding_model") or "Unknown",
+        size=size if size is not None else int(metadata.get("size") or 0),
+        words=int(metadata.get("words") or 0),
+        characters=int(metadata.get("characters") or 0),
+        chunks=int(chunks_count),
+        avg_chunk_size=float(metadata.get("avg_chunk_size") or 0.0),
+        chunk_size=metadata.get("chunk_size"),
+        chunk_overlap=metadata.get("chunk_overlap"),
+        separator=metadata.get("separator"),
+        status="ready" if chunks_count > 0 else "empty",
+        failure_reason=None,
+        last_job_id=None,
+        source_types=metadata.get("source_types", []),
+        column_config=metadata.get("column_config"),
+        backend_type=str(metadata.get("backend_type") or BackendType.CHROMA.value),
+        backend_config=_coerce_backend_config(metadata.get("backend_config")),
+    )
+
+
+async def _resolve_backend_selection(
+    *,
+    kb_name: str,
+    kb_path: Path,
+    current_user: CurrentActiveUser,
+) -> tuple[str, dict[str, Any]]:
+    kb_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+    if kb_record is not None:
+        return (
+            kb_record.backend_type or BackendType.CHROMA.value,
+            _coerce_backend_config(kb_record.backend_config),
+        )
+
+    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
+    return (
+        str(metadata.get("backend_type") or BackendType.CHROMA.value),
+        _coerce_backend_config(metadata.get("backend_config")),
+    )
+
+
+async def _delete_remote_backend_collection(
+    *,
+    kb_name: str,
+    kb_path: Path,
+    current_user: CurrentActiveUser,
+) -> None:
+    backend_type_value, backend_config = await _resolve_backend_selection(
+        kb_name=kb_name,
+        kb_path=kb_path,
+        current_user=current_user,
+    )
+    if backend_type_value == BackendType.CHROMA.value:
+        return
+
+    backend = create_backend(
+        backend_type_value,
+        kb_name=kb_name,
+        kb_path=kb_path,
+        backend_config=backend_config,
+        user_id=current_user.id,
+    )
+    try:
+        await backend.ensure_ready()
+        await backend.delete_collection()
+    except Exception as exc:
+        await logger.aerror(
+            "Failed to delete remote backend resources for %s (%s): %s",
+            kb_name,
+            backend_type_value,
+            exc,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Failed to delete the remote {backend_type_value} resources for "
+                f"knowledge base '{kb_name}'. Please retry after checking the backend credentials."
+            ),
+        ) from exc
+    finally:
+        await backend.teardown()
+
+
 @router.post("", status_code=HTTPStatus.CREATED)
 @router.post("/", status_code=HTTPStatus.CREATED)
 async def create_knowledge_base(
@@ -229,7 +327,10 @@ async def create_knowledge_base(
             characters=0,
             chunks=0,
             avg_chunk_size=0.0,
+            status="empty",
             column_config=column_config_dicts,
+            backend_type=backend_type_value,
+            backend_config=backend_config_value,
         )
 
     except HTTPException:
@@ -644,7 +745,6 @@ async def list_knowledge_bases(
             if not kb_dir.is_dir() or kb_dir.name.startswith("."):
                 continue
             try:
-                # Use deep update (fast=False) to ensure legacy KBs are migrated on first view
                 metadata = KBAnalysisHelper.get_metadata(kb_dir, fast=False)
 
                 # Extract KB ID from metadata (stored as string, convert to UUID)
@@ -657,28 +757,10 @@ async def list_knowledge_bases(
                         # If ID is invalid, skip job status lookup for this KB
                         kb_id_str = None
 
-                chunks_count = metadata["chunks"]
-                status = "ready" if chunks_count > 0 else "empty"
-                failure_reason = None
-                kb_info = KnowledgeBaseInfo(
-                    id=kb_id_str or kb_dir.name,  # Fallback to directory name if no ID
+                kb_info = _build_kb_info(
+                    kb_name=kb_dir.name.replace("_", " "),
                     dir_name=kb_dir.name,
-                    name=kb_dir.name.replace("_", " "),
-                    embedding_provider=metadata["embedding_provider"],
-                    embedding_model=metadata["embedding_model"],
-                    size=metadata["size"],
-                    words=metadata["words"],
-                    characters=metadata["characters"],
-                    chunks=chunks_count,
-                    avg_chunk_size=metadata["avg_chunk_size"],
-                    chunk_size=metadata.get("chunk_size"),
-                    chunk_overlap=metadata.get("chunk_overlap"),
-                    separator=metadata.get("separator"),
-                    status=status,
-                    failure_reason=failure_reason,
-                    last_job_id=None,
-                    source_types=metadata.get("source_types", []),
-                    column_config=metadata.get("column_config"),
+                    metadata=metadata,
                 )
                 knowledge_bases.append(kb_info)
 
@@ -757,31 +839,12 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
 
-        # Get size of the directory
-        size = KBStorageHelper.get_directory_size(kb_path)
-
-        # Get metadata from KB files
         metadata = KBAnalysisHelper.get_metadata(kb_path)
-
-        chunks_count = metadata["chunks"]
-        status = "ready" if chunks_count > 0 else "empty"
-        return KnowledgeBaseInfo(
-            id=kb_name,
+        return _build_kb_info(
+            kb_name=kb_name.replace("_", " "),
             dir_name=kb_name,
-            name=kb_name.replace("_", " "),
-            embedding_provider=metadata["embedding_provider"],
-            embedding_model=metadata["embedding_model"],
-            size=size,
-            words=metadata["words"],
-            characters=metadata["characters"],
-            chunks=chunks_count,
-            avg_chunk_size=metadata["avg_chunk_size"],
-            chunk_size=metadata.get("chunk_size"),
-            chunk_overlap=metadata.get("chunk_overlap"),
-            separator=metadata.get("separator"),
-            status=status,
-            source_types=metadata.get("source_types", []),
-            column_config=metadata.get("column_config"),
+            metadata=metadata,
+            size=KBStorageHelper.get_directory_size(kb_path),
         )
 
     except HTTPException:
@@ -824,14 +887,11 @@ async def get_knowledge_base_chunks(
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
 
-        # Look up the KB record so we know which backend to open.
-        # Falls back to Chroma for legacy KBs that only exist on disk
-        # (pre-DB rows); those still have their files under ``kb_path``.
-        kb_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
-        backend_type_value = (
-            kb_record.backend_type if kb_record and kb_record.backend_type else BackendType.CHROMA.value
+        backend_type_value, backend_config = await _resolve_backend_selection(
+            kb_name=kb_name,
+            kb_path=kb_path,
+            current_user=current_user,
         )
-        backend_config = (kb_record.backend_config or {}) if kb_record is not None else {}
 
         # Local-Chroma short-circuit: if the KB lives on disk and has no
         # files yet, return empty without booting a Chroma client (which
@@ -1101,6 +1161,11 @@ async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -
     """Delete a specific knowledge base."""
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
+        await _delete_remote_backend_collection(
+            kb_name=kb_name,
+            kb_path=kb_path,
+            current_user=current_user,
+        )
 
         if not KBStorageHelper.delete_storage(kb_path, kb_name):
             raise HTTPException(
@@ -1133,6 +1198,7 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
     try:
         deleted_count = 0
         not_found_kbs = []
+        failed_kbs = []
 
         for kb_name in request.kb_names:
             try:
@@ -1144,15 +1210,24 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
                 raise  # Re-raise 403 (traversal) and 500 errors
 
             try:
-                if KBStorageHelper.delete_storage(kb_path, kb_name):
-                    deleted_count += 1
-                    try:
-                        await knowledge_base_service.delete_by_user_and_name(current_user.id, kb_name)
-                    except Exception as exc:  # noqa: BLE001
-                        await logger.awarning("KB DB delete lagged for %s: %s", kb_name, exc)
-            except (OSError, PermissionError) as e:
+                await _delete_remote_backend_collection(
+                    kb_name=kb_name,
+                    kb_path=kb_path,
+                    current_user=current_user,
+                )
+                if not KBStorageHelper.delete_storage(kb_path, kb_name):
+                    failed_kbs.append(kb_name)
+                    continue
+
+                deleted_count += 1
+                try:
+                    await knowledge_base_service.delete_by_user_and_name(current_user.id, kb_name)
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning("KB DB delete lagged for %s: %s", kb_name, exc)
+            except (HTTPException, OSError, PermissionError) as e:
                 await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)
                 # Continue with other deletions even if one fails
+                failed_kbs.append(kb_name)
 
         if not_found_kbs and deleted_count == 0:
             raise HTTPException(
@@ -1166,6 +1241,8 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
 
         if not_found_kbs:
             result["not_found"] = ", ".join(not_found_kbs)
+        if failed_kbs:
+            result["failed"] = ", ".join(failed_kbs)
 
     except HTTPException:
         raise

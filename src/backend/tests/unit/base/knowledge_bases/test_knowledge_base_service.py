@@ -151,6 +151,8 @@ class TestNormalization:
             model_selection={"name": "x"},
             chunk_size=1000,
             chunk_overlap=200,
+            backend_type="opensearch",
+            backend_config={"index_name": "kb_index"},
             chunks=4,
             words=200,
             characters=1000,
@@ -168,6 +170,8 @@ class TestNormalization:
             "model_selection",
             "chunk_size",
             "chunk_overlap",
+            "backend_type",
+            "backend_config",
             "chunks",
             "words",
             "characters",
@@ -179,6 +183,8 @@ class TestNormalization:
             assert key in snapshot
         assert snapshot["size"] == 500  # note the legacy JSON uses "size" not "size_bytes"
         assert snapshot["avg_chunk_size"] == round(1000 / 4, 1)
+        assert snapshot["backend_type"] == "opensearch"
+        assert snapshot["backend_config"] == {"index_name": "kb_index"}
 
 
 class TestBackfillFromDisk:
