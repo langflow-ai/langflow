@@ -26,10 +26,8 @@ export const usePatchSnapshot: useMutationFunctionType<
     return data;
   };
 
-  // TODO: Add retries for transient server-side errors (5xx, timeouts).
   return mutate(["usePatchSnapshot"], fn, {
     ...options,
-    retry: false,
     onSuccess: (...args) => {
       queryClient.refetchQueries({ queryKey: ["useGetDeployments"] });
       options?.onSuccess?.(...args);
