@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "../../../../../../../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../../../../../../../components/common/shadTooltipComponent";
 import {
@@ -25,6 +26,7 @@ const MicrophoneSelect = ({
   setMicrophones,
   setSelectedMicrophone,
 }: MicrophoneSelectProps) => {
+  const { t } = useTranslation();
   useEffect(() => {
     const getMicrophones = async () => {
       try {
@@ -88,7 +90,7 @@ const MicrophoneSelect = ({
 
       <Select value={selectedMicrophone} onValueChange={handleSetMicrophone}>
         <SelectTrigger className="h-9 w-full">
-          <SelectValue placeholder="Select microphone" />
+          <SelectValue placeholder={t("voice.selectMicrophone")} />
         </SelectTrigger>
         <SelectContent className="max-h-[200px]">
           <SelectGroup>

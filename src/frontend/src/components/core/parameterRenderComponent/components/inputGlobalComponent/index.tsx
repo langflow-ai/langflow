@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
 import { looksLikeVariableName } from "../../../../../utils/reactflowUtils";
@@ -30,6 +31,7 @@ export default function InputGlobalComponent({
   hasRefreshButton = false,
   showParameter = true,
 }: InputProps<string, InputGlobalComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const {
     data: globalVariables,
     isFetchedAfterMount: isGlobalVariablesFetchedAfterMount,
@@ -128,7 +130,7 @@ export default function InputGlobalComponent({
           className={cn("mr-2 h-4 w-4 text-primary")}
           aria-hidden="true"
         />
-        <span>Add New Variable</span>
+        <span>{t("input.addNewVariable")}</span>
       </CommandItem>
     </GlobalVariableModal>
   );

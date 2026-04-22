@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import ConfirmationModal from "@/modals/confirmationModal";
 import EditNodeModal from "@/modals/editNodeModal";
@@ -51,13 +52,14 @@ const ToolbarModals = memo(
     addFlow,
     name = "code",
   }: ToolbarModalsProps) => {
+    const { t } = useTranslation();
     // Handlers for confirmation modal
     const handleConfirm = () => {
       addFlow({
         flow: flowComponent,
         override: true,
       });
-      setSuccessData({ title: `${data.id} successfully overridden!` });
+      setSuccessData({ title: t("success.componentOverridden", { id: data.id }) });
       setShowOverrideModal(false);
     };
 
@@ -70,7 +72,7 @@ const ToolbarModals = memo(
         flow: flowComponent,
         override: true,
       });
-      setSuccessData({ title: "New component successfully saved!" });
+      setSuccessData({ title: t("success.customComponentSaved") });
       setShowOverrideModal(false);
     };
 

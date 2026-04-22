@@ -189,7 +189,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isBuilding: false });
     get().revertBuiltStatusFromBuilding();
     useAlertStore.getState().setErrorData({
-      title: "Build stopped",
+      title: (i18n as any).t("alerts.buildStopped"),
     });
   },
   isPending: true,

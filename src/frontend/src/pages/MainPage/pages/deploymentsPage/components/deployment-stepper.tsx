@@ -1,23 +1,25 @@
+import { useTranslation } from "react-i18next";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
 
-const CREATE_STEPS = [
-  { number: 1, label: "Provider" },
-  { number: 2, label: "Type" },
-  { number: 3, label: "Attach Flows" },
-  { number: 4, label: "Review" },
-] as const;
-
-const EDIT_STEPS = [
-  { number: 1, label: "Type" },
-  { number: 2, label: "Attach Flows" },
-  { number: 3, label: "Review" },
-] as const;
-
-export const DEPLOYMENT_STEPS = CREATE_STEPS;
+export const DEPLOYMENT_STEPS_COUNT = 4;
 
 export default function DeploymentStepper() {
+  const { t } = useTranslation();
   const { currentStep, isEditMode } = useDeploymentStepper();
+
+  const CREATE_STEPS = [
+    { number: 1, label: t("deployments.provider") },
+    { number: 2, label: t("deployments.labelType") },
+    { number: 3, label: t("deployments.attachFlows") },
+    { number: 4, label: t("deployments.review") },
+  ];
+
+  const EDIT_STEPS = [
+    { number: 1, label: t("deployments.labelType") },
+    { number: 2, label: t("deployments.attachFlows") },
+    { number: 3, label: t("deployments.review") },
+  ];
   const steps = isEditMode ? EDIT_STEPS : CREATE_STEPS;
   const progressPercent = ((currentStep - 1) / (steps.length - 1)) * 100;
 

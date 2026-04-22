@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
@@ -26,6 +27,7 @@ import {
 import { CURRENT_DRAFT_ID } from "./constants";
 
 export function useFlowVersionSidebar(flowId: string) {
+  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setPreview = useVersionPreviewStore((s) => s.setPreview);
@@ -265,7 +267,7 @@ export function useFlowVersionSidebar(flowId: string) {
         const data = response.data?.data;
         const tag = response.data?.version_tag ?? "version";
         if (!data) {
-          setErrorData({ title: "No data available to export" });
+          setErrorData({ title: t("errors.noDataToExport") });
           return;
         }
         const flowName = `${currentFlow?.name || "flow"}_${tag}`;
@@ -302,7 +304,7 @@ export function useFlowVersionSidebar(flowId: string) {
         { flowId, versionId: entry.id },
         {
           onSuccess: () => {
-            setSuccessData({ title: "Version deleted" });
+            setSuccessData({ title: t("success.versionDeleted") });
             // Select the next entry (triggers fetch + preview via existing
             // effects) instead of setting empty arrays into the store which
             // would cause a blank canvas flash.

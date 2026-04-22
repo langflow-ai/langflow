@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,6 +16,7 @@ export default function OutputModal({
   open,
   setOpen,
 }): JSX.Element {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"Outputs" | "Logs">("Outputs");
   const [isCopied, setIsCopied] = useState(false);
   const flowPool = useFlowStore((state) => state.flowPool);
@@ -46,7 +48,7 @@ export default function OutputModal({
 
     navigator.clipboard.writeText(content).then(() => {
       setIsCopied(true);
-      setSuccessData({ title: "Copied to clipboard" });
+      setSuccessData({ title: t("success.outputCopied") });
       setTimeout(() => {
         setIsCopied(false);
       }, 2000);

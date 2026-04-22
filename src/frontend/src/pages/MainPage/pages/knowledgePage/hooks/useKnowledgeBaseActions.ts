@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useCancelIngestion } from "@/controllers/API/queries/knowledge-bases/use-cancel-ingestion";
 import { useDeleteKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
@@ -18,6 +19,7 @@ export const useKnowledgeBaseActions = ({
   selectedFiles,
   clearSelection,
 }: UseKnowledgeBaseActionsOptions) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { setErrorData, setSuccessData } = useAlertStore((state) => ({
     setErrorData: state.setErrorData,
@@ -35,7 +37,7 @@ export const useKnowledgeBaseActions = ({
 
   const cancelIngestionMutation = useCancelIngestion({
     onSuccess: () => {
-      setSuccessData({ title: "Ingestion cancelled" });
+      setSuccessData({ title: t("success.ingestionCancelled") });
       refetch();
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
@@ -54,7 +56,7 @@ export const useKnowledgeBaseActions = ({
 
   const deleteKnowledgeBaseMutation = useDeleteKnowledgeBase({
     onSuccess: () => {
-      setSuccessData({ title: "Knowledge base deleted" });
+      setSuccessData({ title: t("success.knowledgeBaseDeleted") });
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       setErrorData({
@@ -73,7 +75,7 @@ export const useKnowledgeBaseActions = ({
 
   const deleteKnowledgeBasesMutation = useDeleteKnowledgeBase({
     onSuccess: () => {
-      setSuccessData({ title: "Knowledge base(s) deleted" });
+      setSuccessData({ title: t("success.knowledgeBaseDeleted") });
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       setErrorData({

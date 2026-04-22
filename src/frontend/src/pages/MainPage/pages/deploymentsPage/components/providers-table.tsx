@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,14 +39,15 @@ export default function ProvidersTable({
   deletingId,
   onDeleteProvider,
 }: ProvidersTableProps) {
+  const { t } = useTranslation();
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>URL</TableHead>
-          <TableHead>Provider Key</TableHead>
-          <TableHead>Created</TableHead>
+          <TableHead>{t("deployments.columnName")}</TableHead>
+          <TableHead>{t("deployments.columnUrl")}</TableHead>
+          <TableHead>{t("deployments.columnProviderKey")}</TableHead>
+          <TableHead>{t("deployments.columnCreated")}</TableHead>
           <TableHead className="w-10" />
         </TableRow>
       </TableHeader>

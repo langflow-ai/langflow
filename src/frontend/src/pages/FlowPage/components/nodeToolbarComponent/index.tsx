@@ -265,7 +265,7 @@ const NodeToolbarComponent = memo(
         flow: flowComponent,
         override: false,
       });
-      setSuccessData({ title: `${data.id} saved successfully` });
+      setSuccessData({ title: t("success.componentSaved", { id: data.id }) });
     }, [isSaved, data.id, flowComponent, addFlow]);
 
     const openDocs = useCallback(() => {

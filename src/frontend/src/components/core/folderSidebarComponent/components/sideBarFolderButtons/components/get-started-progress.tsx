@@ -1,4 +1,5 @@
 import { type FC, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ export const GetStartedProgress: FC<{
   isDiscordJoined: boolean;
   handleDismissDialog: () => void;
 }> = ({ userData, isGithubStarred, isDiscordJoined, handleDismissDialog }) => {
+  const { t } = useTranslation();
   const [isGithubStarredChild, setIsGithubStarredChild] =
     useState(isGithubStarred);
   const [isDiscordJoinedChild, setIsDiscordJoinedChild] =
@@ -92,10 +94,10 @@ export const GetStartedProgress: FC<{
         >
           {percentageGetStarted >= 100 ? (
             <>
-              <span>All Set</span> <span className="pl-1"> 🎉 </span>
+              <span>{t("sidebar.allSet")}</span> <span className="pl-1"> 🎉 </span>
             </>
           ) : (
-            "Get started"
+            t("sidebar.getStarted")
           )}
         </span>
         <button
@@ -160,7 +162,7 @@ export const GetStartedProgress: FC<{
                 isGithubStarredChild && "text-muted-foreground line-through",
               )}
             >
-              Star repo for updates
+              {t("sidebar.starRepo")}
             </span>
           </div>
         </Button>
@@ -202,7 +204,7 @@ export const GetStartedProgress: FC<{
                 isDiscordJoinedChild && "text-muted-foreground line-through",
               )}
             >
-              Join the community
+              {t("sidebar.joinCommunity")}
             </span>
           </div>
         </Button>
@@ -229,7 +231,7 @@ export const GetStartedProgress: FC<{
               />
             </span>
             <span className={cn("text-sm", hasFlows && "line-through")}>
-              Create a flow
+              {t("sidebar.createFlow")}
             </span>
           </div>
         </Button>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,7 @@ function EditableToolName({
   placeholder: string;
   onSave: (name: string) => void;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -57,7 +59,7 @@ function EditableToolName({
           type="button"
           onClick={confirm}
           className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-          title="Confirm"
+          title={t("deployments.confirm")}
         >
           <ForwardedIconComponent name="Check" className="h-3.5 w-3.5" />
         </button>
@@ -77,7 +79,7 @@ function EditableToolName({
           setEditing(true);
         }}
         className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-        title="Edit tool name"
+        title={t("deployments.editToolName")}
         data-testid="edit-tool-name"
       >
         <ForwardedIconComponent name="Pencil" className="h-3.5 w-3.5" />
@@ -87,6 +89,7 @@ function EditableToolName({
 }
 
 export default function StepReview() {
+  const { t } = useTranslation();
   const {
     isEditMode,
     deploymentType,
@@ -147,9 +150,9 @@ export default function StepReview() {
   return (
     <div className="flex flex-col gap-4 py-3">
       <div>
-        <h2 className="text-lg font-semibold">Review & Confirm</h2>
+        <h2 className="text-lg font-semibold">{t("deployments.reviewAndConfirm")}</h2>
         <p className="text-sm text-muted-foreground">
-          Review your deployment details before creating.
+          {t("deployments.reviewDetails")}
         </p>
       </div>
 
@@ -158,11 +161,11 @@ export default function StepReview() {
           {/* Deployment column */}
           <div className="flex flex-col gap-3">
             <span className="text-sm font-medium text-foreground">
-              Deployment
+              {t("deployments.deploymentLabel")}
             </span>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <span className="w-10 text-xs text-muted-foreground">Type</span>
+                <span className="w-10 text-xs text-muted-foreground">{t("deployments.labelType")}</span>
                 <div className="flex items-center gap-1.5">
                   <ForwardedIconComponent
                     name={deploymentType === "agent" ? "Bot" : "Server"}
@@ -174,7 +177,7 @@ export default function StepReview() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-10 text-xs text-muted-foreground">Name</span>
+                <span className="w-10 text-xs text-muted-foreground">{t("deployments.labelName")}</span>
                 <span className="text-sm text-foreground">
                   {deploymentName || "—"}
                 </span>
@@ -182,7 +185,7 @@ export default function StepReview() {
               {selectedLlm && (
                 <div className="flex items-center gap-2">
                   <span className="w-10 text-xs text-muted-foreground">
-                    Model
+                    {t("deployments.labelModel")}
                   </span>
                   <span className="text-sm text-foreground">{selectedLlm}</span>
                 </div>
@@ -193,7 +196,7 @@ export default function StepReview() {
           {/* Attached Flows column */}
           <div className="flex flex-col gap-3">
             <span className="text-sm font-medium text-foreground">
-              Attached Flows
+              {t("deployments.attachedFlowsLabel")}
             </span>
             <div className="flex flex-col gap-1.5">
               {reviewFlows.length === 0 ? (
@@ -285,7 +288,7 @@ export default function StepReview() {
                         {existingConns.length > 0 && (
                           <div className="flex flex-col gap-2">
                             <span className="text-xs font-medium text-muted-foreground">
-                              Existing Connections
+                              {t("deployments.existingConnections")}
                             </span>
                             {existingConns.map((conn) => (
                               <span
@@ -300,7 +303,7 @@ export default function StepReview() {
                         {newConns.length > 0 && (
                           <div className="flex flex-col gap-2">
                             <span className="text-xs font-medium text-muted-foreground">
-                              New Connections
+                              {t("deployments.newConnections")}
                             </span>
                             {newConns.map((conn) => (
                               <div
@@ -351,7 +354,7 @@ export default function StepReview() {
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
           <div className="flex flex-col gap-3">
             <span className="text-sm font-medium text-destructive">
-              Detaching
+              {t("deployments.detaching")}
             </span>
             <div className="flex flex-col gap-2">
               {Array.from(removedFlowIds).map((flowId) => {
@@ -366,22 +369,21 @@ export default function StepReview() {
                       className="h-3.5 w-3.5 shrink-0 text-destructive/60"
                     />
                     <span className="text-sm text-foreground">
-                      {flow?.name ?? "Unknown flow"}
+                      {flow?.name ?? t("deployments.unknownFlow")}
                     </span>
                     <Badge
                       variant="secondaryStatic"
                       size="tag"
                       className="bg-destructive/10 text-destructive"
                     >
-                      removing
+                      {t("deployments.removing")}
                     </Badge>
                   </div>
                 );
               })}
             </div>
             <p className="text-xs text-muted-foreground">
-              These tools will be detached from the agent. They will remain
-              available on your provider tenant.
+              {t("deployments.toolsWillBeDetached")}
             </p>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,6 +27,7 @@ const TYPE_OPTIONS = [
 ];
 
 export default function StepType() {
+  const { t } = useTranslation();
   const {
     isEditMode,
     deploymentType,
@@ -72,7 +74,7 @@ export default function StepType() {
 
   return (
     <div className="flex w-full flex-col gap-6 overflow-y-auto py-3">
-      <h2 className="text-lg font-semibold">Deployment Type</h2>
+      <h2 className="text-lg font-semibold">{t("deployments.deploymentType")}</h2>
 
       <div className="flex flex-col gap-3">
         <span className="text-sm font-medium">
@@ -81,7 +83,7 @@ export default function StepType() {
         <div
           className="grid grid-cols-2 gap-3"
           role="radiogroup"
-          aria-label="Deployment type"
+          aria-label={t("deployments.ariaDeploymentType")}
         >
           {TYPE_OPTIONS.map((option) => (
             <label
@@ -129,7 +131,7 @@ export default function StepType() {
           Agent Name <span className="text-destructive">*</span>
         </span>
         <Input
-          placeholder="e.g., Sales Bot"
+          placeholder={t("deployments.placeholderSalesBot")}
           className="bg-muted"
           value={deploymentName}
           onChange={(e) => setDeploymentName(e.target.value)}
@@ -188,7 +190,7 @@ export default function StepType() {
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">Description</span>
         <Textarea
-          placeholder="Describe the agent's purpose..."
+          placeholder={t("deployments.placeholderAgentPurpose")}
           rows={3}
           className="resize-none bg-muted placeholder:text-placeholder-foreground"
           value={deploymentDescription}

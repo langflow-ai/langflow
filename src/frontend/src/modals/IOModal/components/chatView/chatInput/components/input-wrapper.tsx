@@ -96,7 +96,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
         onKeyDown={onKeyDown}
         role="button"
         tabIndex={0}
-        aria-label="Focus chat input"
+        aria-label={t("playgroundComponent.focusChatInput")}
       >
         <TextAreaWrapper
           isBuilding={isBuilding}

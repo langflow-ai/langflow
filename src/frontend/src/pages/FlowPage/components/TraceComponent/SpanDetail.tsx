@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import type { SpanDetailProps } from "./types";
  * Includes inputs, outputs, model info, tokens, and errors
  */
 export function SpanDetail({ span }: SpanDetailProps) {
+  const { t } = useTranslation();
   if (!span) {
     return (
       <div
@@ -137,7 +139,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
         {/* Inputs section */}
         {hasInputs && (
           <div className="mb-4">
-            <SectionHeader icon="ArrowRight" title="Input" />
+            <SectionHeader icon="ArrowRight" title={t("trace.input")} />
             <div className="mt-2">
               <SimplifiedCodeTabComponent
                 language="json"
@@ -150,7 +152,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
         {/* Outputs section */}
         {hasOutputs && (
           <div className="mb-4">
-            <SectionHeader icon="ArrowLeft" title="Output" />
+            <SectionHeader icon="ArrowLeft" title={t("trace.output")} />
             <div className="mt-2">
               <SimplifiedCodeTabComponent
                 language="json"

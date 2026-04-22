@@ -54,7 +54,7 @@ export const UserMessage = memo(
           },
           onError: () => {
             setErrorData({
-              title: "Error updating messages.",
+              title: t("errors.updatingMessages"),
             });
           },
         },
@@ -88,7 +88,7 @@ export const UserMessage = memo(
         {
           onError: () => {
             setErrorData({
-              title: "Error updating messages.",
+              title: t("errors.updatingMessages"),
             });
           },
         },

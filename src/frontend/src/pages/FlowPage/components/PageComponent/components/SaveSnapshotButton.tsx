@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useSidebar } from "@/components/ui/sidebar";
 import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-version";
@@ -12,6 +13,7 @@ interface SaveSnapshotButtonProps {
 export default function SaveSnapshotButton({
   flowId,
 }: SaveSnapshotButtonProps) {
+  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { setActiveSection, open, toggleSidebar } = useSidebar();
@@ -34,7 +36,7 @@ export default function SaveSnapshotButton({
       { flowId, description: null },
       {
         onSuccess: () => {
-          setSuccessData({ title: "Version saved" });
+          setSuccessData({ title: t("success.versionSaved") });
           setIsSavingDisplay(false);
           setSavedSuccess(true);
         },
@@ -53,7 +55,7 @@ export default function SaveSnapshotButton({
   return (
     <CanvasBanner
       icon="BookMarked"
-      title="Save a version of your flow"
+      title={t("flow.saveVersion")}
       description="Capture the current state as a restore point"
       actionSlot={
         <div className="flex items-center gap-2">

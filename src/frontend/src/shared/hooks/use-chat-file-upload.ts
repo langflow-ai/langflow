@@ -44,7 +44,7 @@ export const useChatFileUpload = ({
 
       if (!isAllowedChatAttachmentFile(file)) {
         setErrorData({
-          title: "Error uploading file",
+          title: t("errors.upload"),
           list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
         });
         return;
@@ -97,7 +97,7 @@ export const useChatFileUpload = ({
             });
 
             setErrorData({
-              title: "Error uploading file",
+              title: t("errors.upload"),
               list: [t("misc.fsErrorText"), SN_ERROR_TEXT],
             });
           },

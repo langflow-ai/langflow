@@ -1,9 +1,11 @@
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import langflowAssistantIcon from "@/assets/langflow_assistant.svg";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 
 export function AssistantNoModelsState() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleConfigureModels = () => {
@@ -20,11 +22,10 @@ export function AssistantNoModelsState() {
         />
       </div>
       <h3 className="mb-3 text-center text-base font-semibold leading-6 tracking-normal text-foreground">
-        No Model Provider Configured
+        {t("assistant.noModelsConfigured")}
       </h3>
       <p className="mb-6 max-w-[280px] text-center text-sm text-muted-foreground">
-        To use the assistant, please configure at least one model provider in
-        your settings.
+        {t("assistant.noModelsDescription")}
       </p>
       <Button
         variant="outline"
@@ -33,7 +34,7 @@ export function AssistantNoModelsState() {
         onClick={handleConfigureModels}
       >
         <ForwardedIconComponent name="Settings" className="h-4 w-4" />
-        Configure Model Providers
+        {t("assistant.configureModels")}
       </Button>
     </div>
   );

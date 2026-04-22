@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import type { ProviderCredentials } from "../types";
@@ -14,6 +15,7 @@ export default function ProviderCredentialsForm({
   onCredentialsChange,
   layout = "single-column",
 }: ProviderCredentialsFormProps) {
+  const { t } = useTranslation();
   const [showApiKey, setShowApiKey] = useState(false);
 
   const urlAndApiKeyFields = (
@@ -24,7 +26,7 @@ export default function ProviderCredentialsForm({
         </span>
         <Input
           type="url"
-          placeholder="https://api.example.com"
+          placeholder={t("deployments.placeholderApiUrl")}
           className="bg-muted"
           value={credentials.url}
           onChange={(e) =>
@@ -42,7 +44,7 @@ export default function ProviderCredentialsForm({
         <div className="relative">
           <Input
             type={showApiKey ? "text" : "password"}
-            placeholder="Enter your API key"
+            placeholder={t("deployments.placeholderApiKey")}
             className="bg-muted pr-10"
             value={credentials.api_key}
             onChange={(e) =>
@@ -76,7 +78,7 @@ export default function ProviderCredentialsForm({
         </span>
         <Input
           type="text"
-          placeholder="e.g. Production"
+          placeholder={t("deployments.placeholderEnvironmentName")}
           className="bg-muted"
           value={credentials.name}
           onChange={(e) =>

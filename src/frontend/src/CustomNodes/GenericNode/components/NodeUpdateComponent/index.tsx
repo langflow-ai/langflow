@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 
@@ -20,6 +21,7 @@ export default function NodeUpdateComponent({
   dismissed?: boolean;
   isRequired?: boolean;
 }) {
+  const { t } = useTranslation();
   const showUpdateAction = !blocked;
 
   if (dismissed && isRequired) {
@@ -88,7 +90,7 @@ export default function NodeUpdateComponent({
           e.stopPropagation();
           setDismissAll(true);
         }}
-        aria-label="Dismiss warning bar"
+        aria-label={t("node.dismissWarning")}
         data-testid="dismiss-warning-bar"
       >
         Dismiss

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ChatMessageBubble from "./chat-message-bubble";
 import type { ChatMessage } from "./types";
@@ -8,12 +9,13 @@ interface ChatMessagesProps {
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
       <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border">
         <ForwardedIconComponent name="Bot" className="h-6 w-6" />
       </div>
-      <span className="text-sm">Agent Chat</span>
+      <span className="text-sm">{t("deployments.agentChat")}</span>
     </div>
   );
 }

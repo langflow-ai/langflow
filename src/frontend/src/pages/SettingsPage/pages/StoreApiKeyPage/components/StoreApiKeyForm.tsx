@@ -59,7 +59,7 @@ const StoreApiKeyFormComponent = ({
                     value={apikey}
                     isForm
                     password={true}
-                    placeholder="Insert your API Key"
+                    placeholder={t("storeApiKey.insertPlaceholder")}
                     className="w-full"
                   />
                   <Form.Message match="valueMissing" className="field-invalid">

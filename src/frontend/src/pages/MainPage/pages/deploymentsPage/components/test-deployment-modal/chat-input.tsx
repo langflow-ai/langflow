@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
@@ -9,6 +10,7 @@ interface ChatInputProps {
 }
 
 export default function ChatInput({ onSend, disabled }: ChatInputProps) {
+  const { t } = useTranslation();
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -52,7 +54,7 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Message"
+          placeholder={t("deployments.placeholderMessage")}
           disabled={disabled}
           rows={1}
           className="max-h-40 flex-1 resize-none overflow-y-auto bg-transparent text-sm leading-5 text-foreground placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
@@ -63,7 +65,7 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
           onClick={handleSend}
           disabled={!value.trim() || disabled}
           className="h-8 w-8 flex-shrink-0 self-end rounded-lg"
-          aria-label="Send message"
+          aria-label={t("deployments.ariaSendMessage")}
         >
           <ForwardedIconComponent name="Send" className="h-4 w-4" />
         </Button>

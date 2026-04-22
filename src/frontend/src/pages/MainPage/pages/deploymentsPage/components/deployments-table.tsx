@@ -1,4 +1,5 @@
 import { Fragment, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,7 @@ export default function DeploymentsTable({
   onUpdateDeployment,
   onDeleteDeployment,
 }: DeploymentsTableProps) {
+  const { t } = useTranslation();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const toggleExpanded = (id: string) => {
@@ -96,12 +98,12 @@ export default function DeploymentsTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Attached</TableHead>
-          <TableHead>Provider</TableHead>
-          <TableHead>Last Modified</TableHead>
-          <TableHead>Test</TableHead>
+          <TableHead>{t("deployments.columnName")}</TableHead>
+          <TableHead>{t("deployments.columnType")}</TableHead>
+          <TableHead>{t("deployments.columnAttached")}</TableHead>
+          <TableHead>{t("deployments.columnProvider")}</TableHead>
+          <TableHead>{t("deployments.columnLastModified")}</TableHead>
+          <TableHead>{t("deployments.columnTest")}</TableHead>
           <TableHead className="w-10" />
         </TableRow>
       </TableHeader>

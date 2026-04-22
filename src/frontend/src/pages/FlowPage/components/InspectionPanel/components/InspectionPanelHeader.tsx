@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useHotkeys } from "react-hotkeys-hook";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
@@ -27,6 +28,7 @@ export default function InspectionPanelHeader({
   isEditingFields,
   setIsEditingFields,
 }: InspectionPanelHeaderProps) {
+  const { t } = useTranslation();
   const [openCodeModal, setOpenCodeModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [isHoveringContent, setIsHoveringContent] = useState(false);
@@ -47,7 +49,7 @@ export default function InspectionPanelHeader({
 
   const handleCopyId = useCallback(() => {
     navigator.clipboard.writeText(data.id);
-    setSuccessData({ title: "Component ID copied to clipboard" });
+    setSuccessData({ title: t("success.componentIdCopied") });
   }, [data.id, setSuccessData]);
 
   const handleOpenCode = useCallback(() => {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
@@ -17,6 +18,7 @@ export default function McpComponent({
   id = "",
   showParameter = true,
 }: InputProps<string, any>): JSX.Element | null {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const { data: mcpServers } = useGetMCPServers({ withCounts: true });
   const { mutate: addMcpServer } = useAddMCPServer();
@@ -102,7 +104,7 @@ export default function McpComponent({
         },
         onError: (error) => {
           setErrorData({
-            title: "Error adding MCP server",
+            title: t("errors.addMcpServer"),
             list: [error.message],
           });
         },
@@ -197,7 +199,7 @@ export default function McpComponent({
           onClick={handleAddButtonClick}
           data-testid="add-mcp-server-simple-button"
         >
-          <span>Add MCP Server</span>
+          <span>{t("input.addMcpServer")}</span>
         </Button>
       )}
       {options && (

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   useDeleteGlobalVariables,
@@ -16,6 +17,7 @@ const GeneralDeleteConfirmationModal = ({
   option,
   onConfirmDelete,
 }: GeneralDeleteConfirmationModalProps) => {
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
   const { data: globalVariables } = useGetGlobalVariables();
@@ -32,16 +34,16 @@ const GeneralDeleteConfirmationModal = ({
           },
           onError: () => {
             setErrorData({
-              title: "Error deleting variable",
-              list: [cn("ID not found for variable: ", key)],
+              title: t("globalVars.errorDeletingVariable"),
+              list: [t("globalVars.errorIdNotFound", { name: key })],
             });
           },
         },
       );
     } else {
       setErrorData({
-        title: "Error deleting variable",
-        list: [cn("ID not found for variable: ", key)],
+        title: t("globalVars.errorDeletingVariable"),
+        list: [t("globalVars.errorIdNotFound", { name: key })],
       });
     }
   }

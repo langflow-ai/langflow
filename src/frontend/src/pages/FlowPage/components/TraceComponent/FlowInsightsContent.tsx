@@ -261,14 +261,14 @@ export function FlowInsightsContent({
               <Input
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search runs..."
+                placeholder={t("trace.searchRuns")}
                 className="h-8 pl-8 text-sm"
               />
             </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-8 w-[130px]">
-                <SelectValue placeholder="All Status" />
+                <SelectValue placeholder={t("trace.allStatus")} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
@@ -288,7 +288,7 @@ export function FlowInsightsContent({
               variant="ghost"
               size="icon"
               onClick={() => refetch()}
-              aria-label="Reload"
+              aria-label={t("trace.reload")}
             >
               <IconComponent name="RefreshCcw" className="h-4 w-4" />
             </Button>
@@ -298,7 +298,7 @@ export function FlowInsightsContent({
               onClick={() =>
                 downloadJson(`runs-${resolvedFlowId ?? "unknown"}.json`, rows)
               }
-              aria-label="Download"
+              aria-label={t("trace.download")}
             >
               <IconComponent name="Download" className="h-4 w-4" />
             </Button>

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import type { Deployment } from "../../types";
 
@@ -20,9 +21,10 @@ export default function DeploymentInfoGrid({
   providerName,
   llm,
 }: DeploymentInfoGridProps) {
+  const { t } = useTranslation();
   return (
     <div className="grid grid-cols-[auto_1fr_auto_1fr] items-baseline gap-x-3 gap-y-2">
-      <span className="text-xs text-muted-foreground">Type</span>
+      <span className="text-xs text-muted-foreground">{t("deployments.labelType")}</span>
       <div className="flex items-center gap-1.5">
         <ForwardedIconComponent
           name={deployment?.type === "agent" ? "Bot" : "Server"}
@@ -32,21 +34,21 @@ export default function DeploymentInfoGrid({
           {deployment?.type}
         </span>
       </div>
-      <span className="text-xs text-muted-foreground">Created</span>
+      <span className="text-xs text-muted-foreground">{t("deployments.labelCreated")}</span>
       <span className="text-sm text-foreground">
         {deployment?.created_at ? formatDate(deployment.created_at) : "—"}
       </span>
 
-      <span className="text-xs text-muted-foreground">Name</span>
+      <span className="text-xs text-muted-foreground">{t("deployments.labelName")}</span>
       <span className="text-sm text-foreground">{deployment?.name || "—"}</span>
-      <span className="text-xs text-muted-foreground">Modified</span>
+      <span className="text-xs text-muted-foreground">{t("deployments.labelModified")}</span>
       <span className="text-sm text-foreground">
         {deployment?.updated_at ? formatDate(deployment.updated_at) : "—"}
       </span>
 
       {deployment?.description && (
         <>
-          <span className="text-xs text-muted-foreground">Desc</span>
+          <span className="text-xs text-muted-foreground">{t("deployments.labelDesc")}</span>
           <span className="col-span-3 text-sm text-foreground">
             {deployment.description}
           </span>
@@ -55,14 +57,14 @@ export default function DeploymentInfoGrid({
 
       {llm && (
         <>
-          <span className="text-xs text-muted-foreground">Model</span>
+          <span className="text-xs text-muted-foreground">{t("deployments.labelModel")}</span>
           <span className="col-span-3 break-words text-sm text-foreground">
             {llm}
           </span>
         </>
       )}
 
-      <span className="text-xs text-muted-foreground">Provider</span>
+      <span className="text-xs text-muted-foreground">{t("deployments.labelProvider")}</span>
       <span className="col-span-3 text-sm text-foreground">
         {providerName || "—"}
       </span>

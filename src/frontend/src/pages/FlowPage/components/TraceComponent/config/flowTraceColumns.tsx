@@ -1,4 +1,5 @@
 import type { ColDef } from "ag-grid-community";
+import i18n from "@/i18n";
 import IconComponent from "@/components/common/genericIconComponent";
 import { formatSmartTimestamp } from "@/utils/dateTime";
 import { formatTotalLatency, getStatusIconProps } from "../traceViewHelpers";
@@ -47,7 +48,7 @@ export function createFlowTracesColumns({
       valueGetter: (params) => formatSmartTimestamp(params.data?.startTime),
     },
     {
-      headerName: "Input",
+      headerName: i18n.t("trace.input"),
       field: "input",
       flex: 1,
       minWidth: 150,
@@ -57,7 +58,7 @@ export function createFlowTracesColumns({
       valueGetter: (params) => formatObjectValue(params.data?.input),
     },
     {
-      headerName: "Output",
+      headerName: i18n.t("trace.output"),
       field: "output",
       flex: 1,
       minWidth: 150,

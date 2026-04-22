@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   PAGINATION_PAGE,
   PAGINATION_ROWS_COUNT,
@@ -24,6 +25,7 @@ export default function PaginatorComponent({
   pages,
   isComponent,
 }: PaginatorComponentType) {
+  const { t } = useTranslation();
   const [size, setPageSize] = useState(pageSize);
   const [maxIndex, setMaxPageIndex] = useState(
     Math.ceil(totalRowsCount / pageSize),
@@ -66,7 +68,7 @@ export default function PaginatorComponent({
               direction="up"
               className="h-7 w-fit gap-1 border-none p-1 pl-1.5 text-mmd focus:border-none focus:ring-0 focus:!ring-offset-0"
             >
-              <SelectValue placeholder="1" />
+              <SelectValue placeholder={t("paginator.placeholder")} />
             </SelectTrigger>
             <SelectContent>
               {Array.from({ length: maxIndex }, (_, i) => i + 1).map((item) => (
