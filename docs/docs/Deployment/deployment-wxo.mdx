@@ -1,0 +1,308 @@
+---
+title: Deploy Langflow on watsonx Orchestrate
+slug: /deployment-wxo
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialGlobalModelProviders from '@site/docs/_partial-global-model-providers.mdx';
+
+Create a flow and deploy it to [IBM watsonx Orchestrate](https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=getting-started-watsonx-orchestrate).
+
+Deploying a flow on IBM watsonx Orchestrate is different from the other Langflow deployment options.
+This workflow **does not** deploy a full-featured Langflow server and flow builder UI.
+Instead, Langflow packages your selected flow and flow version, and then publishes it to IBM watsonx Orchestrate as a tool that an IBM watsonx Orchestrate agent can call.
+Langflow is used to build and configure the flow, while IBM watsonx Orchestrate hosts the agent experience and invokes the deployed flow as part of that agent's toolset.
+
+## Prerequisites
+
+- [Install and start Langflow](/get-started-installation)
+- Create an [OpenAI API key](https://platform.openai.com/api-keys)
+- Create an [IBM watsonx Orchestrate instance](https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=getting-started-watsonx-orchestrate)
+
+## Create and deploy a flow
+
+1. Create a flow in the Langflow UI, such as the Simple Agent starter flow in the [Quickstart](/get-started-quickstart).
+
+2. Click <Icon name="Rocket" aria-hidden="true"/> **Deploy**.
+The **Provider** pane opens.
+
+3. Enter the **Name**, **Service Instance URL**, and **API Key** from your IBM watsonx Orchestrate instance.
+These values are found in the **Settings** page of your IBM watsonx Orchestrate instance.
+
+   - **Name**: `YOUR_DEPLOYMENT_NAME`
+   - **Service Instance URL**: `https://api.dl.watson-orchestrate.ibm.com/instances/80194572-4421-6735-91ab-55c0d8e4f962`
+   - **API Key**: `YOUR_WATSONX_ORCHESTRATE_API_KEY`
+
+   The last segment of the Service Instance URL is the IBM watsonx Orchestrate tenant ID, which can be found in your watsonx Orchestrate deployment.
+   In this example, the tenant ID is `80194572-4421-6735-91ab-55c0d8e4f962`.
+
+4. Click **Next**.
+   The **Deployment Type** pane opens.
+5. Enter a **Type**, **Agent Name**, **Model**, and **Description**.
+
+    The **Type** is always **Agent**. The deployed flow is an IBM watsonx Orchestrate agent with your flow available as a tool the agent can call.
+
+    The **Model** list is populated from the connected watsonx Orchestrate instance, not Langflow.
+
+6. To open the **Attach Flows** pane, click the **Attach Flows** tab. Select a flow and flow version to deploy.
+7. To open the **Create Connections** pane, click the **Create Connections** tab. Create a new connection, or select an existing connection to bind to the flow.
+
+   To create a new connection, do the following:
+
+      1. Enter a **Connection Name** and any environment variables the flow requires, such as the `OPENAI_API_KEY`. Langflow auto-detects global variables from the flow JSON file, and you can add additional variables.
+
+      2. To add the new connection to the list of available connections, click **Create Connection**.
+
+      3. In the list of available connections, select the new connection, and then click **Attach Connection to Flow**.
+
+   :::tip
+   To bind the connection to the flow **without** environment variable binding, click **Skip**, and then click **Next**.
+   :::
+
+   For more information, see [Build flows](../Flows/concepts-flows.mdx#save-and-restore-flow-versions).
+8. Click **Next**. The **Review & Confirm** pane opens.
+9. Confirm the deployment values are correct, and then click <Icon name="Rocket" aria-hidden="true"/> **Deploy**.
+
+    Langflow installs any required extra dependencies on your watsonx Orchestrate tenant automatically.
+
+    In the Langflow UI, `Deployment successful` indicates your deployment succeeded.
+
+    :::tip
+    If you get an error that the tool name already exists on your deployment, click <Icon name="Pencil" aria-hidden="true"/> **Edit** to change the tool name.
+    :::
+
+10. Click **Test** to open a chat window with your agent on watsonx Orchestrate.
+    Enter a question, and the agent responds using the connected flow as a tool.
+11. Navigate to your IBM watsonx Orchestrate deployment, and then confirm that your Langflow flow is listed as an agent.
+
+## Manage deployments in Langflow
+
+From the **Projects** page, click **Deployments** to open the deployment management screen.
+
+* **Deployments**:
+
+   A **Deployment** is a published watsonx Orchestrate agent created from a specific Langflow flow version. Deployment details include the agent name, type, attached flows, model, and the IBM watsonx Orchestrate environment it belongs to.
+
+   Use the **Deployments** tab to create, update, view, and delete flow deployments in Langflow.
+
+* **Deployment Environments**:
+
+   A **Deployment Environment** is a saved watsonx Orchestrate target that Langflow can deploy to. An environment stores the connection details for a watsonx Orchestrate tenant.
+
+   Use the **Deployment Environments** tab to connect, view, and disconnect IBM watsonx Orchestrate environments in Langflow.
+
+   To manage the tenant itself, use the IBM watsonx Orchestrate dashboard.
+
+## Send requests to your flow
+
+After you deploy your flow to IBM watsonx Orchestrate, you can connect to it through the Langflow deployment run endpoints.
+
+Don't use the `/run` endpoint for flows deployed to IBM watsonx Orchestrate.
+Instead use `POST /api/v1/deployments/{deployment_id}/runs` to start a run, and `GET /api/v1/deployments/{deployment_id}/runs/{run_id}` to check its status.
+
+Endpoint paths must be prefixed with your Langflow server URL, such as `http://localhost:7860`.
+
+### Create deployment run endpoint
+
+**Endpoint:** `POST /api/v1/deployments/{deployment_id}/runs`
+
+**Description:** Start a run for a deployed flow and return a provider-owned run ID that you can poll for status.
+
+#### Example request
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = "http://LANGFLOW_SERVER_ADDRESS/api/v1/deployments/DEPLOYMENT_ID/runs"
+
+payload = {
+    "provider_data": {
+        "input": "Summarize today's tickets",
+        "thread_id": "thread-123"
+    }
+}
+
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": "LANGFLOW_API_KEY"
+}
+
+response = requests.post(url, json=payload, headers=headers)
+response.raise_for_status()
+
+print(response.json())
+```
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+```js
+const payload = {
+  provider_data: {
+    input: "Summarize today's tickets",
+    thread_id: "thread-123"
+  }
+};
+
+const options = {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-api-key": "LANGFLOW_API_KEY"
+  },
+  body: JSON.stringify(payload)
+};
+
+fetch("http://LANGFLOW_SERVER_ADDRESS/api/v1/deployments/DEPLOYMENT_ID/runs", options)
+  .then((response) => response.json())
+  .then((response) => console.log(response))
+  .catch((err) => console.error(err));
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+curl --request POST \
+     --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/deployments/DEPLOYMENT_ID/runs" \
+     --header "Content-Type: application/json" \
+     --header "x-api-key: LANGFLOW_API_KEY" \
+     --data '{
+       "provider_data": {
+         "input": "Summarize today's tickets",
+         "thread_id": "thread-123"
+       }
+     }'
+```
+
+</TabItem>
+</Tabs>
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `provider_data.input` | `string` | Yes | The prompt or message content to send to the deployed agent. |
+| `provider_data.thread_id` | `string` | No | Optional thread identifier to continue an existing conversation. |
+
+#### Example response
+
+```json
+{
+  "deployment_id": "3ea34379-1f72-4a33-9f6e-9e3ca88365b5",
+  "provider_data": {
+    "id": "run-42",
+    "agent_id": "agent-123",
+    "thread_id": "thread-123",
+    "status": "accepted",
+    "result": null,
+    "started_at": null,
+    "completed_at": null,
+    "failed_at": null,
+    "cancelled_at": null,
+    "last_error": null
+  }
+}
+```
+
+#### Response body
+
+The response returns the Langflow `deployment_id` and a `provider_data` object containing the provider-owned run metadata.
+Use `provider_data.id` as the `run_id` when checking the run status.
+
+### Get deployment run status endpoint
+
+**Endpoint:** `GET /api/v1/deployments/{deployment_id}/runs/{run_id}`
+
+**Description:** Retrieve the current status and result of a deployment run.
+
+#### Example request
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = "http://LANGFLOW_SERVER_ADDRESS/api/v1/deployments/DEPLOYMENT_ID/runs/RUN_ID"
+
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": "LANGFLOW_API_KEY"
+}
+
+response = requests.get(url, headers=headers)
+response.raise_for_status()
+
+print(response.json())
+```
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+```js
+const options = {
+  method: "GET",
+  headers: {
+    "Content-Type": "application/json",
+    "x-api-key": "LANGFLOW_API_KEY"
+  }
+};
+
+fetch("http://LANGFLOW_SERVER_ADDRESS/api/v1/deployments/DEPLOYMENT_ID/runs/RUN_ID", options)
+  .then((response) => response.json())
+  .then((response) => console.log(response))
+  .catch((err) => console.error(err));
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+curl --request GET \
+     --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/deployments/DEPLOYMENT_ID/runs/RUN_ID" \
+     --header "Content-Type: application/json" \
+     --header "x-api-key: LANGFLOW_API_KEY"
+```
+
+</TabItem>
+</Tabs>
+
+#### Path parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `deployment_id` | `uuid` | Yes | The Langflow deployment ID for the deployed flow. |
+| `run_id` | `string` | Yes | The provider-owned run ID returned in `provider_data.id`. |
+
+#### Example response
+
+```json
+{
+  "deployment_id": "3ea34379-1f72-4a33-9f6e-9e3ca88365b5",
+  "provider_data": {
+    "id": "run-42",
+    "agent_id": "agent-123",
+    "thread_id": "thread-123",
+    "status": "completed",
+    "result": {
+      "output": "Here is your summary..."
+    },
+    "started_at": "2026-04-03T12:40:00Z",
+    "completed_at": "2026-04-03T12:40:05Z",
+    "failed_at": null,
+    "cancelled_at": null,
+    "last_error": null
+  }
+}
+```
+
+#### Response body
+
+Check `provider_data.status` to determine whether the run is still processing or has finished.
+When the status is `completed`, read the output from `provider_data.result`.
