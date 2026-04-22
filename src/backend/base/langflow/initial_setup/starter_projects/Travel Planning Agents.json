@@ -1718,7 +1718,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.27"
+                    "version": "1.2.29"
                   }
                 ],
                 "total_dependencies": 3
@@ -2301,7 +2301,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.27"
+                    "version": "1.2.29"
                   }
                 ],
                 "total_dependencies": 3
@@ -2884,7 +2884,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.27"
+                    "version": "1.2.29"
                   }
                 ],
                 "total_dependencies": 3

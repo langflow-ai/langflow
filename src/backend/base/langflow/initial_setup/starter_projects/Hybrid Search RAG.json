@@ -1522,7 +1522,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.27"
+                    "version": "1.2.29"
                   },
                   {
                     "name": "lfx",
