@@ -3,7 +3,13 @@ import { StepperModal, StepperModalFooter } from "../stepperModal/StepperModal";
 import { FilesPanel } from "./components/FilesPanel";
 import { StepConfiguration } from "./components/StepConfiguration";
 import { StepReview } from "./components/StepReview";
-import { STEP_DESCRIPTIONS, STEP_TITLES } from "./constants";
+import {
+  MODAL_HEIGHT_DEFAULT,
+  MODAL_HEIGHT_WITH_ADVANCED,
+  STEP_DESCRIPTIONS,
+  STEP_TITLES,
+  VALIDATION_ERROR_LINE_HEIGHT,
+} from "./constants";
 import { useKnowledgeBaseForm } from "./hooks/useKnowledgeBaseForm";
 import type { KnowledgeBaseUploadModalProps } from "./types";
 
@@ -91,6 +97,15 @@ export default function KnowledgeBaseUploadModal({
     }
   };
 
+  const errorCount = Object.keys(form.validationErrors).length;
+  const modalBase =
+    !hideAdvanced && form.showAdvanced
+      ? MODAL_HEIGHT_WITH_ADVANCED
+      : MODAL_HEIGHT_DEFAULT;
+  const modalHeight = `${modalBase + errorCount * VALIDATION_ERROR_LINE_HEIGHT}`;
+
+  const showHelpButton = !hideAdvanced && form.currentStep === 1;
+
   return (
     <StepperModal
       open={open}
@@ -111,11 +126,7 @@ export default function KnowledgeBaseUploadModal({
           : STEP_DESCRIPTIONS[form.currentStep]
       }
       icon="Database"
-      height={(() => {
-        const errorCount = Object.keys(form.validationErrors).length;
-        const base = !hideAdvanced && form.showAdvanced ? 690 : 347;
-        return `${base + errorCount * 16}`;
-      })()}
+      height={modalHeight}
       width="w-[700px]"
       showProgress={false}
       sidePanel={
@@ -140,17 +151,13 @@ export default function KnowledgeBaseUploadModal({
           submitTestId="kb-create-button"
           submitLabel={form.isAddSourcesMode ? "Add Sources" : "Create"}
           helpLabel={
-            !hideAdvanced && form.currentStep === 1
+            showHelpButton
               ? form.showAdvanced
                 ? "Hide Configuration"
                 : "Configure Sources"
               : undefined
           }
-          onHelp={
-            !hideAdvanced && form.currentStep === 1
-              ? form.toggleAdvanced
-              : undefined
-          }
+          onHelp={showHelpButton ? form.toggleAdvanced : undefined}
         />
       }
     >

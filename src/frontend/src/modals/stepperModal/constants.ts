@@ -11,4 +11,5 @@ export const DEFAULT_BACK_LABEL = "Back";
 export const DEFAULT_HELP_LABEL = "Need Help?";
 
 export const MIN_PROGRESS_PERCENTAGE = 10;
+export const SIDE_PANEL_WIDTH_PX = 300;
 export const SIDE_PANEL_WIDTH = "w-[300px]";
