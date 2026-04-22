@@ -251,7 +251,7 @@ async def test_get_config_unauthenticated_returns_correct_field_types(client: As
     assert isinstance(result["frontend_timeout"], int), "frontend_timeout must be an integer"
     assert isinstance(result["voice_mode_available"], bool), "voice_mode_available must be a boolean"
     assert isinstance(result["feature_flags"], dict), "feature_flags must be an object"
-    assert result["feature_flags"].get("wxo_deployments") is False, "wxo_deployments flag should default to false"
+    assert result["feature_flags"].get("wxo_deployments") is True, "wxo_deployments flag should default to true"
     assert result["event_delivery"] in ["polling", "streaming", "direct"], (
         "event_delivery must be one of: polling, streaming, direct"
     )
