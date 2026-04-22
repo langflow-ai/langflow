@@ -94,7 +94,7 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
         if is_absolute:
             raise HTTPException(
                 status_code=400,
-                detail=f"Absolute path must be within your flows directory: {base_dir_resolved}",
+                detail="Absolute path must be within your flows directory",
             )
         raise HTTPException(
             status_code=400,
