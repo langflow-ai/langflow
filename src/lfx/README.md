@@ -12,10 +12,29 @@ Operations that depend on `langflow.db` will not work as they do in the full Lan
 Memory operations are dispatched at call time, not at import time.
 If the `langflow` package is installed in the same Python environment as `lfx` and a real database service is registered, memory operations are routed to the full `langflow.memory` implementation instead. This applies when `lfx` is used as a Python library inside a running Langflow server, not when running `lfx run` or `lfx serve` from the command line.
 
-LFX includes two commands for executing flows:
+## Commands
 
-- **`lfx serve`**: Starts a FastAPI server hosting a Langflow API endpoint with your flow available at `/flows/{flow_id}/run`. The flow graph is stored in memory at all times, so there is less overhead for loading the graph from a database.
-- **`lfx run`**: Executes a flow locally and returns the results to `stdout`.
+**Runtime commands** — documented in this README:
+
+| Command | Description |
+|---------|-------------|
+| [`lfx serve`](#serve-the-simple-agent-starter-flow-with-lfx-serve) | Serve a flow as a FastAPI endpoint at `/flows/{flow_id}/run` |
+| [`lfx run`](#run-the-simple-agent-flow-with-lfx-run) | Execute a flow locally and stream results to `stdout` |
+| [`lfx-mcp`](#lfx-mcp) | Start an MCP server that connects to a running Langflow instance |
+
+**Flow DevOps SDK commands** — documented in the [Flow DevOps Toolkit](https://docs.langflow.org/flow-devops-sdk):
+
+| Command | Description |
+|---------|-------------|
+| `lfx init` | Scaffold a versioned flow project with CI templates |
+| `lfx login` | Validate credentials against a remote Langflow instance |
+| `lfx create` | Create a new flow JSON from a built-in or custom template |
+| `lfx validate` | Validate flow JSON before pushing |
+| `lfx requirements` | Generate `requirements.txt` from a flow's component dependencies |
+| `lfx status` | Compare local flow files against a remote Langflow instance |
+| `lfx push` | Push flows to a remote instance by stable ID |
+| `lfx pull` | Pull flows from a remote instance to local files |
+| `lfx export` | Normalize flow JSON for clean git diffs |
 
 ## Prerequisites
 
@@ -419,6 +438,12 @@ Install dependencies and set your OpenAI API key, then run:
 ```bash
 uv run lfx run simple_agent.py "How are you?" --verbose
 ```
+
+## lfx-mcp
+
+`lfx-mcp` is a separate binary installed with `lfx`. It starts an MCP server that gives any MCP-compatible client programmatic control over a Langflow instance for building flows, managing components, and running executions.
+
+For more information, see [LFX-MCP.md](./LFX-MCP.md).
 
 ## Development
 
