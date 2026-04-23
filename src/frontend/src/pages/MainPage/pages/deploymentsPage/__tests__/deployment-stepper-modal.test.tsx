@@ -345,7 +345,7 @@ describe("Step labels", () => {
     renderModal();
     expect(screen.getByText("Provider")).toBeInTheDocument();
     expect(screen.getByText("Type")).toBeInTheDocument();
-    expect(screen.getByText("Attach Flows")).toBeInTheDocument();
+    expect(screen.getByText("Configure")).toBeInTheDocument();
     expect(screen.getByText("Review")).toBeInTheDocument();
   });
 
@@ -355,7 +355,7 @@ describe("Step labels", () => {
     renderModal({ editingDeployment: makeDeployment() });
     expect(screen.queryByText("Provider")).not.toBeInTheDocument();
     expect(screen.getByText("Type")).toBeInTheDocument();
-    expect(screen.getByText("Attach Flows")).toBeInTheDocument();
+    expect(screen.getByText("Configure")).toBeInTheDocument();
     expect(screen.getByText("Review")).toBeInTheDocument();
   });
 });

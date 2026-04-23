@@ -21,7 +21,7 @@ import {
 } from "../contexts/deployment-stepper-context";
 import { useErrorAlert } from "../hooks/use-error-alert";
 import type { Deployment, DeploymentProvider, ProviderAccount } from "../types";
-import DeploymentStepper from "./deployment-stepper";
+import DeploymentStepper, { CREATE_DEPLOYED_STEPS } from "./deployment-stepper";
 import StepAttachFlows from "./step-attach-flows";
 import StepDeployStatus from "./step-deploy-status";
 import StepProvider from "./step-provider";
@@ -206,6 +206,7 @@ function DeploymentStepperModalContent({
     canGoNext,
     handleNext,
     handleBack,
+    selectedProvider,
     selectedInstance,
     setSelectedInstance,
     needsProviderAccountCreation,
@@ -225,6 +226,8 @@ function DeploymentStepperModalContent({
   const isDeploying = deploymentPhase === "deploying";
   const isDeployed = deploymentPhase === "deployed";
   const isInDeployPhase = isDeploying || isDeployed;
+  const providerConsoleUrl = "https://www.ibm.com/products/watsonx-orchestrate";
+  const providerDisplayName = selectedProvider?.name ?? "watsonx Orchestrate";
 
   // In edit mode, steps are shifted: 1=Type, 2=Attach, 3=Review.
   const logicalStep = isEditMode ? currentStep + 1 : currentStep;
@@ -316,19 +319,82 @@ function DeploymentStepperModalContent({
           className="text-center text-2xl font-semibold"
           data-testid="stepper-modal-title"
         >
-          {isEditMode ? "Update Deployment" : "Create New Deployment"}
+          {isDeployed && !isEditMode
+            ? "Deployed"
+            : isEditMode
+              ? "Update Deployment"
+              : "Create New Deployment"}
         </h2>
-        <DeploymentStepper />
+        <DeploymentStepper
+          steps={!isEditMode && isDeployed ? CREATE_DEPLOYED_STEPS : undefined}
+          currentStepOverride={!isEditMode && isDeployed ? 4 : undefined}
+        />
       </div>
 
       {/* Content box: step content + footer */}
       <div className="mx-4 mb-4 mt-4 flex flex-1 flex-col overflow-hidden rounded-lg border border-border bg-background">
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-2">
           {isInDeployPhase ? (
-            <StepDeployStatus
-              phase={isDeploying ? "deploying" : "deployed"}
-              deploymentName={createdDeployment?.name}
-            />
+            isDeployed && !isEditMode ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-8 py-10 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-emerald-500">
+                  <ForwardedIconComponent
+                    name="Check"
+                    className="h-8 w-8 text-emerald-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="font-sans text-2xl font-semibold tracking-normal text-foreground">
+                    Deployment successful
+                  </h3>
+                  <p className="font-sans text-base font-normal text-muted-foreground">
+                    Deployed to {providerDisplayName} as draft
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1 font-sans text-sm font-normal text-muted-foreground">
+                  <span>Publish from Draft to Live in</span>
+                  {providerConsoleUrl ? (
+                    <a
+                      href={providerConsoleUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-semibold text-foreground hover:underline"
+                    >
+                      {providerDisplayName}
+                      <ForwardedIconComponent
+                        name="ArrowUpRight"
+                        className="h-4 w-4"
+                      />
+                    </a>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+                      {providerDisplayName}
+                    </span>
+                  )}
+                </div>
+
+                {onTestDeployment &&
+                  createdDeployment &&
+                  selectedInstance?.id && (
+                    <Button
+                      variant="outline"
+                      className="h-11 w-full max-w-lg gap-2 rounded-lg border-zinc-700 font-sans text-base font-semibold text-foreground hover:bg-input"
+                      data-testid="deployment-stepper-test"
+                      onClick={handleTest}
+                    >
+                      <ForwardedIconComponent name="Play" className="h-5 w-5" />
+                      Test Deployment
+                    </Button>
+                  )}
+              </div>
+            ) : (
+              <StepDeployStatus
+                phase={isDeploying ? "deploying" : "deployed"}
+                deploymentName={createdDeployment?.name}
+              />
+            )
           ) : (
             <>
               {logicalStep === 1 && <StepProvider />}
@@ -341,9 +407,13 @@ function DeploymentStepperModalContent({
 
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-border px-6 py-4">
-          <Button variant="ghost" onClick={() => setOpen(false)}>
-            {isDeployed ? "Close" : "Cancel"}
-          </Button>
+          {isDeployed ? (
+            <div />
+          ) : (
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          )}
           <div className="flex items-center gap-3">
             {!isDeployed && (
               <Button
@@ -384,14 +454,7 @@ function DeploymentStepperModalContent({
                 {progressLabel}
               </Button>
             )}
-            {isDeployed && onTestDeployment && !isEditMode && (
-              <Button
-                data-testid="deployment-stepper-test"
-                onClick={handleTest}
-              >
-                Test
-              </Button>
-            )}
+            {isDeployed && <Button onClick={() => setOpen(false)}>Done</Button>}
           </div>
         </div>
       </div>
