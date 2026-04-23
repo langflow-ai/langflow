@@ -146,13 +146,7 @@ override-dependencies = [
     "Markdown>=3.8.0",
     "dynaconf>=3.2.13",
     "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
-    # Pin until fastmcp>=3.2.0 and litellm>=1.83.11 stop conflicting on python-dotenv.
-    "litellm==1.82.6",
     "playwright>=1.58.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
-    "python-dotenv>=1.1.0",
-    "openai>=2.26.0",
-    "aiohttp>=3.13.5",
-    "click>=8.3.0",  # Override litellm's exact `click==8.1.8` pin (upstream BerriAI/litellm#26154)
 ]
 
 [project.scripts]
