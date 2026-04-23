@@ -49,10 +49,19 @@ const makeKb = (
   ...overrides,
 });
 
+type NameCellRendererProps = {
+  data: KnowledgeBaseInfo;
+  value: string;
+};
+
+type StatusCellRendererProps = {
+  data: KnowledgeBaseInfo;
+};
+
 describe("createKnowledgeBaseColumns", () => {
-  it("returns 7 column definitions", () => {
+  it("returns 8 column definitions", () => {
     const cols = createKnowledgeBaseColumns();
-    expect(cols).toHaveLength(7);
+    expect(cols).toHaveLength(8);
   });
 
   it("includes the expected header names", () => {
@@ -62,6 +71,7 @@ describe("createKnowledgeBaseColumns", () => {
         "Name",
         "Size",
         "Embedding Model",
+        "Vector Store",
         "Chunks",
         "Avg Chunk Size",
         "Status",
@@ -73,7 +83,8 @@ describe("createKnowledgeBaseColumns", () => {
     it("renders the KB name", () => {
       const cols = createKnowledgeBaseColumns();
       const nameCol = cols.find((c) => c.headerName === "Name")!;
-      const CellRenderer = nameCol.cellRenderer as React.ComponentType<any>;
+      const CellRenderer =
+        nameCol.cellRenderer as React.ComponentType<NameCellRendererProps>;
       render(<CellRenderer data={makeKb()} value="My KB" />);
       expect(screen.getByText("My KB")).toBeInTheDocument();
     });
@@ -81,7 +92,8 @@ describe("createKnowledgeBaseColumns", () => {
     it("shows a file icon when source_types is empty", () => {
       const cols = createKnowledgeBaseColumns();
       const nameCol = cols.find((c) => c.headerName === "Name")!;
-      const CellRenderer = nameCol.cellRenderer as React.ComponentType<any>;
+      const CellRenderer =
+        nameCol.cellRenderer as React.ComponentType<NameCellRendererProps>;
       render(
         <CellRenderer data={makeKb({ source_types: [] })} value="My KB" />,
       );
@@ -91,7 +103,8 @@ describe("createKnowledgeBaseColumns", () => {
     it("shows Layers icon when multiple source types present", () => {
       const cols = createKnowledgeBaseColumns();
       const nameCol = cols.find((c) => c.headerName === "Name")!;
-      const CellRenderer = nameCol.cellRenderer as React.ComponentType<any>;
+      const CellRenderer =
+        nameCol.cellRenderer as React.ComponentType<NameCellRendererProps>;
       render(
         <CellRenderer
           data={makeKb({ source_types: ["pdf", "txt"] })}
@@ -106,7 +119,7 @@ describe("createKnowledgeBaseColumns", () => {
     const getStatusRenderer = () => {
       const cols = createKnowledgeBaseColumns();
       return cols.find((c) => c.headerName === "Status")!
-        .cellRenderer as React.ComponentType<any>;
+        .cellRenderer as React.ComponentType<StatusCellRendererProps>;
     };
 
     it('renders "Ready" label for ready status', () => {
@@ -138,7 +151,7 @@ describe("createKnowledgeBaseColumns", () => {
     const getActionsRenderer = (callbacks = {}) => {
       const cols = createKnowledgeBaseColumns(callbacks);
       return cols.find((c) => c.headerName === "")!
-        .cellRenderer as React.ComponentType<any>;
+        .cellRenderer as React.ComponentType<StatusCellRendererProps>;
     };
 
     it("calls onDelete when Delete menu item is clicked for a ready KB", async () => {
