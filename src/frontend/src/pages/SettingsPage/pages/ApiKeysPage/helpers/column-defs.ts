@@ -1,6 +1,7 @@
 import type { ColDef } from "ag-grid-community";
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
 import { IpRestrictionCell } from "../components/IpRestrictionCell";
+import { PlainTableCell } from "../components/PlainTableCell";
 
 export const getColumnDefs = (options?: { hideIpRestriction?: boolean }) => {
   const columns: ColDef[] = [
@@ -10,13 +11,13 @@ export const getColumnDefs = (options?: { hideIpRestriction?: boolean }) => {
       showDisabledCheckboxes: true,
       headerName: "Name",
       field: "name",
-      cellRenderer: TableAutoCellRender,
+      cellRenderer: PlainTableCell,
       flex: 2,
     },
     {
       headerName: "Key",
       field: "api_key",
-      cellRenderer: TableAutoCellRender,
+      cellRenderer: PlainTableCell,
       flex: 1,
     },
     {
