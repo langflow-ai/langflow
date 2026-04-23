@@ -178,19 +178,16 @@ test(
     await textarea.fill(probePrompt);
 
     await page.getByTestId("playground-btn-flow-io").click();
-    await page
-      .getByTestId("input-chat-playground")
-      .last()
-      .fill("Run now.");
+    await page.getByTestId("input-chat-playground").last().fill("Run now.");
     await page.getByTestId("button-send").last().click();
 
     const stopButton = page.getByRole("button", { name: "Stop" });
     await stopButton.waitFor({ state: "visible", timeout: 30000 });
     await stopButton.waitFor({ state: "hidden", timeout: 120000 });
 
-    await expect(
-      page.getByTestId("div-chat-message").first(),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("div-chat-message").first()).toBeVisible({
+      timeout: 10000,
+    });
 
     const reply = (
       (await page.locator(".markdown.prose").last().textContent()) ?? ""
@@ -245,9 +242,9 @@ test(
     await stopButton.waitFor({ state: "visible", timeout: 30000 });
     await stopButton.waitFor({ state: "hidden", timeout: 120000 });
 
-    await expect(
-      page.getByTestId("div-chat-message").first(),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("div-chat-message").first()).toBeVisible({
+      timeout: 10000,
+    });
 
     const reply = (
       (await page.locator(".markdown.prose").last().textContent()) ?? ""
@@ -308,9 +305,9 @@ test(
     await stopButton.waitFor({ state: "visible", timeout: 30000 });
     await stopButton.waitFor({ state: "hidden", timeout: 120000 });
 
-    await expect(
-      page.getByTestId("div-chat-message").first(),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("div-chat-message").first()).toBeVisible({
+      timeout: 10000,
+    });
 
     const reply =
       (await page.locator(".markdown.prose").last().textContent()) ?? "";
