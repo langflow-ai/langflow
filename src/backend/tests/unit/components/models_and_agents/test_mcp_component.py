@@ -733,6 +733,194 @@ class TestMCPComponentConfigPriority:
 
             # Connect should be called with API-provided config as fallback
 
+    # Tests below patch `builtins.__import__` to simulate import failures. This is a
+    # heavyweight approach — the patch intercepts *every* import executed while active,
+    # including unrelated library code pulled in by awaits, mocks, or assertions — but
+    # targeted alternatives (sys.modules / importlib) do not reliably reproduce the
+    # `ModuleNotFoundError` raised from an `import langflow.*` statement inside the
+    # code under test. The `real_import` fallback forwards all non-matching names to
+    # the real import machinery; the `name`-prefix guard in each fake_import is kept
+    # as tight as possible so surrounding test plumbing is not affected.
+
+    @pytest.mark.asyncio
+    async def test_update_tool_list_falls_back_to_value_config_when_langflow_absent(self, component):
+        """Test LFX standalone mode falls back to value config when Langflow is unavailable.
+
+        Regression test: when lfx is run without the full Langflow package installed
+        (e.g., serving a flow via `lfx`), importing `langflow.api.v2.mcp` raises
+        ModuleNotFoundError. The component must gracefully fall back to the server
+        config embedded in the flow JSON (server_config_from_value) rather than failing.
+        """
+        import builtins
+
+        value_config = {
+            "command": "uvx mcp-server-from-value",
+            "args": ["--standalone"],
+        }
+        component.mcp_server = {"name": "standalone_server", "config": value_config}
+        component._user_id = "test_user_123"
+
+        real_import = builtins.__import__
+        langflow_prefixes = ("langflow.api.v2.mcp", "langflow.services.database")
+
+        def fake_import(name, import_globals=None, import_locals=None, fromlist=(), level=0):
+            if any(name == p or name.startswith(p + ".") for p in langflow_prefixes):
+                raise ModuleNotFoundError(name=name)
+            return real_import(name, import_globals, import_locals, fromlist, level)
+
+        with (
+            patch("builtins.__import__", side_effect=fake_import),
+            patch("lfx.components.models_and_agents.mcp_component.update_tools") as mock_update_tools,
+        ):
+            mock_update_tools.return_value = (None, [], {})
+
+            # Must not raise — should fall back to value config
+            _tools, server_info = await component.update_tool_list()
+
+            # update_tools should have been called with the value config as a fallback
+            mock_update_tools.assert_called_once()
+            call_kwargs = mock_update_tools.call_args.kwargs
+            assert call_kwargs["server_name"] == "standalone_server"
+            assert call_kwargs["server_config"]["command"] == "uvx mcp-server-from-value"
+            assert call_kwargs["server_config"]["args"] == ["--standalone"]
+
+            # server_info should echo the resolved value config
+            assert server_info["name"] == "standalone_server"
+            assert server_info["config"]["command"] == "uvx mcp-server-from-value"
+
+    @pytest.mark.asyncio
+    async def test_update_tool_list_surfaces_transitive_import_error_instead_of_falling_back(self, component):
+        """A transitive ModuleNotFoundError inside Langflow must NOT be silently swallowed.
+
+        If a Langflow dependency (e.g. sqlmodel) fails to import while loading
+        langflow.services.database.models.user.crud, that's a real bug in the full
+        Langflow stack — not LFX standalone mode. We must not silently fall back
+        to the flow-embedded config, because the database config is supposed to
+        take precedence when Langflow is available.
+        """
+        import builtins
+
+        component.mcp_server = {
+            "name": "broken_server",
+            "config": {"command": "uvx mcp-server-from-value"},
+        }
+        component._user_id = "test_user_123"
+
+        real_import = builtins.__import__
+
+        transitive_error_msg = "No module named 'sqlmodel'"
+
+        def fake_import(name, import_globals=None, import_locals=None, fromlist=(), level=0):
+            # Simulate a transitive dependency failure: sqlmodel is the missing module,
+            # not a Langflow module. This should NOT be treated as standalone mode.
+            if name.startswith("langflow.services.database"):
+                raise ModuleNotFoundError(transitive_error_msg, name="sqlmodel")
+            return real_import(name, import_globals, import_locals, fromlist, level)
+
+        with (
+            patch("builtins.__import__", side_effect=fake_import),
+            patch("lfx.components.models_and_agents.mcp_component.update_tools") as mock_update_tools,
+        ):
+            mock_update_tools.return_value = (None, [], {})
+
+            # The transitive ImportError must surface (wrapped as ValueError by the
+            # outer handler in update_tool_list); update_tools must NOT be called.
+            with pytest.raises(ValueError, match="Error updating tool list") as exc_info:
+                await component.update_tool_list()
+
+            # The original ModuleNotFoundError for sqlmodel should be preserved as __cause__
+            assert isinstance(exc_info.value.__cause__, ModuleNotFoundError)
+            assert exc_info.value.__cause__.name == "sqlmodel"
+
+            mock_update_tools.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_update_tool_list_surfaces_plain_import_error_instead_of_falling_back(self, component):
+        """A plain ImportError (attribute missing, not module missing) must surface.
+
+        Regression test for the intentional `except ModuleNotFoundError` narrowing: if
+        an installed Langflow no longer exposes `get_server` or `get_user_by_id` (real
+        API break), the resulting ImportError — which is NOT a ModuleNotFoundError —
+        must NOT be swallowed as standalone mode. It must propagate to the outer
+        handler and surface as a `ValueError("Error updating tool list: ...")`.
+        """
+        import builtins
+
+        component.mcp_server = {
+            "name": "broken_server",
+            "config": {"command": "uvx mcp-server-from-value"},
+        }
+        component._user_id = "test_user_123"
+
+        real_import = builtins.__import__
+
+        def fake_import(name, import_globals=None, import_locals=None, fromlist=(), level=0):
+            # The module imports fine, but a specific attribute is missing — this
+            # raises plain ImportError (not ModuleNotFoundError) at the `from ... import`
+            # line. Emulate that by raising ImportError when this module is requested
+            # with a fromlist, just as `from langflow.api.v2.mcp import get_server` would.
+            if name == "langflow.api.v2.mcp" and fromlist and "get_server" in fromlist:
+                msg = "cannot import name 'get_server' from 'langflow.api.v2.mcp'"
+                raise ImportError(msg, name="langflow.api.v2.mcp")
+            return real_import(name, import_globals, import_locals, fromlist, level)
+
+        with (
+            patch("builtins.__import__", side_effect=fake_import),
+            patch("lfx.components.models_and_agents.mcp_component.update_tools") as mock_update_tools,
+        ):
+            mock_update_tools.return_value = (None, [], {})
+
+            with pytest.raises(ValueError, match="Error updating tool list") as exc_info:
+                await component.update_tool_list()
+
+            # The original ImportError should be preserved as __cause__ — it must not
+            # have been silently converted into a fallback path.
+            assert isinstance(exc_info.value.__cause__, ImportError)
+            assert not isinstance(exc_info.value.__cause__, ModuleNotFoundError)
+
+            mock_update_tools.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_update_tool_list_surfaces_lfx_services_deps_missing(self, component):
+        """A ModuleNotFoundError for an lfx module (not langflow.*) must surface.
+
+        Edge-case regression test: if `lfx.services.deps` itself is missing (a
+        packaging error inside lfx), the prefix check `missing_module == "langflow"
+        or missing_module.startswith("langflow.")` correctly returns False and the
+        error is re-raised. Locks in the intended precedence rule so a future rewrite
+        of the prefix check cannot silently convert this into a standalone fallback.
+        """
+        import builtins
+
+        component.mcp_server = {
+            "name": "broken_server",
+            "config": {"command": "uvx mcp-server-from-value"},
+        }
+        component._user_id = "test_user_123"
+
+        real_import = builtins.__import__
+
+        deps_missing_msg = "No module named 'lfx.services.deps'"
+
+        def fake_import(name, import_globals=None, import_locals=None, fromlist=(), level=0):
+            if name == "lfx.services.deps" or name.startswith("lfx.services.deps."):
+                raise ModuleNotFoundError(deps_missing_msg, name="lfx.services.deps")
+            return real_import(name, import_globals, import_locals, fromlist, level)
+
+        with (
+            patch("builtins.__import__", side_effect=fake_import),
+            patch("lfx.components.models_and_agents.mcp_component.update_tools") as mock_update_tools,
+        ):
+            mock_update_tools.return_value = (None, [], {})
+
+            with pytest.raises(ValueError, match="Error updating tool list") as exc_info:
+                await component.update_tool_list()
+
+            assert isinstance(exc_info.value.__cause__, ModuleNotFoundError)
+            assert exc_info.value.__cause__.name == "lfx.services.deps"
+
+            mock_update_tools.assert_not_called()
+
 
 # ============================================================================
 # Tests for resolve_mcp_config pure function
