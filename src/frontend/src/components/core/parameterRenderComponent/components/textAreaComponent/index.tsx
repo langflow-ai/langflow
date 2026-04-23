@@ -85,13 +85,14 @@ export default function TextAreaComponent({
     [handleOnNewValue],
   );
 
-  const { displayValue, inputProps } = useIMEInput<HTMLInputElement>({
-    value: value ?? "",
-    onCommit: commitValue,
-    inputRef,
-    cursor,
-    setCursor,
-  });
+  const { displayValue, inputProps, flushPendingComposition } =
+    useIMEInput<HTMLInputElement>({
+      value: value ?? "",
+      onCommit: commitValue,
+      inputRef,
+      cursor,
+      setCursor,
+    });
 
   const isWebhook = useMemo(
     () => nodeInformationMetadata?.nodeType === "webhook",
@@ -197,10 +198,13 @@ export default function TextAreaComponent({
     <div className={cn("w-full", disabled && "pointer-events-none")}>
       <Input
         onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
         id={id}
         data-testid={id}
         {...inputProps}
+        onBlur={() => {
+          flushPendingComposition();
+          setIsFocused(false);
+        }}
         value={disabled ? "" : displayValue}
         disabled={disabled}
         className={getInputClassName()}

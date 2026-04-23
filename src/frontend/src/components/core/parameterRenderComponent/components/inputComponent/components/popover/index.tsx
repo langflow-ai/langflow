@@ -1,7 +1,6 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { X } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
-import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +17,7 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
+import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
 
 const OptionBadge = ({
   option,
@@ -195,12 +195,15 @@ const CustomInputPopover = ({
   const PopoverContentInput =
     editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
-  const { displayValue, inputProps: imeInputProps } =
-    useIMEInputForOnChange<HTMLInputElement>({
-      value,
-      onChange,
-      inputRef: refInput,
-    });
+  const {
+    displayValue,
+    inputProps: imeInputProps,
+    flushPendingComposition,
+  } = useIMEInputForOnChange<HTMLInputElement>({
+    value,
+    onChange,
+    inputRef: refInput,
+  });
 
   const handleRemoveOption = (
     optionToRemove: string,
@@ -293,11 +296,12 @@ const CustomInputPopover = ({
               id={id}
               ref={refInput}
               type={!pwdVisible && password ? "password" : "text"}
+              {...imeInputProps}
               onBlur={() => {
+                flushPendingComposition();
                 onInputLostFocus?.();
                 setIsFocused(false);
               }}
-              {...imeInputProps}
               value={disabled ? "" : displayValue}
               disabled={disabled}
               required={required}

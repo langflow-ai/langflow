@@ -33,7 +33,7 @@ export const CursorInput = forwardRef<HTMLInputElement, CursorInputProps>(
   ) => {
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const { displayValue, inputProps } =
+    const { displayValue, inputProps, flushPendingComposition } =
       useIMEInputForOnChange<HTMLInputElement>({
         value,
         onChange,
@@ -41,6 +41,7 @@ export const CursorInput = forwardRef<HTMLInputElement, CursorInputProps>(
       });
 
     const handleInputBlur = () => {
+      flushPendingComposition();
       onBlur?.();
     };
 

@@ -66,14 +66,22 @@ function FormInputBranch({
     [onChange, onChangeFolderName, refInput],
   );
 
-  const { displayValue, inputProps: imeInputProps } =
-    useIMEInput<HTMLInputElement>({
-      value: value ?? "",
-      onCommit: commitValue,
-      inputRef: refInput,
-      cursor,
-      setCursor,
-    });
+  const {
+    displayValue,
+    inputProps: imeInputProps,
+    flushPendingComposition,
+  } = useIMEInput<HTMLInputElement>({
+    value: value ?? "",
+    onCommit: commitValue,
+    inputRef: refInput,
+    cursor,
+    setCursor,
+  });
+
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    flushPendingComposition();
+    onInputLostFocus(event);
+  };
 
   return (
     <Form.Control asChild>
@@ -81,10 +89,10 @@ function FormInputBranch({
         name={name}
         id={"form-" + id}
         ref={refInput}
-        onBlur={onInputLostFocus}
         autoFocus={autoFocus}
         type={password && !pwdVisible ? "password" : "text"}
         {...imeInputProps}
+        onBlur={handleBlur}
         value={displayValue}
         disabled={disabled}
         required={required}

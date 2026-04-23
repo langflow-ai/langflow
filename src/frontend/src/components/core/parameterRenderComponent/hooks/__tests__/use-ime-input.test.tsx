@@ -1,6 +1,10 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useRef, useState } from "react";
-import { normalizeNFC, useIMEInput } from "../use-ime-input";
+import {
+  normalizeNFC,
+  useIMEInput,
+  useIMEInputForOnChange,
+} from "../use-ime-input";
 
 interface HarnessProps {
   value: string | null | undefined;
@@ -20,6 +24,29 @@ const Harness = ({ value, onCommit, initialCursor = null }: HarnessProps) => {
   });
 
   return <input data-testid="ime-input" ref={inputRef} {...inputProps} />;
+};
+
+const BlurHarness = ({ value, onCommit }: HarnessProps) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [cursor, setCursor] = useState<number | null>(null);
+  const { inputProps, flushPendingComposition } = useIMEInput<HTMLInputElement>(
+    {
+      value,
+      onCommit,
+      inputRef,
+      cursor,
+      setCursor,
+    },
+  );
+
+  return (
+    <input
+      data-testid="ime-input"
+      ref={inputRef}
+      {...inputProps}
+      onBlur={() => flushPendingComposition()}
+    />
+  );
 };
 
 describe("useIMEInput", () => {
@@ -189,6 +216,208 @@ describe("useIMEInput", () => {
     rerender(<Harness value="also-stale" onCommit={onCommit} />);
 
     expect(onCommit).not.toHaveBeenCalled();
+  });
+});
+
+describe("useIMEInput flushPendingComposition", () => {
+  it("commits NFC-normalized value on blur-mid-composition", () => {
+    const onCommit = jest.fn();
+    render(<BlurHarness value="" onCommit={onCommit} />);
+    const input = screen.getByTestId("ime-input") as HTMLInputElement;
+
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: "´" } });
+    // Decomposed composed buffer still sitting in the DOM at blur time.
+    input.value = "á";
+    fireEvent.blur(input);
+
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(onCommit).toHaveBeenCalledWith("á");
+  });
+
+  it("resets composing state so later plain typing commits normally", () => {
+    const onCommit = jest.fn();
+    render(<BlurHarness value="" onCommit={onCommit} />);
+    const input = screen.getByTestId("ime-input") as HTMLInputElement;
+
+    fireEvent.compositionStart(input);
+    input.value = "é";
+    fireEvent.blur(input);
+    expect(onCommit).toHaveBeenCalledTimes(1);
+
+    // Focus returns, plain keystrokes must now commit — not get stuck.
+    fireEvent.change(input, { target: { value: "éx" } });
+    expect(onCommit).toHaveBeenCalledTimes(2);
+    expect(onCommit).toHaveBeenNthCalledWith(2, "éx");
+  });
+
+  it("is a no-op when not composing", () => {
+    const onCommit = jest.fn();
+    render(<BlurHarness value="hello" onCommit={onCommit} />);
+    const input = screen.getByTestId("ime-input") as HTMLInputElement;
+
+    fireEvent.blur(input);
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it("does not double-commit when compositionend precedes blur", () => {
+    const onCommit = jest.fn();
+    render(<BlurHarness value="" onCommit={onCommit} />);
+    const input = screen.getByTestId("ime-input") as HTMLInputElement;
+
+    fireEvent.compositionStart(input);
+    input.value = "á";
+    fireEvent.compositionEnd(input, { data: "á" });
+    fireEvent.blur(input);
+
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(onCommit).toHaveBeenCalledWith("á");
+  });
+
+  it("skips phantom commit when orphan blur leaves value unchanged from compositionStart", () => {
+    const onCommit = jest.fn();
+    render(<BlurHarness value="abc" onCommit={onCommit} />);
+    const input = screen.getByTestId("ime-input") as HTMLInputElement;
+
+    // Dead-key only: user pressed Option+E then immediately blurred. No
+    // composition progress committed to element.value.
+    input.value = "abc";
+    fireEvent.compositionStart(input);
+    fireEvent.blur(input);
+
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+});
+
+describe("useIMEInput unmount cleanup", () => {
+  it("commits buffered composition value when input unmounts mid-composition", () => {
+    const onCommit = jest.fn();
+    const { unmount } = render(<Harness value="" onCommit={onCommit} />);
+    const input = screen.getByTestId("ime-input") as HTMLInputElement;
+
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: "é" } });
+    expect(onCommit).not.toHaveBeenCalled();
+
+    // Popover closes / modal dismisses — element gone before compositionend.
+    unmount();
+
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(onCommit).toHaveBeenCalledWith("é");
+  });
+
+  it("does not commit on unmount when not composing", () => {
+    const onCommit = jest.fn();
+    const { unmount } = render(<Harness value="hello" onCommit={onCommit} />);
+
+    unmount();
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it("does not commit on unmount when composition made no progress", () => {
+    const onCommit = jest.fn();
+    const { unmount } = render(<Harness value="abc" onCommit={onCommit} />);
+    const input = screen.getByTestId("ime-input") as HTMLInputElement;
+
+    input.value = "abc";
+    fireEvent.compositionStart(input);
+    unmount();
+
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+});
+
+interface CancelHarnessProps extends HarnessProps {
+  cancel?: boolean;
+}
+
+const CancelHarness = ({
+  value,
+  onCommit,
+  cancel = false,
+}: CancelHarnessProps) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [cursor, setCursor] = useState<number | null>(null);
+  const { inputProps, cancelComposition } = useIMEInput<HTMLInputElement>({
+    value,
+    onCommit,
+    inputRef,
+    cursor,
+    setCursor,
+  });
+  if (cancel) cancelComposition();
+  return <input data-testid="ime-input" ref={inputRef} {...inputProps} />;
+};
+
+describe("useIMEInput cancelComposition", () => {
+  it("clears composing flag without committing", () => {
+    const onCommit = jest.fn();
+    const { rerender } = render(<CancelHarness value="" onCommit={onCommit} />);
+    const input = screen.getByTestId("ime-input") as HTMLInputElement;
+
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: "é" } });
+    expect(onCommit).not.toHaveBeenCalled();
+
+    // Caller invokes cancelComposition (e.g. selection-mode toggle).
+    rerender(<CancelHarness value="" onCommit={onCommit} cancel />);
+
+    // Plain typing after cancel must commit normally.
+    fireEvent.change(input, { target: { value: "hi" } });
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(onCommit).toHaveBeenCalledWith("hi");
+  });
+});
+
+describe("useIMEInputForOnChange", () => {
+  it("keeps stable cancelComposition identity across onChange prop churn", () => {
+    const cancelIdentities: unknown[] = [];
+    const Capture = ({ counter }: { counter: number }) => {
+      const inputRef = useRef<HTMLInputElement>(null);
+      // Fresh onChange every render — would normally churn commitValue and
+      // every callback derived from it.
+      const onChange = (next: string) => void next;
+      const { inputProps, cancelComposition } =
+        useIMEInputForOnChange<HTMLInputElement>({
+          value: String(counter),
+          onChange,
+          inputRef,
+        });
+      cancelIdentities.push(cancelComposition);
+      return <input data-testid="ime-input" ref={inputRef} {...inputProps} />;
+    };
+
+    const { rerender } = render(<Capture counter={0} />);
+    rerender(<Capture counter={1} />);
+    rerender(<Capture counter={2} />);
+
+    // All renders must see the same cancelComposition reference. If churn
+    // returns, popoverObject's useEffect would re-fire on every parent render
+    // and reset composition state under the user's fingers.
+    expect(new Set(cancelIdentities).size).toBe(1);
+  });
+
+  it("uses the latest onChange via the internal ref", () => {
+    const first = jest.fn();
+    const second = jest.fn();
+    const Capture = ({ onChange }: { onChange: (v: string) => void }) => {
+      const inputRef = useRef<HTMLInputElement>(null);
+      const { inputProps } = useIMEInputForOnChange<HTMLInputElement>({
+        value: "",
+        onChange,
+        inputRef,
+      });
+      return <input data-testid="ime-input" ref={inputRef} {...inputProps} />;
+    };
+
+    const { rerender } = render(<Capture onChange={first} />);
+    rerender(<Capture onChange={second} />);
+    const input = screen.getByTestId("ime-input") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "x" } });
+
+    // Latest onChange wins even though commitValue identity is frozen.
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledWith("x");
   });
 });
 

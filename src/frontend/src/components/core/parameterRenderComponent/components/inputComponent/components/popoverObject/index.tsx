@@ -1,4 +1,5 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
+import { useEffect } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Command,
@@ -45,18 +46,30 @@ const CustomInputPopoverObject = ({
   const PopoverContentInput =
     editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
-  const { displayValue, inputProps: imeInputProps } =
-    useIMEInputForOnChange<HTMLInputElement>({
-      value,
-      onChange,
-      inputRef: refInput,
-    });
+  const {
+    displayValue,
+    inputProps: imeInputProps,
+    flushPendingComposition,
+    cancelComposition,
+  } = useIMEInputForOnChange<HTMLInputElement>({
+    value,
+    onChange,
+    inputRef: refInput,
+  });
 
   const isSingleSelectionMode =
     (selectedOption !== "" || !onChange) && setSelectedOption;
   const isMultiSelectionMode =
     (selectedOptions?.length !== 0 || !onChange) && setSelectedOptions;
   const isSelectionMode = isSingleSelectionMode || isMultiSelectionMode;
+
+  // Selection-mode renders the input as readOnly with imeInputProps skipped.
+  // If we toggled into selection-mode mid-composition, the IME handlers are
+  // gone and `compositionend` will never reset the stuck flag — clear it now
+  // so a later text-mode swap doesn't drop plain keystrokes.
+  useEffect(() => {
+    if (isSelectionMode) cancelComposition();
+  }, [isSelectionMode, cancelComposition]);
 
   const selectionDisplay = isSingleSelectionMode
     ? options?.find((option) => option.id === selectedOption)?.name || ""
@@ -76,8 +89,11 @@ const CustomInputPopoverObject = ({
           id={id}
           ref={refInput}
           type="text"
-          onBlur={onInputLostFocus}
           {...(isSelectionMode ? {} : imeInputProps)}
+          onBlur={(event) => {
+            if (!isSelectionMode) flushPendingComposition();
+            onInputLostFocus?.(event);
+          }}
           readOnly={Boolean(isSelectionMode) || undefined}
           value={isSelectionMode ? selectionDisplay : displayValue}
           autoFocus={autoFocus}
