@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import sys
 from copy import deepcopy
 from typing import TYPE_CHECKING
 
@@ -189,9 +190,25 @@ def _add_commands_to_tool_description(tool_description: str, commands: str):
 
 
 class ComponentToolkit:
-    def __init__(self, component: Component, metadata: pd.DataFrame | None = None):
+    def __init__(self, component: Component, metadata: list[dict] | pd.DataFrame | None = None):
         self.component = component
         self.metadata = metadata
+
+    def _metadata_records(self) -> list[dict]:
+        """Return the tools-metadata as list[dict].
+
+        Accepts either list[dict] (preferred; no pandas needed) or a legacy
+        pd.DataFrame for backward compatibility. Pandas is only imported if the
+        caller actually passed a DataFrame.
+        """
+        if self.metadata is None:
+            return []
+        if isinstance(self.metadata, list):
+            return self.metadata
+        _pd = sys.modules.get("pandas")
+        if _pd is not None and isinstance(self.metadata, _pd.DataFrame):
+            return self.metadata.to_dict(orient="records")
+        return []
 
     def _should_skip_output(self, output: Output) -> bool:
         """Determines if an output should be skipped when creating tools.
@@ -319,28 +336,21 @@ class ComponentToolkit:
         return tools
 
     def get_tools_metadata_dictionary(self) -> dict:
-        import pandas as pd
-
-        if isinstance(self.metadata, pd.DataFrame):
-            try:
-                return {
-                    record["tags"][0]: record
-                    for record in self.metadata.to_dict(orient="records")
-                    if record.get("tags")
-                }
-            except (KeyError, IndexError) as e:
-                msg = "Error processing metadata records: " + str(e)
-                raise ValueError(msg) from e
-        return {}
+        records = self._metadata_records()
+        if not records:
+            return {}
+        try:
+            return {record["tags"][0]: record for record in records if record.get("tags")}
+        except (KeyError, IndexError) as e:
+            msg = "Error processing metadata records: " + str(e)
+            raise ValueError(msg) from e
 
     def update_tools_metadata(
         self,
         tools: list[BaseTool | StructuredTool],
     ) -> list[BaseTool]:
         # update the tool_name and description according to the name and secriotion mentioned in the list
-        import pandas as pd
-
-        if isinstance(self.metadata, pd.DataFrame):
+        if self._metadata_records():
             metadata_dict = self.get_tools_metadata_dictionary()
             filtered_tools = []
             for tool in tools:

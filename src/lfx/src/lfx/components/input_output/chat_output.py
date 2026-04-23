@@ -1,3 +1,4 @@
+import sys
 from collections.abc import Generator
 from typing import Any
 
@@ -8,7 +9,6 @@ from lfx.base.io.chat import ChatComponent
 from lfx.helpers.data import safe_convert
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput
 from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.schema.properties import Source
 from lfx.template.field.base import Output
@@ -17,6 +17,16 @@ from lfx.utils.constants import (
     MESSAGE_SENDER_NAME_AI,
     MESSAGE_SENDER_USER,
 )
+
+
+def _is_dataframe(x) -> bool:
+    """Return True if x is a pandas-backed DataFrame, without loading pandas.
+
+    lfx.schema.dataframe.DataFrame subclasses pandas.DataFrame — an instance
+    therefore implies pandas is already imported somewhere in the process.
+    """
+    _pd = sys.modules.get("pandas")
+    return _pd is not None and isinstance(x, _pd.DataFrame)
 
 
 class ChatOutput(ChatComponent):
@@ -173,18 +183,18 @@ class ChatOutput(ChatComponent):
             msg = "Input data cannot be None"
             raise ValueError(msg)
         if isinstance(self.input_value, list) and not all(
-            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value
+            isinstance(item, Message | Data | str) or _is_dataframe(item) for item in self.input_value
         ):
             invalid_types = [
                 type(item).__name__
                 for item in self.input_value
-                if not isinstance(item, Message | Data | DataFrame | str)
+                if not (isinstance(item, Message | Data | str) or _is_dataframe(item))
             ]
             msg = f"Expected Data or DataFrame or Message or str, got {invalid_types}"
             raise TypeError(msg)
-        if not isinstance(
-            self.input_value,
-            Message | Data | DataFrame | str | list | Generator | type(None),
+        if not (
+            isinstance(self.input_value, Message | Data | str | list | Generator | type(None))
+            or _is_dataframe(self.input_value)
         ):
             type_name = type(self.input_value).__name__
             msg = f"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}"

@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
+import sys
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
@@ -1330,8 +1331,6 @@ class Component(CustomComponent):
 
     def extract_data(self, result):
         """Extract the data from the result. this is where the self.status is set."""
-        import pandas as pd
-
         if isinstance(result, Message):
             self.status = result.get_text()
             return (
@@ -1340,7 +1339,10 @@ class Component(CustomComponent):
         # IMPORTANT: keep this before the generic `hasattr(result, "data")` branch.
         # pandas objects expose a `.data` attribute, but for DataFrame/Series we must
         # preserve the object rather than returning its underlying array/manager.
-        if isinstance(result, pd.DataFrame | pd.Series):
+        # Lazy pandas: only run the check if pandas is already loaded elsewhere in
+        # the process. A result that is a DataFrame/Series couldn't exist without it.
+        _pd = sys.modules.get("pandas")
+        if _pd is not None and isinstance(result, _pd.DataFrame | _pd.Series):
             return result
         if hasattr(result, "data"):
             return result.data
@@ -1456,22 +1458,30 @@ class Component(CustomComponent):
         # Use set comparison for O(n) average case complexity, earlier the old_tags.sort() != new_tags.sort() was used
         return set(old_tags) != set(new_tags)
 
-    def _filter_tools_by_status(self, tools: list[Tool], metadata: pd.DataFrame | None) -> list[Tool]:
+    def _filter_tools_by_status(self, tools: list[Tool], metadata: list[dict] | pd.DataFrame | None) -> list[Tool]:
         """Filter tools based on their status in metadata.
 
         Args:
             tools (list[Tool]): List of tools to filter.
-            metadata (list[dict] | None): Tools metadata containing status information.
+            metadata: Tools metadata containing status information. Accepts
+                either list[dict] (preferred — no pandas needed) or a legacy
+                pd.DataFrame.
 
         Returns:
             list[Tool]: Filtered list of tools.
         """
-        import pandas as pd
-
-        # Convert metadata to a list of dicts if it's a DataFrame
-        metadata_dict = None  # Initialize as None to avoid lint issues with empty dict
-        if isinstance(metadata, pd.DataFrame):
-            metadata_dict = metadata.to_dict(orient="records")
+        # Normalize metadata to list[dict]. Lazy pandas: only import pandas if
+        # the caller actually handed us a DataFrame.
+        if metadata is None:
+            metadata_dict = None
+        elif isinstance(metadata, list):
+            metadata_dict = metadata
+        else:
+            _pd = sys.modules.get("pandas")
+            if _pd is not None and isinstance(metadata, _pd.DataFrame):
+                metadata_dict = metadata.to_dict(orient="records")
+            else:
+                metadata_dict = None
 
         # If metadata is None or empty, use enabled_tools
         if not metadata_dict:
@@ -1483,10 +1493,6 @@ class Component(CustomComponent):
                     tool for tool in tools if any(enabled_name in [tool.name, *tool.tags] for enabled_name in enabled)
                 ]
             )
-
-        # Ensure metadata is a list of dicts
-        if not isinstance(metadata_dict, list):
-            return tools
 
         # Create a mapping of tool names to their status
         tool_status = {item["name"]: item.get("status", True) for item in metadata_dict}

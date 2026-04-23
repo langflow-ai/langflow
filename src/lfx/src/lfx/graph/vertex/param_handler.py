@@ -348,9 +348,21 @@ class ParameterHandler:
                         params[field_name] = val
                     case str():
                         params[field_name] = bool(val)
-            case "table" | "tools":
+            case "table":
                 if isinstance(val, list) and all(isinstance(item, dict) for item in val):
+                    import pandas as pd
+
                     params[field_name] = pd.DataFrame(val)
+                else:
+                    msg = f"Invalid value type {type(val)} for field {field_name}"
+                    raise ValueError(msg)
+            case "tools":
+                # Pass tools metadata through as list[dict] to avoid importing
+                # pandas on every flow build. Downstream consumers
+                # (ComponentToolkit, Component._filter_tools_by_status) accept
+                # either list[dict] or pd.DataFrame.
+                if isinstance(val, list) and all(isinstance(item, dict) for item in val):
+                    params[field_name] = val
                 else:
                     msg = f"Invalid value type {type(val)} for field {field_name}"
                     raise ValueError(msg)
