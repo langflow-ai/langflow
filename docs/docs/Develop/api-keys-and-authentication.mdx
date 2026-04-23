@@ -118,6 +118,126 @@ By default, Langflow tracks API key usage through `total_uses` and `last_used_at
 To disable API key tracking, set `LANGFLOW_DISABLE_TRACK_APIKEY_USAGE=True` in your [Langflow environment variables](/environment-variables).
 This can help avoid database contention during periods of high concurrency.
 
+### Restrict API keys by IP address {#ip-restriction}
+
+You can restrict which IP addresses are permitted to authenticate with a Langflow API key.
+When an IP restriction is set, requests from any IP address that doesn't match the allow-list receive a `403 Forbidden` response, even if the API key itself is valid.
+
+There are two levels of IP restriction:
+
+* **Per-key restriction:** Each API key in the database can have its own allow-list. This is useful when different clients or systems should be restricted to specific IPs.
+* **Global env-level restriction:** A single allow-list enforced for all API-key requests across the entire deployment. This is the only option when using [`LANGFLOW_API_KEY_SOURCE=env`](#langflow-api-key-source) because env-sourced keys don't have a database record. When the global restriction is active, per-key restrictions are ignored.
+
+#### IP pattern syntax
+
+Both levels use the same pattern syntax: a semicolon-separated list of entries. Each entry can be:
+
+| Pattern | Matches |
+|---------|---------|
+| `203.0.113.5` | Exactly `203.0.113.5` (literal IPv4) |
+| `2001:db8::1` | Exactly `2001:db8::1` (literal IPv6) |
+| `10.0.0.0/8` | Any address in the IPv4 CIDR block |
+| `2001:db8::/32` | Any address in the IPv6 CIDR block |
+| `10.0.%.%` | IPv4 wildcard: any address in `10.0.0.0/16` |
+| `192.168.1.%` | IPv4 wildcard: any address in `192.168.1.0/24` |
+| `203.0.113.5;10.0.0.0/8;2001:db8::/32` | Any of the above |
+
+An empty or unset allow-list means no restriction — all IPs are allowed. IPv4-mapped IPv6 addresses (`::ffff:1.2.3.4`) match IPv4 patterns transparently. Malformed patterns are rejected when you save the key or start the server; they never silently weaken the restriction.
+
+#### Set a per-key IP restriction
+
+1. In the Langflow header, click your profile icon, and then select **Settings**.
+2. Click **Langflow API Keys**.
+3. In the **IP Restriction** column, click the edit icon next to the key you want to restrict.
+4. Enter one or more IP patterns separated by semicolons, for example `203.0.113.5;10.0.%.%`.
+5. Click **Save**.
+
+You can also set an IP restriction when creating a new key.
+The optional **IP Restriction** field appears in the **Create API Key** dialog below the key name field.
+
+#### Set a global IP restriction {#langflow-api-ip-restriction}
+
+To restrict all API-key requests to a specific set of IPs, set the `LANGFLOW_API_IP_RESTRICTION` environment variable in your `.env` file:
+
+```text
+LANGFLOW_API_IP_RESTRICTION=203.0.113.5;10.0.%.%
+```
+
+When this variable is set:
+* All API-key requests must originate from a matching IP. Per-key `allowed_ips` settings are ignored.
+* The **Langflow API Keys** page displays a warning banner and hides the per-key **IP Restriction** column, because the column has no effect.
+* The global restriction also applies when `LANGFLOW_API_KEY_SOURCE=env`.
+
+:::warning
+Setting `LANGFLOW_API_IP_RESTRICTION` to an incorrect or overly narrow pattern will lock out all API access until the variable is corrected and the server is restarted.
+Test your patterns before deploying to production.
+:::
+
+#### Use with a reverse proxy {#langflow-trust-proxy-headers}
+
+When Langflow is deployed behind a reverse proxy (Nginx, Apache, AWS ALB, K8s ingress, or similar), the direct TCP connection comes from the proxy, not the original client. Langflow needs to know the real client IP to enforce IP restrictions.
+
+`LANGFLOW_TRUST_PROXY_HEADERS` controls how `X-Forwarded-For` and `X-Real-IP` are read:
+
+| Value | Behavior |
+|-------|----------|
+| `auto` (default) | Trust proxy headers only when the direct TCP peer is a loopback / RFC1918 / ULA address (i.e. a local proxy). Safe for both directly-exposed and proxied deployments. |
+| `always` | Always trust proxy headers. Only use when every path to Langflow goes through a header-sanitizing proxy. |
+| `never` | Ignore proxy headers and always use the TCP peer address. |
+
+In the default `auto` mode, no configuration is needed for the common case of a reverse proxy on the same host or private network. Directly-exposed deployments stay safe because headers are ignored when the peer is a public client.
+
+When headers are trusted, Langflow reads the `LANGFLOW_TRUSTED_PROXY_HOPS`-th entry from the right of `X-Forwarded-For` (default `1`). Taking the rightmost entry is what makes this resistant to spoofing — that is the value *appended* by the last trusted proxy from its own view of the TCP peer, so a client cannot forge it.
+
+```text
+# Single proxy (default)
+LANGFLOW_TRUST_PROXY_HEADERS=auto
+LANGFLOW_TRUSTED_PROXY_HOPS=1
+
+# Two proxies (e.g. CDN -> ingress -> Langflow)
+LANGFLOW_TRUSTED_PROXY_HOPS=2
+```
+
+Configure your proxy to forward the client IP:
+
+<Tabs>
+<TabItem value="nginx" label="Nginx" default>
+
+```nginx
+location / {
+    proxy_pass http://langflow:7860;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Real-IP       $remote_addr;
+}
+```
+
+</TabItem>
+<TabItem value="apache" label="Apache">
+
+```apache
+# Enable mod_remoteip or set the header manually:
+RequestHeader set X-Real-IP "%{REMOTE_ADDR}e"
+```
+
+</TabItem>
+<TabItem value="docker-compose" label="Docker Compose">
+
+```yaml
+services:
+  langflow:
+    image: langflowai/langflow:latest
+    environment:
+      - LANGFLOW_API_IP_RESTRICTION=10.0.0.0/8
+      # LANGFLOW_TRUST_PROXY_HEADERS=auto is the default and needs no change.
+```
+
+</TabItem>
+</Tabs>
+
+:::danger
+Do not use `LANGFLOW_TRUST_PROXY_HEADERS=always` on an instance that is directly reachable from untrusted networks. In that mode a client can set `X-Forwarded-For` to any value and bypass IP restrictions. The default `auto` setting is safe for both directly-exposed and proxied deployments.
+:::
+
 ### Revoke an API key
 
 To revoke and delete an API key, do the following:
@@ -472,6 +592,28 @@ By default, webhooks run as the flow owner without authentication with `LANGFLOW
 To require API key authentication for webhooks, in your Langflow `.env` file, set `LANGFLOW_WEBHOOK_AUTH_ENABLE=True`.
 
 When webhook authentication is enabled, you must provide a Langflow API key with each webhook request as an HTTP header or query parameter. For more information, see [Require authentication for webhooks](/webhook#require-authentication-for-webhooks).
+
+### LANGFLOW_API_IP_RESTRICTION {#langflow-api-ip-restriction-env}
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_API_IP_RESTRICTION` | String | Not set | Global IP allow-list for all API-key authenticated requests. Semicolon-separated entries: literal IPv4/IPv6 addresses, CIDR networks (`10.0.0.0/8`, `2001:db8::/32`), or IPv4 wildcards with `%` (`10.0.%.%`). When set, per-key IP restrictions are ignored. Invalid patterns cause Langflow to fail to start. Example: `203.0.113.5;10.0.0.0/8;2001:db8::/32`. |
+
+For full details, including syntax and proxy configuration, see [Restrict API keys by IP address](#ip-restriction).
+
+### LANGFLOW_TRUST_PROXY_HEADERS {#langflow-trust-proxy-headers-env}
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_TRUST_PROXY_HEADERS` | `auto` \| `always` \| `never` | `auto` | How `X-Forwarded-For` and `X-Real-IP` are used to determine the client IP for IP restriction checks. `auto` trusts the headers only when the direct TCP peer is a loopback / RFC1918 / ULA address; this is safe for both directly-exposed and standard reverse-proxy deployments. `always` trusts them unconditionally (use only behind a header-sanitizing proxy). `never` ignores them and always uses the TCP peer. When headers are trusted, the IP is taken as the `LANGFLOW_TRUSTED_PROXY_HOPS`-th entry from the right of `X-Forwarded-For`, which prevents client-side spoofing. |
+
+### LANGFLOW_TRUSTED_PROXY_HOPS {#langflow-trusted-proxy-hops-env}
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_TRUSTED_PROXY_HOPS` | Integer (≥ 1) | `1` | Number of trusted reverse proxies in front of Langflow. Used when parsing `X-Forwarded-For`: the real client IP is read as the Nth entry from the right, matching the IP appended by the last trusted hop. Set to the actual length of your proxy chain. |
+
+For proxy configuration examples, see [Use with a reverse proxy](#langflow-trust-proxy-headers).
 
 ## Start a Langflow server with authentication enabled
 

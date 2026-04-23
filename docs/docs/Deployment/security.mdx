@@ -55,6 +55,32 @@ For shared services, such as databases, enforce access limitations externally th
 
 For more information, see [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
 
+## API key IP restrictions
+
+Langflow supports IP-based access control for API key authentication.
+You can restrict which IP addresses are permitted to use a given API key, providing an additional network-level firewall on top of key-based authentication.
+
+There are two levels:
+
+* **Per-key allow-list:** Set directly on each key in **Settings > Langflow API Keys** using the **IP Restriction** column. Accepts semicolon-separated entries. Each entry can be a literal IPv4/IPv6 address (`203.0.113.5`, `2001:db8::1`), a CIDR network (`10.0.0.0/8`, `2001:db8::/32`), or an IPv4 wildcard with `%` for any octet (`10.0.%.%`). Invalid patterns are rejected on save.
+* **Global allow-list (`LANGFLOW_API_IP_RESTRICTION`):** A single environment variable that applies to every API-key request across the entire deployment. When set, per-key restrictions are ignored. This is the only available option when `LANGFLOW_API_KEY_SOURCE=env`. Invalid patterns cause Langflow to fail to start, so misconfiguration cannot silently weaken security.
+
+### Extracting the real client IP
+
+`LANGFLOW_TRUST_PROXY_HEADERS` controls how `X-Forwarded-For` and `X-Real-IP` are used:
+
+* `auto` (default) - trust the headers only when the direct TCP peer is a loopback / RFC1918 / ULA address. Safe for both directly-exposed and standard reverse-proxy deployments (Nginx, Apache, K8s ingress, load balancers on a private network).
+* `always` - trust the headers unconditionally. Use only when every network path to Langflow passes through a header-sanitizing proxy.
+* `never` - ignore the headers and always use the TCP peer.
+
+When headers are trusted, Langflow reads the `LANGFLOW_TRUSTED_PROXY_HOPS`-th entry from the right of `X-Forwarded-For` (default: `1`, i.e. the value appended by the last trusted proxy). Increase this when multiple proxies sit in front of Langflow.
+
+:::danger
+Do not use `LANGFLOW_TRUST_PROXY_HEADERS=always` on an instance that is directly reachable from untrusted networks. In that mode a client can set `X-Forwarded-For` to any value and bypass IP restrictions. The default `auto` mode is safe for both topologies and should be preferred.
+:::
+
+For full configuration details, see [Restrict API keys by IP address](/api-keys-and-authentication#ip-restriction).
+
 ## Security bulletin
 
 For more information, see the [Langflow Security Policy](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md).

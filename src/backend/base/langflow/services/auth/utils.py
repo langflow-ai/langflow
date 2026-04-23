@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import ipaddress
 import random
 from typing import TYPE_CHECKING, Annotated, Final
 
@@ -15,9 +16,10 @@ from langflow.services.auth.exceptions import (
     AuthenticationError,
     InsufficientPermissionsError,
     InvalidCredentialsError,
+    IpRestrictionError,
     MissingCredentialsError,
 )
-from langflow.services.deps import get_auth_service
+from langflow.services.deps import get_auth_service, get_settings_service
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -60,6 +62,91 @@ API_KEY_NAME = "x-api-key"
 
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
+
+
+_TRUSTED_PROXY_NETWORKS: tuple = tuple(
+    ipaddress.ip_network(n)
+    for n in (
+        "127.0.0.0/8",  # IPv4 loopback
+        "10.0.0.0/8",  # RFC1918
+        "172.16.0.0/12",  # RFC1918
+        "192.168.0.0/16",  # RFC1918
+        "::1/128",  # IPv6 loopback
+        "fc00::/7",  # IPv6 unique local address
+        "fe80::/10",  # IPv6 link-local
+    )
+)
+
+
+def _is_trusted_peer(peer: str | None) -> bool:
+    """Return True if *peer* is a loopback / RFC1918 / ULA address.
+
+    Used by ``TRUST_PROXY_HEADERS='auto'`` to decide whether the immediate TCP
+    peer is likely a local reverse proxy (nginx on the same host, a k8s ingress,
+    a docker-compose sidecar, etc.) whose ``X-Forwarded-For`` / ``X-Real-IP``
+    headers can be trusted.
+    """
+    if not peer:
+        return False
+    try:
+        ip = ipaddress.ip_address(peer)
+    except ValueError:
+        return False
+    return any(ip in net for net in _TRUSTED_PROXY_NETWORKS)
+
+
+def get_client_ip(request: Request | WebSocket) -> str | None:
+    """Extract the real client IP from a FastAPI *request* or *websocket*.
+
+    The ``LANGFLOW_TRUST_PROXY_HEADERS`` setting controls header handling:
+
+    - ``"auto"`` (default) - trust ``X-Real-IP`` / ``X-Forwarded-For`` only when
+      the direct TCP peer is a loopback / RFC1918 / ULA address. This keeps
+      directly-exposed deployments safe (headers ignored when the peer is a
+      real public client) while transparently working behind a local proxy.
+    - ``"always"`` - unconditionally trust the headers. Use ONLY when every
+      network path to Langflow passes through a header-sanitizing proxy; on a
+      directly-exposed host a client can freely spoof its IP in this mode.
+    - ``"never"`` - always return the direct TCP peer.
+
+    When headers are trusted, ``X-Forwarded-For`` is parsed right-to-left and
+    the ``LANGFLOW_TRUSTED_PROXY_HOPS``-th entry from the right is returned.
+    That's the value *appended* by the last trusted proxy (from its TCP
+    ``remote_addr``) and therefore cannot be forged by the client. Taking the
+    leftmost entry instead would be vulnerable to ``X-Forwarded-For`` spoofing
+    when the proxy is configured with the typical ``$proxy_add_x_forwarded_for``
+    (append-mode) pattern.
+    """
+    peer = request.client.host if request.client else None
+    auth_settings = get_settings_service().auth_settings
+    mode = getattr(auth_settings, "TRUST_PROXY_HEADERS", "auto")
+    hops = max(1, int(getattr(auth_settings, "TRUSTED_PROXY_HOPS", 1)))
+
+    # Backward-compat: older bool values map to always/never.
+    if isinstance(mode, bool):
+        mode = "always" if mode else "never"
+
+    should_trust = mode == "always" or (mode == "auto" and _is_trusted_peer(peer))
+    if not should_trust:
+        return peer
+
+    # Prefer X-Real-IP: single value, typically set by the proxy from $remote_addr
+    # and therefore harder to spoof via append.
+    x_real_ip = request.headers.get("X-Real-IP")
+    if x_real_ip:
+        candidate = x_real_ip.strip()
+        if candidate:
+            return candidate
+
+    xff = request.headers.get("X-Forwarded-For")
+    if xff:
+        entries = [p.strip() for p in xff.split(",") if p.strip()]
+        if len(entries) >= hops:
+            return entries[-hops]
+        # Fewer entries than trusted hops -> header shape is suspicious; fall
+        # back to the TCP peer rather than an attacker-controlled value.
+
+    return peer
 
 
 def _auth_service():
@@ -131,10 +218,12 @@ def get_jwt_signing_key(settings_service: SettingsService) -> str:
 
 
 async def api_key_security(
+    request: Request,
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
 ) -> UserRead | None:
-    return await _auth_service().api_key_security(query_param, header_param)
+    client_ip = get_client_ip(request)
+    return await _auth_service().api_key_security(query_param, header_param, client_ip=client_ip)
 
 
 async def ws_api_key_security(api_key: str | None) -> UserRead:
@@ -148,20 +237,22 @@ def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
     """
     if isinstance(
         e,
-        (MissingCredentialsError, InvalidCredentialsError, InsufficientPermissionsError),
+        (MissingCredentialsError, InvalidCredentialsError, InsufficientPermissionsError, IpRestrictionError),
     ):
         return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message)
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.message)
 
 
 async def get_current_user(
+    request: Request,
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope),
 ) -> User:
+    client_ip = get_client_ip(request)
     try:
-        return await _auth_service().get_current_user(token, query_param, header_param, db)
+        return await _auth_service().get_current_user(token, query_param, header_param, db, client_ip=client_ip)
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
 
@@ -200,9 +291,10 @@ async def get_current_user_for_websocket(
         or websocket.headers.get("x-api-key")
         or websocket.headers.get("api_key")
     )
+    client_ip = get_client_ip(websocket)
 
     try:
-        return await _auth_service().get_current_user_for_websocket(token, api_key, db)
+        return await _auth_service().get_current_user_for_websocket(token, api_key, db, client_ip=client_ip)
     except AuthenticationError as e:
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=WS_AUTH_REASON) from e
 
@@ -217,9 +309,10 @@ async def get_current_user_for_sse(
     """
     token = request.cookies.get("access_token_lf")
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
+    client_ip = get_client_ip(request)
 
     try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db)
+        return await _auth_service().get_current_user_for_sse(token, api_key, db, client_ip=client_ip)
     except AuthenticationError as e:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -228,6 +321,7 @@ async def get_current_user_for_sse(
 
 
 async def get_optional_user(
+    request: Request,
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
@@ -241,8 +335,9 @@ async def get_optional_user(
     Returns:
         User | None: The authenticated user if valid credentials are provided, None otherwise.
     """
+    client_ip = get_client_ip(request)
     try:
-        user = await _auth_service().get_current_user(token, query_param, header_param, db)
+        user = await _auth_service().get_current_user(token, query_param, header_param, db, client_ip=client_ip)
     except (AuthenticationError, HTTPException):
         return None
     else:
@@ -267,7 +362,8 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     Raises:
         HTTPException: If authentication fails or user doesn't have permission
     """
-    return await _auth_service().get_webhook_user(flow_id, request)
+    client_ip = get_client_ip(request)
+    return await _auth_service().get_webhook_user(flow_id, request, client_ip=client_ip)
 
 
 async def get_current_user_optional(
@@ -288,8 +384,9 @@ async def get_current_user_optional(
     if not token and not api_key:
         return None
 
+    client_ip = get_client_ip(request)
     try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db)
+        return await _auth_service().get_current_user_for_sse(token, api_key, db, client_ip=client_ip)
     except (AuthenticationError, HTTPException):
         return None
 
@@ -393,13 +490,15 @@ async def create_user_longterm_token(db: AsyncSession) -> tuple:
 
 
 async def get_current_user_mcp(
+    request: Request,
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope),
 ) -> User:
+    client_ip = get_client_ip(request)
     try:
-        return await _auth_service().get_current_user_mcp(token, query_param, header_param, db)
+        return await _auth_service().get_current_user_mcp(token, query_param, header_param, db, client_ip=client_ip)
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
 

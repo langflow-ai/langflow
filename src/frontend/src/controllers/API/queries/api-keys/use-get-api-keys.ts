@@ -12,12 +12,15 @@ export interface IApiKeysDataArray {
   api_key: string;
   user_id: string;
   created_at: string;
+  allowed_ips: string | null;
 }
 
 interface IApiQueryResponse {
   total_count: number;
   user_id: string;
   api_keys: Array<IApiKeysDataArray>;
+  env_ip_restriction_enabled: boolean;
+  env_ip_restriction: string | null;
 }
 
 export const useGetApiKeysQuery: useQueryFunctionType<

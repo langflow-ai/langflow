@@ -8,14 +8,19 @@ type ApiKeyHeaderComponentProps = {
   selectedRows: string[];
   fetchApiKeys: () => void;
   userId: string;
+  envIpRestrictionEnabled?: boolean;
 };
 const ApiKeyHeaderComponent = ({
   selectedRows,
   fetchApiKeys,
   userId,
+  envIpRestrictionEnabled = false,
 }: ApiKeyHeaderComponentProps) => {
   const { t } = useTranslation();
-  const modalProps = getModalPropsApiKey();
+  const modalProps = {
+    ...getModalPropsApiKey(),
+    hideAllowedIps: envIpRestrictionEnabled,
+  };
   return (
     <>
       <div className="flex w-full items-start justify-between gap-6">

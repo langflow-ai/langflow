@@ -1,6 +1,7 @@
 import type { SelectionChangedEvent } from "ag-grid-community";
 import { useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   type IApiKeysDataArray,
   useDeleteApiKey,
@@ -20,6 +21,8 @@ export default function ApiKeysPage() {
   const { userData } = useContext(AuthContext);
   const [userId, setUserId] = useState("");
   const [keysList, setKeysList] = useState<IApiKeysDataArray[]>([]);
+  const [envIpRestrictionEnabled, setEnvIpRestrictionEnabled] = useState(false);
+  const [envIpRestriction, setEnvIpRestriction] = useState<string | null>(null);
   const { refetch } = useGetApiKeysQuery();
 
   async function getApiKeysQuery() {
@@ -32,6 +35,8 @@ export default function ApiKeysPage() {
       }));
       setKeysList(updatedKeysList);
       setUserId(data["user_id"]);
+      setEnvIpRestrictionEnabled(Boolean(data["env_ip_restriction_enabled"]));
+      setEnvIpRestriction(data["env_ip_restriction"] ?? null);
     }
   }
 
@@ -75,7 +80,9 @@ export default function ApiKeysPage() {
     }
   }
 
-  const columnDefs = getColumnDefs();
+  const columnDefs = getColumnDefs({
+    hideIpRestriction: envIpRestrictionEnabled,
+  });
 
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
@@ -83,11 +90,45 @@ export default function ApiKeysPage() {
         selectedRows={selectedRows}
         fetchApiKeys={getApiKeysQuery}
         userId={userId}
+        envIpRestrictionEnabled={envIpRestrictionEnabled}
       />
+
+      {envIpRestrictionEnabled && (
+        <div
+          className="flex items-start gap-3 rounded-md border border-accent-amber-foreground bg-accent-amber/20 p-3"
+          data-testid="env_ip_restriction_banner"
+        >
+          <ForwardedIconComponent
+            name="ShieldCheck"
+            className="mt-0.5 h-5 w-5 flex-shrink-0 text-accent-amber-foreground"
+          />
+          <div className="flex flex-col gap-1 text-sm">
+            <p className="font-medium text-accent-amber-foreground">
+              Global IP restriction is active
+            </p>
+            <p className="text-muted-foreground">
+              The{" "}
+              <code className="rounded bg-muted px-1 font-mono text-xs">
+                LANGFLOW_API_IP_RESTRICTION
+              </code>{" "}
+              environment variable is set. All API key requests must originate
+              from the allow-listed IPs; per-key IP restrictions are ignored.
+            </p>
+            {envIpRestriction && (
+              <p className="text-muted-foreground">
+                Allow-list:{" "}
+                <code className="rounded bg-muted px-1 font-mono text-xs">
+                  {envIpRestriction}
+                </code>
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
-          key={"apiKeys"}
+          key={envIpRestrictionEnabled ? "apiKeys-env" : "apiKeys"}
           onDelete={handleDeleteApi}
           overlayNoRowsTemplate={t("settings.noDataAvailable")}
           onSelectionChanged={(event: SelectionChangedEvent) => {

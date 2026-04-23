@@ -240,6 +240,8 @@ class ApiKeysResponse(BaseModel):
     total_count: int
     user_id: UUID
     api_keys: list[ApiKeyRead]
+    env_ip_restriction_enabled: bool = False
+    env_ip_restriction: str | None = None
 
 
 class CreateApiKeyRequest(BaseModel):
@@ -254,6 +256,10 @@ class Token(BaseModel):
 
 class ApiKeyCreateRequest(BaseModel):
     api_key: str
+
+
+class ApiKeyUpdateRequest(BaseModel):
+    allowed_ips: str | None = None
 
 
 class VerticesOrderResponse(BaseModel):

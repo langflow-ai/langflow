@@ -1,7 +1,9 @@
+import type { ColDef } from "ag-grid-community";
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
+import { IpRestrictionCell } from "../components/IpRestrictionCell";
 
-export const getColumnDefs = () => {
-  return [
+export const getColumnDefs = (options?: { hideIpRestriction?: boolean }) => {
+  const columns: ColDef[] = [
     {
       headerCheckboxSelection: true,
       checkboxSelection: true,
@@ -37,4 +39,17 @@ export const getColumnDefs = () => {
       resizable: false,
     },
   ];
+
+  if (!options?.hideIpRestriction) {
+    columns.push({
+      headerName: "IP Restriction",
+      field: "allowed_ips",
+      cellRenderer: IpRestrictionCell,
+      cellClass: "group",
+      flex: 2,
+      resizable: true,
+    });
+  }
+
+  return columns;
 };

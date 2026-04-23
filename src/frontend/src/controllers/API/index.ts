@@ -42,9 +42,12 @@ export async function getDiscordCount() {
 export const getAppVersions = customGetAppVersions;
 export const getLatestVersion = customGetLatestVersion;
 
-export async function createApiKey(name: string) {
+export async function createApiKey(name: string, allowedIps?: string) {
   try {
-    const res = await api.post(`${getBaseUrl()}api_key/`, { name });
+    const res = await api.post(`${getBaseUrl()}api_key/`, {
+      name,
+      ...(allowedIps ? { allowed_ips: allowedIps } : {}),
+    });
     if (res.status === 200) {
       return res.data;
     }
@@ -123,7 +126,7 @@ export async function getStoreComponents({
 }): Promise<StoreComponentResponse | undefined> {
   try {
     let url = `${getBaseUrl()}store/components/`;
-    const queryParams: any = [];
+    const queryParams: string[] = [];
     if (component_id !== undefined && component_id !== null) {
       queryParams.push(`component_id=${component_id}`);
     }
@@ -264,7 +267,7 @@ export async function getVerticesOrder(
 ): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
   // nodeId is optional and is a query parameter
   // if nodeId is not provided, the API will return all vertices
-  const config: AxiosRequestConfig<any> = {};
+  const config: AxiosRequestConfig<VerticesOrderTypeAPI> = {};
   if (stopNodeId) {
     config["params"] = { stop_component_id: stopNodeId };
   } else if (startNodeId) {

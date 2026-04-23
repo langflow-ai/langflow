@@ -9,6 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from lfx.log.logger import logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from lfx.services.settings.ip_restriction import validate_allowed_ips
 from lfx.services.settings.utils import (
     derive_public_key_from_private,
     generate_rsa_key_pair,
@@ -84,6 +85,57 @@ class AuthSettings(BaseSettings):
     WEBHOOK_AUTH_ENABLE: bool = False
     """If True, webhook endpoints will require API key authentication.
     If False, webhooks run as flow owner without authentication."""
+
+    TRUST_PROXY_HEADERS: Literal["auto", "always", "never"] = Field(
+        default="auto",
+        description=(
+            "How reverse-proxy headers (X-Forwarded-For, X-Real-IP) are used to determine the client IP "
+            "for API key IP restriction checks.\n"
+            "- 'auto' (default): trust the headers only when the direct TCP peer is a loopback / "
+            "RFC1918 / ULA address. Safe for both directly-exposed and standard reverse-proxy "
+            "deployments.\n"
+            "- 'always': always trust the headers. ONLY use this when every network path to Langflow "
+            "passes through a header-sanitizing proxy. On a directly-exposed instance, clients can "
+            "spoof their IP address with this mode.\n"
+            "- 'never': ignore the headers and always use the direct TCP peer."
+        ),
+    )
+    """Controls how proxy-forwarded client-IP headers are trusted when enforcing IP restrictions."""
+
+    TRUSTED_PROXY_HOPS: int = Field(
+        default=1,
+        ge=1,
+        description=(
+            "Number of trusted reverse proxies in front of Langflow. Used when parsing "
+            "X-Forwarded-For: the real client IP is taken as the Nth entry from the right, matching "
+            "the IP appended by the last trusted hop. Default 1 fits a single-proxy deployment "
+            "(Nginx, ALB, K8s ingress)."
+        ),
+    )
+    """How many trusted proxy hops sit between the client and Langflow."""
+
+    API_IP_RESTRICTION: str | None = Field(
+        default=None,
+        description=(
+            "Global API-key IP allow-list, semicolon-separated entries. Each entry may be a literal "
+            "IPv4/IPv6 address (203.0.113.5, 2001:db8::1), a CIDR network (10.0.0.0/8, 2001:db8::/32), "
+            "or an IPv4 octet wildcard using '%' (10.0.%.%). When set, every API-key authenticated "
+            "request must originate from a matching IP; per-key `allowed_ips` are ignored. Useful "
+            "with API_KEY_SOURCE=env (no DB record) or to enforce a single firewall rule for the "
+            "whole deployment. Example: '10.0.0.0/8;203.0.113.5;2001:db8::/32'"
+        ),
+    )
+    """Global IP allow-list for all API-key requests. Overrides per-key allowed_ips."""
+
+    @field_validator("API_IP_RESTRICTION", mode="before")
+    @classmethod
+    def _validate_api_ip_restriction(cls, value: str | None) -> str | None:
+        """Reject malformed global allow-lists at startup so bad config fails fast."""
+        try:
+            return validate_allowed_ips(value)
+        except ValueError as e:
+            msg = f"Invalid LANGFLOW_API_IP_RESTRICTION: {e}"
+            raise ValueError(msg) from e
 
     ENABLE_SUPERUSER_CLI: bool = Field(
         default=True,

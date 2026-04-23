@@ -19,6 +19,7 @@ from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_WARNIN
 from langflow.services.auth.exceptions import (
     InactiveUserError,
     InvalidCredentialsError,
+    IpRestrictionError,
     MissingCredentialsError,
     TokenExpiredError,
 )
@@ -60,6 +61,7 @@ class AuthService(BaseAuthService):
         token: str | None,
         api_key: str | None,
         db: AsyncSession,
+        client_ip: str | None = None,
     ) -> User | UserRead:
         """Framework-agnostic authentication method.
 
@@ -70,6 +72,7 @@ class AuthService(BaseAuthService):
             token: Access token (JWT, OIDC token, etc.)
             api_key: API key for authentication
             db: Database session
+            client_ip: Real client IP for API-key IP-restriction enforcement
 
 
         Returns:
@@ -94,12 +97,12 @@ class AuthService(BaseAuthService):
                 # Token auth failed; fall back to API key if provided
                 if api_key:
                     try:
-                        user = await self._authenticate_with_api_key(api_key, db)
+                        user = await self._authenticate_with_api_key(api_key, db, client_ip=client_ip)
                         if user:
                             return user
                         msg = "Invalid API key"
                         raise InvalidCredentialsError(msg)
-                    except InvalidCredentialsError:
+                    except (InvalidCredentialsError, IpRestrictionError):
                         raise
                     except Exception as api_key_err:
                         logger.error(f"Unexpected error during API key authentication: {api_key_err}")
@@ -112,12 +115,12 @@ class AuthService(BaseAuthService):
         # Try API key authentication
         if api_key:
             try:
-                user = await self._authenticate_with_api_key(api_key, db)
+                user = await self._authenticate_with_api_key(api_key, db, client_ip=client_ip)
                 if user:
                     return user
                 msg = "Invalid API key"
                 raise InvalidCredentialsError(msg)
-            except InvalidCredentialsError:
+            except (InvalidCredentialsError, IpRestrictionError):
                 raise
             except Exception as e:
                 logger.error(f"Unexpected error during API key authentication: {e}")
@@ -192,9 +195,11 @@ class AuthService(BaseAuthService):
 
         return user
 
-    async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
+    async def _authenticate_with_api_key(
+        self, api_key: str, db: AsyncSession, client_ip: str | None = None
+    ) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions)."""
-        result = await check_key(db, api_key)
+        result = await check_key(db, api_key, client_ip=client_ip)
         if not result:
             return None
 
@@ -208,16 +213,20 @@ class AuthService(BaseAuthService):
         return None
 
     async def api_key_security(
-        self, query_param: str | None, header_param: str | None, db: AsyncSession | None = None
+        self,
+        query_param: str | None,
+        header_param: str | None,
+        db: AsyncSession | None = None,
+        client_ip: str | None = None,
     ) -> UserRead | None:
         settings_service = self.settings
 
         # Use provided session or create a new one
         if db is not None:
-            return await self._api_key_security_impl(query_param, header_param, db, settings_service)
+            return await self._api_key_security_impl(query_param, header_param, db, settings_service, client_ip)
 
         async with session_scope() as new_db:
-            return await self._api_key_security_impl(query_param, header_param, new_db, settings_service)
+            return await self._api_key_security_impl(query_param, header_param, new_db, settings_service, client_ip)
 
     async def _api_key_security_impl(
         self,
@@ -225,6 +234,7 @@ class AuthService(BaseAuthService):
         header_param: str | None,
         db: AsyncSession,
         settings_service,
+        client_ip: str | None = None,
     ) -> UserRead | None:
         result: ApiKey | User | None
 
@@ -247,7 +257,10 @@ class AuthService(BaseAuthService):
             api_key = query_param or header_param
             if api_key is None:  # pragma: no cover - guaranteed by the if-condition above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            result = await check_key(db, api_key)
+            try:
+                result = await check_key(db, api_key, client_ip=client_ip)
+            except IpRestrictionError as exc:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=exc.message) from exc
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -260,7 +273,10 @@ class AuthService(BaseAuthService):
             api_key = query_param or header_param
             if api_key is None:  # pragma: no cover - guaranteed by the elif-condition above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            result = await check_key(db, api_key)
+            try:
+                result = await check_key(db, api_key, client_ip=client_ip)
+            except IpRestrictionError as exc:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=exc.message) from exc
 
         if not result:
             raise HTTPException(
@@ -274,7 +290,7 @@ class AuthService(BaseAuthService):
         msg = "Invalid result type"
         raise ValueError(msg)
 
-    async def ws_api_key_security(self, api_key: str | None) -> UserRead:
+    async def ws_api_key_security(self, api_key: str | None, client_ip: str | None = None) -> UserRead:
         settings = self.settings
         async with session_scope() as db:
             if settings.auth_settings.AUTO_LOGIN:
@@ -293,7 +309,13 @@ class AuthService(BaseAuthService):
                             reason=AUTO_LOGIN_ERROR,
                         )
                 else:
-                    result = await check_key(db, api_key)
+                    try:
+                        result = await check_key(db, api_key, client_ip=client_ip)
+                    except IpRestrictionError as exc:
+                        raise WebSocketException(
+                            code=status.WS_1008_POLICY_VIOLATION,
+                            reason=exc.message,
+                        ) from exc
 
             else:
                 if not api_key:
@@ -301,7 +323,13 @@ class AuthService(BaseAuthService):
                         code=status.WS_1008_POLICY_VIOLATION,
                         reason="An API key must be passed as query or header",
                     )
-                result = await check_key(db, api_key)
+                try:
+                    result = await check_key(db, api_key, client_ip=client_ip)
+                except IpRestrictionError as exc:
+                    raise WebSocketException(
+                        code=status.WS_1008_POLICY_VIOLATION,
+                        reason=exc.message,
+                    ) from exc
 
             if not result:
                 raise WebSocketException(
@@ -323,6 +351,7 @@ class AuthService(BaseAuthService):
         query_param: str | None,
         header_param: str | None,
         db: AsyncSession,
+        client_ip: str | None = None,
     ) -> User | UserRead:
         # Handle coroutine token (FastAPI dependency injection)
         resolved_token: str | None = None
@@ -335,7 +364,7 @@ class AuthService(BaseAuthService):
         api_key = query_param or header_param
 
         # Delegate to framework-agnostic method
-        return await self.authenticate_with_credentials(resolved_token, api_key, db)
+        return await self.authenticate_with_credentials(resolved_token, api_key, db, client_ip=client_ip)
 
     async def get_current_user_from_access_token(
         self,
@@ -368,18 +397,20 @@ class AuthService(BaseAuthService):
         token: str | None,
         api_key: str | None,
         db: AsyncSession,
+        client_ip: str | None = None,
     ) -> User | UserRead:
         """Delegates to authenticate_with_credentials()."""
-        return await self.authenticate_with_credentials(token, api_key, db)
+        return await self.authenticate_with_credentials(token, api_key, db, client_ip=client_ip)
 
     async def get_current_user_for_sse(
         self,
         token: str | None,
         api_key: str | None,
         db: AsyncSession,
+        client_ip: str | None = None,
     ) -> User | UserRead:
         """Delegates to authenticate_with_credentials()."""
-        return await self.authenticate_with_credentials(token, api_key, db)
+        return await self.authenticate_with_credentials(token, api_key, db, client_ip=client_ip)
 
     async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead | None:
         if not current_user.is_active:
@@ -391,7 +422,7 @@ class AuthService(BaseAuthService):
             return None
         return current_user
 
-    async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:
+    async def get_webhook_user(self, flow_id: str, request: Request, client_ip: str | None = None) -> UserRead:
         settings_service = self.settings
 
         if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
@@ -415,7 +446,7 @@ class AuthService(BaseAuthService):
 
         try:
             async with session_scope() as db:
-                result = await check_key(db, api_key)
+                result = await check_key(db, api_key, client_ip=client_ip)
                 if not result:
                     logger.warning("Invalid API key provided for webhook")
                     raise HTTPException(status_code=403, detail="Invalid API key")
@@ -424,6 +455,8 @@ class AuthService(BaseAuthService):
                 logger.info("Webhook API key validated successfully")
         except HTTPException:
             raise
+        except IpRestrictionError as exc:
+            raise HTTPException(status_code=403, detail=exc.message) from exc
         except Exception as exc:
             logger.error(f"Webhook API key validation error: {exc}")
             raise HTTPException(status_code=403, detail="API key authentication failed") from exc
@@ -700,6 +733,7 @@ class AuthService(BaseAuthService):
         query_param: str | None,
         header_param: str | None,
         db: AsyncSession,
+        client_ip: str | None = None,
     ) -> User | UserRead:
         if token:
             return await self.get_current_user_from_access_token(token, db)
@@ -723,7 +757,10 @@ class AuthService(BaseAuthService):
                 api_key = query_param or header_param
                 if api_key is None:  # pragma: no cover - guaranteed by the if-condition above
                     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-                result = await check_key(db, api_key)
+                try:
+                    result = await check_key(db, api_key, client_ip=client_ip)
+                except IpRestrictionError as exc:
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=exc.message) from exc
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -732,13 +769,19 @@ class AuthService(BaseAuthService):
             )
 
         elif query_param:
-            result = await check_key(db, query_param)
+            try:
+                result = await check_key(db, query_param, client_ip=client_ip)
+            except IpRestrictionError as exc:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=exc.message) from exc
 
         else:
             # header_param must be truthy here (query_param is falsy, and we passed the not-both-None check)
             if header_param is None:  # pragma: no cover - guaranteed by the elif chain above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            result = await check_key(db, header_param)
+            try:
+                result = await check_key(db, header_param, client_ip=client_ip)
+            except IpRestrictionError as exc:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=exc.message) from exc
 
         if not result:
             raise HTTPException(

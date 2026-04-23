@@ -8,10 +8,12 @@ from uuid import UUID
 
 from cryptography.fernet import InvalidToken
 from lfx.log.logger import logger
+from lfx.services.settings.ip_restriction import check_ip_restriction, validate_allowed_ips
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth import utils as auth_utils
+from langflow.services.auth.exceptions import IpRestrictionError
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
@@ -53,6 +55,9 @@ async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]
 
 
 async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
+    # Reject malformed IP allow-lists up front so invalid patterns never reach the DB.
+    normalized_allowed_ips = validate_allowed_ips(api_key_create.allowed_ips)
+
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
 
@@ -64,6 +69,7 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
         name=api_key_create.name,
         user_id=user_id,
         created_at=api_key_create.created_at or datetime.datetime.now(datetime.timezone.utc),
+        allowed_ips=normalized_allowed_ips,
     )
 
     session.add(api_key)
@@ -85,26 +91,53 @@ async def delete_api_key(session: AsyncSession, api_key_id: UUID, user_id: UUID)
     await session.delete(api_key)
 
 
-async def check_key(session: AsyncSession, api_key: str) -> User | None:
-    """Check if the API key is valid.
+async def check_key(session: AsyncSession, api_key: str, client_ip: str | None = None) -> User | None:
+    """Check if the API key is valid and the caller's IP is permitted.
 
     Validates API keys based on the LANGFLOW_API_KEY_SOURCE setting:
     - 'db': Validates against database-stored API keys (default)
     - 'env': Validates against the LANGFLOW_API_KEY environment variable,
              falls back to database if env validation fails
+
+    IP restriction precedence:
+    1. If ``LANGFLOW_API_IP_RESTRICTION`` is set, it is the single source of
+       truth and applies to every API-key request (db- or env-sourced).
+    2. Otherwise the per-key ``allowed_ips`` column is consulted (db path only).
+
+    When *client_ip* is ``None`` and a restriction exists (either global or
+    per-key), the check fails closed (returns ``None``) to prevent bypasses
+    from unknown contexts.
     """
     settings_service = get_settings_service()
     api_key_source = settings_service.auth_settings.API_KEY_SOURCE
+    global_ip_restriction = getattr(settings_service.auth_settings, "API_IP_RESTRICTION", None)
+
+    # Global env-level IP gate — applies to every API-key authentication.
+    if global_ip_restriction and not check_ip_restriction(global_ip_restriction, client_ip):
+        logger.warning(
+            "API request rejected by LANGFLOW_API_IP_RESTRICTION: client IP %s is not in the allow-list",
+            client_ip,
+        )
+        raise IpRestrictionError(client_ip)
+
+    # If a global restriction is active, the per-key ``allowed_ips`` is ignored.
+    # Pass None downstream to skip the per-key check.
+    downstream_ip = None if global_ip_restriction else client_ip
 
     if api_key_source == "env":
-        user = await _check_key_from_env(session, api_key, settings_service)
+        user = await _check_key_from_env(session, api_key, settings_service, _client_ip=downstream_ip)
         if user is not None:
             return user
         # Fallback to database if env validation fails
-    return await _check_key_from_db(session, api_key, settings_service)
+    return await _check_key_from_db(session, api_key, settings_service, client_ip=downstream_ip)
 
 
-async def _check_key_from_db(session: AsyncSession, api_key: str, settings_service) -> User | None:
+async def _check_key_from_db(
+    session: AsyncSession,
+    api_key: str,
+    settings_service,
+    client_ip: str | None = None,
+) -> User | None:
     """Validate API key against the database.
 
     Uses hash-based O(1) lookup first. Falls back to decrypt-and-compare
@@ -121,6 +154,9 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
 
     if len(matches) == 1:
         api_key_obj = matches[0]
+        if not check_ip_restriction(api_key_obj.allowed_ips, client_ip):
+            logger.warning("API key %s rejected: client IP %s not in allowed list", str(api_key_obj.id), client_ip)
+            raise IpRestrictionError(client_ip)
         if settings_service.settings.disable_track_apikey_usage is not True:
             api_key_obj.total_uses += 1
             api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
@@ -155,6 +191,9 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
             matched = candidate == api_key
 
         if matched:
+            if not check_ip_restriction(api_key_obj.allowed_ips, client_ip):
+                logger.warning("API key %s rejected: client IP %s not in allowed list", str(api_key_obj.id), client_ip)
+                raise IpRestrictionError(client_ip)
             # Backfill hash for future O(1) lookups
             api_key_obj.api_key_hash = incoming_hash
             if settings_service.settings.disable_track_apikey_usage is not True:
@@ -167,11 +206,17 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
     return None
 
 
-async def _check_key_from_env(session: AsyncSession, api_key: str, settings_service) -> User | None:
+async def _check_key_from_env(
+    session: AsyncSession,
+    api_key: str,
+    settings_service,
+    _client_ip: str | None = None,
+) -> User | None:
     """Validate API key against the environment variable.
 
     When API_KEY_SOURCE='env', the x-api-key header is validated against
     LANGFLOW_API_KEY environment variable. If valid, returns the superuser for authorization.
+    IP restriction is not applied to env-sourced keys (no DB record to check).
     """
     from langflow.services.database.models.user.crud import get_user_by_username
 
@@ -189,3 +234,38 @@ async def _check_key_from_env(session: AsyncSession, api_key: str, settings_serv
     if user and user.is_active:
         return user
     return None
+
+
+async def update_api_key_allowed_ips(
+    session: AsyncSession,
+    api_key_id: UUID,
+    user_id: UUID,
+    allowed_ips: str | None,
+) -> ApiKeyRead:
+    """Update the ``allowed_ips`` field on an existing API key.
+
+    Only the owner of the key (matched by ``user_id``) may update it.
+    Returns the updated key as an ``ApiKeyRead`` (masked) instance.
+    """
+    api_key_obj = await session.get(ApiKey, api_key_id)
+    if api_key_obj is None or api_key_obj.user_id != user_id:
+        msg = "API Key not found"
+        raise ValueError(msg)
+
+    # Validate before writing; ValueError propagates to the API layer as 422.
+    api_key_obj.allowed_ips = validate_allowed_ips(allowed_ips)
+    session.add(api_key_obj)
+    await session.flush()
+    await session.refresh(api_key_obj)
+
+    data = api_key_obj.model_dump()
+    raw_key = data.get("api_key", "")
+    if raw_key:
+        try:
+            actual_key = auth_utils.decrypt_api_key(raw_key)
+        except Exception:  # noqa: BLE001
+            actual_key = raw_key
+        if not actual_key:
+            actual_key = raw_key
+        data["api_key"] = actual_key
+    return ApiKeyRead.model_validate(data)

@@ -19,6 +19,7 @@ interface ModalConfigProps {
   buttonText?: string;
   generatedKeyMessage?: React.ReactNode;
   showIcon?: boolean;
+  hideAllowedIps?: boolean;
 }
 
 interface SecretKeyModalProps {
@@ -37,6 +38,7 @@ export default function SecretKeyModal({
   const [open, setOpen] = useState(false);
   const [apiKeyName, setApiKeyName] = useState(data?.apikeyname ?? "");
   const [apiKeyValue, setApiKeyValue] = useState("");
+  const [allowedIps, setAllowedIps] = useState("");
   const [renderKey, setRenderKey] = useState(false);
   const [textCopied, setTextCopied] = useState(true);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -56,6 +58,7 @@ export default function SecretKeyModal({
   function resetForm() {
     setApiKeyName("");
     setApiKeyValue("");
+    setAllowedIps("");
   }
 
   const handleCopyClick = async () => {
@@ -75,7 +78,7 @@ export default function SecretKeyModal({
   };
 
   function handleAddNewKey() {
-    createApiKey(apiKeyName)
+    createApiKey(apiKeyName, allowedIps.trim() || undefined)
       .then((res) => {
         setApiKeyValue(res["api_key"]);
       })
@@ -151,6 +154,10 @@ export default function SecretKeyModal({
             apiKeyName={apiKeyName}
             inputRef={inputRef}
             setApiKeyName={setApiKeyName}
+            allowedIps={allowedIps}
+            setAllowedIps={
+              modalConfigProps?.hideAllowedIps ? undefined : setAllowedIps
+            }
           />
         )}
       </BaseModal.Content>

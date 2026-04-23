@@ -20,6 +20,11 @@ class ApiKeyBase(SQLModel):
     last_used_at: datetime | None = Field(default=None, nullable=True)
     total_uses: int = Field(default=0)
     is_active: bool = Field(default=True)
+    allowed_ips: str | None = Field(
+        default=None,
+        nullable=True,
+        description="Semicolon-separated IP patterns. Use % as wildcard for any octet (0-255). E.g. '1.2.3.4;10.0.%.%'",
+    )
 
 
 class ApiKey(ApiKeyBase, table=True):  # type: ignore[call-arg]

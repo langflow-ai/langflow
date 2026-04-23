@@ -52,3 +52,15 @@ class InvalidTokenError(AuthenticationError):
 
     def __init__(self, message: str = "Invalid authentication token"):
         super().__init__(message, error_code="invalid_token")
+
+
+class IpRestrictionError(AuthenticationError):
+    """Raised when the client IP is not in the API key's allowed list."""
+
+    def __init__(self, client_ip: str | None = None):
+        self.client_ip = client_ip
+        ip_display = client_ip or "unknown"
+        super().__init__(
+            f"Access denied: IP address {ip_display} is not in the allowed list for this API key",
+            error_code="ip_restriction",
+        )
