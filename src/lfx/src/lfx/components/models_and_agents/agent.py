@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from langchain_core.tools import Tool
 
 from lfx.base.agents.agent import LCToolsAgentComponent
+from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.unified_models import (
     get_language_model_options,
@@ -85,7 +86,7 @@ class AgentComponent(ToolCallingAgentComponent):
             name="system_prompt",
             display_name="Agent Instructions",
             info="System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
+            value=DEFAULT_SYSTEM_PROMPT_TEMPLATE,
             advanced=False,
         ),
         MessageTextInput(
