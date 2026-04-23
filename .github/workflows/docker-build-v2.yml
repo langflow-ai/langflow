@@ -137,7 +137,8 @@ jobs:
             echo "Latest main release version: $last_released_version"
           fi
 
-          if [ "$version" = "$last_released_version" ]; then
+          # Skip check only applies to main image, not backend/frontend which are separate images
+          if [ "$version" = "$last_released_version" ] && [[ "${{ inputs.release_type }}" != "main-backend" ]] && [[ "${{ inputs.release_type }}" != "main-frontend" ]]; then
             echo "Main docker version $version is already released. Skipping release."
             echo skipped=true >> $GITHUB_OUTPUT
             exit 0
