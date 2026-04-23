@@ -547,6 +547,91 @@ class TestMultiUserMCPServerAccess:
         assert response_two.json() is None
 
 
+class TestMCPPatchServerConfig:
+    """Test PATCH semantics for MCP server configs."""
+
+    @pytest.mark.asyncio
+    async def test_patch_preserves_existing_headers_when_omitted(self, client: AsyncClient, created_api_key):
+        """PATCH should keep existing headers when request body omits them."""
+        server_name = f"preserve-headers-{uuid4()}"
+        auth_headers = {"x-api-key": created_api_key.api_key}
+        initial_config = {
+            "url": f"http://host-{uuid4()}/sse",
+            "headers": {"X-My-Header": "value"},
+        }
+        patch_config = {"url": f"http://new-host-{uuid4()}/sse"}
+        expected_config = {**initial_config, **patch_config}
+
+        response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=initial_config, headers=auth_headers)
+        assert response.status_code == 200
+        assert response.json() == initial_config
+
+        try:
+            response = await client.patch(f"/api/v2/mcp/servers/{server_name}", json=patch_config, headers=auth_headers)
+            assert response.status_code == 200
+            assert response.json() == expected_config
+
+            response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+            assert response.status_code == 200
+            assert response.json() == expected_config
+        finally:
+            await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+
+    @pytest.mark.asyncio
+    async def test_patch_allows_explicit_header_clear(self, client: AsyncClient, created_api_key):
+        """PATCH with headers=null should clear stored headers explicitly."""
+        server_name = f"clear-headers-{uuid4()}"
+        auth_headers = {"x-api-key": created_api_key.api_key}
+        initial_config = {
+            "url": f"http://host-{uuid4()}/sse",
+            "headers": {"X-My-Header": "value"},
+        }
+        patch_config = {"headers": None}
+        expected_config = {"url": initial_config["url"], "headers": None}
+
+        response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=initial_config, headers=auth_headers)
+        assert response.status_code == 200
+        assert response.json() == initial_config
+
+        try:
+            response = await client.patch(f"/api/v2/mcp/servers/{server_name}", json=patch_config, headers=auth_headers)
+            assert response.status_code == 200
+            assert response.json() == expected_config
+
+            response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+            assert response.status_code == 200
+            assert response.json() == expected_config
+        finally:
+            await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+
+    @pytest.mark.asyncio
+    async def test_patch_replaces_headers_instead_of_deep_merging(self, client: AsyncClient, created_api_key):
+        """PATCH should replace the headers dict with the exact value provided."""
+        server_name = f"replace-headers-{uuid4()}"
+        auth_headers = {"x-api-key": created_api_key.api_key}
+        initial_config = {
+            "url": f"http://host-{uuid4()}/sse",
+            "headers": {"A": "1", "B": "2"},
+        }
+        patch_config = {"headers": {"A": "9"}}
+        expected_config = {"url": initial_config["url"], "headers": {"A": "9"}}
+
+        response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=initial_config, headers=auth_headers)
+        assert response.status_code == 200
+        assert response.json() == initial_config
+
+        try:
+            response = await client.patch(f"/api/v2/mcp/servers/{server_name}", json=patch_config, headers=auth_headers)
+            assert response.status_code == 200
+            assert response.json() == expected_config
+
+            response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+            assert response.status_code == 200
+            assert response.json() == expected_config
+        finally:
+            await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+
+
 class TestMCPWithDefaultFolderName:
     """Test MCP configuration with different DEFAULT_FOLDER_NAME values."""
 
