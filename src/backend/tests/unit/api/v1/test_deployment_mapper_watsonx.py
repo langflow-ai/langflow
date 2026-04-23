@@ -1809,7 +1809,7 @@ def test_wxo_mapper_verify_credentials_create_filters_non_credential_fields() ->
     )
     result = mapper.resolve_verify_credentials_for_create(payload=payload)
     assert isinstance(result, VerifyCredentials)
-    assert "cloud.ibm.com" in result.base_url
+    assert result.base_url == "https://api.us-south.wxo.cloud.ibm.com/"
     assert result.provider_data is not None
     assert result.provider_data["api_key"] == "my-secret-key"  # pragma: allowlist secret
     assert "tenant_id" not in result.provider_data
@@ -1832,7 +1832,7 @@ def test_wxo_mapper_verify_credentials_create_accepts_missing_tenant() -> None:
 
     result = mapper.resolve_verify_credentials_for_create(payload=payload)
     assert isinstance(result, VerifyCredentials)
-    assert "cloud.ibm.com" in result.base_url
+    assert result.base_url == "https://api.us-south.wxo.cloud.ibm.com/"
 
 
 def test_wxo_mapper_provider_account_create_requires_tenant() -> None:

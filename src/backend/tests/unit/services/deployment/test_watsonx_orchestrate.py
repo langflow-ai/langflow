@@ -5165,6 +5165,29 @@ def test_get_authenticator_unknown_url():
         get_authenticator("https://example.com", "test-key")
 
 
+@pytest.mark.parametrize(
+    "bypass_url",
+    [
+        # Path smuggling: IBM domain appears in the path, not the hostname.
+        "https://evil.example.com/.cloud.ibm.com",
+        "https://evil.example.com/.ibm.com",
+        # Query-string smuggling: IBM domain in query parameters.
+        "https://evil.example.com/?host=.cloud.ibm.com",
+        # Userinfo smuggling: IBM domain in userinfo before @.
+        "https://cloud.ibm.com@evil.example.com/",
+        # Fragment smuggling.
+        "https://evil.example.com/#.cloud.ibm.com",
+    ],
+)
+def test_get_authenticator_rejects_substring_bypass(bypass_url):
+    """Regression for CodeQL py/incomplete-url-substring-sanitization: scheme selection must be hostname-based."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_authenticator
+    from lfx.services.adapters.deployment.exceptions import AuthSchemeError
+
+    with pytest.raises(AuthSchemeError, match="Could not determine"):
+        get_authenticator(bypass_url, "test-key")
+
+
 def test_get_authenticator_sets_http_timeout_on_iam():
     from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_authenticator
 

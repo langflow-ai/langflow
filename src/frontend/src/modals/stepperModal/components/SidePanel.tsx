@@ -11,7 +11,7 @@ export function SidePanel({ children, open }: SidePanelProps) {
   return (
     <div
       className={cn(
-        "absolute left-full top-[-1px] bottom-[-1px] flex transition-opacity duration-150",
+        "absolute left-full top-[-1px] bottom-[-1px] flex transition-[opacity] duration-300 ease-in-out",
         open ? "opacity-100" : "opacity-0 pointer-events-none",
       )}
     >
@@ -21,7 +21,7 @@ export function SidePanel({ children, open }: SidePanelProps) {
       <div className="overflow-hidden">
         <div
           className={cn(
-            "h-full transition-transform duration-300 ease-out",
+            "h-full transition-[transform] duration-300 ease-in-out",
             open ? "translate-x-0" : "-translate-x-full",
           )}
         >
