@@ -6,7 +6,8 @@ import type { IApiKeysDataArray } from "./use-get-api-keys";
 
 export interface IPatchApiKey {
   keyId: string;
-  allowed_ips: string | null;
+  name?: string | null;
+  allowed_ips?: string | null;
 }
 
 export const usePatchApiKey: useMutationFunctionType<
@@ -19,9 +20,15 @@ export const usePatchApiKey: useMutationFunctionType<
   const patchApiKeyFn = async (
     payload: IPatchApiKey,
   ): Promise<IApiKeysDataArray> => {
-    const res = await api.patch(`${getURL("API_KEY")}/${payload.keyId}`, {
-      allowed_ips: payload.allowed_ips || null,
-    });
+    const { keyId, ...rest } = payload;
+    const body: { name?: string | null; allowed_ips?: string | null } = {};
+    if ("name" in rest) {
+      body.name = rest.name ?? null;
+    }
+    if ("allowed_ips" in rest) {
+      body.allowed_ips = rest.allowed_ips ?? null;
+    }
+    const res = await api.patch(`${getURL("API_KEY")}/${keyId}`, body);
     return res.data;
   };
 

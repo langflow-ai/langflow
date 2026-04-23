@@ -12,7 +12,8 @@ from langflow.services.database.models.api_key.crud import (
     create_api_key,
     delete_api_key,
     get_api_keys,
-    update_api_key_allowed_ips,
+    regenerate_api_key,
+    update_api_key,
 )
 from langflow.services.database.models.api_key.model import ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
 from langflow.services.deps import get_settings_service
@@ -67,6 +68,23 @@ async def create_api_key_route(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+@router.post("/{api_key_id}/regenerate", include_in_schema=False)
+async def regenerate_api_key_route(
+    api_key_id: UUID,
+    db: DbSession,
+    current_user: CurrentActiveUser,
+) -> UnmaskedApiKeyRead:
+    """Rotate the secret for an API key. The new value is returned once; list views show a masked key."""
+    try:
+        return await regenerate_api_key(db, api_key_id, current_user.id)
+    except ValueError as e:
+        detail = str(e)
+        status_code = 404 if "not found" in detail.lower() else 400
+        raise HTTPException(status_code=status_code, detail=detail) from e
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
 @router.patch("/{api_key_id}", include_in_schema=False)
 async def update_api_key_route(
     api_key_id: UUID,
@@ -74,9 +92,10 @@ async def update_api_key_route(
     db: DbSession,
     current_user: CurrentActiveUser,
 ) -> ApiKeyRead:
-    """Update mutable fields of an API key (currently: ``allowed_ips``)."""
+    """Update mutable fields of an API key (``name``, ``allowed_ips``)."""
     try:
-        return await update_api_key_allowed_ips(db, api_key_id, current_user.id, req.allowed_ips)
+        updates = req.model_dump(exclude_unset=True)
+        return await update_api_key(db, api_key_id, current_user.id, updates)
     except ValueError as e:
         # "API Key not found" → 404; malformed allow-list pattern → 422.
         detail = str(e)

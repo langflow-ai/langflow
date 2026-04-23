@@ -12,6 +12,8 @@ from langflow.services.database.models.api_key.crud import (
     _check_key_from_db,
     create_api_key,
     hash_api_key,
+    regenerate_api_key,
+    update_api_key,
 )
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 from langflow.services.database.models.user.model import User
@@ -244,3 +246,60 @@ async def test_check_key_duplicate_hash_fails_closed(async_session, mock_setting
 
     result = await _check_key_from_db(async_session, "sk-shared", mock_settings)
     assert result is None
+
+
+@pytest.mark.anyio
+async def test_update_api_key_name_and_allowed_ips(async_session, mock_settings, monkeypatch):  # noqa: ARG001
+    """update_api_key must patch name and allowed_ips when present in updates dict."""
+    user = _make_user()
+    async_session.add(user)
+    await async_session.commit()
+
+    monkeypatch.setattr(
+        "langflow.services.database.models.api_key.crud.auth_utils.encrypt_api_key",
+        lambda key, **_kwargs: f"encrypted-{key}",
+    )
+
+    created = await create_api_key(async_session, ApiKeyCreate(name="old"), user.id)
+
+    updated = await update_api_key(
+        async_session,
+        created.id,
+        user.id,
+        {"name": "new-name", "allowed_ips": "1.2.3.4"},
+    )
+    assert updated.name == "new-name"
+
+    from sqlmodel import select
+
+    row = (await async_session.exec(select(ApiKey).where(ApiKey.id == created.id))).first()
+    assert row is not None
+    assert row.name == "new-name"
+    assert row.allowed_ips == "1.2.3.4"
+
+
+@pytest.mark.anyio
+async def test_regenerate_api_key_replaces_secret(async_session, mock_settings, monkeypatch):  # noqa: ARG001
+    """regenerate_api_key must set a new secret and return it unmasked once."""
+    user = _make_user()
+    async_session.add(user)
+    await async_session.commit()
+
+    monkeypatch.setattr(
+        "langflow.services.database.models.api_key.crud.auth_utils.encrypt_api_key",
+        lambda key, **_kwargs: f"encrypted-{key}",
+    )
+
+    created = await create_api_key(async_session, ApiKeyCreate(name="k"), user.id)
+    old_plain = created.api_key
+
+    unmasked = await regenerate_api_key(async_session, created.id, user.id)
+    assert unmasked.api_key != old_plain
+    assert unmasked.api_key.startswith("sk-")
+    assert unmasked.id == created.id
+
+    from sqlmodel import select
+
+    row = (await async_session.exec(select(ApiKey).where(ApiKey.id == created.id))).first()
+    assert row is not None
+    assert row.api_key_hash == hash_api_key(unmasked.api_key)

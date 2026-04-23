@@ -259,6 +259,7 @@ class ApiKeyCreateRequest(BaseModel):
 
 
 class ApiKeyUpdateRequest(BaseModel):
+    name: str | None = None
     allowed_ips: str | None = None
 
 

@@ -3,7 +3,7 @@ import datetime
 import hashlib
 import os
 import secrets
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from cryptography.fernet import InvalidToken
@@ -236,28 +236,7 @@ async def _check_key_from_env(
     return None
 
 
-async def update_api_key_allowed_ips(
-    session: AsyncSession,
-    api_key_id: UUID,
-    user_id: UUID,
-    allowed_ips: str | None,
-) -> ApiKeyRead:
-    """Update the ``allowed_ips`` field on an existing API key.
-
-    Only the owner of the key (matched by ``user_id``) may update it.
-    Returns the updated key as an ``ApiKeyRead`` (masked) instance.
-    """
-    api_key_obj = await session.get(ApiKey, api_key_id)
-    if api_key_obj is None or api_key_obj.user_id != user_id:
-        msg = "API Key not found"
-        raise ValueError(msg)
-
-    # Validate before writing; ValueError propagates to the API layer as 422.
-    api_key_obj.allowed_ips = validate_allowed_ips(allowed_ips)
-    session.add(api_key_obj)
-    await session.flush()
-    await session.refresh(api_key_obj)
-
+def _api_key_read_with_decrypted_key(api_key_obj: ApiKey) -> ApiKeyRead:
     data = api_key_obj.model_dump()
     raw_key = data.get("api_key", "")
     if raw_key:
@@ -269,3 +248,59 @@ async def update_api_key_allowed_ips(
             actual_key = raw_key
         data["api_key"] = actual_key
     return ApiKeyRead.model_validate(data)
+
+
+async def update_api_key(
+    session: AsyncSession,
+    api_key_id: UUID,
+    user_id: UUID,
+    updates: dict[str, Any],
+) -> ApiKeyRead:
+    """Update mutable fields on an API key (``name``, ``allowed_ips``).
+
+    Only the owner of the key (matched by ``user_id``) may update it.
+    ``updates`` should be a non-empty dict of fields to change (typically from
+    ``ApiKeyUpdateRequest.model_dump(exclude_unset=True)``).
+    """
+    api_key_obj = await session.get(ApiKey, api_key_id)
+    if api_key_obj is None or api_key_obj.user_id != user_id:
+        msg = "API Key not found"
+        raise ValueError(msg)
+
+    if not updates:
+        return _api_key_read_with_decrypted_key(api_key_obj)
+
+    if "name" in updates:
+        name_val = updates["name"]
+        api_key_obj.name = name_val.strip() if isinstance(name_val, str) and name_val.strip() else None
+    if "allowed_ips" in updates:
+        api_key_obj.allowed_ips = validate_allowed_ips(updates["allowed_ips"])
+
+    session.add(api_key_obj)
+    await session.flush()
+    await session.refresh(api_key_obj)
+
+    return _api_key_read_with_decrypted_key(api_key_obj)
+
+
+async def regenerate_api_key(
+    session: AsyncSession,
+    api_key_id: UUID,
+    user_id: UUID,
+) -> UnmaskedApiKeyRead:
+    """Replace the secret value with a new random key. Returns the plaintext once (like create)."""
+    api_key_obj = await session.get(ApiKey, api_key_id)
+    if api_key_obj is None or api_key_obj.user_id != user_id:
+        msg = "API Key not found"
+        raise ValueError(msg)
+
+    generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
+    api_key_obj.api_key = auth_utils.encrypt_api_key(generated_api_key)
+    api_key_obj.api_key_hash = hash_api_key(generated_api_key)
+
+    session.add(api_key_obj)
+    await session.flush()
+    await session.refresh(api_key_obj)
+    unmasked = UnmaskedApiKeyRead.model_validate(api_key_obj, from_attributes=True)
+    unmasked.api_key = generated_api_key
+    return unmasked

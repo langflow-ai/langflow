@@ -1,6 +1,6 @@
-import type { ColDef } from "ag-grid-community";
+import type { ColDef, ValueFormatterParams } from "ag-grid-community";
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
-import { IpRestrictionCell } from "../components/IpRestrictionCell";
+import type { IApiKeysDataArray } from "@/controllers/API/queries/api-keys";
 import { PlainTableCell } from "../components/PlainTableCell";
 
 export const getColumnDefs = (options?: { hideIpRestriction?: boolean }) => {
@@ -12,6 +12,8 @@ export const getColumnDefs = (options?: { hideIpRestriction?: boolean }) => {
       headerName: "Name",
       field: "name",
       cellRenderer: PlainTableCell,
+      valueFormatter: (p: ValueFormatterParams<IApiKeysDataArray>) =>
+        p.value != null && p.value !== "" ? String(p.value) : "Untitled",
       flex: 2,
     },
     {
@@ -45,8 +47,9 @@ export const getColumnDefs = (options?: { hideIpRestriction?: boolean }) => {
     columns.push({
       headerName: "IP Restriction",
       field: "allowed_ips",
-      cellRenderer: IpRestrictionCell,
-      cellClass: "group",
+      cellRenderer: PlainTableCell,
+      valueFormatter: (p: ValueFormatterParams<IApiKeysDataArray>) =>
+        p.value ? String(p.value) : "—",
       flex: 2,
       resizable: true,
     });

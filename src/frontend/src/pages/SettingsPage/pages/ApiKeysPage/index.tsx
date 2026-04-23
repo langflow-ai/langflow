@@ -1,5 +1,5 @@
-import type { SelectionChangedEvent } from "ag-grid-community";
-import { useContext, useEffect, useState } from "react";
+import type { RowClickedEvent, SelectionChangedEvent } from "ag-grid-community";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
@@ -10,6 +10,7 @@ import {
 import TableComponent from "../../../../components/core/parameterRenderComponent/components/tableComponent";
 import { AuthContext } from "../../../../contexts/authContext";
 import useAlertStore from "../../../../stores/alertStore";
+import ApiKeyEditModal from "./components/ApiKeyEditModal";
 import ApiKeyHeaderComponent from "./components/ApiKeyHeader";
 import { getColumnDefs } from "./helpers/column-defs";
 
@@ -24,13 +25,14 @@ export default function ApiKeysPage() {
   const [envIpRestrictionEnabled, setEnvIpRestrictionEnabled] = useState(false);
   const [envIpRestriction, setEnvIpRestriction] = useState<string | null>(null);
   const { refetch } = useGetApiKeysQuery();
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const selectedKeyForEdit = useRef<IApiKeysDataArray | null>(null);
 
   async function getApiKeysQuery() {
     const { data } = await refetch();
     if (data !== undefined) {
       const updatedKeysList = data["api_keys"].map((apikey) => ({
         ...apikey,
-        name: apikey.name && apikey.name !== "" ? apikey.name : "Untitled",
         last_used_at: apikey.last_used_at ?? "Never",
       }));
       setKeysList(updatedKeysList);
@@ -84,6 +86,17 @@ export default function ApiKeysPage() {
     hideIpRestriction: envIpRestrictionEnabled,
   });
 
+  function handleRowClicked(event: RowClickedEvent<IApiKeysDataArray>) {
+    const target = event.event?.target as HTMLElement | undefined;
+    if (target?.closest("input[type='checkbox']")) {
+      return;
+    }
+    if (event.data) {
+      selectedKeyForEdit.current = event.data;
+      setOpenEditModal(true);
+    }
+  }
+
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
       <ApiKeyHeaderComponent
@@ -134,12 +147,23 @@ export default function ApiKeysPage() {
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
           }}
+          onRowClicked={handleRowClicked}
           rowSelection="multiple"
           suppressRowClickSelection={true}
           pagination={true}
           columnDefs={columnDefs}
           rowData={keysList}
         />
+        {selectedKeyForEdit.current && (
+          <ApiKeyEditModal
+            key={selectedKeyForEdit.current.id}
+            initialData={selectedKeyForEdit.current}
+            open={openEditModal}
+            setOpen={setOpenEditModal}
+            onUpdated={getApiKeysQuery}
+            envIpRestrictionEnabled={envIpRestrictionEnabled}
+          />
+        )}
       </div>
     </div>
   );

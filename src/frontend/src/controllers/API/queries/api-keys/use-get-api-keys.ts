@@ -4,7 +4,7 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface IApiKeysDataArray {
-  name: string;
+  name: string | null;
   last_used_at: string | null;
   total_uses: number;
   is_active: boolean;
