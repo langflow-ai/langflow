@@ -1,7 +1,5 @@
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +20,8 @@ import {
 import { useErrorAlert } from "../hooks/use-error-alert";
 import type { Deployment, DeploymentProvider, ProviderAccount } from "../types";
 import DeploymentStepper, { CREATE_DEPLOYED_STEPS } from "./deployment-stepper";
+import DeploymentStepperFooter from "./deployment-stepper-footer";
+import DeploymentSuccessContent from "./deployment-success-content";
 import StepAttachFlows from "./step-attach-flows";
 import StepDeployStatus from "./step-deploy-status";
 import StepProvider from "./step-provider";
@@ -336,59 +336,17 @@ function DeploymentStepperModalContent({
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-2">
           {isInDeployPhase ? (
             isDeployed && !isEditMode ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-8 py-10 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-emerald-500">
-                  <ForwardedIconComponent
-                    name="Check"
-                    className="h-8 w-8 text-emerald-500"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <h3 className="font-sans text-2xl font-semibold tracking-normal text-foreground">
-                    Deployment successful
-                  </h3>
-                  <p className="font-sans text-base font-normal text-muted-foreground">
-                    Deployed to {providerDisplayName} as draft
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-1 font-sans text-sm font-normal text-muted-foreground">
-                  <span>Publish from Draft to Live in</span>
-                  {providerConsoleUrl ? (
-                    <a
-                      href={providerConsoleUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 font-semibold text-foreground hover:underline"
-                    >
-                      {providerDisplayName}
-                      <ForwardedIconComponent
-                        name="ArrowUpRight"
-                        className="h-4 w-4"
-                      />
-                    </a>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 font-semibold text-foreground">
-                      {providerDisplayName}
-                    </span>
-                  )}
-                </div>
-
-                {onTestDeployment &&
-                  createdDeployment &&
-                  selectedInstance?.id && (
-                    <Button
-                      variant="outline"
-                      className="h-11 w-full max-w-lg gap-2 rounded-lg border-zinc-700 font-sans text-base font-semibold text-foreground hover:bg-input"
-                      data-testid="deployment-stepper-test"
-                      onClick={handleTest}
-                    >
-                      <ForwardedIconComponent name="Play" className="h-5 w-5" />
-                      Test Deployment
-                    </Button>
-                  )}
-              </div>
+              <DeploymentSuccessContent
+                deploymentName={createdDeployment?.name}
+                providerName={providerDisplayName}
+                providerUrl={providerConsoleUrl}
+                showTestButton={
+                  !!onTestDeployment &&
+                  !!createdDeployment &&
+                  !!selectedInstance?.id
+                }
+                onTest={handleTest}
+              />
             ) : (
               <StepDeployStatus
                 phase={isDeploying ? "deploying" : "deployed"}
@@ -405,58 +363,23 @@ function DeploymentStepperModalContent({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between border-t border-border px-6 py-4">
-          {isDeployed ? (
-            <div />
-          ) : (
-            <Button variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-          )}
-          <div className="flex items-center gap-3">
-            {!isDeployed && (
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                disabled={currentStep === minStep || isDeploying}
-              >
-                Back
-              </Button>
-            )}
-            {!isInDeployPhase && (
-              <Button
-                onClick={isFinalStep ? handleDeploy : handleStepNext}
-                disabled={!canGoNext || isCreatingAccount}
-                data-testid="deployment-stepper-next"
-              >
-                {isFinalStep ? (
-                  <>
-                    <ForwardedIconComponent
-                      name={actionIcon}
-                      className="h-4 w-4"
-                    />
-                    {actionLabel}
-                  </>
-                ) : isCreatingAccount ? (
-                  "Connecting..."
-                ) : (
-                  "Next"
-                )}
-              </Button>
-            )}
-            {isDeploying && (
-              <Button disabled data-testid="deployment-stepper-next">
-                <ForwardedIconComponent
-                  name={actionIcon}
-                  className="h-4 w-4 animate-pulse"
-                />
-                {progressLabel}
-              </Button>
-            )}
-            {isDeployed && <Button onClick={() => setOpen(false)}>Done</Button>}
-          </div>
-        </div>
+        <DeploymentStepperFooter
+          canGoNext={canGoNext}
+          currentStep={currentStep}
+          isCreatingAccount={isCreatingAccount}
+          isDeployed={isDeployed}
+          isDeploying={isDeploying}
+          isInDeployPhase={isInDeployPhase}
+          isFinalStep={isFinalStep}
+          minStep={minStep}
+          actionIcon={actionIcon}
+          actionLabel={actionLabel}
+          progressLabel={progressLabel}
+          onBack={handleBack}
+          onCancel={() => setOpen(false)}
+          onClose={() => setOpen(false)}
+          onPrimaryAction={isFinalStep ? handleDeploy : handleStepNext}
+        />
       </div>
     </>
   );
