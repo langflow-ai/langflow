@@ -98,6 +98,46 @@ jobs:
 
           echo "Validated: '${{ inputs.release_tag }}' is a valid tag."
 
+  validate-tag-format:
+    name: Validate Tag Format and Check for Duplicates
+    runs-on: ubuntu-latest
+    needs: [validate-tag]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      
+      - name: Validate Tag Has v Prefix
+        run: |
+          TAG="${{ inputs.release_tag }}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Error: Tag must start with 'v' and follow semver format (v1.2.3)"
+            echo "   Got: $TAG"
+            echo ""
+            echo "This is required to ensure GitHub's generateReleaseNotes uses the correct base comparison."
+            exit 1
+          fi
+          echo "✅ Tag format is valid: $TAG"
+      
+      - name: Check for Duplicate Tag Without v Prefix
+        run: |
+          TAG="${{ inputs.release_tag }}"
+          TAG_WITHOUT_V="${TAG#v}"
+          
+          if git rev-parse "$TAG_WITHOUT_V" >/dev/null 2>&1; then
+            echo "❌ Error: Duplicate tag without 'v' prefix exists: $TAG_WITHOUT_V"
+            echo "   This will cause release notes to use the wrong base comparison."
+            echo ""
+            echo "   The tag '$TAG_WITHOUT_V' points to commit: $(git rev-parse --short $TAG_WITHOUT_V)"
+            echo "   The tag '$TAG' points to commit: $(git rev-parse --short $TAG)"
+            echo ""
+            echo "   To fix this, delete the duplicate tag:"
+            echo "   git push origin :refs/tags/$TAG_WITHOUT_V"
+            exit 1
+          fi
+          echo "✅ No duplicate tag found"
+
   validate-dependencies:
     name: Validate Release Dependencies
     runs-on: ubuntu-latest
@@ -1000,14 +1040,15 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [determine-main-version, build-main, publish-main]
+    needs: [determine-main-version, build-main, publish-main, validate-tag-format]
     if: |
       always() &&
       !cancelled() &&
       !inputs.dry_run &&
       inputs.create_release &&
       needs.build-main.result == 'success' &&
-      needs.publish-main.result == 'success'
+      needs.publish-main.result == 'success' &&
+      needs.validate-tag-format.result == 'success'
     steps:
       - uses: actions/download-artifact@v4
         with:
