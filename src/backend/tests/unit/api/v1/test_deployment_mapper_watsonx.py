@@ -75,6 +75,20 @@ class _FakeDb:
         return _FakeExecResult(self._rows)
 
 
+@pytest.mark.asyncio
+async def test_watsonx_mapper_resolve_deployment_list_adapter_params_passthrough() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    params = await mapper.resolve_deployment_list_adapter_params(
+        deployment_type=DeploymentType.AGENT,
+        names=["A", "B"],
+        provider_params={"env": "prod"},
+        db=_FakeDb([]),
+    )
+    assert params.deployment_types == [DeploymentType.AGENT]
+    assert params.deployment_names == ["A", "B"]
+    assert params.provider_params == {"env": "prod"}
+
+
 def test_watsonx_mapper_is_registered() -> None:
     mapper = get_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
     assert isinstance(mapper, WatsonxOrchestrateDeploymentMapper)

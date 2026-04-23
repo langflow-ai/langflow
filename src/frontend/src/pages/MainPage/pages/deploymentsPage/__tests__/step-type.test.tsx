@@ -18,6 +18,8 @@ let mockSelectedLlm = "";
 let mockSelectedInstance: { id: string } | null = { id: "inst-1" };
 let mockLlmModels: Array<{ model_name: string }> = [];
 let mockLlmsLoading = false;
+let mockHasAgentNameErrors = false;
+const mockSetHasAgentNameErrors = jest.fn();
 
 jest.mock("../contexts/deployment-stepper-context", () => ({
   useDeploymentStepper: () => ({
@@ -31,6 +33,8 @@ jest.mock("../contexts/deployment-stepper-context", () => ({
     selectedLlm: mockSelectedLlm,
     setSelectedLlm: mockSetSelectedLlm,
     selectedInstance: mockSelectedInstance,
+    hasAgentNameErrors: mockHasAgentNameErrors,
+    setHasAgentNameErrors: mockSetHasAgentNameErrors,
   }),
 }));
 
@@ -45,6 +49,13 @@ jest.mock(
     }),
   }),
 );
+
+jest.mock("@/controllers/API/queries/deployments", () => ({
+  useCheckAgentNames: () => ({
+    data: { existing_names: [] },
+    isFetching: false,
+  }),
+}));
 
 jest.mock(
   "@/components/common/genericIconComponent",

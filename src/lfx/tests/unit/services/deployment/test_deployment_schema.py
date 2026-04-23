@@ -141,6 +141,14 @@ def test_deployment_list_params_rejects_blank_filter_ids() -> None:
         DeploymentListParams(deployment_ids=["   "])
 
 
+def test_deployment_list_params_validates_deployment_names() -> None:
+    params = DeploymentListParams(deployment_names=[" A ", "B"])
+    assert params.deployment_names == ["A", "B"]
+
+    with pytest.raises(ValidationError, match="deployment_names must not contain empty or whitespace-only entries"):
+        DeploymentListParams(deployment_names=["A", "  "])
+
+
 def test_snapshot_binding_update_add_ids_dedupes() -> None:
     snapshot_uuid = uuid4()
     payload = SnapshotDeploymentBindingUpdate(

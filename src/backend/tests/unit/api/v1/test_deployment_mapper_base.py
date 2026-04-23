@@ -339,6 +339,20 @@ async def test_base_mapper_resolve_execution_create_rejects_invalid_provider_dat
         )
 
 
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_deployment_list_adapter_params_passthrough() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_deployment_list_adapter_params(
+        deployment_type=DeploymentType.AGENT,
+        names=["A", "B"],
+        provider_params={"env": "prod"},
+        db=None,
+    )
+    assert params.deployment_types == [DeploymentType.AGENT]
+    assert params.deployment_names == ["A", "B"]
+    assert params.provider_params == {"env": "prod"}
+
+
 def test_mapper_has_resolve_method_for_all_inbound_slots() -> None:
     for slot_name in INBOUND_SLOT_NAMES:
         assert hasattr(BaseDeploymentMapper, f"resolve_{slot_name}")

@@ -41,7 +41,9 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
     DeploymentGetResult,
     DeploymentListLlmsResult,
+    DeploymentListParams,
     DeploymentListResult,
+    DeploymentType,
     DeploymentUpdateResult,
     ExecutionCreate,
     ExecutionCreateResult,
@@ -287,6 +289,23 @@ class BaseDeploymentMapper:
                     f"artifact: {exc.errors()[0]['msg']}"
                 ),
             ) from exc
+
+    async def resolve_deployment_list_adapter_params(
+        self,
+        *,
+        deployment_type: DeploymentType | None,
+        names: list[str] | None = None,
+        provider_params: dict[str, Any] | None,
+        db: AsyncSession,
+    ) -> DeploymentListParams | None:
+        resolved_provider_params = await self.resolve_deployment_list_params(provider_params, db)
+        if deployment_type is None and not names and resolved_provider_params is None:
+            return None
+        return DeploymentListParams(
+            deployment_types=[deployment_type] if deployment_type is not None else None,
+            deployment_names=names or None,
+            provider_params=resolved_provider_params,
+        )
 
     async def resolve_config_list_adapter_params(
         self,

@@ -15,7 +15,9 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
     DeploymentGetResult,
     DeploymentListLlmsResult,
+    DeploymentListParams,
     DeploymentListResult,
+    DeploymentType,
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
@@ -333,6 +335,22 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             raw=provider_data,
         )
         return parsed.model_dump()
+
+    async def resolve_deployment_list_adapter_params(
+        self,
+        *,
+        deployment_type: DeploymentType | None,
+        names: list[str] | None = None,
+        provider_params: dict[str, Any] | None,
+        db: AsyncSession,
+    ) -> DeploymentListParams | None:
+        normalized = [name for n in names if (name := normalize_wxo_name(n))] if names else None
+        return await super().resolve_deployment_list_adapter_params(
+            deployment_type=deployment_type,
+            names=normalized,
+            provider_params=provider_params,
+            db=db,
+        )
 
     async def resolve_snapshot_list_adapter_params(
         self,

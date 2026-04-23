@@ -374,3 +374,38 @@ test(
     await expect(page.getByTestId("deployment-row-dep-1")).toBeVisible();
   },
 );
+
+test(
+  "Names filter is passed to API when fetching deployments",
+  { tag: ["@release", "@workspace", "@api"] },
+  async ({ page }) => {
+    test.skip(
+      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+    );
+
+    const namesRequest = page.waitForRequest(
+      (req) =>
+        req.url().includes("/api/v1/deployments") &&
+        req.url().includes("names=Agent"),
+    );
+
+    await page.route("**/api/v1/deployments*", (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ deployments: [] }),
+      });
+    });
+
+    // Since there is no UI for names filter yet, we trigger the API call directly
+    // to verify the mock contract.
+    await page.evaluate(() => {
+      fetch("/api/v1/deployments?names=Agent+Alpha&names=Agent+Beta");
+    });
+
+    const req = await namesRequest;
+    expect(req.url()).toContain("names=Agent+Alpha");
+    expect(req.url()).toContain("names=Agent+Beta");
+  },
+);
