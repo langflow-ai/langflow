@@ -18,10 +18,10 @@ export default function DeploymentSuccessContent({
 }: DeploymentSuccessContentProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8 py-10 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-emerald-500">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-accent-emerald">
         <ForwardedIconComponent
           name="Check"
-          className="h-8 w-8 text-emerald-500"
+          className="h-8 w-8 text-accent-emerald-foreground"
         />
       </div>
 
@@ -50,7 +50,7 @@ export default function DeploymentSuccessContent({
       {showTestButton && deploymentName && (
         <Button
           variant="outline"
-          className="h-11 w-full max-w-lg gap-2 rounded-lg border-zinc-700 font-sans text-base font-semibold text-foreground hover:bg-input"
+          className="h-11 w-full max-w-lg gap-2 rounded-lg border-input font-sans text-base font-semibold text-foreground hover:bg-input"
           data-testid="deployment-stepper-test"
           onClick={onTest}
         >
