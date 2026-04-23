@@ -2,18 +2,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
-
-from toolguard.buildtime import (
-    PolicySpecOptions,
-    ToolGuardsCodeGenerationResult,
-    ToolGuardSpec,
-    generate_guard_specs,
-    generate_guards_code,
-)
-from toolguard.extra.langchain_to_oas import langchain_tools_to_openapi
-from toolguard.runtime import load_toolguards, load_toolguards_from_memory
-from toolguard.runtime.runtime import RESULTS_FILENAME
+from typing import TYPE_CHECKING, Any, cast
 
 from lfx.base.models import LCModelComponent
 from lfx.base.models.unified_models import (
@@ -21,9 +10,6 @@ from lfx.base.models.unified_models import (
     get_llm,
     update_model_options_in_build_config,
 )
-from lfx.components.models_and_agents.policies.guard_sync_utils import sync_generated_guard_code_inputs
-from lfx.components.models_and_agents.policies.guarded_tool import GuardedTool
-from lfx.components.models_and_agents.policies.llm_wrapper import LangchainModelWrapper
 from lfx.components.models_and_agents.policies.module_utils import unload_module
 from lfx.field_typing import LanguageModel, Tool
 from lfx.io import (
@@ -39,7 +25,73 @@ from lfx.io import (
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
+    from toolguard.buildtime import PolicySpecOptions, ToolGuardsCodeGenerationResult, ToolGuardSpec
+
     from lfx.inputs.inputs import InputTypes
+else:
+    PolicySpecOptions = ToolGuardsCodeGenerationResult = ToolGuardSpec = Any
+
+
+RESULTS_FILENAME = "results.json"
+_TOOLGUARD_IMPORT_ERROR: ModuleNotFoundError | None = None
+
+
+def _toolguard_error_message() -> str:
+    msg = (
+        "Policies component requires the optional `toolguard` dependency. "
+        "Install `langflow-base[toolguard]` or `langflow-base[complete]` to enable it."
+    )
+    if _TOOLGUARD_IMPORT_ERROR is not None:
+        return f"{msg} Original error: {_TOOLGUARD_IMPORT_ERROR}"
+    return msg
+
+
+def _missing_toolguard_dependency(*_args, **_kwargs):
+    raise ImportError(_toolguard_error_message())
+
+
+class _MissingToolguardType:
+    def __init__(self, *_args, **_kwargs):
+        raise ImportError(_toolguard_error_message())
+
+
+try:
+    from toolguard.buildtime import (
+        PolicySpecOptions,
+        ToolGuardsCodeGenerationResult,
+        ToolGuardSpec,
+        generate_guard_specs,
+        generate_guards_code,
+    )
+    from toolguard.extra.langchain_to_oas import langchain_tools_to_openapi
+    from toolguard.runtime import load_toolguards, load_toolguards_from_memory
+    from toolguard.runtime.runtime import RESULTS_FILENAME
+
+    from lfx.components.models_and_agents.policies.guard_sync_utils import sync_generated_guard_code_inputs
+    from lfx.components.models_and_agents.policies.guarded_tool import GuardedTool
+    from lfx.components.models_and_agents.policies.llm_wrapper import LangchainModelWrapper
+except ModuleNotFoundError as exc:
+    if not exc.name or not exc.name.startswith("toolguard"):
+        raise
+
+    _TOOLGUARD_IMPORT_ERROR = exc
+    PolicySpecOptions = _MissingToolguardType
+    ToolGuardsCodeGenerationResult = _MissingToolguardType
+    generate_guard_specs = _missing_toolguard_dependency
+    generate_guards_code = _missing_toolguard_dependency
+    langchain_tools_to_openapi = _missing_toolguard_dependency
+    load_toolguards = _missing_toolguard_dependency
+    load_toolguards_from_memory = _missing_toolguard_dependency
+    GuardedTool = _MissingToolguardType
+    LangchainModelWrapper = _MissingToolguardType
+
+    def sync_generated_guard_code_inputs(
+        build_config: dict,
+        _work_dir: Path,
+        _step2_subdir: str,
+        _project_name: str,
+    ) -> dict:
+        return build_config
 
 
 TOOLGUARD_WORK_DIR = Path(os.getenv("TOOLGUARD_WORK_DIR") or "tmp_toolguard")

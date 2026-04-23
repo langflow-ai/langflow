@@ -263,7 +263,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.0"
+                    "version": "0.136.1"
                   },
                   {
                     "name": "lfx",
@@ -565,7 +565,7 @@
                   },
                   {
                     "name": "langchain_openai",
-                    "version": "1.1.16"
+                    "version": "1.2.0"
                   },
                   {
                     "name": "langchain_huggingface",

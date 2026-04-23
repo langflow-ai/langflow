@@ -59,6 +59,7 @@ payloads_module = importlib.import_module("langflow.services.adapters.deployment
 client_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.client")
 types_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types")
 deployment_context_module = importlib.import_module("langflow.services.adapters.deployment.context")
+utils_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.utils")
 WatsonxOrchestrateDeploymentService = importlib.import_module(
     "langflow.services.adapters.deployment.watsonx_orchestrate"
 ).WatsonxOrchestrateDeploymentService
@@ -76,6 +77,10 @@ ListConfigsResponse = importlib.import_module(
 ).ListConfigsResponse
 
 TEST_WXO_LLM = "ibm/granite-3.3-8b"
+
+
+def _normalized_provider_app_id(app_id: str) -> str:
+    return utils_module.validate_wxo_name(app_id)
 
 
 def _reload_wxo_auth_modules():
@@ -1780,8 +1785,10 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
         error_prefix,
         created_app_ids_journal=None,
     ):
-        _ = clients, payload, user_id, db, error_prefix, created_app_ids_journal
-        if app_id.endswith("cfg-a"):
+        _ = clients, payload, user_id, db, error_prefix
+        if app_id == _normalized_provider_app_id("cfg-a"):
+            if created_app_ids_journal is not None:
+                created_app_ids_journal.append(app_id)
             return app_id
         msg = "boom-create-connection"
         raise RuntimeError(msg)
@@ -1809,7 +1816,7 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
             plan=plan,
         )
 
-    assert captured.get("rollback_app_ids") == ["cfg-a"]
+    assert captured.get("rollback_app_ids") == [_normalized_provider_app_id("cfg-a")]
 
 
 @pytest.mark.anyio
@@ -1853,10 +1860,12 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
         error_prefix,
         created_app_ids_journal=None,
     ):
-        _ = clients, payload, user_id, db, error_prefix, created_app_ids_journal
-        if app_id.endswith("cfg-c"):
+        _ = clients, payload, user_id, db, error_prefix
+        if app_id == _normalized_provider_app_id("cfg-c"):
             msg = "boom-create-connection"
             raise RuntimeError(msg)
+        if created_app_ids_journal is not None:
+            created_app_ids_journal.append(app_id)
         return app_id
 
     async def mock_rollback_created_resources(*, clients, agent_id, tool_ids, app_ids=None):  # noqa: ARG001
@@ -1882,7 +1891,10 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
             plan=plan,
         )
 
-    assert captured["rollback_app_ids"] == ["cfg-a", "cfg-b"]
+    assert captured["rollback_app_ids"] == [
+        _normalized_provider_app_id("cfg-a"),
+        _normalized_provider_app_id("cfg-b"),
+    ]
 
 
 @pytest.mark.anyio
@@ -1953,7 +1965,7 @@ async def test_apply_provider_create_plan_rolls_back_journaled_app_ids_when_crea
             plan=plan,
         )
 
-    assert captured["rollback_app_ids"] == ["cfg-a"]
+    assert captured["rollback_app_ids"] == [_normalized_provider_app_id("cfg-a")]
 
 
 @pytest.mark.anyio
@@ -2000,8 +2012,10 @@ async def test_apply_provider_update_plan_rolls_back_successfully_created_raw_co
         error_prefix,
         created_app_ids_journal=None,
     ):
-        _ = clients, payload, user_id, db, error_prefix, created_app_ids_journal
-        if app_id.endswith("cfg-a"):
+        _ = clients, payload, user_id, db, error_prefix
+        if app_id == _normalized_provider_app_id("cfg-a"):
+            if created_app_ids_journal is not None:
+                created_app_ids_journal.append(app_id)
             return app_id
         msg = "boom-update-connection"
         raise RuntimeError(msg)
@@ -2031,7 +2045,7 @@ async def test_apply_provider_update_plan_rolls_back_successfully_created_raw_co
             plan=plan,
         )
 
-    assert captured["rolled_back_app_ids"] == ["cfg-a"]
+    assert captured["rolled_back_app_ids"] == [_normalized_provider_app_id("cfg-a")]
 
 
 @pytest.mark.anyio
@@ -2079,10 +2093,12 @@ async def test_apply_provider_update_plan_rolls_back_all_journaled_raw_connectio
         error_prefix,
         created_app_ids_journal=None,
     ):
-        _ = clients, payload, user_id, db, error_prefix, created_app_ids_journal
-        if app_id.endswith("cfg-c"):
+        _ = clients, payload, user_id, db, error_prefix
+        if app_id == _normalized_provider_app_id("cfg-c"):
             msg = "boom-update-connection"
             raise RuntimeError(msg)
+        if created_app_ids_journal is not None:
+            created_app_ids_journal.append(app_id)
         return app_id
 
     async def mock_rollback_update_resources(*, clients, created_tool_ids, created_app_id, original_tools):  # noqa: ARG001
@@ -2110,7 +2126,10 @@ async def test_apply_provider_update_plan_rolls_back_all_journaled_raw_connectio
             plan=plan,
         )
 
-    assert captured["rolled_back_app_ids"] == ["cfg-a", "cfg-b"]
+    assert captured["rolled_back_app_ids"] == [
+        _normalized_provider_app_id("cfg-a"),
+        _normalized_provider_app_id("cfg-b"),
+    ]
 
 
 @pytest.mark.anyio
@@ -2187,7 +2206,7 @@ async def test_apply_provider_update_plan_rolls_back_journaled_app_ids_when_crea
             plan=plan,
         )
 
-    assert captured["rolled_back_app_ids"] == ["cfg-a"]
+    assert captured["rolled_back_app_ids"] == [_normalized_provider_app_id("cfg-a")]
 
 
 @pytest.mark.anyio
