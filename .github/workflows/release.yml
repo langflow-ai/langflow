@@ -53,6 +53,11 @@ on:
         required: false
         type: boolean
         default: true
+      run_pip_check:
+        description: "Whether to run pip check - ONLY SET TO FALSE ONCE YOU HAVE ALREADY ATTEMPTED AND FAILED A RUN THEN MADE SURE DEPS DO NOT CAUSE FAILURES"
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   echo-inputs:
@@ -107,7 +112,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      
+
       - name: Validate Tag Has v Prefix
         run: |
           TAG="${{ inputs.release_tag }}"
@@ -119,12 +124,12 @@ jobs:
             exit 1
           fi
           echo "✅ Tag format is valid: $TAG"
-      
+
       - name: Check for Duplicate Tag Without v Prefix
         run: |
           TAG="${{ inputs.release_tag }}"
           TAG_WITHOUT_V="${TAG#v}"
-          
+
           if git rev-parse "$TAG_WITHOUT_V" >/dev/null 2>&1; then
             echo "❌ Error: Duplicate tag without 'v' prefix exists: $TAG_WITHOUT_V"
             echo "   This will cause release notes to use the wrong base comparison."
@@ -600,6 +605,7 @@ jobs:
           fi
           uv pip install $FIND_LINKS --prerelease=allow -e src/backend/base
       - name: Check for dependency incompatibility
+        if: ${{ inputs.run_pip_check }}
         run: uv pip check
       - name: Set version for pre-release
         if: ${{ inputs.pre_release }}
@@ -747,6 +753,7 @@ jobs:
           fi
           uv pip install $FIND_LINKS --prerelease=allow -e .
       - name: Check for dependency incompatibility
+        if: ${{ inputs.run_pip_check }}
         run: uv pip check
       - name: Set version for pre-release
         if: ${{ inputs.pre_release }}
@@ -1040,7 +1047,8 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [determine-main-version, build-main, publish-main, validate-tag-format]
+    needs:
+      [determine-main-version, build-main, publish-main, validate-tag-format]
     if: |
       always() &&
       !cancelled() &&
