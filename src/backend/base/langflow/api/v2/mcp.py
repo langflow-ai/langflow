@@ -280,6 +280,7 @@ async def update_server(
     *,
     check_existing: bool = False,
     delete: bool = False,
+    merge_existing: bool = False,
 ):
     async with _update_server_locks[str(current_user.id)]:
         server_list = await get_server_list(current_user, session, storage_service, settings_service)
@@ -294,6 +295,9 @@ async def update_server(
                 del server_list["mcpServers"][server_name]
             else:
                 raise HTTPException(status_code=500, detail="Server not found.")
+        elif merge_existing:
+            existing_config = server_list["mcpServers"].get(server_name, {})
+            server_list["mcpServers"][server_name] = {**existing_config, **server_config}
         else:
             server_list["mcpServers"][server_name] = server_config
 
@@ -359,6 +363,7 @@ async def update_server_endpoint(
         session,
         storage_service,
         settings_service,
+        merge_existing=True,
     )
 
 
