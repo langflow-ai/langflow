@@ -2,7 +2,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 from lfx.base.models import LCModelComponent
 from lfx.base.models.unified_models import (
@@ -28,8 +28,6 @@ if TYPE_CHECKING:
     from toolguard.buildtime import PolicySpecOptions, ToolGuardsCodeGenerationResult, ToolGuardSpec
 
     from lfx.inputs.inputs import InputTypes
-else:
-    PolicySpecOptions = ToolGuardsCodeGenerationResult = ToolGuardSpec = Any
 
 
 RESULTS_FILENAME = "results.json"
@@ -55,11 +53,32 @@ class _MissingToolguardType:
         raise ImportError(_toolguard_error_message())
 
 
+def _sync_generated_guard_code_inputs_fallback(
+    build_config: dict,
+    work_dir: Path,
+    step2_subdir: str,
+    project_name: str,
+) -> dict:
+    _ = work_dir, step2_subdir, project_name
+    return build_config
+
+
+PolicySpecOptions = _MissingToolguardType
+ToolGuardsCodeGenerationResult = _MissingToolguardType
+generate_guard_specs = _missing_toolguard_dependency
+generate_guards_code = _missing_toolguard_dependency
+langchain_tools_to_openapi = _missing_toolguard_dependency
+load_toolguards = _missing_toolguard_dependency
+load_toolguards_from_memory = _missing_toolguard_dependency
+GuardedTool = _MissingToolguardType
+LangchainModelWrapper = _MissingToolguardType
+sync_generated_guard_code_inputs = _sync_generated_guard_code_inputs_fallback
+
+
 try:
     from toolguard.buildtime import (
         PolicySpecOptions,
         ToolGuardsCodeGenerationResult,
-        ToolGuardSpec,
         generate_guard_specs,
         generate_guards_code,
     )
@@ -75,23 +94,6 @@ except ModuleNotFoundError as exc:
         raise
 
     _TOOLGUARD_IMPORT_ERROR = exc
-    PolicySpecOptions = _MissingToolguardType
-    ToolGuardsCodeGenerationResult = _MissingToolguardType
-    generate_guard_specs = _missing_toolguard_dependency
-    generate_guards_code = _missing_toolguard_dependency
-    langchain_tools_to_openapi = _missing_toolguard_dependency
-    load_toolguards = _missing_toolguard_dependency
-    load_toolguards_from_memory = _missing_toolguard_dependency
-    GuardedTool = _MissingToolguardType
-    LangchainModelWrapper = _MissingToolguardType
-
-    def sync_generated_guard_code_inputs(
-        build_config: dict,
-        _work_dir: Path,
-        _step2_subdir: str,
-        _project_name: str,
-    ) -> dict:
-        return build_config
 
 
 TOOLGUARD_WORK_DIR = Path(os.getenv("TOOLGUARD_WORK_DIR") or "tmp_toolguard")
@@ -228,7 +230,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             project_name=py_module,
         )
 
-    async def _generate_guard_specs(self) -> list[ToolGuardSpec]:
+    async def _generate_guard_specs(self) -> list["ToolGuardSpec"]:
         logger.debug("Starting step 1")
         logger.debug(f"model = {self.model}")
         llm = LangchainModelWrapper(self.build_model())
@@ -245,7 +247,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         logger.debug("Step 1 Done")
         return specs
 
-    async def _generate_guard_code(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
+    async def _generate_guard_code(self, specs: list["ToolGuardSpec"]) -> "ToolGuardsCodeGenerationResult":
         logger.debug("Starting step 2")
         out_dir = self.work_dir / STEP2
         if out_dir.exists():
@@ -327,7 +329,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
         self._verify_cached_guards(code_dir)
 
-    def make_toolguard_result(self) -> ToolGuardsCodeGenerationResult:
+    def make_toolguard_result(self) -> "ToolGuardsCodeGenerationResult":
         attrs = self.get_vertex().data["node"]["template"]
         if not attrs:
             raise ValueError
