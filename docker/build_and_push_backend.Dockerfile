@@ -37,19 +37,9 @@ RUN uv venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
 
-# Extract `[tool.uv] override-dependencies` from src/backend/base/pyproject.toml so that
-# `uv pip install` (which doesn't read those overrides) can resolve around upstream
-# packages that exact-pin transitive deps — notably litellm 1.83.5+ pinning
-# `click==8.1.8` and `aiohttp==3.13.3` (BerriAI/litellm#26154), which conflict with
-# cuga's `aiohttp>=3.13.5` requirement. Reading from pyproject.toml keeps this in sync
-# automatically — edit the overrides there, not here.
-RUN python3 -c "import tomllib; \
-print('\n'.join(tomllib.load(open('src/backend/base/pyproject.toml','rb'))['tool']['uv']['override-dependencies']))" \
-    > /tmp/uv-overrides.txt
-
+# Install langflow-base with all extras except dev (which includes Playwright)
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --overrides /tmp/uv-overrides.txt \
-        ./src/sdk ./src/lfx "./src/backend/base[complete,postgresql]"
+    uv pip install ./src/sdk ./src/lfx "./src/backend/base[complete,postgresql]"
 
 ################################
 # RUNTIME
