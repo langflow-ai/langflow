@@ -10,7 +10,7 @@ Two responsibilities:
 2. **DB-first read** helper that consolidates metadata from either the
    row or the on-disk JSON, whichever is populated. New KBs live only
    in the DB after Phase 1.5; older KBs continue to work because the
-   boot-time backfill upserts rows for any directory that lacks one.
+   startup reconciliation upserts rows for any directory that lacks one.
 
 Kept small and procedural on purpose — no repository class because
 the CRUD surface is tiny (create, upsert, update counters, update
@@ -29,10 +29,7 @@ from uuid import UUID, uuid4
 from lfx.log.logger import logger
 from sqlmodel import select
 
-from langflow.services.database.models.knowledge_base import (
-    KnowledgeBaseRecord,
-    KnowledgeBaseStatus,
-)
+from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from langflow.services.deps import session_scope
 
 
@@ -105,6 +102,40 @@ async def list_by_user(user_id: UUID) -> list[KnowledgeBaseRecord]:
         )
         result = await session.exec(stmt)
         return list(result.all())
+
+
+async def backfill_all_users_from_disk(*, kb_root: Path | None = None) -> int:
+    """Backfill missing KB rows for every existing user.
+
+    Runs during application startup so list/detail endpoints can stay
+    read-only. Returns the total number of inserted rows across all
+    users and never raises for per-user failures.
+    """
+    from langflow.api.utils.kb_helpers import KBStorageHelper
+    from langflow.services.database.models.user.model import User
+
+    effective_root = kb_root or KBStorageHelper.get_root_path()
+    if not effective_root.exists():
+        return 0
+
+    async with session_scope() as session:
+        users = list((await session.exec(select(User))).all())
+
+    inserted = 0
+    for user in users:
+        kb_user_root = effective_root / user.username
+        if not kb_user_root.exists():
+            continue
+        try:
+            inserted += await backfill_from_disk(user_id=user.id, kb_user_root=kb_user_root)
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(
+                "knowledge-base startup reconciliation failed for user %s: %s",
+                user.username,
+                exc,
+            )
+
+    return inserted
 
 
 async def update_stats(
@@ -225,6 +256,10 @@ def record_to_metadata_dict(record: KnowledgeBaseRecord) -> dict[str, Any]:
     routes expect so a DB-first migration doesn't need a parallel
     consumer refactor.
     """
+    status = record.status
+    if status == KnowledgeBaseStatus.READY.value and record.chunks <= 0:
+        status = "empty"
+
     return {
         "id": str(record.id),
         "name": record.name,
@@ -242,7 +277,7 @@ def record_to_metadata_dict(record: KnowledgeBaseRecord) -> dict[str, Any]:
         "characters": record.characters,
         "size": record.size_bytes,
         "source_types": record.source_types,
-        "status": record.status,
+        "status": status,
         "failure_reason": record.failure_reason,
         "avg_chunk_size": round(record.characters / record.chunks, 1) if record.chunks > 0 else 0.0,
     }

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import uuid
+from contextlib import suppress
 from datetime import datetime, timezone
 from http import HTTPStatus
 from pathlib import Path
@@ -81,8 +82,6 @@ def _resolve_kb_path(kb_name: str, current_user: CurrentActiveUser) -> Path:
     Raises 404 if the KB directory does not exist.
     """
     kb_root_path = KBStorageHelper.get_root_path()
-    if not kb_root_path:
-        raise HTTPException(status_code=500, detail="Knowledge base root path not configured")
     kb_user = current_user.username
     kb_user_path = (kb_root_path / kb_user).resolve()
     kb_path = (kb_user_path / kb_name).resolve()
@@ -273,15 +272,10 @@ async def create_knowledge_base(
         # the JSON file so older service versions still see the legacy
         # on-disk view, while new code reads from the DB first.
         #
-        # For Chroma (the default backend) a missing DB row is recoverable
-        # — the next ``backfill_from_disk`` reads ``embedding_metadata.json``
-        # and upserts the row. For non-default backends (MongoDB, Postgres,
-        # Astra) we now also persist ``backend_type``/``backend_config`` to
-        # the JSON file so the backfill *can* round-trip them, but the DB
-        # remains the source of truth during the lifetime of this request.
-        # Any DB failure would cause the very next call (ingest, chunks)
-        # to fall back to Chroma and silently route to the wrong store,
-        # so we surface it immediately and roll the on-disk state back.
+        # The DB row is now authoritative for list/detail reads, so a
+        # create that only reaches the filesystem is an inconsistent
+        # partial success. Roll back the on-disk state and surface a
+        # 500 regardless of backend type.
         try:
             await knowledge_base_service.create_record(
                 user_id=current_user.id,
@@ -294,27 +288,19 @@ async def create_knowledge_base(
                 record_id=kb_id,
             )
         except Exception as exc:
-            if backend_type_value != "chroma":
-                # Non-default backend: the JSON fallback is insufficient
-                # because downstream code needs ``backend_type`` in the
-                # DB row to route reads/writes. Roll back the filesystem
-                # state and surface a 500 so the caller retries.
-                await logger.aerror(
-                    "KB DB persist failed for non-default backend %s (kb=%s): %s — rolling back",
-                    backend_type_value,
-                    kb_name,
-                    exc,
-                )
-                KBStorageHelper.delete_storage(kb_path, kb_name)
-                raise HTTPException(
-                    status_code=500,
-                    detail=(
-                        f"Failed to persist knowledge base '{kb_name}' with backend "
-                        f"'{backend_type_value}'. Please retry."
-                    ),
-                ) from exc
-            # Chroma fallback path: the next backfill will upsert.
-            await logger.awarning("KB DB persist failed for %s; relying on JSON fallback: %s", kb_name, exc)
+            await logger.aerror(
+                "KB DB persist failed for backend %s (kb=%s): %s — rolling back",
+                backend_type_value,
+                kb_name,
+                exc,
+            )
+            KBStorageHelper.delete_storage(kb_path, kb_name)
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    f"Failed to persist knowledge base '{kb_name}' with backend '{backend_type_value}'. Please retry."
+                ),
+            ) from exc
 
         return KnowledgeBaseInfo(
             id=str(kb_id),
@@ -710,7 +696,11 @@ async def list_knowledge_bases(
     current_user: CurrentActiveUser,
     job_service: Annotated[JobService, Depends(get_job_service)],
 ) -> list[KnowledgeBaseInfo]:
-    """List all available knowledge bases."""
+    """List all available knowledge bases.
+
+    Reads from ``knowledge_base`` rows first. A disk scan is only used
+    as a recovery fallback when the user has no KB rows yet.
+    """
     try:
         kb_root_path = KBStorageHelper.get_root_path()
         # Resolve + containment-check on par with every other path
@@ -723,51 +713,46 @@ async def list_knowledge_bases(
         )
         kb_path = kb_user_path
 
-        if not kb_path.exists():
-            return []
-
-        # Opportunistic backfill: ensure every KB on disk has a row so
-        # Phase 2 visibility queries don't miss legacy KBs. Idempotent
-        # — existing rows are skipped.
-        try:
-            await knowledge_base_service.backfill_from_disk(
-                user_id=current_user.id,
-                kb_user_root=kb_path,
-            )
-        except Exception as exc:  # noqa: BLE001
-            await logger.awarning("KB backfill swallowed error: %s", exc)
-
         knowledge_bases = []
         kb_ids_to_fetch = []  # Collect KB IDs for batch fetching
+        rows = await knowledge_base_service.list_by_user(current_user.id)
 
-        # First pass: Load all KBs into memory
-        for kb_dir in kb_path.iterdir():
-            if not kb_dir.is_dir() or kb_dir.name.startswith("."):
-                continue
-            try:
-                metadata = KBAnalysisHelper.get_metadata(kb_dir, fast=False)
-
-                # Extract KB ID from metadata (stored as string, convert to UUID)
-                kb_id_str = metadata.get("id")
-                if kb_id_str:
-                    try:
-                        kb_id_uuid = uuid.UUID(kb_id_str)
-                        kb_ids_to_fetch.append(kb_id_uuid)
-                    except (ValueError, AttributeError):
-                        # If ID is invalid, skip job status lookup for this KB
-                        kb_id_str = None
-
-                kb_info = _build_kb_info(
-                    kb_name=kb_dir.name.replace("_", " "),
-                    dir_name=kb_dir.name,
-                    metadata=metadata,
+        if rows:
+            for row in rows:
+                metadata = knowledge_base_service.record_to_metadata_dict(row)
+                kb_ids_to_fetch.append(row.id)
+                knowledge_bases.append(
+                    _build_kb_info(
+                        kb_name=row.name.replace("_", " "),
+                        dir_name=row.name,
+                        metadata=metadata,
+                        size=row.size_bytes,
+                    )
                 )
-                knowledge_bases.append(kb_info)
+        elif kb_path.exists():
+            # Recovery-only fallback for legacy/exported KB directories
+            # that have not been reconciled into the DB yet.
+            for kb_dir in kb_path.iterdir():
+                if not kb_dir.is_dir() or kb_dir.name.startswith("."):
+                    continue
+                try:
+                    metadata = knowledge_base_service.load_metadata_from_disk(kb_dir)
+                    kb_id_str = metadata.get("id")
+                    if kb_id_str:
+                        with suppress(ValueError, AttributeError, TypeError):
+                            kb_ids_to_fetch.append(uuid.UUID(str(kb_id_str)))
 
-            except OSError as _:
-                # Log the exception and skip directories that can't be read
-                await logger.aexception("Error reading knowledge base directory '%s'", kb_dir)
-                continue
+                    knowledge_bases.append(
+                        _build_kb_info(
+                            kb_name=kb_dir.name.replace("_", " "),
+                            dir_name=kb_dir.name,
+                            metadata=metadata,
+                            size=KBStorageHelper.get_directory_size(kb_dir),
+                        )
+                    )
+                except OSError:
+                    await logger.aexception("Error reading knowledge base directory '%s'", kb_dir)
+                    continue
 
         # Second pass: Batch fetch all job statuses in a single query
         if kb_ids_to_fetch:
@@ -837,9 +822,17 @@ async def list_connectors(_current_user: CurrentActiveUser) -> list[ConnectorCat
 async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
     """Get detailed information about a specific knowledge base."""
     try:
-        kb_path = _resolve_kb_path(kb_name, current_user)
+        record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+        if record is not None:
+            return _build_kb_info(
+                kb_name=record.name.replace("_", " "),
+                dir_name=record.name,
+                metadata=knowledge_base_service.record_to_metadata_dict(record),
+                size=record.size_bytes,
+            )
 
-        metadata = KBAnalysisHelper.get_metadata(kb_path)
+        kb_path = _resolve_kb_path(kb_name, current_user)
+        metadata = knowledge_base_service.load_metadata_from_disk(kb_path)
         return _build_kb_info(
             kb_name=kb_name.replace("_", " "),
             dir_name=kb_name,

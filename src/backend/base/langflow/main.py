@@ -214,6 +214,19 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_auto_login_default_superuser()
             await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Reconciling knowledge base rows from disk")
+            try:
+                from langflow.api.utils import knowledge_base_service
+
+                inserted = await knowledge_base_service.backfill_all_users_from_disk()
+                elapsed = asyncio.get_event_loop().time() - current_time
+                await logger.adebug(
+                    f"Knowledge base reconciliation completed in {elapsed:.2f}s ({inserted} rows inserted)"
+                )
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
+
             if get_settings_service().settings.prometheus_enabled:
                 try:
                     from prometheus_client import start_http_server

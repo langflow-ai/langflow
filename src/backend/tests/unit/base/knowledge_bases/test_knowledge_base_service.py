@@ -186,6 +186,27 @@ class TestNormalization:
         assert snapshot["backend_type"] == "opensearch"
         assert snapshot["backend_config"] == {"index_name": "kb_index"}
 
+    def test_record_to_metadata_dict_maps_zero_chunk_ready_kb_to_empty_status(self):
+        import uuid
+
+        from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+
+        record = KnowledgeBaseRecord(
+            id=uuid.uuid4(),
+            name="kb_empty",
+            user_id=uuid.uuid4(),
+            embedding_provider="OpenAI",
+            embedding_model="text-embedding-3-small",
+            chunks=0,
+            words=0,
+            characters=0,
+            size_bytes=0,
+            status=KnowledgeBaseStatus.READY.value,
+        )
+
+        snapshot = knowledge_base_service.record_to_metadata_dict(record)
+        assert snapshot["status"] == "empty"
+
 
 class TestBackfillFromDisk:
     async def test_backfill_inserts_missing_rows(self, active_user, tmp_path: Path):
@@ -244,6 +265,51 @@ class TestBackfillFromDisk:
             user_id=active_user.id, kb_user_root=tmp_path / "does_not_exist"
         )
         assert inserted == 0
+
+
+class TestBackfillAllUsersFromDisk:
+    async def test_backfill_all_users_scans_each_user_root(self, active_user, tmp_path: Path):
+        from langflow.services.database.models.user.model import User
+        from langflow.services.deps import get_auth_service, session_scope
+
+        other_username = "phase15_other_user"
+        other_user_id = None
+
+        async with session_scope() as session:
+            other_user = User(
+                username=other_username,
+                password=get_auth_service().get_password_hash("testpassword"),
+                is_active=True,
+                is_superuser=False,
+            )
+            session.add(other_user)
+            await session.flush()
+            await session.refresh(other_user)
+            other_user_id = other_user.id
+        assert other_user_id is not None
+
+        for username, kb_name in [(active_user.username, "startup_kb_a"), (other_username, "startup_kb_b")]:
+            kb_dir = tmp_path / username / kb_name
+            kb_dir.mkdir(parents=True)
+            (kb_dir / "embedding_metadata.json").write_text(
+                json.dumps(
+                    {
+                        "embedding_provider": "OpenAI",
+                        "embedding_model": "text-embedding-3-small",
+                    }
+                )
+            )
+
+        try:
+            inserted = await knowledge_base_service.backfill_all_users_from_disk(kb_root=tmp_path)
+            assert inserted == 2
+            assert await knowledge_base_service.get_by_user_and_name(active_user.id, "startup_kb_a") is not None
+            assert await knowledge_base_service.get_by_user_and_name(other_user_id, "startup_kb_b") is not None
+        finally:
+            async with session_scope() as session:
+                other_user = await session.get(User, other_user_id)
+                if other_user is not None:
+                    await session.delete(other_user)
 
 
 class TestReadMetadata:

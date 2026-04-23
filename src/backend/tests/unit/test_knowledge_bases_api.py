@@ -370,35 +370,67 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 409
         assert "already exists" in response.json()["detail"]
 
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.backfill_from_disk", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
-    @patch("langflow.api.v1.knowledge_bases.get_job_service")
     async def test_list_knowledge_bases(
-        self, mock_job_service, mock_meta, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+        self, mock_root, mock_backfill, client: AsyncClient, logged_in_headers, active_user, tmp_path
+    ):
+        from langflow.api.utils import knowledge_base_service
+
+        mock_root.return_value = tmp_path
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="KB1",
+            embedding_provider="OpenAI",
+            embedding_model="model",
+            backend_type="opensearch",
+            backend_config={"index_name": "kb1_index"},
+        )
+        await knowledge_base_service.update_stats(
+            record.id,
+            chunks=10,
+            words=100,
+            characters=500,
+            size_bytes=1024,
+        )
+
+        response = await client.get("api/v1/knowledge_bases", headers=logged_in_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) >= 1
+        kb = next(kb for kb in data if kb["id"] == str(record.id))
+        assert kb["backend_type"] == "opensearch"
+        assert kb["backend_config"] == {"index_name": "kb1_index"}
+        assert kb["size"] == 1024
+        mock_backfill.assert_not_awaited()
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_list_knowledge_bases_falls_back_to_disk_when_user_has_no_rows(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
     ):
         mock_root.return_value = tmp_path
         kb_user_path = tmp_path / "activeuser"
         kb_user_path.mkdir(parents=True, exist_ok=True)
-        (kb_user_path / "KB1").mkdir(exist_ok=True)
-
-        mock_meta.return_value = {
-            "chunks": 10,
-            "words": 100,
-            "characters": 500,
-            "avg_chunk_size": 50.0,
-            "embedding_provider": "OpenAI",
-            "embedding_model": "model",
-            "id": str(uuid.uuid4()),
-            "size": 1024,
-            "source_types": [],
-            "column_config": None,
-            "backend_type": "opensearch",
-            "backend_config": {"index_name": "kb1_index"},
-        }
-
-        mock_job_service_inst = MagicMock()
-        mock_job_service.return_value = mock_job_service_inst
-        mock_job_service_inst.get_latest_jobs_by_asset_ids = AsyncMock(return_value={})
+        kb_path = kb_user_path / "KB1"
+        kb_path.mkdir(exist_ok=True)
+        (kb_path / "embedding_metadata.json").write_text(
+            json.dumps(
+                {
+                    "chunks": 10,
+                    "words": 100,
+                    "characters": 500,
+                    "avg_chunk_size": 50.0,
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "model",
+                    "id": str(uuid.uuid4()),
+                    "size": 1024,
+                    "source_types": [],
+                    "column_config": None,
+                    "backend_type": "opensearch",
+                    "backend_config": {"index_name": "kb1_index"},
+                }
+            )
+        )
 
         response = await client.get("api/v1/knowledge_bases", headers=logged_in_headers)
         assert response.status_code == 200
@@ -435,6 +467,66 @@ class TestKnowledgeBaseAPI:
         assert data["name"] == "Detail KB"
         assert data["backend_type"] == "postgres"
         assert data["backend_config"] == {"collection_name": "detail_kb"}
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_get_knowledge_base_detail_prefers_db_row_when_dir_missing(
+        self, mock_root, client: AsyncClient, logged_in_headers, active_user, tmp_path
+    ):
+        from langflow.api.utils import knowledge_base_service
+
+        mock_root.return_value = tmp_path
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="DB_Only_KB",
+            embedding_provider="OpenAI",
+            embedding_model="model",
+            backend_type="opensearch",
+            backend_config={"index_name": "db_only_index"},
+        )
+        await knowledge_base_service.update_stats(
+            record.id,
+            chunks=5,
+            words=50,
+            characters=250,
+            size_bytes=100,
+        )
+
+        response = await client.get("api/v1/knowledge_bases/DB_Only_KB", headers=logged_in_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(record.id)
+        assert data["chunks"] == 5
+        assert data["backend_type"] == "opensearch"
+        assert data["backend_config"] == {"index_name": "db_only_index"}
+
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.create_record", new_callable=AsyncMock)
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_knowledge_base_rolls_back_when_db_persist_fails(
+        self,
+        mock_root,
+        mock_fresh_client,
+        mock_create_record,
+        client: AsyncClient,
+        logged_in_headers,
+        tmp_path,
+    ):
+        mock_root.return_value = tmp_path
+        mock_fresh_client.return_value = MagicMock()
+        mock_create_record.side_effect = RuntimeError("db unavailable")
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "Rollback KB",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+            },
+        )
+
+        assert response.status_code == 500
+        assert not (tmp_path / "activeuser" / "Rollback_KB").exists()
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
     @patch("langflow.api.v1.knowledge_bases.create_backend")
