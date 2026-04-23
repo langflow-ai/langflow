@@ -9,6 +9,9 @@ There is no `langflow.db` database file when using LFX.
 You can run flows with the API, but any stateful operations that depend on the Langflow database, like saving flows, storing messages, or managing users **will not** persist data.
 Operations that depend on `langflow.db` will not work as they do in the full Langflow application.
 
+Memory operations are dispatched at call time, not at import time.
+If the `langflow` package is installed in the same Python environment as `lfx` and a real database service is registered, memory operations are routed to the full `langflow.memory` implementation instead. This applies when `lfx` is used as a Python library inside a running Langflow server, not when running `lfx run` or `lfx serve` from the command line.
+
 LFX includes two commands for executing flows:
 
 - **`lfx serve`**: Starts a FastAPI server hosting a Langflow API endpoint with your flow available at `/flows/{flow_id}/run`. The flow graph is stored in memory at all times, so there is less overhead for loading the graph from a database.
