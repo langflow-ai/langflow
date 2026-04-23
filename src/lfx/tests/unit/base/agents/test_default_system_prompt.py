@@ -114,9 +114,7 @@ def test_should_not_contain_tools_placeholder_or_hardcoded_tool_list():
     assert "{tools}" not in DEFAULT_SYSTEM_PROMPT_TEMPLATE, (
         "Template must not embed a tool list; tools are exposed via the API."
     )
-    assert "available tools:" not in lower, (
-        "Template must not hardcode a 'Available tools:' block."
-    )
+    assert "available tools:" not in lower, "Template must not hardcode a 'Available tools:' block."
 
 
 # Slice I — template contains safety directives (fabrication, prompt injection, destructive)

@@ -119,9 +119,7 @@ def substitute_env_placeholders(
     rendered = prompt
     rendered = rendered.replace(_CURRENT_DATE_PLACEHOLDER, current_date)
     rendered = rendered.replace(_MODEL_NAME_PLACEHOLDER, model_name)
-    rendered = rendered.replace(
-        _USER_CONTEXT_PLACEHOLDER, _render_user_context(user_context)
-    )
+    rendered = rendered.replace(_USER_CONTEXT_PLACEHOLDER, _render_user_context(user_context))
     return rendered.rstrip() + "\n"
 
 
