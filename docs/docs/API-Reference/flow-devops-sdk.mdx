@@ -130,9 +130,9 @@ Instead of manually exporting, sharing, and importing flow JSON files from the L
 9. To pull the reported changes from the Langflow server to your local project folder, run `lfx pull`.
 10. To _push_ flow changes from flows stored locally in `demo-project/flows` to the Langflow server, run `lfx push`.
 
-## Validate flows
+## Validate flows with `lfx validate`
 
-The Flow DevOps SDK can validate that local flows are correctly formed before pushing to the Langflow with `lfx validate`.
+The Flow DevOps SDK validates that local flows are correctly formed before pushing to the Langflow with `lfx validate`.
 
 1. To test the Simple Agent starter flow, pass the flow JSON path to the `lfx validate` command:
     ```
@@ -144,7 +144,7 @@ The Flow DevOps SDK can validate that local flows are correctly formed before pu
 
 The Flow DevOps SDK can generate a `requirements.txt` file for a flow.
 
-A flow JSON describes nodes and wiring, and does not list the PyPI packages components import at runtime.
+A flow JSON describes nodes and edge connections, and does not list the PyPI packages components import at runtime.
 Generate a `requirements.txt` file to capture the minimal Python dependencies, so you can install a matching environment for the flow.
 
 1. From your project directory, point `lfx requirements` at a flow JSON file.
@@ -225,3 +225,59 @@ lfx push --env local
 ```
 
 This command will send the request to the Langflow base URL at `http://127.0.0.1:7860` using a Langflow API key named `LANGFLOW_LOCAL_API_KEY`.
+
+## Create reusable templates with `lfx create`
+
+Instead of building new flows from scratch every time, you can turn any flow into a reusable template. `lfx create` writes a new flow JSON file into your project's `flows/` directory.
+It does not scaffold a project like `lfx init`.
+
+1. List the templates that are already available:
+
+    ```bash
+    lfx create --list
+    ```
+
+2. To create a new flow JSON file from the included `hello-world` template, run:
+
+    ```bash
+    lfx create "My Agent" --template hello-world
+    ```
+
+    The new flow JSON is written to `flows/my-agent.json` by default. Use `--output-dir` to write to a different directory, or `--overwrite` to replace an existing file with the same name.
+
+3. To add your own flow as a template, start with a flow you've already built in the Langflow UI and pulled to disk with `lfx pull`.
+
+   Normalize the flow with `lfx export`, so volatile fields like `user_id` and UI positions are stripped before copying it into the templates directory:
+
+    ```bash
+    lfx export flows/Simple_Agent.json --in-place
+    ```
+
+4. Copy the normalized JSON into the templates directory at `src/lfx/src/lfx/templates/flows/your-template-name.json`.
+
+    The filename without `.json` becomes the `--template` argument. Use lowercase words separated by hyphens, such as `simple-agent`.
+
+    The LFX CLI discovers automatically by scanning for `*.json` files in `templates/flows/`.
+
+5. Register a description in [`src/lfx/src/lfx/cli/create.py`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/cli/create.py).
+A template will still work without an entry in `create.py`, but no description will be displayed with `lfx create --list`.
+The description helps other users in your environment know what the template is for.
+
+    ```python
+    _TEMPLATE_DESCRIPTIONS: dict[str, str] = {
+        "hello-world": "ChatInput → ChatOutput — minimal echo flow, no LLM required",
+        "your-template-name": "Description shown in lfx create --list",
+    }
+    ```
+
+6. Confirm your template appears in the list:
+
+    ```bash
+    lfx create --list
+    ```
+
+7. You can now create a new flow from the template:
+
+    ```bash
+    lfx create "New Flow" --template your-template-name
+    ```
