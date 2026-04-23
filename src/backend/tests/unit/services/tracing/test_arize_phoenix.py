@@ -8,8 +8,7 @@ from src.backend.base.langflow.services.tracing.arize_phoenix import (
 
 @pytest.fixture
 def tracer():
-    tracer = ArizePhoenixTracer.__new__(ArizePhoenixTracer)
-    return tracer
+    return ArizePhoenixTracer.__new__(ArizePhoenixTracer)
 
 
 def test_data_dict_conversion(tracer):
