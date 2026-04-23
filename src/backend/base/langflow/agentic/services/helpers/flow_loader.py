@@ -7,6 +7,7 @@ When both exist, .py takes priority for gradual migration.
 import importlib.util
 import inspect
 import json
+import os
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -37,16 +38,19 @@ def _temporary_sys_path(path: str):
         yield
 
 
-def _validate_path_within_base(flow_path: Path) -> None:
-    """Validate that the resolved path stays within FLOWS_BASE_PATH.
+def _safe_resolved_path(flow_path: Path) -> Path:
+    """Resolve *flow_path* and confirm it stays within FLOWS_BASE_PATH.
 
-    Defense-in-depth: even after rejecting '..' substrings, resolve the
-    final path and confirm it is still under the allowed base directory.
+    Uses ``os.path.realpath`` + ``startswith`` — the sanitiser pattern
+    recognised by CodeQL's ``py/path-injection`` analysis — so the
+    returned path is safe to pass to filesystem operations such as
+    ``Path.exists()``. Raises HTTPException 400 on escape attempts.
     """
-    resolved = flow_path.resolve()
-    base_resolved = FLOWS_BASE_PATH.resolve()
-    if not resolved.is_relative_to(base_resolved):
+    base_resolved = os.path.realpath(str(FLOWS_BASE_PATH))
+    resolved = os.path.realpath(str(flow_path))
+    if resolved != base_resolved and not resolved.startswith(base_resolved + os.sep):
         raise HTTPException(status_code=400, detail="Invalid flow filename")
+    return Path(resolved)
 
 
 def resolve_flow_path(flow_filename: str) -> tuple[Path, str]:
@@ -69,15 +73,13 @@ def resolve_flow_path(flow_filename: str) -> tuple[Path, str]:
         raise HTTPException(status_code=400, detail=f"Invalid flow filename: '{flow_filename}'")
 
     if flow_filename.endswith(".json"):
-        flow_path = FLOWS_BASE_PATH / flow_filename
-        _validate_path_within_base(flow_path)
+        flow_path = _safe_resolved_path(FLOWS_BASE_PATH / flow_filename)
         if flow_path.exists():
             return flow_path, "json"
         raise HTTPException(status_code=404, detail=f"Flow file '{flow_filename}' not found")
 
     if flow_filename.endswith(".py"):
-        flow_path = FLOWS_BASE_PATH / flow_filename
-        _validate_path_within_base(flow_path)
+        flow_path = _safe_resolved_path(FLOWS_BASE_PATH / flow_filename)
         if flow_path.exists():
             return flow_path, "python"
         raise HTTPException(status_code=404, detail=f"Flow file '{flow_filename}' not found")
@@ -85,19 +87,16 @@ def resolve_flow_path(flow_filename: str) -> tuple[Path, str]:
     # Auto-detect: try Python first, then JSON (allows gradual migration)
     base_name = flow_filename.rsplit(".", 1)[0] if "." in flow_filename else flow_filename
 
-    py_path = FLOWS_BASE_PATH / f"{base_name}.py"
-    _validate_path_within_base(py_path)
+    py_path = _safe_resolved_path(FLOWS_BASE_PATH / f"{base_name}.py")
     if py_path.exists():
         return py_path, "python"
 
-    json_path = FLOWS_BASE_PATH / f"{base_name}.json"
-    _validate_path_within_base(json_path)
+    json_path = _safe_resolved_path(FLOWS_BASE_PATH / f"{base_name}.json")
     if json_path.exists():
         return json_path, "json"
 
     # Try without adding extension
-    direct_path = FLOWS_BASE_PATH / flow_filename
-    _validate_path_within_base(direct_path)
+    direct_path = _safe_resolved_path(FLOWS_BASE_PATH / flow_filename)
     if direct_path.exists():
         if direct_path.suffix == ".py":
             return direct_path, "python"

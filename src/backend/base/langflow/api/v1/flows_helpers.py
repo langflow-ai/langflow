@@ -6,10 +6,10 @@ Extracted from flows.py to keep the route-handler module concise.
 from __future__ import annotations
 
 import io
+import os
 import re
 import zipfile
 from datetime import datetime, timezone
-from pathlib import Path as StdlibPath
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -43,6 +43,11 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
     """Get a safe filesystem path for flow storage, restricted to user's flows directory.
 
     Allows both absolute and relative paths, but ensures they're within the user's flows directory.
+
+    Uses ``os.path.realpath`` + ``startswith`` for containment — the sanitiser pattern
+    recognised by CodeQL's ``py/path-injection`` analysis. ``realpath`` canonicalises
+    the path and follows symlinks, so the returned path is safe to pass to filesystem
+    operations.
     """
     if not fs_path:
         raise HTTPException(status_code=400, detail="fs_path cannot be empty")
@@ -62,15 +67,10 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
             detail="Invalid fs_path: null bytes are not allowed",
         )
 
-    # Build the safe base directory path
+    # Build and canonicalise the safe base directory path.
     base_dir = storage_service.data_dir / "flows" / str(user_id)
-    base_dir_str = str(base_dir)
-
-    # Normalize base directory path (resolve to absolute, handle symlinks)
-    # resolve() doesn't require the path to exist, it just resolves symlinks
     try:
-        base_dir_stdlib = StdlibPath(base_dir_str).resolve()
-        base_dir_resolved = str(base_dir_stdlib)
+        base_dir_resolved = os.path.realpath(str(base_dir))
     except (OSError, ValueError) as e:
         raise HTTPException(status_code=400, detail=f"Invalid base directory: {e}") from e
 
@@ -78,49 +78,31 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
     is_absolute = normalized_path.startswith("/") or (len(normalized_path) > 1 and normalized_path[1] == ":")
 
     if is_absolute:
-        # Absolute path - resolve and validate it's within base directory
-        try:
-            requested_path = StdlibPath(normalized_path).resolve()
-            requested_resolved = str(requested_path)
-            # Ensure resolved path stays within base (prevent symlink attacks)
-            if not requested_resolved.startswith(base_dir_resolved + "/") and requested_resolved != base_dir_resolved:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Absolute path must be within your flows directory: {base_dir_resolved}",
-                )
-            # Reconstruct the path from the base directory + relative portion
-            # so the returned value is derived from the safe base, not user input.
-            rel = StdlibPath(requested_resolved).relative_to(base_dir_stdlib)
-            return Path(str(base_dir_stdlib / rel))
-        except HTTPException:
-            raise
-        except (OSError, ValueError) as e:
+        candidate = normalized_path
+    else:
+        relative_part = normalized_path.lstrip("/")
+        # os.path.join is deliberate here (PTH118) to match CodeQL's sanitiser model.
+        candidate = os.path.join(base_dir_resolved, relative_part) if relative_part else base_dir_resolved  # noqa: PTH118
+
+    try:
+        resolved_str = os.path.realpath(candidate)
+    except (OSError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
+
+    # SECURITY: containment check using os.path.realpath + startswith (CodeQL-recognised).
+    if resolved_str != base_dir_resolved and not resolved_str.startswith(base_dir_resolved + os.sep):
+        if is_absolute:
             raise HTTPException(
                 status_code=400,
-                detail=(
-                    f"Invalid file save path: {e}. "
-                    f"Verify that the path is within your flows directory: {base_dir_resolved}"
-                ),
-            ) from e
-    else:
-        # Relative path - validate that it's within the base directory
-        relative_part = normalized_path.lstrip("/")
-        safe_path_stdlib = base_dir_stdlib / relative_part if relative_part else base_dir_stdlib
-        try:
-            resolved_path = safe_path_stdlib.resolve()
-            resolved_str = str(resolved_path)
+                detail="Absolute path must be within your flows directory",
+            )
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid path: resolves outside allowed directory",
+        )
 
-            # Ensure resolved path stays within base (prevent symlink attacks)
-            if not resolved_str.startswith(base_dir_resolved + "/") and resolved_str != base_dir_resolved:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Invalid path: resolves outside allowed directory",
-                )
-        except (OSError, ValueError) as e:
-            raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
-
-        # Return the resolved path to prevent TOCTOU symlink attacks
-        return Path(resolved_str)
+    # Return the canonicalised path — safe for subsequent filesystem operations.
+    return Path(resolved_str)
 
 
 # Fields that may be updated via setattr on a Flow ORM instance.
