@@ -73,7 +73,6 @@ dependencies = [
     "filelock>=3.20.1,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
     "spider-client>=0.0.27,<1.0.0",
-    "diskcache>=5.6.3,<6.0.0",
     "clickhouse-connect==0.7.19",
     "assemblyai>=0.33.0,<1.0.0",
     "fastapi-pagination>=0.13.1,<1.0.0",

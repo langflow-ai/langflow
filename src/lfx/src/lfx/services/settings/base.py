@@ -181,7 +181,10 @@ class Settings(BaseSettings):
 
     # cache configuration
     cache_type: Literal["async", "redis", "memory", "disk"] = "async"
-    """The cache type can be 'async' or 'redis'."""
+    """The cache type can be 'async', 'redis', or 'memory'.
+
+    The 'disk' value is deprecated and transparently falls back to 'async'
+    (diskcache is no longer a runtime dependency)."""
     cache_expire: int = 3600
     """The cache expire in seconds."""
     variable_store: str = "db"
