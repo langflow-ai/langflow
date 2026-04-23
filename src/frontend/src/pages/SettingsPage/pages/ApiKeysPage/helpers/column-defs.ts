@@ -1,7 +1,29 @@
 import type { ColDef, ValueFormatterParams } from "ag-grid-community";
-import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
 import type { IApiKeysDataArray } from "@/controllers/API/queries/api-keys";
+import { isTimeStampString } from "@/utils/utils";
 import { PlainTableCell } from "../components/PlainTableCell";
+
+/** Matches DateReader formatting; avoids TableAutoCellRender / StringReader → TextModal on cell click. */
+function formatApiKeyDateTime(value: unknown): string {
+  if (value == null || value === "") {
+    return "";
+  }
+  const s = String(value);
+  if (s === "Never") {
+    return "Never";
+  }
+  if (isTimeStampString(s)) {
+    const date = new Date(s);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const seconds = String(date.getSeconds()).padStart(2, "0");
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
+  return s;
+}
 
 export const getColumnDefs = (options?: { hideIpRestriction?: boolean }) => {
   const columns: ColDef[] = [
@@ -25,19 +47,25 @@ export const getColumnDefs = (options?: { hideIpRestriction?: boolean }) => {
     {
       headerName: "Created",
       field: "created_at",
-      cellRenderer: TableAutoCellRender,
+      cellRenderer: PlainTableCell,
+      valueFormatter: (p: ValueFormatterParams<IApiKeysDataArray>) =>
+        formatApiKeyDateTime(p.value),
       flex: 1,
     },
     {
       headerName: "Last Used",
       field: "last_used_at",
-      cellRenderer: TableAutoCellRender,
+      cellRenderer: PlainTableCell,
+      valueFormatter: (p: ValueFormatterParams<IApiKeysDataArray>) =>
+        formatApiKeyDateTime(p.value),
       flex: 1,
     },
     {
       headerName: "Total Uses",
       field: "total_uses",
-      cellRenderer: TableAutoCellRender,
+      cellRenderer: PlainTableCell,
+      valueFormatter: (p: ValueFormatterParams<IApiKeysDataArray>) =>
+        p.value != null ? String(p.value) : "",
       flex: 1,
       resizable: false,
     },
