@@ -45,6 +45,7 @@ from lfx.base.knowledge_bases.ingestion_sources.registry import (
     create_source,
     get_source_class,
     register_source,
+    registered_source_keys,
     registered_sources,
 )
 from lfx.base.knowledge_bases.ingestion_sources.s3 import S3Source
@@ -78,5 +79,6 @@ __all__ = [
     "create_source",
     "get_source_class",
     "register_source",
+    "registered_source_keys",
     "registered_sources",
 ]
