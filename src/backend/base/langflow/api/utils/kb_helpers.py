@@ -652,48 +652,37 @@ class KBIngestionHelper:
                 item_metadata_tag = json.dumps(combined_metadata) if combined_metadata else encoded_metadata_tag
 
                 chunks = text_splitter.split_text(text)
-                item_chunks_written = 0
+                docs = [
+                    Document(
+                        page_content=c,
+                        metadata={
+                            METADATA_KEY_SOURCE: source_name or content_obj.file_name,
+                            METADATA_KEY_FILE_NAME: content_obj.file_name,
+                            METADATA_KEY_CHUNK_INDEX: i,
+                            METADATA_KEY_TOTAL_CHUNKS: len(chunks),
+                            METADATA_KEY_INGESTED_AT: datetime.now(timezone.utc).isoformat(),
+                            METADATA_KEY_JOB_ID: job_id_str,
+                            METADATA_KEY_SOURCE_TYPE: source.source_type.value or source_type,
+                            METADATA_KEY_SOURCE_METADATA: item_metadata_tag,
+                        },
+                    )
+                    for i, c in enumerate(chunks)
+                ]
+
                 # Writes that exhaust the retry budget still propagate to
                 # the outer handler so the whole run can roll back
                 # uncommitted chunks. Only per-item fetch/extraction
                 # failures are caught and continue (above).
-                for i in range(0, len(chunks), INGESTION_BATCH_SIZE):
-                    if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
-                        raise IngestionCancelledError
-
-                    batch = chunks[i : i + INGESTION_BATCH_SIZE]
-                    docs = [
-                        Document(
-                            page_content=c,
-                            metadata={
-                                METADATA_KEY_SOURCE: source_name or content_obj.file_name,
-                                METADATA_KEY_FILE_NAME: content_obj.file_name,
-                                METADATA_KEY_CHUNK_INDEX: i + j,
-                                METADATA_KEY_TOTAL_CHUNKS: len(chunks),
-                                METADATA_KEY_INGESTED_AT: datetime.now(timezone.utc).isoformat(),
-                                METADATA_KEY_JOB_ID: job_id_str,
-                                METADATA_KEY_SOURCE_TYPE: source.source_type.value or source_type,
-                                METADATA_KEY_SOURCE_METADATA: item_metadata_tag,
-                            },
-                        )
-                        for j, c in enumerate(batch)
-                    ]
-
-                    for attempt in range(MAX_RETRY_ATTEMPTS):
-                        if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
-                            raise IngestionCancelledError
-                        try:
-                            await backend.add_documents(docs)
-                            break
-                        except Exception as exc:
-                            if attempt == MAX_RETRY_ATTEMPTS - 1:
-                                raise
-                            wait = (attempt + 1) * EXPONENTIAL_BACKOFF_MULTIPLIER
-                            await logger.awarning("Write failed, retrying in %ds: %s", wait, exc)
-                            await asyncio.sleep(wait)
-
-                    item_chunks_written += len(batch)
-                    await asyncio.sleep(0.01)
+                item_chunks_written = await KBIngestionHelper.write_documents_to_backend(
+                    documents=docs,
+                    backend=backend,
+                    task_job_id=task_job_id,
+                    job_service=job_service,
+                )
+                if item_chunks_written < len(docs):
+                    # Job was cancelled mid-item — bail out and let the
+                    # outer handler roll the run back.
+                    raise IngestionCancelledError
 
                 summary.record_item(
                     IngestionItemResult(
@@ -888,6 +877,57 @@ class KBIngestionHelper:
                         raise
                     wait = (attempt + 1) * EXPONENTIAL_BACKOFF_MULTIPLIER
                     await logger.awarning("Write failed, retrying in %ds: %s", wait, e)
+                    await asyncio.sleep(wait)
+
+            written += len(batch)
+            await asyncio.sleep(0.01)
+
+        return written
+
+    @staticmethod
+    async def write_documents_to_backend(
+        *,
+        documents: list[Document],
+        backend: BaseVectorStoreBackend,
+        task_job_id: uuid.UUID,
+        job_service: JobService,
+    ) -> int:
+        """Write pre-built Documents through a ``BaseVectorStoreBackend``.
+
+        Backend-agnostic counterpart to :meth:`write_documents_to_chroma`.
+        Used by the multi-backend KB ingestion path so Mongo/Astra/
+        Postgres/OpenSearch ingestions share the same batching,
+        cancellation-checking, and exponential-backoff retry logic that
+        Memory Base's Chroma path gets from
+        :meth:`write_documents_to_chroma`.
+
+        Documents must already be chunked with metadata populated.
+
+        Returns:
+            Number of documents successfully written. Less than
+            ``len(documents)`` when the job is cancelled mid-write.
+
+        Raises:
+            Exception: Re-raises any non-cancellation write failure
+                after the retry budget is exhausted.
+        """
+        written = 0
+        for i in range(0, len(documents), INGESTION_BATCH_SIZE):
+            if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
+                return written
+
+            batch = documents[i : i + INGESTION_BATCH_SIZE]
+            for attempt in range(MAX_RETRY_ATTEMPTS):
+                if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
+                    return written
+                try:
+                    await backend.add_documents(batch)
+                    break
+                except Exception as exc:
+                    if attempt == MAX_RETRY_ATTEMPTS - 1:
+                        raise
+                    wait = (attempt + 1) * EXPONENTIAL_BACKOFF_MULTIPLIER
+                    await logger.awarning("Write failed, retrying in %ds: %s", wait, exc)
                     await asyncio.sleep(wait)
 
             written += len(batch)

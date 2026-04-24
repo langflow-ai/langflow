@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import uuid
 from contextlib import suppress
@@ -40,7 +41,9 @@ from langflow.schema.knowledge_base import (
 )
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
+from langflow.services.jobs import DuplicateJobError
 from langflow.services.jobs.service import JobService
+from langflow.services.memory_base.kb_path_helpers import validate_kb_path
 from langflow.services.task.service import TaskService
 from langflow.utils.kb_constants import (
     CHUNK_PREVIEW_MULTIPLIER,
@@ -59,19 +62,25 @@ router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_
 def _validate_kb_path_containment(kb_user_path: Path, kb_path: Path, kb_name: str, username: str) -> None:
     """Raise 403 if kb_path is not contained within kb_user_path.
 
-    Uses is_relative_to() instead of startswith() to prevent path traversal attacks.
-    startswith() has a prefix-ambiguity bug: a user named "alice" would incorrectly allow
-    paths under "alice_evil/" because the string starts with "alice". is_relative_to() performs
-    proper path containment checking.
+    Delegates the actual containment check to
+    :func:`langflow.services.memory_base.kb_path_helpers.validate_kb_path`
+    (introduced in #12417) so the traversal guard is defined in one
+    place — but translates its ``ValueError`` into the 403 HTTPException
+    expected by the KB routes and keeps the high-signal log line.
     """
-    if not kb_path.is_relative_to(kb_user_path):
+    try:
+        validate_kb_path(kb_user_path, kb_path)
+    except ValueError as exc:
         logger.warning(
             "Path traversal attempt blocked: user=%s kb_name=%r resolved_path=%s",
             username,
             kb_name,
             kb_path,
         )
-        raise HTTPException(status_code=403, detail=f"Access denied for knowledge base '{kb_name}'.")
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access denied for knowledge base '{kb_name}'.",
+        ) from exc
 
 
 def _resolve_kb_path(kb_name: str, current_user: CurrentActiveUser) -> Path:
@@ -91,6 +100,34 @@ def _resolve_kb_path(kb_name: str, current_user: CurrentActiveUser) -> Path:
     if not kb_path.exists() or not kb_path.is_dir():
         raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
     return kb_path
+
+
+def _build_connector_ingest_dedupe_key(
+    *,
+    user_id: uuid.UUID,
+    kb_name: str,
+    source_type: str,
+    source_config: dict[str, Any],
+) -> str:
+    """Build a stable idempotency key for a connector-driven ingestion job.
+
+    The key is a SHA-256 hash of ``(user, kb, source_type, sorted_config)``
+    so semantically-equivalent requests collapse to the same key regardless
+    of JSON key ordering. Only the hash (not the config) goes on the
+    ``job`` row, so no credentials leak through ``dedupe_key``.
+    """
+    canonical = json.dumps(
+        {
+            "user_id": str(user_id),
+            "kb_name": kb_name,
+            "source_type": source_type,
+            "source_config": source_config,
+        },
+        sort_keys=True,
+        default=str,
+    )
+    digest = hashlib.sha256(canonical.encode()).hexdigest()
+    return f"kb_connector_ingest:{digest}"
 
 
 def _is_memory_base_associated(metadata: dict[str, Any]) -> bool:
@@ -1064,16 +1101,40 @@ async def ingest_via_connector(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+        # Build an idempotency key over (user, kb, source, config) so
+        # that a double-click on "Ingest" doesn't spawn two jobs for
+        # the same connector target. ``JobService.create_job`` (see
+        # #12417) rejects duplicates with a ``DuplicateJobError`` when
+        # a prior QUEUED/IN_PROGRESS/COMPLETED job carries the same
+        # dedupe_key; FAILED/CANCELLED jobs remain retryable.
+        dedupe_key = _build_connector_ingest_dedupe_key(
+            user_id=current_user.id,
+            kb_name=kb_name,
+            source_type=payload.source_type,
+            source_config=payload.source_config,
+        )
+
         job_service = get_job_service()
         job_id = uuid.uuid4()
-        await job_service.create_job(
-            job_id=job_id,
-            flow_id=job_id,
-            job_type=JobType.INGESTION,
-            asset_id=asset_id,
-            asset_type="knowledge_base",
-            user_id=current_user.id,
-        )
+        try:
+            await job_service.create_job(
+                job_id=job_id,
+                flow_id=job_id,
+                job_type=JobType.INGESTION,
+                asset_id=asset_id,
+                asset_type="knowledge_base",
+                user_id=current_user.id,
+                dedupe_key=dedupe_key,
+            )
+        except DuplicateJobError as exc:
+            raise HTTPException(
+                status_code=HTTPStatus.CONFLICT,
+                detail=(
+                    "An ingestion for this connector target is already "
+                    "queued or running. Wait for it to finish before "
+                    "starting another."
+                ),
+            ) from exc
 
         task_service = get_task_service()
         await task_service.fire_and_forget_task(
