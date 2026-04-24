@@ -22,9 +22,9 @@ class RunPayload(BasePayload):
 class DeploymentPayload(BasePayload):
     deployment_action: str = Field(serialization_alias="deploymentAction")
     deployment_provider: str = Field(serialization_alias="deploymentProvider")
-    deployment_seconds: int = Field(serialization_alias="deploymentSeconds")
+    deployment_seconds: float = Field(serialization_alias="deploymentSeconds")
     deployment_success: bool = Field(serialization_alias="deploymentSuccess")
-    deployment_error_message: str = Field("", serialization_alias="deploymentErrorMessage")
+    deployment_error_type: str | None = Field(default=None, serialization_alias="deploymentErrorType")
 
 
 class ShutdownPayload(BasePayload):

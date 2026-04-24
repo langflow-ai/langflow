@@ -146,24 +146,6 @@ def mock_db_crud(mock_mapper):
         yield
 
 
-def _get_deployment_call_payload(mock_telemetry_service):
-    """Inspect the single DeploymentPayload handed to background_tasks.add_task.
-
-    Telemetry now goes through BackgroundTasks, so the mocked service method is
-    referenced rather than awaited. The payload is the positional arg passed to
-    ``add_task(log_package_deployment, payload)``.
-    """
-    mock_method = mock_telemetry_service.log_package_deployment
-    # Background tasks may either await the coroutine function directly or
-    # queue it via BackgroundTasks; handle both shapes.
-    if mock_method.await_args_list:
-        return mock_method.await_args_list[-1].args[0]
-    if mock_method.call_args_list:
-        return mock_method.call_args_list[-1].args[0]
-    msg = "log_package_deployment was not invoked"
-    raise AssertionError(msg)
-
-
 @pytest.mark.asyncio
 async def test_create_provider_account_telemetry(
     client: AsyncClient, mock_telemetry_service, mock_adapter, mock_mapper, mock_db_crud, logged_in_headers
@@ -174,11 +156,11 @@ async def test_create_provider_account_telemetry(
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_201_CREATED
-    payload = _get_deployment_call_payload(mock_telemetry_service)
+    mock_telemetry_service.log_package_deployment_provider.assert_awaited_once()
+    payload = mock_telemetry_service.log_package_deployment_provider.call_args[0][0]
     assert payload.deployment_action == "provider.create"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
-    assert payload.deployment_error_message == ""
 
 
 @pytest.mark.asyncio
@@ -191,7 +173,8 @@ async def test_update_provider_account_telemetry(
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_200_OK
-    payload = _get_deployment_call_payload(mock_telemetry_service)
+    mock_telemetry_service.log_package_deployment_provider.assert_awaited_once()
+    payload = mock_telemetry_service.log_package_deployment_provider.call_args[0][0]
     assert payload.deployment_action == "provider.update"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
@@ -203,7 +186,8 @@ async def test_delete_provider_account_telemetry(
 ):
     response = await client.delete(f"api/v1/deployments/providers/{uuid4()}", headers=logged_in_headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
-    payload = _get_deployment_call_payload(mock_telemetry_service)
+    mock_telemetry_service.log_package_deployment_provider.assert_awaited_once()
+    payload = mock_telemetry_service.log_package_deployment_provider.call_args[0][0]
     assert payload.deployment_action == "provider.delete"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
@@ -219,7 +203,8 @@ async def test_create_deployment_telemetry(
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_201_CREATED, response.json()
-    payload = _get_deployment_call_payload(mock_telemetry_service)
+    mock_telemetry_service.log_package_deployment.assert_awaited_once()
+    payload = mock_telemetry_service.log_package_deployment.call_args[0][0]
     assert payload.deployment_action == "deployment.create"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
@@ -231,7 +216,8 @@ async def test_update_deployment_telemetry(
 ):
     response = await client.patch(f"api/v1/deployments/{uuid4()}", json={"name": "Test"}, headers=logged_in_headers)
     assert response.status_code == status.HTTP_200_OK
-    payload = _get_deployment_call_payload(mock_telemetry_service)
+    mock_telemetry_service.log_package_deployment.assert_awaited_once()
+    payload = mock_telemetry_service.log_package_deployment.call_args[0][0]
     assert payload.deployment_action == "deployment.update"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
@@ -243,7 +229,8 @@ async def test_delete_deployment_telemetry(
 ):
     response = await client.delete(f"api/v1/deployments/{uuid4()}", headers=logged_in_headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
-    payload = _get_deployment_call_payload(mock_telemetry_service)
+    mock_telemetry_service.log_package_deployment.assert_awaited_once()
+    payload = mock_telemetry_service.log_package_deployment.call_args[0][0]
     assert payload.deployment_action == "deployment.delete"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
@@ -257,7 +244,8 @@ async def test_create_deployment_run_telemetry(
         f"api/v1/deployments/{uuid4()}/runs", json={"provider_data": {}}, headers=logged_in_headers
     )
     assert response.status_code == status.HTTP_201_CREATED, response.json()
-    payload = _get_deployment_call_payload(mock_telemetry_service)
+    mock_telemetry_service.log_package_deployment_run.assert_awaited_once()
+    payload = mock_telemetry_service.log_package_deployment_run.call_args[0][0]
     assert payload.deployment_action == "deployment.run"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
@@ -271,7 +259,8 @@ async def test_update_snapshot_telemetry(
         "api/v1/deployments/snapshots/snap-1", json={"flow_version_id": str(uuid4())}, headers=logged_in_headers
     )
     assert response.status_code == status.HTTP_200_OK
-    payload = _get_deployment_call_payload(mock_telemetry_service)
+    mock_telemetry_service.log_package_deployment.assert_awaited_once()
+    payload = mock_telemetry_service.log_package_deployment.call_args[0][0]
     assert payload.deployment_action == "snapshot.update"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
@@ -288,11 +277,12 @@ async def test_create_provider_account_telemetry_error(
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    payload = _get_deployment_call_payload(mock_telemetry_service)
+    mock_telemetry_service.log_package_deployment_provider.assert_awaited_once()
+    payload = mock_telemetry_service.log_package_deployment_provider.call_args[0][0]
     assert payload.deployment_action == "provider.create"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is False
-    assert payload.deployment_error_message  # non-empty; HTTPException.str() includes the detail
+    assert payload.deployment_error_type == "HTTPException"
 
 
 @pytest.mark.asyncio
@@ -307,8 +297,9 @@ async def test_cross_route_smoke_exception_after_provider_set(
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-    payload = _get_deployment_call_payload(mock_telemetry_service)
+    mock_telemetry_service.log_package_deployment.assert_awaited_once()
+    payload = mock_telemetry_service.log_package_deployment.call_args[0][0]
     assert payload.deployment_action == "deployment.create"
     assert payload.deployment_provider == "watsonx-orchestrate"  # Provider should be captured!
     assert payload.deployment_success is False
-    assert payload.deployment_error_message  # non-empty error message captured
+    assert payload.deployment_error_type == "HTTPException"

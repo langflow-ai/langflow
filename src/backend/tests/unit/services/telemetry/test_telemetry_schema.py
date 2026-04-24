@@ -25,17 +25,17 @@ class TestDeploymentPayload:
         payload = DeploymentPayload(
             deployment_action="deployment.create",
             deployment_provider="test_provider",
-            deployment_seconds=2,
+            deployment_seconds=1.5,
             deployment_success=True,
-            deployment_error_message="",
+            deployment_error_type=None,
             client_type="oss",
         )
 
         assert payload.deployment_action == "deployment.create"
         assert payload.deployment_provider == "test_provider"
-        assert payload.deployment_seconds == 2
+        assert payload.deployment_seconds == 1.5
         assert payload.deployment_success is True
-        assert payload.deployment_error_message == ""
+        assert payload.deployment_error_type is None
         assert payload.client_type == "oss"
 
     def test_deployment_payload_initialization_with_defaults(self):
@@ -43,46 +43,36 @@ class TestDeploymentPayload:
         payload = DeploymentPayload(
             deployment_action="deployment.delete",
             deployment_provider="test_provider",
-            deployment_seconds=1,
+            deployment_seconds=0.5,
             deployment_success=False,
-            deployment_error_message="Invalid credentials",
+            deployment_error_type="ValueError",
         )
 
         assert payload.deployment_action == "deployment.delete"
         assert payload.deployment_provider == "test_provider"
-        assert payload.deployment_seconds == 1
+        assert payload.deployment_seconds == 0.5
         assert payload.deployment_success is False
-        assert payload.deployment_error_message == "Invalid credentials"
+        assert payload.deployment_error_type == "ValueError"
         assert payload.client_type is None  # Default value
-
-    def test_deployment_payload_error_message_defaults_to_empty(self):
-        """Omitting deployment_error_message yields an empty string (matches RunPayload)."""
-        payload = DeploymentPayload(
-            deployment_action="deployment.create",
-            deployment_provider="test_provider",
-            deployment_seconds=2,
-            deployment_success=True,
-        )
-        assert payload.deployment_error_message == ""
 
     def test_deployment_payload_serialization(self):
         """Test DeploymentPayload serialization to dictionary."""
         payload = DeploymentPayload(
             deployment_action="deployment.update",
             deployment_provider="test_provider",
-            deployment_seconds=3,
+            deployment_seconds=2.0,
             deployment_success=True,
-            deployment_error_message="",
+            deployment_error_type=None,
             client_type="desktop",
         )
 
-        data = payload.model_dump(by_alias=True)
+        data = payload.model_dump(by_alias=True, exclude_none=True)
 
         assert data["deploymentAction"] == "deployment.update"
         assert data["deploymentProvider"] == "test_provider"
-        assert data["deploymentSeconds"] == 3
+        assert data["deploymentSeconds"] == 2.0
         assert data["deploymentSuccess"] is True
-        assert data["deploymentErrorMessage"] == ""
+        assert "deploymentErrorType" not in data
         assert data["clientType"] == "desktop"
 
     def test_deployment_payload_roundtrip(self):
@@ -90,9 +80,9 @@ class TestDeploymentPayload:
         payload = DeploymentPayload(
             deployment_action="provider.create",
             deployment_provider="test_provider",
-            deployment_seconds=1,
+            deployment_seconds=1.0,
             deployment_success=False,
-            deployment_error_message="boom",
+            deployment_error_type="Exception",
             client_type="oss",
         )
 
@@ -103,7 +93,7 @@ class TestDeploymentPayload:
         assert new_payload.deployment_provider == payload.deployment_provider
         assert new_payload.deployment_seconds == payload.deployment_seconds
         assert new_payload.deployment_success == payload.deployment_success
-        assert new_payload.deployment_error_message == payload.deployment_error_message
+        assert new_payload.deployment_error_type == payload.deployment_error_type
         assert new_payload.client_type == payload.client_type
 
 
