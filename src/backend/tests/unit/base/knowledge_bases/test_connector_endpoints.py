@@ -12,8 +12,9 @@ dispatcher must reject them as 400 typos rather than 500s.
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -140,6 +141,106 @@ class TestConnectorIngest:
 
         assert response.status_code == 422
         assert "chunk_size" in response.text
+
+
+class TestFolderIngest:
+    @patch("langflow.api.v1.knowledge_bases.get_task_service")
+    @patch("langflow.api.v1.knowledge_bases.get_job_service")
+    @patch("langflow.api.v1.knowledge_bases.get_settings_service")
+    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_dispatches_folder_source_with_settings_allow_list(
+        self,
+        mock_root,
+        mock_meta,
+        mock_settings_service,
+        mock_job_service,
+        mock_task_service,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        allowed_root = tmp_path / "allowed"
+        folder = allowed_root / "docs"
+        folder.mkdir(parents=True)
+        (folder / "readme.md").write_text("hello")
+
+        mock_settings_service.return_value = SimpleNamespace(
+            settings=SimpleNamespace(kb_allowed_folder_roots=[str(allowed_root)])
+        )
+        mock_root.return_value = tmp_path
+        kb_dir = tmp_path / active_user.username / "folder_kb"
+        kb_dir.mkdir(parents=True)
+        mock_meta.return_value = {
+            "id": "00000000-0000-0000-0000-000000000004",
+            "embedding_provider": "OpenAI",
+            "embedding_model": "text-embedding-3-small",
+        }
+
+        js = AsyncMock()
+        js.create_job = AsyncMock()
+        js.execute_with_status = AsyncMock()
+        mock_job_service.return_value = js
+        ts = AsyncMock()
+        ts.fire_and_forget_task = AsyncMock()
+        mock_task_service.return_value = ts
+
+        response = await client.post(
+            "api/v1/knowledge_bases/folder_kb/ingest/folder",
+            headers=logged_in_headers,
+            json={"path": str(folder), "chunk_size": 500, "chunk_overlap": 100},
+        )
+
+        assert response.status_code == 200
+        fire_call = ts.fire_and_forget_task.await_args
+        assert fire_call is not None
+        passed_source = fire_call.kwargs["source"]
+        assert passed_source.source_type.value == "folder"
+        assert passed_source.source_config["path"] == str(folder)
+        assert passed_source.source_config["allowed_roots"] == [str(allowed_root)]
+
+    @patch("langflow.api.v1.knowledge_bases.get_job_service")
+    @patch("langflow.api.v1.knowledge_bases.get_settings_service")
+    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_rejects_folder_outside_settings_allow_list_before_job(
+        self,
+        mock_root,
+        mock_meta,
+        mock_settings_service,
+        mock_job_service,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        allowed_root = tmp_path / "allowed"
+        allowed_root.mkdir()
+        outside_folder = tmp_path / "outside"
+        outside_folder.mkdir()
+
+        mock_settings_service.return_value = SimpleNamespace(
+            settings=SimpleNamespace(kb_allowed_folder_roots=[str(allowed_root)])
+        )
+        mock_root.return_value = tmp_path
+        kb_dir = tmp_path / active_user.username / "folder_kb"
+        kb_dir.mkdir(parents=True)
+        mock_meta.return_value = {
+            "id": "00000000-0000-0000-0000-000000000005",
+            "embedding_provider": "OpenAI",
+            "embedding_model": "text-embedding-3-small",
+        }
+
+        response = await client.post(
+            "api/v1/knowledge_bases/folder_kb/ingest/folder",
+            headers=logged_in_headers,
+            json={"path": str(outside_folder)},
+        )
+
+        assert response.status_code == 400
+        assert "outside the configured allow-list" in response.json()["detail"]
+        mock_job_service.assert_not_called()
 
     async def test_folder_ingest_rejects_unbounded_chunk_parameters(self, client: AsyncClient, logged_in_headers):
         response = await client.post(
