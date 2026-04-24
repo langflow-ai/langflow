@@ -111,25 +111,24 @@ async function extractAndCleanCode(page: Page): Promise<string> {
   return codeContent.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
 
-// Reliably replace the Ace editor content. Using page.locator("textarea").fill()
-// directly is flaky on Windows because Ace's internal buffer may not pick up the
-// change (the "Check & Save" would then submit the old code). We clear through
-// the keyboard and insert the new text via an input event, then wait until the
-// hidden #codeValue input mirrors the new code before returning.
+// Reliably replace the Ace editor content. The keyboard-based approaches are
+// all flaky on at least one platform: locator.fill() bypasses Ace's internal
+// buffer so the editor never sees the change, keyboard.insertText() drops
+// embedded "\n" characters on Windows (flattening the code into a single
+// invalid line), and pressSequentially() triggers Ace's Python auto-indent and
+// corrupts whitespace. Instead, drive Ace through its own API: ace-builds
+// exposes `window.ace` globally and `ace.edit(element)` returns the existing
+// editor instance, so setValue() applies the change atomically.
 async function setAceEditorValue(page: Page, newCode: string): Promise<void> {
-  const aceContent = page.locator(".ace_content").first();
-  await aceContent.click();
-
-  // The ace textarea captures keystrokes; scope to a single element so we don't
-  // get a different textarea from elsewhere on the page.
-  const aceTextarea = page.locator("textarea.ace_text-input").first();
-  await aceTextarea.focus();
-  await page.keyboard.press("ControlOrMeta+a");
-  await page.keyboard.press("Delete");
-
-  // insertText dispatches a proper `beforeinput`/`input` event that Ace listens
-  // to, which is more reliable cross-platform than locator.fill() for Ace.
-  await page.keyboard.insertText(newCode);
+  await page.locator(".ace_editor").first().waitFor({ state: "visible" });
+  await page.evaluate((code) => {
+    const aceEl = document.querySelector(".ace_editor");
+    const globalAce = (window as unknown as { ace?: { edit: (el: Element) => { setValue: (v: string, cursorPos?: number) => void } } }).ace;
+    if (!aceEl || !globalAce) {
+      throw new Error("Ace editor not found on the page");
+    }
+    globalAce.edit(aceEl).setValue(code, -1);
+  }, newCode);
 
   // Wait for Ace to propagate the change to the controlled React state so the
   // hidden #codeValue mirror contains the expected value before we save.
