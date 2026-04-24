@@ -17,8 +17,10 @@ export const useDeleteDeployment: useMutationFunctionType<
     await api.delete(`${getURL("DEPLOYMENTS")}/${deployment_id}`);
   };
 
+  // TODO: Add retries for transient server-side errors (5xx, timeouts).
   return mutate(["useDeleteDeployment"], fn, {
     ...options,
+    retry: false,
     onSuccess: (...args) => {
       queryClient.refetchQueries({ queryKey: ["useGetDeployments"] });
       options?.onSuccess?.(...args);

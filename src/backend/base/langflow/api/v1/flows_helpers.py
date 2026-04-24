@@ -6,10 +6,10 @@ Extracted from flows.py to keep the route-handler module concise.
 from __future__ import annotations
 
 import io
+import os
 import re
 import zipfile
 from datetime import datetime, timezone
-from pathlib import Path as StdlibPath
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -23,6 +23,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import normalize_flow_for_export, remove_api_keys
 from langflow.services.database.models.base import orjson_dumps
+from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
 from langflow.services.database.models.flow.model import (
     Flow,
     FlowCreate,
@@ -43,6 +44,11 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
     """Get a safe filesystem path for flow storage, restricted to user's flows directory.
 
     Allows both absolute and relative paths, but ensures they're within the user's flows directory.
+
+    Uses ``os.path.realpath`` + ``startswith`` for containment — the sanitiser pattern
+    recognised by CodeQL's ``py/path-injection`` analysis. ``realpath`` canonicalises
+    the path and follows symlinks, so the returned path is safe to pass to filesystem
+    operations.
     """
     if not fs_path:
         raise HTTPException(status_code=400, detail="fs_path cannot be empty")
@@ -62,15 +68,10 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
             detail="Invalid fs_path: null bytes are not allowed",
         )
 
-    # Build the safe base directory path
+    # Build and canonicalise the safe base directory path.
     base_dir = storage_service.data_dir / "flows" / str(user_id)
-    base_dir_str = str(base_dir)
-
-    # Normalize base directory path (resolve to absolute, handle symlinks)
-    # resolve() doesn't require the path to exist, it just resolves symlinks
     try:
-        base_dir_stdlib = StdlibPath(base_dir_str).resolve()
-        base_dir_resolved = str(base_dir_stdlib)
+        base_dir_resolved = os.path.realpath(str(base_dir))
     except (OSError, ValueError) as e:
         raise HTTPException(status_code=400, detail=f"Invalid base directory: {e}") from e
 
@@ -78,49 +79,31 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
     is_absolute = normalized_path.startswith("/") or (len(normalized_path) > 1 and normalized_path[1] == ":")
 
     if is_absolute:
-        # Absolute path - resolve and validate it's within base directory
-        try:
-            requested_path = StdlibPath(normalized_path).resolve()
-            requested_resolved = str(requested_path)
-            # Ensure resolved path stays within base (prevent symlink attacks)
-            if not requested_resolved.startswith(base_dir_resolved + "/") and requested_resolved != base_dir_resolved:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Absolute path must be within your flows directory: {base_dir_resolved}",
-                )
-            # Reconstruct the path from the base directory + relative portion
-            # so the returned value is derived from the safe base, not user input.
-            rel = StdlibPath(requested_resolved).relative_to(base_dir_stdlib)
-            return Path(str(base_dir_stdlib / rel))
-        except HTTPException:
-            raise
-        except (OSError, ValueError) as e:
+        candidate = normalized_path
+    else:
+        relative_part = normalized_path.lstrip("/")
+        # os.path.join is deliberate here (PTH118) to match CodeQL's sanitiser model.
+        candidate = os.path.join(base_dir_resolved, relative_part) if relative_part else base_dir_resolved  # noqa: PTH118
+
+    try:
+        resolved_str = os.path.realpath(candidate)
+    except (OSError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
+
+    # SECURITY: containment check using os.path.realpath + startswith (CodeQL-recognised).
+    if resolved_str != base_dir_resolved and not resolved_str.startswith(base_dir_resolved + os.sep):
+        if is_absolute:
             raise HTTPException(
                 status_code=400,
-                detail=(
-                    f"Invalid file save path: {e}. "
-                    f"Verify that the path is within your flows directory: {base_dir_resolved}"
-                ),
-            ) from e
-    else:
-        # Relative path - validate that it's within the base directory
-        relative_part = normalized_path.lstrip("/")
-        safe_path_stdlib = base_dir_stdlib / relative_part if relative_part else base_dir_stdlib
-        try:
-            resolved_path = safe_path_stdlib.resolve()
-            resolved_str = str(resolved_path)
+                detail="Absolute path must be within your flows directory",
+            )
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid path: resolves outside allowed directory",
+        )
 
-            # Ensure resolved path stays within base (prevent symlink attacks)
-            if not resolved_str.startswith(base_dir_resolved + "/") and resolved_str != base_dir_resolved:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Invalid path: resolves outside allowed directory",
-                )
-        except (OSError, ValueError) as e:
-            raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
-
-        # Return the resolved path to prevent TOCTOU symlink attacks
-        return Path(resolved_str)
+    # Return the canonicalised path — safe for subsequent filesystem operations.
+    return Path(resolved_str)
 
 
 # Fields that may be updated via setattr on a Flow ORM instance.
@@ -257,15 +240,27 @@ async def _validate_and_assign_folder(
     Falls back to the default folder when the current ``folder_id`` is
     ``None`` or references a non-existent / other-user's folder.
     """
-    if db_flow.folder_id is not None:
-        folder_exists = (
-            await session.exec(select(Folder).where(Folder.id == db_flow.folder_id, Folder.user_id == user_id))
-        ).first()
-        if not folder_exists:
-            db_flow.folder_id = None
+    old_folder_id = db_flow.folder_id
+    # no_autoflush prevents the guard query (ensure_flow_move_allowed)
+    # from flushing the in-progress folder_id mutation before the guard
+    # has validated it.
+    with session.no_autoflush:
+        if db_flow.folder_id is not None:
+            folder_exists = (
+                await session.exec(select(Folder).where(Folder.id == db_flow.folder_id, Folder.user_id == user_id))
+            ).first()
+            if not folder_exists:
+                db_flow.folder_id = None
 
-    if db_flow.folder_id is None:
-        db_flow.folder_id = await get_default_folder_id(session, user_id)
+        if db_flow.folder_id is None:
+            db_flow.folder_id = await get_default_folder_id(session, user_id)
+
+        await ensure_flow_move_allowed(
+            session,
+            flow_id=db_flow.id,
+            old_folder_id=old_folder_id,
+            new_folder_id=db_flow.folder_id,
+        )
 
 
 async def _new_flow(
@@ -404,7 +399,7 @@ async def _update_existing_flow(
         if endpoint_conflict:
             raise HTTPException(status_code=409, detail="Endpoint name must be unique")
 
-    # Build update data
+    # None-valued inputs are treated as omitted by default for updates.
     update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
     # Preserve the existing endpoint unless the request explicitly clears it.
@@ -418,6 +413,13 @@ async def _update_existing_flow(
     # If folder_id not provided, keep existing
     if "folder_id" not in update_data or update_data.get("folder_id") is None:
         update_data.pop("folder_id", None)
+    elif update_data["folder_id"] != existing_flow.folder_id:
+        await ensure_flow_move_allowed(
+            session,
+            flow_id=existing_flow.id,
+            old_folder_id=existing_flow.folder_id,
+            new_folder_id=update_data["folder_id"],
+        )
 
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
@@ -447,11 +449,21 @@ async def _patch_flow(
     """Apply a partial update (PATCH) to an existing flow and return a FlowRead."""
     settings_service = get_settings_service()
 
+    # PATCH follows the same rule: None-valued fields are omitted unless
+    # explicitly reintroduced below (for example endpoint_name clear).
     update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
     # Preserve the existing endpoint unless the request explicitly clears it.
     if _endpoint_name_was_explicitly_cleared(flow):
         update_data["endpoint_name"] = None
+
+    if "folder_id" in update_data and update_data["folder_id"] != db_flow.folder_id:
+        await ensure_flow_move_allowed(
+            session,
+            flow_id=db_flow.id,
+            old_folder_id=db_flow.folder_id,
+            new_folder_id=update_data["folder_id"],
+        )
 
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
