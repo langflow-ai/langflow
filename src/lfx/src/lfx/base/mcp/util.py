@@ -9,9 +9,9 @@ import shlex
 import shutil
 import subprocess
 import unicodedata
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from types import UnionType
-from typing import Any, Union, get_args, get_origin
+from typing import Any, TypedDict, Union, get_args, get_origin
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -816,6 +816,22 @@ def _is_mcp_session_bust_error(exc: BaseException) -> bool:
     return False
 
 
+class _ServerLockEntry(TypedDict):
+    """Shape of each value in ``MCPSessionManager._server_locks``.
+
+    ``pins`` is the number of callers that have obtained (but not yet
+    released) the lock via ``_server_lock``; it gates reclamation of the
+    entry so a new caller can't grab a fresh lock while an older caller is
+    about to enter the old one.
+    """
+
+    lock: asyncio.Lock
+    pins: int
+
+
+# TODO(langflow-ai/langflow#12541-followup): MCPSessionManager lives in this
+# 2k+ line module; extract it (and the concurrency primitives below) into a
+# dedicated ``mcp/session_manager.py`` so future edits stay small.
 class MCPSessionManager:
     """Manages persistent MCP sessions with proper context manager lifecycle.
 
@@ -838,8 +854,102 @@ class MCPSessionManager:
         # Cache which transport works for each server to avoid retrying failed transports
         # server_key -> "streamable_http" | "sse"
         self._transport_preference: dict[str, str] = {}
+        # Per-server asyncio locks to serialize session create/reuse/cleanup under
+        # concurrent access. Without this, two concurrent flow executions sharing
+        # the same MCP server URL can race on the sessions dict and raise a
+        # KeyError from `del sessions[session_id]` in `_cleanup_session_by_id`, or
+        # create colliding session_ids from `len(sessions)`.
+        #
+        # Each entry is a `_ServerLockEntry` {"lock": asyncio.Lock(), "pins": int}.
+        # The pin count is the number of callers that have obtained (but not yet
+        # released) the lock via `_server_lock`. We reclaim the entry only when
+        # pins == 0 and the lock is not held, to avoid a new caller grabbing a
+        # fresh lock while an older caller is about to enter the old one.
+        self._server_locks: dict[str, _ServerLockEntry] = {}
+        self._locks_guard = asyncio.Lock()
+        # Monotonic counter per server_key to generate unique session_ids even
+        # when sessions are removed between allocations.
+        self._session_id_counters: dict[str, int] = {}
         self._cleanup_task = None
         self._start_cleanup_task()
+
+    @contextlib.asynccontextmanager
+    async def _server_lock(self, server_key: str) -> AsyncIterator[None]:
+        """Acquire the per-server lock with pin counting for safe reclamation.
+
+        The pin count prevents reclaiming a lock that another task is about to
+        enter (e.g. between obtaining a reference and calling ``async with``).
+        Reclamation in `_cleanup_idle_sessions` / `_release_server_lock_if_idle`
+        only runs when pins drop to zero *and* the lock is not held.
+        """
+        async with self._locks_guard:
+            entry = self._server_locks.get(server_key)
+            if entry is None:
+                entry = _ServerLockEntry(lock=asyncio.Lock(), pins=0)
+                self._server_locks[server_key] = entry
+            entry["pins"] += 1
+            lock = entry["lock"]
+        try:
+            async with lock:
+                yield
+        finally:
+            await self._release_server_lock_if_idle(server_key)
+
+    async def _release_server_lock_if_idle(self, server_key: str):
+        """Drop the pin and, once the server is fully idle, reclaim the maps.
+
+        Reclamation is deliberately conservative: we only drop the lock entry
+        (and the matching session-id counter) when *both* conditions hold —
+        pin count is zero and the server has no remaining sessions. This
+        prevents two problems:
+        - Churning the lock on every `get_session` call while a server is
+          actively in use (pin count oscillates 0↔1 between callers).
+        - Rotating auth/session headers (which change `server_key` via
+          `_get_server_key`) leaking per-key entries forever in long-lived
+          processes.
+        """
+        async with self._locks_guard:
+            entry = self._server_locks.get(server_key)
+            if entry is None:
+                return
+            entry["pins"] -= 1
+            if entry["pins"] < 0:
+                # A negative pin count means a missing acquire or a double release.
+                # Log loudly so it surfaces in telemetry instead of being swept.
+                await logger.awarning(
+                    f"Negative pin count ({entry['pins']}) for server_key {server_key}; "
+                    "this indicates a missing _server_lock acquire or a double release.",
+                )
+            if entry["pins"] <= 0 and not entry["lock"].locked() and server_key not in self.sessions_by_server:
+                self._server_locks.pop(server_key, None)
+                self._session_id_counters.pop(server_key, None)
+
+    def _next_session_id(self, server_key: str) -> str:
+        """Generate a monotonically unique session_id for *server_key*.
+
+        Caller must hold ``self._server_lock(server_key)`` while invoking this.
+        The increment is otherwise unsynchronised — two concurrent callers
+        without the lock would race on ``_session_id_counters[server_key]`` and
+        produce colliding ids.
+        """
+        current = self._session_id_counters.get(server_key, 0)
+        self._session_id_counters[server_key] = current + 1
+        return f"{server_key}_{current}"
+
+    def _sessions_for(self, server_key: str) -> dict[str, dict[str, Any]]:
+        """Return the sessions dict for *server_key* (empty dict if absent).
+
+        Encapsulates the ``sessions_by_server[server_key]["sessions"]`` shape
+        so callers don't have to reach through the outer envelope. Handles the
+        legacy structure (sessions stored directly under the server_key)
+        uniformly as well.
+        """
+        server_data = self.sessions_by_server.get(server_key)
+        if server_data is None:
+            return {}
+        if isinstance(server_data, dict) and "sessions" in server_data:
+            return server_data["sessions"]
+        return server_data  # legacy flat structure
 
     def _start_cleanup_task(self):
         """Start the periodic cleanup task."""
@@ -861,30 +971,37 @@ class MCPSessionManager:
                 await logger.awarning(f"Error in periodic cleanup: {e}")
 
     async def _cleanup_idle_sessions(self):
-        """Clean up sessions that have been idle for too long."""
+        """Clean up sessions that have been idle for too long.
+
+        Acquires the per-server lock before mutating the sessions dict so we
+        don't race with `get_session()` — otherwise a concurrent `get_session`
+        could finish validating a session while this task pops and cancels it,
+        handing the caller a dead session plus a dangling refcount entry.
+        """
         current_time = asyncio.get_event_loop().time()
-        servers_to_remove = []
 
-        for server_key, server_data in self.sessions_by_server.items():
-            sessions = server_data.get("sessions", {})
-            sessions_to_remove = []
+        # Snapshot keys to avoid mutating-while-iterating.
+        for server_key in list(self.sessions_by_server.keys()):
+            async with self._server_lock(server_key):
+                sessions = self._sessions_for(server_key)
+                if not sessions and server_key not in self.sessions_by_server:
+                    continue
 
-            for session_id, session_info in list(sessions.items()):
-                if current_time - session_info["last_used"] > get_session_idle_timeout():
-                    sessions_to_remove.append(session_id)
+                sessions_to_remove = [
+                    session_id
+                    for session_id, session_info in list(sessions.items())
+                    if current_time - session_info["last_used"] > get_session_idle_timeout()
+                ]
 
-            # Clean up idle sessions
-            for session_id in sessions_to_remove:
-                await logger.ainfo(f"Cleaning up idle session {session_id} for server {server_key}")
-                await self._cleanup_session_by_id(server_key, session_id)
+                for session_id in sessions_to_remove:
+                    await logger.ainfo(f"Cleaning up idle session {session_id} for server {server_key}")
+                    await self._cleanup_session_by_id(server_key, session_id)
 
-            # Remove server entry if no sessions left
-            if not sessions:
-                servers_to_remove.append(server_key)
-
-        # Clean up empty server entries
-        for server_key in servers_to_remove:
-            del self.sessions_by_server[server_key]
+                # Remove server entry if no sessions left. The counter for
+                # this server_key is reclaimed by `_release_server_lock_if_idle`
+                # once this lock's pin count hits zero.
+                if not sessions:
+                    self.sessions_by_server.pop(server_key, None)
 
     def _get_server_key(self, connection_params, transport_type: str) -> str:
         """Generate a consistent server key based on connection parameters."""
@@ -957,85 +1074,95 @@ class MCPSessionManager:
         The key insight is that we should reuse sessions based on the server
         identity (command + args for stdio, URL for Streamable HTTP) rather than the context_id.
         This prevents creating a new subprocess for each unique context.
+
+        Concurrent callers for the same server are serialized via a per-server
+        lock. This is required to keep the `sessions` dict consistent across
+        concurrent flow executions that share a single `MCPSessionManager`
+        (e.g. two `MCPTools` components pointing at the same SSE URL).
         """
         server_key = self._get_server_key(connection_params, transport_type)
 
-        # Ensure server entry exists
-        if server_key not in self.sessions_by_server:
-            self.sessions_by_server[server_key] = {"sessions": {}, "last_cleanup": asyncio.get_event_loop().time()}
+        async with self._server_lock(server_key):
+            # Ensure server entry exists
+            if server_key not in self.sessions_by_server:
+                self.sessions_by_server[server_key] = {
+                    "sessions": {},
+                    "last_cleanup": asyncio.get_event_loop().time(),
+                }
 
-        server_data = self.sessions_by_server[server_key]
-        sessions = server_data["sessions"]
+            server_data = self.sessions_by_server[server_key]
+            sessions = server_data["sessions"]
 
-        # Try to find a healthy existing session
-        for session_id, session_info in list(sessions.items()):
-            session = session_info["session"]
-            task = session_info["task"]
+            # Try to find a healthy existing session
+            for session_id, session_info in list(sessions.items()):
+                session = session_info["session"]
+                task = session_info["task"]
 
-            # Check if session is still alive
-            if not task.done():
-                # Update last used time
-                session_info["last_used"] = asyncio.get_event_loop().time()
+                # Check if session is still alive
+                if not task.done():
+                    # Update last used time
+                    session_info["last_used"] = asyncio.get_event_loop().time()
 
-                # Quick health check
-                if await self._validate_session_connectivity(session):
-                    await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
-                    # record mapping & bump ref-count for backwards compatibility
-                    self._context_to_session[context_id] = (server_key, session_id)
-                    self._session_refcount[(server_key, session_id)] = (
-                        self._session_refcount.get((server_key, session_id), 0) + 1
-                    )
-                    return session
-                await logger.ainfo(f"Session {session_id} for server {server_key} failed health check, cleaning up")
-                await self._cleanup_session_by_id(server_key, session_id)
+                    # Quick health check
+                    if await self._validate_session_connectivity(session):
+                        await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
+                        # record mapping & bump ref-count for backwards compatibility
+                        self._context_to_session[context_id] = (server_key, session_id)
+                        self._session_refcount[(server_key, session_id)] = (
+                            self._session_refcount.get((server_key, session_id), 0) + 1
+                        )
+                        return session
+                    await logger.ainfo(f"Session {session_id} for server {server_key} failed health check, cleaning up")
+                    await self._cleanup_session_by_id(server_key, session_id)
+                else:
+                    # Task is done, clean up
+                    await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
+                    await self._cleanup_session_by_id(server_key, session_id)
+
+            # Check if we've reached the maximum number of sessions for this server
+            if len(sessions) >= get_max_sessions_per_server():
+                # Remove the oldest session
+                oldest_session_id = min(sessions.keys(), key=lambda x: sessions[x]["last_used"])
+                await logger.ainfo(
+                    f"Maximum sessions reached for server {server_key}, removing oldest session {oldest_session_id}"
+                )
+                await self._cleanup_session_by_id(server_key, oldest_session_id)
+
+            # Create new session. Use a monotonic counter so removed sessions
+            # don't cause id collisions with newly-created sessions.
+            session_id = self._next_session_id(server_key)
+            await logger.ainfo(f"Creating new session {session_id} for server {server_key}")
+
+            if transport_type == "stdio":
+                session, task = await self._create_stdio_session(session_id, connection_params)
+                actual_transport = "stdio"
+            elif transport_type == "streamable_http":
+                # Pass the cached transport preference if available (SSE only when last success required it)
+                preferred_transport = self._transport_preference.get(server_key)
+                session, task, actual_transport, sse_pref_lock = await self._create_streamable_http_session(
+                    session_id, connection_params, preferred_transport
+                )
+                if actual_transport == "streamable_http":
+                    self._transport_preference[server_key] = "streamable_http"
+                elif sse_pref_lock:
+                    self._transport_preference[server_key] = "sse"
             else:
-                # Task is done, clean up
-                await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
-                await self._cleanup_session_by_id(server_key, session_id)
+                msg = f"Unknown transport type: {transport_type}"
+                raise ValueError(msg)
 
-        # Check if we've reached the maximum number of sessions for this server
-        if len(sessions) >= get_max_sessions_per_server():
-            # Remove the oldest session
-            oldest_session_id = min(sessions.keys(), key=lambda x: sessions[x]["last_used"])
-            await logger.ainfo(
-                f"Maximum sessions reached for server {server_key}, removing oldest session {oldest_session_id}"
-            )
-            await self._cleanup_session_by_id(server_key, oldest_session_id)
+            # Store session info with the actual transport used
+            sessions[session_id] = {
+                "session": session,
+                "task": task,
+                "type": actual_transport,
+                "last_used": asyncio.get_event_loop().time(),
+            }
 
-        # Create new session
-        session_id = f"{server_key}_{len(sessions)}"
-        await logger.ainfo(f"Creating new session {session_id} for server {server_key}")
+            # register mapping & initial ref-count for the new session
+            self._context_to_session[context_id] = (server_key, session_id)
+            self._session_refcount[(server_key, session_id)] = 1
 
-        if transport_type == "stdio":
-            session, task = await self._create_stdio_session(session_id, connection_params)
-            actual_transport = "stdio"
-        elif transport_type == "streamable_http":
-            # Pass the cached transport preference if available (SSE only when last success required it)
-            preferred_transport = self._transport_preference.get(server_key)
-            session, task, actual_transport, sse_pref_lock = await self._create_streamable_http_session(
-                session_id, connection_params, preferred_transport
-            )
-            if actual_transport == "streamable_http":
-                self._transport_preference[server_key] = "streamable_http"
-            elif sse_pref_lock:
-                self._transport_preference[server_key] = "sse"
-        else:
-            msg = f"Unknown transport type: {transport_type}"
-            raise ValueError(msg)
-
-        # Store session info with the actual transport used
-        sessions[session_id] = {
-            "session": session,
-            "task": task,
-            "type": actual_transport,
-            "last_used": asyncio.get_event_loop().time(),
-        }
-
-        # register mapping & initial ref-count for the new session
-        self._context_to_session[context_id] = (server_key, session_id)
-        self._session_refcount[(server_key, session_id)] = 1
-
-        return session
+            return session
 
     async def _create_stdio_session(self, session_id: str, connection_params):
         """Create a new stdio session as a background task to avoid context issues."""
@@ -1257,22 +1384,24 @@ class MCPSessionManager:
             raise ValueError(msg) from timeout_err
 
     async def _cleanup_session_by_id(self, server_key: str, session_id: str):
-        """Clean up a specific session by server key and session ID."""
-        if server_key not in self.sessions_by_server:
+        """Clean up a specific session by server key and session ID.
+
+        Safe against concurrent cleanup of the same session: we `pop` the entry
+        up front so two concurrent callers don't both try to cancel the same
+        task or `del` the same key (which raised `KeyError: 'streamable_http_..._0'`
+        previously under concurrent flow execution).
+        """
+        sessions = self._sessions_for(server_key)
+        if not sessions and server_key not in self.sessions_by_server:
             return
 
-        server_data = self.sessions_by_server[server_key]
-        # Handle both old and new session structure
-        if isinstance(server_data, dict) and "sessions" in server_data:
-            sessions = server_data["sessions"]
-        else:
-            # Handle old structure where sessions were stored directly
-            sessions = server_data
-
-        if session_id not in sessions:
+        # Atomically remove the session entry; only the caller that wins this
+        # pop performs the actual teardown. Concurrent callers get None and
+        # return early instead of racing on del/task.cancel().
+        session_info = sessions.pop(session_id, None)
+        if session_info is None:
             return
 
-        session_info = sessions[session_id]
         try:
             # First try to properly close the session if it exists
             if "session" in session_info:
@@ -1318,10 +1447,11 @@ class MCPSessionManager:
                     except asyncio.CancelledError:
                         await logger.ainfo(f"Cancelled task for session {session_id}")
         except Exception as e:  # noqa: BLE001
+            # Teardown is load-bearing: MCP transports (stdio subprocess, SSE,
+            # streamable HTTP) all raise their own exception hierarchies on
+            # shutdown, and a leak on cleanup is far worse than a swallowed
+            # error. Log and continue rather than propagating.
             await logger.awarning(f"Error cleaning up session {session_id}: {e}")
-        finally:
-            # Remove from sessions dict
-            del sessions[session_id]
 
     async def cleanup_all(self):
         """Clean up all sessions."""
@@ -1333,15 +1463,7 @@ class MCPSessionManager:
 
         # Clean up all sessions
         for server_key in list(self.sessions_by_server.keys()):
-            server_data = self.sessions_by_server[server_key]
-            # Handle both old and new session structure
-            if isinstance(server_data, dict) and "sessions" in server_data:
-                sessions = server_data["sessions"]
-            else:
-                # Handle old structure where sessions were stored directly
-                sessions = server_data
-
-            for session_id in list(sessions.keys()):
+            for session_id in list(self._sessions_for(server_key).keys()):
                 await self._cleanup_session_by_id(server_key, session_id)
 
         # Clear the sessions_by_server structure completely
@@ -1350,6 +1472,13 @@ class MCPSessionManager:
         # Clear compatibility maps
         self._context_to_session.clear()
         self._session_refcount.clear()
+
+        # Reclaim per-server lock and counter maps. Safe here because
+        # cleanup_all is a shutdown/reset operation; no other manager state
+        # should be in use past this point.
+        async with self._locks_guard:
+            self._server_locks.clear()
+            self._session_id_counters.clear()
 
         # Clear all background tasks
         for task in list(self._background_tasks):
@@ -1368,6 +1497,19 @@ class MCPSessionManager:
         Decrements the ref-count for the session used by *context_id* and only
         tears the session down when the last context that references it goes
         away.
+
+        Acquires the per-server lock so concurrent `get_session()` calls don't
+        observe a half-torn-down session (e.g. returning a ClientSession whose
+        background task was just cancelled out from under them).
+
+        Uses a compare-and-swap on `_context_to_session[context_id]` before
+        popping it: if a concurrent `get_session()` has re-pointed the same
+        context at a *different* server (e.g. a component reconnecting to a
+        new MCP URL while the old disconnect is in flight), we must not wipe
+        out the fresh mapping — otherwise the new session leaks. The per-
+        server lock doesn't cover this case because the new and old sessions
+        live under different server_keys, so the two operations run in
+        parallel.
         """
         mapping = self._context_to_session.get(context_id)
         if not mapping:
@@ -1375,17 +1517,22 @@ class MCPSessionManager:
             return
 
         server_key, session_id = mapping
-        ref_key = (server_key, session_id)
-        remaining = self._session_refcount.get(ref_key, 1) - 1
+        async with self._server_lock(server_key):
+            ref_key = (server_key, session_id)
+            remaining = self._session_refcount.get(ref_key, 1) - 1
 
-        if remaining <= 0:
-            await self._cleanup_session_by_id(server_key, session_id)
-            self._session_refcount.pop(ref_key, None)
-        else:
-            self._session_refcount[ref_key] = remaining
+            if remaining <= 0:
+                await self._cleanup_session_by_id(server_key, session_id)
+                self._session_refcount.pop(ref_key, None)
+            else:
+                self._session_refcount[ref_key] = remaining
 
-        # Remove the mapping for this context
-        self._context_to_session.pop(context_id, None)
+            # CAS: only drop the context->session mapping if it still points
+            # at the session we just cleaned up. The get() and pop() below run
+            # synchronously with no `await` between them, so no other coroutine
+            # can interleave and re-point the mapping after our check.
+            if self._context_to_session.get(context_id) == (server_key, session_id):
+                self._context_to_session.pop(context_id, None)
 
 
 class MCPStdioClient:

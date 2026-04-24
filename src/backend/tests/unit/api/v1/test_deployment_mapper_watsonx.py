@@ -86,6 +86,11 @@ def test_watsonx_mapper_is_registered() -> None:
     assert mapper.api_payloads.snapshot_list_result is not None
 
 
+def test_watsonx_mapper_load_from_provider_params_force_draft_filter() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    assert mapper.resolve_load_from_provider_deployment_list_params() == {"environment": "draft"}
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "provider_data",
@@ -180,7 +185,10 @@ def test_watsonx_mapper_provider_list_entry_flattens_provider_data_and_uses_id()
         description="desc",
         created_at=now,
         updated_at=now,
-        provider_data={"tool_ids": ["tool-1", "  ", "tool-2"], "environment": "draft"},
+        provider_data={
+            "tool_ids": ["tool-1", "  ", "tool-2"],
+            "environments": ["draft", "draft", "live"],
+        },
     )
 
     shaped = mapper._shape_provider_deployment_list_entry(item)
@@ -192,7 +200,7 @@ def test_watsonx_mapper_provider_list_entry_flattens_provider_data_and_uses_id()
     assert shaped["created_at"] == now.isoformat().replace("+00:00", "Z")
     assert shaped["updated_at"] == now.isoformat().replace("+00:00", "Z")
     assert shaped["tool_ids"] == ["tool-1", "tool-2"]
-    assert shaped["environment"] == "draft"
+    assert shaped["environments"] == ["draft", "live"]
     assert "provider_data" not in shaped
     assert "resource_key" not in shaped
 
@@ -209,7 +217,7 @@ def test_watsonx_mapper_shapes_deployment_list_result_with_flattened_entries() -
                 description="desc",
                 created_at=now,
                 updated_at=now,
-                provider_data={"tool_ids": ["tool-1"], "environment": "live"},
+                provider_data={"tool_ids": ["tool-1"], "environments": ["live"]},
             )
         ]
     )
@@ -229,7 +237,7 @@ def test_watsonx_mapper_shapes_deployment_list_result_with_flattened_entries() -
             "created_at": now.isoformat().replace("+00:00", "Z"),
             "updated_at": now.isoformat().replace("+00:00", "Z"),
             "tool_ids": ["tool-1"],
-            "environment": "live",
+            "environments": ["live"],
         }
     ]
 
@@ -886,6 +894,16 @@ def test_watsonx_mapper_create_result_from_existing_update_normalizes_slot_paylo
         "tools_with_refs": [{"source_ref": str(flow_version_id), "tool_id": "tool-1"}],
         "tool_app_bindings": [],
     }
+
+
+def test_watsonx_mapper_create_result_from_existing_resource_includes_empty_payload() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    create_result = mapper.util_create_result_from_existing_resource(existing_resource_key="existing-agent-1")
+
+    assert create_result.id == "existing-agent-1"
+    assert isinstance(create_result.provider_result, dict)
+    assert create_result.provider_result.get("app_ids") == []
+    assert create_result.provider_result.get("tools_with_refs") == []
 
 
 def test_watsonx_mapper_resolve_verify_credentials_for_update_returns_none_without_provider_data() -> None:

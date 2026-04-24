@@ -13,7 +13,11 @@ Trace data is stored in the Langflow database in the `trace` and `span` tables.
 Trace data is presented in the **Flow Activity** and **Trace Details** pages in the UI, and can be retrieved from the `/monitor/traces` API endpoint.
 
 Traces are enabled by default.
-To disable Langflow tracing and use a different tracing provider, set `LANGFLOW_NATIVE_TRACING` to `false`.
+
+Langflow traces can run alongside supported third-party tracing providers.
+If both are enabled, Langflow stores native traces in the `trace` and `span` database tables for the **Trace View**, and also sends tracing data to the configured external provider.
+
+To disable Langflow native tracing and use only an external tracing provider, set `LANGFLOW_NATIVE_TRACING=false`.
 
 ## What traces capture
 
