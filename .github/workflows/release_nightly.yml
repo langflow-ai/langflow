@@ -169,7 +169,7 @@ jobs:
 
       - name: Download LFX artifact
         if: inputs.build_lfx
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-lfx
           path: lfx-dist
@@ -266,13 +266,13 @@ jobs:
 
       - name: Download LFX artifact
         if: inputs.build_lfx
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-lfx
           path: lfx-dist
 
       - name: Download base artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-base
           path: base-dist
@@ -361,7 +361,7 @@ jobs:
           ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: Download LFX artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-lfx
           path: src/lfx/dist
@@ -389,7 +389,7 @@ jobs:
           ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: Download langflow-sdk artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-sdk
           path: src/sdk/dist
@@ -417,7 +417,7 @@ jobs:
           ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: Download base artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-base
           path: src/backend/base/dist
@@ -445,7 +445,7 @@ jobs:
           ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: Download main artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-main
           path: dist
