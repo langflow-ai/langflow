@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pandas as pd
 import pytest
 from httpx import AsyncClient
+from langflow.api.utils import knowledge_base_service
 from langflow.api.utils.kb_helpers import (
     KBAnalysisHelper,
     KBIngestionHelper,
@@ -194,11 +195,17 @@ class TestKnowledgeBaseAPI:
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_knowledge_base(
-        self, mock_root, mock_fresh_client, client: AsyncClient, logged_in_headers, tmp_path
+        self, mock_root, mock_fresh_client, client: AsyncClient, logged_in_headers, active_user, tmp_path
     ):
         mock_fresh_client.return_value = MagicMock()
         mock_root.return_value = tmp_path
         kb_name = "New_KB"
+        model_selection = {
+            "id": "text-embedding-3-small",
+            "name": "text-embedding-3-small",
+            "provider": "OpenAI",
+            "metadata": {"model_type": "embeddings"},
+        }
         response = await client.post(
             "api/v1/knowledge_bases",
             headers=logged_in_headers,
@@ -206,6 +213,7 @@ class TestKnowledgeBaseAPI:
                 "name": kb_name,
                 "embedding_provider": "OpenAI",
                 "embedding_model": "text-embedding-3-small",
+                "model_selection": model_selection,
                 "backend_type": "opensearch",
                 "backend_config": {"index_name": "new_kb_index"},
             },
@@ -215,6 +223,42 @@ class TestKnowledgeBaseAPI:
         assert data["name"] == "New KB"
         assert data["backend_type"] == "opensearch"
         assert data["backend_config"] == {"index_name": "new_kb_index"}
+        record = await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name)
+        assert record is not None
+        assert record.model_selection == model_selection
+        metadata = json.loads((tmp_path / active_user.username / kb_name / "embedding_metadata.json").read_text())
+        assert metadata["model_selection"] == model_selection
+
+    async def test_create_knowledge_base_rejects_unknown_backend(self, client: AsyncClient, logged_in_headers):
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "Bad_Backend_KB",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+                "backend_type": "not-a-backend",
+            },
+        )
+
+        assert response.status_code == 422
+        assert "unknown vector-store backend" in response.text.lower()
+
+    async def test_create_knowledge_base_rejects_missing_backend_config(self, client: AsyncClient, logged_in_headers):
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "Missing_Backend_Config_KB",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+                "backend_type": "postgres",
+                "backend_config": {},
+            },
+        )
+
+        assert response.status_code == 422
+        assert "collection_name" in response.text
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_kb_path_traversal_single_level(

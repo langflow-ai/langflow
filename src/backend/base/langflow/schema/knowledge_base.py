@@ -1,7 +1,17 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from lfx.base.knowledge_bases.backends import BackendType
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from langflow.utils.kb_constants import MAX_CHUNK_OVERLAP, MAX_CHUNK_SIZE, MIN_CHUNK_OVERLAP, MIN_CHUNK_SIZE
+
+_REQUIRED_BACKEND_CONFIG: dict[str, tuple[str, ...]] = {
+    BackendType.MONGODB.value: ("database", "collection"),
+    BackendType.ASTRA.value: ("collection_name",),
+    BackendType.POSTGRES.value: ("collection_name",),
+    BackendType.OPENSEARCH.value: ("index_name",),
+}
 
 
 class KnowledgeBaseInfo(BaseModel):
@@ -21,10 +31,10 @@ class KnowledgeBaseInfo(BaseModel):
     status: str = "empty"
     failure_reason: str | None = None
     last_job_id: str | None = None
-    source_types: list[str] = []
+    source_types: list[str] = Field(default_factory=list)
     column_config: list[dict] | None = None
     backend_type: str = "chroma"
-    backend_config: dict[str, Any] = {}
+    backend_config: dict[str, Any] = Field(default_factory=dict)
 
 
 class BulkDeleteRequest(BaseModel):
@@ -41,10 +51,30 @@ class CreateKnowledgeBaseRequest(BaseModel):
     name: str
     embedding_provider: str
     embedding_model: str
+    model_selection: dict[str, Any] | list[dict[str, Any]] | None = None
     column_config: list[ColumnConfigItem] | None = None
     # Phase 4 additions. Default keeps existing KBs on Chroma.
     backend_type: str = "chroma"
-    backend_config: dict[str, Any] = {}
+    backend_config: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("backend_type")
+    @classmethod
+    def validate_backend_type(cls, value: str) -> str:
+        try:
+            return BackendType(value or BackendType.CHROMA.value).value
+        except ValueError as exc:
+            allowed = ", ".join(backend.value for backend in BackendType)
+            msg = f"Unknown vector-store backend {value!r}. Expected one of: {allowed}."
+            raise ValueError(msg) from exc
+
+    @model_validator(mode="after")
+    def validate_backend_config(self) -> "CreateKnowledgeBaseRequest":
+        required_keys = _REQUIRED_BACKEND_CONFIG.get(self.backend_type, ())
+        missing = [key for key in required_keys if not str(self.backend_config.get(key) or "").strip()]
+        if missing:
+            msg = f"{self.backend_type} backend requires backend_config field(s): {', '.join(missing)}."
+            raise ValueError(msg)
+        return self
 
 
 class AddSourceRequest(BaseModel):
@@ -109,8 +139,8 @@ class IngestionRunDetail(IngestionRunInfo):
     a file-by-file drill-down with individual error messages.
     """
 
-    source_config: dict[str, Any] = {}
-    items: list[IngestionRunItemInfo] = []
+    source_config: dict[str, Any] = Field(default_factory=dict)
+    items: list[IngestionRunItemInfo] = Field(default_factory=list)
 
 
 class PaginatedIngestionRunResponse(BaseModel):
@@ -140,8 +170,8 @@ class ConnectorIngestRequest(BaseModel):
     """Body payload for the generic ``POST /{kb}/ingest/connector`` route."""
 
     source_type: str
-    source_config: dict[str, Any] = {}
+    source_config: dict[str, Any] = Field(default_factory=dict)
     source_name: str = ""
-    chunk_size: int = 1000
-    chunk_overlap: int = 200
+    chunk_size: int = Field(1000, ge=MIN_CHUNK_SIZE, le=MAX_CHUNK_SIZE)
+    chunk_overlap: int = Field(200, ge=MIN_CHUNK_OVERLAP, le=MAX_CHUNK_OVERLAP)
     separator: str = ""

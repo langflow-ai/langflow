@@ -425,6 +425,7 @@ export function useKnowledgeBaseForm({
           name: kbName,
           embedding_provider: selectedModel.provider || "Unknown",
           embedding_model: selectedModel.id || selectedModel.name,
+          model_selection: selectedModel,
           column_config: columnConfig,
           backend_type: backendType,
           backend_config: backendConfig,

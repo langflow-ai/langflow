@@ -9,6 +9,12 @@ export interface CreateKnowledgeBaseRequest {
   name: string;
   embedding_provider: string;
   embedding_model: string;
+  /**
+   * Exact unified-model selection captured at create time. Retrieval uses
+   * this instead of resolving by provider/name again, which avoids drift
+   * when multiple providers expose the same model name.
+   */
+  model_selection?: unknown;
   column_config?: Array<{
     column_name: string;
     vectorize: boolean;
@@ -42,7 +48,7 @@ export const useCreateKnowledgeBase: useMutationFunctionType<
   CreateKnowledgeBaseRequest,
   KnowledgeBaseInfo
 > = (options?) => {
-  const { mutate, queryClient } = UseRequestProcessor();
+  const { mutate } = UseRequestProcessor();
 
   const createKnowledgeBaseFn = async (
     payload: CreateKnowledgeBaseRequest,

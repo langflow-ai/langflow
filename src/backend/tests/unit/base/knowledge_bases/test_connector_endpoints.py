@@ -164,3 +164,32 @@ class TestConnectorIngest:
         )
         assert response.status_code == 400
         assert "bucket" in response.json()["detail"].lower()
+
+    async def test_rejects_unbounded_chunk_parameters(self, client: AsyncClient, logged_in_headers):
+        response = await client.post(
+            "api/v1/knowledge_bases/connector_kb/ingest/connector",
+            headers=logged_in_headers,
+            json={
+                "source_type": "s3",
+                "source_config": {"bucket": "demo"},
+                "chunk_size": 100_000_000,
+                "chunk_overlap": 0,
+            },
+        )
+
+        assert response.status_code == 422
+        assert "chunk_size" in response.text
+
+    async def test_folder_ingest_rejects_unbounded_chunk_parameters(self, client: AsyncClient, logged_in_headers):
+        response = await client.post(
+            "api/v1/knowledge_bases/folder_kb/ingest/folder",
+            headers=logged_in_headers,
+            json={
+                "path": "/example-folder",
+                "chunk_size": 100_000_000,
+                "chunk_overlap": 0,
+            },
+        )
+
+        assert response.status_code == 422
+        assert "chunk_size" in response.text

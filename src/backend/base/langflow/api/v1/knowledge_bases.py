@@ -249,6 +249,7 @@ async def create_knowledge_base(
             "id": str(kb_id),
             "embedding_provider": request.embedding_provider,
             "embedding_model": request.embedding_model,
+            "model_selection": request.model_selection,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "chunks": 0,
             "words": 0,
@@ -282,6 +283,7 @@ async def create_knowledge_base(
                 name=kb_name,
                 embedding_provider=request.embedding_provider,
                 embedding_model=request.embedding_model,
+                model_selection=request.model_selection,
                 column_config=column_config_dicts or [],
                 backend_type=backend_type_value,
                 backend_config=backend_config_value,
@@ -589,8 +591,18 @@ class IngestFolderRequest(BaseModel):
     )
     max_file_size_bytes: int | None = Field(None, description="Per-file size cap; None → 25 MB default.")
     source_name: str = Field("", description="Optional grouping label stamped on every chunk's 'source'.")
-    chunk_size: int = Field(1000, description="Chunk size in characters.")
-    chunk_overlap: int = Field(200, description="Chunk overlap in characters.")
+    chunk_size: int = Field(
+        1000,
+        ge=MIN_CHUNK_SIZE,
+        le=MAX_CHUNK_SIZE,
+        description="Chunk size in characters.",
+    )
+    chunk_overlap: int = Field(
+        200,
+        ge=MIN_CHUNK_OVERLAP,
+        le=MAX_CHUNK_OVERLAP,
+        description="Chunk overlap in characters.",
+    )
     separator: str = Field("", description="Custom separator (\\n → newline).")
 
 
