@@ -177,15 +177,24 @@ class KnowledgeBaseComponent(Component):
         """Resolve the ``get_embeddings``-compatible model selection from metadata.
 
         New KBs persist the full ``model_selection`` dict at ingest
-        time so we can pass it straight through. Older KBs only
-        stored ``embedding_model`` / ``embedding_provider`` strings —
-        for those we look the model up in the current unified-models
-        catalog and fail loudly if it's no longer available (indicating
-        the KB needs to be re-created with a supported model).
+        time so we can pass it straight through. Older KBs — and KBs
+        whose persisted ``model_selection`` was serialized without the
+        nested ``metadata`` block (e.g. third-party API clients, or
+        older frontend builds that dropped unknown fields) — fall
+        through to the catalog lookup.
+
+        The catalog lookup is also used as a *hydration* step when
+        ``model_selection`` is present but missing
+        ``metadata.embedding_class`` / ``metadata.param_mapping``, which
+        ``get_embeddings`` needs to instantiate the provider SDK.
+        Without this hydration the retrieval would fail with
+        ``No embedding class defined in metadata for <model>`` even
+        though the model is fully supported by the current runtime.
         """
         model_selection = metadata.get("model_selection")
         if model_selection:
-            return [model_selection] if isinstance(model_selection, dict) else model_selection
+            selection_list = [model_selection] if isinstance(model_selection, dict) else list(model_selection)
+            return [self._hydrate_model_metadata(entry) for entry in selection_list]
 
         embedding_model_name = metadata.get("embedding_model")
         embedding_provider = metadata.get("embedding_provider", "Unknown")
@@ -196,8 +205,7 @@ class KnowledgeBaseComponent(Component):
             )
             raise ValueError(msg)
 
-        options = get_embedding_model_options(user_id=self.user_id)
-        match = next((o for o in options if o.get("name") == embedding_model_name), None)
+        match = self._find_catalog_entry(embedding_model_name)
         if match is None:
             msg = (
                 f"Embedding model '{embedding_model_name}' (provider '{embedding_provider}') "
@@ -206,6 +214,36 @@ class KnowledgeBaseComponent(Component):
             )
             raise ValueError(msg)
         return [match]
+
+    def _hydrate_model_metadata(self, entry: dict[str, Any]) -> dict[str, Any]:
+        """Fill in ``metadata.embedding_class`` / ``param_mapping`` if missing.
+
+        Preserves existing keys — the catalog is only used to fill
+        gaps. Returns a shallow copy so the persisted metadata on disk
+        is not mutated in place.
+        """
+        entry_metadata = entry.get("metadata") or {}
+        has_class = bool(entry_metadata.get("embedding_class"))
+        has_mapping = bool(entry_metadata.get("param_mapping"))
+        if has_class and has_mapping:
+            return entry
+
+        model_name = entry.get("name")
+        if not model_name:
+            return entry
+
+        catalog_entry = self._find_catalog_entry(model_name)
+        if catalog_entry is None:
+            return entry
+
+        catalog_metadata = catalog_entry.get("metadata") or {}
+        merged_metadata = {**catalog_metadata, **entry_metadata}
+        return {**entry, "metadata": merged_metadata}
+
+    def _find_catalog_entry(self, model_name: str) -> dict[str, Any] | None:
+        """Look up an embedding model by name in the unified-models catalog."""
+        options = get_embedding_model_options(user_id=self.user_id)
+        return next((o for o in options if o.get("name") == model_name), None)
 
     async def retrieve_data(self) -> DataFrame:
         """Retrieve data from the selected knowledge base.

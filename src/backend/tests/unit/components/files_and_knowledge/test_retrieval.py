@@ -174,6 +174,86 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
             )
         assert resolved == [catalog_entry]
 
+    def test_resolve_model_selection_hydrates_missing_embedding_class_from_catalog(
+        self, component_class, default_kwargs
+    ):
+        """Partial model_selection must be completed from the unified-models catalog.
+
+        Regression: KBs created through older frontends or third-party API
+        clients sometimes persisted ``model_selection`` as just
+        ``{name, provider}`` with an empty or missing ``metadata`` block.
+        Retrieval would then fail with
+        ``"No embedding class defined in metadata for <model>"`` even
+        though the model is fully supported by the current runtime. The
+        fix looks the model up by name in the catalog and merges the
+        missing ``embedding_class`` / ``param_mapping`` entries.
+        """
+        component = component_class(**default_kwargs)
+        persisted = {"name": "text-embedding-3-small", "provider": "OpenAI", "metadata": {}}
+        catalog_entry = {
+            "name": "text-embedding-3-small",
+            "provider": "OpenAI",
+            "metadata": {
+                "embedding_class": "OpenAIEmbeddings",
+                "param_mapping": {"api_key": "<mapped_openai_key>", "model": "model"},
+            },
+        }
+        with patch(
+            "lfx.components.files_and_knowledge.retrieval.get_embedding_model_options",
+            return_value=[catalog_entry],
+        ):
+            resolved = component._resolve_model_selection({"model_selection": persisted})
+
+        assert len(resolved) == 1
+        resolved_metadata = resolved[0]["metadata"]
+        # Missing fields were hydrated from the catalog…
+        assert resolved_metadata["embedding_class"] == "OpenAIEmbeddings"
+        assert resolved_metadata["param_mapping"] == {
+            "api_key": "<mapped_openai_key>",
+            "model": "model",
+        }
+        # …and the persisted top-level fields stay intact.
+        assert resolved[0]["name"] == "text-embedding-3-small"
+        assert resolved[0]["provider"] == "OpenAI"
+
+    def test_resolve_model_selection_preserves_existing_metadata_over_catalog(self, component_class, default_kwargs):
+        """Persisted metadata wins on conflict — catalog only fills gaps.
+
+        Guards against silent drift for users who customised
+        ``param_mapping`` or chose a specific ``embedding_class`` per KB.
+        """
+        component = component_class(**default_kwargs)
+        persisted = {
+            "name": "text-embedding-3-small",
+            "provider": "OpenAI",
+            "metadata": {
+                "embedding_class": "CustomOpenAIEmbeddings",
+                "param_mapping": {"api_key": "<mapped_custom_key>"},
+            },
+        }
+        catalog_entry = {
+            "name": "text-embedding-3-small",
+            "provider": "OpenAI",
+            "metadata": {
+                "embedding_class": "OpenAIEmbeddings",
+                "param_mapping": {"api_key": "<mapped_openai_key>"},
+                "extra_flag": True,
+            },
+        }
+        with patch(
+            "lfx.components.files_and_knowledge.retrieval.get_embedding_model_options",
+            return_value=[catalog_entry],
+        ):
+            resolved = component._resolve_model_selection({"model_selection": persisted})
+
+        # Existing entries win (hydration fills gaps only). Both
+        # ``has_class`` and ``has_mapping`` are true on the persisted
+        # side, so ``_hydrate_model_metadata`` short-circuits without
+        # touching ``extra_flag`` either.
+        assert resolved[0]["metadata"]["embedding_class"] == "CustomOpenAIEmbeddings"
+        assert resolved[0]["metadata"]["param_mapping"] == {"api_key": "<mapped_custom_key>"}
+        assert "extra_flag" not in resolved[0]["metadata"]
+
     def test_resolve_model_selection_raises_when_legacy_model_unavailable(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         with (
