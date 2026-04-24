@@ -40,6 +40,7 @@ from langflow.initial_setup.setup import (
 )
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
+from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
     get_queue_service,
@@ -148,7 +149,6 @@ def warn_about_future_cors_changes(settings):
 
 def get_lifespan(*, fix_migration=False, version=None):
     initialize_settings_service()
-    telemetry_service = get_telemetry_service()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -168,6 +168,26 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         try:
             start_time = asyncio.get_event_loop().time()
+
+            if get_settings_service().settings.sentry_dsn:
+                try:
+                    import sentry_sdk
+                except ImportError:
+                    await logger.awarning(
+                        "LANGFLOW_SENTRY_DSN is set but sentry-sdk is not installed; "
+                        "Sentry will not be initialized. Install it with: pip install sentry-sdk"
+                    )
+                else:
+                    try:
+                        sentry_settings = get_settings_service().settings
+                        sentry_sdk.init(
+                            dsn=sentry_settings.sentry_dsn,
+                            traces_sample_rate=sentry_settings.sentry_traces_sample_rate,
+                            profiles_sample_rate=sentry_settings.sentry_profiles_sample_rate,
+                        )
+                        await logger.adebug("Sentry SDK initialized in worker")
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"Failed to initialize Sentry SDK (check LANGFLOW_SENTRY_DSN): {e}")
 
             await logger.adebug("Initializing services")
             await initialize_services(fix_migration=fix_migration)
@@ -195,11 +215,36 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_auto_login_default_superuser()
             await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            if get_settings_service().settings.prometheus_enabled:
+                try:
+                    from prometheus_client import start_http_server
+
+                    start_http_server(get_settings_service().settings.prometheus_port)
+                    await logger.adebug(
+                        f"Started Prometheus server on port {get_settings_service().settings.prometheus_port}"
+                    )
+                except ImportError:
+                    await logger.aerror(
+                        "prometheus_client is not installed. Install it with: pip install prometheus-client"
+                    )
+                except OSError as e:
+                    import errno
+
+                    if e.errno == errno.EADDRINUSE:
+                        await logger.adebug(
+                            f"Prometheus port {get_settings_service().settings.prometheus_port} already in use "
+                            "(may be running in another worker)"
+                        )
+                    else:
+                        await logger.awarning(f"Failed to start Prometheus server: {e}")
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading bundles")
             temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
             get_settings_service().settings.components_path.extend(bundles_components_paths)
             await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            telemetry_service = get_telemetry_service()
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Caching types")
@@ -445,7 +490,7 @@ def create_app():
         ContentSizeLimitMiddleware,
     )
 
-    setup_sentry(app)
+    add_sentry_middleware(app)
 
     # Warn about future CORS changes
     warn_about_future_cors_changes(settings)
@@ -535,18 +580,13 @@ def create_app():
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
-        if prome_port > 0 or prome_port < MAX_PORT:
-            logger.debug(f"Starting Prometheus server on port {prome_port}...")
+        if prome_port > 0 and prome_port < MAX_PORT:
+            logger.debug(f"Prometheus server port configured as {prome_port}...")
             settings.prometheus_enabled = True
             settings.prometheus_port = prome_port
         else:
             msg = f"Invalid port number {prome_port_str}"
             raise ValueError(msg)
-
-    if settings.prometheus_enabled:
-        from prometheus_client import start_http_server
-
-        start_http_server(settings.prometheus_port)
 
     if settings.mcp_server_enabled:
         from langflow.api.v1 import mcp_router
@@ -559,6 +599,13 @@ def create_app():
 
     # Discover and register additional routers from plugins (langflow.plugins entry-point)
     load_plugin_routes(app)
+
+    @app.exception_handler(DeploymentGuardError)
+    async def deployment_guard_exception_handler(_request: Request, exc: DeploymentGuardError):
+        return JSONResponse(
+            status_code=HTTPStatus.CONFLICT,
+            content={"detail": exc.detail},
+        )
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
@@ -584,17 +631,27 @@ def create_app():
     return app
 
 
-def setup_sentry(app: FastAPI) -> None:
+def add_sentry_middleware(app: FastAPI) -> None:
+    """Attach SentryAsgiMiddleware to the app.
+
+    Only the ASGI middleware is registered here so it is available at request time.
+    The actual ``sentry_sdk.init()`` call is deferred to the worker lifespan
+    (see ``get_lifespan``) to avoid ghost transactions across pre-fork workers.
+    """
     settings = get_settings_service().settings
     if settings.sentry_dsn:
-        import sentry_sdk
-        from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+        try:
+            from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+        except ImportError:
+            logger.warning(
+                "LANGFLOW_SENTRY_DSN is set but sentry-sdk is not installed; "
+                "SentryAsgiMiddleware will not be added. Install it with: pip install sentry-sdk"
+            )
+            return
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Failed to import SentryAsgiMiddleware: {e}")
+            return
 
-        sentry_sdk.init(
-            dsn=settings.sentry_dsn,
-            traces_sample_rate=settings.sentry_traces_sample_rate,
-            profiles_sample_rate=settings.sentry_profiles_sample_rate,
-        )
         app.add_middleware(SentryAsgiMiddleware)
 
 
