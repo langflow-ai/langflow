@@ -5,7 +5,10 @@ import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { useCreateKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-create-knowledge-base";
 import { useGetIngestionJobStatus } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-job-status";
+import { useIngestViaConnector } from "@/controllers/API/queries/knowledge-bases/use-ingest-via-connector";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import type { BackendValue } from "@/modals/knowledgeBaseUploadModal/components/BackendPicker";
+import type { DeferredConnectorPayload } from "@/pages/MainPage/pages/knowledgePage/components/connectorPayload";
 import useAlertStore from "@/stores/alertStore";
 import {
   DEFAULT_CHUNK_OVERLAP,
@@ -23,6 +26,32 @@ import type {
   WizardStep,
 } from "../types";
 import { formatFileSize } from "../utils";
+
+/**
+ * Per-backend required-field check. Returns ``null`` when the config
+ * is acceptable, or a human-readable message otherwise. Mirrors the
+ * server-side validation in each Phase 4 backend's
+ * ``_build_vector_store`` so the user sees the problem inline before
+ * the request ever lands.
+ */
+function validateBackendConfig(
+  backendType: BackendValue,
+  config: Record<string, string>,
+): string | null {
+  if (backendType === "mongodb") {
+    if (!config.database?.trim()) return "MongoDB requires a database name";
+    if (!config.collection?.trim()) return "MongoDB requires a collection name";
+  } else if (backendType === "astra") {
+    if (!config.collection_name?.trim())
+      return "Astra requires a collection_name";
+  } else if (backendType === "postgres") {
+    if (!config.collection_name?.trim())
+      return "Postgres requires a collection_name";
+  } else if (backendType === "opensearch") {
+    if (!config.index_name?.trim()) return "OpenSearch requires an index_name";
+  }
+  return null;
+}
 
 export function useKnowledgeBaseForm({
   open,
@@ -85,6 +114,15 @@ export function useKnowledgeBaseForm({
   const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState<
     ModelOption[]
   >([]);
+  // Phase 4 vector-store backend picker. Defaults keep existing KBs
+  // on the local Chroma store. Backend is immutable after create.
+  // Typed as the ``BackendValue`` union so ``StepConfiguration`` no
+  // longer needs an unsound ``as BackendValue`` cast. Any value that
+  // isn't in ``BACKEND_OPTIONS`` becomes a TypeScript error here.
+  const [backendType, setBackendType] = useState<BackendValue>("chroma");
+  const [backendConfig, setBackendConfig] = useState<Record<string, string>>(
+    {},
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
@@ -97,6 +135,17 @@ export function useKnowledgeBaseForm({
 
   // Async ingestion tracking
   const [ingestionJobId, setIngestionJobId] = useState<string | null>(null);
+
+  // Unified source picker: files (default) or a connector source type.
+  // When a connector is active its inline form emits payload upward via
+  // ``connectorPayload`` — null means "required fields not yet filled".
+  const [activeConnector, setActiveConnector] = useState<string | null>(null);
+  const [connectorPayload, setConnectorPayload] =
+    useState<DeferredConnectorPayload | null>(null);
+
+  // Shared mutation for all connector types. Reused for both the
+  // create-then-ingest flow and add-sources-to-existing-KB flow.
+  const ingestViaConnector = useIngestViaConnector();
 
   // Alert store
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -167,6 +216,13 @@ export function useKnowledgeBaseForm({
       ) {
         setColumnConfig(existingKnowledgeBase.columnConfig);
       }
+      setBackendType(
+        (existingKnowledgeBase.backendType as BackendValue | undefined) ||
+          "chroma",
+      );
+      setBackendConfig(
+        (existingKnowledgeBase.backendConfig as Record<string, string>) || {},
+      );
     }
   }, [existingKnowledgeBase, open, embeddingModelOptions]);
 
@@ -180,6 +236,8 @@ export function useKnowledgeBaseForm({
       { column_name: "text", vectorize: true, identifier: true },
     ]);
     setSelectedEmbeddingModel([]);
+    setBackendType("chroma");
+    setBackendConfig({});
     setChunkPreviews([]);
     setCurrentChunkIndex(0);
     setSelectedPreviewFileIndex(0);
@@ -188,16 +246,37 @@ export function useKnowledgeBaseForm({
     setShowAdvanced(false);
     setIngestionJobId(null);
     setValidationErrors({});
+    setActiveConnector(null);
+    setConnectorPayload(null);
+  }, []);
+
+  // When the user toggles away from a connector, forget its payload —
+  // otherwise stale config from a previous selection would leak into
+  // the next submit.
+  const selectConnector = useCallback((sourceType: string | null) => {
+    setActiveConnector((prev) => {
+      if (prev !== sourceType) {
+        setConnectorPayload(null);
+      }
+      return sourceType;
+    });
   }, []);
 
   const toggleAdvanced = useCallback(() => {
     setShowAdvanced((prev) => {
       if (prev) {
-        // Hiding advanced: reset chunk settings and close panel
+        // Hiding advanced: reset chunk settings and close the file
+        // panel. Connector state is also cleared here — collapsing
+        // Advanced is meant to *disable* the advanced source path,
+        // not just hide it. Leaving stale ``activeConnector`` around
+        // would let a connector-with-missing-fields state survive
+        // into the simple-submit flow.
         setChunkSize(0);
         setChunkOverlap(0);
         setSeparator("");
         setIsFilePanelOpen(false);
+        setActiveConnector(null);
+        setConnectorPayload(null);
       } else {
         // Showing advanced: apply defaults
         setChunkSize(DEFAULT_CHUNK_SIZE);
@@ -292,6 +371,21 @@ export function useKnowledgeBaseForm({
     if (!isAddSourcesMode && selectedEmbeddingModel.length === 0) {
       errors.embeddingModel = "Embedding model is required";
     }
+    if (!isAddSourcesMode) {
+      const backendErrors = validateBackendConfig(backendType, backendConfig);
+      if (backendErrors) {
+        errors.backend = backendErrors;
+      }
+    }
+    // Connector submission gate: if the user picked a connector
+    // (S3 / Google Drive / OneDrive / SharePoint) but the inline
+    // form hasn't emitted a valid payload yet, block submission.
+    // Without this gate, ``handleSubmit`` would create an empty
+    // KB and close the modal with a success toast while silently
+    // skipping the ingestion dispatch.
+    if (activeConnector && !connectorPayload) {
+      errors.connector = `Complete the ${activeConnector} connector configuration before continuing`;
+    }
     const totalBytes = files.reduce((acc, file) => acc + file.size, 0);
     if (totalBytes > MAX_TOTAL_FILE_SIZE) {
       errors.files = "Total file size exceeds the 1 GB limit";
@@ -301,8 +395,12 @@ export function useKnowledgeBaseForm({
     sourceName,
     isAddSourcesMode,
     selectedEmbeddingModel,
+    backendType,
+    backendConfig,
     files,
     existingKnowledgeBaseNames,
+    activeConnector,
+    connectorPayload,
   ]);
 
   const clearValidationErrors = useCallback(() => {
@@ -327,17 +425,24 @@ export function useKnowledgeBaseForm({
           name: kbName,
           embedding_provider: selectedModel.provider || "Unknown",
           embedding_model: selectedModel.id || selectedModel.name,
+          model_selection: selectedModel,
           column_config: columnConfig,
+          backend_type: backendType,
+          backend_config: backendConfig,
         });
       }
 
-      // Simple mode: only name + embedding model, no files or chunk params
-      if (!showAdvanced && !isAddSourcesMode) {
+      // Simple mode: only name + embedding model, no files or chunk params.
+      // A staged connector means the user opened advanced mode and picked
+      // a source — fall through to dispatch the connector ingestion.
+      if (!showAdvanced && !isAddSourcesMode && !activeConnector) {
         const callbackData: KnowledgeBaseFormData = {
           sourceName,
           files: [],
           embeddingModel: selectedEmbeddingModel,
           columnConfig,
+          backendType,
+          backendConfig,
         };
 
         setSuccessData({
@@ -378,6 +483,36 @@ export function useKnowledgeBaseForm({
           });
       }
 
+      // Connector source (S3 / Google Drive / OneDrive / SharePoint).
+      // ``await`` the mutation so we do NOT close the modal with a
+      // misleading "success" toast when the ingestion dispatch fails.
+      // The KB itself was already created above — we keep it, surface
+      // the connector error inline, and leave the modal open so the
+      // user can retry or switch sources.
+      if (activeConnector && connectorPayload) {
+        try {
+          await ingestViaConnector.mutateAsync({
+            kb_name: kbName,
+            source_type: connectorPayload.source_type,
+            source_config: connectorPayload.source_config,
+            source_name: connectorPayload.source_name,
+            chunk_size: chunkSize || undefined,
+            chunk_overlap: chunkOverlap || undefined,
+            separator: separator || undefined,
+          });
+        } catch (ingestError: unknown) {
+          const err = ingestError as AxiosError<{ detail?: string }>;
+          setErrorData({
+            title: `Failed to start ingestion for "${sourceName}"`,
+            list: [
+              err?.response?.data?.detail || err?.message || "Unknown error",
+            ],
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const callbackData: KnowledgeBaseFormData = {
         sourceName,
         files,
@@ -386,6 +521,8 @@ export function useKnowledgeBaseForm({
         chunkOverlap,
         separator,
         columnConfig,
+        backendType,
+        backendConfig,
       };
 
       if (isAddSourcesMode) {
@@ -499,6 +636,10 @@ export function useKnowledgeBaseForm({
     selectedEmbeddingModel,
     setSelectedEmbeddingModel,
     embeddingModelOptions,
+    backendType,
+    setBackendType,
+    backendConfig,
+    setBackendConfig,
 
     // Validation
     validationErrors,
@@ -513,6 +654,12 @@ export function useKnowledgeBaseForm({
     // Column config
     columnConfig,
     setColumnConfig,
+
+    // Connector picker (unified source selection)
+    activeConnector,
+    selectConnector,
+    connectorPayload,
+    setConnectorPayload,
 
     // Preview
     chunkPreviews,

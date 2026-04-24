@@ -69,6 +69,32 @@ class Settings(BaseSettings):
     knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
     """The directory to store knowledge bases."""
 
+    vector_store_backend: str = "chroma"
+    """Vector-store backend for Knowledge Bases.
+
+    Currently only ``chroma`` (local, persistent) is shipped; ``mongodb``,
+    ``astra``, and ``postgres`` are reserved identifiers for upcoming phases
+    of the KB DB-Connectors epic."""
+    vector_store_backend_config: dict = {}
+    """Backend-specific configuration for the selected ``vector_store_backend``.
+
+    Ignored for the default ``chroma`` backend. Populated per-backend (e.g.
+    connection URIs, index names, auth references) as additional backends land."""
+
+    kb_allowed_folder_roots: list[str] = ["~"]
+    """Directories the server-side ``FolderSource`` is permitted to walk.
+
+    Each entry is expanded (``~`` → user home) and resolved before use.
+    ``FolderSource`` refuses to ingest any folder whose resolved path is
+    not equal to or underneath one of these roots, which blocks both
+    arbitrary-path access and symlink escapes (``resolve()`` follows
+    symlinks before the containment check).
+
+    Defaults to the user's home directory for single-user desktop /
+    self-hosted deployments. Set to an empty list (or per-tenant roots)
+    for multi-tenant cloud to disable folder ingestion until explicitly
+    configured."""
+
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None

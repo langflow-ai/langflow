@@ -1,6 +1,7 @@
 import asyncio
 import json
 import uuid
+from contextlib import suppress
 from datetime import datetime, timezone
 from http import HTTPStatus
 from pathlib import Path
@@ -8,20 +9,34 @@ from typing import Annotated, Any
 
 import chromadb.errors
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
-from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
+from lfx.base.knowledge_bases.backends import BackendType, create_backend
+from lfx.base.knowledge_bases.ingestion_sources import (
+    FolderSource,
+    SourceType,
+    create_source,
+    get_source_class,
+    registered_sources,
+)
 from lfx.log import logger
+from pydantic import BaseModel, Field
 
-from langflow.api.utils import CurrentActiveUser
+from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
 from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
 from langflow.api.v1.schemas import TaskResponse
 from langflow.schema.knowledge_base import (
     BulkDeleteRequest,
     ChunkInfo,
+    ConnectorCatalogEntry,
+    ConnectorIngestRequest,
     CreateKnowledgeBaseRequest,
+    IngestionRunDetail,
+    IngestionRunInfo,
+    IngestionRunItemInfo,
     KnowledgeBaseInfo,
     PaginatedChunkResponse,
+    PaginatedIngestionRunResponse,
 )
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
@@ -29,7 +44,13 @@ from langflow.services.jobs.service import JobService
 from langflow.services.task.service import TaskService
 from langflow.utils.kb_constants import (
     CHUNK_PREVIEW_MULTIPLIER,
+    MAX_CHUNK_OVERLAP,
+    MAX_CHUNK_SIZE,
+    MAX_MAX_CHUNKS,
+    MIN_CHUNK_OVERLAP,
+    MIN_CHUNK_SIZE,
     MIN_KB_NAME_LENGTH,
+    MIN_MAX_CHUNKS,
 )
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_in_schema=False)
@@ -61,8 +82,6 @@ def _resolve_kb_path(kb_name: str, current_user: CurrentActiveUser) -> Path:
     Raises 404 if the KB directory does not exist.
     """
     kb_root_path = KBStorageHelper.get_root_path()
-    if not kb_root_path:
-        raise HTTPException(status_code=500, detail="Knowledge base root path not configured")
     kb_user = current_user.username
     kb_user_path = (kb_root_path / kb_user).resolve()
     kb_path = (kb_user_path / kb_name).resolve()
@@ -96,6 +115,104 @@ def _check_memory_base_association(kb_name: str, current_user: CurrentActiveUser
             status_code=403,
             detail=f"Access denied: knowledge base '{kb_name}' is managed by a Memory Base.",
         )
+
+
+def _coerce_backend_config(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _build_kb_info(
+    *,
+    kb_name: str,
+    dir_name: str,
+    metadata: dict[str, Any],
+    size: int | None = None,
+) -> KnowledgeBaseInfo:
+    chunks_count = metadata.get("chunks") or 0
+    return KnowledgeBaseInfo(
+        id=str(metadata.get("id") or dir_name),
+        dir_name=dir_name,
+        name=kb_name,
+        embedding_provider=metadata.get("embedding_provider") or "Unknown",
+        embedding_model=metadata.get("embedding_model") or "Unknown",
+        size=size if size is not None else int(metadata.get("size") or 0),
+        words=int(metadata.get("words") or 0),
+        characters=int(metadata.get("characters") or 0),
+        chunks=int(chunks_count),
+        avg_chunk_size=float(metadata.get("avg_chunk_size") or 0.0),
+        chunk_size=metadata.get("chunk_size"),
+        chunk_overlap=metadata.get("chunk_overlap"),
+        separator=metadata.get("separator"),
+        status="ready" if chunks_count > 0 else "empty",
+        failure_reason=None,
+        last_job_id=None,
+        source_types=metadata.get("source_types", []),
+        column_config=metadata.get("column_config"),
+        backend_type=str(metadata.get("backend_type") or BackendType.CHROMA.value),
+        backend_config=_coerce_backend_config(metadata.get("backend_config")),
+    )
+
+
+async def _resolve_backend_selection(
+    *,
+    kb_name: str,
+    kb_path: Path,
+    current_user: CurrentActiveUser,
+) -> tuple[str, dict[str, Any]]:
+    kb_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+    if kb_record is not None:
+        return (
+            kb_record.backend_type or BackendType.CHROMA.value,
+            _coerce_backend_config(kb_record.backend_config),
+        )
+
+    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
+    return (
+        str(metadata.get("backend_type") or BackendType.CHROMA.value),
+        _coerce_backend_config(metadata.get("backend_config")),
+    )
+
+
+async def _delete_remote_backend_collection(
+    *,
+    kb_name: str,
+    kb_path: Path,
+    current_user: CurrentActiveUser,
+) -> None:
+    backend_type_value, backend_config = await _resolve_backend_selection(
+        kb_name=kb_name,
+        kb_path=kb_path,
+        current_user=current_user,
+    )
+    if backend_type_value == BackendType.CHROMA.value:
+        return
+
+    backend = create_backend(
+        backend_type_value,
+        kb_name=kb_name,
+        kb_path=kb_path,
+        backend_config=backend_config,
+        user_id=current_user.id,
+    )
+    try:
+        await backend.ensure_ready()
+        await backend.delete_collection()
+    except Exception as exc:
+        await logger.aerror(
+            "Failed to delete remote backend resources for %s (%s): %s",
+            kb_name,
+            backend_type_value,
+            exc,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Failed to delete the remote {backend_type_value} resources for "
+                f"knowledge base '{kb_name}'. Please retry after checking the backend credentials."
+            ),
+        ) from exc
+    finally:
+        await backend.teardown()
 
 
 @router.post("", status_code=HTTPStatus.CREATED)
@@ -144,11 +261,19 @@ async def create_knowledge_base(
         if request.column_config:
             column_config_dicts = [item.model_dump() for item in request.column_config]
 
-        # Save full embedding metadata to prevent immediate backfill
+        # Save full embedding metadata to prevent immediate backfill.
+        # ``backend_type``/``backend_config`` are persisted here too so
+        # a later ``backfill_from_disk`` reconstructs the correct
+        # backend routing even if the DB write below fails.
+        # ``backend_config`` holds only *variable names* (never raw
+        # secrets) per the credential-indirection contract.
+        backend_type_value = request.backend_type or "chroma"
+        backend_config_value = request.backend_config or {}
         embedding_metadata = {
             "id": str(kb_id),
             "embedding_provider": request.embedding_provider,
             "embedding_model": request.embedding_model,
+            "model_selection": request.model_selection,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "chunks": 0,
             "words": 0,
@@ -156,6 +281,8 @@ async def create_knowledge_base(
             "avg_chunk_size": 0.0,
             "size": 0,
             "column_config": column_config_dicts,
+            "backend_type": backend_type_value,
+            "backend_config": backend_config_value,
         }
         metadata_path = kb_path / "embedding_metadata.json"
         metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
@@ -165,6 +292,41 @@ async def create_knowledge_base(
             schema_data = [{**col, "data_type": "string"} for col in column_config_dicts]
             schema_path = kb_path / "schema.json"
             schema_path.write_text(json.dumps(schema_data, indent=2))
+
+        # Dual-write: persist the identity + config to the DB alongside
+        # the JSON file so older service versions still see the legacy
+        # on-disk view, while new code reads from the DB first.
+        #
+        # The DB row is now authoritative for list/detail reads, so a
+        # create that only reaches the filesystem is an inconsistent
+        # partial success. Roll back the on-disk state and surface a
+        # 500 regardless of backend type.
+        try:
+            await knowledge_base_service.create_record(
+                user_id=current_user.id,
+                name=kb_name,
+                embedding_provider=request.embedding_provider,
+                embedding_model=request.embedding_model,
+                model_selection=request.model_selection,
+                column_config=column_config_dicts or [],
+                backend_type=backend_type_value,
+                backend_config=backend_config_value,
+                record_id=kb_id,
+            )
+        except Exception as exc:
+            await logger.aerror(
+                "KB DB persist failed for backend %s (kb=%s): %s — rolling back",
+                backend_type_value,
+                kb_name,
+                exc,
+            )
+            KBStorageHelper.delete_storage(kb_path, kb_name)
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    f"Failed to persist knowledge base '{kb_name}' with backend '{backend_type_value}'. Please retry."
+                ),
+            ) from exc
 
         return KnowledgeBaseInfo(
             id=str(kb_id),
@@ -177,7 +339,10 @@ async def create_knowledge_base(
             characters=0,
             chunks=0,
             avg_chunk_size=0.0,
+            status="empty",
             column_config=column_config_dicts,
+            backend_type=backend_type_value,
+            backend_config=backend_config_value,
         )
 
     except HTTPException:
@@ -194,10 +359,14 @@ async def create_knowledge_base(
 async def preview_chunks(
     _current_user: CurrentActiveUser,
     files: Annotated[list[UploadFile], File(description="Files to preview chunking for")],
-    chunk_size: Annotated[int, Form()] = 1000,
-    chunk_overlap: Annotated[int, Form()] = 200,
+    # Upper bounds cap the memory footprint of a preview request.
+    # ``max_chunks * chunk_size * CHUNK_PREVIEW_MULTIPLIER`` is the
+    # largest text slice this endpoint will hold in memory — without
+    # these bounds, an authenticated user can request gigabytes.
+    chunk_size: Annotated[int, Form(ge=MIN_CHUNK_SIZE, le=MAX_CHUNK_SIZE)] = 1000,
+    chunk_overlap: Annotated[int, Form(ge=MIN_CHUNK_OVERLAP, le=MAX_CHUNK_OVERLAP)] = 200,
     separator: Annotated[str, Form()] = "\n",
-    max_chunks: Annotated[int, Form()] = 5,
+    max_chunks: Annotated[int, Form(ge=MIN_MAX_CHUNKS, le=MAX_MAX_CHUNKS)] = 5,
 ) -> dict[str, object]:
     """Preview how files will be chunked without storing anything.
 
@@ -305,8 +474,10 @@ async def ingest_files_to_knowledge_base(
     current_user: CurrentActiveUser,
     files: Annotated[list[UploadFile], File(description="Files to ingest into the knowledge base")],
     source_name: Annotated[str, Form()] = "",
-    chunk_size: Annotated[int, Form()] = 1000,
-    chunk_overlap: Annotated[int, Form()] = 200,
+    # Mirrors the bounds on ``preview_chunks`` so ingestion can't be
+    # used to bypass the memory-footprint cap.
+    chunk_size: Annotated[int, Form(ge=MIN_CHUNK_SIZE, le=MAX_CHUNK_SIZE)] = 1000,
+    chunk_overlap: Annotated[int, Form(ge=MIN_CHUNK_OVERLAP, le=MAX_CHUNK_OVERLAP)] = 200,
     separator: Annotated[str, Form()] = "",
     column_config: Annotated[str, Form()] = "",
 ) -> dict[str, object] | TaskResponse:
@@ -427,72 +598,202 @@ async def ingest_files_to_knowledge_base(
         raise HTTPException(status_code=500, detail="Error ingesting files to knowledge base.") from e
 
 
+class IngestFolderRequest(BaseModel):
+    """Body payload for ``POST /{kb_name}/ingest/folder``.
+
+    Path is expanded (``~`` → user home) and resolved before being
+    checked against the settings allow-list. ``extensions`` and
+    ``max_file_size_bytes`` are optional — unset means "use the
+    FolderSource defaults".
+    """
+
+    path: str = Field(..., description="Absolute or ~-expanded directory to walk.")
+    recursive: bool = Field(default=True, description="Walk subdirectories as well.")
+    extensions: list[str] | None = Field(
+        None,
+        description="Lowercase extensions without dot. None → defaults (txt, md, pdf, docx, …).",
+    )
+    max_file_size_bytes: int | None = Field(None, description="Per-file size cap; None → 25 MB default.")
+    source_name: str = Field("", description="Optional grouping label stamped on every chunk's 'source'.")
+    chunk_size: int = Field(
+        1000,
+        ge=MIN_CHUNK_SIZE,
+        le=MAX_CHUNK_SIZE,
+        description="Chunk size in characters.",
+    )
+    chunk_overlap: int = Field(
+        200,
+        ge=MIN_CHUNK_OVERLAP,
+        le=MAX_CHUNK_OVERLAP,
+        description="Chunk overlap in characters.",
+    )
+    separator: str = Field("", description="Custom separator (\\n → newline).")
+
+
+@router.post("/{kb_name}/ingest/folder", status_code=HTTPStatus.OK)
+async def ingest_folder_to_knowledge_base(
+    kb_name: str,
+    current_user: CurrentActiveUser,
+    payload: IngestFolderRequest,
+) -> TaskResponse:
+    """Ingest every matching file from a server-side folder.
+
+    Uses ``FolderSource`` with the allow-list configured in
+    ``settings.kb_allowed_folder_roots`` (defaults to the user's home
+    directory). The resolved path must be equal to or inside one of
+    those roots — symlink escapes are blocked because ``Path.resolve()``
+    is applied before the containment check.
+
+    Returns a ``TaskResponse`` pointing at the ingestion job; track it
+    via ``/task/{id}`` or the ``GET /{kb_name}`` endpoint.
+    """
+    try:
+        settings = get_settings_service().settings
+        allowed_roots = settings.kb_allowed_folder_roots or []
+
+        kb_path = _resolve_kb_path(kb_name, current_user)
+        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=False)
+        if not metadata:
+            raise HTTPException(
+                status_code=400,
+                detail="Knowledge base missing embedding configuration. Please create a new KB or reconfigure it.",
+            )
+
+        embedding_provider = metadata.get("embedding_provider")
+        embedding_model = metadata.get("embedding_model")
+        if not embedding_provider or not embedding_model:
+            raise HTTPException(status_code=400, detail="Invalid embedding configuration")
+
+        asset_id_str = metadata.get("id")
+        asset_id = uuid.UUID(asset_id_str) if asset_id_str else uuid.uuid4()
+
+        # Build + validate the folder source up-front so invalid
+        # configurations surface as a 4xx response before a background
+        # job is spawned.
+        source_config: dict[str, Any] = {
+            "path": payload.path,
+            "recursive": payload.recursive,
+            "allowed_roots": allowed_roots,
+        }
+        if payload.extensions is not None:
+            source_config["extensions"] = payload.extensions
+        if payload.max_file_size_bytes is not None:
+            source_config["max_file_size_bytes"] = payload.max_file_size_bytes
+
+        folder_source = FolderSource(user_id=current_user.id, source_config=source_config)
+        try:
+            await folder_source.validate_config()
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        job_service = get_job_service()
+        job_id = uuid.uuid4()
+
+        await job_service.create_job(
+            job_id=job_id,
+            flow_id=job_id,
+            job_type=JobType.INGESTION,
+            asset_id=asset_id,
+            asset_type="knowledge_base",
+            user_id=current_user.id,
+        )
+
+        task_service = get_task_service()
+        await task_service.fire_and_forget_task(
+            job_service.execute_with_status,
+            job_id=job_id,
+            run_coro_func=KBIngestionHelper.perform_ingestion,
+            kb_name=kb_name,
+            kb_path=kb_path,
+            files_data=None,
+            chunk_size=payload.chunk_size,
+            chunk_overlap=payload.chunk_overlap,
+            separator=payload.separator,
+            source_name=payload.source_name,
+            current_user=current_user,
+            embedding_provider=embedding_provider,
+            embedding_model=embedding_model,
+            task_job_id=job_id,
+            job_service=job_service,
+            source=folder_source,
+        )
+        return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await logger.aerror("Error ingesting folder to knowledge base: %s", e)
+        raise HTTPException(status_code=500, detail="Error ingesting folder to knowledge base.") from e
+
+
 @router.get("", status_code=HTTPStatus.OK)
 @router.get("/", status_code=HTTPStatus.OK)
 async def list_knowledge_bases(
     current_user: CurrentActiveUser,
     job_service: Annotated[JobService, Depends(get_job_service)],
 ) -> list[KnowledgeBaseInfo]:
-    """List all available knowledge bases."""
+    """List all available knowledge bases.
+
+    Reads from ``knowledge_base`` rows first. A disk scan is only used
+    as a recovery fallback when the user has no KB rows yet.
+    """
     try:
         kb_root_path = KBStorageHelper.get_root_path()
-        kb_path = kb_root_path / current_user.username
+        # Resolve + containment-check on par with every other path
+        # construction in this file. A username containing path
+        # separators (from a compromised token, or a weird legacy
+        # account) would otherwise escape the root directory.
+        kb_user_path = (kb_root_path / current_user.username).resolve()
+        _validate_kb_path_containment(
+            kb_root_path.resolve(), kb_user_path, current_user.username, current_user.username
+        )
+        kb_path = kb_user_path
 
-        if not kb_path.exists():
-            return []
+        knowledge_bases: list[KnowledgeBaseInfo] = []
+        kb_ids_to_fetch: list[uuid.UUID] = []
 
-        knowledge_bases = []
-        kb_ids_to_fetch = []  # Collect KB IDs for batch fetching
+        rows = await knowledge_base_service.list_by_user(current_user.id)
 
-        # First pass: Load all KBs into memory
-        for kb_dir in kb_path.iterdir():
-            if not kb_dir.is_dir() or kb_dir.name.startswith("."):
-                continue
-            try:
-                # Use deep update (fast=False) to ensure legacy KBs are migrated on first view
-                metadata = KBAnalysisHelper.get_metadata(kb_dir, fast=False)
+        if rows:
+            for row in rows:
+                metadata = knowledge_base_service.record_to_metadata_dict(row)
+                # Skip KBs that are managed by a Memory Base — those are
+                # exposed through the Memory Base APIs, not the generic KB list.
                 if _is_memory_base_associated(metadata):
-                    continue  # Skip KBs that are associated with a Memory Base
-
-                # Extract KB ID from metadata (stored as string, convert to UUID)
-                kb_id_str = metadata.get("id")
-                if kb_id_str:
-                    try:
-                        kb_id_uuid = uuid.UUID(kb_id_str)
-                        kb_ids_to_fetch.append(kb_id_uuid)
-                    except (ValueError, AttributeError):
-                        # If ID is invalid, skip job status lookup for this KB
-                        kb_id_str = None
-
-                chunks_count = metadata["chunks"]
-                status = "ready" if chunks_count > 0 else "empty"
-                failure_reason = None
-                kb_info = KnowledgeBaseInfo(
-                    id=kb_id_str or kb_dir.name,  # Fallback to directory name if no ID
-                    dir_name=kb_dir.name,
-                    name=kb_dir.name.replace("_", " "),
-                    embedding_provider=metadata["embedding_provider"],
-                    embedding_model=metadata["embedding_model"],
-                    size=metadata["size"],
-                    words=metadata["words"],
-                    characters=metadata["characters"],
-                    chunks=chunks_count,
-                    avg_chunk_size=metadata["avg_chunk_size"],
-                    chunk_size=metadata.get("chunk_size"),
-                    chunk_overlap=metadata.get("chunk_overlap"),
-                    separator=metadata.get("separator"),
-                    status=status,
-                    failure_reason=failure_reason,
-                    last_job_id=None,
-                    source_types=metadata.get("source_types", []),
-                    column_config=metadata.get("column_config"),
+                    continue
+                kb_ids_to_fetch.append(row.id)
+                knowledge_bases.append(
+                    _build_kb_info(
+                        kb_name=row.name.replace("_", " "),
+                        dir_name=row.name,
+                        metadata=metadata,
+                        size=row.size_bytes,
+                    )
                 )
-                knowledge_bases.append(kb_info)
+        elif kb_path.exists():
+            # Recovery-only fallback for legacy/exported KB directories
+            # that have not been reconciled into the DB yet.
+            for kb_dir in kb_path.iterdir():
+                if not kb_dir.is_dir() or kb_dir.name.startswith("."):
+                    continue
+                try:
+                    metadata = knowledge_base_service.load_metadata_from_disk(kb_dir)
+                    kb_id_str = metadata.get("id")
+                    if kb_id_str:
+                        with suppress(ValueError, AttributeError, TypeError):
+                            kb_ids_to_fetch.append(uuid.UUID(str(kb_id_str)))
 
-            except OSError as _:
-                # Log the exception and skip directories that can't be read
-                await logger.aexception("Error reading knowledge base directory '%s'", kb_dir)
-                continue
+                    knowledge_bases.append(
+                        _build_kb_info(
+                            kb_name=kb_dir.name.replace("_", " "),
+                            dir_name=kb_dir.name,
+                            metadata=metadata,
+                            size=KBStorageHelper.get_directory_size(kb_dir),
+                        )
+                    )
+                except OSError:
+                    await logger.aexception("Error reading knowledge base directory '%s'", kb_dir)
+                    continue
 
         # Second pass: Batch fetch all job statuses in a single query
         if kb_ids_to_fetch:
@@ -529,37 +830,55 @@ async def list_knowledge_bases(
         return knowledge_bases
 
 
+@router.get("/connectors", status_code=HTTPStatus.OK)
+async def list_connectors(_current_user: CurrentActiveUser) -> list[ConnectorCatalogEntry]:
+    """Enumerate registered connector sources for the UI picker.
+
+    Declared before the ``GET /{kb_name}`` route so FastAPI matches
+    the literal ``/connectors`` path first rather than treating it
+    as a ``kb_name`` parameter. Skips ``file_upload`` because that
+    path is wired through the dedicated upload modal.
+    """
+    entries: list[ConnectorCatalogEntry] = []
+    for source_type in registered_sources():
+        if source_type is SourceType.FILE_UPLOAD:
+            continue
+        try:
+            source_cls = get_source_class(source_type)
+        except ValueError:
+            continue
+        entries.append(
+            ConnectorCatalogEntry(
+                source_type=source_type.value,
+                display_name=getattr(source_cls, "display_name", source_type.value),
+                description=getattr(source_cls, "description", "") or "",
+                icon=getattr(source_cls, "icon", None),
+                requires_credentials=bool(getattr(source_cls, "requires_credentials", False)),
+            )
+        )
+    return entries
+
+
 @router.get("/{kb_name}", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
 async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
     """Get detailed information about a specific knowledge base."""
     try:
+        record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+        if record is not None:
+            return _build_kb_info(
+                kb_name=record.name.replace("_", " "),
+                dir_name=record.name,
+                metadata=knowledge_base_service.record_to_metadata_dict(record),
+                size=record.size_bytes,
+            )
+
         kb_path = _resolve_kb_path(kb_name, current_user)
-
-        # Get size of the directory
-        size = KBStorageHelper.get_directory_size(kb_path)
-
-        # Get metadata from KB files
-        metadata = KBAnalysisHelper.get_metadata(kb_path)
-
-        chunks_count = metadata["chunks"]
-        status = "ready" if chunks_count > 0 else "empty"
-        return KnowledgeBaseInfo(
-            id=kb_name,
+        metadata = knowledge_base_service.load_metadata_from_disk(kb_path)
+        return _build_kb_info(
+            kb_name=kb_name.replace("_", " "),
             dir_name=kb_name,
-            name=kb_name.replace("_", " "),
-            embedding_provider=metadata["embedding_provider"],
-            embedding_model=metadata["embedding_model"],
-            size=size,
-            words=metadata["words"],
-            characters=metadata["characters"],
-            chunks=chunks_count,
-            avg_chunk_size=metadata["avg_chunk_size"],
-            chunk_size=metadata.get("chunk_size"),
-            chunk_overlap=metadata.get("chunk_overlap"),
-            separator=metadata.get("separator"),
-            status=status,
-            source_types=metadata.get("source_types", []),
-            column_config=metadata.get("column_config"),
+            metadata=metadata,
+            size=KBStorageHelper.get_directory_size(kb_path),
         )
 
     except HTTPException:
@@ -576,78 +895,108 @@ async def get_knowledge_base_chunks(
     page: Annotated[int, Query(ge=1)] = 1,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     search: Annotated[str, Query(description="Filter chunks whose text contains this substring")] = "",
+    source_type: Annotated[
+        str | None,
+        Query(description="Only return chunks ingested via the given source type (e.g. 'file_upload', 'folder')."),
+    ] = None,
+    file_name: Annotated[
+        str | None,
+        Query(description="Only return chunks whose source filename exactly matches."),
+    ] = None,
+    job_id: Annotated[
+        str | None,
+        Query(description="Only return chunks written by the given ingestion job_id."),
+    ] = None,
 ) -> PaginatedChunkResponse:
-    """Get chunks from a specific knowledge base with pagination."""
+    """Get chunks from a specific knowledge base with pagination.
+
+    The ``source_type`` / ``file_name`` / ``job_id`` filters map
+    directly onto the metadata keys every chunk receives at ingestion
+    time, so a UI can drill from a run row down to the chunks that run
+    produced without pulling the whole collection into memory.
+    """
     kb_path: Path | None = None
+    backend = None
+    backend_type_value: str = BackendType.CHROMA.value
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
 
-        # Guard: If no physical chroma data exists, return empty response immediately
-        # This prevents 'readonly database' errors when trying to initialize Chroma on an empty directory
-        has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
-        if not has_data:
-            return PaginatedChunkResponse(
-                chunks=[],
-                total=0,
-                page=page,
-                limit=limit,
-                total_pages=0,
-            )
-
-        # Create vector store
-        client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-        chroma = Chroma(
-            client=client,
-            collection_name=kb_name,
+        backend_type_value, backend_config = await _resolve_backend_selection(
+            kb_name=kb_name,
+            kb_path=kb_path,
+            current_user=current_user,
         )
 
-        # Access the raw collection
-        collection = chroma._collection  # noqa: SLF001
-
-        search_term = search.strip()
-
-        if search_term:
-            # When searching, fetch all matching docs then paginate in-memory
-            where_doc = {"$contains": search_term}
-            all_results = collection.get(
-                include=["documents", "metadatas"],
-                where_document=where_doc,
-            )
-            total_count = len(all_results["ids"])
-            offset = (page - 1) * limit
-            sliced_ids = all_results["ids"][offset : offset + limit]
-            sliced_docs = all_results["documents"][offset : offset + limit]
-            sliced_metas = all_results["metadatas"][offset : offset + limit]
-        else:
-            # No search - use Chroma's native pagination
-            total_count = collection.count()
-            offset = (page - 1) * limit
-            results = collection.get(
-                include=["documents", "metadatas"],
-                limit=limit,
-                offset=offset,
-            )
-            sliced_ids = results["ids"]
-            sliced_docs = results["documents"]
-            sliced_metas = results["metadatas"]
-
-        chunks = []
-        for doc_id, document, metadata in zip(sliced_ids, sliced_docs, sliced_metas, strict=False):
-            content = document or ""
-            chunks.append(
-                ChunkInfo(
-                    id=doc_id,
-                    content=content,
-                    char_count=len(content),
-                    metadata=metadata,
+        # Local-Chroma short-circuit: if the KB lives on disk and has no
+        # files yet, return empty without booting a Chroma client (which
+        # would otherwise hit 'readonly database' on the empty dir).
+        if backend_type_value == BackendType.CHROMA.value:
+            has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
+            if not has_data:
+                return PaginatedChunkResponse(
+                    chunks=[],
+                    total=0,
+                    page=page,
+                    limit=limit,
+                    total_pages=0,
                 )
-            )
+
+        backend = create_backend(
+            backend_type_value,
+            kb_name=kb_name,
+            kb_path=kb_path,
+            backend_config=backend_config,
+            user_id=current_user.id,
+        )
+
+        search_term = search.strip().lower()
+
+        def matches_filters(metadata: dict[str, Any] | None, content: str) -> bool:
+            meta = metadata or {}
+            if source_type and meta.get("source_type") != source_type:
+                return False
+            if file_name and meta.get("file_name") != file_name:
+                return False
+            if job_id and meta.get("job_id") != job_id:
+                return False
+            return not (search_term and search_term not in (content or "").lower())
+
+        # Stream through the backend and filter in Python. The vector
+        # stores don't share a filter DSL (Chroma's ``where`` vs Mongo
+        # query documents vs Astra's Data API vs PGVector JSONB), so a
+        # uniform client-side pass is the only path that works for all
+        # four. KB chunk browsers operate on bounded collections — a
+        # full iteration is acceptable here.
+        offset = (page - 1) * limit
+        matched: list[tuple[str, str, dict[str, Any]]] = []
+        matched_count = 0
+        try:
+            async for batch in backend.iter_documents(batch_size=1000):
+                for entry in batch:
+                    if not matches_filters(entry.metadata, entry.content):
+                        continue
+                    entry_id = (
+                        entry.metadata.get("_id") or entry.metadata.get("id") or entry.metadata.get("chunk_id") or ""
+                    )
+                    # Only materialize entries inside the requested page; we
+                    # still have to count past them for ``total_pages``.
+                    if offset <= matched_count < offset + limit:
+                        matched.append((entry_id, entry.content, dict(entry.metadata)))
+                    matched_count += 1
+        except Exception as iter_error:
+            await logger.aerror("iter_documents failed for '%s': %s", kb_name, iter_error)
+            raise HTTPException(status_code=500, detail="Error getting chunks.") from iter_error
+
+        chunks = [
+            ChunkInfo(id=doc_id, content=content, char_count=len(content or ""), metadata=metadata)
+            for doc_id, content, metadata in matched
+        ]
         return PaginatedChunkResponse(
             chunks=chunks,
-            total=total_count,
+            total=matched_count,
             page=page,
             limit=limit,
-            total_pages=(total_count + limit - 1) // limit if total_count > 0 else 0,
+            total_pages=(matched_count + limit - 1) // limit if matched_count > 0 else 0,
         )
 
     except HTTPException:
@@ -656,10 +1005,189 @@ async def get_knowledge_base_chunks(
         await logger.aerror("Error getting chunks for '%s': %s", kb_name, e)
         raise HTTPException(status_code=500, detail="Error getting chunks.") from e
     finally:
-        client = None
-        chroma = None
-        if kb_path is not None:
+        if backend is not None:
+            try:
+                await backend.teardown()
+            except Exception as teardown_exc:  # noqa: BLE001
+                # Surface at debug level so teardown failures stay
+                # visible without masking the original error path.
+                await logger.adebug("Backend teardown failed: %s", teardown_exc)
+        # ``release_chroma_resources`` clears Chroma's shared
+        # ``SharedSystemClient`` registry entry. Calling it for a
+        # MongoDB/Astra/Postgres-backed KB would mutate that registry
+        # for unrelated Chroma KBs served from the same path.
+        if kb_path is not None and backend_type_value == BackendType.CHROMA.value:
             KBStorageHelper.release_chroma_resources(kb_path)
+
+
+@router.post("/{kb_name}/ingest/connector", status_code=HTTPStatus.OK)
+async def ingest_via_connector(
+    kb_name: str,
+    payload: ConnectorIngestRequest,
+    current_user: CurrentActiveUser,
+) -> TaskResponse:
+    """Generic connector-driven ingestion dispatcher.
+
+    Accepts a ``source_type`` string + ``source_config`` dict,
+    instantiates the matching source via the registry, validates its
+    config (surfaces credential / config errors as 400 before the job
+    is spawned), then hands off to the same async ingestion machinery
+    file-upload + folder already use.
+    """
+    try:
+        kb_path = _resolve_kb_path(kb_name, current_user)
+
+        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=False)
+        if not metadata:
+            raise HTTPException(
+                status_code=400,
+                detail="Knowledge base missing embedding configuration. Please create a new KB or reconfigure it.",
+            )
+        embedding_provider = metadata.get("embedding_provider")
+        embedding_model = metadata.get("embedding_model")
+        if not embedding_provider or not embedding_model:
+            raise HTTPException(status_code=400, detail="Invalid embedding configuration")
+        asset_id_str = metadata.get("id")
+        asset_id = uuid.UUID(asset_id_str) if asset_id_str else uuid.uuid4()
+
+        try:
+            source = create_source(
+                payload.source_type,
+                user_id=current_user.id,
+                source_config=payload.source_config,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        try:
+            await source.validate_config()
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        job_service = get_job_service()
+        job_id = uuid.uuid4()
+        await job_service.create_job(
+            job_id=job_id,
+            flow_id=job_id,
+            job_type=JobType.INGESTION,
+            asset_id=asset_id,
+            asset_type="knowledge_base",
+            user_id=current_user.id,
+        )
+
+        task_service = get_task_service()
+        await task_service.fire_and_forget_task(
+            job_service.execute_with_status,
+            job_id=job_id,
+            run_coro_func=KBIngestionHelper.perform_ingestion,
+            kb_name=kb_name,
+            kb_path=kb_path,
+            files_data=None,
+            chunk_size=payload.chunk_size,
+            chunk_overlap=payload.chunk_overlap,
+            separator=payload.separator,
+            source_name=payload.source_name,
+            current_user=current_user,
+            embedding_provider=embedding_provider,
+            embedding_model=embedding_model,
+            task_job_id=job_id,
+            job_service=job_service,
+            source=source,
+        )
+        return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await logger.aerror("Error ingesting via connector to KB: %s", e)
+        raise HTTPException(status_code=500, detail="Error ingesting via connector.") from e
+
+
+@router.get("/{kb_name}/runs", status_code=HTTPStatus.OK)
+async def list_ingestion_runs(
+    kb_name: str,
+    current_user: CurrentActiveUser,
+    page: Annotated[int, Query(ge=1)] = 1,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> PaginatedIngestionRunResponse:
+    """Paginated list of ingestion runs for a KB (newest first).
+
+    Scoped to the requesting user so one account can't observe
+    another's run history. Returns counter-only rows; the UI fetches
+    the detail endpoint for the drill-down.
+    """
+    # Verify the KB path exists + traversal-safe before exposing run
+    # history — otherwise a crafted ``kb_name`` could be used to probe
+    # for other users' KB existence by timing list_runs_for_kb.
+    _resolve_kb_path(kb_name, current_user)
+
+    rows, total = await ingestion_run_service.list_runs_for_kb(
+        kb_name=kb_name,
+        user_id=current_user.id,
+        page=page,
+        limit=limit,
+    )
+    runs = [_run_row_to_info(row) for row in rows]
+    total_pages = (total + limit - 1) // limit if total > 0 else 0
+    return PaginatedIngestionRunResponse(
+        runs=runs,
+        total=total,
+        page=page,
+        limit=limit,
+        total_pages=total_pages,
+    )
+
+
+@router.get("/{kb_name}/runs/{run_id}", status_code=HTTPStatus.OK)
+async def get_ingestion_run(
+    kb_name: str,
+    run_id: uuid.UUID,
+    current_user: CurrentActiveUser,
+) -> IngestionRunDetail:
+    """Full run detail including per-item breakdown + error messages."""
+    _resolve_kb_path(kb_name, current_user)
+
+    row = await ingestion_run_service.get_run(run_id, user_id=current_user.id)
+    if row is None or row.kb_name != kb_name:
+        raise HTTPException(status_code=404, detail="Ingestion run not found.")
+
+    base = _run_row_to_info(row)
+    items = [
+        IngestionRunItemInfo(
+            item_id=item.get("item_id", ""),
+            display_name=item.get("display_name", ""),
+            status=item.get("status", "succeeded"),
+            chunks_created=int(item.get("chunks_created", 0) or 0),
+            error_message=item.get("error_message"),
+        )
+        for item in (row.items or [])
+    ]
+    return IngestionRunDetail(
+        **base.model_dump(),
+        source_config=row.source_config or {},
+        items=items,
+    )
+
+
+def _run_row_to_info(row) -> IngestionRunInfo:
+    """Translate an ``IngestionRun`` row into its list-response shape."""
+    return IngestionRunInfo(
+        id=str(row.id),
+        kb_name=row.kb_name,
+        kb_id=str(row.kb_id) if row.kb_id else None,
+        job_id=str(row.job_id) if row.job_id else None,
+        source_type=row.source_type,
+        status=row.status,
+        error_message=row.error_message,
+        total_items=row.total_items,
+        succeeded=row.succeeded,
+        failed=row.failed,
+        skipped=row.skipped,
+        total_bytes=row.total_bytes,
+        chunks_created=row.chunks_created,
+        started_at=row.started_at,
+        finished_at=row.finished_at,
+    )
 
 
 @router.delete("/{kb_name}", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
@@ -667,12 +1195,26 @@ async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -
     """Delete a specific knowledge base."""
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
+        await _delete_remote_backend_collection(
+            kb_name=kb_name,
+            kb_path=kb_path,
+            current_user=current_user,
+        )
 
         if not KBStorageHelper.delete_storage(kb_path, kb_name):
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to delete knowledge base '{kb_name}'. The database may be in use.",
             )
+
+        # Mirror the deletion in the DB so list/search endpoints stop
+        # returning a stale row. Failures don't fail the request — the
+        # filesystem is already gone; the orphan row will be reaped by
+        # the next backfill when the disk dir is absent.
+        try:
+            await knowledge_base_service.delete_by_user_and_name(current_user.id, kb_name)
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning("KB DB delete lagged for %s: %s", kb_name, exc)
 
     except HTTPException:
         raise
@@ -690,6 +1232,7 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
     try:
         deleted_count = 0
         not_found_kbs = []
+        failed_kbs = []
 
         for kb_name in request.kb_names:
             try:
@@ -701,11 +1244,24 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
                 raise  # Re-raise 403 (traversal) and 500 errors
 
             try:
-                if KBStorageHelper.delete_storage(kb_path, kb_name):
-                    deleted_count += 1
-            except (OSError, PermissionError) as e:
+                await _delete_remote_backend_collection(
+                    kb_name=kb_name,
+                    kb_path=kb_path,
+                    current_user=current_user,
+                )
+                if not KBStorageHelper.delete_storage(kb_path, kb_name):
+                    failed_kbs.append(kb_name)
+                    continue
+
+                deleted_count += 1
+                try:
+                    await knowledge_base_service.delete_by_user_and_name(current_user.id, kb_name)
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning("KB DB delete lagged for %s: %s", kb_name, exc)
+            except (HTTPException, OSError, PermissionError) as e:
                 await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)
                 # Continue with other deletions even if one fails
+                failed_kbs.append(kb_name)
 
         if not_found_kbs and deleted_count == 0:
             raise HTTPException(
@@ -719,6 +1275,8 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
 
         if not_found_kbs:
             result["not_found"] = ", ".join(not_found_kbs)
+        if failed_kbs:
+            result["failed"] = ", ".join(failed_kbs)
 
     except HTTPException:
         raise
@@ -769,8 +1327,25 @@ async def cancel_ingestion(
         # Update status immediately so background task can see it
         await job_service.update_job_status(job.job_id, JobStatus.CANCELLED)
 
-        # Clean up any partially ingested chunks from this job
-        await KBIngestionHelper.cleanup_chroma_chunks_by_job(job.job_id, kb_path, kb_name)
+        # Clean up any partially ingested chunks from this job. Forward
+        # the KB's configured backend + user_id so non-Chroma KBs
+        # (Mongo/Astra/Postgres) actually find their variable-backed
+        # credentials and delete against the right store — otherwise
+        # cleanup silently falls back to Chroma and remote chunks
+        # written before the cancel stick around.
+        kb_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+        backend_type_value = (
+            kb_record.backend_type if kb_record and kb_record.backend_type else BackendType.CHROMA.value
+        )
+        backend_config = (kb_record.backend_config or {}) if kb_record is not None else {}
+        await KBIngestionHelper.cleanup_chroma_chunks_by_job(
+            job.job_id,
+            kb_path,
+            kb_name,
+            backend_type=backend_type_value,
+            backend_config=backend_config,
+            user_id=current_user.id,
+        )
 
         if revoked:
             message = f"Ingestion job for {job.job_id} cancelled successfully."

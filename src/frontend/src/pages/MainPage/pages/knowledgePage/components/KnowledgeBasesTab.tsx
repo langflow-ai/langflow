@@ -25,7 +25,6 @@ import { useKnowledgeBasePolling } from "../hooks/useKnowledgeBasePolling";
 import { useOptimisticKnowledgeBase } from "../hooks/useOptimisticKnowledgeBase";
 import type { KnowledgeBasesTabProps } from "../types";
 import KnowledgeBaseEmptyState from "./KnowledgeBaseEmptyState";
-import KnowledgeBaseSelectionOverlay from "./KnowledgeBaseSelectionOverlay";
 
 const KnowledgeBasesTab = ({
   quickFilterText,
@@ -36,6 +35,7 @@ const KnowledgeBasesTab = ({
   setQuantitySelected,
   isShiftPressed,
   onRowClick,
+  onViewChunks,
 }: KnowledgeBasesTabProps) => {
   const tableRef = useRef<AgGridReact<unknown>>(null);
   const { setErrorData, setSuccessData } = useAlertStore((state) => ({
@@ -147,6 +147,8 @@ const KnowledgeBasesTab = ({
       chunkOverlap: actions.knowledgeBaseForAddSources.chunk_overlap,
       separator: actions.knowledgeBaseForAddSources.separator,
       columnConfig: actions.knowledgeBaseForAddSources.column_config,
+      backendType: actions.knowledgeBaseForAddSources.backend_type,
+      backendConfig: actions.knowledgeBaseForAddSources.backend_config,
     };
   }, [actions.knowledgeBaseForAddSources]);
 
@@ -161,7 +163,7 @@ const KnowledgeBasesTab = ({
   );
 
   const columnDefs = createKnowledgeBaseColumns({
-    onViewChunks: onRowClick,
+    onViewChunks: onViewChunks ?? onRowClick,
     onDelete: actions.handleDelete,
     onAddSources: handleAddSources,
     onStopIngestion: actions.handleStopIngestion,

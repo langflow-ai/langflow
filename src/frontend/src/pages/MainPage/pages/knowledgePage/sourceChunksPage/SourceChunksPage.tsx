@@ -25,6 +25,7 @@ export const SourceChunksPage = () => {
   const [pageSize, setPageSize] = useState<number>(CHUNKS_PER_PAGE);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sourceTypeFilter, setSourceTypeFilter] = useState<string>("all");
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearchChange = useCallback((value: string) => {
@@ -34,6 +35,11 @@ export const SourceChunksPage = () => {
       setDebouncedSearch(value);
       setCurrentPage(1);
     }, 300);
+  }, []);
+
+  const handleSourceTypeChange = useCallback((value: string) => {
+    setSourceTypeFilter(value);
+    setCurrentPage(1);
   }, []);
 
   useEffect(() => {
@@ -51,6 +57,7 @@ export const SourceChunksPage = () => {
     page: currentPage,
     limit: pageSize,
     search: debouncedSearch || undefined,
+    source_type: sourceTypeFilter === "all" ? undefined : sourceTypeFilter,
   });
 
   const handleBack = () => {
@@ -132,17 +139,36 @@ export const SourceChunksPage = () => {
 
         <div className="flex shrink-0 items-center pb-4">
           <div className="xl:container">
-            <div className="relative w-full xl:w-5/12">
-              <ForwardedIconComponent
-                name="Search"
-                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              />
-              <Input
-                placeholder="Search chunks..."
-                value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                data-testid="chunks-search-input"
-              />
+            <div className="flex w-full items-center gap-2 xl:w-7/12">
+              <div className="relative flex-1">
+                <ForwardedIconComponent
+                  name="Search"
+                  className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                  placeholder="Search chunks..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  data-testid="chunks-search-input"
+                />
+              </div>
+              <Select
+                value={sourceTypeFilter}
+                onValueChange={handleSourceTypeChange}
+              >
+                <SelectTrigger
+                  className="w-44 shrink-0"
+                  data-testid="chunks-source-type-filter"
+                >
+                  <SelectValue placeholder="All sources" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All sources</SelectItem>
+                  <SelectItem value="file_upload">File Upload</SelectItem>
+                  <SelectItem value="folder">Folder</SelectItem>
+                  <SelectItem value="template">Flow Template</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

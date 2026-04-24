@@ -2,6 +2,12 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import {
+  getKnowledgeBaseBackendLabel,
+  getKnowledgeBaseBackendTarget,
+} from "../utils/backendMetadata";
+import ConnectorsSection from "./ConnectorsSection";
+import IngestionRunsSection from "./IngestionRunsSection";
 
 interface KnowledgeBaseDrawerProps {
   isOpen: boolean;
@@ -17,6 +23,9 @@ const KnowledgeBaseDrawer = ({
   if (!isOpen || !knowledgeBase) {
     return null;
   }
+
+  const backendLabel = getKnowledgeBaseBackendLabel(knowledgeBase.backend_type);
+  const backendTarget = getKnowledgeBaseBackendTarget(knowledgeBase);
 
   return (
     <div className="flex h-full w-80 flex-col border-l bg-background">
@@ -39,10 +48,38 @@ const KnowledgeBaseDrawer = ({
 
           <div className="space-y-2 px-4">
             <label className="text-sm font-medium">Embedding Provider</label>
-            <div className="flex items-center gap-2">
+            <div className="text-sm font-medium text-muted-foreground">
+              {knowledgeBase.embedding_provider || "Unknown"}
+            </div>
+          </div>
+
+          <div className="space-y-2 px-4">
+            <label className="text-sm font-medium">Embedding Model</label>
+            <div className="text-sm font-medium text-muted-foreground">
+              {knowledgeBase.embedding_model || "Unknown"}
+            </div>
+          </div>
+
+          <div className="space-y-2 px-4">
+            <label className="text-sm font-medium">Vector Store</label>
+            <div className="text-sm font-medium text-muted-foreground">
+              {backendLabel}
+            </div>
+          </div>
+
+          {backendTarget && (
+            <div className="space-y-2 px-4">
+              <label className="text-sm font-medium">Target</label>
               <div className="text-sm font-medium text-muted-foreground">
-                {knowledgeBase.embedding_model || "Unknown"}
+                {backendTarget}
               </div>
+            </div>
+          )}
+
+          <div className="space-y-2 px-4">
+            <label className="text-sm font-medium">Status</label>
+            <div className="text-sm font-medium text-muted-foreground">
+              {knowledgeBase.status || "Unknown"}
             </div>
           </div>
 
@@ -59,6 +96,14 @@ const KnowledgeBaseDrawer = ({
               No linked flows available.
             </div>
           </div>
+
+          <Separator />
+
+          <ConnectorsSection kbName={knowledgeBase.dir_name} />
+
+          <Separator />
+
+          <IngestionRunsSection kbName={knowledgeBase.dir_name} />
         </div>
       </div>
     </div>

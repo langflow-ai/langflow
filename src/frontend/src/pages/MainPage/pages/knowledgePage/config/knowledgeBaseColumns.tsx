@@ -12,6 +12,7 @@ import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-base
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
+import { getKnowledgeBaseBackendLabel } from "../utils/backendMetadata";
 import {
   formatAverageChunkSize,
   formatNumber,
@@ -117,6 +118,17 @@ export const createKnowledgeBaseColumns = (
           </div>
         );
       },
+    },
+    {
+      headerName: "Vector Store",
+      field: "backend_type",
+      flex: 1.3,
+      sortable: false,
+      editable: false,
+      cellClass: baseCellClass,
+      cellRenderer: (params: { data: KnowledgeBaseInfo }) => (
+        <span>{getKnowledgeBaseBackendLabel(params.data.backend_type)}</span>
+      ),
     },
     {
       headerName: "Chunks",

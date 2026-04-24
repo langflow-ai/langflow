@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pandas as pd
 import pytest
 from httpx import AsyncClient
+from langflow.api.utils import knowledge_base_service
 from langflow.api.utils.kb_helpers import (
     KBAnalysisHelper,
     KBIngestionHelper,
@@ -194,11 +195,17 @@ class TestKnowledgeBaseAPI:
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_knowledge_base(
-        self, mock_root, mock_fresh_client, client: AsyncClient, logged_in_headers, tmp_path
+        self, mock_root, mock_fresh_client, client: AsyncClient, logged_in_headers, active_user, tmp_path
     ):
         mock_fresh_client.return_value = MagicMock()
         mock_root.return_value = tmp_path
         kb_name = "New_KB"
+        model_selection = {
+            "id": "text-embedding-3-small",
+            "name": "text-embedding-3-small",
+            "provider": "OpenAI",
+            "metadata": {"model_type": "embeddings"},
+        }
         response = await client.post(
             "api/v1/knowledge_bases",
             headers=logged_in_headers,
@@ -206,11 +213,52 @@ class TestKnowledgeBaseAPI:
                 "name": kb_name,
                 "embedding_provider": "OpenAI",
                 "embedding_model": "text-embedding-3-small",
+                "model_selection": model_selection,
+                "backend_type": "opensearch",
+                "backend_config": {"index_name": "new_kb_index"},
             },
         )
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "New KB"
+        assert data["backend_type"] == "opensearch"
+        assert data["backend_config"] == {"index_name": "new_kb_index"}
+        record = await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name)
+        assert record is not None
+        assert record.model_selection == model_selection
+        metadata = json.loads((tmp_path / active_user.username / kb_name / "embedding_metadata.json").read_text())
+        assert metadata["model_selection"] == model_selection
+
+    async def test_create_knowledge_base_rejects_unknown_backend(self, client: AsyncClient, logged_in_headers):
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "Bad_Backend_KB",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+                "backend_type": "not-a-backend",
+            },
+        )
+
+        assert response.status_code == 422
+        assert "unknown vector-store backend" in response.text.lower()
+
+    async def test_create_knowledge_base_rejects_missing_backend_config(self, client: AsyncClient, logged_in_headers):
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "Missing_Backend_Config_KB",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+                "backend_type": "postgres",
+                "backend_config": {},
+            },
+        )
+
+        assert response.status_code == 422
+        assert "collection_name" in response.text
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_kb_path_traversal_single_level(
@@ -366,38 +414,75 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 409
         assert "already exists" in response.json()["detail"]
 
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.backfill_from_disk", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
-    @patch("langflow.api.v1.knowledge_bases.get_job_service")
     async def test_list_knowledge_bases(
-        self, mock_job_service, mock_meta, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+        self, mock_root, mock_backfill, client: AsyncClient, logged_in_headers, active_user, tmp_path
     ):
+        from langflow.api.utils import knowledge_base_service
+
         mock_root.return_value = tmp_path
-        kb_user_path = tmp_path / "activeuser"
-        kb_user_path.mkdir(parents=True, exist_ok=True)
-        (kb_user_path / "KB1").mkdir(exist_ok=True)
-
-        mock_meta.return_value = {
-            "chunks": 10,
-            "words": 100,
-            "characters": 500,
-            "avg_chunk_size": 50.0,
-            "embedding_provider": "OpenAI",
-            "embedding_model": "model",
-            "id": str(uuid.uuid4()),
-            "size": 1024,
-            "source_types": [],
-            "column_config": None,
-        }
-
-        mock_job_service_inst = MagicMock()
-        mock_job_service.return_value = mock_job_service_inst
-        mock_job_service_inst.get_latest_jobs_by_asset_ids = AsyncMock(return_value={})
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="KB1",
+            embedding_provider="OpenAI",
+            embedding_model="model",
+            backend_type="opensearch",
+            backend_config={"index_name": "kb1_index"},
+        )
+        await knowledge_base_service.update_stats(
+            record.id,
+            chunks=10,
+            words=100,
+            characters=500,
+            size_bytes=1024,
+        )
 
         response = await client.get("api/v1/knowledge_bases", headers=logged_in_headers)
         assert response.status_code == 200
         data = response.json()
         assert len(data) >= 1
+        kb = next(kb for kb in data if kb["id"] == str(record.id))
+        assert kb["backend_type"] == "opensearch"
+        assert kb["backend_config"] == {"index_name": "kb1_index"}
+        assert kb["size"] == 1024
+        mock_backfill.assert_not_awaited()
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_list_knowledge_bases_falls_back_to_disk_when_user_has_no_rows(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        mock_root.return_value = tmp_path
+        kb_user_path = tmp_path / "activeuser"
+        kb_user_path.mkdir(parents=True, exist_ok=True)
+        kb_path = kb_user_path / "KB1"
+        kb_path.mkdir(exist_ok=True)
+        (kb_path / "embedding_metadata.json").write_text(
+            json.dumps(
+                {
+                    "chunks": 10,
+                    "words": 100,
+                    "characters": 500,
+                    "avg_chunk_size": 50.0,
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "model",
+                    "id": str(uuid.uuid4()),
+                    "size": 1024,
+                    "source_types": [],
+                    "column_config": None,
+                    "backend_type": "opensearch",
+                    "backend_config": {"index_name": "kb1_index"},
+                }
+            )
+        )
+
+        response = await client.get("api/v1/knowledge_bases", headers=logged_in_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) >= 1
+        assert any(
+            kb["backend_type"] == "opensearch" and kb["backend_config"] == {"index_name": "kb1_index"} for kb in data
+        )
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_get_knowledge_base_detail(self, mock_root, client: AsyncClient, logged_in_headers, tmp_path):
@@ -414,6 +499,8 @@ class TestKnowledgeBaseAPI:
             "embedding_model": "model",
             "id": "uuid",
             "size": 100,
+            "backend_type": "postgres",
+            "backend_config": {"collection_name": "detail_kb"},
         }
         (kb_path / "embedding_metadata.json").write_text(json.dumps(meta))
 
@@ -422,17 +509,101 @@ class TestKnowledgeBaseAPI:
         data = response.json()
         assert data["chunks"] == 5
         assert data["name"] == "Detail KB"
+        assert data["backend_type"] == "postgres"
+        assert data["backend_config"] == {"collection_name": "detail_kb"}
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_get_knowledge_base_detail_prefers_db_row_when_dir_missing(
+        self, mock_root, client: AsyncClient, logged_in_headers, active_user, tmp_path
+    ):
+        from langflow.api.utils import knowledge_base_service
+
+        mock_root.return_value = tmp_path
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="DB_Only_KB",
+            embedding_provider="OpenAI",
+            embedding_model="model",
+            backend_type="opensearch",
+            backend_config={"index_name": "db_only_index"},
+        )
+        await knowledge_base_service.update_stats(
+            record.id,
+            chunks=5,
+            words=50,
+            characters=250,
+            size_bytes=100,
+        )
+
+        response = await client.get("api/v1/knowledge_bases/DB_Only_KB", headers=logged_in_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(record.id)
+        assert data["chunks"] == 5
+        assert data["backend_type"] == "opensearch"
+        assert data["backend_config"] == {"index_name": "db_only_index"}
+
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.create_record", new_callable=AsyncMock)
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_knowledge_base_rolls_back_when_db_persist_fails(
+        self,
+        mock_root,
+        mock_fresh_client,
+        mock_create_record,
+        client: AsyncClient,
+        logged_in_headers,
+        tmp_path,
+    ):
+        mock_root.return_value = tmp_path
+        mock_fresh_client.return_value = MagicMock()
+        mock_create_record.side_effect = RuntimeError("db unavailable")
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "Rollback KB",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+            },
+        )
+
+        assert response.status_code == 500
+        assert not (tmp_path / "activeuser" / "Rollback_KB").exists()
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
+    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_delete_knowledge_base(
-        self, mock_root, mock_delete, client: AsyncClient, logged_in_headers, tmp_path
+        self,
+        mock_root,
+        mock_get_record,
+        mock_create_backend,
+        mock_delete,
+        client: AsyncClient,
+        logged_in_headers,
+        tmp_path,
     ):
         mock_root.return_value = tmp_path
         (tmp_path / "activeuser" / "To_Delete").mkdir(parents=True, exist_ok=True)
+        mock_get_record.return_value = MagicMock(
+            backend_type="opensearch",
+            backend_config={"index_name": "to_delete_index"},
+        )
+        backend = MagicMock()
+        backend.ensure_ready = AsyncMock()
+        backend.delete_collection = AsyncMock()
+        backend.teardown = AsyncMock()
+        mock_create_backend.return_value = backend
 
         response = await client.delete("api/v1/knowledge_bases/To_Delete", headers=logged_in_headers)
         assert response.status_code == 200
+        mock_create_backend.assert_called_once()
+        backend.ensure_ready.assert_awaited_once()
+        backend.delete_collection.assert_awaited_once()
+        backend.teardown.assert_awaited_once()
         mock_delete.assert_called_once()
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
@@ -651,48 +822,58 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 400
         assert "Invalid embedding configuration" in response.json()["detail"]
 
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    @patch("langflow.api.v1.knowledge_bases.Chroma")
+    @patch("langflow.api.v1.knowledge_bases.create_backend")
     async def test_get_chunks_pagination_and_search(
-        self, mock_chroma, mock_root, mock_fresh_client, client: AsyncClient, logged_in_headers, tmp_path
+        self, mock_create_backend, mock_root, client: AsyncClient, logged_in_headers, tmp_path
     ):
-        mock_fresh_client.return_value = MagicMock()
+        """Chunks endpoint streams through ``backend.iter_documents`` now.
+
+        Old Chroma ``_collection.get`` assertions replaced with a mock
+        backend that yields a fixed set of ``IngestedDocument``s — this
+        keeps the test backend-agnostic and exercises the new filter +
+        paginate-in-Python path that works across Chroma / Mongo /
+        Astra / Postgres.
+        """
+        from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / "activeuser" / "KB1"
         kb_dir.mkdir(parents=True, exist_ok=True)
         (kb_dir / "chroma.sqlite3").write_text("dummy")
 
-        mock_collection = MagicMock()
-        # Set up for page 1 search
-        mock_collection.get.return_value = {
-            "ids": ["1", "2"],
-            "documents": ["content 1", "content 2"],
-            "metadatas": [{}, {}],
-        }
-        mock_chroma.return_value._collection = mock_collection
+        # 25 documents: ids "0" through "24". Two of them contain the
+        # substring "needle"; the rest read as "doc N".
+        documents = [
+            IngestedDocument(
+                content="needle match" if idx in {3, 7} else f"doc {idx}",
+                metadata={"_id": str(idx)},
+            )
+            for idx in range(25)
+        ]
 
-        # Test search
-        response = await client.get("api/v1/knowledge_bases/KB1/chunks?search=content", headers=logged_in_headers)
+        async def _iter_documents(*, batch_size: int = 1000, include_embeddings: bool = False):  # noqa: ARG001
+            yield documents
+
+        backend = MagicMock()
+        backend.iter_documents = _iter_documents
+        backend.teardown = AsyncMock()
+        mock_create_backend.return_value = backend
+
+        # Search filters client-side and finds both "needle" rows.
+        response = await client.get("api/v1/knowledge_bases/KB1/chunks?search=needle", headers=logged_in_headers)
         assert response.status_code == 200
         data = response.json()
-        assert len(data["chunks"]) == 2
-        mock_collection.get.assert_called_with(
-            include=["documents", "metadatas"], where_document={"$contains": "content"}
-        )
+        assert [chunk["content"] for chunk in data["chunks"]] == ["needle match", "needle match"]
+        assert data["total"] == 2
 
-        # Test pagination (page 2)
-        mock_collection.count.return_value = 25
-        mock_collection.get.return_value = {
-            "ids": ["11"],
-            "documents": ["page 2 content"],
-            "metadatas": [{}],
-        }
+        # Pagination: page 2 of 10 returns ids "10" through "19".
         response = await client.get("api/v1/knowledge_bases/KB1/chunks?page=2&limit=10", headers=logged_in_headers)
         assert response.status_code == 200
         data = response.json()
         assert data["page"] == 2
-        mock_collection.get.assert_called_with(include=["documents", "metadatas"], limit=10, offset=10)
+        assert data["total"] == 25
+        assert [chunk["id"] for chunk in data["chunks"]] == [str(i) for i in range(10, 20)]
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_get_chunks_non_existent_kb_returns_404(
@@ -712,8 +893,10 @@ class TestKnowledgeBaseAPI:
 class TestPerformIngestionTask:
     """Tests for the internal KBIngestionHelper.perform_ingestion background task."""
 
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client")
-    @patch("langflow.api.utils.kb_helpers.Chroma")
+    @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.create_backend")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
@@ -724,25 +907,33 @@ class TestPerformIngestionTask:
         mock_size,
         mock_meta,
         mock_build,
-        mock_chroma,
-        mock_fresh_client,
+        mock_backend_cls,
+        mock_create_run,
+        mock_mark_running,
+        mock_finalize_run,
         mock_kb_path,
         sample_text_file,
     ):
-        mock_fresh_client.return_value = MagicMock()
         mock_update.return_value = None
         mock_embeddings = MagicMock()
         mock_build.return_value = mock_embeddings
 
-        mock_chroma_inst = MagicMock()
-        mock_chroma.return_value = mock_chroma_inst
-        mock_chroma_inst.aadd_documents = AsyncMock()
+        mock_backend = MagicMock()
+        mock_backend.add_documents = AsyncMock()
+        mock_backend.teardown = AsyncMock()
+        mock_backend.raw_langchain_store = MagicMock(return_value=MagicMock())
+        mock_backend_cls.return_value = mock_backend
 
+        run_id = uuid.uuid4()
+        mock_create_run.return_value = run_id
         mock_meta.return_value = {"chunks": 5, "size": 100, "source_types": []}
         mock_size.return_value = 100
 
         file_name, file_content = sample_text_file
         files_data = [(file_name, file_content.encode())]
+
+        current_user = MagicMock()
+        current_user.id = uuid.uuid4()
 
         result = await KBIngestionHelper.perform_ingestion(
             kb_name="test_kb",
@@ -752,31 +943,63 @@ class TestPerformIngestionTask:
             chunk_overlap=20,
             separator="\n",
             source_name="src",
-            current_user=MagicMock(),
+            current_user=current_user,
             embedding_provider="OpenAI",
             embedding_model="model",
             task_job_id=uuid.uuid4(),
             job_service=AsyncMock(),
         )
 
-        assert result["files_processed"] == 1
-        mock_chroma_inst.aadd_documents.assert_called()
+        assert result["ingestion_run_id"] == str(run_id)
+        mock_backend.add_documents.assert_called()
+        mock_backend.teardown.assert_awaited()
+        mock_create_run.assert_awaited_once()
+        mock_mark_running.assert_awaited_once_with(run_id)
+        mock_finalize_run.assert_awaited_once()
 
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client")
-    @patch("langflow.api.utils.kb_helpers.Chroma")
+        # Finalize should mark the run SUCCEEDED when every item lands.
+        finalize_kwargs = mock_finalize_run.await_args.kwargs
+        from langflow.services.database.models.ingestion_run import IngestionRunStatus
+
+        assert finalize_kwargs["status"] is IngestionRunStatus.SUCCEEDED
+        assert finalize_kwargs["summary"].succeeded == 1
+        assert finalize_kwargs["summary"].failed == 0
+
+        # Every chunk should carry the default ingestion-source-type tag so
+        # Phase 2 visibility tooling can key off origin.
+        written_docs = [doc for call in mock_backend.add_documents.call_args_list for doc in call.args[0]]
+        assert written_docs, "expected at least one chunk document to be written"
+        assert all(doc.metadata.get("source_type") == "file_upload" for doc in written_docs)
+
+    @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.create_backend")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.cleanup_chroma_chunks_by_job", new_callable=AsyncMock)
     async def test_perform_ingestion_rollback(
-        self, mock_cleanup, mock_build, mock_chroma, mock_fresh_client, mock_kb_path
+        self,
+        mock_cleanup,
+        mock_build,
+        mock_backend_cls,
+        mock_create_run,
+        mock_mark_running,  # noqa: ARG002 — patched to keep ingestion_run DB calls out of this test
+        mock_finalize_run,
+        mock_kb_path,
     ):
-        mock_fresh_client.return_value = MagicMock()
-        mock_chroma_inst = MagicMock()
-        mock_chroma.return_value = mock_chroma_inst
-        mock_chroma_inst.aadd_documents = AsyncMock(side_effect=Exception("Chroma error"))
-        mock_chroma_inst.adelete = AsyncMock()
+        """Write-loop errors that exhaust retries must propagate and trigger rollback."""
+        mock_backend = MagicMock()
+        mock_backend.add_documents = AsyncMock(side_effect=Exception("Chroma error"))
+        mock_backend.teardown = AsyncMock()
+        mock_backend.raw_langchain_store = MagicMock(return_value=MagicMock())
+        mock_backend_cls.return_value = mock_backend
+        mock_create_run.return_value = uuid.uuid4()
 
         files_data = [("test.txt", b"content")]
         job_id = uuid.uuid4()
+
+        current_user = MagicMock()
+        current_user.id = uuid.uuid4()
 
         with pytest.raises(Exception, match="Chroma error"):
             await KBIngestionHelper.perform_ingestion(
@@ -787,7 +1010,7 @@ class TestPerformIngestionTask:
                 chunk_overlap=20,
                 separator="\n",
                 source_name="src",
-                current_user=MagicMock(),
+                current_user=current_user,
                 embedding_provider="OpenAI",
                 embedding_model="model",
                 task_job_id=job_id,
@@ -795,7 +1018,20 @@ class TestPerformIngestionTask:
             )
 
         mock_build.assert_called_once()
-        mock_cleanup.assert_called_once_with(job_id, mock_kb_path, "test_kb")
+        # Rollback now threads optional backend info through so
+        # non-Chroma backends can clean up; assert by positional tuple.
+        mock_cleanup.assert_called_once()
+        call_args = mock_cleanup.call_args
+        assert call_args.args == (job_id, mock_kb_path, "test_kb")
+        mock_backend.teardown.assert_awaited()
+        # The run row must still be finalized even on error so the
+        # visibility UI doesn't show stuck RUNNING rows.
+        mock_finalize_run.assert_awaited_once()
+        finalize_kwargs = mock_finalize_run.await_args.kwargs
+        from langflow.services.database.models.ingestion_run import IngestionRunStatus
+
+        assert finalize_kwargs["status"] is IngestionRunStatus.FAILED
+        assert finalize_kwargs["error_message"] == "Chroma error"
 
 
 class TestCancelIngestion:
