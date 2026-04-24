@@ -1,25 +1,26 @@
 {
   "name": "langflow",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "private": true,
   "engines": {
     "node": ">=20.19.0"
   },
   "overrides": {
     "tar": "^7.5.7",
-    "tar-fs": ">=2.1.4",
+    "tar-fs": "^2.1.4",
     "glob": "^11.1.0",
     "test-exclude": "^7.0.0",
-    "picomatch": ">=4.0.4",
+    "picomatch": "^4.0.4",
     "jest-util": {
-      "picomatch": ">=4.0.4"
+      "picomatch": "^4.0.4"
     },
     "jest-message-util": {
-      "picomatch": ">=4.0.4"
+      "picomatch": "^4.0.4"
     },
     "playwright": "^1.59.1",
-    "brace-expansion": ">=5.0.5",
-    "handlebars": ">=4.7.9"
+    "brace-expansion": "^5.0.5",
+    "handlebars": "^4.7.9",
+    "minimatch": "^10.2.5"
   },
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
@@ -99,6 +100,7 @@
     "reactflow": "^11.11.3",
     "rehype-mathjax": "^7.1.0",
     "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
     "shadcn-ui": "^0.9.4",
@@ -152,7 +154,7 @@
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
     "@modelcontextprotocol/server-everything": "^2026.1.14",
-    "@playwright/test": "^1.57.0",
+    "@playwright/test": "^1.59.1",
     "@storybook/addon-docs": "^10.1.0",
     "@storybook/addon-links": "^10.1.0",
     "@storybook/react": "^10.1.0",

@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.9.0"
+version = "0.9.1"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 
 dependencies = [
-    "lfx~=0.4.0",
+    "lfx~=0.4.1",
     "fastapi>=0.135.0,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
@@ -100,11 +100,7 @@ dependencies = [
     "dynaconf>=3.2.13,<4.0.0",
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
-]
-
-[tool.uv]
-override-dependencies = [
-    "litellm>=1.83.0"
+    "transformers>=5.6.0,<6.0.0",
 ]
 
 [dependency-groups]
@@ -130,6 +126,8 @@ dev = [
     "pytest-split>=0.9.0",
     "devtools>=0.12.2",
     "pytest-flakefinder>=1.1.0",
+    "types-markdown>=3.7.0.20240822",
+    "codeflash>=0.8.4",
 ]
 
 
@@ -147,6 +145,16 @@ log_cli = true
 markers = ["async_test"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+
+[tool.codeflash]
+# All paths are relative to this pyproject.toml's directory.
+module-root = "langflow"
+tests-root = "../tests/unit"
+test-framework = "pytest"
+ignore-paths = ["langflow/components/"]
+formatter-cmds = ["ruff check --exit-zero --fix $file", "ruff format $file"]
+# disable plugins that might interfere with runtime measurement
+pytest-cmd = "pytest -p no:profiling -p no:sugar -p no:xdist -p no:cov -p no:split"
 
 
 [build-system]
@@ -181,7 +189,7 @@ clickhouse = ["clickhouse-connect==0.7.19"]
 
 mongodb = ["pymongo==4.10.1"]
 supabase = ["supabase>=2.6.0,<3.0.0"]
-redis = ["redis>=5.2.1,<6.0.0"]
+redis = ["redis>=7.4.0,<8.0.0"]
 elasticsearch = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0"]
 
 # Individual vector store providers
@@ -258,7 +266,7 @@ nltk = ["nltk>=3.9.4"]
 lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
-huggingface = ["huggingface-hub[inference]>=0.23.2,<1.0.0"]
+huggingface = ["huggingface-hub[inference]>=1.0.0,<2.0.0"]
 metaphor = ["metaphor-python==0.1.23"]
 metal = ["metal_sdk==2.5.1"]
 markup = ["MarkupSafe==3.0.2"]
@@ -266,7 +274,7 @@ aws = ["boto3>=1.34.162,<2.0.0", "langchain-aws~=1.1.0"]
 numexpr = ["numexpr==2.10.2"]
 qianfan = ["qianfan==0.3.5"]
 pgvector = ["pgvector>=0.4.2"]
-litellm = ["litellm>=1.83.0,<2.0.0"]
+litellm = ["litellm>=1.83.0"]
 zep = ["zep-python==2.0.2"]
 youtube = ["youtube-transcript-api>=1.0.0,<2.0.0"]
 markdown = ["Markdown>=3.8.0"]
@@ -353,8 +361,8 @@ gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
 # SDKs for IBM watsonx Orchestrate deployment adapter.
 ibm-watsonx-clients = [
     "ibm-cloud-sdk-core~=3.24.4",
-    "ibm-watsonx-orchestrate-core~=2.7.0; python_version >= '3.11'",
-    "ibm-watsonx-orchestrate-clients~=2.7.0; python_version >= '3.11'",
+    "ibm-watsonx-orchestrate-core~=2.8.0; python_version >= '3.11'",
+    "ibm-watsonx-orchestrate-clients~=2.8.0; python_version >= '3.11'",
 ]
 
 complete = [
