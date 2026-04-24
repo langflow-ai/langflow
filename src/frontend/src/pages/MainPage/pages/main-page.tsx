@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import SideBarFoldersButtonsComponent from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import CustomEmptyPageCommunity from "@/customization/components/custom-empty-page";
 import CustomLoader from "@/customization/components/custom-loader";
@@ -48,6 +49,7 @@ export default function CollectionPage(): JSX.Element {
           console.error(err);
           setErrorData({
             title: "Error deleting project.",
+            list: [getAxiosErrorMessage(err, "Error deleting project.")],
           });
         },
       },
