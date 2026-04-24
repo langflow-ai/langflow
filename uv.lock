@@ -6169,7 +6169,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.9.1"
+version = "1.10.0"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
@@ -6317,7 +6317,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.9.1"
+version = "0.10.0"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -7345,7 +7345,7 @@ dev = [
 
 [[package]]
 name = "langflow-sdk"
-version = "0.1.1"
+version = "0.2.0"
 source = { editable = "src/sdk" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
@@ -7550,7 +7550,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "0.4.1"
+version = "0.5.0"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "ag-ui-protocol" },
