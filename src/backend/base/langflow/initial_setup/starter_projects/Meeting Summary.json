@@ -689,7 +689,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.3"
+                    "version": "0.136.1"
                   },
                   {
                     "name": "lfx",
@@ -969,7 +969,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.3"
+                    "version": "0.136.1"
                   },
                   {
                     "name": "lfx",
@@ -1249,7 +1249,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.3"
+                    "version": "0.136.1"
                   },
                   {
                     "name": "lfx",
@@ -2514,7 +2514,7 @@
               }
             ],
             "pinned": false,
-            "score": 1.8578044550916993e-05,
+            "score": 0.000018578044550916993,
             "template": {
               "_type": "Component",
               "api_key": {
