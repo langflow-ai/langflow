@@ -385,6 +385,6 @@ async def test_deprecated_upload_enforces_max_file_size(
         headers=logged_in_headers,
     )
 
-    assert response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, (
+    assert response.status_code == status.HTTP_413_CONTENT_TOO_LARGE, (
         f"Expected 413 for oversized upload, got {response.status_code}: {response.text}"
     )
