@@ -9,6 +9,7 @@ import type {
   MemoryInfo,
 } from "./types";
 import { mapMemoryApiToMemoryInfo } from "./mappers";
+import { ensureRequiredParam } from "./validation";
 
 export const useAddMessagesToMemory: useMutationFunctionType<
   undefined,
@@ -20,9 +21,7 @@ export const useAddMessagesToMemory: useMutationFunctionType<
   const addMessagesFn = async (
     params: AddMessagesToMemoryParams,
   ): Promise<MemoryInfo> => {
-    if (!params?.memoryId) {
-      throw new Error("addMessagesToMemory: missing memoryId");
-    }
+    ensureRequiredParam(params?.memoryId, "memoryId");
     if (!Array.isArray(params.messageIds) || params.messageIds.length === 0) {
       throw new Error(
         "addMessagesToMemory: message_ids must be a non-empty array",
@@ -44,7 +43,7 @@ export const useAddMessagesToMemory: useMutationFunctionType<
 
   const mutation: UseMutationResult<
     MemoryInfo,
-    any,
+    Error,
     AddMessagesToMemoryParams
   > = mutate(["useAddMessagesToMemory"], addMessagesFn, options);
 

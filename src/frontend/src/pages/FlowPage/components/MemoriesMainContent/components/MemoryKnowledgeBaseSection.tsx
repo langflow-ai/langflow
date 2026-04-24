@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/utils/utils";
 import { formatTimestamp } from "../helpers";
+import { KNOWLEDGE_BASE_SCROLL_THRESHOLD_PX } from "../MemoriesMainContent.constants";
 import { MemoryKnowledgeBaseSectionProps } from "../types";
 
 export function MemoryKnowledgeBaseSection({
@@ -27,7 +28,7 @@ export function MemoryKnowledgeBaseSection({
     if (!hasNextMessagesPage || isFetchingNextMessagesPage) return;
     const el = e.currentTarget;
     const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
-    if (remaining < 240) {
+    if (remaining < KNOWLEDGE_BASE_SCROLL_THRESHOLD_PX) {
       fetchNextMessagesPage();
     }
   };

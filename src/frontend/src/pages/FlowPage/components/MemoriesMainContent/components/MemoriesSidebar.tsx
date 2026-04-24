@@ -3,7 +3,7 @@ import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/utils/utils";
-import { statusBgColors, statusColors } from "../helpers";
+import { SIDEBAR_SCROLL_THRESHOLD_PX } from "../MemoriesMainContent.constants";
 import { MemoriesSidebarProps } from "../types";
 
 export function MemoriesSidebar({
@@ -23,7 +23,7 @@ export function MemoriesSidebar({
     if (!fetchNextPage || !hasNextPage || isFetchingNextPage) return;
     const el = e.currentTarget;
     const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
-    if (remaining < 160) {
+    if (remaining < SIDEBAR_SCROLL_THRESHOLD_PX) {
       fetchNextPage();
     }
   };

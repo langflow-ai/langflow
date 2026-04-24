@@ -3,6 +3,7 @@ import type { ModelOption } from "@/components/core/parameterRenderComponent/com
 import { useCreateMemory } from "@/controllers/API/queries/memories/use-create-memory";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import useAlertStore from "@/stores/alertStore";
+import { extractApiErrorMessages } from "@/utils/apiError";
 
 interface UseCreateMemoryModalParams {
   flowId: string;
@@ -88,26 +89,10 @@ export function useCreateMemoryModal({
       resetForm();
       onSuccess?.(data.id);
     },
-    onError: (error: any) => {
-      const detail = error?.response?.data?.detail;
-      const list = Array.isArray(detail)
-        ? detail
-            .map((entry) => {
-              if (typeof entry === "string") return entry;
-              if (entry && typeof entry === "object") {
-                const msg = (entry as any)?.msg;
-                return typeof msg === "string" ? msg : JSON.stringify(entry);
-              }
-              return String(entry);
-            })
-            .filter(Boolean)
-        : typeof detail === "string"
-          ? [detail]
-          : [error?.message || "An unknown error occurred"];
-
+    onError: (error: unknown) => {
       setErrorData({
         title: "Failed to create memory",
-        list,
+        list: extractApiErrorMessages(error),
       });
     },
   });

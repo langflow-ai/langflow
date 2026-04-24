@@ -8,12 +8,16 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import type { GetMemoriesApiResponse, GetMemoriesParams } from "./types";
 import { mapGetMemoriesApiResponse } from "./mappers";
+import {
+  MEMORIES_PAGE_SIZE,
+  MEMORIES_RETRY_BASE_DELAY_MS,
+  MEMORIES_RETRY_MAX_ATTEMPTS,
+  MEMORIES_RETRY_MAX_DELAY_MS,
+} from "@/pages/FlowPage/components/MemoriesMainContent/MemoriesMainContent.constants";
 
 type MemoriesPage = ReturnType<typeof mapGetMemoriesApiResponse>;
 
 const MEMORIES_INFINITE_QUERY_KEY = "useGetMemoriesInfinite";
-
-const DEFAULT_PAGE_SIZE = 50;
 
 type MemoriesQueryKey = readonly [
   typeof MEMORIES_INFINITE_QUERY_KEY,
@@ -46,7 +50,7 @@ export const useGetMemories = (
       url.searchParams.set("flow_id", flowId);
     }
     url.searchParams.set("page", String(pageParam));
-    url.searchParams.set("size", String(DEFAULT_PAGE_SIZE));
+    url.searchParams.set("size", String(MEMORIES_PAGE_SIZE));
 
     const res = await api.get<GetMemoriesApiResponse>(url.toString());
     return mapGetMemoriesApiResponse(res.data);
@@ -65,8 +69,12 @@ export const useGetMemories = (
     getNextPageParam: (lastPage) =>
       lastPage.page < lastPage.pages ? lastPage.page + 1 : undefined,
     refetchOnWindowFocus: false,
-    retry: 5,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    retry: MEMORIES_RETRY_MAX_ATTEMPTS,
+    retryDelay: (attemptIndex) =>
+      Math.min(
+        MEMORIES_RETRY_BASE_DELAY_MS * 2 ** attemptIndex,
+        MEMORIES_RETRY_MAX_DELAY_MS,
+      ),
     ...(options ?? {}),
   });
 };

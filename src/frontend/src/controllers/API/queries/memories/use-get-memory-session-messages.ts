@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import { MEMORIES_PAGE_SIZE } from "@/pages/FlowPage/components/MemoriesMainContent/MemoriesMainContent.constants";
 
 export type MemorySessionMessageApiItem = {
   timestamp: string;
@@ -43,8 +44,6 @@ type MessagesQueryKey = readonly [
   number,
 ];
 
-const DEFAULT_PAGE_SIZE = 50;
-
 export const useGetMemorySessionMessages = (
   params: GetMemorySessionMessagesParams,
   options?: Omit<
@@ -60,7 +59,7 @@ export const useGetMemorySessionMessages = (
 ): UseInfiniteQueryResult<InfiniteData<MessagesPage, number>, unknown> => {
   const memoryId = params?.memoryId;
   const sessionId = params?.sessionId;
-  const size = params?.size ?? DEFAULT_PAGE_SIZE;
+  const size = params?.size ?? MEMORIES_PAGE_SIZE;
 
   const getMessagesPage = async ({
     pageParam,
