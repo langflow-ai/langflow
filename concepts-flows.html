@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.d29a2eb4.css">
-<script src="/assets/js/runtime~main.2dbb77b3.js" defer="defer"></script>
-<script src="/assets/js/main.25320c33.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.e5de2727.js" defer="defer"></script>
+<script src="/assets/js/main.18ca0898.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -117,9 +117,13 @@ To create a project, click <svg xmlns="http://www.w3.org/2000/svg" width="16" he
 <li class="">Select a previously saved version to preview the flow in read-only mode.</li>
 <li class="">To replace the current draft with the selected version, click <strong>Restore</strong>.</li>
 </ol>
-<p>When restoring a version, you can keep <strong>Save current draft before restoring</strong> enabled to create a backup of your current work before the selected version replaces it.</p>
 <p>From a saved version&#x27;s <!-- --> menu, you can also <strong>Export</strong> or <strong>Delete</strong> that version.</p>
 <p>Saved flow versions are stored in the database configured for your Langflow deployment.</p>
+<p>When restoring a saved version, if <strong>Save current draft before restoring</strong> is enabled, then Langflow creates a backup of your current work before the selected version replaces it.</p>
+<p><a class="" href="/environment-variables#visual-editor-and-playground-behavior">Flow auto-save</a> and flow versions serve different purposes.
+Auto-save keeps your current flow draft up to date in the background, but it doesn&#x27;t create version entries.
+A saved <em>version</em> is an explicit snapshot that you create when you want a restore point.</p>
+<p>When previewing a saved version, Langflow temporarily pauses auto-save so the preview doesn&#x27;t overwrite your current draft.</p>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="lock-a-flow">Lock a flow<a href="#lock-a-flow" class="hash-link" aria-label="Direct link to Lock a flow" title="Direct link to Lock a flow" translate="no">​</a></h3>
 <p>To prevent changes to a flow, you can lock it:</p>
 <ol>
