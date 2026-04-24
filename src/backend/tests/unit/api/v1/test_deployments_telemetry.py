@@ -1,4 +1,4 @@
-# ruff: noqa: ARG001
+# ruff: noqa: ARG001, EM101, PT012, TRY003
 from __future__ import annotations
 
 from contextlib import ExitStack
@@ -7,13 +7,104 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi import status
+from fastapi import HTTPException, status
+from langflow.api.v1.deployments import DeploymentTelemetryCtx, _track_deployment_telemetry
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
 
 # We'll use a mocked adapter so we don't need real credentials.
 # We need to mock the adapter resolution and the telemetry service.
+
+
+class TestTrackDeploymentTelemetryCM:
+    """Direct unit tests for the _track_deployment_telemetry context manager.
+
+    The CM is the sole shared primitive across the 8 instrumented routes, so
+    regressions here surface before the (much heavier) integration tests run.
+    """
+
+    @pytest.fixture
+    def mock_ts(self):
+        with patch("langflow.api.v1.deployments.get_telemetry_service") as mock_get:
+            service = AsyncMock()
+            mock_get.return_value = service
+            yield service
+
+    @pytest.mark.asyncio
+    async def test_success_path_emits_success_true_with_empty_error(self, mock_ts):
+        async with _track_deployment_telemetry("deployment.create") as telemetry:
+            assert isinstance(telemetry, DeploymentTelemetryCtx)
+            telemetry.provider = "watsonx-orchestrate"
+
+        mock_ts.log_package_deployment.assert_awaited_once()
+        payload = mock_ts.log_package_deployment.await_args.args[0]
+        assert payload.deployment_action == "deployment.create"
+        assert payload.deployment_provider == "watsonx-orchestrate"
+        assert payload.deployment_success is True
+        assert payload.deployment_error_message == ""
+        # seconds must be a non-negative int (not float), per schema contract.
+        assert isinstance(payload.deployment_seconds, int)
+        assert payload.deployment_seconds >= 0
+
+    @pytest.mark.asyncio
+    async def test_exception_is_reraised_and_emits_failure_with_str_exc(self, mock_ts):
+        with pytest.raises(ValueError, match="boom"):
+            async with _track_deployment_telemetry("provider.create") as telemetry:
+                telemetry.provider = "watsonx-orchestrate"
+                raise ValueError("boom")
+
+        mock_ts.log_package_deployment.assert_awaited_once()
+        payload = mock_ts.log_package_deployment.await_args.args[0]
+        assert payload.deployment_action == "provider.create"
+        assert payload.deployment_provider == "watsonx-orchestrate"
+        assert payload.deployment_success is False
+        # Full str(exc) is captured, not just the class name.
+        assert payload.deployment_error_message == "boom"
+
+    @pytest.mark.asyncio
+    async def test_http_exception_str_includes_status_and_detail(self, mock_ts):
+        with pytest.raises(HTTPException):
+            async with _track_deployment_telemetry("deployment.delete"):
+                raise HTTPException(status_code=404, detail="Deployment not found.")
+
+        payload = mock_ts.log_package_deployment.await_args.args[0]
+        # str(HTTPException(404, "X")) == "404: X" — verifies we keep the
+        # useful status+detail context that deployment_error_type dropped.
+        assert payload.deployment_error_message == "404: Deployment not found."
+        assert payload.deployment_success is False
+
+    @pytest.mark.asyncio
+    async def test_provider_defaults_to_unknown_when_handler_never_sets_it(self, mock_ts):
+        # Simulates an exception thrown before the handler resolves the provider.
+        with pytest.raises(RuntimeError):
+            async with _track_deployment_telemetry("deployment.run"):
+                raise RuntimeError("early failure")
+
+        payload = mock_ts.log_package_deployment.await_args.args[0]
+        assert payload.deployment_provider == "unknown"
+        assert payload.deployment_success is False
+
+    @pytest.mark.asyncio
+    async def test_emit_failure_is_swallowed_and_does_not_shadow_handler_exception(self, mock_ts):
+        # If the telemetry service itself blows up, it must NOT replace the
+        # handler's original exception — otherwise callers would see misleading
+        # errors and lose the real failure context.
+        mock_ts.log_package_deployment.side_effect = RuntimeError("telemetry down")
+
+        with pytest.raises(ValueError, match="original"):
+            async with _track_deployment_telemetry("deployment.update"):
+                raise ValueError("original")
+
+    @pytest.mark.asyncio
+    async def test_emit_failure_on_success_path_is_swallowed(self, mock_ts):
+        # On the success path, a telemetry emit failure must not surface as an
+        # exception to the handler's caller — telemetry is best-effort.
+        mock_ts.log_package_deployment.side_effect = RuntimeError("telemetry down")
+
+        async with _track_deployment_telemetry("snapshot.update") as telemetry:
+            telemetry.provider = "watsonx-orchestrate"
+        # Reaching this line without raising is the assertion.
 
 
 @pytest.fixture
@@ -292,7 +383,9 @@ async def test_create_provider_account_telemetry_error(
     assert payload.deployment_action == "provider.create"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is False
-    assert payload.deployment_error_message  # non-empty; HTTPException.str() includes the detail
+    # The ValueError("Invalid credentials") is converted to HTTPException by the
+    # route's error-mapping helper; the CM captures str(exc) so the detail survives.
+    assert "Invalid credentials" in payload.deployment_error_message
 
 
 @pytest.mark.asyncio
@@ -311,4 +404,9 @@ async def test_cross_route_smoke_exception_after_provider_set(
     assert payload.deployment_action == "deployment.create"
     assert payload.deployment_provider == "watsonx-orchestrate"  # Provider should be captured!
     assert payload.deployment_success is False
-    assert payload.deployment_error_message  # non-empty error message captured
+    # handle_adapter_errors deliberately redacts the underlying adapter error and
+    # surfaces a generic 500 message (security: don't leak provider internals).
+    # deployment_error_message still carries the status + rewritten detail —
+    # strictly more information than the old deployment_error_type class-name capture.
+    assert payload.deployment_error_message.startswith("500:")
+    assert "deployment provider" in payload.deployment_error_message
