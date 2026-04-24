@@ -414,6 +414,37 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 409
         assert "already exists" in response.json()["detail"]
 
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_duplicate_kb_rejects_existing_db_row_without_directory(
+        self,
+        mock_root,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        mock_root.return_value = tmp_path
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="Duplicate_DB_KB",
+            embedding_provider="OpenAI",
+            embedding_model="model",
+        )
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "Duplicate DB KB",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "model",
+            },
+        )
+
+        assert response.status_code == 409
+        assert "already exists" in response.json()["detail"]
+        assert not (tmp_path / active_user.username / "Duplicate_DB_KB").exists()
+
     @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.backfill_from_disk", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_list_knowledge_bases(
@@ -447,6 +478,51 @@ class TestKnowledgeBaseAPI:
         assert kb["backend_config"] == {"index_name": "kb1_index"}
         assert kb["size"] == 1024
         mock_backfill.assert_not_awaited()
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_list_and_detail_reflect_cleared_db_separator(
+        self,
+        mock_root,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        mock_root.return_value = tmp_path
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="Cleared_Separator_KB",
+            embedding_provider="OpenAI",
+            embedding_model="model",
+            separator="\n",
+        )
+        await knowledge_base_service.update_stats(
+            record.id,
+            chunks=3,
+            words=30,
+            characters=300,
+            size_bytes=2048,
+            chunk_size=512,
+            chunk_overlap=64,
+            separator=None,
+        )
+
+        list_response = await client.get("api/v1/knowledge_bases", headers=logged_in_headers)
+        assert list_response.status_code == 200
+        listed = next(kb for kb in list_response.json() if kb["id"] == str(record.id))
+        assert listed["chunk_size"] == 512
+        assert listed["chunk_overlap"] == 64
+        assert listed["separator"] is None
+
+        detail_response = await client.get(
+            "api/v1/knowledge_bases/Cleared_Separator_KB",
+            headers=logged_in_headers,
+        )
+        assert detail_response.status_code == 200
+        detail = detail_response.json()
+        assert detail["chunk_size"] == 512
+        assert detail["chunk_overlap"] == 64
+        assert detail["separator"] is None
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_list_knowledge_bases_falls_back_to_disk_when_user_has_no_rows(

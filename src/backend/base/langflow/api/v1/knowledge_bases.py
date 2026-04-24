@@ -364,8 +364,11 @@ async def create_knowledge_base(
         kb_path = (kb_user_path / kb_name).resolve()
         _validate_kb_path_containment(kb_user_path, kb_path, kb_name, kb_user)
 
-        # Check if KB already exists
-        if kb_path.exists():
+        # Check both durable DB state and legacy disk state. During
+        # expand/contract rollout a KB row can exist even if its local
+        # sidecar directory was cleaned up out of band.
+        existing_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+        if existing_record is not None or kb_path.exists():
             raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists")
 
         # Create KB directory

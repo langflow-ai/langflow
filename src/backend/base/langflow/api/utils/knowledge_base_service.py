@@ -34,6 +34,13 @@ from langflow.services.deps import session_scope
 from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
 
 
+class _UnsetType:
+    """Sentinel for optional fields where ``None`` is a valid value."""
+
+
+_UNSET = _UnsetType()
+
+
 async def create_record(
     *,
     user_id: UUID,
@@ -47,6 +54,11 @@ async def create_record(
     column_config: list[dict[str, Any]] | None = None,
     backend_type: str = "chroma",
     backend_config: dict[str, Any] | None = None,
+    chunks: int = 0,
+    words: int = 0,
+    characters: int = 0,
+    size_bytes: int = 0,
+    source_types: list[str] | None = None,
     record_id: UUID | None = None,
 ) -> KnowledgeBaseRecord:
     """Insert a new KB record. Caller should already hold the name lock.
@@ -69,6 +81,11 @@ async def create_record(
         column_config=column_config or [],
         backend_type=backend_type,
         backend_config=backend_config or {},
+        chunks=chunks,
+        words=words,
+        characters=characters,
+        size_bytes=size_bytes,
+        source_types=sorted(set(source_types or [])),
         status=KnowledgeBaseStatus.READY.value,
     )
     async with session_scope() as session:
@@ -149,7 +166,7 @@ async def update_stats(
     source_types: list[str] | None = None,
     chunk_size: int | None = None,
     chunk_overlap: int | None = None,
-    separator: str | None = None,
+    separator: str | None | _UnsetType = _UNSET,
 ) -> None:
     """Refresh the cached aggregates + chunker settings after an ingestion run.
 
@@ -176,7 +193,7 @@ async def update_stats(
             row.chunk_size = chunk_size
         if chunk_overlap is not None:
             row.chunk_overlap = chunk_overlap
-        if separator is not None:
+        if not isinstance(separator, _UnsetType):
             row.separator = separator
         row.updated_at = datetime.now(timezone.utc)
         session.add(row)
@@ -338,6 +355,9 @@ async def backfill_from_disk(
             continue
 
         try:
+            from langflow.api.utils.kb_helpers import KBAnalysisHelper
+
+            metadata = KBAnalysisHelper.get_metadata(kb_dir, fast=False) or metadata
             model_selection = _normalize_model_selection(metadata.get("model_selection"))
             record_id = _coerce_uuid(metadata.get("id")) or uuid4()
             # ``backend_type``/``backend_config`` are persisted by
@@ -369,6 +389,11 @@ async def backfill_from_disk(
                 column_config=metadata.get("column_config") or [],
                 backend_type=backend_type,
                 backend_config=backend_config,
+                chunks=_coerce_int(metadata.get("chunks"), default=0),
+                words=_coerce_int(metadata.get("words"), default=0),
+                characters=_coerce_int(metadata.get("characters"), default=0),
+                size_bytes=_coerce_int(metadata.get("size_bytes", metadata.get("size")), default=0),
+                source_types=_coerce_source_types(metadata.get("source_types")),
                 record_id=record_id,
             )
             inserted += 1
@@ -399,3 +424,19 @@ def _coerce_uuid(value) -> UUID | None:
         return UUID(str(value))
     except (ValueError, AttributeError, TypeError):
         return None
+
+
+def _coerce_int(value, *, default: int) -> int:
+    """Safely coerce metadata counters from legacy JSON into non-negative ints."""
+    try:
+        coerced = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(coerced, 0)
+
+
+def _coerce_source_types(value) -> list[str]:
+    """Normalize legacy source type metadata into a stable list of strings."""
+    if not isinstance(value, list):
+        return []
+    return sorted({str(item) for item in value if str(item).strip()})
