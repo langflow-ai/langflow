@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
+from lfx.services.adapters.deployment.schema import EnvVarSource
 from pydantic import field_validator, model_validator
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import ForeignKey, UniqueConstraint
@@ -97,6 +98,11 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     # MUST be stored encrypted; the CRUD layer encrypts via auth_utils before writing
     # and the Read schema intentionally excludes this field.
     api_key: str = Field(description="Provider credential material. Stored encrypted; never returned in API responses.")
+    api_key_source: EnvVarSource = Field(
+        default=EnvVarSource.RAW,
+        sa_column=Column(sa.String(), nullable=False, server_default=EnvVarSource.RAW.value),
+        description="How to interpret decrypted api_key: raw secret or global variable name.",
+    )
     created_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),

@@ -137,6 +137,7 @@ describe("Create mode — canGoNext validation", () => {
           provider_key: "watsonx-orchestrate",
           url: "https://api.example.com",
           api_key: "my-secret-key", // pragma: allowlist secret
+          api_key_source: "raw", // pragma: allowlist secret
         });
       });
 
@@ -154,6 +155,7 @@ describe("Create mode — canGoNext validation", () => {
           provider_key: "watsonx-orchestrate",
           url: "",
           api_key: "my-secret-key", // pragma: allowlist secret
+          api_key_source: "raw", // pragma: allowlist secret
         });
       });
 
@@ -370,6 +372,7 @@ describe("Create mode — provider selection", () => {
       provider_key: "",
       url: "",
       api_key: "",
+      api_key_source: "raw", // pragma: allowlist secret
     });
   });
 
@@ -384,6 +387,7 @@ describe("Create mode — provider selection", () => {
         provider_key: "watsonx-orchestrate",
         url: "https://api.example.com",
         api_key: "my-secret-key", // pragma: allowlist secret
+        api_key_source: "raw", // pragma: allowlist secret
       });
     });
 
@@ -512,6 +516,7 @@ describe("Create mode — buildProviderAccountPayload", () => {
         provider_key: "watsonx-orchestrate",
         url: "",
         api_key: "key-123", // pragma: allowlist secret
+        api_key_source: "raw", // pragma: allowlist secret
       });
     });
 
@@ -527,6 +532,7 @@ describe("Create mode — buildProviderAccountPayload", () => {
         provider_key: "watsonx-orchestrate",
         url: "  https://api.example.com  ",
         api_key: "  secret-key-123  ", // pragma: allowlist secret
+        api_key_source: "raw", // pragma: allowlist secret
       });
     });
 
@@ -537,6 +543,7 @@ describe("Create mode — buildProviderAccountPayload", () => {
       provider_data: {
         url: "https://api.example.com",
         api_key: "secret-key-123", // pragma: allowlist secret
+        api_key_source: "raw", // pragma: allowlist secret
       },
     });
   });
@@ -550,6 +557,7 @@ describe("Create mode — buildProviderAccountPayload", () => {
         provider_key: "watsonx-orchestrate",
         url: "  https://padded.com  ",
         api_key: "  padded-key  ", // pragma: allowlist secret
+        api_key_source: "raw", // pragma: allowlist secret
       });
     });
 
@@ -559,6 +567,32 @@ describe("Create mode — buildProviderAccountPayload", () => {
     expect(payload.name).toBe("padded");
     expect(payload.provider_data.url).toBe("https://padded.com");
     expect(payload.provider_data.api_key).toBe("padded-key"); // pragma: allowlist secret
+    expect(payload.provider_data.api_key_source).toBe("raw");
+  });
+
+  it("preserves variable source when credentials use global variable", () => {
+    const { result } = renderCreateHook();
+
+    act(() => {
+      result.current.setCredentials({
+        name: "Global Variable Account",
+        provider_key: "watsonx-orchestrate",
+        url: "https://api.example.com",
+        api_key: "WXO_API_KEY", // pragma: allowlist secret
+        api_key_source: "variable", // pragma: allowlist secret
+      });
+    });
+
+    const payload = result.current.buildProviderAccountPayload();
+    expect(payload).toEqual({
+      name: "Global Variable Account",
+      provider_key: "watsonx-orchestrate",
+      provider_data: {
+        url: "https://api.example.com",
+        api_key: "WXO_API_KEY", // pragma: allowlist secret
+        api_key_source: "variable", // pragma: allowlist secret
+      },
+    });
   });
 });
 

@@ -17,6 +17,58 @@ jest.mock("../hooks/use-error-alert", () => ({
   useErrorAlert: () => jest.fn(),
 }));
 
+jest.mock("@/controllers/API/queries/variables", () => ({
+  useGetGlobalVariables: () => ({
+    data: [{ name: "WXO_API_KEY" }, { name: "OTHER_KEY" }],
+  }),
+}));
+
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/inputComponent",
+  () =>
+    function MockInputComponent({
+      id,
+      placeholder,
+      value,
+      onChange,
+      options,
+      selectedOption,
+      setSelectedOption,
+    }: {
+      id: string;
+      placeholder: string;
+      value: string;
+      onChange: (v: string) => void;
+      options?: string[];
+      selectedOption?: string;
+      setSelectedOption?: (v: string) => void;
+    }) {
+      return (
+        <div data-testid={`input-component-${id}`}>
+          <input
+            placeholder={placeholder}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+          />
+          {options && options.length > 0 && (
+            <select
+              data-testid={`select-${id}`}
+              value={selectedOption ?? ""}
+              onChange={(e) => setSelectedOption?.(e.target.value)}
+            >
+              <option value="">Select...</option>
+              {options.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      );
+    },
+);
+
 jest.mock(
   "@/components/common/genericIconComponent",
   () =>
@@ -196,6 +248,37 @@ describe("Submit behavior", () => {
         provider_data: {
           url: "https://prod.example.com",
           api_key: "sk-test-123", // pragma: allowlist secret
+          api_key_source: "raw", // pragma: allowlist secret
+        },
+      });
+    });
+    expect(setOpen).toHaveBeenCalledWith(false);
+  });
+
+  it("submits selected global variable with variable source", async () => {
+    mockMutateAsync.mockResolvedValue({ id: "new-prov" });
+    const { setOpen } = renderModal();
+    const user = userEvent.setup();
+
+    await user.type(screen.getByPlaceholderText("e.g. Production"), "My Env");
+    await user.type(
+      screen.getByPlaceholderText("https://api.example.com"),
+      "https://prod.example.com",
+    );
+    await user.selectOptions(
+      screen.getByTestId("select-provider-api-key"),
+      "WXO_API_KEY",
+    );
+    await user.click(screen.getByTestId("add-provider-save"));
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        name: "My Env",
+        provider_key: "watsonx-orchestrate",
+        provider_data: {
+          url: "https://prod.example.com",
+          api_key: "WXO_API_KEY", // pragma: allowlist secret
+          api_key_source: "variable", // pragma: allowlist secret
         },
       });
     });

@@ -10,6 +10,7 @@ export interface ProviderAccountCreateRequest {
   provider_data: {
     url: string;
     api_key: string;
+    api_key_source?: "raw" | "variable";
   };
 }
 

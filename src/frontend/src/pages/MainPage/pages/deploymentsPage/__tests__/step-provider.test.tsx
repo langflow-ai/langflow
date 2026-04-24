@@ -14,6 +14,58 @@ let mockProviderAccountsData:
   | { provider_accounts: ProviderAccount[] }
   | undefined;
 
+jest.mock("@/controllers/API/queries/variables", () => ({
+  useGetGlobalVariables: () => ({
+    data: [{ name: "WXO_API_KEY" }],
+  }),
+}));
+
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/inputComponent",
+  () =>
+    function MockInputComponent({
+      id,
+      placeholder,
+      value,
+      onChange,
+      options,
+      selectedOption,
+      setSelectedOption,
+    }: {
+      id: string;
+      placeholder: string;
+      value: string;
+      onChange: (v: string) => void;
+      options?: string[];
+      selectedOption?: string;
+      setSelectedOption?: (v: string) => void;
+    }) {
+      return (
+        <div data-testid={`input-component-${id}`}>
+          <input
+            placeholder={placeholder}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+          />
+          {options && options.length > 0 && (
+            <select
+              data-testid={`select-${id}`}
+              value={selectedOption ?? ""}
+              onChange={(e) => setSelectedOption?.(e.target.value)}
+            >
+              <option value="">Select...</option>
+              {options.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      );
+    },
+);
+
 jest.mock(
   "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts",
   () => ({
@@ -33,6 +85,7 @@ jest.mock("../contexts/deployment-stepper-context", () => ({
       provider_key: "watsonx-orchestrate",
       url: "",
       api_key: "",
+      api_key_source: "raw", // pragma: allowlist secret
     } as ProviderCredentials,
     setCredentials: mockSetCredentials,
   }),
@@ -209,6 +262,25 @@ describe("With existing environments", () => {
     expect(
       screen.getByPlaceholderText("Enter your API key"),
     ).toBeInTheDocument();
+  });
+
+  it("passes variable source when selecting API key global variable", async () => {
+    const user = userEvent.setup();
+    render(<StepProvider />);
+
+    await user.click(screen.getByText("Add new environment"));
+    await user.selectOptions(
+      screen.getByTestId("select-provider-api-key"),
+      "WXO_API_KEY",
+    );
+
+    expect(mockSetCredentials).toHaveBeenCalledWith({
+      name: "",
+      provider_key: "watsonx-orchestrate",
+      url: "",
+      api_key: "WXO_API_KEY", // pragma: allowlist secret
+      api_key_source: "variable", // pragma: allowlist secret
+    });
   });
 
   it("has radiogroup role for environment selection", async () => {

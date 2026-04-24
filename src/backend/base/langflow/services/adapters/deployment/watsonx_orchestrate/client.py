@@ -170,7 +170,15 @@ async def resolve_wxo_client_credentials(
             raise CredentialResolutionError(message=msg)
 
         instance_url = (provider_account.provider_url or "").strip()
-        api_key = auth_utils.decrypt_api_key((provider_account.api_key or "").strip())
+        decrypted_value = auth_utils.decrypt_api_key((provider_account.api_key or "").strip())
+        if provider_account.api_key_source == EnvVarSource.VARIABLE:
+            api_key = await resolve_variable_value(
+                decrypted_value,
+                user_id=user_id,
+                db=db,
+            )
+        else:
+            api_key = decrypted_value
         if not instance_url or not api_key:
             msg = "Watsonx Orchestrate backend URL and API key must be configured."
             raise CredentialResolutionError(message=msg)

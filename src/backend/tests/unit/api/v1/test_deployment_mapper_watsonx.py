@@ -1835,6 +1835,25 @@ def test_wxo_mapper_verify_credentials_create_accepts_missing_tenant() -> None:
     assert result.base_url == "https://api.us-south.wxo.cloud.ibm.com/"
 
 
+def test_wxo_mapper_verify_credentials_create_accepts_api_key_source() -> None:
+    """Verify-credentials path accepts api_key_source without forwarding it."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentProviderAccountCreateRequest(
+        name="test-account",
+        provider_key="watsonx-orchestrate",
+        provider_data={
+            "url": "https://api.us-south.wxo.cloud.ibm.com",
+            "api_key": "WXO_API_KEY",  # pragma: allowlist secret
+            "api_key_source": "variable",  # pragma: allowlist secret
+        },
+    )
+
+    result = mapper.resolve_verify_credentials_for_create(payload=payload)
+    assert result.provider_data == {"api_key": "WXO_API_KEY"}  # pragma: allowlist secret
+
+
 def test_wxo_mapper_provider_account_create_requires_tenant() -> None:
     """Create path rejects payloads with no explicit or URL-derived tenant."""
     from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
@@ -1857,7 +1876,7 @@ def test_wxo_mapper_resolve_credentials_returns_api_key() -> None:
     """WXO mapper extracts api_key from provider_data for DB storage."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     result = mapper.resolve_credentials(provider_data={"api_key": "my-key"})  # pragma: allowlist secret
-    assert result == {"api_key": "my-key"}  # pragma: allowlist secret
+    assert result == {"api_key": "my-key", "api_key_source": "raw"}  # pragma: allowlist secret
 
 
 def test_wxo_mapper_resolve_credentials_rejects_tenant_metadata() -> None:
@@ -1899,7 +1918,7 @@ def test_wxo_mapper_resolve_credentials_strips_whitespace() -> None:
     """WXO mapper strips whitespace from api_key."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     result = mapper.resolve_credentials(provider_data={"api_key": "  my-key  "})  # pragma: allowlist secret
-    assert result == {"api_key": "my-key"}  # pragma: allowlist secret
+    assert result == {"api_key": "my-key", "api_key_source": "raw"}  # pragma: allowlist secret
 
 
 def test_wxo_mapper_resolve_credentials_rejects_empty() -> None:
@@ -1936,9 +1955,29 @@ def test_wxo_mapper_provider_account_create_assembles_model() -> None:
     )
     result = mapper.resolve_provider_account_create(payload=payload, user_id=uuid4())
     assert result.name == "test-account"
+    assert result.api_key_source == "raw"  # pragma: allowlist secret
+
+
+def test_wxo_mapper_provider_account_create_preserves_variable_source() -> None:
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentProviderAccountCreateRequest(
+        name="test-account",
+        provider_key="watsonx-orchestrate",
+        provider_data={
+            "url": "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-123",
+            "tenant_id": "tenant-123",
+            "api_key": "WXO_API_KEY",  # pragma: allowlist secret
+            "api_key_source": "variable",  # pragma: allowlist secret
+        },
+    )
+
+    result = mapper.resolve_provider_account_create(payload=payload, user_id=uuid4())
+    assert result.api_key == "WXO_API_KEY"  # pragma: allowlist secret
+    assert result.api_key_source == "variable"  # pragma: allowlist secret
     assert result.provider_url == "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-123"
     assert result.provider_tenant_id == "tenant-123"
-    assert result.api_key == "my-secret-key"  # pragma: allowlist secret
 
 
 def test_wxo_mapper_provider_account_create_uses_url_tenant_fallback() -> None:

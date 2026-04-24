@@ -39,6 +39,7 @@ export interface ProviderCredentials {
   provider_key: string;
   url: string;
   api_key: string;
+  api_key_source: "raw" | "variable"; // pragma: allowlist secret
 }
 
 export type DeploymentType = "agent" | "mcp";

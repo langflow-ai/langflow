@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from lfx.services.adapters.deployment.schema import DeploymentType
+from lfx.services.adapters.deployment.schema import DeploymentType, EnvVarSource
 from pydantic import (
     BaseModel,
     Field,
@@ -52,6 +52,7 @@ class WatsonxApiProviderAccountCreate(BaseModel):
     url: ValidatedUrl
     tenant_id: Annotated[str | None, StringConstraints(strip_whitespace=True, min_length=1)] = None
     api_key: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    api_key_source: EnvVarSource = EnvVarSource.RAW
 
 
 class WatsonxApiProviderAccountUpdate(BaseModel):
@@ -64,6 +65,7 @@ class WatsonxApiProviderAccountUpdate(BaseModel):
     model_config = {"extra": "forbid"}
 
     api_key: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    api_key_source: EnvVarSource = EnvVarSource.RAW
 
 
 class WatsonxApiProviderAccountResponse(BaseModel):

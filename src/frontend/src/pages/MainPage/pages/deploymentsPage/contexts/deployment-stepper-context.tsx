@@ -140,6 +140,7 @@ export function DeploymentStepperProvider({
     provider_key: "",
     url: "",
     api_key: "",
+    api_key_source: "raw", // pragma: allowlist secret
   });
 
   // Pre-fill from editing deployment when in edit mode.
@@ -292,6 +293,7 @@ export function DeploymentStepperProvider({
       provider_key: "",
       url: "",
       api_key: "",
+      api_key_source: "raw", // pragma: allowlist secret
     });
   }, []);
 
@@ -318,6 +320,7 @@ export function DeploymentStepperProvider({
         provider_data: {
           url: credentials.url.trim(),
           api_key: credentials.api_key.trim(),
+          api_key_source: credentials.api_key_source,
         },
       };
     }, [credentials, hasValidCredentials]);
@@ -359,7 +362,9 @@ export function DeploymentStepperProvider({
     (providerId: string): DeploymentCreateRequest => {
       const allConnectionIds = new Set<string>();
       Array.from(attachedConnectionByFlow.values()).forEach((ids) => {
-        ids.forEach((id) => allConnectionIds.add(id));
+        ids.forEach((id) => {
+          allConnectionIds.add(id);
+        });
       });
 
       const addFlows: DeploymentCreateRequest["provider_data"]["add_flows"] =
@@ -479,7 +484,9 @@ export function DeploymentStepperProvider({
       // Collect connection details for newly added binds only.
       const newConnectionIds = new Set<string>();
       upsertFlows.forEach((flowItem) => {
-        flowItem.add_app_ids.forEach((id) => newConnectionIds.add(id));
+        flowItem.add_app_ids.forEach((id) => {
+          newConnectionIds.add(id);
+        });
       });
       const connectionPayloads = buildConnectionPayloads(newConnectionIds);
 

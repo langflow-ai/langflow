@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from cryptography.fernet import InvalidToken
 from lfx.log.logger import logger
+from lfx.services.adapters.deployment.schema import EnvVarSource
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
@@ -112,6 +113,7 @@ async def create_provider_account(
     provider_key: str | DeploymentProviderKey,
     provider_url: str,
     api_key: str,
+    api_key_source: EnvVarSource = EnvVarSource.RAW,
 ) -> DeploymentProviderAccount:
     return await _create_provider_account_internal(
         db=db,
@@ -121,6 +123,7 @@ async def create_provider_account(
         provider_key=provider_key,
         provider_url=provider_url,
         api_key=api_key,
+        api_key_source=api_key_source,
     )
 
 
@@ -137,6 +140,7 @@ async def create_provider_account_from_model(
         provider_key=provider_account.provider_key,
         provider_url=provider_account.provider_url,
         api_key=provider_account.api_key,
+        api_key_source=provider_account.api_key_source,
     )
 
 
@@ -149,6 +153,7 @@ async def _create_provider_account_internal(
     provider_key: str | DeploymentProviderKey,
     provider_url: str,
     api_key: str,
+    api_key_source: EnvVarSource = EnvVarSource.RAW,
 ) -> DeploymentProviderAccount:
     user_uuid = parse_uuid(user_id, field_name="user_id")
 
@@ -175,6 +180,7 @@ async def _create_provider_account_internal(
         provider_key=provider_key_enum,
         provider_url=provider_url_s,
         api_key=encrypted_key,
+        api_key_source=api_key_source,
         created_at=now,
         updated_at=now,
     )
@@ -208,6 +214,7 @@ async def update_provider_account(
     provider_key: str | DeploymentProviderKey | None = None,
     provider_url: str | None = None,
     api_key: str | None = None,
+    api_key_source: EnvVarSource | None = None,
 ) -> DeploymentProviderAccount:
     if name is not None:
         provider_account.name = _strip_or_raise(name, "name")
@@ -226,6 +233,8 @@ async def update_provider_account(
                 provider_account.id,
             )
             raise
+    if api_key_source is not None:
+        provider_account.api_key_source = api_key_source
     provider_account.updated_at = datetime.now(timezone.utc)
     db.add(provider_account)
     try:

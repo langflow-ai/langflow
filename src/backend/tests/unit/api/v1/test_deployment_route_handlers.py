@@ -36,6 +36,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
     DeploymentListResult,
     DeploymentUpdateResult,
+    EnvVarSource,
     ItemResult,
     SnapshotItem,
     SnapshotListResult,
@@ -55,12 +56,14 @@ def _fake_provider_account(
     provider_key: str = DeploymentProviderKey.WATSONX_ORCHESTRATE,
     provider_url: str = "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
     api_key: str = "encrypted-key",
+    api_key_source: EnvVarSource = EnvVarSource.RAW,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid4(),
         provider_key=provider_key,
         provider_url=provider_url,
         api_key=api_key,
+        api_key_source=api_key_source,
     )
 
 
@@ -1328,6 +1331,56 @@ class TestProviderAccountRoutes:
 
         assert exc_info.value.status_code == 409
         assert exc_info.value.detail == "Provider account is already tracked by user."
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.get_variable_service")
+    @patch(f"{ROUTES_MODULE}.create_provider_account_row", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    async def test_create_provider_account_resolves_variable_before_verify(
+        self,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_create_provider_account,
+        mock_get_variable_service,
+    ):
+        """POST resolves global-variable api_key before credential verification."""
+        from langflow.api.v1.deployments import create_provider_account
+
+        mapper = MagicMock()
+        mapper.resolve_verify_credentials_for_create.return_value = MagicMock()
+        mapper.resolve_provider_account_create.return_value = MagicMock()
+        mock_get_mapper.return_value = mapper
+
+        adapter = AsyncMock()
+        mock_resolve_adapter.return_value = adapter
+        mock_create_provider_account.return_value = _fake_provider_account()
+
+        variable_service = AsyncMock()
+        variable_service.get_variable.return_value = "resolved-api-key"  # pragma: allowlist secret
+        mock_get_variable_service.return_value = variable_service
+
+        payload = DeploymentProviderAccountCreateRequest(
+            name="prod",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            provider_data={
+                "url": "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+                "api_key": "WXO_API_KEY",  # pragma: allowlist secret
+                "api_key_source": "variable",  # pragma: allowlist secret
+            },
+        )
+
+        await create_provider_account(
+            session=AsyncMock(),
+            payload=payload,
+            current_user=_fake_user(),
+        )
+
+        variable_service.get_variable.assert_awaited_once()
+        verify_payload = mapper.resolve_verify_credentials_for_create.call_args.kwargs["payload"]
+        assert verify_payload.provider_data["api_key"] == "resolved-api-key"  # pragma: allowlist secret
+        assert verify_payload.provider_data["api_key_source"] == EnvVarSource.RAW
+        adapter.verify_credentials.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)

@@ -44,6 +44,7 @@ describe("usePostProviderAccount", () => {
     provider_data: {
       url: "https://api.wxo.ibm.com",
       api_key: "secret-key", // pragma: allowlist secret
+      api_key_source: "raw", // pragma: allowlist secret
     },
   };
 
@@ -69,6 +70,7 @@ describe("usePostProviderAccount", () => {
 
     const sentPayload = mockApiPost.mock.calls[0][1];
     expect(sentPayload.provider_data.api_key).toBe("secret-key");
+    expect(sentPayload.provider_data.api_key_source).toBe("raw");
   });
 
   it("refetches useGetProviderAccounts on success", async () => {

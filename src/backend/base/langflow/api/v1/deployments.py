@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
@@ -16,6 +16,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentListTypesResult,
     DeploymentType,
     DeploymentUpdateResult,
+    EnvVarSource,
 )
 from pydantic import AfterValidator, StringConstraints
 
@@ -109,8 +110,42 @@ from langflow.services.database.models.flow_version_deployment_attachment.crud i
     list_deployment_attachments_for_flow_version_ids,
     update_flow_version_by_provider_snapshot_id,
 )
+from langflow.services.deps import get_variable_service
 
 router = APIRouter(prefix="/deployments", tags=["Deployments"], include_in_schema=False)
+
+
+async def _resolve_provider_account_api_key_for_verify(
+    *,
+    session,
+    current_user: CurrentActiveUser,
+    provider_data: dict[str, Any],
+) -> dict[str, Any]:
+    api_key = provider_data.get("api_key")
+    api_key_source = provider_data.get("api_key_source", EnvVarSource.RAW)
+    if api_key_source != EnvVarSource.VARIABLE or not isinstance(api_key, str):
+        return provider_data
+
+    variable_service = get_variable_service()
+    try:
+        resolved_api_key = await variable_service.get_variable(
+            current_user.id,
+            api_key,
+            "value",
+            session,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    return {
+        **provider_data,
+        "api_key": resolved_api_key,
+        "api_key_source": EnvVarSource.RAW,
+    }
+
 
 DeploymentProviderAccountIdQuery = Annotated[
     UUID,
@@ -269,9 +304,22 @@ async def create_provider_account(
 ):
     deployment_mapper = get_deployment_mapper(payload.provider_key)
     deployment_adapter = resolve_deployment_adapter(payload.provider_key)
+    verify_payload = payload
+    if payload.provider_data is not None:
+        resolved_provider_data = await _resolve_provider_account_api_key_for_verify(
+            session=session,
+            current_user=current_user,
+            provider_data=payload.provider_data,
+        )
+        if resolved_provider_data is not payload.provider_data:
+            verify_payload = payload.model_copy(
+                update={"provider_data": resolved_provider_data},
+            )
 
     with handle_adapter_errors(mapper=deployment_mapper):
-        verify_input = deployment_mapper.resolve_verify_credentials_for_create(payload=payload)
+        verify_input = deployment_mapper.resolve_verify_credentials_for_create(
+            payload=verify_payload,
+        )
         await deployment_adapter.verify_credentials(
             user_id=current_user.id,
             payload=verify_input,

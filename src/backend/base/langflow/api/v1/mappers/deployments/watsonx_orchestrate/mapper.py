@@ -364,6 +364,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             provider_key=payload.provider_key,
             provider_url=parsed.url,
             api_key=parsed.api_key,
+            api_key_source=parsed.api_key_source,
         )
 
     def resolve_provider_account_provider_data(

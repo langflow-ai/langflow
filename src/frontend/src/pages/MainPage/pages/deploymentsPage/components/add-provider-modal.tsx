@@ -23,6 +23,7 @@ const EMPTY_CREDENTIALS: ProviderCredentials = {
   provider_key: "watsonx-orchestrate",
   url: "",
   api_key: "",
+  api_key_source: "raw", // pragma: allowlist secret
 };
 
 export default function AddProviderModal({
@@ -57,6 +58,7 @@ export default function AddProviderModal({
         provider_data: {
           url: credentials.url.trim(),
           api_key: credentials.api_key.trim(),
+          api_key_source: credentials.api_key_source,
         },
       });
       setCredentials(EMPTY_CREDENTIALS);

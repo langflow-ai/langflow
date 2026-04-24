@@ -5342,6 +5342,47 @@ async def test_resolve_wxo_client_credentials_reads_provider_url_from_account(mo
     assert credentials.authenticator is not None
 
 
+@pytest.mark.anyio
+async def test_resolve_wxo_client_credentials_resolves_variable_backed_api_key(monkeypatch):
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from lfx.services.adapters.deployment.schema import EnvVarSource
+
+    provider_account = DeploymentProviderAccount(
+        id=UUID("00000000-0000-0000-0000-000000000199"),
+        user_id=UUID("00000000-0000-0000-0000-000000000200"),
+        name="prod",
+        provider_tenant_id="tenant-1",
+        provider_key="watsonx-orchestrate",
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+        api_key="encrypted-variable-name",  # pragma: allowlist secret
+        api_key_source=EnvVarSource.VARIABLE,  # pragma: allowlist secret
+    )
+
+    async def mock_get_provider_account_by_id(*args, **kwargs):  # noqa: ARG001
+        return provider_account
+
+    async def mock_resolve_variable_value(variable_name: str, *, user_id, db, **kwargs):  # noqa: ARG001
+        assert variable_name == "WXO_API_KEY"
+        return "resolved-api-key"  # pragma: allowlist secret
+
+    monkeypatch.setattr(client_module, "get_provider_account_by_id", mock_get_provider_account_by_id)
+    monkeypatch.setattr(
+        client_module.auth_utils,
+        "decrypt_api_key",
+        lambda _encrypted_api_key: "WXO_API_KEY",  # pragma: allowlist secret
+    )
+    monkeypatch.setattr(client_module, "resolve_variable_value", mock_resolve_variable_value)
+
+    credentials = await client_module.resolve_wxo_client_credentials(
+        user_id="user-1",
+        db=object(),
+        provider_id=UUID("00000000-0000-0000-0000-000000000001"),
+    )
+
+    assert credentials.instance_url == provider_account.provider_url
+    assert credentials.authenticator is not None
+
+
 def test_wxo_client_initializes_subclients_eagerly(monkeypatch):
     init_counts = {"tool": 0, "connections": 0, "agent": 0, "base": 0}
 

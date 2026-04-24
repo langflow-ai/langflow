@@ -1,6 +1,6 @@
-import { useState } from "react";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { Input } from "@/components/ui/input";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import type { ProviderCredentials } from "../types";
 
 interface ProviderCredentialsFormProps {
@@ -14,7 +14,10 @@ export default function ProviderCredentialsForm({
   onCredentialsChange,
   layout = "single-column",
 }: ProviderCredentialsFormProps) {
-  const [showApiKey, setShowApiKey] = useState(false);
+  const { data: globalVariables } = useGetGlobalVariables();
+  const globalVariableOptions = (globalVariables ?? []).map(
+    (variable) => variable.name,
+  );
 
   const urlAndApiKeyFields = (
     <>
@@ -39,31 +42,33 @@ export default function ProviderCredentialsForm({
         <span className="pb-2 text-sm font-medium">
           API Key <span className="text-destructive">*</span>
         </span>
-        <div className="relative">
-          <Input
-            type={showApiKey ? "text" : "password"}
-            placeholder="Enter your API key"
-            className="bg-muted pr-10"
-            value={credentials.api_key}
-            onChange={(e) =>
-              onCredentialsChange({
-                ...credentials,
-                api_key: e.target.value,
-              })
-            }
-          />
-          <button
-            type="button"
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            onClick={() => setShowApiKey((prev) => !prev)}
-            tabIndex={-1}
-          >
-            <ForwardedIconComponent
-              name={showApiKey ? "EyeOff" : "Eye"}
-              className="h-4 w-4"
-            />
-          </button>
-        </div>
+        <InputComponent
+          nodeStyle
+          password
+          id="provider-api-key"
+          placeholder="Enter your API key"
+          value={credentials.api_key}
+          options={globalVariableOptions}
+          optionsPlaceholder="Global Variables"
+          optionsIcon="Globe"
+          selectedOption={
+            credentials.api_key_source === "variable" ? credentials.api_key : "" // pragma: allowlist secret
+          }
+          setSelectedOption={(selected) =>
+            onCredentialsChange({
+              ...credentials,
+              api_key: selected,
+              api_key_source: selected === "" ? "raw" : "variable",
+            })
+          }
+          onChange={(value) =>
+            onCredentialsChange({
+              ...credentials,
+              api_key: value,
+              api_key_source: "raw", // pragma: allowlist secret
+            })
+          }
+        />
       </div>
     </>
   );
