@@ -338,11 +338,16 @@ def run(
         # create path object if frontend_path is provided
         static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
 
+    # Use uvicorn directly (no Gunicorn fork) on Windows and Desktop mode.
+    # Gunicorn's fork() crashes on macOS when native libs like Metal Performance
+    # Shaders (MPSGraphObject) are initialized before fork.
+    _use_uvicorn = platform.system() == "Windows" or os.environ.get("LANGFLOW_DESKTOP") == "true"
+
     # Step 2: Starting Core Services
     app = None
     app_factory = None
     with progress.step(2):
-        if platform.system() == "Windows":
+        if _use_uvicorn:
             app = setup_app(static_files_dir=static_files_dir, backend_only=bool(backend_only))
         else:
             app_factory = partial(setup_app, static_files_dir=static_files_dir, backend_only=bool(backend_only))
@@ -377,12 +382,12 @@ def run(
             pass  # Starter projects are added during app startup
 
     # Step 6: Launching Langflow
-    if platform.system() == "Windows":
+    if _use_uvicorn:
         with progress.step(6):
             import uvicorn
 
             if app is None:
-                msg = "Windows startup requires a pre-built FastAPI application."
+                msg = "Uvicorn startup requires a pre-built FastAPI application."
                 raise RuntimeError(msg)
 
             # Print summary and banner before starting the server, since uvicorn is a blocking call.
