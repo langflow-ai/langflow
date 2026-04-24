@@ -562,6 +562,44 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         assert captured.get("system_prompt") == "Powered by gpt-4o."
 
+    async def test_should_not_mutate_format_instructions_when_json_response_runs(self, component_class, default_kwargs):
+        """Regression: injection must only touch agent_instructions, not format_instructions.
+
+        Ensures literal {current_date}/{model_name} tokens in user-authored
+        format_instructions survive intact while the main system_prompt is
+        still replaced by the helper.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        default_kwargs["system_prompt"] = "Powered by {model_name}."
+        default_kwargs["format_instructions"] = "Return JSON with fields {current_date} and {model_name} preserved."
+        default_kwargs["add_calculator_tool"] = False
+        default_kwargs["add_current_date_tool"] = False
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+
+        captured: dict = {}
+
+        def fake_set(**kwargs):
+            captured.update(kwargs)
+            return component
+
+        component.set = fake_set
+        component.create_agent_runnable = MagicMock(return_value=MagicMock())
+        component.run_agent = AsyncMock(return_value=MagicMock(content="{}"))
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            await component.json_response()
+
+        prompt = captured.get("system_prompt") or ""
+        assert "Powered by gpt-4o." in prompt, "agent_instructions should have placeholders replaced"
+        assert "{current_date}" in prompt, "format_instructions literal braces must survive"
+        assert "{model_name} preserved" in prompt, "format_instructions literal braces must survive"
+
     async def test_should_accept_add_calculator_tool_in_default_keys(self, component_class, default_kwargs):
         """update_build_config's default_keys validation must include add_calculator_tool."""
         from lfx.schema.dotdict import dotdict

@@ -35,8 +35,6 @@ async function dragAgentOntoCanvas(page: import("@playwright/test").Page) {
   await page
     .getByTestId("models_and_agentsAgent")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
 
   await adjustScreenView(page);
 }

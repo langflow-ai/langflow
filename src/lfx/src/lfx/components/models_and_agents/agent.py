@@ -458,8 +458,10 @@ class AgentComponent(ToolCallingAgentComponent):
         try:
             system_components = []
 
-            # 1. Agent Instructions (system_prompt)
-            agent_instructions = getattr(self, "system_prompt", "") or ""
+            # 1. Agent Instructions (system_prompt).
+            # Inject dynamic placeholders HERE so user-authored format_instructions
+            # and schema descriptions appended later keep their literal {...} tokens.
+            agent_instructions = self._inject_dynamic_prompt_values(getattr(self, "system_prompt", "") or "") or ""
             if agent_instructions:
                 system_components.append(f"{agent_instructions}")
 
@@ -489,7 +491,9 @@ class AgentComponent(ToolCallingAgentComponent):
                 except (ValidationError, ValueError, TypeError, KeyError) as e:
                     await logger.aerror(f"Could not build schema for prompt: {e}", exc_info=True)
 
-            # Combine all components
+            # Combine all components. Injection already applied on agent_instructions
+            # above; do NOT re-run it here so literal {...} tokens in format
+            # instructions / schema descriptions stay intact.
             combined_instructions = "\n\n".join(system_components) if system_components else ""
             llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
             self.set(
@@ -497,7 +501,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 tools=self.tools or [],
                 chat_history=self.chat_history,
                 input_value=self.input_value,
-                system_prompt=self._inject_dynamic_prompt_values(combined_instructions),
+                system_prompt=combined_instructions,
             )
 
             # Create and run structured chat agent
