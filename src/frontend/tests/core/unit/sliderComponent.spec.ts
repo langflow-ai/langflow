@@ -41,13 +41,13 @@ test(
 
     const cleanCode = await extractAndCleanCode(page);
 
-    // Replace the multiline string in the code
+    // Replace the multiline string in the code.
+    // Use a regex so the match is resilient to line-ending differences
+    // (LF on macOS/Linux vs CRLF on Windows after git checkout).
+    const originalSliderBlockRegex =
+      /name="temperature",\s+display_name="Temperature",\s+value=0\.1,\s+range_spec=RangeSpec\(min=0, max=1, step=0\.01\),\s+advanced=True,/;
     const newCode = cleanCode.replace(
-      `name="temperature",
-            display_name="Temperature",
-            value=0.1,
-            range_spec=RangeSpec(min=0, max=1, step=0.01),
-            advanced=True,`,
+      originalSliderBlockRegex,
       `name="temperature",
             display_name="Temperature",
             value=0.2,
@@ -63,9 +63,7 @@ test(
     );
     // make sure codes are different
     expect(cleanCode).not.toEqual(newCode);
-    await page.locator("textarea").last().press(`ControlOrMeta+a`);
-    await page.keyboard.press("Backspace");
-    await page.locator("textarea").last().fill(newCode);
+    await setAceEditorValue(page, newCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
     await adjustScreenView(page);
 
@@ -104,24 +102,41 @@ test(
 );
 
 async function extractAndCleanCode(page: Page): Promise<string> {
-  const outerHTML = await page
+  const codeContent = await page
     .locator('//*[@id="codeValue"]')
-    .evaluate((el) => el.outerHTML);
+    .evaluate((el) => (el as HTMLInputElement).value);
 
-  const valueMatch = outerHTML.match(/value="([\s\S]*?)"/);
-  if (!valueMatch) {
-    throw new Error("Could not find value attribute in the HTML");
-  }
+  // Normalize line endings so downstream string operations are OS-agnostic
+  // (Windows git checkouts of .py files can end up with CRLF).
+  return codeContent.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
 
-  const codeContent = valueMatch[1]
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, "/");
+// Reliably replace the Ace editor content. Using page.locator("textarea").fill()
+// directly is flaky on Windows because Ace's internal buffer may not pick up the
+// change (the "Check & Save" would then submit the old code). We clear through
+// the keyboard and insert the new text via an input event, then wait until the
+// hidden #codeValue input mirrors the new code before returning.
+async function setAceEditorValue(page: Page, newCode: string): Promise<void> {
+  const aceContent = page.locator(".ace_content").first();
+  await aceContent.click();
 
-  return codeContent;
+  // The ace textarea captures keystrokes; scope to a single element so we don't
+  // get a different textarea from elsewhere on the page.
+  const aceTextarea = page.locator("textarea.ace_text-input").first();
+  await aceTextarea.focus();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.press("Delete");
+
+  // insertText dispatches a proper `beforeinput`/`input` event that Ace listens
+  // to, which is more reliable cross-platform than locator.fill() for Ace.
+  await page.keyboard.insertText(newCode);
+
+  // Wait for Ace to propagate the change to the controlled React state so the
+  // hidden #codeValue mirror contains the expected value before we save.
+  await expect(page.locator("#codeValue")).toHaveValue(
+    /range_spec=RangeSpec\(min=3, max=30, step=1\)/,
+    { timeout: 10000 },
+  );
 }
 
 async function mutualValidation(page: Page) {
