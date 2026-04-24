@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
@@ -117,48 +118,40 @@ from langflow.services.telemetry.schema import DeploymentPayload
 
 @dataclass
 class DeploymentTelemetryCtx:
-    """Mutable context that routes write `provider` into; passed via Depends."""
+    """Handler-local context for deployment telemetry; handlers set `provider` once known."""
 
     provider: str = "unknown"
 
 
-def _make_telemetry_dep(action: str, log_method_name: str):
-    async def _dep() -> AsyncIterator[DeploymentTelemetryCtx]:
-        ctx = DeploymentTelemetryCtx()
-        started_at = time.perf_counter()
-        success: bool = True
-        error: Exception | None = None
+@asynccontextmanager
+async def _track_deployment_telemetry(action: str) -> AsyncIterator[DeploymentTelemetryCtx]:
+    # Emits telemetry inline via ``await`` (like endpoints.py:282) rather than
+    # BackgroundTasks because BackgroundTasks are dropped when the handler
+    # raises, and we still need to record failure telemetry. The queue put
+    # is effectively instant so latency is not a concern.
+    ctx = DeploymentTelemetryCtx()
+    start = time.perf_counter()
+    success = True
+    error_message = ""
+    try:
+        yield ctx
+    except Exception as exc:
+        success = False
+        error_message = str(exc)
+        raise
+    finally:
         try:
-            yield ctx
-        except Exception as exc:
-            success = False
-            error = exc
-            raise
-        finally:
-            try:
-                ts = get_telemetry_service()
-                payload = DeploymentPayload(
+            await get_telemetry_service().log_package_deployment(
+                DeploymentPayload(
                     deployment_action=action,
                     deployment_provider=ctx.provider,
-                    deployment_seconds=time.perf_counter() - started_at,
+                    deployment_seconds=int(time.perf_counter() - start),
                     deployment_success=success,
-                    deployment_error_type=type(error).__name__ if error else None,
+                    deployment_error_message=error_message,
                 )
-                await getattr(ts, log_method_name)(payload)
-            except Exception:  # noqa: BLE001
-                logger.debug("deployment telemetry emit failed", exc_info=True)
-
-    return _dep
-
-
-deployment_create_telemetry = _make_telemetry_dep("deployment.create", "log_package_deployment")
-deployment_update_telemetry = _make_telemetry_dep("deployment.update", "log_package_deployment")
-deployment_delete_telemetry = _make_telemetry_dep("deployment.delete", "log_package_deployment")
-deployment_run_telemetry = _make_telemetry_dep("deployment.run", "log_package_deployment_run")
-provider_create_telemetry = _make_telemetry_dep("provider.create", "log_package_deployment_provider")
-provider_update_telemetry = _make_telemetry_dep("provider.update", "log_package_deployment_provider")
-provider_delete_telemetry = _make_telemetry_dep("provider.delete", "log_package_deployment_provider")
-snapshot_update_telemetry = _make_telemetry_dep("snapshot.update", "log_package_deployment")
+            )
+        except Exception:  # noqa: BLE001
+            logger.debug("deployment telemetry emit failed", exc_info=True)
 
 
 router = APIRouter(prefix="/deployments", tags=["Deployments"], include_in_schema=False)
@@ -318,31 +311,31 @@ async def create_provider_account(
     session: DbSession,
     payload: DeploymentProviderAccountCreateRequest,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(provider_create_telemetry)],
 ):
-    telemetry.provider = payload.provider_key
-    deployment_mapper = get_deployment_mapper(payload.provider_key)
-    deployment_adapter = resolve_deployment_adapter(payload.provider_key)
+    async with _track_deployment_telemetry("provider.create") as telemetry:
+        telemetry.provider = payload.provider_key
+        deployment_mapper = get_deployment_mapper(payload.provider_key)
+        deployment_adapter = resolve_deployment_adapter(payload.provider_key)
 
-    with handle_adapter_errors(mapper=deployment_mapper):
-        verify_input = deployment_mapper.resolve_verify_credentials_for_create(payload=payload)
-        await deployment_adapter.verify_credentials(
-            user_id=current_user.id,
-            payload=verify_input,
-        )
+        with handle_adapter_errors(mapper=deployment_mapper):
+            verify_input = deployment_mapper.resolve_verify_credentials_for_create(payload=payload)
+            await deployment_adapter.verify_credentials(
+                user_id=current_user.id,
+                payload=verify_input,
+            )
 
-    try:
-        provider_account_to_create = deployment_mapper.resolve_provider_account_create(
-            payload=payload,
-            user_id=current_user.id,
-        )
-        provider_account = await create_provider_account_row(
-            session,
-            provider_account=provider_account_to_create,
-        )
-    except ValueError as exc:
-        _raise_http_for_provider_account_value_error(exc)
-    return deployment_mapper.resolve_provider_account_response(provider_account)
+        try:
+            provider_account_to_create = deployment_mapper.resolve_provider_account_create(
+                payload=payload,
+                user_id=current_user.id,
+            )
+            provider_account = await create_provider_account_row(
+                session,
+                provider_account=provider_account_to_create,
+            )
+        except ValueError as exc:
+            _raise_http_for_provider_account_value_error(exc)
+        return deployment_mapper.resolve_provider_account_response(provider_account)
 
 
 @router.get("/providers", response_model=DeploymentProviderAccountListResponse, tags=["Deployment Providers"])
@@ -391,29 +384,29 @@ async def delete_provider_account(
     provider_id: DeploymentProviderAccountIdPath,
     session: DbSession,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(provider_delete_telemetry)],
 ):
-    provider_account = await get_owned_provider_account_or_404(
-        provider_id=provider_id,
-        user_id=current_user.id,
-        db=session,
-    )
-    telemetry.provider = provider_account.provider_key
-    deployment_count = await _count_provider_deployments_after_reconciliation(
-        session=session,
-        provider_account=provider_account,
-        user_id=current_user.id,
-    )
-    if deployment_count > 0:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot delete provider account while deployments still exist.",
+    async with _track_deployment_telemetry("provider.delete") as telemetry:
+        provider_account = await get_owned_provider_account_or_404(
+            provider_id=provider_id,
+            user_id=current_user.id,
+            db=session,
         )
-    try:
-        await delete_provider_account_row(session, provider_account=provider_account)
-    except ValueError as exc:
-        _raise_http_for_provider_account_value_error(exc)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+        telemetry.provider = provider_account.provider_key
+        deployment_count = await _count_provider_deployments_after_reconciliation(
+            session=session,
+            provider_account=provider_account,
+            user_id=current_user.id,
+        )
+        if deployment_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Cannot delete provider account while deployments still exist.",
+            )
+        try:
+            await delete_provider_account_row(session, provider_account=provider_account)
+        except ValueError as exc:
+            _raise_http_for_provider_account_value_error(exc)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.patch(
@@ -426,51 +419,51 @@ async def update_provider_account(
     session: DbSession,
     payload: DeploymentProviderAccountUpdateRequest,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(provider_update_telemetry)],
 ):
-    provider_account = await get_owned_provider_account_or_404(
-        provider_id=provider_id,
-        user_id=current_user.id,
-        db=session,
-    )
-    telemetry.provider = provider_account.provider_key
+    async with _track_deployment_telemetry("provider.update") as telemetry:
+        provider_account = await get_owned_provider_account_or_404(
+            provider_id=provider_id,
+            user_id=current_user.id,
+            db=session,
+        )
+        telemetry.provider = provider_account.provider_key
 
-    deployment_mapper = get_deployment_mapper(provider_account.provider_key)
-    verify_input = None
-    if _field_was_explicitly_set(payload, "provider_data"):
-        deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
+        deployment_mapper = get_deployment_mapper(provider_account.provider_key)
+        verify_input = None
+        if _field_was_explicitly_set(payload, "provider_data"):
+            deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
+            try:
+                verify_input = deployment_mapper.resolve_verify_credentials_for_update(
+                    payload=payload,
+                    existing_account=provider_account,
+                )
+            except ValueError as exc:
+                _raise_http_for_provider_account_value_error(exc)
+            except NotImplementedError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                    detail="This operation is not supported by the deployment provider.",
+                ) from exc
+            if verify_input is not None:
+                with handle_adapter_errors(mapper=deployment_mapper):
+                    await deployment_adapter.verify_credentials(
+                        user_id=current_user.id,
+                        payload=verify_input,
+                    )
+
         try:
-            verify_input = deployment_mapper.resolve_verify_credentials_for_update(
+            update_kwargs = deployment_mapper.resolve_provider_account_update(
                 payload=payload,
                 existing_account=provider_account,
             )
+            updated = await update_provider_account_row(
+                session,
+                provider_account=provider_account,
+                **update_kwargs,
+            )
         except ValueError as exc:
             _raise_http_for_provider_account_value_error(exc)
-        except NotImplementedError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_501_NOT_IMPLEMENTED,
-                detail="This operation is not supported by the deployment provider.",
-            ) from exc
-        if verify_input is not None:
-            with handle_adapter_errors(mapper=deployment_mapper):
-                await deployment_adapter.verify_credentials(
-                    user_id=current_user.id,
-                    payload=verify_input,
-                )
-
-    try:
-        update_kwargs = deployment_mapper.resolve_provider_account_update(
-            payload=payload,
-            existing_account=provider_account,
-        )
-        updated = await update_provider_account_row(
-            session,
-            provider_account=provider_account,
-            **update_kwargs,
-        )
-    except ValueError as exc:
-        _raise_http_for_provider_account_value_error(exc)
-    return deployment_mapper.resolve_provider_account_response(updated)
+        return deployment_mapper.resolve_provider_account_response(updated)
 
 
 @router.post("", response_model=DeploymentCreateResponse, status_code=status.HTTP_201_CREATED)
@@ -478,161 +471,163 @@ async def create_deployment(
     session: DbSession,
     payload: DeploymentCreateRequest,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_create_telemetry)],
 ):
-    provider_id = payload.provider_id
-    provider_account = await get_owned_provider_account_or_404(
-        provider_id=provider_id,
-        user_id=current_user.id,
-        db=session,
-    )
-    telemetry.provider = provider_account.provider_key
-    # fail fast if the deployment name already exists
-    # we could have races but that is more
-    # acceptable than provider-side rollback failure
-    if await deployment_name_exists(
-        session,
-        user_id=current_user.id,
-        deployment_provider_account_id=provider_id,
-        name=payload.name,
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"A deployment named '{payload.name}' already exists. "
-            "Please choose a different name or delete the existing deployment first.",
+    async with _track_deployment_telemetry("deployment.create") as telemetry:
+        provider_id = payload.provider_id
+        provider_account = await get_owned_provider_account_or_404(
+            provider_id=provider_id,
+            user_id=current_user.id,
+            db=session,
         )
-
-    deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
-    deployment_mapper = get_deployment_mapper(provider_account.provider_key)
-    existing_resource_key = deployment_mapper.util_existing_deployment_resource_key_for_create(payload)
-    if existing_resource_key is not None:
-        existing_deployment = await get_deployment_by_resource_key(
+        telemetry.provider = provider_account.provider_key
+        # fail fast if the deployment name already exists
+        # we could have races but that is more
+        # acceptable than provider-side rollback failure
+        if await deployment_name_exists(
             session,
             user_id=current_user.id,
             deployment_provider_account_id=provider_id,
-            resource_key=str(existing_resource_key),
-        )
-        if existing_deployment is not None:
+            name=payload.name,
+        ):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"The agent '{existing_resource_key}' is already managed by Langflow. "
-                "Update it to make changes, or delete the existing deployment first.",
+                detail=f"A deployment named '{payload.name}' already exists. "
+                "Please choose a different name or delete the existing deployment first.",
             )
-    should_mutate_existing_resource = (
-        existing_resource_key is not None
-        and deployment_mapper.util_should_mutate_provider_for_existing_deployment_create(payload)
-    )
-    should_create_provider_resource = existing_resource_key is None
-    project_id = await resolve_project_id_for_deployment_create(payload=payload, user_id=current_user.id, db=session)
-    flow_version_ids = deployment_mapper.util_create_flow_version_ids(payload)
-    await validate_project_scoped_flow_version_ids(
-        flow_version_ids=flow_version_ids,
-        user_id=current_user.id,
-        project_id=project_id,
-        db=session,
-    )
-    if should_create_provider_resource:
-        adapter_payload = await deployment_mapper.resolve_deployment_create(
+
+        deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
+        deployment_mapper = get_deployment_mapper(provider_account.provider_key)
+        existing_resource_key = deployment_mapper.util_existing_deployment_resource_key_for_create(payload)
+        if existing_resource_key is not None:
+            existing_deployment = await get_deployment_by_resource_key(
+                session,
+                user_id=current_user.id,
+                deployment_provider_account_id=provider_id,
+                resource_key=str(existing_resource_key),
+            )
+            if existing_deployment is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"The agent '{existing_resource_key}' is already managed by Langflow. "
+                    "Update it to make changes, or delete the existing deployment first.",
+                )
+        should_mutate_existing_resource = (
+            existing_resource_key is not None
+            and deployment_mapper.util_should_mutate_provider_for_existing_deployment_create(payload)
+        )
+        should_create_provider_resource = existing_resource_key is None
+        project_id = await resolve_project_id_for_deployment_create(
+            payload=payload, user_id=current_user.id, db=session
+        )
+        flow_version_ids = deployment_mapper.util_create_flow_version_ids(payload)
+        await validate_project_scoped_flow_version_ids(
+            flow_version_ids=flow_version_ids,
             user_id=current_user.id,
             project_id=project_id,
             db=session,
-            payload=payload,
         )
-        with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
-            provider_create_result = await deployment_adapter.create(
-                user_id=current_user.id,
-                payload=adapter_payload,
-                db=session,
-            )
-    else:
-        # Existing-resource create starts as DB-only onboarding: no provider
-        # mutation is performed and created_* response fields stay empty.
-        provider_create_result = deployment_mapper.util_create_result_from_existing_resource(
-            existing_resource_key=str(existing_resource_key),
-        )
-        if should_mutate_existing_resource:
-            # When create payload includes add_flows/upsert_tools, run provider
-            # update and normalize the update result into create-style created_*.
-            adapter_payload = await deployment_mapper.resolve_deployment_update_for_existing_create(
+        if should_create_provider_resource:
+            adapter_payload = await deployment_mapper.resolve_deployment_create(
                 user_id=current_user.id,
                 project_id=project_id,
                 db=session,
                 payload=payload,
             )
             with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
-                provider_update_result: DeploymentUpdateResult = await deployment_adapter.update(
-                    deployment_id=existing_resource_key,
+                provider_create_result = await deployment_adapter.create(
+                    user_id=current_user.id,
                     payload=adapter_payload,
+                    db=session,
+                )
+        else:
+            # Existing-resource create starts as DB-only onboarding: no provider
+            # mutation is performed and created_* response fields stay empty.
+            provider_create_result = deployment_mapper.util_create_result_from_existing_resource(
+                existing_resource_key=str(existing_resource_key),
+            )
+            if should_mutate_existing_resource:
+                # When create payload includes add_flows/upsert_tools, run provider
+                # update and normalize the update result into create-style created_*.
+                adapter_payload = await deployment_mapper.resolve_deployment_update_for_existing_create(
+                    user_id=current_user.id,
+                    project_id=project_id,
+                    db=session,
+                    payload=payload,
+                )
+                with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
+                    provider_update_result: DeploymentUpdateResult = await deployment_adapter.update(
+                        deployment_id=existing_resource_key,
+                        payload=adapter_payload,
+                        user_id=current_user.id,
+                        db=session,
+                    )
+                provider_create_result = deployment_mapper.util_create_result_from_existing_update(
+                    existing_resource_key=str(existing_resource_key),
+                    result=provider_update_result,
+                )
+        # if we get here, the deployment was created successfully in the provider
+        # so we need to create the deployment row and attach the flow versions
+        # in the DB
+        try:
+            deployment_row = await create_deployment_db(
+                session,
+                user_id=current_user.id,
+                project_id=project_id,
+                deployment_provider_account_id=provider_id,
+                resource_key=str(provider_create_result.id),
+                name=payload.name,
+                deployment_type=payload.type,
+                description=payload.description or None,
+            )
+
+            snapshot_id_by_flow_version_id: dict[UUID, str] = {}
+            if flow_version_ids:
+                snapshot_id_by_flow_version_id = resolve_snapshot_map_for_create(
+                    deployment_mapper=deployment_mapper,
+                    result=provider_create_result,
+                    flow_version_ids=flow_version_ids,
+                )
+            await attach_flow_versions(
+                flow_version_ids=flow_version_ids,
+                user_id=current_user.id,
+                deployment_row_id=deployment_row.id,
+                snapshot_id_by_flow_version_id=snapshot_id_by_flow_version_id,
+                db=session,
+            )
+
+            await session.commit()
+        except Exception as exc:
+            # Compensate: delete the provider resource so it doesn't become orphaned.
+            # Only the deployment resource itself is deleted (e.g. the WXO agent).
+            # Secondary resources (snapshots/tools, configs) may remain orphaned --
+            # this is intentional because snapshots/configs may be shared across deployments,
+            # making cascade-delete unsafe.
+            await session.rollback()
+            if should_create_provider_resource:
+                await rollback_provider_create(
+                    deployment_adapter=deployment_adapter,
+                    provider_id=provider_id,
+                    resource_id=provider_create_result.id,
+                    provider_result=provider_create_result.provider_result,
                     user_id=current_user.id,
                     db=session,
                 )
-            provider_create_result = deployment_mapper.util_create_result_from_existing_update(
-                existing_resource_key=str(existing_resource_key),
-                result=provider_update_result,
-            )
-    # if we get here, the deployment was created successfully in the provider
-    # so we need to create the deployment row and attach the flow versions
-    # in the DB
-    try:
-        deployment_row = await create_deployment_db(
-            session,
-            user_id=current_user.id,
-            project_id=project_id,
-            deployment_provider_account_id=provider_id,
-            resource_key=str(provider_create_result.id),
-            name=payload.name,
-            deployment_type=payload.type,
-            description=payload.description or None,
+            elif should_mutate_existing_resource:
+                await rollback_provider_create(
+                    deployment_adapter=deployment_adapter,
+                    provider_id=provider_id,
+                    resource_id=str(existing_resource_key),
+                    provider_result=provider_create_result.provider_result,
+                    allow_delete_fallback=False,
+                    user_id=current_user.id,
+                    db=session,
+                )
+            if isinstance(exc, AttachmentConflictError):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+            raise
+        return deployment_mapper.shape_deployment_create_result(
+            provider_create_result, deployment_row, provider_key=provider_account.provider_key
         )
-
-        snapshot_id_by_flow_version_id: dict[UUID, str] = {}
-        if flow_version_ids:
-            snapshot_id_by_flow_version_id = resolve_snapshot_map_for_create(
-                deployment_mapper=deployment_mapper,
-                result=provider_create_result,
-                flow_version_ids=flow_version_ids,
-            )
-        await attach_flow_versions(
-            flow_version_ids=flow_version_ids,
-            user_id=current_user.id,
-            deployment_row_id=deployment_row.id,
-            snapshot_id_by_flow_version_id=snapshot_id_by_flow_version_id,
-            db=session,
-        )
-
-        await session.commit()
-    except Exception as exc:
-        # Compensate: delete the provider resource so it doesn't become orphaned.
-        # Only the deployment resource itself is deleted (e.g. the WXO agent).
-        # Secondary resources (snapshots/tools, configs) may remain orphaned --
-        # this is intentional because snapshots/configs may be shared across deployments,
-        # making cascade-delete unsafe.
-        await session.rollback()
-        if should_create_provider_resource:
-            await rollback_provider_create(
-                deployment_adapter=deployment_adapter,
-                provider_id=provider_id,
-                resource_id=provider_create_result.id,
-                provider_result=provider_create_result.provider_result,
-                user_id=current_user.id,
-                db=session,
-            )
-        elif should_mutate_existing_resource:
-            await rollback_provider_create(
-                deployment_adapter=deployment_adapter,
-                provider_id=provider_id,
-                resource_id=str(existing_resource_key),
-                provider_result=provider_create_result.provider_result,
-                allow_delete_fallback=False,
-                user_id=current_user.id,
-                db=session,
-            )
-        if isinstance(exc, AttachmentConflictError):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-        raise
-    return deployment_mapper.shape_deployment_create_result(
-        provider_create_result, deployment_row, provider_key=provider_account.provider_key
-    )
 
 
 # exclude none as its associated with
@@ -809,33 +804,38 @@ async def create_deployment_run(
     session: DbSession,
     payload: RunCreateRequest,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_run_telemetry)],
 ):
-    deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
-        deployment_id=deployment_id,
-        user_id=current_user.id,
-        db=session,
-    )
-    telemetry.provider = _provider_key
-    adapter_execution_payload = await deployment_mapper.resolve_execution_create(
-        deployment_resource_key=deployment_row.resource_key,
-        db=session,
-        payload=payload,
-    )
-    with (
-        handle_adapter_errors(mapper=deployment_mapper),
-        deployment_provider_scope(deployment_row.deployment_provider_account_id),
-    ):
-        execution_result = await deployment_adapter.create_execution(
-            payload=adapter_execution_payload,
+    async with _track_deployment_telemetry("deployment.run") as telemetry:
+        (
+            deployment_row,
+            deployment_adapter,
+            deployment_mapper,
+            _provider_key,
+        ) = await resolve_adapter_mapper_from_deployment(
+            deployment_id=deployment_id,
             user_id=current_user.id,
             db=session,
         )
+        telemetry.provider = _provider_key
+        adapter_execution_payload = await deployment_mapper.resolve_execution_create(
+            deployment_resource_key=deployment_row.resource_key,
+            db=session,
+            payload=payload,
+        )
+        with (
+            handle_adapter_errors(mapper=deployment_mapper),
+            deployment_provider_scope(deployment_row.deployment_provider_account_id),
+        ):
+            execution_result = await deployment_adapter.create_execution(
+                payload=adapter_execution_payload,
+                user_id=current_user.id,
+                db=session,
+            )
 
-    return deployment_mapper.shape_execution_create_result(
-        execution_result,
-        deployment_id=deployment_row.id,
-    )
+        return deployment_mapper.shape_execution_create_result(
+            execution_result,
+            deployment_id=deployment_row.id,
+        )
 
 
 @router.get("/{deployment_id}/runs/{run_id}", response_model=RunStatusResponse)
@@ -1012,7 +1012,6 @@ async def update_snapshot(
     body: SnapshotUpdateRequest,
     session: DbSession,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(snapshot_update_telemetry)],
 ):
     """Replace an existing provider snapshot's content with a new flow version.
 
@@ -1023,150 +1022,151 @@ async def update_snapshot(
     from langflow.services.database.models.deployment.crud import get_deployment as get_deployment_row
     from langflow.services.database.models.flow_version.crud import get_flow_version_entry
 
-    snapshot_id = provider_snapshot_id.strip()
+    async with _track_deployment_telemetry("snapshot.update") as telemetry:
+        snapshot_id = provider_snapshot_id.strip()
 
-    attachment = await get_attachment_by_provider_snapshot_id(
-        session,
-        user_id=current_user.id,
-        provider_snapshot_id=snapshot_id,
-    )
-    if attachment is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No attachment found for provider_snapshot_id '{snapshot_id}'.",
-        )
-
-    deployment = await get_deployment_row(
-        session,
-        user_id=current_user.id,
-        deployment_id=attachment.deployment_id,
-    )
-    if deployment is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Deployment for attachment (deployment_id={attachment.deployment_id}) not found.",
-        )
-
-    flow_version = await get_flow_version_entry(
-        session,
-        version_id=body.flow_version_id,
-        user_id=current_user.id,
-    )
-    if flow_version is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Flow version '{body.flow_version_id}' not found.",
-        )
-    if flow_version.data is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Flow version '{body.flow_version_id}' has no data.",
-        )
-
-    provider_account = await get_owned_provider_account_or_404(
-        provider_id=deployment.deployment_provider_account_id,
-        user_id=current_user.id,
-        db=session,
-    )
-    telemetry.provider = provider_account.provider_key
-    deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
-    deployment_mapper = get_deployment_mapper(provider_account.provider_key)
-
-    from langflow.services.database.models.flow.model import Flow
-
-    flow_row = await session.get(Flow, flow_version.flow_id)
-
-    flow_artifact = deployment_mapper.resolve_snapshot_update_artifact(
-        flow_version=flow_version,
-        flow_row=flow_row,
-        deployment=deployment,
-    )
-
-    with (
-        handle_adapter_errors(mapper=deployment_mapper),
-        deployment_provider_scope(deployment.deployment_provider_account_id),
-    ):
-        await deployment_adapter.update_snapshot(
-            user_id=current_user.id,
-            db=session,
-            snapshot_id=snapshot_id,
-            flow_artifact=flow_artifact,
-        )
-
-    # Provider mutation succeeded — update all local attachment rows that share
-    # this provider snapshot id.
-    # If the DB flush fails, attempt a best-effort compensating re-upload
-    # of the previous flow version's artifact.
-    # Concurrency note: rollback uses a single previously-read flow_version_id.
-    # This assumes the snapshot->flow_version invariant held before this call.
-    # Because the invariant is enforced in app logic (not a DB constraint),
-    # concurrent writers can still race and violate that assumption.
-    previous_flow_version_id = attachment.flow_version_id
-    try:
-        updated_rows = await update_flow_version_by_provider_snapshot_id(
+        attachment = await get_attachment_by_provider_snapshot_id(
             session,
             user_id=current_user.id,
             provider_snapshot_id=snapshot_id,
-            flow_version_id=body.flow_version_id,
         )
-        if updated_rows == 0:
-            logger.warning(
-                "Snapshot '%s' update changed zero attachment rows after provider mutation "
-                "(user_id=%s, requested_flow_version_id=%s). Possible concurrent modification.",
-                snapshot_id,
-                current_user.id,
-                body.flow_version_id,
+        if attachment is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No attachment found for provider_snapshot_id '{snapshot_id}'.",
             )
-        await session.commit()
-    except Exception:
-        await session.rollback()
-        logger.warning(
-            "DB update/commit failed after provider snapshot update for snapshot '%s' "
-            "(requested_flow_version_id=%s). Attempting compensating provider rollback.",
-            snapshot_id,
-            body.flow_version_id,
-            exc_info=True,
+
+        deployment = await get_deployment_row(
+            session,
+            user_id=current_user.id,
+            deployment_id=attachment.deployment_id,
         )
-        try:
-            prev_version = await get_flow_version_entry(
-                session,
-                version_id=previous_flow_version_id,
+        if deployment is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Deployment for attachment (deployment_id={attachment.deployment_id}) not found.",
+            )
+
+        flow_version = await get_flow_version_entry(
+            session,
+            version_id=body.flow_version_id,
+            user_id=current_user.id,
+        )
+        if flow_version is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Flow version '{body.flow_version_id}' not found.",
+            )
+        if flow_version.data is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Flow version '{body.flow_version_id}' has no data.",
+            )
+
+        provider_account = await get_owned_provider_account_or_404(
+            provider_id=deployment.deployment_provider_account_id,
+            user_id=current_user.id,
+            db=session,
+        )
+        telemetry.provider = provider_account.provider_key
+        deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
+        deployment_mapper = get_deployment_mapper(provider_account.provider_key)
+
+        from langflow.services.database.models.flow.model import Flow
+
+        flow_row = await session.get(Flow, flow_version.flow_id)
+
+        flow_artifact = deployment_mapper.resolve_snapshot_update_artifact(
+            flow_version=flow_version,
+            flow_row=flow_row,
+            deployment=deployment,
+        )
+
+        with (
+            handle_adapter_errors(mapper=deployment_mapper),
+            deployment_provider_scope(deployment.deployment_provider_account_id),
+        ):
+            await deployment_adapter.update_snapshot(
                 user_id=current_user.id,
+                db=session,
+                snapshot_id=snapshot_id,
+                flow_artifact=flow_artifact,
             )
-            if prev_version and prev_version.data:
-                prev_artifact = deployment_mapper.resolve_snapshot_update_artifact(
-                    flow_version=prev_version,
-                    flow_row=flow_row,
-                    deployment=deployment,
-                )
-                with deployment_provider_scope(deployment.deployment_provider_account_id):
-                    await deployment_adapter.update_snapshot(
-                        user_id=current_user.id,
-                        db=session,
-                        snapshot_id=snapshot_id,
-                        flow_artifact=prev_artifact,
-                    )
-                logger.info(
-                    "Restored provider snapshot '%s' to previous flow_version_id=%s after DB commit failure.",
+
+        # Provider mutation succeeded — update all local attachment rows that share
+        # this provider snapshot id.
+        # If the DB flush fails, attempt a best-effort compensating re-upload
+        # of the previous flow version's artifact.
+        # Concurrency note: rollback uses a single previously-read flow_version_id.
+        # This assumes the snapshot->flow_version invariant held before this call.
+        # Because the invariant is enforced in app logic (not a DB constraint),
+        # concurrent writers can still race and violate that assumption.
+        previous_flow_version_id = attachment.flow_version_id
+        try:
+            updated_rows = await update_flow_version_by_provider_snapshot_id(
+                session,
+                user_id=current_user.id,
+                provider_snapshot_id=snapshot_id,
+                flow_version_id=body.flow_version_id,
+            )
+            if updated_rows == 0:
+                logger.warning(
+                    "Snapshot '%s' update changed zero attachment rows after provider mutation "
+                    "(user_id=%s, requested_flow_version_id=%s). Possible concurrent modification.",
                     snapshot_id,
-                    previous_flow_version_id,
+                    current_user.id,
+                    body.flow_version_id,
                 )
-        except Exception:  # noqa: BLE001
+            await session.commit()
+        except Exception:
+            await session.rollback()
             logger.warning(
-                "Best-effort rollback failed for snapshot '%s'. "
-                "Provider content reflects flow_version_id=%s but attachment "
-                "records point to flow_version_id=%s. Manual reconciliation may be needed.",
+                "DB update/commit failed after provider snapshot update for snapshot '%s' "
+                "(requested_flow_version_id=%s). Attempting compensating provider rollback.",
                 snapshot_id,
                 body.flow_version_id,
-                previous_flow_version_id,
                 exc_info=True,
             )
-        raise
+            try:
+                prev_version = await get_flow_version_entry(
+                    session,
+                    version_id=previous_flow_version_id,
+                    user_id=current_user.id,
+                )
+                if prev_version and prev_version.data:
+                    prev_artifact = deployment_mapper.resolve_snapshot_update_artifact(
+                        flow_version=prev_version,
+                        flow_row=flow_row,
+                        deployment=deployment,
+                    )
+                    with deployment_provider_scope(deployment.deployment_provider_account_id):
+                        await deployment_adapter.update_snapshot(
+                            user_id=current_user.id,
+                            db=session,
+                            snapshot_id=snapshot_id,
+                            flow_artifact=prev_artifact,
+                        )
+                    logger.info(
+                        "Restored provider snapshot '%s' to previous flow_version_id=%s after DB commit failure.",
+                        snapshot_id,
+                        previous_flow_version_id,
+                    )
+            except Exception:  # noqa: BLE001
+                logger.warning(
+                    "Best-effort rollback failed for snapshot '%s'. "
+                    "Provider content reflects flow_version_id=%s but attachment "
+                    "records point to flow_version_id=%s. Manual reconciliation may be needed.",
+                    snapshot_id,
+                    body.flow_version_id,
+                    previous_flow_version_id,
+                    exc_info=True,
+                )
+            raise
 
-    return SnapshotUpdateResponse(
-        flow_version_id=body.flow_version_id,
-        provider_snapshot_id=snapshot_id,
-    )
+        return SnapshotUpdateResponse(
+            flow_version_id=body.flow_version_id,
+            provider_snapshot_id=snapshot_id,
+        )
 
 
 # Internal note: keep exclude-none for lean responses; use explicit nulls only for intentional tri-state fields.
@@ -1296,103 +1296,108 @@ async def update_deployment(
     session: DbSession,
     payload: DeploymentUpdateRequest,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_update_telemetry)],
 ):
-    deployment_row, deployment_adapter, deployment_mapper, provider_key = await resolve_adapter_mapper_from_deployment(
-        deployment_id=deployment_id,
-        user_id=current_user.id,
-        db=session,
-    )
-    telemetry.provider = provider_key
-    deployment_row_id = deployment_row.id
-    deployment_resource_key = deployment_row.resource_key
-    deployment_provider_account_id = deployment_row.deployment_provider_account_id
-    adapter_payload = await deployment_mapper.resolve_deployment_update(
-        user_id=current_user.id,
-        deployment_db_id=deployment_row_id,
-        db=session,
-        payload=payload,
-    )
-    added_flow_version_ids, remove_flow_version_ids = resolve_flow_version_patch_for_update(
-        deployment_mapper=deployment_mapper,
-        payload=payload,
-    )
-    await validate_project_scoped_flow_version_ids(
-        flow_version_ids=list(dict.fromkeys([*added_flow_version_ids, *remove_flow_version_ids])),
-        user_id=current_user.id,
-        project_id=deployment_row.project_id,
-        db=session,
-    )
-    with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(deployment_provider_account_id):
-        update_result: DeploymentUpdateResult = await deployment_adapter.update(
-            deployment_id=deployment_resource_key,
-            payload=adapter_payload,
+    async with _track_deployment_telemetry("deployment.update") as telemetry:
+        (
+            deployment_row,
+            deployment_adapter,
+            deployment_mapper,
+            provider_key,
+        ) = await resolve_adapter_mapper_from_deployment(
+            deployment_id=deployment_id,
             user_id=current_user.id,
             db=session,
         )
-    try:
-        existing_attachments = await list_deployment_attachments_for_flow_version_ids(
-            session,
+        telemetry.provider = provider_key
+        deployment_row_id = deployment_row.id
+        deployment_resource_key = deployment_row.resource_key
+        deployment_provider_account_id = deployment_row.deployment_provider_account_id
+        adapter_payload = await deployment_mapper.resolve_deployment_update(
             user_id=current_user.id,
-            deployment_id=deployment_row_id,
-            flow_version_ids=added_flow_version_ids,
+            deployment_db_id=deployment_row_id,
+            db=session,
+            payload=payload,
         )
-        already_attached = {a.flow_version_id for a in existing_attachments}
-        newly_added_flow_version_ids = [fv for fv in added_flow_version_ids if fv not in already_attached]
-        added_snapshot_bindings = resolve_added_snapshot_bindings_for_update(
+        added_flow_version_ids, remove_flow_version_ids = resolve_flow_version_patch_for_update(
             deployment_mapper=deployment_mapper,
-            added_flow_version_ids=newly_added_flow_version_ids,
-            result=update_result,
+            payload=payload,
         )
-        await apply_flow_version_patch_attachments(
+        await validate_project_scoped_flow_version_ids(
+            flow_version_ids=list(dict.fromkeys([*added_flow_version_ids, *remove_flow_version_ids])),
             user_id=current_user.id,
-            deployment_row_id=deployment_row_id,
-            added_snapshot_bindings=added_snapshot_bindings,
-            remove_flow_version_ids=remove_flow_version_ids,
+            project_id=deployment_row.project_id,
             db=session,
         )
-
-        update_kwargs: dict = {}
-        if payload.name is not None and payload.name != deployment_row.name:
-            update_kwargs["name"] = payload.name
-        if _field_was_explicitly_set(payload, "description"):
-            if payload.description != deployment_row.description:
-                update_kwargs["description"] = payload.description
-        elif payload.description is not None and payload.description != deployment_row.description:
-            update_kwargs["description"] = payload.description
-        if update_kwargs:
-            deployment_row = await update_deployment_db(
+        with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(deployment_provider_account_id):
+            update_result: DeploymentUpdateResult = await deployment_adapter.update(
+                deployment_id=deployment_resource_key,
+                payload=adapter_payload,
+                user_id=current_user.id,
+                db=session,
+            )
+        try:
+            existing_attachments = await list_deployment_attachments_for_flow_version_ids(
                 session,
-                deployment=deployment_row,
-                **update_kwargs,
+                user_id=current_user.id,
+                deployment_id=deployment_row_id,
+                flow_version_ids=added_flow_version_ids,
+            )
+            already_attached = {a.flow_version_id for a in existing_attachments}
+            newly_added_flow_version_ids = [fv for fv in added_flow_version_ids if fv not in already_attached]
+            added_snapshot_bindings = resolve_added_snapshot_bindings_for_update(
+                deployment_mapper=deployment_mapper,
+                added_flow_version_ids=newly_added_flow_version_ids,
+                result=update_result,
+            )
+            await apply_flow_version_patch_attachments(
+                user_id=current_user.id,
+                deployment_row_id=deployment_row_id,
+                added_snapshot_bindings=added_snapshot_bindings,
+                remove_flow_version_ids=remove_flow_version_ids,
+                db=session,
             )
 
-        await session.commit()
-    except Exception as exc:
-        # Provider was already mutated by deployment_adapter.update above.
-        # Roll back the session to discard any pending DB changes (or reset
-        # it from the "inactive" state after a failed commit) so the mapper
-        # can query the original attachment rows and build a compensating
-        # payload.
-        await session.rollback()
-        await rollback_provider_update(
-            deployment_adapter=deployment_adapter,
-            deployment_mapper=deployment_mapper,
-            deployment_db_id=deployment_row_id,
-            deployment_resource_key=deployment_resource_key,
-            deployment_provider_account_id=deployment_provider_account_id,
-            user_id=current_user.id,
-            db=session,
-        )
-        if isinstance(exc, AttachmentConflictError):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-        raise
+            update_kwargs: dict = {}
+            if payload.name is not None and payload.name != deployment_row.name:
+                update_kwargs["name"] = payload.name
+            if _field_was_explicitly_set(payload, "description"):
+                if payload.description != deployment_row.description:
+                    update_kwargs["description"] = payload.description
+            elif payload.description is not None and payload.description != deployment_row.description:
+                update_kwargs["description"] = payload.description
+            if update_kwargs:
+                deployment_row = await update_deployment_db(
+                    session,
+                    deployment=deployment_row,
+                    **update_kwargs,
+                )
 
-    return deployment_mapper.shape_deployment_update_result(
-        update_result,
-        deployment_row,
-        provider_key=provider_key,
-    )
+            await session.commit()
+        except Exception as exc:
+            # Provider was already mutated by deployment_adapter.update above.
+            # Roll back the session to discard any pending DB changes (or reset
+            # it from the "inactive" state after a failed commit) so the mapper
+            # can query the original attachment rows and build a compensating
+            # payload.
+            await session.rollback()
+            await rollback_provider_update(
+                deployment_adapter=deployment_adapter,
+                deployment_mapper=deployment_mapper,
+                deployment_db_id=deployment_row_id,
+                deployment_resource_key=deployment_resource_key,
+                deployment_provider_account_id=deployment_provider_account_id,
+                user_id=current_user.id,
+                db=session,
+            )
+            if isinstance(exc, AttachmentConflictError):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+            raise
+
+        return deployment_mapper.shape_deployment_update_result(
+            update_result,
+            deployment_row,
+            provider_key=provider_key,
+        )
 
 
 @router.delete("/{deployment_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -1400,40 +1405,40 @@ async def delete_deployment(
     deployment_id: DeploymentIdPath,
     session: DbSession,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_delete_telemetry)],
     *,
     include_provider: IncludeProviderDeleteQuery = True,
 ):
-    deployment_row, deployment_adapter, _provider_key = await resolve_adapter_from_deployment(
-        deployment_id=deployment_id,
-        user_id=current_user.id,
-        db=session,
-    )
-    telemetry.provider = _provider_key
-    if include_provider:
-        try:
-            with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
-                await deployment_adapter.delete(
-                    deployment_id=deployment_row.resource_key,
-                    user_id=current_user.id,
-                    db=session,
+    async with _track_deployment_telemetry("deployment.delete") as telemetry:
+        deployment_row, deployment_adapter, _provider_key = await resolve_adapter_from_deployment(
+            deployment_id=deployment_id,
+            user_id=current_user.id,
+            db=session,
+        )
+        telemetry.provider = _provider_key
+        if include_provider:
+            try:
+                with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+                    await deployment_adapter.delete(
+                        deployment_id=deployment_row.resource_key,
+                        user_id=current_user.id,
+                        db=session,
+                    )
+            except HTTPException as exc:
+                if exc.status_code != status.HTTP_404_NOT_FOUND:
+                    raise
+                logger.warning(
+                    "Deployment %s (resource_key=%s) already missing on provider %s during delete; deleting stale row.",
+                    deployment_row.id,
+                    deployment_row.resource_key,
+                    deployment_row.deployment_provider_account_id,
                 )
-        except HTTPException as exc:
-            if exc.status_code != status.HTTP_404_NOT_FOUND:
-                raise
-            logger.warning(
-                "Deployment %s (resource_key=%s) already missing on provider %s during delete; deleting stale row.",
-                deployment_row.id,
-                deployment_row.resource_key,
-                deployment_row.deployment_provider_account_id,
-            )
-    await _delete_local_deployment_row_with_commit_retry(
-        session=session,
-        deployment_id=deployment_row.id,
-        user_id=current_user.id,
-        resource_key=deployment_row.resource_key,
-    )
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+        await _delete_local_deployment_row_with_commit_retry(
+            session=session,
+            deployment_id=deployment_row.id,
+            user_id=current_user.id,
+            resource_key=deployment_row.resource_key,
+        )
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get(
