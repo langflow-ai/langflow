@@ -39,6 +39,22 @@ NormalizedStr = Annotated[
 ]
 
 
+def _normalize_environments(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        return []
+    seen: set[str] = set()
+    normalized_names: list[str] = []
+    for item in value:
+        name = str(item or "").strip().lower()
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        normalized_names.append(name)
+    return normalized_names
+
+
 class WatsonxApiProviderAccountCreate(BaseModel):
     """WXO provider-account provider_data contract at API boundary.
 
@@ -491,19 +507,20 @@ class WatsonxApiProviderDeploymentListItem(BaseModel):
     @field_validator("environments", mode="before")
     @classmethod
     def normalize_environments(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        if not isinstance(value, list):
-            return []
-        seen: set[str] = set()
-        normalized_names: list[str] = []
-        for item in value:
-            name = str(item or "").strip().lower()
-            if not name or name in seen:
-                continue
-            seen.add(name)
-            normalized_names.append(name)
-        return normalized_names
+        return _normalize_environments(value)
+
+
+class WatsonxApiDeploymentListItemProviderData(BaseModel):
+    """Per-item provider_data surfaced on synced wxO deployment list rows."""
+
+    model_config = {"extra": "forbid"}
+
+    environments: list[str] = Field(default_factory=list)
+
+    @field_validator("environments", mode="before")
+    @classmethod
+    def normalize_environments(cls, value: Any) -> list[str]:
+        return _normalize_environments(value)
 
 
 class WatsonxApiDeploymentListProviderData(BaseModel):

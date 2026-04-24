@@ -322,7 +322,9 @@ class BaseDeploymentMapper:
         rows_with_counts: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]],
         has_flow_filter: bool = False,
         provider_key: str,
+        provider_data_by_resource_key: dict[str, dict[str, Any]] | None = None,
     ) -> list[DeploymentListItem]:
+        _ = provider_data_by_resource_key
         return [
             DeploymentListItem(
                 id=row.id,
@@ -664,6 +666,18 @@ class BaseDeploymentMapper:
         """
         _ = provider_view
         return []
+
+    def extract_list_item_provider_data(
+        self,
+        provider_view: DeploymentListResult,
+    ) -> dict[str, dict[str, Any]]:
+        """Extract per-deployment list-item provider_data from an already-fetched provider list response.
+
+        Returns a {resource_key -> provider_data} dict. Base returns an empty
+        dict so providers without per-item list metadata omit provider_data.
+        """
+        _ = provider_view
+        return {}
 
     def extract_snapshot_bindings_for_get(
         self,

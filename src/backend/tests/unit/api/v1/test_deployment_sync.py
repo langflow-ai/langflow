@@ -8,6 +8,7 @@ Covers:
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -297,7 +298,7 @@ class TestListDeploymentsSynced:
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
-        accepted, total = await list_deployments_synced(
+        accepted, total, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=BaseDeploymentMapper(),
             user_id=uuid4(),
@@ -312,6 +313,7 @@ class TestListDeploymentsSynced:
         assert accepted[0][0] is row1
         assert accepted[1][0] is row2
         assert total == 2
+        assert provider_data_by_resource_key == {}
         mock_delete_unbound.assert_awaited_once()
         mock_count.assert_awaited_once()
 
@@ -348,7 +350,7 @@ class TestListDeploymentsSynced:
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
-        accepted, _ = await list_deployments_synced(
+        accepted, _, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=BaseDeploymentMapper(),
             user_id=uid,
@@ -361,11 +363,78 @@ class TestListDeploymentsSynced:
 
         assert len(accepted) == 1
         assert accepted[0][0] is good_row
+        assert provider_data_by_resource_key == {}
         mock_delete.assert_awaited_once_with(
             db,
             user_id=uid,
             deployment_id=stale_row.id,
         )
+        mock_delete_unbound.assert_awaited_once()
+        mock_count.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=2)
+    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
+    @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
+    async def test_merges_list_item_provider_data_across_refill_rounds(
+        self,
+        mock_list,
+        mock_fetch,
+        mock_delete,
+        mock_delete_unbound,
+        mock_count_attachments,
+        mock_count,
+    ):
+        """Per-item provider_data is collected from each provider sync round."""
+
+        class _ProviderDataMapper(BaseDeploymentMapper):
+            def extract_list_item_provider_data(self, provider_view) -> dict[str, dict[str, Any]]:
+                return {str(item.id): item.provider_data for item in provider_view.deployments}
+
+        stale_row = _mock_deployment_row("rk-stale")
+        row1 = _mock_deployment_row("rk-1")
+        row2 = _mock_deployment_row("rk-2")
+        mock_list.side_effect = [
+            [(stale_row, 0, []), (row1, 0, [])],
+            [(row2, 0, [])],
+        ]
+        mock_fetch.side_effect = [
+            (
+                {"rk-1"},
+                _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"environments": ["draft"]})]),
+            ),
+            (
+                {"rk-2"},
+                _mock_provider_view([SimpleNamespace(id="rk-2", provider_data={"environments": ["live"]})]),
+            ),
+        ]
+        mock_count_attachments.return_value = {row1.id: 0, row2.id: 0}
+        db = MagicMock()
+        db.begin_nested.return_value = _AsyncNoopSavepoint()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
+
+        accepted, total, provider_data_by_resource_key = await list_deployments_synced(
+            deployment_adapter=AsyncMock(),
+            deployment_mapper=_ProviderDataMapper(),
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            db=db,
+            page=1,
+            size=2,
+            deployment_type=None,
+        )
+
+        assert [row.resource_key for row, _, _ in accepted] == ["rk-1", "rk-2"]
+        assert total == 2
+        assert provider_data_by_resource_key == {
+            "rk-1": {"environments": ["draft"]},
+            "rk-2": {"environments": ["live"]},
+        }
+        mock_delete.assert_awaited_once()
         mock_delete_unbound.assert_awaited_once()
         mock_count.assert_awaited_once()
 
@@ -379,7 +448,7 @@ class TestListDeploymentsSynced:
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
-        accepted, total = await list_deployments_synced(
+        accepted, total, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=BaseDeploymentMapper(),
             user_id=uuid4(),
@@ -392,6 +461,7 @@ class TestListDeploymentsSynced:
 
         assert accepted == []
         assert total == 0
+        assert provider_data_by_resource_key == {}
         mock_fetch.assert_not_awaited()
         mock_count.assert_awaited_once()
 
@@ -430,7 +500,7 @@ class TestListDeploymentsSynced:
 
         from langflow.api.v1.mappers.deployments.helpers import DeploymentType, list_deployments_synced
 
-        accepted, _ = await list_deployments_synced(
+        accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=BaseDeploymentMapper(),
             user_id=uuid4(),
@@ -485,7 +555,7 @@ class TestListDeploymentsSynced:
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
-        accepted, _ = await list_deployments_synced(
+        accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=BaseDeploymentMapper(),
             user_id=uuid4(),
@@ -544,7 +614,7 @@ class TestListDeploymentsSynced:
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
-        accepted, _ = await list_deployments_synced(
+        accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=BaseDeploymentMapper(),
             user_id=uuid4(),
@@ -803,6 +873,18 @@ def test_watsonx_mapper_extract_snapshot_bindings_requires_tool_ids():
     )
 
     with pytest.raises(ValueError, match=r"^tool_ids is required from wxO adapter\.$"):
+        mapper.extract_snapshot_bindings(provider_view)
+
+
+def test_watsonx_mapper_extract_snapshot_bindings_requires_provider_data_object():
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    provider_view = _mock_provider_view(
+        [
+            SimpleNamespace(id="agent-1", provider_data="bad-payload-type"),
+        ]
+    )
+
+    with pytest.raises(ValueError, match=r"^provider_data is required from wxO adapter for list\(\)\.$"):
         mapper.extract_snapshot_bindings(provider_view)
 
 
@@ -1881,7 +1963,9 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_list.side_effect = [[(row, 3, [])], []]
         mock_fetch_rk.return_value = (
             {"rk-1"},
-            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"tool_ids": ["snap-1"]})]),
+            _mock_provider_view(
+                [SimpleNamespace(id="rk-1", provider_data={"tool_ids": ["snap-1"], "environments": []})]
+            ),
         )
         mock_count_attachments.return_value = {row.id: 2}
         db = MagicMock()
@@ -1889,7 +1973,7 @@ class TestListDeploymentsSyncedBindingPhase:
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
-        accepted, _ = await list_deployments_synced(
+        accepted, _, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
             user_id=uuid4(),
@@ -1902,6 +1986,7 @@ class TestListDeploymentsSyncedBindingPhase:
 
         assert len(accepted) == 1
         assert accepted[0][1] == 2
+        assert provider_data_by_resource_key == {"rk-1": {"environments": []}}
         db.begin_nested.assert_called_once()
         mock_delete_unbound.assert_awaited_once()
         mock_count_attachments.assert_awaited_once()
@@ -1925,7 +2010,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_list.side_effect = [[(row, 0, [])], []]
         mock_fetch_rk.return_value = (
             {"rk-1"},
-            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"tool_ids": []})]),
+            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"tool_ids": [], "environments": []})]),
         )
         mock_count_attachments.return_value = {row.id: 0}
         db = MagicMock()
@@ -1934,7 +2019,7 @@ class TestListDeploymentsSyncedBindingPhase:
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
-        accepted, _ = await list_deployments_synced(
+        accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
             user_id=uuid4(),
@@ -1970,7 +2055,9 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_list.side_effect = [[(row, 3, [])], []]
         mock_fetch_rk.return_value = (
             {"rk-1"},
-            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"tool_ids": ["snap-1"]})]),
+            _mock_provider_view(
+                [SimpleNamespace(id="rk-1", provider_data={"tool_ids": ["snap-1"], "environments": []})]
+            ),
         )
         mock_delete_unbound.side_effect = RuntimeError("cleanup failed")
         db = MagicMock()
@@ -1978,7 +2065,7 @@ class TestListDeploymentsSyncedBindingPhase:
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
-        accepted, _ = await list_deployments_synced(
+        accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
             user_id=uuid4(),
@@ -2012,7 +2099,9 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_list.side_effect = [[(row, 3, [])], []]
         mock_fetch_rk.return_value = (
             {"rk-1"},
-            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"tool_ids": ["snap-1"]})]),
+            _mock_provider_view(
+                [SimpleNamespace(id="rk-1", provider_data={"tool_ids": ["snap-1"], "environments": []})]
+            ),
         )
         mock_count_attachments.return_value = {row.id: 3}
         db = MagicMock()
@@ -2020,7 +2109,7 @@ class TestListDeploymentsSyncedBindingPhase:
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
-        accepted, _ = await list_deployments_synced(
+        accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
             deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
             user_id=uuid4(),
