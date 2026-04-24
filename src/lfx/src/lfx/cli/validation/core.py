@@ -36,12 +36,14 @@ LEVEL_STRUCTURAL = 1
 LEVEL_COMPONENTS = 2
 LEVEL_EDGE_TYPES = 3
 LEVEL_REQUIRED_INPUTS = 4
+LEVEL_AUDIT = 5
 
 # Keep underscore-prefixed aliases for backwards compatibility
 _LEVEL_STRUCTURAL = LEVEL_STRUCTURAL
 _LEVEL_COMPONENTS = LEVEL_COMPONENTS
 _LEVEL_EDGE_TYPES = LEVEL_EDGE_TYPES
 _LEVEL_REQUIRED_INPUTS = LEVEL_REQUIRED_INPUTS
+_LEVEL_AUDIT = LEVEL_AUDIT
 
 
 # ---------------------------------------------------------------------------
@@ -115,6 +117,7 @@ def validate_flow_file(
     skip_required_inputs: bool = False,
     skip_version_check: bool = False,
     skip_credentials: bool = False,
+    audit: bool = False,
 ) -> ValidationResult:
     result = ValidationResult(path=path)
 
@@ -172,6 +175,11 @@ def validate_flow_file(
         _check_required_inputs(flow, result)
     if not skip_credentials:
         _check_missing_credentials(flow, result)
+
+    if audit or level >= LEVEL_AUDIT:
+        from lfx.cli.validation.audit import _check_agent_audit
+
+        _check_agent_audit(flow, result)
 
     return result
 
@@ -236,6 +244,7 @@ def validate_command(
     flow_paths: list[str],
     level: int,
     *,
+    audit: bool = False,
     skip_components: bool,
     skip_edge_types: bool,
     skip_required_inputs: bool,
@@ -259,6 +268,7 @@ def validate_command(
         result = validate_flow_file(
             p,
             level=level,
+            audit=audit,
             skip_components=skip_components,
             skip_edge_types=skip_edge_types,
             skip_required_inputs=skip_required_inputs,

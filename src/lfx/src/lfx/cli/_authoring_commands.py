@@ -133,13 +133,25 @@ def register(app: typer.Typer) -> None:
             "--level",
             "-l",
             min=1,
-            max=4,
+            max=5,
             help=(
                 "Validation depth: "
                 "1=structural JSON, "
                 "2=+component existence, "
                 "3=+edge type compatibility, "
-                "4=+required inputs connected"
+                "4=+required inputs connected, "
+                "5=+agent architecture audit"
+            ),
+        ),
+        audit: bool = typer.Option(
+            False,
+            "--audit",
+            "-a",
+            help=(
+                "Run agent architecture audit (Level 5). "
+                "Checks for hardcoded secrets, unrestricted code execution, "
+                "missing error handling, runaway agent loops, unbounded memory growth, "
+                "missing observability, and state-mutator safety."
             ),
         ),
         skip_components: bool = typer.Option(
@@ -196,6 +208,7 @@ def register(app: typer.Typer) -> None:
         validate_command(
             flow_paths=effective_paths,
             level=level,
+            audit=audit,
             skip_components=skip_components,
             skip_edge_types=skip_edge_types,
             skip_required_inputs=skip_required_inputs,
