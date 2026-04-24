@@ -6,6 +6,7 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useReducer,
   useState,
 } from "react";
 import type { ProviderAccountCreateRequest } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
@@ -19,6 +20,11 @@ import type {
   ProviderAccount,
   ProviderCredentials,
 } from "../types";
+import {
+  createDeploymentStepperAttachmentsState,
+  createSetAttachedConnectionByFlowDispatch,
+  deploymentStepperAttachmentsReducer,
+} from "./deployment-stepper-attachments-reducer";
 import {
   buildDeploymentPayload as buildDeploymentPayloadFromState,
   buildDeploymentUpdatePayload as buildDeploymentUpdatePayloadFromState,
@@ -155,21 +161,28 @@ export function DeploymentStepperProvider({
     initialState?.initialLlm ?? "",
   );
 
-  const [selectedVersionByFlow, setSelectedVersionByFlow] = useState<
-    Map<string, { versionId: string; versionTag: string }>
-  >(initialState?.selectedVersionByFlow ?? new Map());
   const [connections, setConnections] = useState<ConnectionItem[]>([]);
   const [toolNameByFlow, setToolNameByFlow] = useState<Map<string, string>>(
     initialState?.initialToolNameByFlow ?? new Map(),
   );
-  const [attachedConnectionByFlow, setAttachedConnectionByFlow] = useState<
-    Map<string, string[]>
-  >(initialState?.initialConnectionsByFlow ?? new Map());
 
   const [hasToolNameErrors, setHasToolNameErrors] = useState(false);
+  const [attachmentsState, attachmentsDispatch] = useReducer(
+    deploymentStepperAttachmentsReducer,
+    undefined,
+    () =>
+      createDeploymentStepperAttachmentsState({
+        selectedVersionByFlow: initialState?.selectedVersionByFlow,
+        initialConnectionsByFlow: initialState?.initialConnectionsByFlow,
+      }),
+  );
+  const { selectedVersionByFlow, attachedConnectionByFlow, removedFlowIds } =
+    attachmentsState;
+  const setAttachedConnectionByFlow = useMemo(
+    () => createSetAttachedConnectionByFlowDispatch(attachmentsDispatch),
+    [attachmentsDispatch],
+  );
 
-  // Edit mode: track which pre-existing flows the user wants to detach.
-  const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(new Set());
   // Cache removed flow data so undo can restore it.
   const initialVersionByFlow = useMemo(
     () => initialState?.selectedVersionByFlow ?? new Map(),
@@ -191,45 +204,26 @@ export function DeploymentStepperProvider({
     [],
   );
 
-  const handleRemoveAttachedFlow = useCallback((flowId: string) => {
-    setRemovedFlowIds((prev) => new Set([...Array.from(prev), flowId]));
-    setSelectedVersionByFlow((prev) => {
-      const next = new Map(prev);
-      next.delete(flowId);
-      return next;
-    });
-    setAttachedConnectionByFlow((prev) => {
-      const next = new Map(prev);
-      next.delete(flowId);
-      return next;
-    });
-  }, []);
+  const handleRemoveAttachedFlow = useCallback(
+    (flowId: string) => {
+      attachmentsDispatch({
+        type: "removeAttachedFlow",
+        flowId,
+      });
+    },
+    [attachmentsDispatch],
+  );
 
   const handleUndoRemoveFlow = useCallback(
     (flowId: string) => {
-      setRemovedFlowIds((prev) => {
-        const next = new Set(prev);
-        next.delete(flowId);
-        return next;
+      attachmentsDispatch({
+        type: "undoRemoveFlow",
+        flowId,
+        initialVersionByFlow,
+        initialConnectionsByFlow,
       });
-      const originalVersion = initialVersionByFlow.get(flowId);
-      if (originalVersion) {
-        setSelectedVersionByFlow((prev) => {
-          const next = new Map(prev);
-          next.set(flowId, originalVersion);
-          return next;
-        });
-      }
-      const originalConnections = initialConnectionsByFlow.get(flowId);
-      if (originalConnections) {
-        setAttachedConnectionByFlow((prev) => {
-          const next = new Map(prev);
-          next.set(flowId, originalConnections);
-          return next;
-        });
-      }
     },
-    [initialVersionByFlow, initialConnectionsByFlow],
+    [attachmentsDispatch, initialVersionByFlow, initialConnectionsByFlow],
   );
 
   const hasValidCredentials =
@@ -297,13 +291,14 @@ export function DeploymentStepperProvider({
 
   const handleSelectVersion = useCallback(
     (flowId: string, versionId: string, versionTag: string) => {
-      setSelectedVersionByFlow((prev) => {
-        const next = new Map(prev);
-        next.set(flowId, { versionId, versionTag });
-        return next;
+      attachmentsDispatch({
+        type: "selectVersion",
+        flowId,
+        versionId,
+        versionTag,
       });
     },
-    [],
+    [attachmentsDispatch],
   );
 
   const needsProviderAccountCreation =
