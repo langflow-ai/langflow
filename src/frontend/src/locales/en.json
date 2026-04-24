@@ -194,7 +194,7 @@
   "settings.apiKeyEditSuccess": "API key updated",
   "settings.apiKeyEditError": "Failed to update API key",
   "settings.apiKeyRegenerateLabel": "Regenerate key",
-  "settings.apiKeyRegenerateDescription": "Creates a new secret. The old key stops working immediately.",
+  "settings.apiKeyRegenerateDescription": "A new key is generated and saved as soon as you click Regenerate. You do not need to click Update. The old key stops working immediately.",
   "settings.apiKeyRegenerateButton": "Regenerate key",
   "settings.apiKeyRegenerateSuccess": "Key regenerated",
   "settings.apiKeyRegenerateError": "Failed to regenerate API key",
