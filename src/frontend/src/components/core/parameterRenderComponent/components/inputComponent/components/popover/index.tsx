@@ -1,6 +1,6 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { X } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
+import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
 
 const OptionBadge = ({
   option,
@@ -189,18 +190,20 @@ const CustomInputPopover = ({
   inspectionPanel,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
-  const [cursor, setCursor] = useState<number | null>(null);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
   const PopoverContentInput =
     editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
-  // Restore cursor position after value changes
-  useEffect(() => {
-    if (cursor !== null && refInput.current) {
-      refInput.current.setSelectionRange(cursor, cursor);
-    }
-  }, [cursor, value]);
+  const {
+    displayValue,
+    inputProps: imeInputProps,
+    flushPendingComposition,
+  } = useIMEInputForOnChange<HTMLInputElement>({
+    value,
+    onChange,
+    inputRef: refInput,
+  });
 
   const handleRemoveOption = (
     optionToRemove: string,
@@ -293,11 +296,13 @@ const CustomInputPopover = ({
               id={id}
               ref={refInput}
               type={!pwdVisible && password ? "password" : "text"}
+              {...imeInputProps}
               onBlur={() => {
+                flushPendingComposition();
                 onInputLostFocus?.();
                 setIsFocused(false);
               }}
-              value={disabled ? "" : value || ""}
+              value={disabled ? "" : displayValue}
               disabled={disabled}
               required={required}
               className={getInputClassName(
@@ -312,10 +317,6 @@ const CustomInputPopover = ({
                   ? ""
                   : placeholder
               }
-              onChange={(e) => {
-                setCursor(e.target.selectionStart);
-                onChange?.(e.target.value);
-              }}
               onKeyDown={(e) => {
                 handleKeyDown?.(e);
                 if (blurOnEnter && e.key === "Enter") refInput.current?.blur();

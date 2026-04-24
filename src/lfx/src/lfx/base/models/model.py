@@ -2,6 +2,7 @@ import importlib
 import json
 import warnings
 from abc import abstractmethod
+from typing import Any
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
@@ -22,6 +23,28 @@ from lfx.utils.constants import MESSAGE_SENDER_AI
 #
 # Models are trained with this exact string. Do not update.
 DETAILED_THINKING_PREFIX = "detailed thinking on\n\n"
+
+
+def _normalize_message_content(content: Any) -> Any:
+    """Flatten LangChain content blocks into a plain string.
+
+    Gemini 3 (and other modern LangChain chat models) return ``AIMessage.content``
+    as a list of content blocks such as
+    ``[{"type": "text", "text": "...", "thought_signature": "..."}]`` instead of a
+    plain string. Join the ``text`` blocks and drop non-text blocks so the result
+    can populate ``Message.text``. Non-list inputs are returned unchanged.
+    """
+    if not isinstance(content, list):
+        return content
+    parts: list[str] = []
+    for block in content:
+        if isinstance(block, str):
+            parts.append(block)
+        elif isinstance(block, dict) and block.get("type") == "text":
+            text = block.get("text")
+            if isinstance(text, str):
+                parts.append(text)
+    return "".join(parts)
 
 
 class LCModelComponent(Component):
@@ -268,6 +291,7 @@ class LCModelComponent(Component):
             else:
                 message = await runnable.ainvoke(inputs)
                 result = message.content if hasattr(message, "content") else message
+                result = _normalize_message_content(result)
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)
                 self.status = status_message
@@ -329,6 +353,7 @@ class LCModelComponent(Component):
         else:
             ai_message = await runnable.ainvoke(inputs)
             result = ai_message.content if hasattr(ai_message, "content") else ai_message
+            result = _normalize_message_content(result)
         return lf_message, result, ai_message
 
     @abstractmethod

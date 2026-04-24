@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException, status
 from ibm_cloud_sdk_core import ApiException
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool
 from lfx.services.adapters.deployment.base import BaseDeploymentService
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
@@ -85,7 +86,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import
     rollback_created_resources,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import (
-    derive_agent_environment,
+    get_agent_environments,
     get_deployment_detail_metadata,
     get_deployment_metadata,
 )
@@ -353,9 +354,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 raise InvalidDeploymentTypeError(message=msg)
 
             query_params: dict[str, Any] = {}
+            environment_filter: str | None = None
 
             if params and params.provider_params:
-                query_params = params.provider_params
+                provider_params = dict(params.provider_params)
+                environment_raw = provider_params.pop("environment", None)
+                if environment_raw is not None:
+                    normalized_environment = str(environment_raw).strip().lower()
+                    environment_filter = normalized_environment or None
+                query_params = provider_params
 
             if params and params.deployment_ids and "ids" not in query_params:
                 query_params["ids"] = [str(_id) for _id in params.deployment_ids]
@@ -370,13 +377,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 client_manager.get_agents_raw,
                 params=query_params or None,
             )
+            if environment_filter is not None:
+                raw_agents = [agent for agent in raw_agents if environment_filter in get_agent_environments(agent)]
             deployments = [
                 get_deployment_metadata(
                     data=agent,
                     deployment_type=DeploymentType.AGENT,
                     provider_data={
                         "tool_ids": extract_agent_tool_ids(agent),
-                        "environment": derive_agent_environment(agent),
+                        "environments": get_agent_environments(agent),
                     },
                 )
                 for agent in raw_agents
@@ -415,13 +424,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if not agent:
             msg = f"Deployment '{deployment_id}' not found."
             raise DeploymentNotFoundError(msg)
+        environments = get_agent_environments(agent) if isinstance(agent, dict) and "environments" in agent else []
         return get_deployment_detail_metadata(
             data=agent,
             deployment_type=DeploymentType.AGENT,
             provider_data={
+                "tool_ids": extract_agent_tool_ids(agent),
+                "environment": environments[0] if environments else "unknown",
                 **({"llm": agent["llm"]} if isinstance(agent, dict) and agent.get("llm") else {}),
-            }
-            or None,
+            },
         )
 
     async def update(
@@ -618,7 +629,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             id=agent_id,
             provider_data={
                 "status": "connected",
-                "environment": derive_agent_environment(agent),
+                "environments": get_agent_environments(agent),
             },
         )
 
@@ -1005,10 +1016,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         method; this prevents accidental overwrites of externally managed
         WXO tools.
         """
-        from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import (
-            create_langflow_tool as _create_langflow_tool,
-        )
-
         from langflow.utils.version import get_version_info
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
@@ -1038,10 +1045,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             if detected_version:
                 flow_definition["last_tested_version"] = detected_version
 
-        tool = _create_langflow_tool(
+        tool = create_langflow_tool(
             tool_definition=flow_definition,
             connections={},
-            show_details=True,
+            show_details=False,
         )
 
         artifact_bytes = build_langflow_artifact_bytes(
