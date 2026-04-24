@@ -607,6 +607,129 @@ class TestKnowledgeBaseAPI:
         mock_delete.assert_called_once()
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
+    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_delete_knowledge_base_survives_remote_backend_auth_failure(
+        self,
+        mock_root,
+        mock_get_record,
+        mock_create_backend,
+        mock_delete,
+        client: AsyncClient,
+        logged_in_headers,
+        tmp_path,
+    ):
+        """Remote-backend cleanup failure must not block local delete.
+
+        Regression for the Astra delete bug: a missing/stale Astra
+        token used to raise ``ValueError`` from
+        ``backend.ensure_ready`` which propagated as HTTP 500. The KB
+        directory + DB row were never cleaned up and the UI showed
+        the entry indefinitely. The fix makes remote cleanup
+        best-effort and surfaces the failure as a ``warning`` field
+        alongside the successful local delete.
+        """
+        mock_root.return_value = tmp_path
+        (tmp_path / "activeuser" / "Stuck_Astra").mkdir(parents=True, exist_ok=True)
+        mock_get_record.return_value = MagicMock(
+            backend_type="astra",
+            backend_config={"collection_name": "stuck_astra"},
+        )
+        backend = MagicMock()
+        backend.ensure_ready = AsyncMock(
+            side_effect=ValueError("Required credential variable 'ASTRA_DB_APPLICATION_TOKEN' is not configured.")
+        )
+        backend.delete_collection = AsyncMock()
+        backend.teardown = AsyncMock()
+        mock_create_backend.return_value = backend
+
+        response = await client.delete("api/v1/knowledge_bases/Stuck_Astra", headers=logged_in_headers)
+
+        # Local cleanup still runs and succeeds.
+        assert response.status_code == 200
+        assert mock_delete.called
+        # Teardown runs even though ensure_ready threw.
+        backend.teardown.assert_awaited_once()
+        # delete_collection is skipped because ensure_ready raised.
+        backend.delete_collection.assert_not_awaited()
+        # Response carries a user-facing warning so the UI can tell
+        # the operator the remote resources need manual cleanup.
+        data = response.json()
+        assert "warning" in data
+        assert "astra" in data["warning"].lower()
+        assert "manual" in data["warning"].lower()
+
+    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.delete_by_user_and_name", new_callable=AsyncMock)
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_delete_knowledge_base_cleans_up_orphan_db_row(
+        self,
+        mock_root,
+        mock_get_record,
+        mock_delete_record,
+        mock_create_backend,
+        client: AsyncClient,
+        logged_in_headers,
+        tmp_path,
+    ):
+        """Dangling DB row must still be deletable even when kb_path is gone.
+
+        Regression for the Astra delete bug: remote-backed KBs whose
+        local ``embedding_metadata.json`` directory is missing (partial
+        creation failure, manual cleanup, legacy import) were 404ing on
+        delete because ``_resolve_kb_path`` requires the dir to exist.
+        The list endpoint, meanwhile, reads from the DB row and kept
+        showing the entry — so the UI was stuck.
+        """
+        mock_root.return_value = tmp_path
+        (tmp_path / "activeuser").mkdir(parents=True, exist_ok=True)
+        # The KB has a DB row but NO on-disk directory. This is the
+        # orphan case the test is regressing.
+        mock_get_record.return_value = MagicMock(
+            backend_type="astra",
+            backend_config={"collection_name": "orphan_astra"},
+        )
+        backend = MagicMock()
+        backend.ensure_ready = AsyncMock()
+        backend.delete_collection = AsyncMock()
+        backend.teardown = AsyncMock()
+        mock_create_backend.return_value = backend
+
+        response = await client.delete("api/v1/knowledge_bases/Orphan_KB", headers=logged_in_headers)
+
+        assert response.status_code == 200
+        # Remote collection + DB row both cleaned up.
+        backend.ensure_ready.assert_awaited_once()
+        backend.delete_collection.assert_awaited_once()
+        backend.teardown.assert_awaited_once()
+        mock_delete_record.assert_awaited_once()
+
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_delete_knowledge_base_truly_missing_still_404s(
+        self,
+        mock_root,
+        mock_get_record,
+        client: AsyncClient,
+        logged_in_headers,
+        tmp_path,
+    ):
+        """No directory AND no DB row → still 404.
+
+        The orphan cleanup must not mask genuine not-found cases —
+        those should keep returning 404 so callers can distinguish a
+        typo from a dangling row.
+        """
+        mock_root.return_value = tmp_path
+        (tmp_path / "activeuser").mkdir(parents=True, exist_ok=True)
+        mock_get_record.return_value = None
+
+        response = await client.delete("api/v1/knowledge_bases/Nonexistent", headers=logged_in_headers)
+        assert response.status_code == 404
+
+    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_bulk_delete_knowledge_bases(
         self, mock_root, mock_delete, client: AsyncClient, logged_in_headers, tmp_path

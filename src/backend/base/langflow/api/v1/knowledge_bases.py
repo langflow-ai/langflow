@@ -143,8 +143,19 @@ def _check_memory_base_association(kb_name: str, current_user: CurrentActiveUser
     ``kb_name`` from the path parameter and ``current_user`` via its own
     dependency.  The list endpoint filters memory KBs inline using
     ``_is_memory_base_associated`` directly.
+
+    A missing local directory is NOT treated as a 404 here because the
+    delete route handles the orphan-DB-row case downstream. This dep
+    only blocks Memory-Base-managed KBs from being touched; an
+    orphan row can't have Memory-Base metadata because that metadata
+    lives in the on-disk ``embedding_metadata.json`` which is gone.
     """
-    kb_path = _resolve_kb_path(kb_name, current_user)
+    try:
+        kb_path = _resolve_kb_path(kb_name, current_user)
+    except HTTPException as exc:
+        if exc.status_code == HTTPStatus.NOT_FOUND:
+            return  # Let the route body handle the missing-dir case.
+        raise
 
     metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
     if _is_memory_base_associated(metadata):
@@ -210,19 +221,97 @@ async def _resolve_backend_selection(
     )
 
 
+async def _cleanup_orphan_db_row(
+    *,
+    kb_name: str,
+    current_user: CurrentActiveUser,
+) -> tuple[bool, str | None]:
+    """Clean up a KB whose local directory is gone but whose DB row lingers.
+
+    The usual delete flow requires the KB directory to exist — but
+    remote-backed KBs (Astra / Mongo / Postgres / OpenSearch) store
+    their vectors off-box, and the on-disk sidecar can go missing if
+    the filesystem was cleaned out of band or creation failed partway
+    through. Before this helper, such a KB would keep showing up in
+    the UI list forever because the list endpoint reads the DB row
+    while the delete endpoint 404s on the missing path.
+
+    Returns ``(True, warning_or_None)`` when a row was found and
+    deleted, ``(False, None)`` when no row exists (truly not found).
+    The remote-backend cleanup is best-effort just like the normal
+    delete path.
+    """
+    record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+    if record is None:
+        return False, None
+
+    backend_type_value = record.backend_type or BackendType.CHROMA.value
+    backend_config = _coerce_backend_config(record.backend_config)
+
+    warning: str | None = None
+    if backend_type_value != BackendType.CHROMA.value:
+        backend = create_backend(
+            backend_type_value,
+            kb_name=kb_name,
+            kb_path=Path("/tmp"),  # noqa: S108 — unused; backend is remote-only
+            backend_config=backend_config,
+            user_id=current_user.id,
+        )
+        try:
+            await backend.ensure_ready()
+            await backend.delete_collection()
+        except Exception as exc:  # noqa: BLE001
+            await logger.aerror(
+                "Failed to delete remote backend resources for orphan KB %s (%s): %s",
+                kb_name,
+                backend_type_value,
+                exc,
+            )
+            warning = (
+                f"Remote {backend_type_value} resources for knowledge base "
+                f"'{kb_name}' could not be deleted ({exc}). The local record "
+                "has been removed; please clean up the remote collection manually."
+            )
+        finally:
+            await backend.teardown()
+
+    try:
+        await knowledge_base_service.delete_by_user_and_name(current_user.id, kb_name)
+    except Exception as exc:  # noqa: BLE001
+        await logger.awarning("KB DB delete lagged for orphan %s: %s", kb_name, exc)
+
+    return True, warning
+
+
 async def _delete_remote_backend_collection(
     *,
     kb_name: str,
     kb_path: Path,
     current_user: CurrentActiveUser,
-) -> None:
+) -> str | None:
+    """Delete the remote vector-store collection on a best-effort basis.
+
+    Returns a human-readable warning string when the remote cleanup
+    failed so the caller can surface it alongside the (successful)
+    local-storage + DB-row deletions; returns ``None`` on success or
+    when the backend is local-only (Chroma).
+
+    Rationale for best-effort: a stale Astra token / missing MongoDB
+    credential / network blip should not leave the user unable to
+    delete the KB from Langflow's UI at all. Before this, the backend
+    ``ensure_ready()`` failure would abort the whole delete flow and
+    the row plus on-disk metadata would stay indefinitely. Remote
+    resources that linger are surfaced to the user through the
+    response warning and a high-severity log line so they can be
+    cleaned up out-of-band.
+    """
     backend_type_value, backend_config = await _resolve_backend_selection(
         kb_name=kb_name,
         kb_path=kb_path,
         current_user=current_user,
     )
     if backend_type_value == BackendType.CHROMA.value:
-        return
+        return None
 
     backend = create_backend(
         backend_type_value,
@@ -234,22 +323,23 @@ async def _delete_remote_backend_collection(
     try:
         await backend.ensure_ready()
         await backend.delete_collection()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         await logger.aerror(
-            "Failed to delete remote backend resources for %s (%s): %s",
+            "Failed to delete remote backend resources for %s (%s): %s — "
+            "proceeding with local cleanup; the remote collection may need "
+            "manual cleanup.",
             kb_name,
             backend_type_value,
             exc,
         )
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                f"Failed to delete the remote {backend_type_value} resources for "
-                f"knowledge base '{kb_name}'. Please retry after checking the backend credentials."
-            ),
-        ) from exc
+        return (
+            f"Remote {backend_type_value} resources for knowledge base "
+            f"'{kb_name}' could not be deleted ({exc}). The local record "
+            "has been removed; please clean up the remote collection manually."
+        )
     finally:
         await backend.teardown()
+    return None
 
 
 @router.post("", status_code=HTTPStatus.CREATED)
@@ -1255,8 +1345,28 @@ def _run_row_to_info(row) -> IngestionRunInfo:
 async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> dict[str, str]:
     """Delete a specific knowledge base."""
     try:
-        kb_path = _resolve_kb_path(kb_name, current_user)
-        await _delete_remote_backend_collection(
+        try:
+            kb_path = _resolve_kb_path(kb_name, current_user)
+        except HTTPException as exc:
+            # The local directory is gone but a DB row may still be
+            # dangling (remote-backed KBs created without a sidecar,
+            # or a partially-cleaned-up delete from a prior attempt).
+            # Fall through to an orphan-row cleanup so the UI stops
+            # showing the KB.
+            if exc.status_code != HTTPStatus.NOT_FOUND:
+                raise
+            handled, orphan_warning = await _cleanup_orphan_db_row(
+                kb_name=kb_name,
+                current_user=current_user,
+            )
+            if not handled:
+                raise
+            response: dict[str, str] = {"message": f"Knowledge base '{kb_name}' deleted successfully"}
+            if orphan_warning:
+                response["warning"] = orphan_warning
+            return response
+
+        remote_warning = await _delete_remote_backend_collection(
             kb_name=kb_name,
             kb_path=kb_path,
             current_user=current_user,
@@ -1283,7 +1393,10 @@ async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -
         await logger.aerror("Error deleting knowledge base '%s': %s", kb_name, e)
         raise HTTPException(status_code=500, detail="Error deleting knowledge base.") from e
     else:
-        return {"message": f"Knowledge base '{kb_name}' deleted successfully"}
+        response: dict[str, str] = {"message": f"Knowledge base '{kb_name}' deleted successfully"}
+        if remote_warning:
+            response["warning"] = remote_warning
+        return response
 
 
 @router.delete("", status_code=HTTPStatus.OK)
@@ -1294,22 +1407,39 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
         deleted_count = 0
         not_found_kbs = []
         failed_kbs = []
+        remote_warnings: list[str] = []
 
         for kb_name in request.kb_names:
             try:
                 kb_path = _resolve_kb_path(kb_name, current_user)
             except HTTPException as exc:
                 if exc.status_code == HTTPStatus.NOT_FOUND:
-                    not_found_kbs.append(kb_name)
+                    # Try the orphan-row cleanup before declaring the
+                    # KB not found — a remote-backed KB (Astra /
+                    # Mongo / Postgres / OpenSearch) whose local dir
+                    # is missing must still be deletable so the UI
+                    # stops showing it.
+                    handled, orphan_warning = await _cleanup_orphan_db_row(
+                        kb_name=kb_name,
+                        current_user=current_user,
+                    )
+                    if handled:
+                        deleted_count += 1
+                        if orphan_warning:
+                            remote_warnings.append(orphan_warning)
+                    else:
+                        not_found_kbs.append(kb_name)
                     continue
                 raise  # Re-raise 403 (traversal) and 500 errors
 
             try:
-                await _delete_remote_backend_collection(
+                remote_warning = await _delete_remote_backend_collection(
                     kb_name=kb_name,
                     kb_path=kb_path,
                     current_user=current_user,
                 )
+                if remote_warning:
+                    remote_warnings.append(remote_warning)
                 if not KBStorageHelper.delete_storage(kb_path, kb_name):
                     failed_kbs.append(kb_name)
                     continue
@@ -1329,7 +1459,7 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
                 status_code=404, detail="Knowledge bases not found: {}".format(", ".join(not_found_kbs))
             )
 
-        result = {
+        result: dict[str, object] = {
             "message": f"Successfully deleted {deleted_count} knowledge base(s)",
             "deleted_count": deleted_count,
         }
@@ -1338,6 +1468,8 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
             result["not_found"] = ", ".join(not_found_kbs)
         if failed_kbs:
             result["failed"] = ", ".join(failed_kbs)
+        if remote_warnings:
+            result["warnings"] = remote_warnings
 
     except HTTPException:
         raise
