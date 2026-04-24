@@ -654,6 +654,94 @@ class TestOpenSearchBackendBuild:
         await backend.teardown()
         client.close.assert_called_once()
 
+    async def test_build_forwards_vector_field_and_knn_options(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("OPENSEARCH_URL", "https://demo:9200")
+
+        client = MagicMock(name="os_client")
+        store = MagicMock(name="os_vector_store")
+        os_ctor, wrapper_ctor = _install_opensearch_stubs(monkeypatch, client_instance=client, store_instance=store)
+
+        backend = OpenSearchBackend(
+            kb_name="kb",
+            kb_path=tmp_path,
+            backend_config={
+                "index_name": "kb_idx",
+                "vector_field": "embedding",
+                "text_field": "body",
+                "engine": "faiss",
+                "space_type": "cosinesimil",
+                "use_ssl": False,
+                "verify_certs": False,
+            },
+            embedding_function=MagicMock(),
+        )
+        await backend.ensure_ready()
+        built = backend._build_vector_store()
+
+        assert built is store
+        os_kwargs = os_ctor.call_args.kwargs
+        assert os_kwargs["use_ssl"] is False
+        assert os_kwargs["verify_certs"] is False
+
+        wrapper_kwargs = wrapper_ctor.call_args.kwargs
+        assert wrapper_kwargs["vector_field"] == "embedding"
+        assert wrapper_kwargs["text_field"] == "body"
+        assert wrapper_kwargs["engine"] == "faiss"
+        assert wrapper_kwargs["space_type"] == "cosinesimil"
+        assert wrapper_kwargs["use_ssl"] is False
+        assert wrapper_kwargs["verify_certs"] is False
+
+
+class TestOpenSearchDeleteBy:
+    async def test_delete_by_matches_top_level_or_nested_metadata(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("OPENSEARCH_URL", "https://demo:9200")
+
+        client = MagicMock(name="os_client")
+        store = MagicMock(name="os_vector_store")
+        _install_opensearch_stubs(monkeypatch, client_instance=client, store_instance=store)
+
+        backend = OpenSearchBackend(
+            kb_name="kb",
+            kb_path=tmp_path,
+            backend_config={"index_name": "idx"},
+            embedding_function=MagicMock(),
+        )
+        await backend.ensure_ready()
+        _ = backend.vector_store
+
+        await backend.delete_by({"job_id": "job-123", "source_type": "folder"})
+
+        client.delete_by_query.assert_called_once()
+        kwargs = client.delete_by_query.call_args.kwargs
+        assert kwargs["index"] == "idx"
+        assert kwargs["refresh"] is True
+        assert kwargs["body"] == {
+            "query": {
+                "bool": {
+                    "must": [
+                        {
+                            "bool": {
+                                "should": [
+                                    {"match": {"job_id": "job-123"}},
+                                    {"match": {"metadata.job_id": "job-123"}},
+                                ],
+                                "minimum_should_match": 1,
+                            }
+                        },
+                        {
+                            "bool": {
+                                "should": [
+                                    {"match": {"source_type": "folder"}},
+                                    {"match": {"metadata.source_type": "folder"}},
+                                ],
+                                "minimum_should_match": 1,
+                            }
+                        },
+                    ]
+                }
+            }
+        }
+
 
 class TestOpenSearchIterDocumentsCancellation:
     async def _build_backend_with_rows(self, tmp_path, monkeypatch, rows: list[dict]):
