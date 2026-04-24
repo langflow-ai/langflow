@@ -31,6 +31,7 @@ from sqlmodel import select
 
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from langflow.services.deps import session_scope
+from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
 
 
 async def create_record(
@@ -347,11 +348,20 @@ async def backfill_from_disk(
             backend_type = str(metadata.get("backend_type") or "chroma")
             backend_config_raw = metadata.get("backend_config") or {}
             backend_config = backend_config_raw if isinstance(backend_config_raw, dict) else {}
+            # When legacy metadata only recorded the embedding model,
+            # reuse the pure-string inference helper shipped by #12417
+            # so backfilled rows get a non-"Unknown" provider whenever
+            # the model name is recognizable (e.g. ``text-embedding-3-small`` → ``OpenAI``).
+            embedding_model_raw = str(metadata.get("embedding_model") or "Unknown")
+            provider_raw = str(metadata.get("embedding_provider") or "Unknown")
+            if provider_raw == "Unknown" and embedding_model_raw != "Unknown":
+                provider_raw = infer_embedding_provider(embedding_model_raw)
+
             await create_record(
                 user_id=user_id,
                 name=name,
-                embedding_provider=str(metadata.get("embedding_provider") or "Unknown"),
-                embedding_model=str(metadata.get("embedding_model") or "Unknown"),
+                embedding_provider=provider_raw,
+                embedding_model=embedding_model_raw,
                 model_selection=model_selection,
                 chunk_size=int(metadata.get("chunk_size") or 1000),
                 chunk_overlap=int(metadata.get("chunk_overlap") or 200),

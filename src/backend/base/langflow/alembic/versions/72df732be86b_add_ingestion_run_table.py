@@ -1,7 +1,7 @@
 """Add ingestion_run table
 
 Revision ID: 72df732be86b
-Revises: d306e5c17c41
+Revises: mb00a1b2c3d4
 Create Date: 2026-04-20 13:15:00.000000
 
 Phase: EXPAND
@@ -9,6 +9,11 @@ Safe to rollback: YES (table is new; no existing data depends on it)
 Services compatible: All versions (older services simply don't write to
     the new table; newer services populate it on every
     ``perform_ingestion`` invocation).
+
+Chained behind the Memory Base migration (``mb00a1b2c3d4``) so the
+Alembic history stays linear — both PRs branched from
+``d306e5c17c41`` during development; stacking this PR on top of #12417
+requires a single successor of the Memory Base head.
 """
 
 from collections.abc import Sequence
@@ -30,7 +35,7 @@ RUN_STATUS_VALUES = ("pending", "running", "succeeded", "partial", "failed", "ca
 
 # revision identifiers, used by Alembic.
 revision: str = "72df732be86b"  # pragma: allowlist secret
-down_revision: str | None = "d306e5c17c41"  # pragma: allowlist secret
+down_revision: str | None = "mb00a1b2c3d4"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
