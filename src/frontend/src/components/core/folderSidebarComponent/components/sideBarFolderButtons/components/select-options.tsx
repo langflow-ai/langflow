@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
@@ -8,27 +9,24 @@ import {
   SelectTrigger,
 } from "@/components/ui/select-custom";
 import type { FolderType } from "@/pages/MainPage/entities";
-import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { handleSelectChange } from "../helpers/handle-select-change";
 import { FolderSelectItem } from "./folder-select-item";
 
 export const SelectOptions = ({
   item,
-  index,
   handleDeleteFolder,
   handleDownloadFolder,
   handleSelectFolderToRename,
   checkPathName,
 }: {
   item: FolderType;
-  index: number;
   handleDeleteFolder: ((folder: FolderType) => void) | undefined;
   handleDownloadFolder: (folderId: string) => void;
   handleSelectFolderToRename: (folder: FolderType) => void;
   checkPathName: (folderId: string) => boolean;
 }) => {
-  const defaultFolderName = useUtilityStore((state) => state.defaultFolderName);
+  const { t } = useTranslation();
   return (
     <div>
       <Select
@@ -43,7 +41,11 @@ export const SelectOptions = ({
         }
         value=""
       >
-        <ShadTooltip content="Options" side="right" styleClasses="z-50">
+        <ShadTooltip
+          content={t("folder.options")}
+          side="right"
+          styleClasses="z-50"
+        >
           <SelectTrigger
             className="w-fit"
             id={`options-trigger-${item.name}`}
@@ -61,32 +63,28 @@ export const SelectOptions = ({
           </SelectTrigger>
         </ShadTooltip>
         <SelectContent align="end" alignOffset={-16} position="popper">
-          {item.name !== defaultFolderName && (
-            <SelectItem
-              id="rename-button"
-              value="rename"
-              data-testid="btn-rename-project"
-              className="text-xs"
-            >
-              <FolderSelectItem name="Rename" iconName="SquarePen" />
-            </SelectItem>
-          )}
+          <SelectItem
+            id="rename-button"
+            value="rename"
+            data-testid="btn-rename-project"
+            className="text-xs"
+          >
+            <FolderSelectItem name={t("folder.rename")} iconName="SquarePen" />
+          </SelectItem>
           <SelectItem
             value="download"
             data-testid="btn-download-project"
             className="text-xs"
           >
-            <FolderSelectItem name="Download" iconName="Download" />
+            <FolderSelectItem name={t("folder.download")} iconName="Download" />
           </SelectItem>
-          {index > 0 && (
-            <SelectItem
-              value="delete"
-              data-testid="btn-delete-project"
-              className="text-xs"
-            >
-              <FolderSelectItem name="Delete" iconName="Trash2" />
-            </SelectItem>
-          )}
+          <SelectItem
+            value="delete"
+            data-testid="btn-delete-project"
+            className="text-xs"
+          >
+            <FolderSelectItem name={t("folder.delete")} iconName="Trash2" />
+          </SelectItem>
         </SelectContent>
       </Select>
     </div>

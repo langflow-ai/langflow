@@ -19,7 +19,7 @@ class ListenComponent(Component):
         )
     ]
 
-    outputs = [Output(name="data", display_name="Data", method="listen_for_data", cache=False)]
+    outputs = [Output(name="data", display_name="JSON", method="listen_for_data", cache=False)]
 
     def listen_for_data(self) -> Data:
         """Retrieves a Data object from the component context using the provided context key.

@@ -50,7 +50,7 @@ class FirecrawlCrawlApi(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="crawl"),
+        Output(display_name="JSON", name="data", method="crawl"),
     ]
     idempotency_key: str | None = None
 

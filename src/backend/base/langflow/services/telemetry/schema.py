@@ -70,7 +70,6 @@ class ComponentInputsPayload(BasePayload):
     Usage:
         payload = ComponentInputsPayload(
             component_run_id="run-123",
-            component_id="comp-456",
             component_name="MyComponent",
             component_inputs={"input1": "value1", "input2": "value2"}
         )

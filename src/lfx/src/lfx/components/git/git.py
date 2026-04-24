@@ -75,7 +75,7 @@ class GitLoaderComponent(Component):
     ]
 
     outputs = [
-        Output(name="data", display_name="Data", method="load_documents"),
+        Output(name="data", display_name="JSON", method="load_documents"),
     ]
 
     @staticmethod

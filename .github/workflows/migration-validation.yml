@@ -1,0 +1,206 @@
+name: Database Migration Validation
+
+on:
+  pull_request:
+    paths:
+      - 'src/backend/base/langflow/alembic/**'
+      - 'src/backend/base/langflow/services/database/models/**'
+      - 'src/backend/base/langflow/services/database/service.py'
+      - 'src/backend/tests/unit/alembic/**'
+      - '.github/workflows/migration-validation.yml'
+
+jobs:
+  model-migration-consistency:
+    name: Model/Migration Consistency
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: langflow
+          POSTGRES_PASSWORD: langflow
+          POSTGRES_DB: langflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U langflow"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          uv sync --extra postgresql
+
+      - name: Check model/migration consistency
+        env:
+          MIGRATION_VALIDATION_CI: "true"
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"
+        run: |
+          uv run pytest src/backend/tests/unit/alembic/test_migration_execution.py -x -v
+
+  validate-migration:
+    name: Migration Pattern Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Get changed migration files
+        id: changed-files
+        run: |
+          set -euo pipefail
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep -E 'src/backend/base/langflow/alembic/versions/.*\.py$' | grep -v 'test_migrations/' || echo "")
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No migration files changed"
+            echo "files=" >> "$GITHUB_OUTPUT"
+          else
+            echo "Changed migration files:"
+            echo "$CHANGED_FILES"
+            echo "files=$(printf '%s' "$CHANGED_FILES" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate migration patterns
+        if: steps.changed-files.outputs.files != ''
+        env:
+          MIGRATION_FILES: ${{ steps.changed-files.outputs.files }}
+        run: |
+          python src/backend/base/langflow/alembic/migration_validator.py $MIGRATION_FILES
+
+      - name: Generate validation report
+        if: always() && steps.changed-files.outputs.files != ''
+        env:
+          MIGRATION_FILES: ${{ steps.changed-files.outputs.files }}
+        run: |
+          python src/backend/base/langflow/alembic/migration_validator.py \
+            --json $MIGRATION_FILES > validation-report.json 2> validation-stderr.txt || true
+          if [ ! -s validation-report.json ]; then
+            echo "::error::Validator produced no output. Stderr:"
+            cat validation-stderr.txt
+          fi
+
+      - name: Post PR comment with results
+        if: always() && steps.changed-files.outputs.files != ''
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+
+            let message = '';
+            let validationPassed = true;
+
+            try {
+              const report = JSON.parse(fs.readFileSync('validation-report.json', 'utf8'));
+
+              for (const result of report) {
+                if (!result.valid) {
+                  validationPassed = false;
+                }
+              }
+
+              if (validationPassed) {
+                message = `✅ **Migration Validation Passed**\n\n`;
+                message += `All migrations follow the Expand-Contract pattern correctly.\n\n`;
+              } else {
+                message = `❌ **Migration Validation Failed**\n\n`;
+                message += `Your migrations don't follow the Expand-Contract pattern.\n\n`;
+
+                for (const result of report) {
+                  if (!result.valid || result.warnings.length > 0) {
+                    message += `### File: \`${result.file.split('/').pop()}\`\n`;
+                    message += `**Phase:** ${result.phase}\n\n`;
+
+                    if (result.violations && result.violations.length > 0) {
+                      message += `**Violations:**\n`;
+                      for (const v of result.violations) {
+                        message += `- Line ${v.line}: ${v.message}\n`;
+                      }
+                      message += `\n`;
+                    }
+
+                    if (result.warnings && result.warnings.length > 0) {
+                      message += `**Warnings:**\n`;
+                      for (const w of result.warnings) {
+                        message += `- Line ${w.line}: ${w.message}\n`;
+                      }
+                      message += `\n`;
+                    }
+                  }
+                }
+
+                message += `### Resources\n`;
+                message += `- Review the [DB Migration Guide](./src/backend/base/langflow/alembic/DB-MIGRATION-GUIDE.MD)\n`;
+                message += `- Use \`python scripts/generate_migration.py --help\` to generate compliant migrations\n\n`;
+
+                message += `### Common Issues & Solutions\n`;
+                message += `- **New columns must be nullable:** Add \`nullable=True\` or \`server_default\`\n`;
+                message += `- **Missing phase marker:** Add \`Phase: EXPAND/MIGRATE/CONTRACT\` to docstring\n`;
+                message += `- **Column drops:** Only allowed in CONTRACT phase\n`;
+                message += `- **Direct renames:** Use expand-contract pattern instead\n`;
+              }
+            } catch (error) {
+              message = `⚠️ **Migration validation check failed to run properly**\n`;
+              message += `Error: ${error.message}\n`;
+              validationPassed = false;
+            }
+
+            // Post or update comment (non-critical — don't let API errors mask validation results)
+            try {
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              });
+
+              const botComment = comments.find(comment =>
+                comment.user.type === 'Bot' &&
+                comment.body.includes('Migration Validation')
+              );
+
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: message
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: message
+                });
+              }
+            } catch (apiError) {
+              core.warning(`Failed to post PR comment: ${apiError.message}`);
+            }
+
+            // Fail the workflow if validation didn't pass
+            if (!validationPassed) {
+              core.setFailed('Migration validation failed');
+            }

@@ -30,13 +30,11 @@ const initialValue: AuthContextType = {
 export const AuthContext = createContext<AuthContextType>(initialValue);
 
 export function AuthProvider({ children }): React.ReactElement {
-  const [accessToken, setAccessToken] = useState<string | null>(
-    cookieManager.get(LANGFLOW_ACCESS_TOKEN) ?? null,
-  );
+  // Authentication state is now managed via session validation
+  // instead of reading cookies directly (supports HttpOnly cookies)
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [userData, setUserData] = useState<Users | null>(null);
-  const [apiKey, setApiKey] = useState<string | null>(
-    cookieManager.get(LANGFLOW_API_TOKEN!) ?? null,
-  );
+  const [apiKey, setApiKey] = useState<string | null>(null);
 
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const fetchApiData = useStoreStore((state) => state.fetchApiData);
@@ -45,19 +43,8 @@ export function AuthProvider({ children }): React.ReactElement {
   const { mutate: mutateLoggedUser } = useGetUserData();
   const { mutate: mutateGetGlobalVariables } = useGetGlobalVariablesMutation();
 
-  useEffect(() => {
-    const storedAccessToken = cookieManager.get(LANGFLOW_ACCESS_TOKEN);
-    if (storedAccessToken) {
-      setAccessToken(storedAccessToken);
-    }
-  }, []);
-
-  useEffect(() => {
-    const apiKey = cookieManager.get(LANGFLOW_API_TOKEN);
-    if (apiKey) {
-      setApiKey(apiKey);
-    }
-  }, []);
+  // Session validation is now handled by components that need it
+  // (e.g., via useGetAuthSession hook) rather than reading cookies here
 
   function getUser() {
     mutateLoggedUser(
@@ -93,8 +80,6 @@ export function AuthProvider({ children }): React.ReactElement {
 
     let userLoaded = false;
     let variablesLoaded = false;
-    let retryCount = 0;
-    const MAX_RETRIES = 20;
 
     const checkAndSetAuthenticated = () => {
       if (userLoaded && variablesLoaded) {
@@ -134,22 +119,9 @@ export function AuthProvider({ children }): React.ReactElement {
       );
     };
 
-    // Verify token is available in browser cookies before proceeding
-    // This prevents race condition where browser hasn't processed cookies yet
-    const verifyAndProceed = () => {
-      const storedToken = cookieManager.get(LANGFLOW_ACCESS_TOKEN);
-      if (storedToken) {
-        executeAuthRequests();
-      } else if (retryCount < MAX_RETRIES) {
-        retryCount++;
-        setTimeout(verifyAndProceed, 50);
-      } else {
-        // Proceed anyway after timeout to avoid blocking login
-        executeAuthRequests();
-      }
-    };
-
-    setTimeout(verifyAndProceed, 50);
+    // Execute auth requests directly
+    // Cookies are set by the server and browser handles them automatically
+    executeAuthRequests();
   }
 
   function storeApiKey(apikey: string) {

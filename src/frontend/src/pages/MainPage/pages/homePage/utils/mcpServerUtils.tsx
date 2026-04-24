@@ -1,3 +1,4 @@
+import type { MCPTransport } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { parseString } from "@/utils/stringManipulation";
 
 type RawFlow = {
@@ -23,10 +24,27 @@ type InstalledClient = { installed?: boolean; name?: string };
 
 export const MAX_MCP_SERVER_NAME_LENGTH = 64;
 
-export const autoInstallers = [
-  { name: "cursor", title: "Cursor", icon: "Cursor" },
-  { name: "claude", title: "Claude", icon: "Claude" },
-  { name: "windsurf", title: "Windsurf", icon: "Windsurf" },
+type AutoInstaller = {
+  name: string;
+  title: string;
+  icon: string;
+  transport?: MCPTransport;
+};
+
+export const autoInstallers: AutoInstaller[] = [
+  {
+    name: "cursor",
+    title: "Cursor",
+    icon: "Cursor",
+    transport: "streamablehttp",
+  },
+  { name: "claude", title: "Claude", icon: "Claude", transport: "sse" },
+  {
+    name: "windsurf",
+    title: "Windsurf",
+    icon: "Windsurf",
+    transport: "streamablehttp",
+  },
 ];
 
 export const operatingSystemTabs = [
@@ -67,11 +85,11 @@ export const getAuthHeaders = ({
 }): string => {
   if (!enableComposer) {
     if (isAutoLogin) return "";
-    return `"--headers","x-api-key","${apiKey ?? "YOUR_API_KEY"}"`;
+    return `"--headers","x-api-key","${apiKey || "YOUR_API_KEY"}"`;
   }
   if (!authType || authType === "none") return "";
   if (authType === "apikey")
-    return `"--headers","x-api-key","${apiKey ?? "YOUR_API_KEY"}"`;
+    return `"--headers","x-api-key","${apiKey || "YOUR_API_KEY"}"`;
   return "";
 };
 
@@ -81,6 +99,7 @@ export const buildMcpServerJson = (opts: {
   apiUrl: string;
   isOAuthProject: boolean;
   authHeadersFragment: string;
+  transport: MCPTransport;
   maxNameLength?: number;
 }): string => {
   const {
@@ -89,6 +108,7 @@ export const buildMcpServerJson = (opts: {
     apiUrl,
     isOAuthProject,
     authHeadersFragment,
+    transport,
     maxNameLength = MAX_MCP_SERVER_NAME_LENGTH,
   } = opts;
 
@@ -111,6 +131,11 @@ export const buildMcpServerJson = (opts: {
     argsParts.push(`"uvx"`);
   }
   argsParts.push(proxy);
+  const shouldUseStreamableFlag =
+    !isOAuthProject && transport === "streamablehttp";
+  if (shouldUseStreamableFlag) {
+    argsParts.push('"--transport"', '"streamablehttp"');
+  }
   if (authHeadersFragment && authHeadersFragment.trim() !== "") {
     const matches = Array.from(authHeadersFragment.matchAll(/"([^"]*)"/g)).map(
       (m) => `"${m[1]}"`,

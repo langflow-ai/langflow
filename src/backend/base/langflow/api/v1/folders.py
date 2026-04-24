@@ -13,7 +13,7 @@ from langflow.services.database.models.folder.model import (
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
 
-router = APIRouter(prefix="/folders", tags=["Folders"])
+router = APIRouter(prefix="/folders", tags=["Folders"], include_in_schema=False)
 
 # This file now serves as a redirection to the projects endpoint
 # All routes will redirect to the corresponding projects endpoint

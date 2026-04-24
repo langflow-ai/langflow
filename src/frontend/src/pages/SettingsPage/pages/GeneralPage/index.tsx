@@ -1,12 +1,7 @@
 import { cloneDeep } from "lodash";
 import { useContext, useState } from "react";
 import { useParams } from "react-router-dom";
-import {
-  EDIT_PASSWORD_ALERT_LIST,
-  EDIT_PASSWORD_ERROR_ALERT,
-  SAVE_ERROR_ALERT,
-  SAVE_SUCCESS_ALERT,
-} from "@/constants/alerts_constants";
+import { useTranslation } from "react-i18next";
 import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
 import {
   useResetPassword,
@@ -36,6 +31,7 @@ export const GeneralPage = () => {
     CONTROL_PATCH_USER_STATE,
   );
 
+  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
@@ -53,8 +49,8 @@ export const GeneralPage = () => {
   const handlePatchPassword = () => {
     if (password !== cnfPassword) {
       setErrorData({
-        title: EDIT_PASSWORD_ERROR_ALERT,
-        list: [EDIT_PASSWORD_ALERT_LIST],
+        title: t("errors.changePassword"),
+        list: [t("errors.passwordMismatch")],
       });
       return;
     }
@@ -66,11 +62,11 @@ export const GeneralPage = () => {
           onSuccess: () => {
             handleInput({ target: { name: "password", value: "" } });
             handleInput({ target: { name: "cnfPassword", value: "" } });
-            setSuccessData({ title: SAVE_SUCCESS_ALERT });
+            setSuccessData({ title: t("success.changesSaved") });
           },
           onError: (error) => {
             setErrorData({
-              title: SAVE_ERROR_ALERT,
+              title: t("errors.saveChanges"),
               list: [(error as any)?.response?.data?.detail],
             });
           },
@@ -90,11 +86,11 @@ export const GeneralPage = () => {
             const newUserData = cloneDeep(userData);
             newUserData!.profile_image = profile_picture;
             setUserData(newUserData);
-            setSuccessData({ title: SAVE_SUCCESS_ALERT });
+            setSuccessData({ title: t("success.changesSaved") });
           },
           onError: (error) => {
             setErrorData({
-              title: SAVE_ERROR_ALERT,
+              title: t("errors.saveChanges"),
               list: [(error as any)?.response?.data?.detail],
             });
           },
@@ -107,7 +103,7 @@ export const GeneralPage = () => {
 
   const { mutate } = usePostAddApiKey({
     onSuccess: () => {
-      setSuccessData({ title: "API key saved successfully" });
+      setSuccessData({ title: t("auth.saveApiKeySuccess") });
       setHasApiKey(true);
       setValidApiKey(true);
       setLoadingApiKey(false);
@@ -115,7 +111,7 @@ export const GeneralPage = () => {
     },
     onError: (error) => {
       setErrorData({
-        title: "API key save error",
+        title: t("errors.saveApiKey"),
         list: [(error as any)?.response?.data?.detail],
       });
       setHasApiKey(false);

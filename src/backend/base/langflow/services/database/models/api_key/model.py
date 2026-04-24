@@ -28,6 +28,7 @@ class ApiKey(ApiKeyBase, table=True):  # type: ignore[call-arg]
         default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     )
     api_key: str = Field(index=True, unique=True)
+    api_key_hash: str | None = Field(default=None, index=True)
     # User relationship
     # Delete API keys when user is deleted
     user_id: UUIDstr = Field(index=True, foreign_key="user.id")

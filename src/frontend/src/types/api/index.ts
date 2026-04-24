@@ -4,7 +4,7 @@ import type {
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
-import type { ChatInputType, ChatOutputType } from "../chat";
+import type { ChatInputType, ChatOutputType, UsageType } from "../chat";
 import type { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
@@ -67,6 +67,17 @@ export type APIClassType = {
     | Array<{ types: Array<string>; selected?: string }>;
 };
 
+export type ModelOptionType = {
+  name: string;
+  id?: string;
+  icon?: string;
+  provider?: string;
+  metadata?: {
+    is_disabled_provider?: boolean;
+    [key: string]: unknown;
+  };
+};
+
 export type InputFieldType = {
   type: string;
   required: boolean;
@@ -87,7 +98,7 @@ export type InputFieldType = {
   refresh_button_text?: string;
   combobox?: boolean;
   info?: string;
-  options?: string[];
+  options?: any[];
   active_tab?: number;
   [key: string]: any;
   icon?: string;
@@ -112,6 +123,7 @@ export type OutputFieldType = {
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
   allows_loop?: boolean;
+  loop_types?: Array<string>;
   options?: { [key: string]: any };
 };
 export type errorsTypeAPI = {
@@ -237,13 +249,14 @@ export type LogsLogType = {
 export type VertexDataTypeAPI = {
   results: { [key: string]: string };
   outputs: { [key: string]: OutputLogType };
-  logs: { [key: string]: LogsLogType };
+  logs: { [key: string]: LogsLogType[] };
   messages: ChatOutputType[] | ChatInputType[];
   inactive?: boolean;
   timedelta?: number;
   duration?: string;
   artifacts?: any | ChatOutputType | ChatInputType;
   message?: ChatOutputType | ChatInputType;
+  token_usage?: UsageType | null;
 };
 
 export type CodeErrorDataTypeAPI = {
@@ -349,4 +362,14 @@ export type TableOptionsTypeAPI = {
   >;
   field_parsers?: Array<FieldParserType | { [key: string]: FieldParserType }>;
   description?: string;
+};
+
+export type TransactionLogsRow = {
+  id: string;
+  timestamp: string;
+  vertex_id: string;
+  target_id: string | null;
+  inputs: Record<string, unknown> | null;
+  outputs: Record<string, unknown> | null;
+  status: string;
 };

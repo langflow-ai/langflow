@@ -11,7 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { SAVED_HOVER } from "@/constants/constants";
+import { useTranslation } from "react-i18next";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -25,6 +25,7 @@ import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 
 export const MenuBar = memo((): JSX.Element => {
+  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const [openSettings, setOpenSettings] = useState(false);
@@ -33,7 +34,6 @@ export const MenuBar = memo((): JSX.Element => {
   const saveFlow = useSaveFlow();
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   const {
-    isFlowLocked,
     currentFlowName,
     currentFlowId,
     currentFlowFolderId,
@@ -41,7 +41,6 @@ export const MenuBar = memo((): JSX.Element => {
     currentFlowGradient,
   } = useFlowStore(
     useShallow((state) => ({
-      isFlowLocked: state.currentFlow?.locked,
       currentFlowName: state.currentFlow?.name,
       currentFlowId: state.currentFlow?.id,
       currentFlowFolderId: state.currentFlow?.folder_id,
@@ -74,6 +73,7 @@ export const MenuBar = memo((): JSX.Element => {
   );
 
   const handleSave = () => {
+    if (!onFlowPage) return;
     saveFlow().then(() => {
       setSuccessData({ title: "Saved successfully" });
     });
@@ -160,7 +160,7 @@ export const MenuBar = memo((): JSX.Element => {
                     ? saveLoading
                       ? "Saving..."
                       : "Save Changes"
-                    : SAVED_HOVER +
+                    : t("flow.savedHover") +
                       (updatedAt
                         ? new Date(updatedAt).toLocaleString("en-US", {
                             hour: "numeric",

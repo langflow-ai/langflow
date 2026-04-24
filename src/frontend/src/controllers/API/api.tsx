@@ -9,6 +9,10 @@ import { IS_AUTO_LOGIN } from "@/constants/constants";
 import { baseURL } from "@/customization/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
 import { customGetAccessToken } from "@/customization/utils/custom-get-access-token";
+import {
+  getAxiosWithCredentials,
+  getFetchCredentials,
+} from "@/customization/utils/get-fetch-credentials";
 import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { BuildStatus, type EventDeliveryType } from "../../constants/enums";
@@ -20,6 +24,7 @@ import { useLogout, useRefreshAccessToken } from "./queries/auth";
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
   baseURL: baseURL,
+  withCredentials: getAxiosWithCredentials(),
 });
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
@@ -44,13 +49,10 @@ function ApiInterceptor() {
   useEffect(() => {
     const unregister = fetchIntercept.register({
       request: (url, config) => {
-        const accessToken = customGetAccessToken();
+        // Browser automatically sends cookies with requests (including HttpOnly cookies)
+        // No need to manually add Authorization header from cookies
 
         if (!isExternalURL(url)) {
-          if (accessToken && !isAuthorizedURL(config?.url)) {
-            config.headers["Authorization"] = `Bearer ${accessToken}`;
-          }
-
           for (const [key, value] of Object.entries(customHeaders)) {
             config.headers[key] = value;
           }
@@ -86,12 +88,6 @@ function ApiInterceptor() {
           }
 
           await tryToRenewAccessToken(error);
-
-          const accessToken = customGetAccessToken();
-
-          if (!accessToken && error?.config?.url?.includes("login")) {
-            return Promise.reject(error);
-          }
         }
 
         await clearBuildVerticesState(error);
@@ -145,7 +141,8 @@ function ApiInterceptor() {
       }
     };
 
-    // Request interceptor to add access token to every request
+    // Request interceptor to add custom headers
+    // Browser automatically sends cookies (including HttpOnly) with requests
     const requestInterceptor = api.interceptors.request.use(
       async (config) => {
         const controller = new AbortController();
@@ -155,12 +152,6 @@ function ApiInterceptor() {
           const error = e as Error;
           controller.abort(error.message);
           console.error(error.message);
-        }
-
-        const accessToken = customGetAccessToken();
-
-        if (accessToken && !isAuthorizedURL(config?.url)) {
-          config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
         const currentOrigin = window.location.origin;
@@ -216,7 +207,6 @@ function ApiInterceptor() {
       onSuccess: async () => {
         setAuthenticationErrorCount(0);
         await remakeRequest(error);
-        setAuthenticationErrorCount(0);
       },
       onError: (error) => {
         console.error(error);
@@ -240,22 +230,12 @@ function ApiInterceptor() {
     const originalRequest = error.config as AxiosRequestConfig;
 
     try {
-      const accessToken = customGetAccessToken();
-
-      if (!accessToken) {
-        throw new Error("Access token not found in cookies");
-      }
-
-      // Modify headers in originalRequest
-      originalRequest.headers = {
-        ...(originalRequest.headers as Record<string, string>), // Cast to suppress TypeScript error
-        Authorization: `Bearer ${accessToken}`,
-      };
-
+      // Browser automatically sends cookies with the request
+      // No need to manually add Authorization header
       const response = await axios.request(originalRequest);
-      return response.data; // Or handle the response as needed
+      return response.data;
     } catch (err) {
-      throw err; // Throw the error if request fails again
+      throw err;
     }
   }
 
@@ -266,6 +246,7 @@ export type StreamingRequestParams = {
   method: string;
   url: string;
   onData: (event: object) => Promise<boolean>;
+  onDataBatch?: (events: object[]) => Promise<boolean>;
   body?: object;
   onError?: (statusCode: number) => void;
   onNetworkError?: (error: Error) => void;
@@ -287,6 +268,7 @@ async function performStreamingRequest({
   method,
   url,
   onData,
+  onDataBatch,
   body,
   onError,
   onNetworkError,
@@ -298,13 +280,14 @@ async function performStreamingRequest({
     Connection: "close",
   };
 
-  const params = {
+  const params: RequestInit = {
     method: method,
     headers: headers,
     signal: buildController.signal,
+    credentials: getFetchCredentials(),
   };
   if (body) {
-    params["body"] = JSON.stringify(body);
+    params.body = JSON.stringify(body);
   }
   let current: string[] = [];
   const textDecoder = new TextDecoder();
@@ -329,25 +312,39 @@ async function performStreamingRequest({
       }
       const decodedChunk = textDecoder.decode(value);
       const all = decodedChunk.split("\n\n");
+
+      // Parse all complete events from this chunk first
+      const parsedEvents: object[] = [];
       for (const string of all) {
         if (string.endsWith("}")) {
           const allString = current.join("") + string;
-          let data: object;
           try {
             const sanitizedJson = sanitizeJsonString(allString);
-            data = JSON.parse(sanitizedJson);
+            parsedEvents.push(JSON.parse(sanitizedJson));
             current = [];
           } catch (_e) {
             current.push(string);
-            continue;
           }
+        } else {
+          current.push(string);
+        }
+      }
+
+      // Dispatch: batch callback processes all chunk events at once,
+      // otherwise fall back to per-event processing.
+      if (onDataBatch && parsedEvents.length > 0) {
+        const shouldContinue = await onDataBatch(parsedEvents);
+        if (!shouldContinue) {
+          buildController.abort();
+          return;
+        }
+      } else {
+        for (const data of parsedEvents) {
           const shouldContinue = await onData(data);
           if (!shouldContinue) {
             buildController.abort();
             return;
           }
-        } else {
-          current.push(string);
         }
       }
     }

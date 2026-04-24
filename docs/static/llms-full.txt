@@ -1,0 +1,74 @@
+# Langflow Documentation (full)
+
+> Comprehensive guide for AI language models: Langflow documentation at docs.langflow.org. Covers the visual flow builder, API and webhook triggers, MCP, deployment, components, and API reference. Use this file for deeper context than llms.txt.
+
+**Platform overview**
+Official documentation for Langflow, a low-code platform for building and deploying AI-powered agents and workflows. Type: Technical Documentation – AI Development Platform. URL: https://docs.langflow.org. Category: Developer Documentation, AI/ML, Workflow Automation, RAG, MCP. Target: developers and teams adopting Langflow (OSS or Desktop) for AI applications.
+
+**Technical specifications (Langflow product)**
+Application type: Python web application (OSS); Tauri-based desktop (Langflow Desktop). Supported platforms: Windows, macOS, Linux. Minimum requirements: Windows 10 (64-bit), macOS 10.15 Catalina, Ubuntu 18.04 LTS or equivalent; 4GB RAM minimum (8GB recommended), 2GB storage, internet for model integrations; Python 3.10–3.13 for OSS. Architecture: modular component system. License: MIT. Runtime: Python 3.10–3.13 (OSS); Node.js and Python (Desktop). Package format: pip/uv (OSS), Docker image, native Desktop installers (.exe, .dmg, .deb/.rpm). Default URL: http://127.0.0.1:7860. Repository: https://github.com/langflow-ai/langflow.
+
+**Core features (by doc section)**
+Get Started: about, installation, quickstart, tutorials (RAG, files, agents, MCP). Flows: visual editor, build flows, API and webhook triggers, playground, import/export. Agents: agents and tools, MCP client/server/Astra. Develop: API keys, custom dependencies, config and globals, env vars, storage and memory, observability (LangSmith, LangFuse, etc.), data types, voice mode, CLI. Deploy: overview, public server, Nginx/SSL, Docker, Kubernetes, GCP/Hugging Face/Railway/Render, security. Components: concepts, core components, bundles (integrations), custom components. API Reference: get started, TypeScript client, flow/OpenAI/files/projects/logs/monitor/build/users endpoints, API spec. Contribute: community, how to contribute, components, bundles, tests, templates. Support: troubleshooting, get help, Luna/IBM, release notes.
+
+**Page structure**
+Get Started: about, install, quickstart, tutorials. Flows: visual editor, triggers, playground, import/export. Agents: agents, MCP. Develop: config, storage, observability, CLI. Deploy: overview, Docker, Kubernetes, cloud, security. Components: concepts, core, bundles, custom. API Reference: getting started, endpoints, spec. Contribute: community, contributing. Support: troubleshooting, help, release notes.
+
+**Installation**
+OSS: uv pip install langflow -U; uv run langflow run. Docker: docker run -p 7860:7860 langflowai/langflow:latest. From source: make run_cli. First use: UI at 127.0.0.1:7860, configure API keys, build or import flows, trigger via API or webhooks.
+
+**Use cases**
+RAG applications, multi-agent workflows, MCP servers and clients, API-backed AI services, document processing, custom components and bundles, deployment (Docker, Kubernetes, cloud). Target users: developers, data scientists, devops, contributors.
+
+**Support**
+Documentation sections: get started, flows, agents, develop, deploy, components, API, contribute, support. Community: Discord, GitHub discussions, YouTube, release notes. Technical: GitHub issues, troubleshooting docs, IBM Elite Support (Luna).
+
+**Privacy & security**
+Deployment security and API keys/auth documented at docs.langflow.org. Repository: SECURITY.md and GitHub security advisories. Data handling and env vars in Develop section.
+
+**Performance**
+Default port 7860; observability docs (LangSmith, LangFuse, etc.); deployment best practices for scaling.
+
+**Documentation for AI agents**
+Documentation URL: https://docs.langflow.org. llms.txt: https://docs.langflow.org/llms.txt. llms-full.txt: https://docs.langflow.org/llms-full.txt. Release notes: https://docs.langflow.org/release-notes.
+
+**Roadmap**
+Follow Langflow releases and GitHub for product direction; release notes at docs.
+
+## Docs
+
+- [About Langflow](https://docs.langflow.org/about-langflow): Platform overview and introduction
+- [Install Langflow](https://docs.langflow.org/get-started-installation): Installation options (OSS, Docker, from source)
+- [Quickstart](https://docs.langflow.org/get-started-quickstart): Get up and running quickly
+- [Use the visual editor](https://docs.langflow.org/concepts-overview): Visual flow builder overview
+- [Build flows](https://docs.langflow.org/concepts-flows): Concepts for building flows
+- [Trigger flows with the API](https://docs.langflow.org/concepts-publish): Run flows via the Langflow API
+- [Trigger flows with webhooks](https://docs.langflow.org/webhook): Webhook triggers
+- [Test flows](https://docs.langflow.org/concepts-playground): Playground and testing
+- [Import and export flows](https://docs.langflow.org/concepts-flows-import): Import/export
+- [Agents](https://docs.langflow.org/agents): Agents and tools
+- [MCP client](https://docs.langflow.org/mcp-client): Model Context Protocol client and server
+- [API keys and authentication](https://docs.langflow.org/api-keys-and-authentication): Configure API keys and auth
+- [Deployment overview](https://docs.langflow.org/deployment-overview): How to deploy Langflow
+- [Docker deployment](https://docs.langflow.org/deployment-docker): Langflow Docker images
+- [Security](https://docs.langflow.org/security): Deployment and security guidance
+- [Components overview](https://docs.langflow.org/concepts-components): Component reference introduction
+- [API reference – get started](https://docs.langflow.org/api-reference-api-examples): Get started with the Langflow API
+- [Troubleshooting](https://docs.langflow.org/troubleshoot): Troubleshooting guide
+- [Release notes](https://docs.langflow.org/release-notes): Version history and release notes
+
+## Community
+
+- [GitHub repository](https://github.com/langflow-ai/langflow): Source code and issues
+- [Langflow website](https://langflow.org): Main product site
+- [Langflow Desktop](https://langflow.org/desktop): Desktop app download
+- [Discord](https://discord.com/invite/EqksyE2EX9): Community chat
+- [Twitter/X](https://x.com/langflow_ai): Updates and news
+- [YouTube](https://www.youtube.com/@Langflow): Tutorials and demos
+- [GitHub Discussions](https://github.com/langflow-ai/langflow/discussions): Community discussions
+
+## Optional
+
+- [Contributing community](https://docs.langflow.org/contributing-community): Community guidelines
+- [How to contribute](https://docs.langflow.org/contributing-how-to-contribute): Contribution guide
+- [Get help and request enhancements](https://docs.langflow.org/contributing-github-issues): GitHub issues and help

@@ -1,11 +1,22 @@
 import re
+from unittest.mock import patch
 
 import pytest
+from langchain_core.messages import AIMessage
 from lfx.components.llm_operations.batch_run import BatchRunComponent
 from lfx.schema import DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
-from tests.unit.mock_language_model import MockLanguageModel
+
+
+class _MockLLM:
+    """Minimal mock LLM for unit-testing batch processing without live API keys."""
+
+    def with_config(self, *_, **__):
+        return self
+
+    async def abatch(self, conversations):
+        return [AIMessage(content=f"Response to: {conv[-1]['content']}") for conv in conversations]
 
 
 class TestBatchRunComponent(ComponentTestBaseWithoutClient):
@@ -18,7 +29,18 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         return {
-            "model": MockLanguageModel(),
+            "model": [
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             "df": DataFrame({"text": ["Hello"]}),
             "column_name": "text",
             "enable_metadata": True,
@@ -34,7 +56,7 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         test_df = DataFrame({"text": ["Hello", "World", "Test"]})
 
         component = BatchRunComponent(
-            model=MockLanguageModel(),
+            model=_MockLLM(),
             system_message="You are a helpful assistant",
             df=test_df,
             column_name="text",
@@ -61,7 +83,7 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         test_df = DataFrame({"text": ["Hello", "World"]})
 
         component = BatchRunComponent(
-            model=MockLanguageModel(),
+            model=_MockLLM(),
             df=test_df,
             column_name="text",
             enable_metadata=False,
@@ -76,7 +98,7 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
 
     async def test_batch_run_error_with_metadata(self):
         component = BatchRunComponent(
-            model=MockLanguageModel(),
+            model=_MockLLM(),
             df="not_a_dataframe",  # This will cause a TypeError
             column_name="text",
             enable_metadata=True,
@@ -87,7 +109,7 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
 
     async def test_batch_run_error_without_metadata(self):
         component = BatchRunComponent(
-            model=MockLanguageModel(),
+            model=_MockLLM(),
             df="not_a_dataframe",  # This will cause a TypeError
             column_name="text",
             enable_metadata=False,
@@ -213,7 +235,7 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
 
     async def test_invalid_column_name(self):
         component = BatchRunComponent(
-            model=MockLanguageModel(),
+            model=_MockLLM(),
             df=DataFrame({"text": ["Hello"]}),
             column_name="nonexistent_column",
             enable_metadata=True,
@@ -227,7 +249,7 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
 
     async def test_empty_dataframe(self):
         component = BatchRunComponent(
-            model=MockLanguageModel(),
+            model=_MockLLM(),
             df=DataFrame({"text": []}),
             column_name="text",
             enable_metadata=True,
@@ -241,7 +263,7 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         test_df = DataFrame({"text": [123, 456, 789]})  # Numeric values
 
         component = BatchRunComponent(
-            model=MockLanguageModel(),
+            model=_MockLLM(),
             df=test_df,
             column_name="text",
             enable_metadata=True,
@@ -256,3 +278,75 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         )
         result_dicts = result.to_dict("records")
         assert all(row["metadata"]["processing_status"] == "success" for row in result_dicts)
+
+    async def test_with_config_failure_handling(self):
+        """Test that batch run handles models that fail with_config() gracefully."""
+
+        # Create a mock model that raises an error during with_config()
+        class ConfigFailureModel:
+            def with_config(self, *_, **__):
+                msg = "Serialization error: SecretStr cannot be serialized"
+                raise ValueError(msg)
+
+            async def abatch(self, conversations):
+                # Model should still work without config
+                return [AIMessage(content=f"Response to: {conv[0]['content']}") for conv in conversations]
+
+        test_df = DataFrame({"text": ["test1", "test2"]})
+        component = BatchRunComponent(
+            model=ConfigFailureModel(),
+            df=test_df,
+            column_name="text",
+            enable_metadata=False,
+        )
+
+        # Should complete successfully despite with_config() failure
+        result = await component.run_batch()
+
+        assert isinstance(result, DataFrame)
+        assert len(result) == 2
+        assert "model_response" in result.columns
+        assert all(isinstance(resp, str) for resp in result["model_response"])
+
+    # ---------------------------------------------------------------------------
+    # update_build_config field-visibility tests (#2)
+    # ---------------------------------------------------------------------------
+
+    def _get_build_config(self, component):
+        """Helper to get a fresh build_config dict from the component's frontend node."""
+        return component.to_frontend_node()["data"]["node"]["template"]
+
+    @patch("lfx.base.models.unified_models.get_language_model_options")
+    async def test_update_build_config_shows_watsonx_fields_when_watsonx_selected(
+        self, mock_opts, component_class, default_kwargs
+    ):
+        """Selecting IBM WatsonX should show base_url_ibm_watsonx and project_id fields."""
+        watsonx_model = [{"name": "ibm/granite-13b-chat-v2", "provider": "IBM WatsonX", "metadata": {}}]
+        mock_opts.return_value = watsonx_model
+        component = component_class(**default_kwargs)
+        component._user_id = None
+
+        build_config = self._get_build_config(component)
+
+        updated = component.update_build_config(build_config, watsonx_model, field_name="model")
+
+        assert updated["base_url_ibm_watsonx"]["show"] is True
+        assert updated["base_url_ibm_watsonx"]["required"] is False
+        assert updated["project_id"]["show"] is True
+
+    @patch("lfx.base.models.unified_models.get_language_model_options")
+    async def test_update_build_config_hides_watsonx_fields_when_openai_selected(
+        self, mock_opts, component_class, default_kwargs
+    ):
+        """Selecting OpenAI should hide WatsonX-specific fields."""
+        openai_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        mock_opts.return_value = openai_model
+        component = component_class(**default_kwargs)
+        component._user_id = None
+
+        build_config = self._get_build_config(component)
+
+        updated = component.update_build_config(build_config, openai_model, field_name="model")
+
+        assert updated["base_url_ibm_watsonx"]["show"] is False
+        assert updated["project_id"]["show"] is False

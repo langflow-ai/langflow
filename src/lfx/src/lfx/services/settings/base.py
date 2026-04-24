@@ -6,9 +6,9 @@ from pathlib import Path
 from shutil import copy2
 from typing import Any, Literal
 
+import aiofiles
 import orjson
 import yaml
-from aiofile import async_open
 from pydantic import Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
@@ -17,8 +17,8 @@ from typing_extensions import override
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.log.logger import logger
 from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
-from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
-from lfx.utils.util_strings import is_valid_database_url
+from lfx.services.settings.constants import AGENTIC_VARIABLES, VARIABLES_TO_GET_FROM_ENVIRONMENT
+from lfx.utils.util_strings import is_valid_database_url, sanitize_database_url
 
 
 def is_list_of_any(field: FieldInfo) -> bool:
@@ -87,6 +87,43 @@ class Settings(BaseSettings):
     db_connect_timeout: int = 30
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
+    migration_lock_namespace: str | None = None
+    """Optional namespace identifier for PostgreSQL advisory lock during migrations.
+    If not provided, a hash of the database URL will be used. Useful when multiple Langflow
+    instances share the same database and need coordinated migration locking."""
+
+    root_path: str = ""
+    """ASGI root_path for deployments behind a reverse proxy that strips a URL
+    prefix (e.g. '/langflow').  When set, the MCP SSE transport includes this
+    prefix in the POST-back URL so clients can reach the correct endpoint.
+    Can also be set via the LANGFLOW_ROOT_PATH environment variable."""
+
+    @field_validator("root_path", mode="before")
+    @classmethod
+    def validate_root_path(cls, value: Any) -> str:
+        if value is None:
+            return ""
+        if not isinstance(value, str):
+            msg = "root_path must be a string"
+            raise TypeError(msg)
+
+        value = value.strip()
+        if not value or value == "/":
+            return ""
+
+        if "://" in value or "?" in value or "#" in value:
+            msg = "root_path must be an ASGI path prefix only, without scheme, query string, or fragment"
+            raise ValueError(msg)
+
+        if not value.startswith("/"):
+            value = f"/{value}"
+
+        return value.rstrip("/")
+
+    mcp_base_url: str = ""
+    """External base URL used to build MCP server URLs in the UI configuration JSON
+    (e.g. 'https://langflow.example.com'). When empty, the frontend falls back to
+    the browser's window.location.origin."""
 
     mcp_server_timeout: int = 20
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
@@ -109,7 +146,7 @@ class Settings(BaseSettings):
     reap idle sessions."""
 
     # sqlite configuration
-    sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
+    sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL", "busy_timeout": 30000}
     """SQLite pragmas to use when connecting to the database."""
 
     db_driver_connection_settings: dict | None = None
@@ -158,6 +195,11 @@ class Settings(BaseSettings):
     disable_track_apikey_usage: bool = False
     remove_api_keys: bool = False
     components_path: list[str] = []
+    """List of paths to custom components.
+
+    Security: This setting defines an allow-list of custom components
+    permitted to execute, even when LANGFLOW_ALLOW_CUSTOM_COMPONENTS is False.
+    """
     components_index_path: str | None = None
     """Path or URL to a prebuilt component index JSON file.
 
@@ -187,6 +229,13 @@ class Settings(BaseSettings):
     like_webhook_url: str | None = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
     storage_type: str = "local"
+    """Storage type for file storage. Defaults to 'local'. Supports 'local' and 's3'."""
+    object_storage_bucket_name: str | None = "langflow-bucket"
+    """Object storage bucket name for file storage. Defaults to 'langflow-bucket'."""
+    object_storage_prefix: str | None = "files"
+    """Object storage prefix for file storage. Defaults to 'files'."""
+    object_storage_tags: dict[str, str] | None = None
+    """Object storage tags for file storage."""
 
     celery_enabled: bool = False
 
@@ -245,6 +294,8 @@ class Settings(BaseSettings):
     """The path to log file for Langflow."""
     alembic_log_file: str = "alembic/alembic.log"
     """The path to log file for Alembic for SQLAlchemy."""
+    alembic_log_to_stdout: bool = False
+    """If set to True, the log file will be ignored and Alembic will log to stdout."""
     frontend_path: str | None = None
     """The path to the frontend directory containing build files. This is for development purposes only.."""
     open_browser: bool = False
@@ -263,10 +314,16 @@ class Settings(BaseSettings):
     """The maximum number of transactions to keep in the database."""
     max_vertex_builds_to_keep: int = 3000
     """The maximum number of vertex builds to keep in the database."""
-    max_vertex_builds_per_vertex: int = 2
+    max_vertex_builds_per_vertex: int = 50
     """The maximum number of builds to keep per vertex. Older builds will be deleted."""
-    webhook_polling_interval: int = 5000
-    """The polling interval for the webhook in ms."""
+    max_flow_version_entries_per_flow: int = 50
+    """Max version history entries per flow. Oldest entries pruned on next snapshot.
+
+    If retroactively lowered below the current count for a flow,
+    the oldest entries are deleted only when the next entry is created.
+    """
+    webhook_polling_interval: int = 0
+    """The polling interval for the webhook in ms. Set to 0 to disable (SSE provides real-time updates)."""
     fs_flows_polling_interval: int = 10000
     """The polling interval in milliseconds for synchronizing flows from the file system."""
     ssl_cert_file: str | None = None
@@ -292,9 +349,17 @@ class Settings(BaseSettings):
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""
-    mcp_composer_version: str = "~=0.1.0.7"
-    """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax.
-    ~=0.1.0.7 allows patch updates (0.1.0.x) but prevents minor/major version changes."""
+    mcp_composer_version: str = "==0.1.0.8.10"
+    """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax."""
+
+    # Agentic Experience
+    agentic_experience: bool = False
+    """If set to True, Langflow will start the agentic MCP server that provides tools for
+    flow/component operations, template search, and graph visualization."""
+
+    # Developer API
+    developer_api_enabled: bool = False
+    """If set to True, Langflow will enable developer API endpoints for advanced debugging and introspection."""
 
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
@@ -317,6 +382,21 @@ class Settings(BaseSettings):
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
 
+    # Custom Component Security
+    allow_custom_components: bool = True
+    """If set to False, blocks execution of components whose code does not match a known
+    server template.
+
+    The server validates node code against its component template cache;
+    when the cache is not yet loaded (e.g., during startup), all flow execution is blocked
+    as a safety measure.
+
+    Note: LANGFLOW_COMPONENTS_PATH can be used to define an allow-list of custom components
+    that will be allowed to execute, even when allow_custom_components is False.
+
+    Note: this is a beta feature. For security in a multi-tenant environment,
+    use hardware-level isolation to restrict access."""
+
     # SSRF Protection
     ssrf_protection_enabled: bool = False
     """If set to True, Langflow will enable SSRF (Server-Side Request Forgery) protection.
@@ -333,6 +413,33 @@ class Settings(BaseSettings):
 
     Note: This setting only takes effect when ssrf_protection_enabled is True.
     When protection is disabled, all hosts are allowed regardless of this setting."""
+
+    @field_validator("runtime_port", mode="before")
+    @classmethod
+    def validate_runtime_port(cls, value):
+        """Parse port from Kubernetes service discovery env vars.
+
+        Kubernetes auto-creates env vars like LANGFLOW_RUNTIME_PORT=tcp://<ip>:<port>
+        for services, which collides with the LANGFLOW_ env prefix. Extract the port
+        number from URL-like values instead of failing.
+        """
+        if value is None:
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            if value.isdigit():
+                return int(value)
+            if "://" in value:
+                from urllib.parse import urlparse
+
+                try:
+                    parsed_port = urlparse(value).port
+                except ValueError:
+                    return None
+                if parsed_port is not None:
+                    return parsed_port
+        return None
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -384,7 +491,7 @@ class Settings(BaseSettings):
         Supports PEP 440 specifiers: ==, !=, <=, >=, <, >, ~=, ===
         """
         if not value:
-            return "~=0.1.0.7"  # Default
+            return "==0.1.0.8.10"  # Default
 
         # Check if it already has a version specifier
         # Order matters: check longer specifiers first to avoid false matches
@@ -406,9 +513,19 @@ class Settings(BaseSettings):
     @field_validator("variables_to_get_from_environment", mode="before")
     @classmethod
     def set_variables_to_get_from_environment(cls, value):
+        import os
+
         if isinstance(value, str):
             value = value.split(",")
-        return list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
+
+        result = list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
+
+        # Add agentic variables if agentic_experience is enabled
+        # Check env var directly since we can't access instance attributes in validator
+        if os.getenv("LANGFLOW_AGENTIC_EXPERIENCE", "true").lower() == "true":
+            result.extend(AGENTIC_VARIABLES)
+
+        return list(set(result))
 
     @field_validator("log_file", mode="before")
     @classmethod
@@ -447,15 +564,14 @@ class Settings(BaseSettings):
     @classmethod
     def set_database_url(cls, value, info):
         if value and not is_valid_database_url(value):
-            msg = f"Invalid database_url provided: '{value}'"
+            sanitized = sanitize_database_url(value)
+            msg = f"Invalid database_url provided: '{sanitized}'"
             raise ValueError(msg)
 
-        logger.debug("No database_url provided, trying LANGFLOW_DATABASE_URL env variable")
         if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
             value = langflow_database_url
-            logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
+            logger.debug("Using LANGFLOW_DATABASE_URL env variable")
         else:
-            logger.debug("No database_url env variable, using sqlite database")
             # Originally, we used sqlite:///./langflow.db
             # so we need to migrate to the new format
             # if there is a database in that location
@@ -471,10 +587,14 @@ class Settings(BaseSettings):
 
             if info.data["save_db_in_config_dir"]:
                 database_dir = info.data["config_dir"]
-                logger.debug(f"Saving database to config_dir: {database_dir}")
             else:
-                database_dir = Path(__file__).parent.parent.parent.resolve()
-                logger.debug(f"Saving database to langflow directory: {database_dir}")
+                # Use langflow package path, not lfx, for backwards compatibility
+                try:
+                    import langflow
+
+                    database_dir = Path(langflow.__file__).parent.resolve()
+                except ImportError:
+                    database_dir = Path(__file__).parent.parent.parent.resolve()
 
             pre_db_file_name = "langflow-pre.db"
             db_file_name = "langflow.db"
@@ -497,7 +617,6 @@ class Settings(BaseSettings):
                     logger.debug(f"Creating new database at {new_pre_path}")
                     final_path = new_pre_path
             elif Path(new_path).exists():
-                logger.debug(f"Database already exists at {new_path}, using it")
                 final_path = new_path
             elif Path(f"./{db_file_name}").exists():
                 try:
@@ -541,15 +660,10 @@ class Settings(BaseSettings):
 
         if not value:
             value = [BASE_COMPONENTS_PATH]
-            logger.debug("Setting default components path to components_path")
-        else:
-            if isinstance(value, Path):
-                value = [str(value)]
-            elif isinstance(value, list):
-                value = [str(p) if isinstance(p, Path) else p for p in value]
-            logger.debug("Adding default components path to components_path")
-
-        logger.debug(f"Components path: {value}")
+        elif isinstance(value, Path):
+            value = [str(value)]
+        elif isinstance(value, list):
+            value = [str(p) if isinstance(p, Path) else p for p in value]
         return value
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
@@ -560,13 +674,10 @@ class Settings(BaseSettings):
         self.dev = dev
 
     def update_settings(self, **kwargs) -> None:
-        logger.debug("Updating settings")
         for key, value in kwargs.items():
             # value may contain sensitive information, so we don't want to log it
             if not hasattr(self, key):
-                logger.debug(f"Key {key} not found in settings")
                 continue
-            logger.debug(f"Updating {key}")
             if isinstance(getattr(self, key), list):
                 # value might be a '[something]' string
                 value_ = value
@@ -577,17 +688,12 @@ class Settings(BaseSettings):
                         item_ = str(item) if isinstance(item, Path) else item
                         if item_ not in getattr(self, key):
                             getattr(self, key).append(item_)
-                    logger.debug(f"Extended {key}")
                 else:
                     value_ = str(value_) if isinstance(value_, Path) else value_
                     if value_ not in getattr(self, key):
                         getattr(self, key).append(value_)
-                        logger.debug(f"Appended {key}")
-
             else:
                 setattr(self, key, value)
-                logger.debug(f"Updated {key}")
-            logger.debug(f"{key}: {getattr(self, key)}")
 
     @property
     def voice_mode_available(self) -> bool:
@@ -627,7 +733,7 @@ async def load_settings_from_yaml(file_path: str) -> Settings:
     else:
         file_path_ = Path(file_path)
 
-    async with async_open(file_path_.name, encoding="utf-8") as f:
+    async with aiofiles.open(file_path_.name, encoding="utf-8") as f:
         content = await f.read()
         settings_dict = yaml.safe_load(content)
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}

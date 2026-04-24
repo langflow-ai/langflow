@@ -8,13 +8,15 @@ import base64
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from functools import wraps
+from pathlib import Path
 from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from lfx.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
 from lfx.log.logger import logger
+from lfx.utils.flow_validation import CustomComponentValidationError
 from lfx.utils.helpers import build_content_type_from_extension
 from mcp import types
 from sqlmodel import select
@@ -24,11 +26,14 @@ from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
 from langflow.services.database.models import Flow
+from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 
 T = TypeVar("T")
 P = ParamSpec("P")
+
+MCP_SERVERS_FILE = "_mcp_servers"
 
 # Create context variables
 current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
@@ -89,10 +94,26 @@ async def handle_list_resources(project_id=None):
         port = getattr(settings_service.settings, "port", 3000)
 
         base_url = f"http://{host}:{port}".rstrip("/")
+        try:
+            current_user = current_user_ctx.get()
+        except Exception as e:  # noqa: BLE001
+            msg = f"Error getting current user: {e!s}"
+            await logger.aexception(msg)
+            current_user = None
+
+        # SECURITY: The current_user context is required to scope resources.
+        # Without it we cannot safely list files from any flow because the
+        # global server previously leaked every user's flow URIs (PVR0754098).
+        if current_user is None:
+            await logger.awarning("handle_list_resources called without a current user; returning empty list")
+            return resources
 
         async with session_scope() as session:
-            # Build query based on whether project_id is provided
-            flows_query = select(Flow).where(Flow.folder_id == project_id) if project_id else select(Flow)
+            # SECURITY: Always scope to the calling user to prevent cross-user enumeration.
+            if project_id:
+                flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id)
+            else:
+                flows_query = select(Flow).where(Flow.user_id == current_user.id)
 
             flows = (await session.exec(flows_query)).all()
 
@@ -104,7 +125,7 @@ async def handle_list_resources(project_id=None):
                             # URL encode the filename
                             safe_filename = quote(file_name)
                             resource = types.Resource(
-                                uri=f"{base_url}/api/v1/files/{flow.id}/{safe_filename}",
+                                uri=f"{base_url}/api/v1/files/download/{flow.id}/{safe_filename}",
                                 name=file_name,
                                 description=f"File in flow: {flow.name}",
                                 mimeType=build_content_type_from_extension(file_name),
@@ -114,6 +135,38 @@ async def handle_list_resources(project_id=None):
                         msg = f"Error listing files for flow {flow.id}: {e}"
                         await logger.adebug(msg)
                         continue
+            ####################################################
+            # When a user uploads a file inside a flow
+            # (e.g., via the File Read component),
+            # it hits /api/v2/files (POST),
+            # which saves files at the user-level.
+            # So the above query for flow files is not enough.
+            # So we list all user files for the current user.
+            # This is not good. We need to fix this for 1.8.0.
+            #
+            # SECURITY (PVR0754098): user-level files have no project association,
+            # so they must not be exposed through a project-scoped MCP server —
+            # doing so would let a project client enumerate files unrelated to
+            # the project. Only include them on the global (project_id is None) server.
+            ###################################################
+            if project_id is None:
+                user_files_stmt = select(UserFile).where(UserFile.user_id == current_user.id)
+                user_files = (await session.exec(user_files_stmt)).all()
+                for user_file in user_files:
+                    stored_path = getattr(user_file, "path", "") or ""
+                    stored_filename = Path(stored_path).name if stored_path else user_file.name
+                    safe_filename = quote(stored_filename)
+                    if stored_filename.startswith(f"{MCP_SERVERS_FILE}_{current_user.id}"):
+                        # reserved file name for langflow MCP server config file(s)
+                        continue
+                    description = getattr(user_file, "provider", None) or "User file uploaded via File Manager"
+                    resource = types.Resource(
+                        uri=f"{base_url}/api/v1/files/download/{current_user.id}/{safe_filename}",
+                        name=stored_filename,
+                        description=description,
+                        mimeType=build_content_type_from_extension(stored_filename),
+                    )
+                    resources.append(resource)
     except Exception as e:
         msg = f"Error in listing resources: {e!s}"
         await logger.aexception(msg)
@@ -121,12 +174,19 @@ async def handle_list_resources(project_id=None):
     return resources
 
 
-async def handle_read_resource(uri: str) -> bytes:
-    """Handle resource read requests."""
+async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -> bytes:
+    """Handle resource read requests.
+
+    Args:
+        uri: The resource URI; last two path segments are the namespace (flow_id or user_id)
+            and filename.
+        project_id: When invoked from a project-scoped server, restricts the lookup so a
+            caller cannot read resources that live outside the project.
+    """
     try:
         # Parse the URI properly
         parsed_uri = urlparse(str(uri))
-        # Path will be like /api/v1/files/{flow_id}/{filename}
+        # Path will be like /api/v1/files/download/{namespace}/{filename}
         path_parts = parsed_uri.path.split("/")
         # Remove empty strings from split
         path_parts = [p for p in path_parts if p]
@@ -137,15 +197,50 @@ async def handle_read_resource(uri: str) -> bytes:
             msg = f"Invalid URI format: {uri}"
             raise ValueError(msg)
 
-        flow_id = path_parts[-2]
+        namespace_id = path_parts[-2]
         filename = unquote(path_parts[-1])  # URL decode the filename
+
+        # SECURITY (defense-in-depth): reject obvious traversal attempts before any
+        # service call. The storage service validates as well, but failing fast here
+        # keeps error logs from the storage layer off the hot path and closes the gap
+        # between the MCP decode step and the storage layer for future refactors.
+        if not filename or ".." in filename or "/" in filename or "\\" in filename:
+            await logger.awarning(f"Rejected MCP resource read with invalid filename: {filename!r}")
+            msg = "Invalid filename"
+            raise ValueError(msg)
+
+        # SECURITY: authorise the caller before reading. The storage layer alone is
+        # not enough because the filesystem doesn't know about Langflow users, and
+        # previously any authenticated user could request any flow_id.
+        try:
+            current_user = current_user_ctx.get()
+        except LookupError as exc:
+            msg = "Authenticated user context is required to read MCP resources"
+            raise ValueError(msg) from exc
+
+        async with session_scope() as session:
+            flow_query = select(Flow).where(Flow.id == namespace_id, Flow.user_id == current_user.id)
+            if project_id is not None:
+                flow_query = flow_query.where(Flow.folder_id == project_id)
+            flow = (await session.exec(flow_query)).first()
+
+            if flow is None:
+                # The namespace segment may refer to the user's own bucket (user-level
+                # files uploaded via /api/v2/files) rather than a flow id.
+                if str(current_user.id) != str(namespace_id):
+                    msg = "Resource not found or access denied"
+                    raise ValueError(msg)
+                # User-level access is never in-scope for a project-scoped server.
+                if project_id is not None:
+                    msg = "Resource not found or access denied"
+                    raise ValueError(msg)
 
         storage_service = get_storage_service()
 
         # Read the file content
-        content = await storage_service.get_file(flow_id=flow_id, file_name=filename)
+        content = await storage_service.get_file(flow_id=namespace_id, file_name=filename)
         if not content:
-            msg = f"File {filename} not found in flow {flow_id}"
+            msg = f"File {filename} not found in flow {namespace_id}"
             raise ValueError(msg)
 
         # Ensure content is base64 encoded
@@ -256,6 +351,12 @@ async def handle_call_tool(
                                     add_result(value.get_text())
                                 else:
                                     add_result(str(value))
+                except CustomComponentValidationError as exc:
+                    logger.warning(f"MCP tool call blocked for flow {flow.id}: {exc!s}")
+                    collected_results.append(types.TextContent(type="text", text=f"Flow build blocked: {exc!s}"))
+                except ValueError as exc:
+                    error_msg = f"Error Executing the {flow.name} tool. Error: {exc!s}"
+                    collected_results.append(types.TextContent(type="text", text=error_msg))
                 except Exception as e:  # noqa: BLE001
                     error_msg = f"Error Executing the {flow.name} tool. Error: {e!s}"
                     collected_results.append(types.TextContent(type="text", text=error_msg))
@@ -292,6 +393,13 @@ async def handle_list_tools(project_id=None, *, mcp_enabled_only=False):
     """
     tools = []
     try:
+        # SECURITY: tools returned from the global server previously included every
+        # user's flows (PVR0754098). Always scope to the authenticated caller.
+        try:
+            current_user = current_user_ctx.get()
+        except LookupError:
+            current_user = None
+
         async with session_scope() as session:
             # Build query based on parameters
             if project_id:
@@ -299,9 +407,14 @@ async def handle_list_tools(project_id=None, *, mcp_enabled_only=False):
                 flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.is_component == False)  # noqa: E712
                 if mcp_enabled_only:
                     flows_query = flows_query.where(Flow.mcp_enabled == True)  # noqa: E712
+            elif current_user is not None:
+                # Global server: scope to the calling user only.
+                flows_query = select(Flow).where(Flow.user_id == current_user.id)
             else:
-                # Get all flows
-                flows_query = select(Flow)
+                await logger.awarning(
+                    "handle_list_tools called without a current user and no project_id; returning empty list"
+                )
+                return tools
 
             flows = (await session.exec(flows_query)).all()
 

@@ -1,10 +1,11 @@
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "jsdom",
+  coverageProvider: "v8",
   injectGlobals: true,
   moduleNameMapper: {
+    "\\.(css|less|scss|sass)$": "<rootDir>/src/__mocks__/styleMock.js",
     "^@/(.*)$": "<rootDir>/src/$1",
-    "\\.(css|less|scss|sass)$": "identity-obj-proxy",
     "^@jsonquerylang/jsonquery$":
       "<rootDir>/src/__mocks__/@jsonquerylang/jsonquery.js",
     "^vanilla-jsoneditor$": "<rootDir>/src/__mocks__/vanilla-jsoneditor.js",
@@ -33,8 +34,8 @@ module.exports = {
     "!src/vite-env.d.ts",
     "!src/**/*.d.ts",
   ],
-  coverageDirectory: "coverage",
-  coverageReporters: ["text", "lcov", "html", "json-summary"],
+  coverageDirectory: "coverage/jest",
+  coverageReporters: ["text", "lcov", "html", "json", "json-summary"],
   coveragePathIgnorePatterns: ["/node_modules/", "/tests/"],
 
   // CI-specific configuration

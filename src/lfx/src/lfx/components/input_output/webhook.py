@@ -7,7 +7,7 @@ from lfx.schema.data import Data
 
 class WebhookComponent(Component):
     display_name = "Webhook"
-    documentation: str = "https://docs.langflow.org/components-data#webhook"
+    documentation: str = "https://docs.langflow.org/component-webhook"
     name = "Webhook"
     icon = "webhook"
 
@@ -35,7 +35,7 @@ class WebhookComponent(Component):
         ),
     ]
     outputs = [
-        Output(display_name="Data", name="output_data", method="build_data"),
+        Output(display_name="JSON", name="output_data", method="build_data"),
     ]
 
     def build_data(self) -> Data:

@@ -34,7 +34,7 @@ test(
       outdatedComponents = await page.getByTestId("update-button").count();
     }
 
-    await page.getByTestId("promptarea_prompt_template").click();
+    await page.getByTestId("button_open_prompt_modal").click();
 
     await page.keyboard.press(`ControlOrMeta+a`);
     await page.keyboard.press("Backspace");

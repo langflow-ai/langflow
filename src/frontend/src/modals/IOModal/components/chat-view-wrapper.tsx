@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -13,7 +14,6 @@ export const ChatViewWrapper = ({
   sidebarOpen,
   currentFlowId,
   setSidebarOpen,
-  isPlayground,
   setvisibleSession,
   setSelectedViewField,
   messagesFetched,
@@ -21,9 +21,9 @@ export const ChatViewWrapper = ({
   sendMessage,
   canvasOpen,
   setOpen,
-  playgroundTitle,
   playgroundPage,
 }: ChatViewWrapperProps) => {
+  const { t } = useTranslation();
   return (
     <div
       className={cn(
@@ -61,18 +61,22 @@ export const ChatViewWrapper = ({
             )}
           >
             {visibleSession === currentFlowId
-              ? "Default Session"
+              ? t("modal.io.defaultSession")
               : `${visibleSession}`}
           </div>
         )}
         <div
           className={cn(
             sidebarOpen ? "pointer-events-none opacity-0" : "",
-            "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             playgroundPage ? "right-2 top-4" : "absolute right-12 top-2 h-8",
           )}
         >
-          <ShadTooltip side="bottom" styleClasses="z-50" content="New Chat">
+          <ShadTooltip
+            side="bottom"
+            styleClasses="z-50"
+            content={t("modal.io.newChat")}
+          >
             <Button
               className="mr-2 h-[32px] w-[32px] hover:bg-secondary-hover"
               variant="ghost"

@@ -98,7 +98,6 @@ class ComponentVertex(Vertex):
         Returns:
             The built result if use_result is True, else the built object.
         """
-        flow_id = self.graph.flow_id
         if not self.built:
             default_value: Any = UNDEFINED
             for edge in self.get_edge_with_target(requester.id):
@@ -109,8 +108,6 @@ class ComponentVertex(Vertex):
                     else:
                         default_value = requester.get_value_from_template_dict(edge.target_param)
 
-            if flow_id:
-                await self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="error")
             if default_value is not UNDEFINED:
                 return default_value
             msg = f"Component {self.display_name} has not been built yet"
@@ -148,8 +145,6 @@ class ComponentVertex(Vertex):
                 raise ValueError(msg)
             msg = f"Result not found for {edge.source_handle.name} in {edge}"
             raise ValueError(msg)
-        if flow_id:
-            await self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="success")
         return result
 
     def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:
@@ -192,6 +187,7 @@ class ComponentVertex(Vertex):
         # We need to set the artifacts to pass information
         # to the frontend
         messages = self.extract_messages_from_artifacts(result_dict)
+        token_usage = self._extract_token_usage()
         result_dict = ResultData(
             results=result_dict,
             artifacts=self.artifacts,
@@ -200,6 +196,7 @@ class ComponentVertex(Vertex):
             messages=messages,
             component_display_name=self.display_name,
             component_id=self.id,
+            token_usage=token_usage,
         )
         self.set_result(result_dict)
 

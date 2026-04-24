@@ -2,7 +2,7 @@ import json
 from typing import Any
 
 import requests
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent
@@ -14,7 +14,7 @@ from lfx.schema.data import Data
 class NotionPageCreator(LCToolComponent):
     display_name: str = "Create Page "
     description: str = "A component for creating Notion pages."
-    documentation: str = "https://docs.langflow.org/integrations/notion/page-create"
+    documentation: str = "https://docs.langflow.org/bundles-notion"
     icon = "NotionDirectoryLoader"
 
     inputs = [

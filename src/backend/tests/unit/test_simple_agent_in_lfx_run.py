@@ -25,14 +25,15 @@ class TestAgentInLfxRun:
         return '''"""A simple agent flow example for Langflow.
 
 This script demonstrates how to set up a conversational agent using Langflow's
-Agent component with web search capabilities.
+Agent component with proper async handling.
 
 Features:
 - Uses the new flattened component access (cp.AgentComponent instead of deep imports)
 - Configures logging to 'langflow.log' at INFO level
 - Creates an agent with OpenAI GPT model
-- Provides web search tools via URLComponent
 - Connects ChatInput → Agent → ChatOutput
+- Uses async get_graph() function for proper async handling
+- Demonstrates the new async script loading pattern
 
 Usage:
     uv run lfx run simple_agent.py "How are you?"
@@ -46,27 +47,42 @@ from lfx import components as cp
 from lfx.graph import Graph
 from lfx.log.logger import LogConfig
 
-log_config = LogConfig(
-    log_level="INFO",
-    log_file=Path("langflow.log"),
-)
 
-# Showcase the new flattened component access - no need for deep imports!
-chat_input = cp.ChatInput()
-agent = cp.AgentComponent()
-url_component = cp.URLComponent()
-tools = await url_component.to_toolkit()
+async def get_graph() -> Graph:
+    """Create and return the graph with async component initialization.
 
-agent.set(
-    model_name="gpt-4o-mini",
-    agent_llm="OpenAI",
-    api_key=os.getenv("OPENAI_API_KEY"),
-    input_value=chat_input.message_response,
-    tools=tools,
-)
-chat_output = cp.ChatOutput().set(input_value=agent.message_response)
+    This function properly handles async component initialization without
+    blocking the module loading process. The script loader will detect this
+    async function and handle it appropriately using run_until_complete.
 
-graph = Graph(chat_input, chat_output, log_config=log_config)
+    Returns:
+        Graph: The configured graph with ChatInput → Agent → ChatOutput flow
+    """
+    log_config = LogConfig(
+        log_level="INFO",
+        log_file=Path("langflow.log"),
+    )
+
+    # Showcase the new flattened component access - no need for deep imports!
+    chat_input = cp.ChatInput()
+    agent = cp.AgentComponent()
+
+    # Use URLComponent for web search capabilities
+    url_component = cp.URLComponent()
+
+    # Properly handle async component initialization
+    tools = await url_component.to_toolkit()
+
+    agent.set(
+        model_name="gpt-4o-mini",
+        agent_llm="OpenAI",
+        api_key=os.getenv("OPENAI_API_KEY"),
+        input_value=chat_input.message_response,
+        tools=tools,
+    )
+    chat_output = cp.ChatOutput().set(input_value=agent.message_response)
+
+    return Graph(chat_input, chat_output, log_config=log_config)
 '''
 
     @pytest.fixture
@@ -99,10 +115,11 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         assert "cp.AgentComponent()" in simple_agent_script_content
         assert "cp.URLComponent()" in simple_agent_script_content
         assert "cp.ChatOutput()" in simple_agent_script_content
-        assert "url_component.to_toolkit()" in simple_agent_script_content
+        assert "async def get_graph()" in simple_agent_script_content
+        assert "await url_component.to_toolkit()" in simple_agent_script_content
         assert 'model_name="gpt-4o-mini"' in simple_agent_script_content
         assert 'agent_llm="OpenAI"' in simple_agent_script_content
-        assert "Graph(chat_input, chat_output" in simple_agent_script_content
+        assert "return Graph(chat_input, chat_output" in simple_agent_script_content
 
     def test_agent_script_file_validation(self, simple_agent_script_file):
         """Test that the agent script file exists and has valid content."""
@@ -114,7 +131,8 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         content = simple_agent_script_file.read_text()
         assert "from lfx import components as cp" in content
         assert "cp.AgentComponent()" in content
-        assert "Graph(chat_input, chat_output" in content
+        assert "async def get_graph()" in content
+        assert "return Graph(chat_input, chat_output" in content
 
     def test_agent_script_supports_formats(self, simple_agent_script_file):
         """Test that the script supports logging configuration."""
@@ -247,7 +265,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         agent.set(
             model_name="gpt-4o-mini",
             agent_llm="OpenAI",
-            api_key="test-key",  # Use test key
+            api_key="test-key",  # pragma: allowlist secret
             input_value="Test message",
             tools=[],  # Empty tools for this test
         )
@@ -255,7 +273,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         # Verify configuration was applied
         assert agent.model_name == "gpt-4o-mini"
         assert agent.agent_llm == "OpenAI"
-        assert agent.api_key == "test-key"
+        assert agent.api_key == "test-key"  # pragma: allowlist secret
         assert agent.input_value == "Test message"
 
     def test_chat_output_chaining_pattern(self):

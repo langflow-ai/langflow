@@ -1,1 +1,1 @@
-# Tracing service for lfx package
+"""Tracing service for lfx package - minimal implementation."""

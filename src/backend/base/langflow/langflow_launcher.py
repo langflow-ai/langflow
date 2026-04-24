@@ -2,13 +2,25 @@ import os
 import platform
 import sys
 
-import typer
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
+from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
+
+configure_windows_postgres_event_loop(source="launcher")
+
+import typer  # noqa: E402
 
 
 def main():
     """Launches langflow with appropriate environment setup.
 
     On macOS, sets required environment variables and replaces current process.
+    On Windows with PostgreSQL, configures event loop for psycopg compatibility.
     On other platforms, calls main function directly.
     """
     if platform.system() == "Darwin":  # macOS

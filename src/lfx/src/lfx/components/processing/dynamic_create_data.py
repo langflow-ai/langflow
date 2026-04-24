@@ -62,7 +62,7 @@ class DynamicCreateDataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="form_data", method="process_form"),
+        Output(display_name="JSON", name="form_data", method="process_form"),
         Output(display_name="Message", name="message", method="get_message"),
     ]
 

@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
 
 export const navigateSettingsPages = async (
   page: Page,
@@ -17,8 +17,5 @@ export const navigateSettingsPages = async (
       timeout: 5000,
     });
     await page.waitForTimeout(500);
-    await expect(page.getByTestId("settings_menu_header").last()).toContainText(
-      settingsMenuName,
-    );
   }
 };

@@ -6,10 +6,12 @@ import json
 import os
 import sys
 import tempfile
+from functools import partial
 from pathlib import Path
 
 import typer
 import uvicorn
+from asyncer import syncify
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
@@ -32,7 +34,8 @@ console = Console()
 API_KEY_MASK_LENGTH = 8
 
 
-def serve_command(
+@partial(syncify, raise_sync_error=False)
+async def serve_command(
     script_path: str | None = typer.Argument(
         None,
         help=(
@@ -201,12 +204,12 @@ def serve_command(
             raise typer.Exit(1)
 
         if resolved_path.suffix == ".json":
-            graph = load_graph_from_path(resolved_path, resolved_path.suffix, verbose_print, verbose=verbose)
+            graph = await load_graph_from_path(resolved_path, resolved_path.suffix, verbose_print, verbose=verbose)
         elif resolved_path.suffix == ".py":
             verbose_print("Loading graph from Python script...")
             from lfx.cli.script_loader import load_graph_from_script
 
-            graph = load_graph_from_script(resolved_path)
+            graph = await load_graph_from_script(resolved_path)
             verbose_print("✓ Graph loaded from Python script")
         else:
             err_msg = "Error: Only JSON flow files (.json) or Python scripts (.py) are supported. "
@@ -300,13 +303,18 @@ def serve_command(
         console.print()
 
         # Start the server
+        # Use uvicorn.Server to properly handle async context
+        # uvicorn.run() uses asyncio.run() internally which fails when
+        # an event loop is already running (due to syncify decorator)
         try:
-            uvicorn.run(
+            config = uvicorn.Config(
                 serve_app,
                 host=host,
                 port=port,
                 log_level=log_level,
             )
+            server = uvicorn.Server(config)
+            await server.serve()
         except KeyboardInterrupt:
             verbose_print("\n👋 Server stopped")
             raise typer.Exit(0) from None

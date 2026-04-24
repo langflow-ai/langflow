@@ -69,6 +69,8 @@ export type NodeDataType = {
   selected_output_type?: string;
   buildStatus?: BuildStatus;
   selected_output?: string;
+  /** Transient flag: true while "Connect other models" mode is active */
+  _connectionMode?: boolean;
 };
 
 export type EdgeType = Edge<EdgeDataType, "default">;

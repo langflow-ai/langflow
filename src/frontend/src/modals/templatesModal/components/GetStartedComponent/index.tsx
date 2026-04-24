@@ -11,7 +11,15 @@ import multiAgentHorizontal from "../../../../assets/temp-pat-m-3.png";
 
 import TemplateGetStartedCardComponent from "../TemplateGetStartedCardComponent";
 
-export default function GetStartedComponent() {
+interface GetStartedComponentProps {
+  loading: boolean;
+  onFlowCreating: (loading: boolean) => void;
+}
+
+export default function GetStartedComponent({
+  loading,
+  onFlowCreating,
+}: GetStartedComponentProps) {
   const examples = useFlowsManagerStore((state) => state.examples);
 
   const filteredExamples = examples.filter((example) => {
@@ -54,7 +62,12 @@ export default function GetStartedComponent() {
       </BaseModal.Header>
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
         {cardData.map((card, index) => (
-          <TemplateGetStartedCardComponent key={index} {...card} />
+          <TemplateGetStartedCardComponent
+            key={index}
+            {...card}
+            loading={loading}
+            onFlowCreating={onFlowCreating}
+          />
         ))}
       </div>
     </div>

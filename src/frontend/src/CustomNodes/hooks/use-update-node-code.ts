@@ -10,7 +10,9 @@ const useUpdateNodeCode = (
   setNode: (id: string, callback: (oldNode) => any) => void,
   updateNodeInternals: (id: string) => void,
 ) => {
-  const { setComponentsToUpdate } = useFlowStore();
+  const setComponentsToUpdate = useFlowStore(
+    (state) => state.setComponentsToUpdate,
+  );
 
   const updateNodeCode = useCallback(
     (newNodeClass: APIClassType, code: string, name: string, type: string) => {
@@ -45,7 +47,7 @@ const useUpdateNodeCode = (
       );
       updateNodeInternals(dataId);
     },
-    [dataId, dataNode, setNode, updateNodeInternals],
+    [dataId, dataNode, setNode, updateNodeInternals, setComponentsToUpdate],
   );
 
   return updateNodeCode;

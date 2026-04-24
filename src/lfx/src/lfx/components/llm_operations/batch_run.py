@@ -1,31 +1,67 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 import toml  # type: ignore[import-untyped]
 
+from lfx.base.models.unified_models import (
+    get_llm,
+    handle_model_input_update,
+)
+from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.custom.custom_component.component import Component
-from lfx.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
+from lfx.io import (
+    BoolInput,
+    DataFrameInput,
+    DropdownInput,
+    MessageTextInput,
+    ModelInput,
+    MultilineInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+)
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
-
-if TYPE_CHECKING:
-    from langchain_core.runnables import Runnable
+from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
 
 
 class BatchRunComponent(Component):
     display_name = "Batch Run"
     description = "Runs an LLM on each row of a DataFrame column. If no column is specified, all columns are used."
-    documentation: str = "https://docs.langflow.org/components-processing#batch-run"
+    documentation: str = "https://docs.langflow.org/batch-run"
     icon = "List"
 
     inputs = [
-        HandleInput(
+        ModelInput(
             name="model",
             display_name="Language Model",
-            info="Connect the 'Language Model' output from your LLM component here.",
-            input_types=["LanguageModel"],
+            info="Select your model provider",
+            real_time_refresh=True,
             required=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
+            real_time_refresh=True,
+            advanced=True,
+        ),
+        DropdownInput(
+            name="base_url_ibm_watsonx",
+            display_name="watsonx API Endpoint",
+            info="The base URL of the API (IBM watsonx.ai only)",
+            options=IBM_WATSONX_URLS,
+            value=IBM_WATSONX_URLS[0],
+            show=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="project_id",
+            display_name="watsonx Project ID",
+            info="The project ID associated with the foundation model (IBM watsonx.ai only)",
+            show=False,
+            required=False,
         ),
         MultilineInput(
             name="system_message",
@@ -35,7 +71,7 @@ class BatchRunComponent(Component):
         ),
         DataFrameInput(
             name="df",
-            display_name="DataFrame",
+            display_name="Table",
             info="The DataFrame whose column (specified by 'column_name') we'll treat as text messages.",
             required=True,
         ),
@@ -76,6 +112,10 @@ class BatchRunComponent(Component):
         ),
     ]
 
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        """Dynamically update build config with user-filtered model options."""
+        return handle_model_input_update(self, build_config, field_value, field_name)
+
     def _format_row_as_toml(self, row: dict[str, Any]) -> str:
         """Convert a dictionary (row) into a TOML-formatted string."""
         formatted_dict = {str(col): {"value": str(val)} for col, val in row.items()}
@@ -111,20 +151,20 @@ class BatchRunComponent(Component):
             }
 
     async def run_batch(self) -> DataFrame:
-        """Process each row in df[column_name] with the language model asynchronously.
+        """Process each row in df[column_name] with the language model asynchronously."""
+        # Check if model is already an instance (for testing) or needs to be instantiated
+        if isinstance(self.model, list):
+            model = get_llm(
+                model=self.model,
+                user_id=self.user_id,
+                api_key=self.api_key,
+                watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
+                watsonx_project_id=getattr(self, "project_id", None),
+            )
+        else:
+            # Model is already an instance (typically in tests)
+            model = self.model
 
-        Returns:
-            DataFrame: A new DataFrame containing:
-                - All original columns
-                - The model's response column (customizable name)
-                - 'batch_index' column for processing order
-                - 'metadata' (optional)
-
-        Raises:
-            ValueError: If the specified column is not found in the DataFrame
-            TypeError: If the model is not compatible or input types are wrong
-        """
-        model: Runnable = self.model
         system_msg = self.system_message or ""
         df: DataFrame = self.df
         col_name = self.column_name or ""
@@ -159,13 +199,22 @@ class BatchRunComponent(Component):
             ]
 
             # Configure the model with project info and callbacks
-            model = model.with_config(
-                {
-                    "run_name": self.display_name,
-                    "project_name": self.get_project_name(),
-                    "callbacks": self.get_langchain_callbacks(),
-                }
-            )
+            # Some models (e.g., ChatWatsonx) may have serialization issues with with_config()
+            # due to SecretStr or other non-serializable attributes
+            try:
+                model = model.with_config(
+                    {
+                        "run_name": self.display_name,
+                        "project_name": self.get_project_name(),
+                        "callbacks": self.get_langchain_callbacks(),
+                    }
+                )
+            except (TypeError, ValueError, AttributeError) as e:
+                # Log warning and continue without configuration
+                await logger.awarning(
+                    f"Could not configure model with callbacks and project info: {e!s}. "
+                    "Proceeding with batch processing without configuration."
+                )
             # Process batches and track progress
             responses_with_idx = list(
                 zip(
@@ -183,7 +232,9 @@ class BatchRunComponent(Component):
             for idx, (original_row, response) in enumerate(
                 zip(df.to_dict(orient="records"), responses_with_idx, strict=False)
             ):
-                response_text = response[1].content if hasattr(response[1], "content") else str(response[1])
+                response_msg = response[1]
+                self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response_msg))
+                response_text = response_msg.content if hasattr(response_msg, "content") else str(response_msg)
                 row = self._create_base_row(
                     cast("dict[str, Any]", original_row), model_response=response_text, batch_index=idx
                 )

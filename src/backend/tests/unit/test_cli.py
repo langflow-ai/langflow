@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 import typer
-from langflow.__main__ import _create_superuser, app
+from langflow.__main__ import _create_superuser, app, get_number_of_workers
 from lfx.services import deps
 
 
@@ -132,7 +132,7 @@ class TestSuperuserCommand:
         with (
             patch("langflow.services.deps.get_settings_service") as mock_settings,
             patch("langflow.__main__.get_settings_service") as mock_settings2,
-            patch("langflow.__main__.get_current_user_by_jwt", side_effect=Exception("Invalid token")),
+            patch("langflow.__main__.get_current_user_from_access_token", side_effect=Exception("Invalid token")),
             patch("langflow.__main__.check_key", return_value=None),
         ):
             # Configure settings for production mode (AUTO_LOGIN=False)
@@ -145,3 +145,18 @@ class TestSuperuserCommand:
                 await _create_superuser("newuser", "newpass", "invalid-token")
 
             assert exc_info.value.exit_code == 1
+
+
+def test_get_number_of_workers():
+    """Test that get_number_of_workers uses cpu_count on Linux."""
+    with (
+        patch("langflow.__main__.platform.system", return_value="Linux"),
+        patch("langflow.__main__.cpu_count", return_value=4),
+    ):
+        # Test default behavior (None)
+        workers = get_number_of_workers(None)
+        assert workers == (4 * 2) + 1  # 9 workers
+
+        # Test explicit value is respected
+        workers = get_number_of_workers(2)
+        assert workers == 2

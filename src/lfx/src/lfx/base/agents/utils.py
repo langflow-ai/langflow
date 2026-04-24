@@ -2,13 +2,13 @@ import re
 from collections.abc import Callable, Sequence
 from typing import Any
 
-from langchain.agents import (
+from langchain_classic.agents import (
     create_json_chat_agent,
     create_openai_tools_agent,
     create_tool_calling_agent,
     create_xml_agent,
 )
-from langchain.agents.xml.base import render_text_description
+from langchain_classic.agents.xml.base import render_text_description
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate
@@ -222,6 +222,10 @@ def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
 def get_chat_output_sender_name(self) -> str | None:
     """Get sender_name from ChatOutput component."""
     if not hasattr(self, "graph") or not self.graph:
+        return None
+
+    # Check if graph has vertices attribute (PlaceholderGraph doesn't)
+    if not hasattr(self.graph, "vertices"):
         return None
 
     for vertex in self.graph.vertices:

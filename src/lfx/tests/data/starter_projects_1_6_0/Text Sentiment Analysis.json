@@ -1129,7 +1129,7 @@
         "data": {
           "id": "note-S1pun",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1158,7 +1158,7 @@
         "data": {
           "id": "note-ZAMRC",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1184,7 +1184,7 @@
         "data": {
           "id": "note-KreFC",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {

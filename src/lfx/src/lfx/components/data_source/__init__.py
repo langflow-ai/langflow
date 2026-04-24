@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from lfx.components.data_source.mock_data import MockDataGeneratorComponent
     from lfx.components.data_source.news_search import NewsSearchComponent
     from lfx.components.data_source.rss import RSSReaderComponent
+    from lfx.components.data_source.sql_executor import SQLComponent
     from lfx.components.data_source.url import URLComponent
     from lfx.components.data_source.web_search import WebSearchComponent
 
@@ -23,6 +24,7 @@ _dynamic_imports = {
     "RSSReaderComponent": "rss",
     "URLComponent": "url",
     "WebSearchComponent": "web_search",
+    "SQLComponent": "sql_executor",
 }
 
 __all__ = [
@@ -32,6 +34,7 @@ __all__ = [
     "MockDataGeneratorComponent",
     "NewsSearchComponent",
     "RSSReaderComponent",
+    "SQLComponent",
     "URLComponent",
     "WebSearchComponent",
 ]

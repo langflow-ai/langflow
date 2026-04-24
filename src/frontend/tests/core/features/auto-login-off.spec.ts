@@ -111,7 +111,12 @@ test(
 
     await page.waitForSelector("text=new user added", { timeout: 30000 });
 
+    const searchResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/users") && response.status() === 200,
+    );
     await page.getByPlaceholder("Username").last().fill(randomName);
+    await searchResponse;
 
     await page.getByTestId("icon-Pencil").last().click();
 
@@ -147,12 +152,12 @@ test(
 
     await renameFlow(page, { flowName: randomFlowName });
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
       state: "visible",
     });
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 1500,
     });
 
@@ -217,7 +222,7 @@ test(
 
     await renameFlow(page, { flowName: secondRandomFlowName });
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });
 

@@ -1,0 +1,20 @@
+---
+title: Calculator
+slug: /calculator
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The **Calculator** component performs basic arithmetic operations on mathematical expressions.
+It supports addition, subtraction, multiplication, division, and exponentiation operations.
+
+For an example of using this component in a flow, see the [**Python Interpreter** component](/python-interpreter).
+
+## Calculator parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| expression | String | Input parameter. The arithmetic expression to evaluate, such as `4*4*(33/22)+12-20`. |
+| result | Data | Output parameter. The calculation result as a [`Data` object](/data-types) containing the evaluated expression. |

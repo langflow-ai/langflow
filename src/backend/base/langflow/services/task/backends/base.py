@@ -13,3 +13,7 @@ class TaskBackend(ABC):
     @abstractmethod
     def get_task(self, task_id: str) -> Any:
         pass
+
+    @abstractmethod
+    def revoke_task(self, task_id: str) -> Any:
+        pass

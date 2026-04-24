@@ -1,5 +1,5 @@
 import requests
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent
@@ -12,7 +12,7 @@ from lfx.schema.data import Data
 class NotionDatabaseProperties(LCToolComponent):
     display_name: str = "List Database Properties "
     description: str = "Retrieve properties of a Notion database."
-    documentation: str = "https://docs.langflow.org/integrations/notion/list-database-properties"
+    documentation: str = "https://docs.langflow.org/bundles-notion"
     icon = "NotionDirectoryLoader"
 
     inputs = [

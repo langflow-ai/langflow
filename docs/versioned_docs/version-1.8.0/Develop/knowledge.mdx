@@ -1,0 +1,131 @@
+---
+title: Manage vector data
+slug: /knowledge
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
+import PartialGlobalModelProviders from '@site/docs/_partial-global-model-providers.mdx';
+
+Vector data is critical to AI applications.
+Langflow provides several components to help you store and retrieve vector data in your flows, including embedding models, vector stores, and knowledge bases.
+
+## Embedding models
+
+Embedding model components generate text embeddings using a specified Large Language Model (LLM).
+
+There are two common use cases for these components:
+
+* **Store vectors**: Generate embeddings for content written to a vector database.
+* **Search vectors**: Generate an embedding from a query to run a similarity search.
+
+In both cases the embedding model component is attached to a vector store component.
+For more information, examples, and available options, see [Embedding model components](/components-embedding-models).
+
+Alternatively, you can use [knowledge bases](#knowledge-bases), which include built-in support for several embedding models.
+
+## Vector stores
+
+Vector store components read and write to vector databases.
+Typically, these components connect to remote databases, but some vector store components support local databases.
+
+import PartialVectorRagBlurb from '@site/docs/_partial-vector-rag-blurb.mdx';
+
+<PartialVectorRagBlurb />
+
+<details>
+<summary>Example: Vector search flow</summary>
+
+import PartialVectorRagFlow from '@site/docs/_partial-vector-rag-flow.mdx';
+
+<PartialVectorRagFlow />
+
+</details>
+
+## Knowledge bases
+
+import PartialKbSummary from '@site/docs/_partial-kb-summary.mdx';
+
+<PartialKbSummary />
+
+### Knowledge base storage locations
+
+Each knowledge base is a [ChromaDB](https://docs.trychroma.com/docs/overview/introduction) vector database.
+Each database is stored in a separate directory that contains the following:
+
+- **Vector embeddings**: Embeddings are stored using the Chroma vector database.
+- **Metadata files**: Configuration and embedding model information.
+- **Source data**: The original data used to create the knowledge base.
+
+Knowledge bases are stored local to your Langflow instance.
+The default storage location depends on your operating system and installation method:
+
+- **Langflow Desktop**:
+    - **macOS**: `/Users/<username>/.langflow/knowledge_bases`
+    - **Windows**: `C:\Users\<name>\AppData\Roaming\com.LangflowDesktop\knowledge_bases`
+- **Langflow OSS**:
+    - **macOS/Windows/Linux/WSL with `uv pip install`**: `<path_to_venv>/lib/python3.12/site-packages/langflow/knowledge_bases` (Python version can vary. Knowledge bases aren't shared between virtual environments.)
+    - **macOS/Windows/Linux/WSL with `git clone`**: `<path_to_clone>/src/backend/base/langflow/knowledge_bases`
+
+If you set the `LANGFLOW_CONFIG_DIR` environment variable, the `knowledge_bases` subdirectory is created relative to that path.
+
+To change the default `knowledge_bases` directory path, set the `LANGFLOW_KNOWLEDGE_BASES_DIR` environment variable:
+
+```bash
+export LANGFLOW_KNOWLEDGE_BASES_DIR="/path/to/parent/directory"
+```
+
+### Create a knowledge base
+
+In this example, you'll create a knowledge base of chunked customer orders.
+To follow along with this example, download [`customer-orders.csv`](/files/customer_orders.csv) to your local machine, or adapt the steps for your own structured data.
+
+1. On the [**Projects** page](/concepts-flows#projects) page, click <Icon name="Library" aria-hidden="true"/>**Knowledge** below the list of projects to view and manage your knowledge bases.
+
+2. To create a new knowledge base, click <Icon name="Plus" aria-hidden="true"/>**Add Knowledge**.
+3. In the **Create Knowledge Base** pane, enter a name for your knowledge base, and select an embedding model.
+    <PartialGlobalModelProviders />
+4. To configure sources for your knowledge base, click **Configure Sources**.
+Optionally, to create an empty knowledge base, click **Create**.
+5. In the **Configure Sources** pane, configure the sources for your knowledge base's data, and also how the embedded data will be chunked for vector search retrieval.
+    For this example, click <Icon name="Upload" aria-hidden="true"/>**Add Sources**, and then select the downloaded [`customer-orders.csv`](/files/customer_orders.csv) file from your local machine.
+    The default settings for **Chunk Size**, **Chunk Overlap**, and **Separator** are fine.
+    To continue, click **Next Step**.
+6. The **Review & Build** pane allows you to preview your first chunk before you commit to spending tokens to embedall of the data into the knowledge base.
+    If the chunk isn't what you want to embed, click **Back** to configure your chunking strategy.
+    To embed this data, click **Create**.
+7. Your data is embedded as a **Knowledge**.
+    When it is available to use, the **Status** changes to **Ready**.
+
+To use the new knowledge base in a flow, see [Use the Knowledge Base component in a flow](/knowledge-base).
+
+### Manage knowledge bases
+
+On the [**Projects** page](/concepts-flows#projects) page, click <Icon name="Library" aria-hidden="true"/>**Knowledge** below the list of projects to view and manage your knowledge bases.
+
+For each knowledge base, you can see the following information:
+
+* Name
+* Embedding model
+* Size on disk
+* Number of words, characters, and chunks
+* The average length and size of chunks
+* The knowledge base's status
+
+Chunking behavior is determined by the embedding model, and the embedding model is set when you create the knowledge base.
+If you need to change the embedding model, you must delete and recreate the knowledge base.
+
+To update a knowledge base with , click <Icon name="EllipsisVertical" aria-hidden="true"/> **More**, and then select <Icon name="RefreshCW" aria-hidden="true"/> **Update Knowledge Base**.
+
+To view a knowledge base's chunks, click <Icon name="EllipsisVertical" aria-hidden="true"/> **More**, and then select <Icon name="Layers" aria-hidden="true"/> **View Chunks**.
+
+To delete a knowledge base, click <Icon name="EllipsisVertical" aria-hidden="true"/> **More**, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
+If any flows use the deleted knowledge base, you must update them to use a different knowledge base.
+
+For more information on using knowledge bases in a flow, see the [**Knowledge Base** component](/knowledge-base) documentation.
+
+## See also
+
+* [Use Langflow agents](/agents)
+* [Language model components](/components-models)

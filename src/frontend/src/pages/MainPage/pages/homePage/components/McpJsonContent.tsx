@@ -3,6 +3,7 @@ import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
+import type { MCPTransport } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { cn } from "@/utils/utils";
 import {
   createSyntaxHighlighterStyle,
@@ -29,6 +30,8 @@ interface MemoizedCodeTagProps {
 interface McpJsonContentProps {
   selectedPlatform?: string;
   setSelectedPlatform: (platform: string) => void;
+  selectedTransport: MCPTransport;
+  setSelectedTransport: (transport: MCPTransport) => void;
   isDarkMode: boolean;
   isCopied: boolean;
   copyToClipboard: (text: string) => void;
@@ -109,6 +112,8 @@ MemoizedCodeTag.displayName = "MemoizedCodeTag";
 export const McpJsonContent = ({
   selectedPlatform,
   setSelectedPlatform,
+  selectedTransport,
+  setSelectedTransport,
   isDarkMode,
   isCopied,
   copyToClipboard,
@@ -119,20 +124,38 @@ export const McpJsonContent = ({
   generateApiKey,
 }: McpJsonContentProps) => (
   <>
-    <Tabs value={selectedPlatform} onValueChange={setSelectedPlatform}>
-      <TabsList>
-        {operatingSystemTabs.map((tab) => (
-          <TabsTrigger
-            className="flex items-center gap-2"
-            key={tab.name}
-            value={tab.name}
-          >
-            <ForwardedIconComponent name={tab.icon} aria-hidden="true" />
-            {tab.title}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex-1">
+        <Tabs value={selectedPlatform} onValueChange={setSelectedPlatform}>
+          <TabsList>
+            {operatingSystemTabs.map((tab) => (
+              <TabsTrigger
+                className="flex items-center gap-2"
+                key={tab.name}
+                value={tab.name}
+              >
+                <ForwardedIconComponent name={tab.icon} aria-hidden="true" />
+                {tab.title}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className="text-[13px] font-medium text-muted-foreground">
+          Transport
+        </span>
+        <Tabs
+          value={selectedTransport}
+          onValueChange={(value) => setSelectedTransport(value as MCPTransport)}
+        >
+          <TabsList>
+            <TabsTrigger value="sse">SSE</TabsTrigger>
+            <TabsTrigger value="streamablehttp">Streamable HTTP</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+    </div>
     <div className="overflow-hidden rounded-lg border border-border">
       <SyntaxHighlighter
         style={createSyntaxHighlighterStyle(isDarkMode)}

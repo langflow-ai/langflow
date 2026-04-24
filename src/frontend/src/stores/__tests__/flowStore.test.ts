@@ -16,12 +16,8 @@ jest.mock("@/CustomNodes/helpers/check-code-validity", () => ({
   checkCodeValidity: jest.fn(),
 }));
 
-jest.mock("@/constants/alerts_constants", () => ({
-  MISSED_ERROR_ALERT: "MISSED_ERROR_ALERT",
-}));
-
-jest.mock("@/constants/constants", () => ({
-  BROKEN_EDGES_WARNING: "BROKEN_EDGES_WARNING",
+jest.mock("../../i18n", () => ({
+  default: { t: jest.fn((key: string) => key) },
 }));
 
 jest.mock("@/customization/feature-flags", () => ({
@@ -96,8 +92,15 @@ jest.mock("@/utils/utils", () => ({
 // Note: Some utility modules may not exist in test environment
 // The store should handle missing utilities gracefully
 
+import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import type { AllNodeType, EdgeType } from "@/types/flow";
-import useFlowStore from "../flowStore";
+import useFlowStore, {
+  completeNodeUpdate,
+  recomputeComponentsToUpdateIfNeeded,
+  registerNodeUpdate,
+  waitForNodeUpdates,
+} from "../flowStore";
+import { useUtilityStore } from "../utilityStore";
 
 describe("useFlowStore", () => {
   // Mock data
@@ -113,7 +116,7 @@ describe("useFlowStore", () => {
     },
   } as AllNodeType;
 
-  const mockEdge: EdgeType = {
+  const _mockEdge: EdgeType = {
     id: "edge-1",
     source: "node-1",
     target: "node-2",
@@ -125,6 +128,7 @@ describe("useFlowStore", () => {
 
     // Reset store state to basics
     act(() => {
+      useUtilityStore.setState({ allowCustomComponents: true });
       useFlowStore.setState({
         playgroundPage: false,
         positionDictionary: {},
@@ -239,6 +243,7 @@ describe("useFlowStore", () => {
           icon: "icon-1",
           display_name: "Component 1",
           outdated: true,
+          blocked: false,
           breakingChange: false,
           userEdited: true,
         },
@@ -259,6 +264,7 @@ describe("useFlowStore", () => {
           icon: "icon-1",
           display_name: "Component 1",
           outdated: true,
+          blocked: false,
           breakingChange: false,
           userEdited: true,
         },
@@ -278,6 +284,7 @@ describe("useFlowStore", () => {
             icon: "icon-2",
             display_name: "Component 2",
             outdated: false,
+            blocked: false,
             breakingChange: true,
             userEdited: false,
           },
@@ -554,6 +561,544 @@ describe("useFlowStore", () => {
       expect(result.current.inputs).toHaveLength(1);
       expect(result.current.outputs).toHaveLength(1);
       expect(result.current.hasIO).toBe(true);
+    });
+  });
+
+  describe("componentsToUpdate staleness — setNode vs updateComponentsToUpdate", () => {
+    const updatedCodeField = {
+      type: "code",
+      value: "new_code",
+      required: false,
+      list: false,
+      show: false,
+      readonly: true,
+    };
+
+    const outdatedEntry = {
+      id: "node-1",
+      icon: "icon-1",
+      display_name: "Outdated Component",
+      outdated: true,
+      blocked: false,
+      breakingChange: false,
+      userEdited: false,
+    };
+
+    const updatedNode: AllNodeType = {
+      id: "node-1",
+      type: "genericNode",
+      position: { x: 0, y: 0 },
+      data: {
+        id: "node-1",
+        type: "UpdatedComponent",
+        node: {
+          display_name: "Updated Component",
+          description: "",
+          documentation: "",
+          template: { code: updatedCodeField },
+        },
+      },
+    } as AllNodeType;
+
+    it("setNode should NOT clear stale componentsToUpdate entries", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        // Seed with a node and a stale componentsToUpdate entry
+        useFlowStore.setState({
+          nodes: [updatedNode],
+          componentsToUpdate: [outdatedEntry],
+        });
+      });
+
+      // Update the node via setNode (singular) — simulates useUpdateNodeCode path
+      act(() => {
+        result.current.setNode(
+          "node-1",
+          (old) =>
+            ({
+              ...old,
+              data: {
+                ...old.data,
+                node: {
+                  ...(old.data.node as Record<string, unknown>),
+                  template: {
+                    ...(((
+                      old.data.node as { template?: Record<string, unknown> }
+                    ).template ?? {}) as Record<string, unknown>),
+                    code: { ...updatedCodeField },
+                  },
+                },
+              },
+            }) as unknown as AllNodeType,
+        );
+      });
+
+      // componentsToUpdate is still stale — setNode does not recalculate it
+      expect(result.current.componentsToUpdate).toEqual([outdatedEntry]);
+    });
+
+    it("updateComponentsToUpdate should clear entries when nodes are no longer outdated", () => {
+      const { result } = renderHook(() => useFlowStore());
+      const mockedCheckCodeValidity = checkCodeValidity as jest.Mock;
+
+      act(() => {
+        useFlowStore.setState({
+          nodes: [updatedNode],
+          componentsToUpdate: [outdatedEntry],
+        });
+      });
+
+      // checkCodeValidity returns not-outdated for the updated node
+      mockedCheckCodeValidity.mockReturnValue({
+        outdated: false,
+        blocked: false,
+        breakingChange: false,
+        userEdited: false,
+      });
+
+      act(() => {
+        result.current.updateComponentsToUpdate(result.current.nodes);
+      });
+
+      expect(result.current.componentsToUpdate).toEqual([]);
+    });
+
+    it("updateComponentsToUpdate should re-populate entries when nodes are still outdated", () => {
+      const { result } = renderHook(() => useFlowStore());
+      const mockedCheckCodeValidity = checkCodeValidity as jest.Mock;
+
+      act(() => {
+        useFlowStore.setState({
+          nodes: [updatedNode],
+          componentsToUpdate: [],
+        });
+      });
+
+      // checkCodeValidity returns outdated
+      mockedCheckCodeValidity.mockReturnValue({
+        outdated: true,
+        blocked: false,
+        breakingChange: false,
+        userEdited: false,
+      });
+
+      act(() => {
+        result.current.updateComponentsToUpdate(result.current.nodes);
+      });
+
+      expect(result.current.componentsToUpdate).toHaveLength(1);
+      expect(result.current.componentsToUpdate[0].id).toBe("node-1");
+      expect(result.current.componentsToUpdate[0].outdated).toBe(true);
+    });
+
+    it("updateComponentsToUpdate should populate blocked entries for unknown custom nodes", () => {
+      const { result } = renderHook(() => useFlowStore());
+      const mockedCheckCodeValidity = checkCodeValidity as jest.Mock;
+
+      act(() => {
+        useFlowStore.setState({
+          nodes: [updatedNode],
+          componentsToUpdate: [],
+        });
+      });
+
+      mockedCheckCodeValidity.mockReturnValue({
+        outdated: false,
+        blocked: true,
+        breakingChange: false,
+        userEdited: false,
+      });
+
+      act(() => {
+        result.current.updateComponentsToUpdate(result.current.nodes);
+      });
+
+      expect(result.current.componentsToUpdate).toHaveLength(1);
+      expect(result.current.componentsToUpdate[0]).toMatchObject({
+        id: "node-1",
+        blocked: true,
+        outdated: false,
+      });
+    });
+
+    it("updateComponentsToUpdate should pass the custom-component policy flag into code validation", () => {
+      const { result } = renderHook(() => useFlowStore());
+      const mockedCheckCodeValidity = checkCodeValidity as jest.Mock;
+
+      mockedCheckCodeValidity.mockReturnValue({
+        outdated: false,
+        blocked: true,
+        breakingChange: false,
+        userEdited: false,
+      });
+
+      act(() => {
+        useUtilityStore.setState({ allowCustomComponents: false });
+        useFlowStore.setState({
+          nodes: [updatedNode],
+          componentsToUpdate: [],
+        });
+      });
+
+      act(() => {
+        result.current.updateComponentsToUpdate(result.current.nodes);
+      });
+
+      expect(mockedCheckCodeValidity).toHaveBeenCalledWith(
+        updatedNode.data,
+        {},
+        false,
+      );
+    });
+
+    it("recomputeComponentsToUpdateIfNeeded should skip recalculation when there are no nodes", () => {
+      act(() => {
+        useFlowStore.setState({
+          nodes: [],
+          componentsToUpdate: [outdatedEntry],
+        });
+      });
+
+      recomputeComponentsToUpdateIfNeeded();
+
+      expect(checkCodeValidity).not.toHaveBeenCalled();
+      expect(useFlowStore.getState().componentsToUpdate).toEqual([
+        outdatedEntry,
+      ]);
+    });
+
+    it("recomputeComponentsToUpdateIfNeeded should recalculate when nodes exist", () => {
+      const mockedCheckCodeValidity = checkCodeValidity as jest.Mock;
+      mockedCheckCodeValidity.mockReturnValue({
+        outdated: false,
+        blocked: false,
+        breakingChange: false,
+        userEdited: false,
+      });
+
+      act(() => {
+        useFlowStore.setState({
+          nodes: [updatedNode],
+          componentsToUpdate: [outdatedEntry],
+        });
+      });
+
+      recomputeComponentsToUpdateIfNeeded();
+
+      expect(mockedCheckCodeValidity).toHaveBeenCalledWith(
+        updatedNode.data,
+        {},
+        true,
+      );
+      expect(useFlowStore.getState().componentsToUpdate).toEqual([]);
+    });
+  });
+
+  describe("pending node update tracking — registerNodeUpdate / completeNodeUpdate / waitForNodeUpdates", () => {
+    it("waitForNodeUpdates resolves immediately when no updates are pending", async () => {
+      await expect(waitForNodeUpdates()).resolves.toBeUndefined();
+    });
+
+    it("waitForNodeUpdates waits until completeNodeUpdate is called", async () => {
+      registerNodeUpdate("n1");
+
+      let resolved = false;
+      const p = waitForNodeUpdates().then(() => {
+        resolved = true;
+      });
+
+      // Should still be waiting
+      await Promise.resolve(); // flush microtasks
+      expect(resolved).toBe(false);
+
+      completeNodeUpdate("n1");
+      await p;
+      expect(resolved).toBe(true);
+    });
+
+    it("waitForNodeUpdates waits for multiple pending updates", async () => {
+      registerNodeUpdate("a");
+      registerNodeUpdate("b");
+
+      let resolved = false;
+      const p = waitForNodeUpdates().then(() => {
+        resolved = true;
+      });
+
+      completeNodeUpdate("a");
+      await Promise.resolve();
+      expect(resolved).toBe(false);
+
+      completeNodeUpdate("b");
+      await p;
+      expect(resolved).toBe(true);
+    });
+
+    it("waitForNodeUpdates times out if updates never complete", async () => {
+      registerNodeUpdate("stuck");
+
+      const start = Date.now();
+      await waitForNodeUpdates(200); // short timeout for test
+      const elapsed = Date.now() - start;
+
+      expect(elapsed).toBeGreaterThanOrEqual(150);
+      // Clean up
+      completeNodeUpdate("stuck");
+    });
+
+    it("duplicate registerNodeUpdate for same ID is a no-op", async () => {
+      registerNodeUpdate("x");
+      registerNodeUpdate("x"); // should not replace the first
+
+      let resolved = false;
+      const p = waitForNodeUpdates().then(() => {
+        resolved = true;
+      });
+
+      completeNodeUpdate("x");
+      await p;
+      expect(resolved).toBe(true);
+    });
+  });
+
+  describe("clearAndSetEdgesRunning", () => {
+    const createEdge = (
+      id: string,
+      sourceHandleId: string,
+      overrides: Partial<any> = {},
+    ) =>
+      ({
+        id,
+        source: `src-${id}`,
+        target: `tgt-${id}`,
+        animated: false,
+        className: "",
+        data: { sourceHandle: { id: sourceHandleId } },
+        ...overrides,
+      }) as any;
+
+    it("should clear all edge animations when no nextIds provided", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        useFlowStore.setState({
+          edges: [
+            createEdge("e1", "n1", { animated: true, className: "running" }),
+            createEdge("e2", "n2", { animated: true, className: "running" }),
+          ],
+        });
+      });
+
+      act(() => {
+        result.current.clearAndSetEdgesRunning();
+      });
+
+      expect(result.current.edges.every((e) => !e.animated)).toBe(true);
+      expect(result.current.edges.every((e) => e.className === "")).toBe(true);
+    });
+
+    it("should set matching edges to animated/running when nextIds provided", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        useFlowStore.setState({
+          edges: [
+            createEdge("e1", "n1"),
+            createEdge("e2", "n2"),
+            createEdge("e3", "n3"),
+          ],
+          stopNodeId: undefined,
+        });
+      });
+
+      act(() => {
+        result.current.clearAndSetEdgesRunning(["n1", "n3"]);
+      });
+
+      const edges = result.current.edges;
+      expect(edges[0].animated).toBe(true);
+      expect(edges[0].className).toBe("running");
+      expect(edges[1].animated).toBe(false);
+      expect(edges[1].className).toBe("");
+      expect(edges[2].animated).toBe(true);
+      expect(edges[2].className).toBe("running");
+    });
+
+    it("should not animate edges matching stopNodeId", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        useFlowStore.setState({
+          edges: [createEdge("e1", "n1"), createEdge("e2", "n2")],
+          stopNodeId: "n1",
+        });
+      });
+
+      act(() => {
+        result.current.clearAndSetEdgesRunning(["n1", "n2"]);
+      });
+
+      const edges = result.current.edges;
+      expect(edges[0].animated).toBe(false);
+      expect(edges[0].className).toBe("");
+      expect(edges[1].animated).toBe(true);
+      expect(edges[1].className).toBe("running");
+    });
+
+    it("should handle empty edges array", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        useFlowStore.setState({ edges: [] });
+      });
+
+      act(() => {
+        result.current.clearAndSetEdgesRunning(["n1"]);
+      });
+
+      expect(result.current.edges).toEqual([]);
+    });
+
+    it("should create new edge objects (immutability check)", () => {
+      const { result } = renderHook(() => useFlowStore());
+      const originalEdge = createEdge("e1", "n1");
+
+      act(() => {
+        useFlowStore.setState({ edges: [originalEdge], stopNodeId: undefined });
+      });
+
+      const edgeBefore = result.current.edges[0];
+
+      act(() => {
+        result.current.clearAndSetEdgesRunning(["n1"]);
+      });
+
+      const edgeAfter = result.current.edges[0];
+      expect(edgeAfter).not.toBe(edgeBefore);
+      expect(edgeAfter.animated).toBe(true);
+    });
+  });
+
+  describe("addDataToFlowPool", () => {
+    const mockVertexData = {
+      id: "node-1",
+      data: { results: {} },
+      valid: true,
+    } as any;
+
+    const mockVertexData2 = {
+      id: "node-1",
+      data: { results: { other: true } },
+      valid: true,
+    } as any;
+
+    it("should add data to new nodeId entry", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.addDataToFlowPool(mockVertexData, "node-1");
+      });
+
+      expect(result.current.flowPool["node-1"]).toEqual([mockVertexData]);
+    });
+
+    it("should append data to existing nodeId entry", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.addDataToFlowPool(mockVertexData, "node-1");
+      });
+
+      act(() => {
+        result.current.addDataToFlowPool(mockVertexData2, "node-1");
+      });
+
+      expect(result.current.flowPool["node-1"]).toHaveLength(2);
+      expect(result.current.flowPool["node-1"][0]).toEqual(mockVertexData);
+      expect(result.current.flowPool["node-1"][1]).toEqual(mockVertexData2);
+    });
+
+    it("should not mutate previous flowPool reference", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.addDataToFlowPool(mockVertexData, "node-1");
+      });
+
+      const poolAfterFirst = result.current.flowPool;
+
+      act(() => {
+        result.current.addDataToFlowPool(mockVertexData2, "node-1");
+      });
+
+      const poolAfterSecond = result.current.flowPool;
+      expect(poolAfterSecond).not.toBe(poolAfterFirst);
+    });
+  });
+
+  describe("appendLogToFlowPool", () => {
+    const mockLog = { name: "Test Log", message: "hello", type: "info" } as any;
+    const mockLog2 = {
+      name: "Second Log",
+      message: "world",
+      type: "info",
+    } as any;
+
+    it("creates a new pool entry with the log when no entry exists for nodeId", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.appendLogToFlowPool(
+          "node-99",
+          "component_as_tool",
+          mockLog,
+        );
+      });
+
+      const entry = result.current.flowPool["node-99"];
+      expect(entry).toHaveLength(1);
+      expect(entry[0].data.logs["component_as_tool"]).toEqual([mockLog]);
+    });
+
+    it("appends a log to the latest existing entry for nodeId", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.appendLogToFlowPool(
+          "node-99",
+          "component_as_tool",
+          mockLog,
+        );
+      });
+      act(() => {
+        result.current.appendLogToFlowPool(
+          "node-99",
+          "component_as_tool",
+          mockLog2,
+        );
+      });
+
+      const logs =
+        result.current.flowPool["node-99"].at(-1)!.data.logs[
+          "component_as_tool"
+        ];
+      expect(logs).toEqual([mockLog, mockLog2]);
+    });
+
+    it("does not overwrite logs for a different output key on the same node", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.appendLogToFlowPool("node-99", "output_a", mockLog);
+      });
+      act(() => {
+        result.current.appendLogToFlowPool("node-99", "output_b", mockLog2);
+      });
+
+      const latest = result.current.flowPool["node-99"].at(-1)!.data.logs;
+      expect(latest["output_a"]).toEqual([mockLog]);
+      expect(latest["output_b"]).toEqual([mockLog2]);
     });
   });
 });

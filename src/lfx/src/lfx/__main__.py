@@ -1,9 +1,20 @@
 """LFX CLI entry point."""
 
+from importlib.metadata import version as _pkg_version
+
 import typer
 
-from lfx.cli.commands import serve_command
-from lfx.cli.run import run
+from lfx.cli._authoring_commands import register as _register_authoring
+from lfx.cli._remote_commands import register as _register_remote
+from lfx.cli._running_commands import register as _register_running
+from lfx.cli._setup_commands import register as _register_setup
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"lfx {_pkg_version('lfx')}")
+        raise typer.Exit(0)
+
 
 app = typer.Typer(
     name="lfx",
@@ -11,9 +22,26 @@ app = typer.Typer(
     add_completion=False,
 )
 
-# Add commands
-app.command(name="serve", help="Serve a flow as an API", no_args_is_help=True)(serve_command)
-app.command(name="run", help="Run a flow directly", no_args_is_help=True)(run)
+
+@app.callback()
+def _app_callback(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        help="Show the lfx version and exit.",
+        is_eager=True,
+        callback=_version_callback,
+    ),
+) -> None:
+    """Lfx - Langflow Executor."""
+
+
+# Register command groups (order determines help-panel ordering)
+_register_setup(app)
+_register_authoring(app)
+_register_running(app)
+_register_remote(app)
 
 
 def main():

@@ -1,9 +1,25 @@
+import io
+import json
+import zipfile
 from unittest.mock import MagicMock, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.services.database.models.deployment.model import Deployment
+from langflow.services.database.models.deployment_provider_account.model import (
+    DeploymentProviderAccount,
+    DeploymentProviderKey,
+)
+from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    FlowVersionDeploymentAttachment,
+)
+from langflow.services.deps import session_scope
+from lfx.services.adapters.deployment.schema import DeploymentType
 
 CYRILLIC_NAME = "Новый проект"
 CYRILLIC_DESC = "Описание проекта с кириллицей"  # noqa: RUF001
@@ -29,6 +45,32 @@ async def test_create_project(client: AsyncClient, logged_in_headers, basic_case
     assert "description" in result, "The dictionary must contain a key called 'description'"
     assert "id" in result, "The dictionary must contain a key called 'id'"
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
+
+
+async def test_create_project_duplicate_name_escapes_like_wildcards(client: AsyncClient, logged_in_headers):
+    unrelated = {
+        "name": "proj_a (7)",
+        "description": "",
+        "flows_list": [],
+        "components_list": [],
+    }
+    wildcard = {
+        "name": "proj_%",
+        "description": "",
+        "flows_list": [],
+        "components_list": [],
+    }
+
+    response = await client.post("api/v1/projects/", json=unrelated, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    response = await client.post("api/v1/projects/", json=wildcard, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["name"] == "proj_%"
+
+    response = await client.post("api/v1/projects/", json=wildcard, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["name"] == "proj_% (1)"
 
 
 async def test_read_projects(client: AsyncClient, logged_in_headers):
@@ -458,14 +500,66 @@ class TestProjectMCPIntegration:
         """Test successful project creation with MCP server auto-add."""
         with (
             patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
-            patch("langflow.api.v1.projects.get_project_sse_url") as mock_sse_url,
-            patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
-            patch("langflow.api.v1.projects.update_server") as mock_update_server,
-            patch("langflow.api.v1.projects.create_api_key") as mock_create_api_key,
-            patch("langflow.api.v1.projects.get_storage_service") as mock_storage,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url") as mock_streamable_url,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server") as mock_update_server,
+            patch("langflow.api.v1.projects_mcp_helpers.create_api_key") as mock_create_api_key,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
+        ):
+            # Setup mocks
+            mock_streamable_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/streamable"
+            mock_storage.return_value = MagicMock()
+
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
+            # Mock API key creation
+            mock_api_key_response = MagicMock()
+            mock_api_key_response.api_key = "test-api-key-123"  # pragma: allowlist secret
+            mock_create_api_key.return_value = mock_api_key_response
+
+            # Mock validation - no conflict
+            mock_validation_result = MagicMock()
+            mock_validation_result.has_conflict = False
+            mock_validation_result.should_skip = False
+            mock_validation_result.server_name = "lf-new-project"
+            mock_validate.return_value = mock_validation_result
+
+            mock_update_server.return_value = None
+
+            response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+            result = response.json()
+
+            assert response.status_code == status.HTTP_201_CREATED
+            assert "name" in result
+
+            # Verify MCP server creation was attempted
+            mock_validate.assert_called_once()
+            mock_update_server.assert_called_once()
+
+    async def test_create_project_with_mcp_auto_add_enabled_success_legacy_sse(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        basic_case,
+        mock_mcp_settings_enabled,  # noqa: ARG002
+    ):
+        """Legacy SSE test for project creation with MCP server auto-add."""
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.mcp_projects.get_project_sse_url") as mock_sse_url,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url") as mock_streamable_url,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server") as mock_update_server,
+            patch("langflow.api.v1.projects_mcp_helpers.create_api_key") as mock_create_api_key,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
         ):
             # Setup mocks
             mock_sse_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/sse"
+            mock_streamable_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/streamable"
             mock_storage.return_value = MagicMock()
 
             # Mock settings to enable MCP auto-add
@@ -508,12 +602,12 @@ class TestProjectMCPIntegration:
         """Test project creation failure due to MCP server name conflict."""
         with (
             patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
-            patch("langflow.api.v1.projects.get_project_sse_url") as mock_sse_url,
-            patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
-            patch("langflow.api.v1.projects.get_storage_service") as mock_storage,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url") as mock_streamable_url,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
         ):
             # Setup mocks
-            mock_sse_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/sse"
+            mock_streamable_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/streamable"
             mock_storage.return_value = MagicMock()
 
             # Mock settings to enable MCP auto-add
@@ -543,6 +637,52 @@ class TestProjectMCPIntegration:
             # Verify validation was called with correct parameters
             mock_validate.assert_called_once()
 
+    async def test_create_project_with_mcp_server_conflict_legacy_sse(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        basic_case,
+        mock_mcp_settings_enabled,  # noqa: ARG002
+    ):
+        """Legacy SSE test verifying project creation failure due to MCP server name conflict."""
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.mcp_projects.get_project_sse_url") as mock_sse_url,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url") as mock_streamable_url,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
+        ):
+            # Setup mocks
+            mock_sse_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/sse"
+            mock_streamable_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/streamable"
+            mock_storage.return_value = MagicMock()
+
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
+            # Mock validation - has conflict
+            mock_validation_result = MagicMock()
+            mock_validation_result.has_conflict = True
+            mock_validation_result.conflict_message = (
+                "MCP server name conflict: 'lf-new-project' already exists "
+                "for a different project. Cannot create MCP server for project "
+                "'New Project' (ID: test-project-id)"
+            )
+            mock_validate.return_value = mock_validation_result
+
+            response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+
+            assert response.status_code == status.HTTP_409_CONFLICT
+            response_data = response.json()
+            assert "detail" in response_data
+            assert mock_validation_result.conflict_message == response_data["detail"]
+
+            # Verify validation was called with correct parameters
+            mock_validate.assert_called_once()
+
     async def test_create_project_oauth_not_implemented(
         self,
         client: AsyncClient,
@@ -555,12 +695,46 @@ class TestProjectMCPIntegration:
         oauth_case["auth_settings"] = {"auth_type": "oauth"}
 
         with (
-            patch("langflow.api.v1.projects.get_project_sse_url") as mock_sse_url,
-            patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
-            patch("langflow.api.v1.projects.get_storage_service") as mock_storage,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url") as mock_streamable_url,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
+        ):
+            # Setup mocks to trigger OAuth path
+            mock_streamable_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/streamable"
+            mock_storage.return_value = MagicMock()
+
+            # Mock validation - no conflict but OAuth case will raise NotImplementedError
+            mock_validation_result = MagicMock()
+            mock_validation_result.has_conflict = False
+            mock_validation_result.should_skip = False
+            mock_validation_result.server_name = "lf-new-project"
+            mock_validate.return_value = mock_validation_result
+
+            response = await client.post("api/v1/projects/", json=oauth_case, headers=logged_in_headers)
+
+            # Should still create project but log error about OAuth
+            assert response.status_code == status.HTTP_201_CREATED
+
+    async def test_create_project_oauth_not_implemented_legacy_sse(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        basic_case,
+        mock_mcp_settings_enabled,  # noqa: ARG002
+    ):
+        """Legacy SSE test verifying OAuth paths raise NotImplementedError during project creation."""
+        oauth_case = basic_case.copy()
+        oauth_case["auth_settings"] = {"auth_type": "oauth"}
+
+        with (
+            patch("langflow.api.v1.mcp_projects.get_project_sse_url") as mock_sse_url,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url") as mock_streamable_url,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
         ):
             # Setup mocks to trigger OAuth path
             mock_sse_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/sse"
+            mock_streamable_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/streamable"
             mock_storage.return_value = MagicMock()
 
             # Mock validation - no conflict but OAuth case will raise NotImplementedError
@@ -586,11 +760,11 @@ class TestProjectMCPIntegration:
         # First create a project
         with (
             patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
-            patch("langflow.api.v1.projects.get_project_sse_url"),
-            patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate_create,
-            patch("langflow.api.v1.projects.update_server"),
-            patch("langflow.api.v1.projects.create_api_key"),
-            patch("langflow.api.v1.projects.get_storage_service"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url"),
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate_create,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server"),
+            patch("langflow.api.v1.projects_mcp_helpers.create_api_key"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service"),
         ):
             # Mock settings to enable MCP auto-add
             mock_settings = MagicMock()
@@ -612,9 +786,86 @@ class TestProjectMCPIntegration:
 
         with (
             patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
-            patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
-            patch("langflow.api.v1.projects.update_server") as mock_update_server,
-            patch("langflow.api.v1.projects.get_storage_service") as mock_storage,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server") as mock_update_server,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
+        ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+            mock_storage.return_value = MagicMock()
+
+            # Mock old server validation
+            mock_old_validation = MagicMock()
+            mock_old_validation.server_exists = True
+            mock_old_validation.project_id_matches = True
+            mock_old_validation.server_name = "lf-new-project"
+            mock_old_validation.existing_config = {"command": "uvx", "args": ["mcp-proxy", "old-url"]}
+
+            # Mock new server validation
+            mock_new_validation = MagicMock()
+            mock_new_validation.has_conflict = False
+            mock_new_validation.server_name = "lf-updated-project-name"
+
+            mock_validate.side_effect = [mock_old_validation, mock_new_validation]
+
+            response = await client.patch(f"api/v1/projects/{project_id}", json=update_case, headers=logged_in_headers)
+
+            assert response.status_code == status.HTTP_200_OK
+            result = response.json()
+            assert result["name"] == "Updated Project Name"
+
+            # Should validate both old and new server names
+            assert mock_validate.call_count == 2
+            # Should update server twice (delete old, create new)
+            assert mock_update_server.call_count == 2
+
+    async def test_update_project_name_with_mcp_server_update_legacy_sse(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        basic_case,
+        mock_mcp_settings_enabled,  # noqa: ARG002
+    ):
+        """Legacy SSE test for project rename with MCP server name update."""
+        # First create a project
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.mcp_projects.get_project_sse_url") as mock_sse_url,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url") as mock_streamable_url,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate_create,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server"),
+            patch("langflow.api.v1.projects_mcp_helpers.create_api_key"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service"),
+        ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
+            mock_sse_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/sse"
+            mock_streamable_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/streamable"
+
+            mock_validation_create = MagicMock()
+            mock_validation_create.has_conflict = False
+            mock_validation_create.should_skip = False
+            mock_validation_create.server_name = "lf-new-project"
+            mock_validate_create.return_value = mock_validation_create
+
+            create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+            project_id = create_response.json()["id"]
+
+        # Now update the project name
+        update_case = {"name": "Updated Project Name", "description": "Updated description"}
+
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server") as mock_update_server,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
         ):
             # Mock settings to enable MCP auto-add
             mock_settings = MagicMock()
@@ -659,11 +910,11 @@ class TestProjectMCPIntegration:
         # Create project first
         with (
             patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
-            patch("langflow.api.v1.projects.get_project_sse_url"),
-            patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate_create,
-            patch("langflow.api.v1.projects.update_server"),
-            patch("langflow.api.v1.projects.create_api_key"),
-            patch("langflow.api.v1.projects.get_storage_service"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url"),
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate_create,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server"),
+            patch("langflow.api.v1.projects_mcp_helpers.create_api_key"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service"),
         ):
             # Mock settings to enable MCP auto-add
             mock_settings = MagicMock()
@@ -685,8 +936,78 @@ class TestProjectMCPIntegration:
 
         with (
             patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
-            patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
-            patch("langflow.api.v1.projects.get_storage_service") as mock_storage,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
+        ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+            mock_storage.return_value = MagicMock()
+
+            # Mock old server validation - exists and matches
+            mock_old_validation = MagicMock()
+            mock_old_validation.server_exists = True
+            mock_old_validation.project_id_matches = True
+            mock_old_validation.server_name = "lf-new-project"
+
+            # Mock new server validation - has conflict
+            mock_new_validation = MagicMock()
+            mock_new_validation.has_conflict = True
+            mock_new_validation.conflict_message = "Server name conflict with different project"
+            mock_new_validation.server_name = "lf-conflicting-project"
+
+            mock_validate.side_effect = [mock_old_validation, mock_new_validation]
+
+            response = await client.patch(f"api/v1/projects/{project_id}", json=update_case, headers=logged_in_headers)
+
+            assert response.status_code == status.HTTP_409_CONFLICT
+            assert "conflict" in response.json()["detail"].lower()
+
+    async def test_update_project_name_with_mcp_conflict_legacy_sse(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        basic_case,
+        mock_mcp_settings_enabled,  # noqa: ARG002
+    ):
+        """Legacy SSE test for project rename with MCP server name conflict."""
+        # Create project first
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.mcp_projects.get_project_sse_url") as mock_sse_url,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url") as mock_streamable_url,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate_create,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server"),
+            patch("langflow.api.v1.projects_mcp_helpers.create_api_key"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service"),
+        ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
+            mock_sse_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/sse"
+            mock_streamable_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/streamable"
+
+            mock_validation_create = MagicMock()
+            mock_validation_create.has_conflict = False
+            mock_validation_create.should_skip = False
+            mock_validation_create.server_name = "lf-new-project"
+            mock_validate_create.return_value = mock_validation_create
+
+            create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+            project_id = create_response.json()["id"]
+
+        # Try to update to conflicting name
+        update_case = {"name": "Conflicting Project"}
+
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
         ):
             # Mock settings to enable MCP auto-add
             mock_settings = MagicMock()
@@ -725,11 +1046,11 @@ class TestProjectMCPIntegration:
         # Create project first
         with (
             patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
-            patch("langflow.api.v1.projects.get_project_sse_url"),
-            patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate_create,
-            patch("langflow.api.v1.projects.update_server"),
-            patch("langflow.api.v1.projects.create_api_key"),
-            patch("langflow.api.v1.projects.get_storage_service"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url"),
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate_create,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server"),
+            patch("langflow.api.v1.projects_mcp_helpers.create_api_key"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service"),
         ):
             # Mock settings to enable MCP auto-add
             mock_settings = MagicMock()
@@ -749,9 +1070,77 @@ class TestProjectMCPIntegration:
         # Delete the project
         with (
             patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
-            patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
-            patch("langflow.api.v1.projects.update_server") as mock_update_server,
-            patch("langflow.api.v1.projects.get_storage_service") as mock_storage,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server") as mock_update_server,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
+        ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+            mock_storage.return_value = MagicMock()
+
+            # Mock validation - server exists and matches this project
+            mock_validation = MagicMock()
+            mock_validation.server_exists = True
+            mock_validation.project_id_matches = True
+            mock_validation.server_name = "lf-new-project"
+            mock_validate.return_value = mock_validation
+
+            response = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+
+            # Should validate server for deletion
+            mock_validate.assert_called_once()
+            # Should call update_server with delete=True
+            mock_update_server.assert_called_once()
+            _, kwargs = mock_update_server.call_args
+            assert kwargs.get("delete") is True
+
+    async def test_delete_project_with_mcp_server_cleanup_legacy_sse(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        basic_case,
+        mock_mcp_settings_enabled,  # noqa: ARG002
+    ):
+        """Legacy SSE test for project deletion with MCP server cleanup."""
+        # Create project first
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.mcp_projects.get_project_sse_url") as mock_sse_url,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url") as mock_streamable_url,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate_create,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server"),
+            patch("langflow.api.v1.projects_mcp_helpers.create_api_key"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service"),
+        ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
+            mock_sse_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/sse"
+            mock_streamable_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/streamable"
+
+            mock_validation_create = MagicMock()
+            mock_validation_create.has_conflict = False
+            mock_validation_create.should_skip = False
+            mock_validation_create.server_name = "lf-new-project"
+            mock_validate_create.return_value = mock_validation_create
+
+            create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+            project_id = create_response.json()["id"]
+
+        # Delete the project
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server") as mock_update_server,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
         ):
             # Mock settings to enable MCP auto-add
             mock_settings = MagicMock()
@@ -789,11 +1178,11 @@ class TestProjectMCPIntegration:
         # Create project first
         with (
             patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
-            patch("langflow.api.v1.projects.get_project_sse_url"),
-            patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate_create,
-            patch("langflow.api.v1.projects.update_server"),
-            patch("langflow.api.v1.projects.create_api_key"),
-            patch("langflow.api.v1.projects.get_storage_service"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url"),
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate_create,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server"),
+            patch("langflow.api.v1.projects_mcp_helpers.create_api_key"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service"),
         ):
             # Mock settings to enable MCP auto-add
             mock_settings = MagicMock()
@@ -813,9 +1202,74 @@ class TestProjectMCPIntegration:
         # Delete the project
         with (
             patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
-            patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
-            patch("langflow.api.v1.projects.update_server") as mock_update_server,
-            patch("langflow.api.v1.projects.get_storage_service") as mock_storage,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server") as mock_update_server,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
+        ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+            mock_storage.return_value = MagicMock()
+
+            # Mock validation - server exists but belongs to different project
+            mock_validation = MagicMock()
+            mock_validation.server_exists = True
+            mock_validation.project_id_matches = False
+            mock_validation.server_name = "lf-new-project"
+            mock_validate.return_value = mock_validation
+
+            response = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+
+            # Should validate server but not delete it
+            mock_validate.assert_called_once()
+            mock_update_server.assert_not_called()
+
+    async def test_delete_project_mcp_server_different_project_legacy_sse(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        basic_case,
+        mock_mcp_settings_enabled,  # noqa: ARG002
+    ):
+        """Legacy SSE test for project deletion when MCP server belongs to different project."""
+        # Create project first
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.mcp_projects.get_project_sse_url") as mock_sse_url,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url") as mock_streamable_url,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate_create,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server"),
+            patch("langflow.api.v1.projects_mcp_helpers.create_api_key"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service"),
+        ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
+            mock_sse_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/sse"
+            mock_streamable_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/streamable"
+
+            mock_validation_create = MagicMock()
+            mock_validation_create.has_conflict = False
+            mock_validation_create.should_skip = False
+            mock_validation_create.server_name = "lf-new-project"
+            mock_validate_create.return_value = mock_validation_create
+
+            create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+            project_id = create_response.json()["id"]
+
+        # Delete the project
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server") as mock_update_server,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
         ):
             # Mock settings to enable MCP auto-add
             mock_settings = MagicMock()
@@ -867,12 +1321,42 @@ class TestProjectMCPIntegration:
     ):
         """Test that MCP exceptions during project creation don't prevent project creation."""
         with (
-            patch("langflow.api.v1.projects.get_project_sse_url") as mock_sse_url,
-            patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
-            patch("langflow.api.v1.projects.get_storage_service") as mock_storage,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url") as mock_streamable_url,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
+        ):
+            # Setup mocks
+            mock_streamable_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/streamable"
+            mock_storage.return_value = MagicMock()
+
+            # Mock validation to raise an exception
+            mock_validate.side_effect = Exception("MCP validation failed")
+
+            response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+
+            # Project should still be created despite MCP error
+            assert response.status_code == status.HTTP_201_CREATED
+            result = response.json()
+            assert "name" in result
+            assert result["name"] == basic_case["name"]
+
+    async def test_project_mcp_exception_handling_legacy_sse(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        basic_case,
+        mock_mcp_settings_enabled,  # noqa: ARG002
+    ):
+        """Legacy SSE test ensuring MCP exceptions don't block project creation."""
+        with (
+            patch("langflow.api.v1.mcp_projects.get_project_sse_url") as mock_sse_url,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url") as mock_streamable_url,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
         ):
             # Setup mocks
             mock_sse_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/sse"
+            mock_streamable_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/streamable"
             mock_storage.return_value = MagicMock()
 
             # Mock validation to raise an exception
@@ -1096,3 +1580,512 @@ class TestReadProjectBugFix:
             assert "not found" in result["detail"].lower(), (
                 f"Error message should mention 'not found' for params: {params}"
             )
+
+
+async def test_download_file_starter_project(client: AsyncClient, logged_in_headers, active_user, json_flow):
+    """Test downloading a project with multiple flows.
+
+    This test specifically validates:
+    1. The download endpoint returns a valid ZIP file with multiple flows
+    2. The remove_api_keys function handles flows with various template structures,
+       including components that don't have 'name' keys in their template values
+       (e.g., Note components with only backgroundColor)
+    3. API keys are removed from downloaded flows
+    4. Non-sensitive data is preserved in the download
+    """
+    # Create a project for the user (since download_file requires user ownership)
+    project_payload = {
+        "name": STARTER_FOLDER_NAME,
+        "description": "Starter projects to help you get started in Langflow.",
+        "flows_list": [],
+        "components_list": [],
+    }
+    create_response = await client.post("api/v1/projects/", json=project_payload, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    starter_project = create_response.json()
+    starter_project_id = starter_project["id"]
+
+    # Create multiple flows in the project
+    flow_data = json.loads(json_flow)
+
+    # Create a flow with a Note component to test the bug fix
+    # Note components have template values without 'name' keys
+    flow_with_note = {
+        "nodes": [
+            {
+                "id": "note-1",
+                "type": "genericNode",
+                "data": {
+                    "node": {
+                        "template": {
+                            "backgroundColor": {"value": "#ffffff"},  # No 'name' key
+                            "text": {"value": "Test note"},  # No 'name' key
+                        }
+                    }
+                },
+            },
+            # Add a node with API keys to test removal
+            {
+                "id": "api-node-1",
+                "type": "genericNode",
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "name": "api_key",
+                                "value": "secret-key-123",
+                                "password": True,
+                            },
+                            "regular_field": {"name": "regular_field", "value": "keep-this"},
+                        }
+                    }
+                },
+            },
+        ],
+        "edges": [],
+    }
+
+    flows_created = []
+    async with session_scope() as session:
+        # Create 3 flows: 2 from basic example + 1 with Note component
+        for i in range(2):
+            flow_create = FlowCreate(
+                name=f"Starter Flow {i + 1}",
+                description=f"Test starter flow {i + 1}",
+                data=flow_data.get("data", {}),
+                folder_id=starter_project_id,
+                user_id=active_user.id,
+            )
+            flow = Flow.model_validate(flow_create.model_dump(exclude={"id"}))
+            session.add(flow)
+            flows_created.append(flow)
+
+        # Add flow with Note component
+        flow_create_note = FlowCreate(
+            name="Flow with Note",
+            description="Flow with Note component and API keys",
+            data=flow_with_note,
+            folder_id=starter_project_id,
+            user_id=active_user.id,
+        )
+        flow_note = Flow.model_validate(flow_create_note.model_dump(exclude={"id"}))
+        session.add(flow_note)
+        flows_created.append(flow_note)
+
+        await session.flush()
+        # Refresh to get IDs
+        for flow in flows_created:
+            await session.refresh(flow)
+        await session.commit()
+
+    # Download the starter project
+    response = await client.get(
+        f"api/v1/projects/download/{starter_project_id}",
+        headers=logged_in_headers,
+    )
+
+    # Verify response
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.headers["Content-Type"] == "application/x-zip-compressed"
+    assert "attachment" in response.headers["Content-Disposition"]
+    assert "filename" in response.headers["Content-Disposition"]
+    # The filename is URL-encoded in the header, so check for the project name
+    content_disposition = response.headers["Content-Disposition"]
+    assert (
+        STARTER_FOLDER_NAME.replace(" ", "%20") in content_disposition
+        or STARTER_FOLDER_NAME.replace(" ", "_") in content_disposition
+    )
+
+    # Verify zip file contents
+    zip_content = response.content
+    with zipfile.ZipFile(io.BytesIO(zip_content), "r") as zip_file:
+        file_names = zip_file.namelist()
+        # Should have 3 flow files
+        assert len(file_names) == 3, f"Expected 3 files in zip, got {len(file_names)}: {file_names}"
+
+        # Verify each basic flow file exists and contains valid JSON
+        for i in range(2):
+            expected_filename = f"Starter Flow {i + 1}.json"
+            assert expected_filename in file_names, f"Expected {expected_filename} in zip file"
+
+            # Read and verify flow content
+            flow_content = zip_file.read(expected_filename)
+            flow_json = json.loads(flow_content)
+            assert flow_json["name"] == f"Starter Flow {i + 1}"
+            assert flow_json["description"] == f"Test starter flow {i + 1}"
+
+        # Verify the flow with Note component
+        note_flow_filename = "Flow with Note.json"
+        assert note_flow_filename in file_names, f"Expected {note_flow_filename} in zip file"
+
+        # Read and verify the Note flow - this tests the bug fix
+        note_flow_content = zip_file.read(note_flow_filename)
+        note_flow_json = json.loads(note_flow_content)
+        assert note_flow_json["name"] == "Flow with Note"
+        assert note_flow_json["description"] == "Flow with Note component and API keys"
+
+        # Verify the flow has the expected structure
+        assert "data" in note_flow_json
+        assert "nodes" in note_flow_json["data"]
+        assert len(note_flow_json["data"]["nodes"]) == 2
+        # Find the API node and verify API key was removed
+        api_node = None
+        note_node = None
+        for node in note_flow_json["data"]["nodes"]:
+            if node["id"] == "api-node-1":
+                api_node = node
+            elif node["id"] == "note-1":
+                note_node = node
+
+        # Verify Note node exists and didn't cause errors (the bug fix)
+        assert note_node is not None, "Note node should exist in downloaded flow"
+        note_template = note_node["data"]["node"]["template"]
+        assert "backgroundColor" in note_template, "Note backgroundColor should be preserved"
+        assert "text" in note_template, "Note text should be preserved"
+
+        # Verify API key was removed but regular field was kept
+        assert api_node is not None, "API node should exist in downloaded flow"
+        api_template = api_node["data"]["node"]["template"]
+        assert "api_key" in api_template, "API key field should exist"
+        assert api_template["api_key"]["value"] is None, "API key value should be removed/null"
+        assert "regular_field" in api_template, "Regular field should be preserved"
+        assert api_template["regular_field"]["value"] == "keep-this", "Regular field value should be kept"
+
+    # Clean up: delete the project (which will cascade delete flows)
+    delete_response = await client.delete(f"api/v1/projects/{starter_project_id}", headers=logged_in_headers)
+    assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+
+
+async def test_download_project_missing_returns_404(client: AsyncClient, logged_in_headers):
+    response = await client.get(f"api/v1/projects/download/{uuid4()}", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "Project not found"
+
+
+async def test_download_project_with_no_flows_returns_404(client: AsyncClient, logged_in_headers, basic_case):
+    response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    project_id = response.json()["id"]
+
+    download_response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
+
+    assert download_response.status_code == status.HTTP_404_NOT_FOUND
+    assert download_response.json()["detail"] == "No flows found in project"
+
+
+async def test_download_project_sanitizes_windows_path_characters(
+    client: AsyncClient, logged_in_headers, basic_case, active_user
+):
+    create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    project_id = create_response.json()["id"]
+
+    async with session_scope() as session:
+        flow_create = FlowCreate(
+            name=r"..\evil\flow",
+            description="Flow with unsafe filename characters",
+            data={"nodes": [], "edges": []},
+            folder_id=project_id,
+            user_id=active_user.id,
+        )
+        flow = Flow.model_validate(flow_create.model_dump(exclude={"id"}))
+        session.add(flow)
+        await session.flush()
+        await session.refresh(flow)
+        await session.commit()
+
+    response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+
+    with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_file:
+        file_names = zip_file.namelist()
+        assert len(file_names) == 1
+        assert "/" not in file_names[0]
+        assert "\\" not in file_names[0]
+        assert ".." not in file_names[0]
+        assert file_names[0].endswith(".json")
+
+
+async def _create_other_user(client: AsyncClient) -> tuple[str, dict]:
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.user.model import User
+
+    user_id = str(uuid4())
+    username = f"other_user_{user_id[:8]}"
+    async with session_scope() as session:
+        user = User(
+            username=username,
+            password=get_password_hash("testpassword"),  # pragma: allowlist secret
+            is_active=True,
+            is_superuser=False,
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        created_id = str(user.id)
+
+    response = await client.post(
+        "api/v1/login", data={"username": username, "password": "testpassword"}
+    )  # pragma: allowlist secret
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    return created_id, {"Authorization": f"Bearer {token}"}
+
+
+async def _attach_deployment_to_flow(*, user_id: UUID, flow_id: UUID, project_id: UUID) -> None:
+    """Create provider/deployment/version/attachment rows for one flow."""
+    async with session_scope() as session:
+        provider = DeploymentProviderAccount(
+            user_id=user_id,
+            name=f"provider-{flow_id.hex[:8]}",
+            provider_tenant_id="tenant-1",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            provider_url=f"https://provider-{flow_id.hex[:8]}.example.com",
+            api_key="encrypted-value",  # pragma: allowlist secret
+        )
+        session.add(provider)
+        await session.flush()
+
+        deployment = Deployment(
+            user_id=user_id,
+            project_id=project_id,
+            deployment_provider_account_id=provider.id,
+            resource_key=f"rk-{flow_id.hex[:8]}",
+            name=f"deployment-{flow_id.hex[:8]}",
+            deployment_type=DeploymentType.AGENT,
+        )
+        session.add(deployment)
+        await session.flush()
+
+        flow_version = FlowVersion(
+            flow_id=flow_id,
+            user_id=user_id,
+            version_number=1,
+            data={"nodes": [], "edges": []},
+        )
+        session.add(flow_version)
+        await session.flush()
+
+        attachment = FlowVersionDeploymentAttachment(
+            user_id=user_id,
+            flow_version_id=flow_version.id,
+            deployment_id=deployment.id,
+            provider_snapshot_id=f"snapshot-{flow_id.hex[:8]}",
+        )
+        session.add(attachment)
+        await session.commit()
+
+
+async def test_create_project_does_not_reassign_other_users_flows(
+    client: AsyncClient,
+    logged_in_headers: dict,
+):
+    """Test that flows_list in create_project only moves flows owned by the requesting user."""
+    _, other_user_headers = await _create_other_user(client)
+
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "user-flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = flow_resp.json()["id"]
+    original_folder_id = flow_resp.json()["folder_id"]
+
+    proj_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "other-project", "flows_list": [flow_id]},
+        headers=other_user_headers,
+    )
+    assert proj_resp.status_code == status.HTTP_201_CREATED
+    other_project_id = proj_resp.json()["id"]
+
+    flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert flow_after.status_code == status.HTTP_200_OK
+    assert flow_after.json()["folder_id"] == original_folder_id
+
+    proj_detail = await client.get(f"api/v1/projects/{other_project_id}", headers=other_user_headers)
+    assert proj_detail.status_code == status.HTTP_200_OK
+    assert len(proj_detail.json().get("flows", [])) == 0
+
+
+async def test_read_project_paginated_only_returns_current_users_flows(
+    client: AsyncClient,
+    logged_in_headers: dict,
+):
+    """Test that paginated GET /projects/{id} does not return flows owned by other users."""
+    _, other_user_headers = await _create_other_user(client)
+
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "user-flow-paginated", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = flow_resp.json()["id"]
+    original_folder_id = flow_resp.json()["folder_id"]
+
+    proj_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "other-project-paginated", "flows_list": [flow_id]},
+        headers=other_user_headers,
+    )
+    assert proj_resp.status_code == status.HTTP_201_CREATED
+    other_project_id = proj_resp.json()["id"]
+
+    paginated = await client.get(
+        f"api/v1/projects/{other_project_id}",
+        params={"page": 1, "size": 50},
+        headers=other_user_headers,
+    )
+    assert paginated.status_code == status.HTTP_200_OK
+    items = paginated.json().get("flows", {}).get("items", [])
+    assert all(item["id"] != flow_id for item in items)
+
+    flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert flow_after.json()["folder_id"] == original_folder_id
+
+
+async def test_create_project_with_own_flows_assigns_them_correctly(
+    client: AsyncClient,
+    logged_in_headers: dict,
+):
+    """Test that flows_list in create_project correctly assigns flows owned by the requesting user."""
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "my-flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = flow_resp.json()["id"]
+
+    proj_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "my-project", "flows_list": [flow_id]},
+        headers=logged_in_headers,
+    )
+    assert proj_resp.status_code == status.HTTP_201_CREATED
+    project_id = proj_resp.json()["id"]
+
+    flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert flow_after.status_code == status.HTTP_200_OK
+    assert flow_after.json()["folder_id"] == project_id
+
+    paginated = await client.get(
+        f"api/v1/projects/{project_id}",
+        params={"page": 1, "size": 50},
+        headers=logged_in_headers,
+    )
+    assert paginated.status_code == status.HTTP_200_OK
+    items = paginated.json().get("flows", {}).get("items", [])
+    assert any(item["id"] == flow_id for item in items)
+
+
+async def test_create_project_with_deployed_flow_returns_409_guard(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    active_user,
+):
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "deployed-flow", "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+
+    flow_payload = flow_resp.json()
+    flow_id = UUID(flow_payload["id"])
+    source_project_id = UUID(flow_payload["folder_id"])
+    await _attach_deployment_to_flow(
+        user_id=active_user.id,
+        flow_id=flow_id,
+        project_id=source_project_id,
+    )
+
+    create_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "new-target", "flows_list": [str(flow_id)], "components_list": []},
+        headers=logged_in_headers,
+    )
+    assert create_resp.status_code == status.HTTP_409_CONFLICT
+    assert "cannot be moved to another project" in create_resp.json()["detail"]
+
+
+async def test_update_project_with_deployed_component_returns_409_guard(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    active_user,
+):
+    project_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "component-project", "description": "", "flows_list": [], "components_list": []},
+        headers=logged_in_headers,
+    )
+    assert project_resp.status_code == status.HTTP_201_CREATED
+    project_id = project_resp.json()["id"]
+
+    component_resp = await client.post(
+        "api/v1/flows/",
+        json={
+            "name": "deployed-component",
+            "folder_id": project_id,
+            "is_component": True,
+            "data": {"nodes": [], "edges": []},
+        },
+        headers=logged_in_headers,
+    )
+    assert component_resp.status_code == status.HTTP_201_CREATED
+
+    component_id = UUID(component_resp.json()["id"])
+    await _attach_deployment_to_flow(
+        user_id=active_user.id,
+        flow_id=component_id,
+        project_id=UUID(project_id),
+    )
+
+    update_resp = await client.patch(
+        f"api/v1/projects/{project_id}",
+        json={"name": "component-project-renamed"},
+        headers=logged_in_headers,
+    )
+    assert update_resp.status_code == status.HTTP_409_CONFLICT
+    assert "cannot be moved to another project" in update_resp.json()["detail"]
+
+
+async def test_delete_project_with_deployments_returns_409_project_guard(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    active_user,
+):
+    project_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "delete-guard-project", "description": "", "flows_list": [], "components_list": []},
+        headers=logged_in_headers,
+    )
+    assert project_resp.status_code == status.HTTP_201_CREATED
+    project_id = project_resp.json()["id"]
+
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={
+            "name": "delete-guard-flow",
+            "folder_id": project_id,
+            "data": {"nodes": [], "edges": []},
+        },
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = UUID(flow_resp.json()["id"])
+
+    await _attach_deployment_to_flow(
+        user_id=active_user.id,
+        flow_id=flow_id,
+        project_id=UUID(project_id),
+    )
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert delete_resp.status_code == status.HTTP_409_CONFLICT
+    detail = delete_resp.json()["detail"]
+    assert "project cannot be deleted because it has deployments" in detail.lower()
+    assert "flow cannot be deleted because it has deployed versions" not in detail.lower()

@@ -25,6 +25,8 @@ withEventDeliveryModes(
 
     await initialGPTsetup(page);
 
+    await page.getByText("URL", { exact: true }).last().click();
+
     await page
       .getByTestId("inputlist_str_urls_0")
       .nth(0)
@@ -38,6 +40,8 @@ withEventDeliveryModes(
       .getByTestId("inputlist_str_urls_1")
       .nth(0)
       .fill("https://www.originaldiving.com/blog/top-ten-turtle-facts");
+
+    await page.getByText("Instructions", { exact: true }).last().click();
 
     await page
       .getByTestId("textarea_str_input_value")

@@ -6,7 +6,8 @@ from uuid import UUID
 from fastapi import HTTPException
 from lfx.log.logger import logger
 from pydantic.v1 import BaseModel, Field, create_model
-from sqlmodel import select
+from sqlalchemy.orm import aliased
+from sqlmodel import asc, desc, select
 
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.database.models.flow.model import Flow, FlowRead
@@ -19,12 +20,16 @@ if TYPE_CHECKING:
     from lfx.graph.schema import RunOutputs
     from lfx.graph.vertex.base import Vertex
 
-    from langflow.schema.data import Data
+from langflow.schema.data import Data
 
 INPUT_TYPE_MAP = {
     "ChatInput": {"type_hint": "Optional[str]", "default": '""'},
     "TextInput": {"type_hint": "Optional[str]", "default": '""'},
     "JSONInput": {"type_hint": "Optional[dict]", "default": "{}"},
+}
+SORT_DISPATCHER = {
+    "asc": asc,
+    "desc": desc,
 }
 
 
@@ -41,6 +46,120 @@ async def list_flows(*, user_id: str | None = None) -> list[Data]:
             return [flow.to_data() for flow in flows]
     except Exception as e:
         msg = f"Error listing flows: {e}"
+        raise ValueError(msg) from e
+
+
+async def list_flows_by_flow_folder(
+    *,
+    user_id: str | None = None,
+    flow_id: str | None = None,
+    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006
+) -> list[Data]:
+    if not user_id:
+        msg = "Session is invalid"
+        raise ValueError(msg)
+    if not flow_id:
+        msg = "Flow ID is required"
+        raise ValueError(msg)
+    try:
+        async with session_scope() as session:
+            uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+            uuid_flow_id = UUID(flow_id) if isinstance(flow_id, str) else flow_id
+            # get all flows belonging to the specified user
+            # and inside the same folder as the specified flow
+            flow_ = aliased(Flow)  # flow table alias, used to retrieve the folder
+            stmt = (
+                select(Flow.id, Flow.name, Flow.updated_at)
+                .join(flow_, Flow.folder_id == flow_.folder_id)
+                .where(flow_.id == uuid_flow_id)
+                .where(flow_.user_id == uuid_user_id)
+                .where(Flow.user_id == uuid_user_id)
+                .where(Flow.id != uuid_flow_id)
+            )
+            # sort flows by the specified column and direction
+            if order_params is not None:
+                sort_col = getattr(Flow, order_params.get("column", "updated_at"), Flow.updated_at)
+                sort_dir = SORT_DISPATCHER.get(order_params.get("direction", "desc"), desc)
+                stmt = stmt.order_by(sort_dir(sort_col))
+
+            flows = (await session.exec(stmt)).all()
+            return [Data(data=dict(flow._mapping)) for flow in flows]  # noqa: SLF001
+    except Exception as e:
+        msg = f"Error listing flows: {e}"
+        raise ValueError(msg) from e
+
+
+async def list_flows_by_folder_id(
+    *, user_id: str | None = None, folder_id: str | None = None, order_params: dict | None = None
+) -> list[Data]:
+    if not user_id:
+        msg = "Session is invalid"
+        raise ValueError(msg)
+    if not folder_id:
+        msg = "Folder ID is required"
+        raise ValueError(msg)
+
+    if order_params is None:
+        order_params = {"column": "updated_at", "direction": "desc"}
+
+    try:
+        async with session_scope() as session:
+            uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+            uuid_folder_id = UUID(folder_id) if isinstance(folder_id, str) else folder_id
+            stmt = (
+                select(Flow.id, Flow.name, Flow.updated_at)
+                .where(Flow.user_id == uuid_user_id)
+                .where(Flow.folder_id == uuid_folder_id)
+            )
+            if order_params is not None:
+                sort_col = getattr(Flow, order_params.get("column", "updated_at"), Flow.updated_at)
+                sort_dir = SORT_DISPATCHER.get(order_params.get("direction", "desc"), desc)
+                stmt = stmt.order_by(sort_dir(sort_col))
+
+            flows = (await session.exec(stmt)).all()
+            return [Data(data=dict(flow._mapping)) for flow in flows]  # noqa: SLF001
+    except Exception as e:
+        msg = f"Error listing flows: {e}"
+        raise ValueError(msg) from e
+
+
+async def get_flow_by_id_or_name(
+    *,
+    user_id: str | None = None,
+    flow_id: str | None = None,
+    flow_name: str | None = None,
+) -> Data | None:
+    if not user_id:
+        msg = "Session is invalid"
+        raise ValueError(msg)
+    if not (flow_id or flow_name):
+        msg = "Flow ID or Flow Name is required"
+        raise ValueError(msg)
+
+    # set user provided flow id or flow name.
+    # if both are provided, flow_id is used.
+    attr, val = None, None
+    if flow_name:
+        attr = "name"
+        val = flow_name
+    if flow_id:
+        attr = "id"
+        val = flow_id
+    if not (attr and val):
+        msg = "Flow id or Name is required"
+        raise ValueError(msg)
+    try:
+        async with session_scope() as session:
+            uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id  # type: ignore[assignment]
+            uuid_flow_id_or_name = val  # type: ignore[assignment]
+            if isinstance(val, str) and attr == "id":
+                uuid_flow_id_or_name = UUID(val)  # type: ignore[assignment]
+            stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(getattr(Flow, attr) == uuid_flow_id_or_name)
+            flow = (await session.exec(stmt)).first()
+            return flow.to_data() if flow else None
+
+    except Exception as e:
+        msg = f"Error getting flow by id: {e}"
         raise ValueError(msg) from e
 
 
@@ -277,17 +396,40 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
     ]
 
 
-async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> FlowRead | None:
+async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> FlowRead:
     async with session_scope() as session:
-        endpoint_name = None
+        # SECURITY (LE-639): previously the UUID branch below called
+        # ``session.get(Flow, flow_id)`` with no ownership check, so any
+        # authenticated caller could resolve any other user's flow by UUID.
+        # The endpoint_name branch scoped by ``user_id`` only when a truthy
+        # value was passed, so callers using this as a FastAPI ``Depends``
+        # (which resolves ``user_id`` from a query param that no one sets) had
+        # the same hole on both branches.  Normalize ``user_id`` once and
+        # enforce it on both branches -- returning None on cross-user lookup
+        # so the shared 404 below fires and we don't disclose existence of
+        # another user's flow.
+        uuid_user_id: UUID | None = None
+        if user_id is not None:
+            # Malformed user_id -- e.g. ``?user_id=foo`` on a legacy Depends
+            # route -- previously raised a raw ValueError (500 to the client).
+            # Fail closed: convert to 404 so we never disclose a flow to a
+            # caller whose identity we can't resolve.
+            try:
+                uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+            except (ValueError, AttributeError) as exc:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Flow identifier {flow_id_or_name} not found",
+                ) from exc
         try:
             flow_id = UUID(flow_id_or_name)
             flow = await session.get(Flow, flow_id)
+            if flow is not None and uuid_user_id is not None and flow.user_id != uuid_user_id:
+                flow = None
         except ValueError:
             endpoint_name = flow_id_or_name
             stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
-            if user_id:
-                uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+            if uuid_user_id is not None:
                 stmt = stmt.where(Flow.user_id == uuid_user_id)
             flow = (await session.exec(stmt)).first()
         if flow is None:
@@ -335,7 +477,7 @@ def json_schema_from_flow(flow: Flow) -> dict:
         template = node_data["template"]
 
         for field_name, field_data in template.items():
-            if field_data != "Component" and field_data.get("show", False) and not field_data.get("advanced", False):
+            if isinstance(field_data, dict) and field_data.get("show", False) and not field_data.get("advanced", False):
                 field_type = field_data.get("type", "string")
                 properties[field_name] = {
                     "type": field_type,

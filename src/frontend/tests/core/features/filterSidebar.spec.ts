@@ -1,6 +1,11 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "user must see on handle click the possibility connections",
@@ -14,6 +19,9 @@ test(
     });
 
     await page.getByTestId("blank-flow").click();
+
+    await disableInspectPanel(page);
+
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 3000,
     });
@@ -44,7 +52,7 @@ test(
     expect(await page.getByTestId("icon-ListFilter").first()).toBeVisible();
 
     await page
-      .getByTestId("icon-X")
+      .getByTestId("sidebar-filter-reset")
       .first()
       .hover()
       .then(async () => {
@@ -109,10 +117,10 @@ test(
     ).not.toBeVisible();
     await expect(page.getByTestId("logicCondition")).not.toBeVisible();
 
-    await page.getByTestId("edit-button-modal").click();
+    await openAdvancedOptions(page);
 
     await page.getByTestId("showheaders").click();
-    await page.getByText("Close").last().click();
+    await closeAdvancedOptions(page);
     await page.getByTestId("handle-apirequest-shownode-headers-left").click();
 
     await expect(page.getByTestId("disclosure-data sources")).toBeVisible();
@@ -131,9 +139,9 @@ test(
 
     await expect(page.getByTestId("flow_controlsSub Flow")).toBeVisible();
 
-    await expect(page.getByTestId("processingData Operations")).toBeVisible();
+    await expect(page.getByTestId("processingJSON Operations")).toBeVisible();
 
-    await page.getByTestId("icon-X").first().click();
+    await page.getByTestId("sidebar-filter-reset").first().click();
 
     await expect(page.getByTestId("data_sourceAPI Request")).not.toBeVisible();
     await expect(page.getByTestId("datastaxAstra DB")).not.toBeVisible();
