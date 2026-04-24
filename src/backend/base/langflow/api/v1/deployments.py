@@ -256,7 +256,7 @@ async def _count_provider_deployments_after_reconciliation(
                 size=deployment_count,
                 deployment_type=None,
             )
-    except Exception:  # noqa: BLE001  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         logger.warning(
             "Failed to reconcile deployments before deleting provider account %s; falling back to local count.",
             provider_account.id,
@@ -284,7 +284,7 @@ async def _delete_local_deployment_row_with_commit_retry(
     try:
         await delete_deployment_by_id(session, user_id=user_id, deployment_id=deployment_id)
         await session.commit()
-    except Exception:  # noqa: BLE001  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         await session.rollback()
         logger.warning(
             "Local deployment cleanup failed for deployment %s (resource_key=%s) after provider delete; retrying.",
@@ -1151,7 +1151,7 @@ async def update_snapshot(
                     snapshot_id,
                     previous_flow_version_id,
                 )
-        except Exception:  # noqa: BLE001  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             logger.warning(
                 "Best-effort rollback failed for snapshot '%s'. "
                 "Provider content reflects flow_version_id=%s but attachment "
@@ -1204,7 +1204,7 @@ async def get_deployment(
             try:
                 await delete_deployment_by_id(session, user_id=current_user.id, deployment_id=deployment_row.id)
                 await session.commit()
-            except Exception:  # noqa: BLE001  # noqa: BLE001
+            except Exception:  # noqa: BLE001
                 logger.warning(
                     "Failed to delete stale deployment row %s; returning 404 anyway",
                     deployment_row.id,
@@ -1248,7 +1248,7 @@ async def get_deployment(
                 session, user_id=current_user.id, deployment_id=deployment_row.id
             )
             attached_count = len(attachments)
-        except Exception:  # noqa: BLE001  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             logger.warning(
                 "Binding-aware sync failed for deployment %s; returning unverified attachment count",
                 deployment_row.id,
@@ -1260,7 +1260,7 @@ async def get_deployment(
                     session, user_id=current_user.id, deployment_id=deployment_row.id
                 )
                 attached_count = len(attachments)
-            except Exception:  # noqa: BLE001  # noqa: BLE001
+            except Exception:  # noqa: BLE001
                 logger.warning(
                     "Fallback attachment count query also failed for deployment %s; defaulting to 0",
                     deployment_row.id,
