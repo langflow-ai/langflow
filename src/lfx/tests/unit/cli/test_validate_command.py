@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 import pytest
 from lfx.cli.validate import (
+    LEVEL_AUDIT,
     ValidationResult,
     _check_missing_credentials,
     _check_orphaned_nodes,
@@ -332,6 +333,123 @@ class TestRequiredInputs:
         result = validate_flow_file(p, level=4, skip_components=True, skip_edge_types=True)
         req_errors = [e for e in result.errors if "Required input" in e.message]
         assert not req_errors
+
+
+class TestAuditLevel:
+    def _code_node(self, node_id: str = "code-node") -> dict:
+        return {
+            "id": node_id,
+            "data": {
+                "id": node_id,
+                "type": "PythonFunction",
+                "node": {"display_name": "Python Function", "template": {}},
+            },
+        }
+
+    def test_level_five_runs_agent_audit(self, tmp_path):
+        flow = {**_MINIMAL_VALID, "data": {"nodes": [self._code_node()], "edges": []}}
+        p = _write_flow(tmp_path, "flow.json", flow)
+        result = validate_flow_file(
+            p,
+            level=LEVEL_AUDIT,
+            skip_components=True,
+            skip_edge_types=True,
+            skip_required_inputs=True,
+            skip_credentials=True,
+            skip_version_check=True,
+        )
+        assert any("Unrestricted code execution detected" in issue.message for issue in result.warnings)
+        assert any(issue.level == LEVEL_AUDIT for issue in result.issues)
+
+    def test_audit_flag_runs_agent_audit_even_below_level_five(self, tmp_path):
+        flow = {**_MINIMAL_VALID, "data": {"nodes": [self._code_node()], "edges": []}}
+        p = _write_flow(tmp_path, "flow.json", flow)
+        result = validate_flow_file(
+            p,
+            level=4,
+            audit=True,
+            skip_components=True,
+            skip_edge_types=True,
+            skip_required_inputs=True,
+            skip_credentials=True,
+            skip_version_check=True,
+        )
+        assert any("Unrestricted code execution detected" in issue.message for issue in result.warnings)
+
+    def test_state_mutator_reachability_counts_non_direct_validator_paths(self, tmp_path):
+        validator = {
+            "id": "validator",
+            "data": {
+                "id": "validator",
+                "type": "ValidationFilter",
+                "node": {"display_name": "Validator", "template": {}},
+            },
+        }
+        middle = {
+            "id": "middle",
+            "data": {
+                "id": "middle",
+                "type": "Transform",
+                "node": {"display_name": "Middle", "template": {}},
+            },
+        }
+        mutator = {
+            "id": "mutator",
+            "data": {
+                "id": "mutator",
+                "type": "FileWriter",
+                "node": {"display_name": "File Writer", "template": {}},
+            },
+        }
+        flow = {
+            **_MINIMAL_VALID,
+            "data": {
+                "nodes": [validator, middle, mutator],
+                "edges": [
+                    {"source": "validator", "target": "middle"},
+                    {"source": "middle", "target": "mutator"},
+                ],
+            },
+        }
+        p = _write_flow(tmp_path, "flow.json", flow)
+        result = validate_flow_file(
+            p,
+            level=LEVEL_AUDIT,
+            skip_components=True,
+            skip_edge_types=True,
+            skip_required_inputs=True,
+            skip_credentials=True,
+            skip_version_check=True,
+        )
+        assert not any("State-mutating component" in issue.message for issue in result.warnings)
+
+    def test_memory_limit_detection_uses_field_names_not_numeric_values(self, tmp_path):
+        memory_node = {
+            "id": "memory",
+            "data": {
+                "id": "memory",
+                "type": "VectorMemory",
+                "node": {
+                    "display_name": "Vector Memory",
+                    "template": {
+                        "ttl": {"value": 4},
+                        "top_k": {"value": 10},
+                    },
+                },
+            },
+        }
+        flow = {**_MINIMAL_VALID, "data": {"nodes": [memory_node], "edges": []}}
+        p = _write_flow(tmp_path, "flow.json", flow)
+        result = validate_flow_file(
+            p,
+            level=LEVEL_AUDIT,
+            skip_components=True,
+            skip_edge_types=True,
+            skip_required_inputs=True,
+            skip_credentials=True,
+            skip_version_check=True,
+        )
+        assert not any("Memory/vector component" in issue.message for issue in result.warnings)
 
     def test_required_field_without_value_or_edge_fails(self, tmp_path):
         node = self._node_with_required_field(has_value=False)

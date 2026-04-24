@@ -8,7 +8,9 @@ from lfx.cli.validation._env_validation import (
     is_valid_env_var_name,
     validate_global_variables_for_env,
 )
+from lfx.cli.validation.audit import _check_agent_audit
 from lfx.cli.validation.core import (
+    LEVEL_AUDIT,
     LEVEL_COMPONENTS,
     LEVEL_EDGE_TYPES,
     LEVEL_REQUIRED_INPUTS,
@@ -36,12 +38,14 @@ from lfx.cli.validation.structural import (
 )
 
 __all__ = [
+    "LEVEL_AUDIT",
     "LEVEL_COMPONENTS",
     "LEVEL_EDGE_TYPES",
     "LEVEL_REQUIRED_INPUTS",
     "LEVEL_STRUCTURAL",
     "ValidationIssue",
     "ValidationResult",
+    "_check_agent_audit",
     "_check_component_existence",
     "_check_edge_type_compatibility",
     "_check_missing_credentials",

@@ -22,8 +22,14 @@ Validation levels (each level implies all levels below it):
         incoming edge connected to it.  Also checks that password/secret fields
         have a value or a matching environment variable set.
 
+    Level 5 - agent architecture audit (--audit flag)
+        Audits flows for wrapper-level failures such as hardcoded secrets,
+        unrestricted code execution, missing error handling, runaway loops,
+        unbounded memory growth, missing observability, and mutator safety.
+
 Use ``--level`` to select how deep to go, or ``--skip-*`` flags to opt out of
-individual checks while still running the others.
+individual checks while still running the others. Use ``--audit`` / ``-a`` to
+enable the Level 5 audit regardless of the selected level.
 
 Pass ``--strict`` to treat warnings as errors (exit code 1).
 
@@ -38,8 +44,10 @@ from __future__ import annotations
 # This keeps ``from lfx.cli.validate import ...`` working for all consumers
 # (the CLI entry point in __main__.py, tests, etc.).
 from lfx.cli.validation import (  # noqa: F401
+    LEVEL_AUDIT,
     ValidationIssue,
     ValidationResult,
+    _check_agent_audit,
     _check_missing_credentials,
     _check_orphaned_nodes,
     _check_unused_nodes,
@@ -53,6 +61,7 @@ from lfx.cli.validation import (  # noqa: F401
 
 # Level constants (re-exported for backwards compatibility)
 from lfx.cli.validation.core import (  # noqa: F401
+    _LEVEL_AUDIT,
     _LEVEL_COMPONENTS,
     _LEVEL_EDGE_TYPES,
     _LEVEL_REQUIRED_INPUTS,
