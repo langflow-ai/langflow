@@ -70,7 +70,9 @@ test(
 
     await adjustScreenView(page);
 
-    const calculatorToggle = page.getByTestId("toggle_bool_add_calculator_tool");
+    const calculatorToggle = page.getByTestId(
+      "toggle_bool_add_calculator_tool",
+    );
     await expect(calculatorToggle).toBeVisible({ timeout: 10000 });
     expect(await calculatorToggle.isChecked()).toBeTruthy();
 

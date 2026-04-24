@@ -477,9 +477,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         assert len(tools) == 1
         assert isinstance(tools[0], StructuredTool)
-        assert "evaluate" in tools[0].name.lower(), (
-            f"Expected a Calculator-derived tool; got name={tools[0].name!r}"
-        )
+        assert "evaluate" in tools[0].name.lower(), f"Expected a Calculator-derived tool; got name={tools[0].name!r}"
 
     async def test_should_not_append_calculator_tool_when_add_calculator_toggle_is_false(
         self, component_class, default_kwargs
@@ -505,9 +503,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         assert tools == []
 
-    def test_should_replace_current_date_and_model_name_when_both_placeholders_present(
-        self, component_class
-    ):
+    def test_should_replace_current_date_and_model_name_when_both_placeholders_present(self, component_class):
         """Unit test: helper replaces both placeholders with concrete values."""
         component = component_class()
         component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
@@ -519,9 +515,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "{model_name}" not in result
         assert "gpt-4o" in result
 
-    def test_should_leave_literal_braces_untouched_when_prompt_has_no_known_placeholders(
-        self, component_class
-    ):
+    def test_should_leave_literal_braces_untouched_when_prompt_has_no_known_placeholders(self, component_class):
         """Adversarial: prompts with literal JSON like {"key": 1} must not raise and must stay intact."""
         component = component_class()
         component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
@@ -568,9 +562,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         assert captured.get("system_prompt") == "Powered by gpt-4o."
 
-    async def test_should_accept_add_calculator_tool_in_default_keys(
-        self, component_class, default_kwargs
-    ):
+    async def test_should_accept_add_calculator_tool_in_default_keys(self, component_class, default_kwargs):
         """update_build_config's default_keys validation must include add_calculator_tool."""
         from lfx.schema.dotdict import dotdict
 
