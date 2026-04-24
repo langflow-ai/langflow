@@ -255,11 +255,11 @@ def test_schema_to_langflow_inputs_sets_input_types_for_connectable_handles():
     assert inputs["enabled"].input_types == ["Message"]
 
     assert isinstance(inputs["payload"], DictInput)
-    assert inputs["payload"].input_types == ["Data"]
+    assert inputs["payload"].input_types == ["JSON"]
 
 
 def test_schema_to_langflow_inputs_sets_data_input_types_for_nested_dict():
-    """Nullable object fields resolve to NestedDictInput and must also advertise a Data handle."""
+    """Nullable object fields resolve to NestedDictInput and must also advertise a JSON handle."""
     schema = {
         "type": "object",
         "properties": {
@@ -273,7 +273,7 @@ def test_schema_to_langflow_inputs_sets_data_input_types_for_nested_dict():
     inputs = {inp.name: inp for inp in schema_to_langflow_inputs(model)}
 
     assert isinstance(inputs["config"], NestedDictInput)
-    assert inputs["config"].input_types == ["Data"]
+    assert inputs["config"].input_types == ["JSON"]
 
 
 def test_schema_to_langflow_inputs_preserves_optional_defaults_and_nullable_objects():

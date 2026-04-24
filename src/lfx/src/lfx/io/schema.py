@@ -59,8 +59,8 @@ _SCHEMA_INPUT_TYPES_BY_CLS: dict[type[InputTypes], list[str]] = {
     IntInput: ["Message"],
     FloatInput: ["Message"],
     BoolInput: ["Message"],
-    DictInput: ["Data"],
-    NestedDictInput: ["Data"],
+    DictInput: ["JSON"],
+    NestedDictInput: ["JSON"],
 }
 
 
