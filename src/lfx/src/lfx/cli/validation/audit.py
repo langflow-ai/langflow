@@ -146,9 +146,7 @@ def _check_missing_error_handling(flow: dict[str, Any], result: ValidationResult
         if node_type in _SAFETY_SENSITIVE:
             safety_nodes.append(node)
         if node_type and (
-            "error" in node_type.lower()
-            or "catch" in node_type.lower()
-            or "fallback" in node_type.lower()
+            "error" in node_type.lower() or "catch" in node_type.lower() or "fallback" in node_type.lower()
         ):
             node_id = node.get("id")
             if node_id:
