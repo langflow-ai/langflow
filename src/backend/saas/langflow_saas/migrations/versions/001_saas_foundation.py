@@ -12,6 +12,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy import inspect as _sa_inspect
 
 revision: str = "001saas"
 down_revision: str | None = None
@@ -22,10 +23,41 @@ depends_on: str | Sequence[str] | None = None
 _uuid = sa.Uuid()
 
 
+def _has_table(name: str) -> bool:
+    """Return True if the table already exists in the target database."""
+    return _sa_inspect(op.get_bind()).has_table(name)
+
+
+def _seed_plans() -> None:
+    """Upsert the three built-in plans. Safe to call multiple times."""
+    op.execute(
+        """
+        INSERT INTO saas_plan
+            (id, name, slug, is_active, max_flows, max_executions_per_day,
+             max_members, max_storage_mb, max_api_keys, rpm_limit,
+             price_monthly_cents, price_yearly_cents, created_at, updated_at)
+        VALUES
+            ('00000000-0000-0000-0000-000000000001', 'Free', 'free', TRUE,
+             50, 1000, 5, 500, 5, 60, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+            ('00000000-0000-0000-0000-000000000002', 'Pro', 'pro', TRUE,
+             500, 10000, 25, 5000, 20, 300, 2900, 29000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+            ('00000000-0000-0000-0000-000000000003', 'Enterprise', 'enterprise', TRUE,
+             -1, -1, -1, -1, -1, 1000, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT (slug) DO NOTHING
+        """
+    )
+
+
 def upgrade() -> None:
     # ------------------------------------------------------------------
     # saas_plan
     # ------------------------------------------------------------------
+    if _has_table("saas_plan"):
+        # Tables were already created (e.g., plugin reinstalled on existing DB).
+        # Skip DDL but still re-seed plans in case the rows are missing.
+        _seed_plans()
+        return
+
     op.create_table(
         "saas_plan",
         sa.Column("id", _uuid, primary_key=True),
@@ -48,23 +80,7 @@ def upgrade() -> None:
     op.create_index("ix_saas_plan_slug", "saas_plan", ["slug"])
     op.create_index("ix_saas_plan_name", "saas_plan", ["name"])
 
-    # Seed default Free plan so the FK from saas_organization can be satisfied.
-    op.execute(
-        """
-        INSERT INTO saas_plan
-            (id, name, slug, is_active, max_flows, max_executions_per_day,
-             max_members, max_storage_mb, max_api_keys, rpm_limit,
-             price_monthly_cents, price_yearly_cents, created_at, updated_at)
-        VALUES
-            ('00000000-0000-0000-0000-000000000001', 'Free', 'free', TRUE,
-             50, 1000, 5, 500, 5, 60, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-            ('00000000-0000-0000-0000-000000000002', 'Pro', 'pro', TRUE,
-             500, 10000, 25, 5000, 20, 300, 2900, 29000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-            ('00000000-0000-0000-0000-000000000003', 'Enterprise', 'enterprise', TRUE,
-             -1, -1, -1, -1, -1, 1000, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        ON CONFLICT (slug) DO NOTHING
-        """
-    )
+    _seed_plans()
 
     # ------------------------------------------------------------------
     # saas_organization

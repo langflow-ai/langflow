@@ -135,6 +135,66 @@ async def _get_username(user_id: UUID) -> str:
         return str(user_id)
 
 
+async def _bootstrap_personal_org(db, user_id: UUID, username: str):
+    """Create a personal org + OWNER membership for a first-time user.
+
+    Called lazily from TenantContextMiddleware when a valid user has no memberships.
+    Returns the newly created UserOrganization, or None on failure.
+    """
+    import re
+    from datetime import datetime, timezone
+
+    from sqlmodel import select
+
+    from langflow_saas.models import Organization, OrgRole, Plan, UserOrganization
+
+    try:
+        # Pick up the Free plan if available; leave plan_id=None otherwise.
+        plan_result = await db.exec(select(Plan).where(Plan.slug == "free", Plan.is_active == True))  # noqa: E712
+        free_plan = plan_result.first()
+
+        # Build a slug guaranteed to be unique: personal-{hex uuid}.
+        base_slug = re.sub(r"[^a-z0-9]+", "-", username.lower()).strip("-")[:50]
+        slug_candidate = base_slug
+        attempt = 0
+        while True:
+            collision = await db.exec(select(Organization).where(Organization.slug == slug_candidate))
+            if not collision.first():
+                break
+            attempt += 1
+            slug_candidate = f"{base_slug}-{attempt}"
+
+        now = datetime.now(timezone.utc)
+        org = Organization(
+            name=f"{username}'s workspace",
+            slug=slug_candidate,
+            owner_id=user_id,
+            plan_id=free_plan.id if free_plan else None,
+            is_personal=True,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(org)
+        await db.flush()  # populate org.id before referencing it
+
+        membership = UserOrganization(
+            user_id=user_id,
+            org_id=org.id,
+            role=OrgRole.OWNER,
+            created_at=now,
+        )
+        db.add(membership)
+        await db.commit()
+        await db.refresh(membership)
+
+        logger.info("langflow-saas: created personal org %s for user %s", org.slug, username)
+        return membership
+    except Exception:  # noqa: BLE001
+        logger.exception("langflow-saas: failed to bootstrap personal org for user %s", username)
+        await db.rollback()
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Redis helpers (graceful no-op when Redis is unavailable)
 # ---------------------------------------------------------------------------
@@ -319,7 +379,14 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 result = await db.exec(select(UserOrganization).where(UserOrganization.user_id == user_id))
                 memberships = result.all()
                 if not memberships:
-                    return
+                    if settings.auto_create_personal_org:
+                        bootstrapped = await _bootstrap_personal_org(db, user_id, username)
+                        if bootstrapped:
+                            memberships = [bootstrapped]
+                        else:
+                            return
+                    else:
+                        return
                 if len(memberships) == 1:
                     membership = memberships[0]
                 else:
