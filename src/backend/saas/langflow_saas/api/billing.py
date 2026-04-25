@@ -184,11 +184,10 @@ async def get_usage(org_id: UUID, ctx: CurrentOrgContext):
         # Count flows from Langflow's flows table for org members.
         # We aggregate flows belonging to all members of the org.
         from langflow.services.database.models.flow.model import Flow
+
         from langflow_saas.models import UserOrganization
 
-        member_result = await db.exec(
-            select(UserOrganization.user_id).where(UserOrganization.org_id == org_id)
-        )
+        member_result = await db.exec(select(UserOrganization.user_id).where(UserOrganization.org_id == org_id))
         member_ids = [r for r in member_result.all()]
         flow_count = 0
         if member_ids:
@@ -226,7 +225,7 @@ async def stripe_webhook(request: Request):
 
     try:
         result = await get_billing_service().handle_webhook(payload=payload, sig_header=sig_header)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(400, f"Webhook processing failed: {exc}") from exc
 
     return result

@@ -44,8 +44,7 @@ def _validate_slug(slug: str) -> None:
     if not _SLUG_RE.match(slug):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Slug must be 3–63 lowercase alphanumeric characters or hyphens, "
-            "cannot start or end with a hyphen.",
+            detail="Slug must be 3–63 lowercase alphanumeric characters or hyphens, cannot start or end with a hyphen.",
         )
 
 
@@ -113,9 +112,7 @@ async def list_orgs(ctx: CurrentOrgContext):
     from langflow.services.deps import session_scope
 
     async with session_scope() as db:
-        memberships_result = await db.exec(
-            select(UserOrganization).where(UserOrganization.user_id == ctx.user_id)
-        )
+        memberships_result = await db.exec(select(UserOrganization).where(UserOrganization.user_id == ctx.user_id))
         memberships = memberships_result.all()
 
         result = []

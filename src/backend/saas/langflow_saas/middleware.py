@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -192,7 +192,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         if not key_id:
             forwarded_for = request.headers.get("X-Forwarded-For")
-            key_id = (forwarded_for or request.client.host if request.client else "unknown")
+            key_id = forwarded_for or request.client.host if request.client else "unknown"
 
         redis = _get_redis()
         if redis is None:
@@ -316,9 +316,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
             else:
                 # Auto-resolve: get all memberships, pick the personal org or the
                 # only org if the user belongs to exactly one.
-                result = await db.exec(
-                    select(UserOrganization).where(UserOrganization.user_id == user_id)
-                )
+                result = await db.exec(select(UserOrganization).where(UserOrganization.user_id == user_id))
                 memberships = result.all()
                 if not memberships:
                     return
@@ -395,9 +393,7 @@ class QuotaEnforcementMiddleware(BaseHTTPMiddleware):
         if not settings.billing_enabled:
             return await call_next(request)
 
-        is_execution = request.method == "POST" and any(
-            request.url.path.startswith(p) for p in _EXECUTION_PATHS
-        )
+        is_execution = request.method == "POST" and any(request.url.path.startswith(p) for p in _EXECUTION_PATHS)
         if not is_execution:
             return await call_next(request)
 

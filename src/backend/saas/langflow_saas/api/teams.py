@@ -120,9 +120,7 @@ async def remove_team_member(org_id: UUID, team_id: UUID, target_user_id: UUID, 
 
     async with session_scope() as db:
         result = await db.exec(
-            select(TeamMember).where(
-                TeamMember.team_id == team_id, TeamMember.user_id == target_user_id
-            )
+            select(TeamMember).where(TeamMember.team_id == team_id, TeamMember.user_id == target_user_id)
         )
         member = result.first()
         if not member:

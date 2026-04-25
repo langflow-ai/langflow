@@ -39,7 +39,6 @@ def _run_migrations() -> None:
     Safe to call on every startup — Alembic no-ops when already up to date.
     """
     try:
-        import os
         from pathlib import Path
 
         from alembic import command
@@ -51,9 +50,7 @@ def _run_migrations() -> None:
             ini_path = Path(__file__).parent.parent / "alembic.ini"
 
         if not ini_path.exists():
-            logger.warning(
-                "langflow-saas: alembic.ini not found at %s — skipping migrations.", ini_path
-            )
+            logger.warning("langflow-saas: alembic.ini not found at %s — skipping migrations.", ini_path)
             return
 
         alembic_cfg = Config(str(ini_path))
@@ -69,10 +66,8 @@ def _run_migrations() -> None:
 
         command.upgrade(alembic_cfg, "heads")
         logger.info("langflow-saas: migrations applied.")
-    except Exception:  # noqa: BLE001
-        logger.exception(
-            "langflow-saas: migration failed — SaaS features may not work correctly."
-        )
+    except Exception:
+        logger.exception("langflow-saas: migration failed — SaaS features may not work correctly.")
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +104,8 @@ async def _ensure_personal_orgs() -> None:
                 # Check for existing personal org.
                 existing_personal = await db.exec(
                     select(Organization).where(
-                        Organization.owner_id == uid, Organization.is_personal == True  # noqa: E712
+                        Organization.owner_id == uid,
+                        Organization.is_personal == True,  # noqa: E712
                     )
                 )
                 if existing_personal.first():
@@ -120,9 +116,7 @@ async def _ensure_personal_orgs() -> None:
                 slug = base_slug
                 attempt = 0
                 while True:
-                    collision = await db.exec(
-                        select(Organization).where(Organization.slug == slug)
-                    )
+                    collision = await db.exec(select(Organization).where(Organization.slug == slug))
                     if not collision.first():
                         break
                     attempt += 1
@@ -140,14 +134,12 @@ async def _ensure_personal_orgs() -> None:
                 db.add(org)
                 await db.flush()
 
-                membership = UserOrganization(
-                    user_id=uid, org_id=org.id, role=OrgRole.OWNER, created_at=now
-                )
+                membership = UserOrganization(user_id=uid, org_id=org.id, role=OrgRole.OWNER, created_at=now)
                 db.add(membership)
 
             await db.commit()
             logger.info("langflow-saas: personal orgs ensured for all users.")
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.exception("langflow-saas: failed to ensure personal orgs.")
 
 
@@ -187,9 +179,9 @@ def register(app) -> None:  # ``app`` is _PluginAppWrapper from plugin_routes.py
         TenantContextMiddleware,
     )
 
-    app.add_middleware(QuotaEnforcementMiddleware)   # added first → innermost
-    app.add_middleware(TenantContextMiddleware)       # added second
-    app.add_middleware(RateLimitMiddleware)           # added last → outermost
+    app.add_middleware(QuotaEnforcementMiddleware)  # added first → innermost
+    app.add_middleware(TenantContextMiddleware)  # added second
+    app.add_middleware(RateLimitMiddleware)  # added last → outermost
 
     # 3. Mount SaaS API routes under /api/saas/v1/.
     from langflow_saas.api.router import router as saas_router

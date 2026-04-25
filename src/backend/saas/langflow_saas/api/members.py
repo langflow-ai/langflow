@@ -181,9 +181,7 @@ async def invite_member(org_id: UUID, body: InvitationCreate, ctx: RequireAdmin,
         org_result = await db.exec(select(Organization).where(Organization.id == org_id))
         org = org_result.first()
 
-        count_result = await db.exec(
-            select(UserOrganization).where(UserOrganization.org_id == org_id)
-        )
+        count_result = await db.exec(select(UserOrganization).where(UserOrganization.org_id == org_id))
         member_count = len(count_result.all())
         if org and member_count >= settings.default_max_members:
             raise HTTPException(
@@ -260,9 +258,7 @@ async def list_invitations(org_id: UUID, ctx: RequireAdmin):
 
     async with session_scope() as db:
         result = await db.exec(
-            select(Invitation).where(
-                Invitation.org_id == org_id, Invitation.status == InvitationStatus.PENDING
-            )
+            select(Invitation).where(Invitation.org_id == org_id, Invitation.status == InvitationStatus.PENDING)
         )
         return [
             InvitationRead(
@@ -277,9 +273,7 @@ async def list_invitations(org_id: UUID, ctx: RequireAdmin):
         ]
 
 
-@router.delete(
-    "/orgs/{org_id}/invitations/{invite_id}", status_code=status.HTTP_204_NO_CONTENT
-)
+@router.delete("/orgs/{org_id}/invitations/{invite_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_invitation(org_id: UUID, invite_id: UUID, ctx: RequireAdmin):
     assert_org_match(org_id, ctx)
     from langflow.services.deps import session_scope
@@ -338,7 +332,8 @@ async def get_invitation_info(token: str):
 @router.post("/invitations/{token}/accept", status_code=status.HTTP_200_OK)
 async def accept_invitation(token: str, ctx: CurrentOrgContext, request: Request):
     """Accept a pending invitation.  Caller must be authenticated as the invited email
-    OR an admin can accept on behalf.  For simplicity we trust the authenticated user."""
+    OR an admin can accept on behalf.  For simplicity we trust the authenticated user.
+    """
     settings = get_saas_settings()
     inv_id = _verify_token(token, settings.invitation_secret.get_secret_value())
     if not inv_id:

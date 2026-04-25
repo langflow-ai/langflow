@@ -14,7 +14,6 @@ All services are module-level singletons initialised lazily on first use.
 
 from __future__ import annotations
 
-import json
 import logging
 import smtplib
 import ssl
@@ -90,8 +89,7 @@ class BaseEmailService(ABC):
     """Abstract email sender.  Implement send_raw() in subclasses."""
 
     @abstractmethod
-    async def send_raw(self, *, to: str, subject: str, html: str, text: str) -> None:
-        ...
+    async def send_raw(self, *, to: str, subject: str, html: str, text: str) -> None: ...
 
     async def send_invitation(
         self,
@@ -133,9 +131,7 @@ class BaseEmailService(ABC):
         text = f"Reset your password: {reset_url}\nExpires in {expire_hours} hours."
         await self.send_raw(to=to_email, subject=subject, html=html, text=text)
 
-    async def send_quota_warning(
-        self, *, to_email: str, org_name: str, metric: str, used: int, limit: int
-    ) -> None:
+    async def send_quota_warning(self, *, to_email: str, org_name: str, metric: str, used: int, limit: int) -> None:
         pct = int(used / limit * 100) if limit else 0
         subject = f"[{org_name}] Usage alert: {pct}% of {metric} quota used"
         html = f"""
@@ -335,9 +331,7 @@ class BillingService:
         import asyncio
 
         stripe = self._stripe()
-        customer_id = await self.get_or_create_customer(
-            org_id=org_id, org_name=org_name, email=owner_email
-        )
+        customer_id = await self.get_or_create_customer(org_id=org_id, org_name=org_name, email=owner_email)
         session = await asyncio.to_thread(
             stripe.checkout.Session.create,
             customer=customer_id,
@@ -361,9 +355,7 @@ class BillingService:
         stripe = self._stripe()
         webhook_secret = get_saas_settings().stripe_webhook_secret.get_secret_value()
 
-        event = await asyncio.to_thread(
-            stripe.Webhook.construct_event, payload, sig_header, webhook_secret
-        )
+        event = await asyncio.to_thread(stripe.Webhook.construct_event, payload, sig_header, webhook_secret)
 
         event_type: str = event["type"]
         handlers = {
@@ -399,9 +391,7 @@ class BillingService:
         from langflow_saas.models import Subscription, SubscriptionStatus
 
         async with session_scope() as db:
-            result = await db.exec(
-                select(Subscription).where(Subscription.stripe_subscription_id == sub_id)
-            )
+            result = await db.exec(select(Subscription).where(Subscription.stripe_subscription_id == sub_id))
             sub = result.first()
             if sub:
                 sub.status = SubscriptionStatus.PAST_DUE
@@ -418,9 +408,7 @@ class BillingService:
 
         customer_id: str = stripe_sub["customer"]
         stripe_sub_id: str = stripe_sub["id"]
-        stripe_price_id: str | None = (
-            stripe_sub.get("items", {}).get("data", [{}])[0].get("price", {}).get("id")
-        )
+        stripe_price_id: str | None = stripe_sub.get("items", {}).get("data", [{}])[0].get("price", {}).get("id")
         raw_status = status_override or stripe_sub.get("status", "active")
 
         try:
@@ -434,9 +422,7 @@ class BillingService:
 
         async with session_scope() as db:
             # Find org by Stripe customer_id.
-            org_result = await db.exec(
-                select(Organization).where(Organization.stripe_customer_id == customer_id)
-            )
+            org_result = await db.exec(select(Organization).where(Organization.stripe_customer_id == customer_id))
             org = org_result.first()
             if not org:
                 logger.warning("Stripe webhook: no org found for customer %s", customer_id)
@@ -453,9 +439,7 @@ class BillingService:
                 )
                 plan = plan_result.first()
 
-            sub_result = await db.exec(
-                select(Subscription).where(Subscription.org_id == org.id)
-            )
+            sub_result = await db.exec(select(Subscription).where(Subscription.org_id == org.id))
             sub = sub_result.first()
 
             now = datetime.now(timezone.utc)
@@ -469,15 +453,9 @@ class BillingService:
             sub.stripe_subscription_id = stripe_sub_id
             sub.stripe_price_id = stripe_price_id
             sub.status = stripe_status
-            sub.current_period_start = (
-                datetime.fromtimestamp(period_start, tz=timezone.utc) if period_start else None
-            )
-            sub.current_period_end = (
-                datetime.fromtimestamp(period_end, tz=timezone.utc) if period_end else None
-            )
-            sub.trial_end = (
-                datetime.fromtimestamp(trial_end, tz=timezone.utc) if trial_end else None
-            )
+            sub.current_period_start = datetime.fromtimestamp(period_start, tz=timezone.utc) if period_start else None
+            sub.current_period_end = datetime.fromtimestamp(period_end, tz=timezone.utc) if period_end else None
+            sub.trial_end = datetime.fromtimestamp(trial_end, tz=timezone.utc) if trial_end else None
             sub.cancel_at_period_end = stripe_sub.get("cancel_at_period_end", False)
             sub.updated_at = now
 

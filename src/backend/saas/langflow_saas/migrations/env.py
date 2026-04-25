@@ -11,7 +11,6 @@ Key design decisions:
 """
 
 import os
-import re
 from logging.config import fileConfig
 
 from alembic import context
@@ -30,11 +29,7 @@ if config.config_file_name is not None:
 # SAAS_DATABASE_URL overrides LANGFLOW_DATABASE_URL for scenarios where the
 # SaaS tables live in a separate database (advanced multi-DB setups).
 # ---------------------------------------------------------------------------
-db_url = (
-    os.getenv("SAAS_DATABASE_URL")
-    or os.getenv("LANGFLOW_DATABASE_URL")
-    or "sqlite:///./langflow.db"
-)
+db_url = os.getenv("SAAS_DATABASE_URL") or os.getenv("LANGFLOW_DATABASE_URL") or "sqlite:///./langflow.db"
 config.set_main_option("sqlalchemy.url", db_url)
 
 # ---------------------------------------------------------------------------
@@ -42,16 +37,6 @@ config.set_main_option("sqlalchemy.url", db_url)
 # Alembic performs autogenerate comparison.
 # ---------------------------------------------------------------------------
 from langflow_saas.models import (  # noqa: E402 — must be after config setup
-    AuditLog,
-    Invitation,
-    Organization,
-    Plan,
-    SaasAlembicVersion,
-    Subscription,
-    Team,
-    TeamMember,
-    UsageRecord,
-    UserOrganization,
     saas_metadata,
 )
 

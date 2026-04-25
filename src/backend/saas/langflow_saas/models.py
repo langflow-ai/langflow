@@ -65,8 +65,8 @@ class Plan(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "saas_plan"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    name: str = Field(unique=True, index=True)            # "Free", "Pro", "Enterprise"
-    slug: str = Field(unique=True, index=True)            # "free", "pro", "enterprise"
+    name: str = Field(unique=True, index=True)  # "Free", "Pro", "Enterprise"
+    slug: str = Field(unique=True, index=True)  # "free", "pro", "enterprise"
     is_active: bool = Field(default=True)
     # Quotas (-1 = unlimited)
     max_flows: int = Field(default=50)
@@ -125,16 +125,12 @@ class UserOrganization(SQLModel, table=True):  # type: ignore[call-arg]
         sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
     )
     org_id: UUID = Field(
-        sa_column=Column(
-            sa.Uuid(), ForeignKey("saas_organization.id", ondelete="CASCADE"), nullable=False, index=True
-        )
+        sa_column=Column(sa.Uuid(), ForeignKey("saas_organization.id", ondelete="CASCADE"), nullable=False, index=True)
     )
     role: OrgRole = Field(default=OrgRole.MEMBER)
     # Tracks which invitation brought this member in; nullable for founders.
     invitation_id: UUID | None = Field(
-        sa_column=Column(
-            sa.Uuid(), ForeignKey("saas_invitation.id", ondelete="SET NULL"), nullable=True
-        )
+        sa_column=Column(sa.Uuid(), ForeignKey("saas_invitation.id", ondelete="SET NULL"), nullable=True)
     )
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -149,9 +145,7 @@ class Team(SQLModel, table=True):  # type: ignore[call-arg]
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     org_id: UUID = Field(
-        sa_column=Column(
-            sa.Uuid(), ForeignKey("saas_organization.id", ondelete="CASCADE"), nullable=False, index=True
-        )
+        sa_column=Column(sa.Uuid(), ForeignKey("saas_organization.id", ondelete="CASCADE"), nullable=False, index=True)
     )
     name: str = Field()
     description: str | None = Field(default=None)
@@ -166,9 +160,7 @@ class TeamMember(SQLModel, table=True):  # type: ignore[call-arg]
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     team_id: UUID = Field(
-        sa_column=Column(
-            sa.Uuid(), ForeignKey("saas_team.id", ondelete="CASCADE"), nullable=False, index=True
-        )
+        sa_column=Column(sa.Uuid(), ForeignKey("saas_team.id", ondelete="CASCADE"), nullable=False, index=True)
     )
     user_id: UUID = Field(
         sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -186,15 +178,11 @@ class Invitation(SQLModel, table=True):  # type: ignore[call-arg]
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     org_id: UUID = Field(
-        sa_column=Column(
-            sa.Uuid(), ForeignKey("saas_organization.id", ondelete="CASCADE"), nullable=False, index=True
-        )
+        sa_column=Column(sa.Uuid(), ForeignKey("saas_organization.id", ondelete="CASCADE"), nullable=False, index=True)
     )
     email: str = Field(index=True)
     role: OrgRole = Field(default=OrgRole.MEMBER)
-    invited_by: UUID = Field(
-        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
-    )
+    invited_by: UUID = Field(sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False))
     # HMAC-signed token — the actual secret is derived from the invitation ID
     # and SAAS_INVITATION_SECRET so the token is never stored in cleartext.
     token_hash: str = Field(unique=True, index=True)
@@ -221,13 +209,11 @@ class Subscription(SQLModel, table=True):  # type: ignore[call-arg]
             sa.Uuid(),
             ForeignKey("saas_organization.id", ondelete="CASCADE"),
             nullable=False,
-            unique=True,   # one active subscription per org
+            unique=True,  # one active subscription per org
             index=True,
         )
     )
-    plan_id: UUID = Field(
-        sa_column=Column(sa.Uuid(), ForeignKey("saas_plan.id", ondelete="RESTRICT"), nullable=False)
-    )
+    plan_id: UUID = Field(sa_column=Column(sa.Uuid(), ForeignKey("saas_plan.id", ondelete="RESTRICT"), nullable=False))
     status: SubscriptionStatus = Field(default=SubscriptionStatus.TRIALING)
     stripe_subscription_id: str | None = Field(default=None, unique=True, index=True)
     stripe_price_id: str | None = Field(default=None)
@@ -256,9 +242,7 @@ class UsageRecord(SQLModel, table=True):  # type: ignore[call-arg]
     org_id: UUID = Field(
         sa_column=Column(sa.Uuid(), ForeignKey("saas_organization.id", ondelete="CASCADE"), nullable=False)
     )
-    user_id: UUID | None = Field(
-        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
-    )
+    user_id: UUID | None = Field(sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True))
     metric: UsageMetric = Field()
     # For FLOW_EXECUTION / API_CALL: value=1 per event.
     # For STORAGE_BYTES: value = delta bytes (can be negative for deletions).
@@ -285,12 +269,10 @@ class AuditLog(SQLModel, table=True):  # type: ignore[call-arg]
     org_id: UUID | None = Field(
         sa_column=Column(sa.Uuid(), ForeignKey("saas_organization.id", ondelete="SET NULL"), nullable=True)
     )
-    user_id: UUID | None = Field(
-        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
-    )
+    user_id: UUID | None = Field(sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True))
     # Dot-separated action name: "org.created", "member.invited", "subscription.upgraded"
     action: str = Field(index=True)
-    resource_type: str | None = Field(default=None)   # "flow", "org", "team", …
+    resource_type: str | None = Field(default=None)  # "flow", "org", "team", …
     resource_id: str | None = Field(default=None)
     log_metadata: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     ip_address: str | None = Field(default=None)
@@ -330,7 +312,7 @@ class OrganizationRead(SQLModel):
     is_personal: bool
     is_active: bool
     created_at: datetime
-    role: OrgRole | None = None       # caller's role — filled at query time
+    role: OrgRole | None = None  # caller's role — filled at query time
     plan: PlanRead | None = None
 
 
