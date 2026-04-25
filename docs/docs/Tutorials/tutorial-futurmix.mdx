@@ -1,5 +1,7 @@
 ---
 title: Use FuturMix AI Gateway models
+description: Configure Langflow's OpenAI Component to use FuturMix AI Gateway with a custom API base URL and reusable API key setup.
+sidebar_position: 5
 slug: /tutorial-futurmix
 ---
 
@@ -24,7 +26,7 @@ Because FuturMix is OpenAI-compatible, you can use it with Langflow's built-in *
 
 3. In the **OpenAI API Base** field, enter:
 
-   ```text
+   ```text title="openai_api_base"
    https://futurmix.ai/v1
    ```
 
@@ -61,14 +63,14 @@ After you save the variable, Langflow automatically applies your FuturMix API ke
 
 Alternatively, you can set the FuturMix API key as an environment variable:
 
-```bash
+```bash title=".env"
 LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=FUTURMIX_API_KEY
 FUTURMIX_API_KEY=your-api-key
 ```
 
 Start Langflow with the `.env` file:
 
-```bash
+```bash title="terminal"
 uv run langflow run --env-file .env
 ```
 
