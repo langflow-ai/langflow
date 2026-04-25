@@ -189,7 +189,7 @@ async def _bootstrap_personal_org(db, user_id: UUID, username: str):
 
         logger.info("langflow-saas: created personal org %s for user %s", org.slug, username)
         return membership
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.exception("langflow-saas: failed to bootstrap personal org for user %s", username)
         await db.rollback()
         return None
