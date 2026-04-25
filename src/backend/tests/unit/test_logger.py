@@ -20,7 +20,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 import structlog
-from loguru import logger as loguru_logger
 from lfx.log.logger import (
     LOG_LEVEL_MAP,
     VALID_LOG_LEVELS,
@@ -34,6 +33,7 @@ from lfx.log.logger import (
     setup_gunicorn_logger,
     setup_uvicorn_logger,
 )
+from loguru import logger as loguru_logger
 
 
 class TestConfigure:
