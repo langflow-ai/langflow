@@ -20,6 +20,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 import structlog
+from loguru import logger as loguru_logger
 from lfx.log.logger import (
     LOG_LEVEL_MAP,
     VALID_LOG_LEVELS,
@@ -100,6 +101,27 @@ class TestConfigure:
             if log_file_path.exists():
                 log_file_path.unlink()
             # Remove any file handlers from root logger
+            for handler in logging.root.handlers[:]:
+                if isinstance(handler, logging.handlers.RotatingFileHandler):
+                    logging.root.removeHandler(handler)
+
+    def test_configure_routes_loguru_messages_to_log_file(self):
+        """Test raw loguru logger messages are captured by Langflow file logging."""
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+            log_file_path = Path(tmp_file.name)
+
+        try:
+            configure(log_level="INFO", log_file=log_file_path)
+            loguru_logger.info("Test message from loguru")
+
+            for handler in logging.root.handlers:
+                if isinstance(handler, logging.handlers.RotatingFileHandler):
+                    handler.flush()
+
+            assert "Test message from loguru" in log_file_path.read_text()
+        finally:
+            if log_file_path.exists():
+                log_file_path.unlink()
             for handler in logging.root.handlers[:]:
                 if isinstance(handler, logging.handlers.RotatingFileHandler):
                     logging.root.removeHandler(handler)

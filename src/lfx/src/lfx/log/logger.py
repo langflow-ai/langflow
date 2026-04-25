@@ -13,6 +13,7 @@ from typing import Any, TypedDict
 
 import orjson
 import structlog
+from loguru import logger as loguru_logger
 from platformdirs import user_cache_dir
 from typing_extensions import NotRequired
 
@@ -202,6 +203,29 @@ class LogConfig(TypedDict):
     log_format: NotRequired[str]
 
 
+def _forward_loguru_message(message: Any) -> None:
+    """Route raw loguru messages through structlog.
+
+    Custom components and some backend modules still import ``loguru.logger`` directly.
+    Forwarding those records through structlog keeps stdout/file logging behavior aligned
+    with ``lfx.log.logger.configure()``.
+    """
+    record = message.record
+    structlog_logger = structlog.get_logger(record["name"] or "loguru")
+    log_method = getattr(structlog_logger, record["level"].name.lower(), structlog_logger.info)
+    exception = record.get("exception")
+    if exception is not None:
+        log_method(record["message"], exception=exception)
+    else:
+        log_method(record["message"])
+
+
+def _configure_loguru_logger(numeric_level: int) -> None:
+    """Keep the global loguru logger wired into Langflow's logging pipeline."""
+    loguru_logger.remove()
+    loguru_logger.add(_forward_loguru_message, level=numeric_level)
+
+
 def configure(
     *,
     log_level: str | None = None,
@@ -349,6 +373,8 @@ def configure(
         logging.root.addHandler(file_handler)
         logging.root.setLevel(numeric_level)
 
+    _configure_loguru_logger(numeric_level)
+
     # Set up interceptors for uvicorn and gunicorn
     setup_uvicorn_logger()
     setup_gunicorn_logger()
@@ -362,6 +388,7 @@ def configure(
         structlog.configure(
             wrapper_class=structlog.make_filtering_bound_logger(logging.CRITICAL),
         )
+        _configure_loguru_logger(logging.CRITICAL)
 
     logger.debug("Logger set up with log level: %s", log_level)
 
