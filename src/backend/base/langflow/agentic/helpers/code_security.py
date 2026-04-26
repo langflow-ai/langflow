@@ -14,6 +14,9 @@ DANGEROUS_CALLS: dict[str, str] = {
     "compile": "Use of compile() is forbidden in components",
     "__import__": "Use of __import__() is forbidden in components",
     "globals": "Use of globals() is forbidden in components",
+    "getattr": "Use of getattr() is forbidden in components",
+    "setattr": "Use of setattr() is forbidden in components",
+    "vars": "Use of vars() is forbidden in components",
 }
 
 # Dangerous attribute calls: (module, method, violation_message)
@@ -44,6 +47,7 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
 
 # Imports that are forbidden entirely
 DANGEROUS_IMPORTS: set[str] = {
+    "os",
     "subprocess",
     "shutil",
     "ctypes",
