@@ -332,6 +332,83 @@ async def test_base_mapper_resolve_deployment_list_adapter_params_passthrough() 
     assert params.provider_params == {"env": "prod"}
 
 
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_deployment_list_adapter_params_returns_none_when_unfiltered() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_deployment_list_adapter_params(
+        deployment_type=None,
+        names=None,
+        provider_params=None,
+        db=None,
+    )
+    assert params is None
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_config_list_adapter_params_passthrough() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_config_list_adapter_params(
+        deployment_resource_key="dep-key-1",
+        provider_params={"tag": "release"},
+        db=None,
+    )
+    assert params.deployment_ids == ["dep-key-1"]
+    assert params.provider_params == {"tag": "release"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_config_list_adapter_params_omits_deployment_ids_when_key_none() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_config_list_adapter_params(
+        deployment_resource_key=None,
+        provider_params=None,
+        db=None,
+    )
+    assert params.deployment_ids is None
+    assert params.provider_params is None
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_snapshot_list_adapter_params_passthrough() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_snapshot_list_adapter_params(
+        deployment_resource_key="dep-key-1",
+        snapshot_names=["snap-a", "snap-b"],
+        provider_params={"tag": "nightly"},
+        db=None,
+    )
+    assert params.deployment_ids == ["dep-key-1"]
+    assert params.snapshot_names == ["snap-a", "snap-b"]
+    assert params.provider_params == {"tag": "nightly"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_snapshot_list_adapter_params_normalizes_empty_names_to_none() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_snapshot_list_adapter_params(
+        deployment_resource_key="dep-key-1",
+        snapshot_names=[],
+        provider_params=None,
+        db=None,
+    )
+    assert params.deployment_ids == ["dep-key-1"]
+    assert params.snapshot_names is None
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_snapshot_list_adapter_params_omits_deployment_ids_when_key_none() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_snapshot_list_adapter_params(
+        deployment_resource_key=None,
+        snapshot_names=None,
+        provider_params=None,
+        db=None,
+    )
+    assert params.deployment_ids is None
+    assert params.snapshot_names is None
+    assert params.provider_params is None
+
+
 def test_mapper_has_resolve_method_for_all_inbound_slots() -> None:
     for slot_name in INBOUND_SLOT_NAMES:
         assert hasattr(BaseDeploymentMapper, f"resolve_{slot_name}")
