@@ -6,10 +6,28 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import type {
   MutationFunctionType,
   QueryFunctionType,
 } from "../../../types/api";
+
+// 4xx responses are intentional client-side rejections (auth, validation,
+// deployment guards, etc.).
+function isClientError(error: unknown): boolean {
+  const status = (error as AxiosError | undefined)?.response?.status;
+  return typeof status === "number" && status >= 400 && status < 500;
+}
+
+function makeRetry(maxRetries: number) {
+  return (failureCount: number, error: unknown) => {
+    if (isClientError(error)) return false;
+    return failureCount < maxRetries;
+  };
+}
+
+const retryDelay = (attemptIndex: number) =>
+  Math.min(1000 * 2 ** attemptIndex, 30000);
 
 export function UseRequestProcessor(): {
   query: QueryFunctionType;
@@ -26,8 +44,8 @@ export function UseRequestProcessor(): {
     return useQuery({
       queryKey,
       queryFn,
-      retry: 5,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retry: makeRetry(5),
+      retryDelay,
       ...options,
     });
   }
@@ -45,8 +63,8 @@ export function UseRequestProcessor(): {
         options.onSettled && options.onSettled(data, error, variables, context);
       },
       ...options,
-      retry: options.retry ?? 3,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retry: options.retry ?? makeRetry(3),
+      retryDelay,
     });
   }
 
