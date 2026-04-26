@@ -579,10 +579,7 @@ class FlowOwnershipMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        is_flow_create = (
-            request.method == "POST"
-            and request.url.path.rstrip("/") == "/api/v1/flows"
-        )
+        is_flow_create = request.method == "POST" and request.url.path.rstrip("/") == "/api/v1/flows"
 
         if not is_flow_create:
             return await call_next(request)

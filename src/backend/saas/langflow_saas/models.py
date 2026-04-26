@@ -408,13 +408,9 @@ class FlowOrg(SQLModel, table=True):  # type: ignore[call-arg]
     __table_args__ = (Index("ix_saas_flow_org_org", "org_id"),)
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    flow_id: UUID = Field(
-        sa_column=Column(sa.Uuid(), nullable=False, unique=True, index=True)
-    )
+    flow_id: UUID = Field(sa_column=Column(sa.Uuid(), nullable=False, unique=True, index=True))
     org_id: UUID = Field(
-        sa_column=Column(
-            sa.Uuid(), ForeignKey("saas_organization.id", ondelete="CASCADE"), nullable=False
-        )
+        sa_column=Column(sa.Uuid(), ForeignKey("saas_organization.id", ondelete="CASCADE"), nullable=False)
     )
     assigned_by: UUID | None = Field(
         sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True)

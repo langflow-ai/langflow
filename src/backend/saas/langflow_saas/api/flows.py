@@ -14,7 +14,7 @@ cases callers never need the assign/unassign endpoints directly.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
@@ -110,8 +110,7 @@ async def assign_flow(org_id: UUID, flow_id: UUID, ctx: RequireAdmin):
                 return {"ok": True, "already_assigned": True}
             raise HTTPException(
                 409,
-                f"Flow is already assigned to org {existing_fo.org_id}. "
-                "Unassign it first.",
+                f"Flow is already assigned to org {existing_fo.org_id}. Unassign it first.",
             )
 
         db.add(FlowOrg(flow_id=flow_id, org_id=org_id, assigned_by=ctx.user_id))
@@ -131,9 +130,7 @@ async def unassign_flow(org_id: UUID, flow_id: UUID, ctx: RequireAdmin):
     from langflow.services.deps import session_scope
 
     async with session_scope() as db:
-        result = await db.exec(
-            select(FlowOrg).where(FlowOrg.flow_id == flow_id, FlowOrg.org_id == org_id)
-        )
+        result = await db.exec(select(FlowOrg).where(FlowOrg.flow_id == flow_id, FlowOrg.org_id == org_id))
         fo = result.first()
         if not fo:
             raise HTTPException(404, "Flow is not assigned to this org.")

@@ -185,9 +185,9 @@ def register(app) -> None:  # ``app`` is _PluginAppWrapper from plugin_routes.py
     # add_middleware() inserts at the outermost position each call, so we add
     # in reverse order:
     app.add_middleware(QuotaEnforcementMiddleware)  # innermost — quota gate on executions
-    app.add_middleware(FlowOwnershipMiddleware)      # auto-assigns new flows to creator's org
-    app.add_middleware(TenantContextMiddleware)      # resolves org context from JWT
-    app.add_middleware(RateLimitMiddleware)          # outermost — fast Redis check
+    app.add_middleware(FlowOwnershipMiddleware)  # auto-assigns new flows to creator's org
+    app.add_middleware(TenantContextMiddleware)  # resolves org context from JWT
+    app.add_middleware(RateLimitMiddleware)  # outermost — fast Redis check
 
     # 3. Mount SaaS API routes under /api/saas/v1/.
     from langflow_saas.api.router import router as saas_router
