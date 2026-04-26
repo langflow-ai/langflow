@@ -187,7 +187,7 @@ def test_watsonx_mapper_provider_list_entry_flattens_provider_data_and_uses_id()
         updated_at=now,
         provider_data={
             "tool_ids": ["tool-1", "  ", "tool-2"],
-            "environments": ["draft", "draft", "live"],
+            "environments": ["draft", "live"],
         },
     )
 
@@ -273,7 +273,7 @@ def test_watsonx_mapper_extracts_list_item_provider_data_environments_only() -> 
                 id="agent-1",
                 provider_data={
                     "tool_ids": ["tool-1"],
-                    "environments": [" Draft ", "draft", "LIVE"],
+                    "environments": ["draft", "live"],
                 },
             )
         ]
