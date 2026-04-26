@@ -822,13 +822,17 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             if not isinstance(item.provider_data, dict):
                 msg = "provider_data is required from wxO adapter for list()."
                 raise ValueError(msg)  # noqa: TRY004
+
             environments = item.provider_data.get("environments")
+
             if environments is None:
                 msg = "environments is required from wxO adapter."
                 raise ValueError(msg)
+
             provider_data_by_resource_key[resource_key] = WatsonxApiDeploymentListItemProviderData(
                 environments=environments,
             ).model_dump(mode="json")
+
         return provider_data_by_resource_key
 
     def extract_snapshot_bindings_for_get(
