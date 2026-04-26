@@ -576,7 +576,8 @@ class TestListDeploymentsLoadFromProvider:
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
         expected = MagicMock()
-        mapper.resolve_deployment_list_adapter_params = AsyncMock(return_value=None)
+        resolved_params = DeploymentListParams(provider_params={"environment": "draft"})
+        mapper.resolve_deployment_list_adapter_params = AsyncMock(return_value=resolved_params)
         mapper.shape_deployment_list_result.return_value = expected
         mapper.resolve_load_from_provider_deployment_list_params.return_value = {"environment": "draft"}
         mock_get_mapper.return_value = mapper
@@ -593,10 +594,15 @@ class TestListDeploymentsLoadFromProvider:
 
         assert result is expected
         mock_list_synced.assert_not_awaited()
+        # The route handler must forward the mapper-supplied provider_params
+        # (e.g. WXO's `{"environment": "draft"}`) into resolve_deployment_list_adapter_params,
+        # otherwise the load_from_provider filter is silently dropped.
+        mapper.resolve_deployment_list_adapter_params.assert_awaited_once()
+        resolve_kwargs = mapper.resolve_deployment_list_adapter_params.await_args.kwargs
+        assert resolve_kwargs["provider_params"] == {"environment": "draft"}
         adapter.list.assert_awaited_once()
         list_call_kwargs = adapter.list.await_args.kwargs
-        assert isinstance(list_call_kwargs["params"], DeploymentListParams)
-        assert list_call_kwargs["params"].provider_params == {"environment": "draft"}
+        assert list_call_kwargs["params"] is resolved_params
         mapper.shape_deployment_list_result.assert_called_once()
 
     @pytest.mark.asyncio
@@ -875,6 +881,7 @@ class TestDeploymentNamesFilter:
         mapper = MagicMock()
         adapter_params = MagicMock()
         mapper.resolve_deployment_list_adapter_params = AsyncMock(return_value=adapter_params)
+        mapper.resolve_load_from_provider_deployment_list_params.return_value = {"environment": "draft"}
         mapper.shape_deployment_list_result.return_value = MagicMock()
         mock_get_mapper.return_value = mapper
 
@@ -893,7 +900,7 @@ class TestDeploymentNamesFilter:
         mapper.resolve_deployment_list_adapter_params.assert_awaited_once_with(
             deployment_type=None,
             names=names,
-            provider_params=None,
+            provider_params={"environment": "draft"},
             db=ANY,
         )
         adapter.list.assert_awaited_once_with(

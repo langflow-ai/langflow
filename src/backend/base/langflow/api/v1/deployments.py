@@ -668,12 +668,11 @@ async def list_deployments(
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     if load_from_provider:
         provider_list_params = deployment_mapper.resolve_load_from_provider_deployment_list_params()
-        adapter_params = DeploymentListParams(provider_params=provider_list_params) if provider_list_params else None
         with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
             adapter_params = await deployment_mapper.resolve_deployment_list_adapter_params(
                 deployment_type=deployment_type,
                 names=names,
-                provider_params=None,
+                provider_params=provider_list_params,
                 db=session,
             )
             provider_view = await deployment_adapter.list(
