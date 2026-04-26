@@ -654,10 +654,7 @@ class UserRegistrationMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        is_registration = (
-            request.method == "POST"
-            and request.url.path.rstrip("/") == "/api/v1/users"
-        )
+        is_registration = request.method == "POST" and request.url.path.rstrip("/") == "/api/v1/users"
 
         if not is_registration:
             return await call_next(request)
@@ -701,10 +698,6 @@ class UserRegistrationMiddleware(BaseHTTPMiddleware):
 
             async with session_scope() as db:
                 await _bootstrap_personal_org(db, user_id, username)
-                logger.info(
-                    "langflow-saas: provisioned org for new user %s on registration", username
-                )
+                logger.info("langflow-saas: provisioned org for new user %s on registration", username)
         except Exception:  # noqa: BLE001
-            logger.warning(
-                "langflow-saas: failed to provision org for new user %s", username
-            )
+            logger.warning("langflow-saas: failed to provision org for new user %s", username)
