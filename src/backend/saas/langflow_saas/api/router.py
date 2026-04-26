@@ -7,7 +7,7 @@ This prefix keeps them completely separate from Langflow's /api/v1/ and
 
 from fastapi import APIRouter
 
-from langflow_saas.api import billing, members, orgs, teams
+from langflow_saas.api import billing, flows, members, orgs, teams
 
 router = APIRouter(prefix="/api/saas/v1")
 
@@ -15,3 +15,4 @@ router.include_router(orgs.router)
 router.include_router(members.router)
 router.include_router(teams.router)
 router.include_router(billing.router)
+router.include_router(flows.router)

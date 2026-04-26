@@ -146,14 +146,14 @@ async def _bootstrap_personal_org(db, user_id: UUID, username: str):
 
     from sqlmodel import select
 
-    from langflow_saas.models import Organization, OrgRole, Plan, UserOrganization
+    from langflow_saas.models import Organization, OrgRole, Plan, Subscription, SubscriptionStatus, UserOrganization
 
     try:
         # Pick up the Free plan if available; leave plan_id=None otherwise.
         plan_result = await db.exec(select(Plan).where(Plan.slug == "free", Plan.is_active == True))  # noqa: E712
         free_plan = plan_result.first()
 
-        # Build a slug guaranteed to be unique: personal-{hex uuid}.
+        # Build a collision-safe slug from username.
         base_slug = re.sub(r"[^a-z0-9]+", "-", username.lower()).strip("-")[:50]
         slug_candidate = base_slug
         attempt = 0
@@ -184,6 +184,18 @@ async def _bootstrap_personal_org(db, user_id: UUID, username: str):
             created_at=now,
         )
         db.add(membership)
+
+        # Auto-provision a Free subscription so quota checks have a real plan row.
+        if free_plan:
+            subscription = Subscription(
+                org_id=org.id,
+                plan_id=free_plan.id,
+                status=SubscriptionStatus.ACTIVE,
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(subscription)
+
         await db.commit()
         await db.refresh(membership)
 
@@ -544,3 +556,84 @@ class QuotaEnforcementMiddleware(BaseHTTPMiddleware):
                 await db.commit()
         except Exception:  # noqa: BLE001
             logger.warning("Failed to record execution usage for org %s", ctx.org_id)
+
+
+# ---------------------------------------------------------------------------
+# 4. Flow Ownership Middleware
+# ---------------------------------------------------------------------------
+
+# Paths that create a new flow in Langflow's native API.
+_FLOW_CREATE_PATHS = ("/api/v1/flows", "/api/v1/flows/")
+
+
+class FlowOwnershipMiddleware(BaseHTTPMiddleware):
+    """Auto-assign newly created Langflow flows to the creator's current org.
+
+    Intercepts successful POST /api/v1/flows responses, extracts the new
+    flow's UUID from the JSON body, and inserts a ``saas_flow_org`` row so
+    the org-scoped flows API can surface it.
+
+    The response body is buffered only for flow-creation requests — all other
+    requests pass through with zero overhead.  Failures never surface to the
+    caller (the flow still gets created, it just won't be org-scoped yet).
+    """
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        is_flow_create = (
+            request.method == "POST"
+            and request.url.path.rstrip("/") == "/api/v1/flows"
+        )
+
+        if not is_flow_create:
+            return await call_next(request)
+
+        ctx: OrgContextData | None = getattr(request.state, "saas_context", None)
+        if not ctx:
+            return await call_next(request)
+
+        response = await call_next(request)
+
+        if response.status_code not in (200, 201):
+            return response
+
+        # Buffer the response body so we can extract the flow id.
+        body = b""
+        async for chunk in response.body_iterator:
+            body += chunk
+
+        try:
+            import json as _json
+
+            data = _json.loads(body)
+            flow_id_str = data.get("id")
+            if flow_id_str:
+                await self._assign_flow(UUID(flow_id_str), ctx.org_id, ctx.user_id)
+        except Exception:  # noqa: BLE001
+            pass  # Never break the create response.
+
+        # Re-emit the buffered body as a new response.
+        from starlette.responses import Response as _Response
+
+        return _Response(
+            content=body,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )
+
+    async def _assign_flow(self, flow_id: UUID, org_id: UUID, user_id: UUID) -> None:
+        try:
+            from langflow.services.deps import session_scope
+            from sqlmodel import select
+
+            from langflow_saas.models import FlowOrg
+
+            async with session_scope() as db:
+                existing = await db.exec(select(FlowOrg).where(FlowOrg.flow_id == flow_id))
+                if existing.first():
+                    return
+                db.add(FlowOrg(flow_id=flow_id, org_id=org_id, assigned_by=user_id))
+                await db.commit()
+                logger.debug("langflow-saas: assigned flow %s to org %s", flow_id, org_id)
+        except Exception:  # noqa: BLE001
+            logger.warning("langflow-saas: failed to assign flow %s to org %s", flow_id, org_id)
