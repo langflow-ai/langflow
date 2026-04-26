@@ -60,18 +60,6 @@ class _ApiExecutionInput(BaseModel):
     invocation_id: str
 
 
-class _ApiDeploymentListParams(BaseModel):
-    env: str
-
-
-class _ApiConfigListParams(BaseModel):
-    config_tag: str
-
-
-class _ApiSnapshotListParams(BaseModel):
-    snapshot_tag: str
-
-
 class _TypedMapper(BaseDeploymentMapper):
     api_payloads = DeploymentApiPayloads(
         deployment_create=PayloadSlot(_ApiCreate, policy=PayloadSlotPolicy.VALIDATE_ONLY),
@@ -79,9 +67,6 @@ class _TypedMapper(BaseDeploymentMapper):
         deployment_config=PayloadSlot(_ApiConfig, policy=PayloadSlotPolicy.VALIDATE_ONLY),
         deployment_update=PayloadSlot(_ApiUpdate, policy=PayloadSlotPolicy.VALIDATE_ONLY),
         execution_input=PayloadSlot(_ApiExecutionInput, policy=PayloadSlotPolicy.VALIDATE_ONLY),
-        deployment_list_params=PayloadSlot(_ApiDeploymentListParams, policy=PayloadSlotPolicy.VALIDATE_ONLY),
-        config_list_params=PayloadSlot(_ApiConfigListParams, policy=PayloadSlotPolicy.VALIDATE_ONLY),
-        snapshot_list_params=PayloadSlot(_ApiSnapshotListParams, policy=PayloadSlotPolicy.VALIDATE_ONLY),
     )
 
 
@@ -95,9 +80,6 @@ INBOUND_METHOD_CASES = [
     ("resolve_deployment_spec", {"region": "us-east-1"}),
     ("resolve_deployment_config", {"retries": 3}),
     ("resolve_execution_input", {"invocation_id": "inv-1"}),
-    ("resolve_deployment_list_params", {"env": "prod"}),
-    ("resolve_config_list_params", {"config_tag": "release"}),
-    ("resolve_snapshot_list_params", {"snapshot_tag": "nightly"}),
 ]
 
 INBOUND_SLOT_NAMES = [
@@ -105,9 +87,6 @@ INBOUND_SLOT_NAMES = [
     "deployment_config",
     "deployment_update",
     "execution_input",
-    "deployment_list_params",
-    "config_list_params",
-    "snapshot_list_params",
 ]
 
 OUTBOUND_SLOT_NAMES = [

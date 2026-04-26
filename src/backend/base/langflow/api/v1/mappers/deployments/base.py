@@ -229,23 +229,12 @@ class BaseDeploymentMapper:
             provider_data=await self.resolve_execution_input(payload.provider_data, db),
         )
 
-    async def resolve_deployment_list_params(
-        self, raw: dict[str, Any] | None, db: AsyncSession
-    ) -> dict[str, Any] | None:
-        return self._validate_slot(self.api_payloads.deployment_list_params, raw)
-
     def resolve_load_from_provider_deployment_list_params(self) -> dict[str, Any] | None:
         """Return provider_params for provider-backed deployment listing.
 
         Default behavior applies no provider-specific filters.
         """
         return None
-
-    async def resolve_config_list_params(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
-        return self._validate_slot(self.api_payloads.config_list_params, raw)
-
-    async def resolve_snapshot_list_params(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
-        return self._validate_slot(self.api_payloads.snapshot_list_params, raw)
 
     def resolve_snapshot_update_artifact(
         self,
@@ -298,13 +287,13 @@ class BaseDeploymentMapper:
         provider_params: dict[str, Any] | None,
         db: AsyncSession,
     ) -> DeploymentListParams | None:
-        resolved_provider_params = await self.resolve_deployment_list_params(provider_params, db)
-        if deployment_type is None and not names and resolved_provider_params is None:
+        _ = db
+        if deployment_type is None and not names and provider_params is None:
             return None
         return DeploymentListParams(
             deployment_types=[deployment_type] if deployment_type is not None else None,
             deployment_names=names or None,
-            provider_params=resolved_provider_params,
+            provider_params=provider_params,
         )
 
     async def resolve_config_list_adapter_params(
@@ -314,10 +303,10 @@ class BaseDeploymentMapper:
         provider_params: dict[str, Any] | None,
         db: AsyncSession,
     ) -> ConfigListParams:
-        resolved_provider_params = await self.resolve_config_list_params(provider_params, db)
+        _ = db
         return ConfigListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
-            provider_params=resolved_provider_params,
+            provider_params=provider_params,
         )
 
     async def resolve_snapshot_list_adapter_params(
@@ -328,11 +317,11 @@ class BaseDeploymentMapper:
         provider_params: dict[str, Any] | None,
         db: AsyncSession,
     ) -> SnapshotListParams:
-        resolved_provider_params = await self.resolve_snapshot_list_params(provider_params, db)
+        _ = db
         return SnapshotListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
             snapshot_names=snapshot_names or None,
-            provider_params=resolved_provider_params,
+            provider_params=provider_params,
         )
 
     def shape_deployment_list_items(
