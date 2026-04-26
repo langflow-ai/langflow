@@ -634,3 +634,77 @@ class FlowOwnershipMiddleware(BaseHTTPMiddleware):
                 logger.debug("langflow-saas: assigned flow %s to org %s", flow_id, org_id)
         except Exception:  # noqa: BLE001
             logger.warning("langflow-saas: failed to assign flow %s to org %s", flow_id, org_id)
+
+
+# ---------------------------------------------------------------------------
+# 5. User Registration Middleware
+# ---------------------------------------------------------------------------
+
+
+class UserRegistrationMiddleware(BaseHTTPMiddleware):
+    """Provision a personal org for every newly registered Langflow user.
+
+    Intercepts successful POST /api/v1/users/ responses (Langflow's public
+    signup endpoint), extracts the new user's id + username from the JSON
+    body, and calls ``_bootstrap_personal_org()`` immediately — so the user
+    has a valid org context before their very first API request.
+
+    The response body is buffered only for this specific endpoint.  Failures
+    are silent: the user account is always created regardless.
+    """
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        is_registration = (
+            request.method == "POST"
+            and request.url.path.rstrip("/") == "/api/v1/users"
+        )
+
+        if not is_registration:
+            return await call_next(request)
+
+        response = await call_next(request)
+
+        # Only provision on successful creation (201).
+        if response.status_code != 201:
+            return response
+
+        body = b""
+        async for chunk in response.body_iterator:
+            body += chunk
+
+        try:
+            import json as _json
+
+            data = _json.loads(body)
+            user_id_str = data.get("id")
+            username = data.get("username", "")
+            if user_id_str and username:
+                await self._provision(UUID(user_id_str), username)
+        except Exception:  # noqa: BLE001
+            pass
+
+        from starlette.responses import Response as _Response
+
+        return _Response(
+            content=body,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )
+
+    async def _provision(self, user_id: UUID, username: str) -> None:
+        settings = get_saas_settings()
+        if not settings.auto_create_personal_org:
+            return
+        try:
+            from langflow.services.deps import session_scope
+
+            async with session_scope() as db:
+                await _bootstrap_personal_org(db, user_id, username)
+                logger.info(
+                    "langflow-saas: provisioned org for new user %s on registration", username
+                )
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "langflow-saas: failed to provision org for new user %s", username
+            )
