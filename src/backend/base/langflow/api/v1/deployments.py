@@ -117,9 +117,10 @@ from langflow.services.telemetry.schema import DeploymentPayload
 
 @dataclass
 class DeploymentTelemetryCtx:
-    """Mutable context that routes write `provider` into; passed via Depends."""
+    """Mutable context that routes write into; passed via Depends."""
 
     provider: str = "unknown"
+    wxo_tenant_id: str | None = None
 
 
 def _make_telemetry_dep(action: str, log_method_name: str):
@@ -143,6 +144,7 @@ def _make_telemetry_dep(action: str, log_method_name: str):
                     deployment_seconds=time.perf_counter() - started_at,
                     deployment_success=success,
                     deployment_error_type=type(error).__name__ if error else None,
+                    wxo_tenant_id=ctx.wxo_tenant_id,
                 )
                 await getattr(ts, log_method_name)(payload)
             except Exception:  # noqa: BLE001
@@ -342,6 +344,7 @@ async def create_provider_account(
         )
     except ValueError as exc:
         _raise_http_for_provider_account_value_error(exc)
+    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     return deployment_mapper.resolve_provider_account_response(provider_account)
 
 
@@ -399,6 +402,7 @@ async def delete_provider_account(
         db=session,
     )
     telemetry.provider = provider_account.provider_key
+    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     deployment_count = await _count_provider_deployments_after_reconciliation(
         session=session,
         provider_account=provider_account,
@@ -434,6 +438,7 @@ async def update_provider_account(
         db=session,
     )
     telemetry.provider = provider_account.provider_key
+    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
 
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     verify_input = None
@@ -487,6 +492,7 @@ async def create_deployment(
         db=session,
     )
     telemetry.provider = provider_account.provider_key
+    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     # fail fast if the deployment name already exists
     # we could have races but that is more
     # acceptable than provider-side rollback failure
@@ -811,12 +817,19 @@ async def create_deployment_run(
     current_user: CurrentActiveUser,
     telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_run_telemetry)],
 ):
-    deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
+    (
+        deployment_row,
+        deployment_adapter,
+        deployment_mapper,
+        _provider_key,
+        provider_tenant_id,
+    ) = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
     )
     telemetry.provider = _provider_key
+    telemetry.wxo_tenant_id = provider_tenant_id
     adapter_execution_payload = await deployment_mapper.resolve_execution_create(
         deployment_resource_key=deployment_row.resource_key,
         db=session,
@@ -845,7 +858,13 @@ async def get_deployment_run(
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
 ):
-    deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
+    (
+        deployment_row,
+        deployment_adapter,
+        deployment_mapper,
+        _provider_key,
+        _provider_tenant_id,
+    ) = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
@@ -1069,6 +1088,7 @@ async def update_snapshot(
         db=session,
     )
     telemetry.provider = provider_account.provider_key
+    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
 
@@ -1180,7 +1200,13 @@ async def get_deployment(
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
-    deployment_row, deployment_adapter, deployment_mapper, provider_key = await resolve_adapter_mapper_from_deployment(
+    (
+        deployment_row,
+        deployment_adapter,
+        deployment_mapper,
+        provider_key,
+        _provider_tenant_id,
+    ) = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
@@ -1298,12 +1324,19 @@ async def update_deployment(
     current_user: CurrentActiveUser,
     telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_update_telemetry)],
 ):
-    deployment_row, deployment_adapter, deployment_mapper, provider_key = await resolve_adapter_mapper_from_deployment(
+    (
+        deployment_row,
+        deployment_adapter,
+        deployment_mapper,
+        provider_key,
+        provider_tenant_id,
+    ) = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
     )
     telemetry.provider = provider_key
+    telemetry.wxo_tenant_id = provider_tenant_id
     deployment_row_id = deployment_row.id
     deployment_resource_key = deployment_row.resource_key
     deployment_provider_account_id = deployment_row.deployment_provider_account_id
@@ -1404,12 +1437,13 @@ async def delete_deployment(
     *,
     include_provider: IncludeProviderDeleteQuery = True,
 ):
-    deployment_row, deployment_adapter, _provider_key = await resolve_adapter_from_deployment(
+    deployment_row, deployment_adapter, _provider_key, provider_tenant_id = await resolve_adapter_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
     )
     telemetry.provider = _provider_key
+    telemetry.wxo_tenant_id = provider_tenant_id
     if include_provider:
         try:
             with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
@@ -1445,7 +1479,7 @@ async def get_deployment_status(
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
 ):
-    deployment_row, deployment_adapter, provider_key = await resolve_adapter_from_deployment(
+    deployment_row, deployment_adapter, provider_key, _provider_tenant_id = await resolve_adapter_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
@@ -1490,7 +1524,13 @@ async def list_deployment_flow_versions(
         ),
     ] = None,
 ):
-    deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
+    (
+        deployment_row,
+        deployment_adapter,
+        deployment_mapper,
+        _provider_key,
+        _provider_tenant_id,
+    ) = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,

@@ -117,8 +117,12 @@ def mock_db_crud(mock_mapper):
             patch("langflow.api.v1.deployments._count_provider_deployments_after_reconciliation")
         )
 
-        mock_create.return_value = AsyncMock(id=uuid4(), provider_key="watsonx-orchestrate")
-        mock_get_owned.return_value = AsyncMock(id=uuid4(), provider_key="watsonx-orchestrate")
+        mock_create.return_value = AsyncMock(
+            id=uuid4(), provider_key="watsonx-orchestrate", provider_tenant_id="tenant-test"
+        )
+        mock_get_owned.return_value = AsyncMock(
+            id=uuid4(), provider_key="watsonx-orchestrate", provider_tenant_id="tenant-test"
+        )
         mock_name_exists.return_value = False
         mock_proj_id.return_value = uuid4()
         mock_create_dep.return_value = AsyncMock(id=uuid4())
@@ -128,6 +132,7 @@ def mock_db_crud(mock_mapper):
             AsyncMock(),
             mock_mapper,
             "watsonx-orchestrate",
+            "tenant-test",
         )
         mock_res_patch.return_value = ([], [])
         mock_list_att.return_value = []
@@ -136,6 +141,7 @@ def mock_db_crud(mock_mapper):
             AsyncMock(id=uuid4(), resource_key="res-1", deployment_provider_account_id=uuid4()),
             AsyncMock(),
             "watsonx-orchestrate",
+            "tenant-test",
         )
         mock_get_att.return_value = AsyncMock(deployment_id=uuid4(), flow_version_id=uuid4())
         mock_get_dep_row.return_value = AsyncMock(deployment_provider_account_id=uuid4())
@@ -161,6 +167,7 @@ async def test_create_provider_account_telemetry(
     assert payload.deployment_action == "provider.create"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
+    assert payload.wxo_tenant_id == "tenant-test"
 
 
 @pytest.mark.asyncio
@@ -178,6 +185,7 @@ async def test_update_provider_account_telemetry(
     assert payload.deployment_action == "provider.update"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
+    assert payload.wxo_tenant_id == "tenant-test"
 
 
 @pytest.mark.asyncio
@@ -191,6 +199,7 @@ async def test_delete_provider_account_telemetry(
     assert payload.deployment_action == "provider.delete"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
+    assert payload.wxo_tenant_id == "tenant-test"
 
 
 @pytest.mark.asyncio
@@ -208,6 +217,7 @@ async def test_create_deployment_telemetry(
     assert payload.deployment_action == "deployment.create"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
+    assert payload.wxo_tenant_id == "tenant-test"
 
 
 @pytest.mark.asyncio
@@ -221,6 +231,7 @@ async def test_update_deployment_telemetry(
     assert payload.deployment_action == "deployment.update"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
+    assert payload.wxo_tenant_id == "tenant-test"
 
 
 @pytest.mark.asyncio
@@ -234,6 +245,7 @@ async def test_delete_deployment_telemetry(
     assert payload.deployment_action == "deployment.delete"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
+    assert payload.wxo_tenant_id == "tenant-test"
 
 
 @pytest.mark.asyncio
@@ -249,6 +261,7 @@ async def test_create_deployment_run_telemetry(
     assert payload.deployment_action == "deployment.run"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
+    assert payload.wxo_tenant_id == "tenant-test"
 
 
 @pytest.mark.asyncio
@@ -264,6 +277,7 @@ async def test_update_snapshot_telemetry(
     assert payload.deployment_action == "snapshot.update"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is True
+    assert payload.wxo_tenant_id == "tenant-test"
 
 
 @pytest.mark.asyncio
@@ -283,6 +297,8 @@ async def test_create_provider_account_telemetry_error(
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is False
     assert payload.deployment_error_type == "HTTPException"
+    # verify_credentials raises before the row is created, so the tenant_id is not yet set.
+    assert payload.wxo_tenant_id is None
 
 
 @pytest.mark.asyncio
@@ -303,3 +319,5 @@ async def test_cross_route_smoke_exception_after_provider_set(
     assert payload.deployment_provider == "watsonx-orchestrate"  # Provider should be captured!
     assert payload.deployment_success is False
     assert payload.deployment_error_type == "HTTPException"
+    # tenant_id is captured before the adapter call that raises.
+    assert payload.wxo_tenant_id == "tenant-test"

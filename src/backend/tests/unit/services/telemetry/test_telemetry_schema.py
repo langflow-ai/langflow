@@ -28,6 +28,7 @@ class TestDeploymentPayload:
             deployment_seconds=1.5,
             deployment_success=True,
             deployment_error_type=None,
+            wxo_tenant_id="tenant-abc",
             client_type="oss",
         )
 
@@ -36,6 +37,7 @@ class TestDeploymentPayload:
         assert payload.deployment_seconds == 1.5
         assert payload.deployment_success is True
         assert payload.deployment_error_type is None
+        assert payload.wxo_tenant_id == "tenant-abc"
         assert payload.client_type == "oss"
 
     def test_deployment_payload_initialization_with_defaults(self):
@@ -53,6 +55,7 @@ class TestDeploymentPayload:
         assert payload.deployment_seconds == 0.5
         assert payload.deployment_success is False
         assert payload.deployment_error_type == "ValueError"
+        assert payload.wxo_tenant_id is None  # Default value
         assert payload.client_type is None  # Default value
 
     def test_deployment_payload_serialization(self):
@@ -63,6 +66,7 @@ class TestDeploymentPayload:
             deployment_seconds=2.0,
             deployment_success=True,
             deployment_error_type=None,
+            wxo_tenant_id="tenant-xyz",
             client_type="desktop",
         )
 
@@ -73,6 +77,7 @@ class TestDeploymentPayload:
         assert data["deploymentSeconds"] == 2.0
         assert data["deploymentSuccess"] is True
         assert "deploymentErrorType" not in data
+        assert data["wxoTenantId"] == "tenant-xyz"
         assert data["clientType"] == "desktop"
 
     def test_deployment_payload_roundtrip(self):
@@ -83,6 +88,7 @@ class TestDeploymentPayload:
             deployment_seconds=1.0,
             deployment_success=False,
             deployment_error_type="Exception",
+            wxo_tenant_id="tenant-abc",
             client_type="oss",
         )
 
@@ -94,6 +100,7 @@ class TestDeploymentPayload:
         assert new_payload.deployment_seconds == payload.deployment_seconds
         assert new_payload.deployment_success == payload.deployment_success
         assert new_payload.deployment_error_type == payload.deployment_error_type
+        assert new_payload.wxo_tenant_id == payload.wxo_tenant_id
         assert new_payload.client_type == payload.client_type
 
 

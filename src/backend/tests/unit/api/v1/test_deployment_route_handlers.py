@@ -59,12 +59,14 @@ def _fake_provider_account(
     provider_key: str = DeploymentProviderKey.WATSONX_ORCHESTRATE,
     provider_url: str = "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
     api_key: str = "encrypted-key",
+    provider_tenant_id: str | None = "tenant-1",
 ) -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid4(),
         provider_key=provider_key,
         provider_url=provider_url,
         api_key=api_key,
+        provider_tenant_id=provider_tenant_id,
     )
 
 
@@ -1197,7 +1199,7 @@ class TestListDeploymentFlowVersionsRoute:
                 )
             ]
         )
-        mock_resolve.return_value = (deployment_row, adapter, mapper, "watsonx-orchestrate")
+        mock_resolve.return_value = (deployment_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
         mock_list_flow_versions_synced.return_value = (rows, 7, snapshot_result)
         mapper.shape_flow_version_list_result.return_value = SimpleNamespace(
             page=2,
@@ -1740,7 +1742,7 @@ class TestUpdateDeploymentRollback:
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
         session = AsyncMock()
         session.commit.side_effect = RuntimeError("DB commit failed")
@@ -1793,7 +1795,7 @@ class TestUpdateDeploymentRollback:
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
         session = AsyncMock()
         session.commit.return_value = None
@@ -1850,7 +1852,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
         reused_fv_id = uuid4()
         new_fv_id = uuid4()
@@ -1909,7 +1911,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
         fv_id_1 = uuid4()
         fv_id_2 = uuid4()
@@ -1964,7 +1966,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
         fv_id_1 = uuid4()
         fv_id_2 = uuid4()
@@ -2026,7 +2028,7 @@ class TestUpdateDeploymentMetadataPersistence:
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
         mock_update_db.return_value = updated_row
 
         session = AsyncMock()
@@ -2077,7 +2079,7 @@ class TestGetDeploymentSync:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         adapter.get.side_effect = DeploymentNotFoundError(message="gone")
-        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper(), "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper(), "watsonx-orchestrate", "tenant-1")
 
         user = _fake_user()
         session = AsyncMock()
@@ -2104,7 +2106,7 @@ class TestGetDeploymentSync:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         adapter.get.side_effect = AuthenticationError(message="bad creds", error_code="authentication_error")
-        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper(), "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper(), "watsonx-orchestrate", "tenant-1")
 
         session = AsyncMock()
 
@@ -2129,7 +2131,7 @@ class TestGetDeploymentSync:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         adapter.get.side_effect = ServiceUnavailableError(message="provider down")
-        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper(), "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, BaseDeploymentMapper(), "watsonx-orchestrate", "tenant-1")
 
         session = AsyncMock()
 
@@ -2182,7 +2184,7 @@ class TestGetDeploymentSync:
             }
         }
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, _MapperForGet(), "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, _MapperForGet(), "watsonx-orchestrate", "tenant-1")
 
         session = AsyncMock()
         result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
@@ -2224,7 +2226,7 @@ class TestGetDeploymentSync:
             ProviderSnapshotBinding(resource_key=dep_row.resource_key, snapshot_id="snap-1")
         ]
         mapper.shape_deployment_get_data.return_value = None
-        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
         att_good = _fake_attachment(provider_snapshot_id="snap-1")
         mock_list_att.return_value = [att_good]
@@ -2262,7 +2264,7 @@ class TestGetDeploymentSync:
         adapter.get.return_value = provider_deployment
         mapper.extract_snapshot_bindings_for_get.side_effect = NotImplementedError("not supported")
         mapper.shape_deployment_get_data.return_value = None
-        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
         mock_list_att.return_value = [_fake_attachment(provider_snapshot_id=None)]
 
         session = AsyncMock()
@@ -2300,7 +2302,7 @@ class TestGetDeploymentSync:
             ProviderSnapshotBinding(resource_key=dep_row.resource_key, snapshot_id="snap-1")
         ]
         mapper.shape_deployment_get_data.return_value = None
-        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
         att1 = _fake_attachment(provider_snapshot_id="snap-1")
         att2 = _fake_attachment(provider_snapshot_id="snap-2")
@@ -2337,7 +2339,7 @@ class TestGetDeploymentSync:
             ProviderSnapshotBinding(resource_key="agent-rk-1", snapshot_id="snap-1")
         ]
         mapper.shape_deployment_get_data.return_value = None
-        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
         mock_list_att.return_value = [_fake_attachment(provider_snapshot_id="snap-1")]
 
         session = AsyncMock()
@@ -2374,7 +2376,7 @@ class TestDeleteDeployment:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         adapter.delete.side_effect = DeploymentNotFoundError(message="gone")
-        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
 
         user = _fake_user()
         session = AsyncMock()
@@ -2402,7 +2404,7 @@ class TestDeleteDeployment:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         adapter.delete.side_effect = AuthenticationError(message="bad creds", error_code="authentication_error")
-        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
 
         session = AsyncMock()
 
@@ -2428,7 +2430,7 @@ class TestDeleteDeployment:
 
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
-        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
 
         user = _fake_user()
         session = AsyncMock()
@@ -2456,7 +2458,7 @@ class TestDeleteDeployment:
 
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
-        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
 
         session = AsyncMock()
         session.commit.side_effect = [RuntimeError("commit failed"), RuntimeError("still failing")]
@@ -2484,7 +2486,7 @@ class TestDeleteDeployment:
 
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
-        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
 
         user = _fake_user()
         session = AsyncMock()
@@ -2514,7 +2516,7 @@ class TestDeleteDeployment:
 
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
-        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate")
+        mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
 
         user = _fake_user()
         session = AsyncMock()
@@ -2772,7 +2774,7 @@ class TestUpdateDeploymentProjectValidation:
         adapter = AsyncMock()
         mapper = MagicMock()
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
-        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate")
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
         add_ids = [uuid4()]
         remove_ids = [uuid4()]
