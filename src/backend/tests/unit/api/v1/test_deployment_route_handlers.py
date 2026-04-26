@@ -16,6 +16,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from langflow.api.v1.deployments import DeploymentTelemetryCtx
 from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
 from langflow.api.v1.schemas.deployments import (
     DeploymentLlmListResponse,
@@ -83,6 +84,10 @@ def _fake_deployment_row(**overrides) -> SimpleNamespace:
 
 def _fake_user() -> SimpleNamespace:
     return SimpleNamespace(id=uuid4())
+
+
+def _fake_telemetry() -> DeploymentTelemetryCtx:
+    return DeploymentTelemetryCtx()
 
 
 def _fake_attachment(*, provider_snapshot_id: str | None = None) -> SimpleNamespace:
@@ -182,7 +187,9 @@ class TestCreateDeploymentRollback:
         payload.description = None
 
         with pytest.raises(RuntimeError, match="DB commit failed"):
-            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+            await create_deployment(
+                session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
 
         mock_rollback.assert_awaited_once()
         assert mock_rollback.call_args.kwargs["resource_id"] == create_result.id
@@ -240,7 +247,9 @@ class TestCreateDeploymentRollback:
         payload.description = None
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
-        await create_deployment(session=session, payload=payload, current_user=_fake_user())
+        await create_deployment(
+            session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+        )
 
         mock_rollback.assert_not_awaited()
 
@@ -301,7 +310,9 @@ class TestCreateDeploymentRollback:
         payload.description = "desc"
 
         with pytest.raises(RuntimeError, match="DB commit failed"):
-            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+            await create_deployment(
+                session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
 
         mock_rollback.assert_awaited_once()
         assert mock_rollback.call_args.kwargs["resource_id"] == "existing-agent-1"
@@ -362,7 +373,9 @@ class TestCreateDeploymentExistingAgent:
         payload.description = None
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
-        await create_deployment(session=session, payload=payload, current_user=_fake_user())
+        await create_deployment(
+            session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+        )
 
         _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
@@ -423,7 +436,9 @@ class TestCreateDeploymentExistingAgent:
         payload.description = "desc"
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
-        await create_deployment(session=session, payload=payload, current_user=_fake_user())
+        await create_deployment(
+            session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+        )
 
         _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
@@ -487,7 +502,9 @@ class TestCreateDeploymentExistingAgent:
         payload.description = "desc"
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
-        await create_deployment(session=session, payload=payload, current_user=_fake_user())
+        await create_deployment(
+            session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+        )
 
         _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
@@ -538,7 +555,9 @@ class TestCreateDeploymentExistingAgent:
         payload.description = None
 
         with pytest.raises(HTTPException) as exc_info:
-            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
+            await create_deployment(
+                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
 
         assert exc_info.value.status_code == 409
         _ = mock_name_exists
@@ -1062,6 +1081,7 @@ class TestUpdateSnapshotRoute:
             body=SnapshotUpdateRequest(flow_version_id=target_flow_version_id),
             session=session,
             current_user=user,
+            telemetry=_fake_telemetry(),
         )
 
         assert response.flow_version_id == target_flow_version_id
@@ -1140,6 +1160,7 @@ class TestUpdateSnapshotRoute:
                 body=SnapshotUpdateRequest(flow_version_id=target_flow_version_id),
                 session=session,
                 current_user=user,
+                telemetry=_fake_telemetry(),
             )
 
         session.commit.assert_awaited_once()
@@ -1257,6 +1278,7 @@ class TestProviderAccountRoutes:
             session=session,
             payload=DeploymentProviderAccountUpdateRequest(name="renamed"),
             current_user=_fake_user(),
+            telemetry=_fake_telemetry(),
         )
 
         mapper.resolve_verify_credentials_for_update.assert_not_called()
@@ -1298,6 +1320,7 @@ class TestProviderAccountRoutes:
                 session=AsyncMock(),
                 payload=DeploymentProviderAccountUpdateRequest(provider_data={"api_key": "new-api-key"}),
                 current_user=_fake_user(),
+                telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 401
@@ -1339,6 +1362,7 @@ class TestProviderAccountRoutes:
                 session=AsyncMock(),
                 payload=payload,
                 current_user=_fake_user(),
+                telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 409
@@ -1377,6 +1401,7 @@ class TestProviderAccountRoutes:
                 session=AsyncMock(),
                 payload=DeploymentProviderAccountUpdateRequest(name="prod"),
                 current_user=_fake_user(),
+                telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 409
@@ -1421,6 +1446,7 @@ class TestProviderAccountRoutes:
                 session=AsyncMock(),
                 payload=DeploymentProviderAccountUpdateRequest(provider_data={"tenant_id": "tenant-renamed"}),
                 current_user=_fake_user(),
+                telemetry=_fake_telemetry(),
             )
 
     @pytest.mark.asyncio
@@ -1461,6 +1487,7 @@ class TestProviderAccountRoutes:
                 session=AsyncMock(),
                 payload=DeploymentProviderAccountUpdateRequest(provider_data={"tenant_id": "tenant-renamed"}),
                 current_user=_fake_user(),
+                telemetry=_fake_telemetry(),
             )
 
     @pytest.mark.asyncio
@@ -1492,6 +1519,7 @@ class TestProviderAccountRoutes:
                 provider_id=existing_account.id,
                 session=AsyncMock(),
                 current_user=_fake_user(),
+                telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 409
@@ -1528,6 +1556,7 @@ class TestProviderAccountRoutes:
             provider_id=existing_account.id,
             session=session,
             current_user=_fake_user(),
+            telemetry=_fake_telemetry(),
         )
 
         assert response.status_code == 204
@@ -1582,6 +1611,7 @@ class TestProviderAccountRoutes:
             provider_id=existing_account.id,
             session=AsyncMock(),
             current_user=_fake_user(),
+            telemetry=_fake_telemetry(),
         )
 
         assert response.status_code == 204
@@ -1629,6 +1659,7 @@ class TestProviderAccountRoutes:
                 provider_id=existing_account.id,
                 session=AsyncMock(),
                 current_user=_fake_user(),
+                telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 409
@@ -1663,6 +1694,7 @@ class TestProviderAccountRoutes:
             provider_id=existing_account.id,
             session=session,
             current_user=_fake_user(),
+            telemetry=_fake_telemetry(),
         )
 
         assert response.status_code == 204
@@ -1723,6 +1755,7 @@ class TestUpdateDeploymentRollback:
                 session=session,
                 payload=payload,
                 current_user=_fake_user(),
+                telemetry=_fake_telemetry(),
             )
 
         mock_rollback.assert_awaited_once()
@@ -1774,6 +1807,7 @@ class TestUpdateDeploymentRollback:
             session=session,
             payload=payload,
             current_user=_fake_user(),
+            telemetry=_fake_telemetry(),
         )
 
         mock_rollback.assert_not_awaited()
@@ -1838,6 +1872,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
             session=session,
             payload=payload,
             current_user=_fake_user(),
+            telemetry=_fake_telemetry(),
         )
 
         mock_resolve_snap.assert_called_once()
@@ -1897,6 +1932,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
             session=session,
             payload=payload,
             current_user=_fake_user(),
+            telemetry=_fake_telemetry(),
         )
 
         resolved_fv_ids = mock_resolve_snap.call_args.kwargs["added_flow_version_ids"]
@@ -1948,6 +1984,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
             session=session,
             payload=payload,
             current_user=_fake_user(),
+            telemetry=_fake_telemetry(),
         )
 
         resolved_fv_ids = mock_resolve_snap.call_args.kwargs["added_flow_version_ids"]
@@ -2007,6 +2044,7 @@ class TestUpdateDeploymentMetadataPersistence:
             session=session,
             payload=payload,
             current_user=_fake_user(),
+            telemetry=_fake_telemetry(),
         )
 
         mock_update_db.assert_awaited_once()
@@ -2341,7 +2379,9 @@ class TestDeleteDeployment:
         user = _fake_user()
         session = AsyncMock()
 
-        response = await delete_deployment(deployment_id=dep_row.id, session=session, current_user=user)
+        response = await delete_deployment(
+            deployment_id=dep_row.id, session=session, current_user=user, telemetry=_fake_telemetry()
+        )
 
         assert response.status_code == 204
         mock_delete_row.assert_awaited_once_with(session, user_id=user.id, deployment_id=dep_row.id)
@@ -2367,7 +2407,9 @@ class TestDeleteDeployment:
         session = AsyncMock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await delete_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
+            await delete_deployment(
+                deployment_id=dep_row.id, session=session, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
 
         assert exc_info.value.status_code == 401
         mock_delete_row.assert_not_awaited()
@@ -2392,7 +2434,9 @@ class TestDeleteDeployment:
         session = AsyncMock()
         session.commit.side_effect = [RuntimeError("commit failed"), None]
 
-        response = await delete_deployment(deployment_id=dep_row.id, session=session, current_user=user)
+        response = await delete_deployment(
+            deployment_id=dep_row.id, session=session, current_user=user, telemetry=_fake_telemetry()
+        )
 
         assert response.status_code == 204
         assert mock_delete_row.await_count == 2
@@ -2418,7 +2462,9 @@ class TestDeleteDeployment:
         session.commit.side_effect = [RuntimeError("commit failed"), RuntimeError("still failing")]
 
         with pytest.raises(HTTPException) as exc_info:
-            await delete_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
+            await delete_deployment(
+                deployment_id=dep_row.id, session=session, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
 
         assert exc_info.value.status_code == 500
         assert mock_delete_row.await_count == 2
@@ -2444,7 +2490,11 @@ class TestDeleteDeployment:
         session = AsyncMock()
 
         response = await delete_deployment(
-            deployment_id=dep_row.id, session=session, current_user=user, include_provider=True
+            deployment_id=dep_row.id,
+            session=session,
+            current_user=user,
+            include_provider=True,
+            telemetry=_fake_telemetry(),
         )
 
         assert response.status_code == 204
@@ -2470,7 +2520,11 @@ class TestDeleteDeployment:
         session = AsyncMock()
 
         response = await delete_deployment(
-            deployment_id=dep_row.id, session=session, current_user=user, include_provider=False
+            deployment_id=dep_row.id,
+            session=session,
+            current_user=user,
+            include_provider=False,
+            telemetry=_fake_telemetry(),
         )
 
         assert response.status_code == 204
@@ -2503,7 +2557,9 @@ class TestCreateDeploymentDuplicateName:
         payload.name = "duplicate-name"
 
         with pytest.raises(HTTPException) as exc_info:
-            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
+            await create_deployment(
+                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
 
         assert exc_info.value.status_code == 409
         assert "duplicate-name" in exc_info.value.detail
@@ -2529,7 +2585,9 @@ class TestCreateDeploymentDuplicateName:
         payload.name = "taken"
 
         with pytest.raises(HTTPException):
-            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
+            await create_deployment(
+                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
 
         mock_resolve_adapter.assert_not_called()
 
@@ -2577,7 +2635,9 @@ class TestCreateDeploymentProjectValidation:
         payload.provider_id = pa.id
 
         with pytest.raises(HTTPException) as exc_info:
-            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
+            await create_deployment(
+                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
 
         assert exc_info.value.status_code == 404
         mock_validate_fv.assert_awaited_once()
@@ -2632,7 +2692,9 @@ class TestCreateDeploymentProjectValidation:
             patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock),
         ):
             mapper.shape_deployment_create_result.return_value = MagicMock()
-            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+            await create_deployment(
+                session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
 
         mock_validate_fv.assert_awaited_once()
         assert mock_validate_fv.call_args.kwargs["flow_version_ids"] == []
@@ -2678,7 +2740,9 @@ class TestCreateDeploymentSchemaValidation:
         payload.provider_id = pa.id
 
         with pytest.raises(HTTPException) as exc_info:
-            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
+            await create_deployment(
+                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
+            )
 
         assert exc_info.value.status_code == 422
         mock_validate_fv.assert_awaited_once()
@@ -2724,6 +2788,7 @@ class TestUpdateDeploymentProjectValidation:
                 session=AsyncMock(),
                 payload=payload,
                 current_user=_fake_user(),
+                telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 404
