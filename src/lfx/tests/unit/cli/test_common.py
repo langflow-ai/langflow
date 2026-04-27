@@ -255,6 +255,39 @@ class TestGraphExecution:
         with pytest.raises(RuntimeError, match="Execution failed"):
             await execute_graph_with_capture(mock_graph, "test input")
 
+    @pytest.mark.asyncio
+    async def test_execute_graph_with_capture_autogenerates_session_id(self):
+        """Auto-generate a session_id when none is provided.
+
+        Message-store validators reject empty session_id, so the helper assigns one
+        to keep streaming/persistence paths functional in lfx serve.
+        """
+
+        async def mock_async_start(inputs):  # noqa: ARG001
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+
+        await execute_graph_with_capture(mock_graph, "test input")
+
+        assert mock_graph.session_id, "session_id should be auto-generated"
+        assert isinstance(mock_graph.session_id, str)
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_with_capture_preserves_caller_session_id(self):
+        """An explicit session_id wins over auto-generation."""
+
+        async def mock_async_start(inputs):  # noqa: ARG001
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+
+        await execute_graph_with_capture(mock_graph, "test input", session_id="fixed-session")
+
+        assert mock_graph.session_id == "fixed-session"
+
 
 class TestResultExtraction:
     """Test result data extraction."""

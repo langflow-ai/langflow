@@ -446,7 +446,7 @@ class TestServeAppEndpoints:
         headers = {"x-api-key": "test-api-key"}
 
         # Mock execute_graph_with_capture to raise an error
-        async def mock_execute_error(graph, input_value):  # noqa: ARG001
+        async def mock_execute_error(graph, input_value, session_id=None):  # noqa: ARG001
             msg = "Flow execution failed"
             raise RuntimeError(msg)
 
@@ -471,7 +471,7 @@ class TestServeAppEndpoints:
         headers = {"x-api-key": "test-api-key"}
 
         # Mock execute_graph_with_capture to return empty results
-        async def mock_execute_empty(graph, input_value):  # noqa: ARG001
+        async def mock_execute_empty(graph, input_value, session_id=None):  # noqa: ARG001
             return [], ""  # Empty results and logs
 
         with (
@@ -485,6 +485,26 @@ class TestServeAppEndpoints:
         assert data["result"] == "No response generated"
         assert data["success"] is False
         assert data["type"] == "error"
+
+    def test_run_endpoint_forwards_session_id(self, app_client):
+        """The /run endpoint must forward session_id from RunRequest to the executor."""
+        captured: dict = {}
+
+        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+            captured["session_id"] = session_id
+            return [], ""
+
+        request_data = {"input_value": "Test input", "session_id": "my-conversation"}
+        headers = {"x-api-key": "test-api-key"}
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_capture),
+        ):
+            response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
+
+        assert response.status_code == 200
+        assert captured["session_id"] == "my-conversation"
 
     def test_list_flows_endpoint(self, multi_flow_client):
         """Test listing flows in multi-flow mode."""

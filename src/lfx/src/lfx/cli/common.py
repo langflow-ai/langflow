@@ -299,12 +299,15 @@ def prepare_graph(graph, verbose_print):
         raise typer.Exit(1) from e
 
 
-async def execute_graph_with_capture(graph, input_value: str | None):
+async def execute_graph_with_capture(graph, input_value: str | None, session_id: str | None = None):
     """Execute a graph and capture output.
 
     Args:
         graph: Graph object to execute
         input_value: Input value to pass to the graph
+        session_id: Optional session ID. If empty, a uuid is generated so that
+            message-store paths (which validate session_id) succeed. Mirrors the
+            behavior of run_flow.
 
     Returns:
         Tuple of (results, captured_logs)
@@ -312,6 +315,10 @@ async def execute_graph_with_capture(graph, input_value: str | None):
     Raises:
         Exception: Re-raises any exception that occurs during graph execution
     """
+    if not session_id:
+        session_id = uuid.uuid4().hex
+    graph.session_id = session_id
+
     # Create input request
     inputs = InputValueRequest(input_value=input_value) if input_value else None
 
