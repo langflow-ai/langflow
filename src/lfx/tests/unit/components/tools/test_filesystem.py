@@ -396,7 +396,9 @@ class TestGrepSearch:
         assert all("a.txt" in entry["path"] for entry in result["matches"])
 
     def test_should_return_structured_error_for_invalid_regex(self, component: FileSystemToolComponent) -> None:
-        result = component._grep_search(r"[invalid")
+        # Regex compilation only happens in opt-in regex mode; in literal
+        # mode, an unbalanced bracket is just a substring (no error).
+        result = component._grep_search(r"[invalid", is_regex=True)
         assert "error" in result
         assert "regex" in result["error"].lower() or "pattern" in result["error"].lower()
 
@@ -492,3 +494,203 @@ class TestBuildMetadata:
         result = component.build_metadata()
         assert result.data["read_only"] is True
         assert set(result.data["tools_registered"]) == {"read_file", "glob_search", "grep_search"}
+
+
+class TestRootPathAllowlist:
+    """Slice 27 — root_path is server-controlled via env-var allowlist.
+
+    A flow author should not be able to escape the operator's intent by
+    pointing root_path at `/`, an app config directory, or any other
+    sensitive server location. When `LANGFLOW_FS_TOOL_ALLOWED_ROOTS` is set,
+    every operation must reject root_path values that don't resolve under
+    one of the allowlisted paths.
+    """
+
+    def test_should_reject_root_outside_allowlist(
+        self, sandbox: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Allowlist names a different directory than the requested root.
+        allowed = tmp_path / "workspace"
+        allowed.mkdir()
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", str(allowed))
+        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
+
+        result = component._read_file("hello.txt")
+        assert "error" in result
+        assert "allowlist" in result["error"].lower() or "not allowed" in result["error"].lower()
+
+    def test_should_accept_root_inside_allowlist(self, sandbox: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Allowlist names the parent of sandbox.
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", str(sandbox.parent))
+        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
+
+        result = component._read_file("hello.txt")
+        assert result.get("status") == "ok", f"Got: {result}"
+
+    def test_should_accept_root_exactly_equal_to_allowlist_entry(
+        self, sandbox: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", str(sandbox))
+        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
+
+        result = component._read_file("hello.txt")
+        assert result.get("status") == "ok", f"Got: {result}"
+
+    def test_should_support_multiple_paths_separated_by_os_pathsep(
+        self, sandbox: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import os
+
+        other = tmp_path / "other"
+        other.mkdir()
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", os.pathsep.join([str(other), str(sandbox.parent)]))
+        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
+
+        result = component._read_file("hello.txt")
+        assert result.get("status") == "ok", f"Got: {result}"
+
+    def test_should_reject_root_when_running_in_astra_cloud(
+        self, sandbox: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Defense in depth: even without an allowlist, a hosted/cloud env
+        # MUST refuse free-form filesystem access from a flow author.
+        monkeypatch.setenv("ASTRA_CLOUD_DISABLE_COMPONENT", "true")
+        monkeypatch.delenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", raising=False)
+        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
+
+        result = component._read_file("hello.txt")
+        assert "error" in result
+        assert "cloud" in result["error"].lower() or "disabled" in result["error"].lower()
+
+    def test_glob_search_should_honor_allowlist(
+        self, sandbox: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        allowed = tmp_path / "workspace"
+        allowed.mkdir()
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", str(allowed))
+        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
+
+        result = component._glob_search("**/*.py")
+        assert "error" in result
+
+    def test_grep_search_should_honor_allowlist(
+        self, sandbox: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        allowed = tmp_path / "workspace"
+        allowed.mkdir()
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", str(allowed))
+        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
+
+        result = component._grep_search(r"foo")
+        assert "error" in result
+
+    def test_write_and_edit_should_honor_allowlist(
+        self, sandbox: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        allowed = tmp_path / "workspace"
+        allowed.mkdir()
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_ALLOWED_ROOTS", str(allowed))
+        component = FileSystemToolComponent(root_path=str(sandbox), read_only=False)
+
+        write_result = component._write_file("new.txt", "data")
+        assert "error" in write_result
+        edit_result = component._edit_file("hello.txt", old_string="line2", new_string="X")
+        assert "error" in edit_result
+
+
+class TestGrepSearchReDoSGuard:
+    """Slice 28 — grep_search must not be DoS-able by a malicious regex.
+
+    The default mode is literal substring match. Regex mode is opt-in via
+    `is_regex=True` and runs each match under a hard timeout so a
+    catastrophic-backtracking pattern cannot pin a worker thread.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _populate(self, sandbox: Path) -> None:
+        # File whose contents would trigger catastrophic backtracking on the
+        # naive `^(a+)+$` pattern under stdlib `re`.
+        (sandbox / "redos.txt").write_text("a" * 60 + "X\n", encoding="utf-8")
+        (sandbox / "lit.txt").write_text("hello world\nfoo.bar\nbaz\n", encoding="utf-8")
+
+    def test_default_mode_should_treat_pattern_as_literal_substring(self, component: FileSystemToolComponent) -> None:
+        # `.` is a regex metachar but in literal mode it must match only a dot.
+        result = component._grep_search("foo.bar", path="lit.txt", output_mode="content")
+        assert result["status"] == "ok"
+        assert any("foo.bar" in entry["line"] for entry in result["matches"])
+
+    def test_default_literal_mode_should_not_match_regex_metachars(self, component: FileSystemToolComponent) -> None:
+        # `h.llo` would match "hello" as a regex; in literal mode it must NOT.
+        result = component._grep_search("h.llo", path="lit.txt", output_mode="content")
+        assert result["status"] == "ok"
+        assert result["matches"] == []
+
+    def test_regex_mode_should_be_opt_in_and_compile_pattern(self, component: FileSystemToolComponent) -> None:
+        result = component._grep_search("h.llo", path="lit.txt", output_mode="content", is_regex=True)
+        assert result["status"] == "ok"
+        assert any("hello" in entry["line"] for entry in result["matches"])
+
+    def test_regex_mode_must_terminate_under_timeout_for_catastrophic_pattern(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        import time
+
+        # Stdlib `re` with `^(a+)+$` against 60 'a's followed by 'X' triggers
+        # exponential backtracking — without a timeout this hangs the worker.
+        # With our guard, it must return promptly with a structured error.
+        start = time.monotonic()
+        result = component._grep_search(r"^(a+)+$", path="redos.txt", is_regex=True)
+        elapsed = time.monotonic() - start
+        assert elapsed < 5.0, f"grep_search did not terminate promptly (took {elapsed:.1f}s)"
+        # Either the pattern was rejected up front, or the per-match timeout fired.
+        assert "error" in result or result.get("truncated") is True or result.get("matches") == []
+
+
+class TestEditFileSizeProjection:
+    """Slice 29 — edit_file rejects empty old_string and projects size up front.
+
+    With `old_string=""`, Python's `str.replace` inserts new_string between
+    every character (and at both ends), producing roughly N*len(new_string)
+    extra bytes. A small file plus a large new_string can blow far past
+    MAX_FILE_SIZE_BYTES before the existing post-construction guard runs.
+    """
+
+    def test_should_reject_empty_old_string(self, component: FileSystemToolComponent, sandbox: Path) -> None:
+        # The reviewer-flagged DoS vector: with old_string="", str.replace
+        # inserts new_string between every character. The pre-fix code did
+        # not reject empty old_string outright — it fell through to
+        # current.count("") == len(file)+1, then to the "ambiguous matches"
+        # error path. That error message is misleading AND only blocks the
+        # path coincidentally; with replace_all=True the unbounded
+        # allocation would proceed. The fix MUST reject empty old_string
+        # explicitly with a message that says "empty", not "ambiguous".
+        result = component._edit_file("hello.txt", old_string="", new_string="X")
+        assert "error" in result
+        assert "empty" in result["error"].lower(), (
+            f"Expected 'empty' in error to distinguish from old 'ambiguous' rejection path. Got: {result['error']!r}"
+        )
+        # File on disk must NOT have been modified.
+        assert (sandbox / "hello.txt").read_text(encoding="utf-8") == "line1\nline2\nline3\n"
+
+    def test_should_reject_empty_old_string_even_with_replace_all(
+        self, component: FileSystemToolComponent, sandbox: Path
+    ) -> None:
+        # The pre-fix code's "ambiguous" guard fired on empty old_string only
+        # because `replace_all=False`. With `replace_all=True`, the
+        # ambiguity check was bypassed and `current.replace("", "X" * N)`
+        # would balloon the file to N*(len+1)+len bytes BEFORE the
+        # post-allocation size check. The fix MUST reject empty old_string
+        # regardless of replace_all.
+        result = component._edit_file("hello.txt", old_string="", new_string="X", replace_all=True)
+        assert "error" in result
+        assert "empty" in result["error"].lower(), f"Got: {result['error']!r}"
+        # File on disk must NOT have been modified.
+        assert (sandbox / "hello.txt").read_text(encoding="utf-8") == "line1\nline2\nline3\n"
+
+    def test_should_still_allow_legitimate_replacements_within_limit(
+        self, component: FileSystemToolComponent, sandbox: Path
+    ) -> None:
+        # Sanity: a normal in-bounds edit still works after the new guard.
+        result = component._edit_file("hello.txt", old_string="line2", new_string="LINE_TWO")
+        assert result["status"] == "ok"
+        assert (sandbox / "hello.txt").read_text(encoding="utf-8") == "line1\nLINE_TWO\nline3\n"

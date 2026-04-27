@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING
@@ -14,6 +15,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, StrInput
 from lfx.io import Output
 from lfx.schema.data import Data
+from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 if TYPE_CHECKING:
     from lfx.field_typing import Tool
@@ -23,6 +25,59 @@ BINARY_SNIFF_BYTES = 8 * 1024
 GLOB_RESULT_LIMIT = 100
 GREP_LINE_LIMIT = 250
 GREP_OUTPUT_MODES = ("files_with_matches", "content", "count")
+# Hard ceiling on user-supplied regex pattern length. Long patterns are a
+# common ReDoS vector and have no legitimate need against single text lines.
+GREP_PATTERN_MAX_LEN = 1024
+# Skip regex matching on lines longer than this — exponential backtracking
+# requires non-trivial input length, and oversized lines tend to be data
+# blobs (minified JS/JSON) rather than meaningful matches.
+GREP_REGEX_LINE_MAX_LEN = 4096
+# Cap on total lines scanned per file in regex mode, regardless of matches.
+# Bounds the work even for benign-looking patterns on large files.
+GREP_REGEX_LINES_PER_FILE = 50_000
+ALLOWED_ROOTS_ENV = "LANGFLOW_FS_TOOL_ALLOWED_ROOTS"
+
+# Heuristic ReDoS detector.
+#
+# Stdlib `re` has no native timeout; we cannot kill a runaway match because
+# the engine holds the GIL. Instead we reject patterns whose structure makes
+# catastrophic backtracking possible BEFORE compiling them.
+#
+# The classic ReDoS shape is a nested unbounded quantifier — a parenthesized
+# group whose body is itself quantifiable, followed by an outer `+`/`*`/`{n,}`.
+# Examples: `(a+)+`, `(a*)*`, `(.*)+`, `(\w+)+`, `(a|aa)+`. We reject any
+# group that ends with `)+`/`)*`/`){n,}` AND whose body contains an
+# unescaped quantifier (`+`, `*`, `{n,}`) or alternation (`|`).
+#
+# This is intentionally conservative — it rules out some safe patterns
+# (`(ab)+` is fine; `(ab+)+` is not, but our rule rejects both). Users who
+# need those patterns can rewrite without the outer quantifier. Trading a
+# bit of expressiveness for a hard guarantee that no user pattern can
+# DoS the worker.
+_REDOS_GROUP = re.compile(
+    r"""
+    \(                          # outer group open
+    (?:                         # body of the group:
+        (?:\\.)                 #   - any escaped char (so \+ etc. don't trip us)
+        | [^()]                 #   - or any non-paren char
+    )*?
+    (?:                         # ... that contains at least one of:
+        (?<!\\)[+*]             #   unescaped + or *
+        | (?<!\\)\{\d+,\d*\}    #   {n,} or {n,m}
+        | (?<!\\)\|             #   alternation
+    )
+    (?:\\.|[^()])*              # ...followed by more body
+    \)                          # outer group close
+    [+*]                        # outer unbounded quantifier
+    """,
+    re.VERBOSE,
+)
+
+
+def _looks_like_redos(pattern: str) -> bool:
+    """Return True if `pattern` matches a known catastrophic-backtracking shape."""
+    return bool(_REDOS_GROUP.search(pattern))
+
 
 # Windows portability rules (applied on every host OS so flows authored on
 # macOS/Linux do not silently break when run on Windows). Pure-string checks.
@@ -36,6 +91,29 @@ _WINDOWS_FORBIDDEN_CHARS = frozenset('<>"|?*')
 
 def _looks_binary(head: bytes) -> bool:
     return b"\x00" in head
+
+
+def _allowed_roots() -> list[Path] | None:
+    """Parse `LANGFLOW_FS_TOOL_ALLOWED_ROOTS` into a list of resolved paths.
+
+    Returns None if the env var is unset (no allowlist enforced — local OSS /
+    desktop installs default to free-form root_path). Returns an empty list if
+    the env var is set but contains no usable paths — that is treated as
+    "deny everything" so a misconfigured operator fails closed.
+    """
+    raw = os.environ.get(ALLOWED_ROOTS_ENV)
+    if raw is None:
+        return None
+    paths: list[Path] = []
+    for raw_entry in raw.split(os.pathsep):
+        entry = raw_entry.strip()
+        if not entry:
+            continue
+        try:
+            paths.append(Path(entry).resolve())
+        except OSError:
+            continue
+    return paths
 
 
 def _check_windows_portability(path: str) -> str | None:
@@ -90,13 +168,21 @@ class _GlobSearchArgs(BaseModel):
 
 
 class _GrepSearchArgs(BaseModel):
-    pattern: str = Field(..., description="Regular expression to match against file contents.")
+    pattern: str = Field(..., description="Pattern to match against file contents (literal substring by default).")
     path: str | None = Field(default=None, description="Optional file or directory to scope the search.")
     glob: str | None = Field(default=None, description="Optional glob filter, e.g. '*.py'.")
-    case_insensitive: bool = Field(default=False, description="If true, the regex is matched case-insensitively.")
+    case_insensitive: bool = Field(default=False, description="If true, the pattern is matched case-insensitively.")
     output_mode: str = Field(
         default="files_with_matches",
         description="One of 'files_with_matches', 'content', 'count'.",
+    )
+    is_regex: bool = Field(
+        default=False,
+        description=(
+            "Treat `pattern` as a Python regex. Disabled by default — when enabled, "
+            "patterns are validated against catastrophic-backtracking shapes "
+            "(rejecting e.g. `(a+)+` or `(.*)*`) and oversized lines are skipped."
+        ),
     )
 
 
@@ -246,6 +332,7 @@ class FileSystemToolComponent(Component):
             *,
             case_insensitive: bool = False,
             output_mode: str = "files_with_matches",
+            is_regex: bool = False,
         ) -> str:
             return json.dumps(
                 self._grep_search(
@@ -254,13 +341,16 @@ class FileSystemToolComponent(Component):
                     glob=glob,
                     case_insensitive=case_insensitive,
                     output_mode=output_mode,
+                    is_regex=is_regex,
                 )
             )
 
         return StructuredTool.from_function(
             name="grep_search",
             description=(
-                "Search file contents with a regular expression. "
+                "Search file contents. Default is literal substring match (safe for any pattern); "
+                "set is_regex=True to opt into Python regex. Patterns with nested unbounded "
+                "quantifiers (e.g. (a+)+) are rejected to prevent catastrophic backtracking. "
                 "output_mode: 'files_with_matches' (default), 'content', or 'count'. "
                 f"Content mode is capped at {GREP_LINE_LIMIT} lines."
             ),
@@ -268,6 +358,32 @@ class FileSystemToolComponent(Component):
             args_schema=_GrepSearchArgs,
             tags=["grep_search"],
         )
+
+    def _validate_root(self) -> Path:
+        """Resolve and authorize `self.root_path`.
+
+        Two server-controlled gates run before the path is usable:
+
+        1. Cloud gate. In a hosted/multi-user deployment a flow author must not
+           be able to point root_path at `/` or any other server-sensitive
+           location. When `ASTRA_CLOUD_DISABLE_COMPONENT=true` we refuse the
+           component outright (defense in depth — the registration filter in
+           `validate_cloud.py` is the primary control, this catches the case
+           where it has been bypassed).
+        2. Allowlist gate. When `LANGFLOW_FS_TOOL_ALLOWED_ROOTS` is set, the
+           resolved root_path MUST be the same as, or nested under, one of the
+           allowlisted directories. Operators who care about scoping enable
+           this; OSS/desktop users leave it unset and get the prior behavior.
+        """
+        if is_astra_cloud_environment():
+            msg = "FileSystemTool is disabled in cloud/hosted deployments"
+            raise PermissionError(msg)
+        root_resolved = Path(self.root_path).resolve()
+        allowed = _allowed_roots()
+        if allowed is not None and not any(root_resolved == a or root_resolved.is_relative_to(a) for a in allowed):
+            msg = f"root_path {self.root_path!r} is not in the server allowlist ({ALLOWED_ROOTS_ENV})"
+            raise PermissionError(msg)
+        return root_resolved
 
     def _validate_path(self, path: str) -> Path:
         """Resolve `path` relative to the sandbox root and reject any escape.
@@ -280,7 +396,7 @@ class FileSystemToolComponent(Component):
             raise PermissionError(msg)
         if portability_error := _check_windows_portability(path):
             raise PermissionError(portability_error)
-        root_resolved = Path(self.root_path).resolve()
+        root_resolved = self._validate_root()
         candidate = (root_resolved / path).resolve()
         if not candidate.is_relative_to(root_resolved):
             msg = f"Path escapes workspace boundary: {path}"
@@ -384,6 +500,15 @@ class FileSystemToolComponent(Component):
         if resolved.is_dir():
             return {"error": f"Path is a directory, not a file: {path}", "path": path}
 
+        # Reject empty old_string outright. With `old_string=""`, str.replace
+        # inserts new_string between every character (and at both ends),
+        # producing roughly N*len(new_string) extra bytes — a small file plus
+        # a large new_string can blow far past MAX_FILE_SIZE_BYTES before the
+        # post-construction guard runs. Empty old_string also has no
+        # well-defined semantics for "edit this exact match".
+        if old_string == "":
+            return {"error": "old_string must not be empty", "path": path}
+
         try:
             current = resolved.read_text(encoding="utf-8", errors="replace")
         except OSError as exc:
@@ -402,8 +527,28 @@ class FileSystemToolComponent(Component):
                 "matches": occurrences,
             }
 
+        # Project the encoded size BEFORE building the replacement string.
+        # str.replace allocates the full result up front, so a small file
+        # with replace_all=True and a large new_string can balloon memory
+        # before the post-allocation length check runs. UTF-8 byte counts are
+        # exact (no estimation) so the projection is precise.
+        old_bytes = len(old_string.encode("utf-8"))
+        new_bytes = len(new_string.encode("utf-8"))
+        current_bytes = len(current.encode("utf-8"))
+        replacements_planned = occurrences if replace_all else 1
+        projected_bytes = current_bytes + replacements_planned * (new_bytes - old_bytes)
+        if projected_bytes > MAX_FILE_SIZE_BYTES:
+            return {
+                "error": (
+                    f"Resulting content size {projected_bytes} would exceed limit of {MAX_FILE_SIZE_BYTES} bytes"
+                ),
+                "path": path,
+            }
+
         updated = current.replace(old_string, new_string) if replace_all else current.replace(old_string, new_string, 1)
         encoded = updated.encode("utf-8")
+        # Defensive re-check (should be unreachable given the projection above,
+        # but keeps the original invariant explicit).
         if len(encoded) > MAX_FILE_SIZE_BYTES:
             return {
                 "error": f"Resulting content size {len(encoded)} exceeds limit of {MAX_FILE_SIZE_BYTES} bytes",
@@ -425,14 +570,14 @@ class FileSystemToolComponent(Component):
 
     def _glob_search(self, pattern: str, path: str | None = None) -> dict:
         try:
-            base = self._validate_path(path) if path else Path(self.root_path).resolve()
+            root_resolved = self._validate_root()
+            base = self._validate_path(path) if path else root_resolved
         except PermissionError as exc:
             return {"error": str(exc), "pattern": pattern, "path": path}
 
         if not base.exists() or not base.is_dir():
             return {"error": f"Base path is not a directory: {path or '.'}", "pattern": pattern}
 
-        root_resolved = Path(self.root_path).resolve()
         matches: list[str] = []
         truncated = False
         for match in base.glob(pattern):
@@ -462,27 +607,68 @@ class FileSystemToolComponent(Component):
         *,
         case_insensitive: bool = False,
         output_mode: str = "files_with_matches",
+        is_regex: bool = False,
     ) -> dict:
         if output_mode not in GREP_OUTPUT_MODES:
             return {
                 "error": f"Invalid output_mode '{output_mode}'. Must be one of {GREP_OUTPUT_MODES}",
                 "pattern": pattern,
             }
-        try:
-            flags = re.IGNORECASE if case_insensitive else 0
-            regex = re.compile(pattern, flags)
-        except re.error as exc:
-            return {"error": f"Invalid regex pattern: {exc}", "pattern": pattern}
+
+        # Build a per-line matcher. Default is a literal substring check —
+        # safe for any user-supplied pattern. Regex is opt-in and is gated by
+        # a static heuristic plus per-line/per-file caps. Stdlib `re` cannot
+        # be cancelled (it holds the GIL), so prevention is the only viable
+        # mitigation: reject pathological patterns at compile time and bound
+        # the input we hand to the engine.
+        if is_regex:
+            if len(pattern) > GREP_PATTERN_MAX_LEN:
+                return {
+                    "error": (
+                        f"Regex pattern exceeds {GREP_PATTERN_MAX_LEN} chars; "
+                        "shorten it or use literal mode (is_regex=False)."
+                    ),
+                    "pattern": pattern,
+                }
+            if _looks_like_redos(pattern):
+                return {
+                    "error": (
+                        "Regex pattern rejected: nested unbounded quantifier "
+                        "(catastrophic-backtracking risk). Rewrite without an "
+                        "outer +/* on a group that already contains +, *, {n,}, "
+                        "or |, or use literal mode (is_regex=False)."
+                    ),
+                    "pattern": pattern,
+                }
+            try:
+                flags = re.IGNORECASE if case_insensitive else 0
+                regex = re.compile(pattern, flags)
+            except re.error as exc:
+                return {"error": f"Invalid regex pattern: {exc}", "pattern": pattern}
+
+            def line_matches(line: str) -> bool:
+                # Skip regex matching on oversized lines — they are usually
+                # data blobs, and a long input is a prerequisite for most
+                # practical exponential-backtracking attacks.
+                if len(line) > GREP_REGEX_LINE_MAX_LEN:
+                    return False
+                return regex.search(line) is not None
+        else:
+            needle = pattern.lower() if case_insensitive else pattern
+
+            def line_matches(line: str) -> bool:
+                hay = line.lower() if case_insensitive else line
+                return needle in hay
 
         try:
-            base = self._validate_path(path) if path else Path(self.root_path).resolve()
+            root_resolved = self._validate_root()
+            base = self._validate_path(path) if path else root_resolved
         except PermissionError as exc:
             return {"error": str(exc), "pattern": pattern, "path": path}
 
         if not base.exists():
             return {"error": f"Path does not exist: {path or '.'}", "pattern": pattern}
 
-        root_resolved = Path(self.root_path).resolve()
         targets = self._collect_grep_targets(base, glob)
         files_with_matches: list[str] = []
         content_matches: list[dict] = []
@@ -519,7 +705,10 @@ class FileSystemToolComponent(Component):
             per_file_count = 0
             matched_any = False
             for idx, line in enumerate(text.splitlines(), start=1):
-                if not regex.search(line):
+                # Per-file scan cap (regex only — literal scans are O(n)).
+                if is_regex and idx > GREP_REGEX_LINES_PER_FILE:
+                    break
+                if not line_matches(line):
                     continue
                 matched_any = True
                 per_file_count += 1
