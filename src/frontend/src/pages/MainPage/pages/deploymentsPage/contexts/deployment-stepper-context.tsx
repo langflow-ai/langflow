@@ -109,6 +109,8 @@ interface DeploymentStepperContextType {
   // Agent name validation
   hasAgentNameErrors: boolean;
   setHasAgentNameErrors: Dispatch<SetStateAction<boolean>>;
+  isAgentNameValidationPending: boolean;
+  setIsAgentNameValidationPending: Dispatch<SetStateAction<boolean>>;
 
   // Deploy / Update
   needsProviderAccountCreation: boolean;
@@ -173,6 +175,8 @@ export function DeploymentStepperProvider({
 
   const [hasToolNameErrors, setHasToolNameErrors] = useState(false);
   const [hasAgentNameErrors, setHasAgentNameErrors] = useState(false);
+  const [isAgentNameValidationPending, setIsAgentNameValidationPending] =
+    useState(false);
 
   // Edit mode: track which pre-existing flows the user wants to detach.
   const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(new Set());
@@ -261,7 +265,8 @@ export function DeploymentStepperProvider({
       return (
         deploymentName.trim() !== "" &&
         selectedLlm.trim() !== "" &&
-        !hasAgentNameErrors
+        !hasAgentNameErrors &&
+        !isAgentNameValidationPending
       );
     }
     if (logical === 3) {
@@ -284,6 +289,7 @@ export function DeploymentStepperProvider({
     isEditMode,
     hasToolNameErrors,
     hasAgentNameErrors,
+    isAgentNameValidationPending,
   ]);
 
   const handleNext = useCallback(() => {
@@ -573,6 +579,8 @@ export function DeploymentStepperProvider({
       setHasToolNameErrors,
       hasAgentNameErrors,
       setHasAgentNameErrors,
+      isAgentNameValidationPending,
+      setIsAgentNameValidationPending,
       needsProviderAccountCreation,
       buildProviderAccountPayload,
       buildDeploymentPayload,
@@ -607,6 +615,7 @@ export function DeploymentStepperProvider({
       handleUndoRemoveFlow,
       hasToolNameErrors,
       hasAgentNameErrors,
+      isAgentNameValidationPending,
       needsProviderAccountCreation,
       buildProviderAccountPayload,
       buildDeploymentPayload,

@@ -1,6 +1,6 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import { ChevronDown, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,6 +27,10 @@ const TYPE_OPTIONS = [
   },
 ];
 
+function normalizeAgentName(name: string): string {
+  return name.replace(/[\s-]/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
+}
+
 export default function StepType() {
   const {
     isEditMode,
@@ -41,6 +45,7 @@ export default function StepType() {
     selectedInstance,
     hasAgentNameErrors,
     setHasAgentNameErrors,
+    setIsAgentNameValidationPending,
   } = useDeploymentStepper();
 
   const showErrorAlert = useErrorAlert();
@@ -82,18 +87,47 @@ export default function StepType() {
   }, [deploymentName]);
 
   const isTypingName = deploymentName !== debouncedDeploymentName;
+  const trimmedDeploymentName = debouncedDeploymentName.trim();
+  const normalizedDeploymentName = useMemo(
+    () => normalizeAgentName(trimmedDeploymentName).toLowerCase(),
+    [trimmedDeploymentName],
+  );
+  const agentNamesToCheck = useMemo(() => {
+    if (!trimmedDeploymentName) return [];
+    return Array.from(
+      new Set(
+        [
+          trimmedDeploymentName,
+          normalizeAgentName(trimmedDeploymentName),
+        ].filter(Boolean),
+      ),
+    );
+  }, [trimmedDeploymentName]);
 
   const { data: checkAgentNameData, isFetching: isCheckingAgentName } =
     useCheckAgentNames(
-      { providerId, names: [debouncedDeploymentName] },
+      { providerId, names: agentNamesToCheck },
       {
-        enabled:
-          !!providerId &&
-          debouncedDeploymentName.trim().length > 0 &&
-          !isEditMode,
+        enabled: !!providerId && agentNamesToCheck.length > 0 && !isEditMode,
         placeholderData: keepPreviousData,
       },
     );
+
+  const isAgentNameValidationPending =
+    !isEditMode &&
+    !!providerId &&
+    deploymentName.trim().length > 0 &&
+    (isTypingName || isCheckingAgentName);
+  const shouldShowAgentNameAvailable =
+    !isEditMode &&
+    !!providerId &&
+    !!trimmedDeploymentName &&
+    !hasAgentNameErrors &&
+    !isAgentNameValidationPending;
+
+  useEffect(() => {
+    setIsAgentNameValidationPending(isAgentNameValidationPending);
+  }, [isAgentNameValidationPending, setIsAgentNameValidationPending]);
 
   useEffect(() => {
     if (isEditMode) {
@@ -107,30 +141,29 @@ export default function StepType() {
 
     // We normalize exactly as backend does for Watsonx: lowercase and strip some chars.
     // However, exact comparison is safer given backend returns the exact normalized names that matched.
-    const nameToCheck = debouncedDeploymentName.trim();
-    if (!nameToCheck) {
+    if (!trimmedDeploymentName) {
       setHasAgentNameErrors(false);
       return;
     }
     const exists = checkAgentNameData.existing_names.some((name) => {
-      // Just do case-insensitive match for basic error checking
+      const normalizedExistingName = normalizeAgentName(name).toLowerCase();
       return (
-        name.toLowerCase() === nameToCheck.toLowerCase() ||
-        // Also check against what backend normalized version might be
-        name.toLowerCase() ===
-          nameToCheck
-            .replace(/[\s-]/g, "_")
-            .replace(/[^a-zA-Z0-9_]/g, "")
-            .toLowerCase()
+        name.trim().toLowerCase() === trimmedDeploymentName.toLowerCase() ||
+        normalizedExistingName === normalizedDeploymentName
       );
     });
     setHasAgentNameErrors(exists);
   }, [
     checkAgentNameData,
-    debouncedDeploymentName,
     isEditMode,
+    normalizedDeploymentName,
     setHasAgentNameErrors,
+    trimmedDeploymentName,
   ]);
+
+  useEffect(() => {
+    return () => setIsAgentNameValidationPending(false);
+  }, [setIsAgentNameValidationPending]);
 
   const [showScrollHint, setShowScrollHint] = useState(true);
   const contentRef = useCallback((node: HTMLDivElement | null) => {
@@ -217,7 +250,7 @@ export default function StepType() {
             onChange={(e) => setDeploymentName(e.target.value)}
             disabled={isEditMode}
           />
-          {(isCheckingAgentName || isTypingName) && (
+          {isAgentNameValidationPending && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
@@ -227,13 +260,21 @@ export default function StepType() {
           <span className="mt-1 text-xs text-muted-foreground">
             Name cannot be changed after creation.
           </span>
-        ) : hasAgentNameErrors && !isTypingName && !isCheckingAgentName ? (
+        ) : hasAgentNameErrors && !isAgentNameValidationPending ? (
           <span className="mt-1.5 flex items-center gap-1.5 text-xs text-destructive">
             <ForwardedIconComponent
               name="AlertTriangle"
               className="h-3.5 w-3.5"
             />
             Agent name already exists. Please choose a different name.
+          </span>
+        ) : shouldShowAgentNameAvailable ? (
+          <span className="mt-1.5 flex items-center gap-1.5 text-xs text-success">
+            <ForwardedIconComponent
+              name="CheckCircle2"
+              className="h-3.5 w-3.5"
+            />
+            Agent name is available.
           </span>
         ) : null}
       </div>
