@@ -18,6 +18,7 @@ from unittest.mock import Mock
 
 import pytest
 from lfx.graph.vertex.vertex_types import ComponentVertex, CustomComponentVertex
+from lfx.serialization.redaction import REDACTED_PLACEHOLDER_TEMPLATE
 
 
 def _make_component_vertex() -> ComponentVertex:
@@ -59,7 +60,7 @@ def test_update_built_object_redacts_logs_and_artifacts_two_tuple():
 
     # Artifacts surfaced to the UI must be masked.
     assert secret not in str(vertex.artifacts)
-    assert "[REDACTED: OPENAI_API_KEY]" in str(vertex.artifacts)
+    assert REDACTED_PLACEHOLDER_TEMPLATE in str(vertex.artifacts)
 
     # ``built_object``/``self.results`` remain raw — downstream vertices
     # consume those over edges and require the real values.
@@ -88,9 +89,9 @@ def test_update_built_object_redacts_logs_three_tuple():
     vertex._update_built_object_and_artifacts((custom_component, built_object, artifacts))
 
     assert secret not in str(vertex.logs)
-    assert "[REDACTED: PRIVATE_TOKEN]" in str(vertex.logs)
+    assert REDACTED_PLACEHOLDER_TEMPLATE in str(vertex.logs)
     assert secret not in str(vertex.artifacts_raw)
-    assert "[REDACTED: PRIVATE_TOKEN]" in str(vertex.artifacts_raw)
+    assert REDACTED_PLACEHOLDER_TEMPLATE in str(vertex.artifacts_raw)
     assert secret not in str(vertex.artifacts)
 
 
@@ -139,8 +140,8 @@ def test_finalize_build_redacts_results_in_result_data():
     assert vertex.result is not None
     results = vertex.result.results
     assert results["text"] != secret
-    assert results["text"] == "[REDACTED: MY_TEXT_VAR]"
-    assert results["result"] == "[REDACTED: MY_TEXT_VAR]"
+    assert results["text"] == REDACTED_PLACEHOLDER_TEMPLATE
+    assert results["result"] == REDACTED_PLACEHOLDER_TEMPLATE
     # ``built_object``/``built_result`` remain raw for downstream edges.
     assert vertex.built_object["text"] == secret
     assert vertex.built_result["text"] == secret
@@ -162,7 +163,7 @@ def test_finalize_build_redacts_messages_payload():
     assert vertex.result is not None
     messages = vertex.result.messages
     assert secret not in str(messages)
-    assert "[REDACTED: CHAT_KEY]" in str(messages)
+    assert REDACTED_PLACEHOLDER_TEMPLATE in str(messages)
 
 
 def test_finalize_build_no_resolved_globals_passthrough():
@@ -208,7 +209,7 @@ def test_custom_component_vertex_finalize_build_redacts_results():
 
     ``CustomComponentVertex`` does not override ``finalize_build``; the base
     method is the only place to redact for this subclass. This pins that
-    ``[REDACTED: <name>]`` is what reaches ``ResultData.results`` while
+    the generic placeholder is what reaches ``ResultData.results`` while
     ``built_object`` is preserved for downstream edges.
     """
     vertex = _make_custom_component_vertex()
@@ -220,8 +221,8 @@ def test_custom_component_vertex_finalize_build_redacts_results():
     vertex.finalize_build()
 
     assert vertex.result is not None
-    assert vertex.result.results["text"] == "[REDACTED: MY_CUSTOM_VAR]"
-    assert vertex.result.results["result"] == "[REDACTED: MY_CUSTOM_VAR]"
+    assert vertex.result.results["text"] == REDACTED_PLACEHOLDER_TEMPLATE
+    assert vertex.result.results["result"] == REDACTED_PLACEHOLDER_TEMPLATE
     # ``built_object`` stays raw — downstream vertices still receive the value.
     assert vertex.built_object["text"] == secret
 
@@ -287,8 +288,8 @@ def test_finalize_build_still_redacts_after_cache_round_trip():
 
     assert restored.result is not None
     assert secret not in str(restored.result.results)
-    assert restored.result.results["text"] == "[REDACTED: FROZEN_VAR]"
-    assert restored.result.results["result"] == "[REDACTED: FROZEN_VAR]"
+    assert restored.result.results["text"] == REDACTED_PLACEHOLDER_TEMPLATE
+    assert restored.result.results["result"] == REDACTED_PLACEHOLDER_TEMPLATE
 
 
 def test_reset_clears_resolved_global_values():
@@ -383,7 +384,7 @@ def test_post_fix_cache_entry_restores_and_redacts():
     vertex.finalize_build()
 
     assert vertex.result is not None
-    assert vertex.result.results["text"] == "[REDACTED: POST_FIX_VAR]"
+    assert vertex.result.results["text"] == REDACTED_PLACEHOLDER_TEMPLATE
 
 
 def test_finalize_build_after_reset_does_not_redact_with_stale_map():
@@ -393,7 +394,7 @@ def test_finalize_build_after_reset_does_not_redact_with_stale_map():
     1, then on run 2 the same vertex outputs a string that happens to contain
     that prior value as a substring (e.g. an end-user typed it back in).
     Without the ``_reset`` fix, run 2's UI output would show
-    ``[REDACTED: …]`` for a value that is no longer secret on this run.
+    the redaction placeholder for a value that is no longer secret on this run.
     """
     vertex = _make_component_vertex()
     prior_secret = "prior-run-secret-value"  # noqa: S105  # pragma: allowlist secret
@@ -410,4 +411,4 @@ def test_finalize_build_after_reset_does_not_redact_with_stale_map():
 
     assert vertex.result is not None
     assert vertex.result.results["text"] == user_input
-    assert "[REDACTED" not in vertex.result.results["text"]
+    assert REDACTED_PLACEHOLDER_TEMPLATE not in vertex.result.results["text"]

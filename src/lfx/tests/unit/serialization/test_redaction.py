@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from lfx.serialization.redaction import build_redaction_map, redact_values
+from lfx.serialization.redaction import REDACTED_PLACEHOLDER_TEMPLATE, build_redaction_map, redact_values
 from pydantic import BaseModel
 
 
@@ -13,42 +13,42 @@ class _Nested(BaseModel):
 
 
 def test_redacts_string_occurrences():
-    redaction_map = {"sk-abc-123": "[REDACTED: OPENAI_API_KEY]"}
-    assert redact_values("token=sk-abc-123!", redaction_map) == "token=[REDACTED: OPENAI_API_KEY]!"
+    redaction_map = {"sk-abc-123": "MASKED_OPENAI_API_KEY"}
+    assert redact_values("token=sk-abc-123!", redaction_map) == "token=MASKED_OPENAI_API_KEY!"
 
 
 def test_redacts_nested_dict_values():
-    redaction_map = {"my-secret": "[REDACTED: MY_VAR]"}
+    redaction_map = {"my-secret": "MASKED_MY_VAR"}
     payload = {
         "message": {"text": "using my-secret in prompt"},
         "type": "message",
         "metadata": {"note": "my-secret appears here too"},
     }
     redacted = redact_values(payload, redaction_map)
-    assert redacted["message"]["text"] == "using [REDACTED: MY_VAR] in prompt"
-    assert redacted["metadata"]["note"] == "[REDACTED: MY_VAR] appears here too"
+    assert redacted["message"]["text"] == "using MASKED_MY_VAR in prompt"
+    assert redacted["metadata"]["note"] == "MASKED_MY_VAR appears here too"
     # Non-sensitive fields untouched
     assert redacted["type"] == "message"
 
 
 def test_redacts_inside_lists_and_tuples():
-    redaction_map = {"s3cret": "[REDACTED: TOK]"}
+    redaction_map = {"s3cret": "MASKED_TOKEN"}
     obj = ["safe", "s3cret value", ("also s3cret", "ok"), {"inner": "s3cret"}]
     redacted = redact_values(obj, redaction_map)
     assert redacted[0] == "safe"
-    assert redacted[1] == "[REDACTED: TOK] value"
-    assert redacted[2] == ("also [REDACTED: TOK]", "ok")
-    assert redacted[3]["inner"] == "[REDACTED: TOK]"
+    assert redacted[1] == "MASKED_TOKEN value"
+    assert redacted[2] == ("also MASKED_TOKEN", "ok")
+    assert redacted[3]["inner"] == "MASKED_TOKEN"
 
 
 def test_handles_pydantic_models():
-    redaction_map = {"pii-value": "[REDACTED: PII]"}
+    redaction_map = {"pii-value": "MASKED_PII"}
     model = _Nested(note="value is pii-value", binding="pii-value")
     redacted = redact_values(model, redaction_map)
     # Pydantic models are dumped to dicts so redaction is visible to callers
     # that serialize the result.
-    assert redacted["note"] == "value is [REDACTED: PII]"
-    assert redacted["binding"] == "[REDACTED: PII]"
+    assert redacted["note"] == "value is MASKED_PII"
+    assert redacted["binding"] == "MASKED_PII"
 
 
 def test_empty_map_returns_input_unchanged():
@@ -57,7 +57,7 @@ def test_empty_map_returns_input_unchanged():
 
 
 def test_does_not_mutate_input():
-    redaction_map = {"leak": "[REDACTED: V]"}
+    redaction_map = {"leak": "MASKED_VALUE"}
     payload = {"items": [{"text": "leak here"}]}
     redact_values(payload, redaction_map)
     assert payload["items"][0]["text"] == "leak here"
@@ -65,18 +65,18 @@ def test_does_not_mutate_input():
 
 def test_longest_match_wins_over_substring():
     # "sk-abc" is a prefix of "sk-abc-123"; we must redact the longer value
-    # first to avoid producing "[REDACTED: SHORT]-123".
+    # first to avoid producing "MASKED_SHORT-123".
     redaction_map = {
-        "sk-abc": "[REDACTED: SHORT]",
-        "sk-abc-123": "[REDACTED: LONG]",
+        "sk-abc": "MASKED_SHORT",
+        "sk-abc-123": "MASKED_LONG",
     }
     result = redact_values("token=sk-abc-123", redaction_map)
-    assert result == "token=[REDACTED: LONG]"
+    assert result == "token=MASKED_LONG"
 
 
 def test_build_redaction_map_skips_empty_values():
     assert build_redaction_map({"": "NAME"}) == {}
-    assert build_redaction_map({"value": "NAME"}) == {"value": "[REDACTED: NAME]"}
+    assert build_redaction_map({"value": "NAME"}) == {"value": REDACTED_PLACEHOLDER_TEMPLATE}
 
 
 def test_build_redaction_map_skips_short_values():
@@ -84,7 +84,7 @@ def test_build_redaction_map_skips_short_values():
 
     Regression: a generic global like a Split Text separator bound to ``,``
     would otherwise rewrite every comma in unrelated output (results, logs,
-    artifacts) to ``[REDACTED: ...]``. The threshold guards against that
+    artifacts) to the redaction placeholder. The threshold guards against that
     while still catching multi-character config values and credentials.
     """
     assert build_redaction_map({",": "SEPARATOR"}) == {}
@@ -93,9 +93,9 @@ def test_build_redaction_map_skips_short_values():
     assert build_redaction_map({"ab": "SHORT"}) == {}
     assert build_redaction_map({"key": "THREE_CHAR"}) == {}
     # Four characters is the smallest length that is redacted.
-    assert build_redaction_map({"abcd": "MIN_LEN"}) == {"abcd": "[REDACTED: MIN_LEN]"}
+    assert build_redaction_map({"abcd": "MIN_LEN"}) == {"abcd": REDACTED_PLACEHOLDER_TEMPLATE}
     # Realistic short generic globals (model names) must still be caught.
-    assert build_redaction_map({"gpt-4": "MODEL"}) == {"gpt-4": "[REDACTED: MODEL]"}
+    assert build_redaction_map({"gpt-4": "MODEL"}) == {"gpt-4": REDACTED_PLACEHOLDER_TEMPLATE}
 
 
 def test_build_redaction_map_short_value_does_not_corrupt_output():
@@ -105,14 +105,13 @@ def test_build_redaction_map_short_value_does_not_corrupt_output():
     assert redact_values(payload, redaction_map) == payload
 
 
-def test_build_redaction_map_uses_generic_placeholder_when_name_missing():
+def test_build_redaction_map_uses_generic_placeholder():
     redaction_map = build_redaction_map({"value": ""})
-    assert "value" in redaction_map
-    assert "REDACTED" in redaction_map["value"]
+    assert redaction_map["value"] == REDACTED_PLACEHOLDER_TEMPLATE
 
 
 def test_non_string_scalars_pass_through():
-    redaction_map = {"leak": "[REDACTED: V]"}
+    redaction_map = {"leak": "MASKED_VALUE"}
     assert redact_values(42, redaction_map) == 42
     flag = True
     assert redact_values(flag, redaction_map) is True
@@ -122,8 +121,8 @@ def test_non_string_scalars_pass_through():
 @pytest.mark.parametrize(
     ("secret", "placeholder"),
     [
-        ("short", "[REDACTED: A]"),
-        ("a" * 64, "[REDACTED: LONG]"),
+        ("short", "MASKED_A"),
+        ("a" * 64, "MASKED_LONG"),
     ],
 )
 def test_replaces_every_occurrence(secret: str, placeholder: str):

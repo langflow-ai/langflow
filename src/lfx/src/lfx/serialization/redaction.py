@@ -9,7 +9,7 @@ leaks the resolved value in the UI's Component Output panel.
 This module provides a single utility, :func:`redact_values`, that walks an
 arbitrary object graph (dicts, lists, tuples, sets, strings, pydantic models,
 and objects exposing ``model_dump``/``dict``) and replaces every occurrence of
-each sensitive string with a placeholder of the form ``[REDACTED: <name>]``.
+each sensitive string with a generic placeholder.
 """
 
 from __future__ import annotations
@@ -25,10 +25,6 @@ REDACTED_PLACEHOLDER_TEMPLATE = "****"
 # keeps real configuration values redactable (model names like ``gpt-4`` are
 # 5+) while skipping the high-false-positive single/two/three-char cases.
 _MIN_REDACTABLE_LENGTH = 4
-
-
-def _placeholder_for(variable_name: str | None) -> str:
-    return REDACTED_PLACEHOLDER_TEMPLATE.format(name=variable_name or "global variable")
 
 
 def _redact_string(value: str, redaction_map: Mapping[str, str]) -> str:
@@ -112,18 +108,19 @@ def redact_values(obj: Any, redaction_map: Mapping[str, str]) -> Any:
     return obj
 
 
-def build_redaction_map(resolved_values: Mapping[str, str]) -> dict[str, str]:
+def build_redaction_map(resolved_values: Mapping[str, object]) -> dict[str, str]:
     """Build a ``{sensitive_value: placeholder}`` mapping.
 
-    ``resolved_values`` maps a resolved value (the secret) to the originating
-    global variable name (e.g. ``{"sk-abc...": "OPENAI_API_KEY"}``). Empty
-    values and values shorter than :data:`_MIN_REDACTABLE_LENGTH` characters
-    are skipped because redacting them would produce noisy, wide-reaching
-    replacements across unrelated output text.
+    ``resolved_values`` maps a resolved value (the secret) to optional metadata
+    kept for cache compatibility. The metadata is intentionally ignored because
+    all values are replaced with the same generic placeholder. Empty values and
+    values shorter than :data:`_MIN_REDACTABLE_LENGTH` characters are skipped
+    because redacting them would produce noisy, wide-reaching replacements
+    across unrelated output text.
     """
     redaction_map: dict[str, str] = {}
-    for value, name in resolved_values.items():
+    for value in resolved_values:
         if not isinstance(value, str) or len(value) < _MIN_REDACTABLE_LENGTH:
             continue
-        redaction_map[value] = _placeholder_for(name)
+        redaction_map[value] = REDACTED_PLACEHOLDER_TEMPLATE
     return redaction_map

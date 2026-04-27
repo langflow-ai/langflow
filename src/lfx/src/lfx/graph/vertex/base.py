@@ -94,10 +94,10 @@ class Vertex:
         self.parent_node_id: str | None = self.full_data.get("parent_node_id")
         self.load_from_db_fields: list[str] = []
         # Populated by ``update_params_with_load_from_db_fields`` during
-        # ``get_instance_results``: maps each resolved global-variable value
-        # (i.e. the fetched secret) to the variable name that supplied it.
-        # Used by the output/log finalisers to mask those values before they
-        # reach the UI's Component Output panel.
+        # ``get_instance_results``: keys are resolved global-variable values
+        # that the output/log finalisers must mask before they reach the UI's
+        # Component Output panel. Values are unused metadata kept for cache
+        # compatibility.
         self._resolved_global_values: dict[str, str] = {}
         self.parent_is_top_level = False
         self.layer = None

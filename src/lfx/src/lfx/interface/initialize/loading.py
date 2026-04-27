@@ -62,10 +62,9 @@ async def get_instance_results(
     fallback_to_env_vars: bool = False,
     base_type: str = "component",
 ):
-    # Snapshot the variable names *before* load_from_db resolution overwrites
-    # them with the resolved values. ``update_params_with_load_from_db_fields``
-    # uses these names to populate ``vertex._resolved_global_values`` so the
-    # output panel can redact the resolved values it would otherwise echo.
+    # Snapshot the configured global-variable placeholders *before*
+    # ``load_from_db`` resolution overwrites them. The snapshot lets us tell
+    # successful resolution apart from an unresolved value left in place.
     pre_resolution_params = {field: custom_params.get(field) for field in vertex.load_from_db_fields}
     custom_params = await update_params_with_load_from_db_fields(
         custom_component,
@@ -117,7 +116,7 @@ def convert_kwargs(params):
     return params
 
 
-def _record_table_resolved_value(custom_component, resolved_value: str, variable_name: str) -> None:
+def _record_table_resolved_value(custom_component, resolved_value: str, _variable_name: str) -> None:
     """Record a resolved table-column global value on the owning vertex.
 
     Table columns resolve one cell at a time inside
@@ -128,7 +127,7 @@ def _record_table_resolved_value(custom_component, resolved_value: str, variable
     if vertex is None:
         return
     resolved_values: dict[str, str] = getattr(vertex, "_resolved_global_values", {}) or {}
-    resolved_values[resolved_value] = variable_name
+    resolved_values[resolved_value] = ""
     vertex._resolved_global_values = resolved_values  # noqa: SLF001
 
 
@@ -140,13 +139,13 @@ def _record_resolved_global_values(
     """Track the post-resolution values so the output layer can redact them.
 
     ``pre_resolution_params`` maps each ``load_from_db`` field to the global
-    variable name that was configured (e.g. ``{"api_key": "OPENAI_API_KEY"}``),  # pragma: allowlist secret
-    captured before the resolver overwrote the params dict with the fetched
-    value. ``resolved_params`` holds the result of that resolution. The pair is
-    stitched back into a ``{resolved_value: variable_name}`` map stored on the
-    vertex so that :func:`lfx.schema.schema.build_output_logs` (and the vertex's
-    own log/artifact finalisers) can mask those literal values in anything the
-    UI renders.
+    variable placeholder that was configured (e.g.
+    ``{"api_key": "OPENAI_API_KEY"}``), captured before the resolver overwrote
+    the params dict with the fetched value. ``resolved_params`` holds the result
+    of that resolution. Successful resolved values are stored as keys on
+    ``vertex._resolved_global_values`` so :func:`lfx.schema.schema.build_output_logs`
+    and the vertex's own log/artifact finalisers can mask those literal values
+    in anything the UI renders.
 
     Non-string resolved values and empty/unchanged placeholders are skipped —
     the redactor only operates on literal string substrings.
@@ -162,7 +161,7 @@ def _record_resolved_global_values(
         # which case redacting it would destroy legitimate output text.
         if resolved_value == variable_name:
             continue
-        resolved_values[resolved_value] = variable_name
+        resolved_values[resolved_value] = ""
     vertex._resolved_global_values = resolved_values  # noqa: SLF001
 
 

@@ -570,7 +570,7 @@ async def test_get_instance_results_records_resolved_global_on_vertex():
             base_type="component",
         )
 
-    assert vertex._resolved_global_values == {"sk-leaked-value": "OPENAI_API_KEY"}  # pragma: allowlist secret
+    assert vertex._resolved_global_values == {"sk-leaked-value": ""}  # pragma: allowlist secret
 
 
 @pytest.mark.asyncio
@@ -629,4 +629,4 @@ async def test_table_column_resolution_records_on_vertex():
             custom_component, params, "table_data", fallback_to_env_vars=False
         )
 
-    assert vertex._resolved_global_values == {"actual_admin_user": "ADMIN_USER"}
+    assert vertex._resolved_global_values == {"actual_admin_user": ""}

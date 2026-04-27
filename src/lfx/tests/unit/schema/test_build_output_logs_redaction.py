@@ -13,6 +13,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from lfx.schema.schema import build_output_logs
+from lfx.serialization.redaction import REDACTED_PLACEHOLDER_TEMPLATE
 
 
 class _FakeComponent:
@@ -42,7 +43,7 @@ def test_outputs_are_redacted_when_vertex_has_resolved_global_values():
     outputs = build_output_logs(vertex, (component,))
 
     assert resolved_value not in outputs["text"]["message"]
-    assert "[REDACTED: OPENAI_API_KEY]" in outputs["text"]["message"]
+    assert REDACTED_PLACEHOLDER_TEMPLATE in outputs["text"]["message"]
 
 
 def test_outputs_unchanged_when_no_resolved_globals():
@@ -87,4 +88,4 @@ def test_redaction_handles_dict_outputs():
 
     payload = outputs["structured"]["message"]
     assert resolved_value not in str(payload)
-    assert "[REDACTED: PRIVATE_TOKEN]" in str(payload)
+    assert REDACTED_PLACEHOLDER_TEMPLATE in str(payload)
