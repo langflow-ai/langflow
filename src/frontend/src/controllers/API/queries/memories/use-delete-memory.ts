@@ -39,8 +39,12 @@ export const useDeleteMemory: useMutationFunctionType<
     ...restOptions,
     onSuccess: (data, variables, onMutateResult, context) => {
       // Cancel in-flight fetches for the deleted resource so a 404 doesn't land after removal.
-      queryClient.cancelQueries({ queryKey: ["useGetMemory", variables.memoryId] });
-      queryClient.removeQueries({ queryKey: ["useGetMemory", variables.memoryId] });
+      queryClient.cancelQueries({
+        queryKey: ["useGetMemory", variables.memoryId],
+      });
+      queryClient.removeQueries({
+        queryKey: ["useGetMemory", variables.memoryId],
+      });
 
       // Keep cached lists consistent without forcing a refetch.
       removeMemoryFromMemoriesCache(queryClient, variables.memoryId);

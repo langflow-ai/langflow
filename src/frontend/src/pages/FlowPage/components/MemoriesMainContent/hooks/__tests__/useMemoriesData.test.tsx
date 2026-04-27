@@ -545,7 +545,9 @@ describe("useMemoriesData", () => {
       }),
     );
 
-    expect(result.current.fetchNextSessionsPage).toBe(mockFetchNextSessionsPage);
+    expect(result.current.fetchNextSessionsPage).toBe(
+      mockFetchNextSessionsPage,
+    );
     expect(result.current.hasNextSessionsPage).toBe(false);
     expect(result.current.isFetchingNextSessionsPage).toBe(false);
   });
