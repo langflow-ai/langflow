@@ -78,16 +78,17 @@ export default function StepAttachFlows() {
       return;
     seededExistingConnections.current = true;
 
-    const existingConnections: ConnectionItem[] = configsData.configs.map(
-      (cfg) => ({
+    const existingConnections: ConnectionItem[] = configsData.configs
+      .filter((cfg) => cfg.environment !== "live")
+      .map((cfg) => ({
         id: cfg.app_id,
         connectionId: cfg.connection_id,
         name: cfg.app_id,
+        environment: cfg.environment,
         variableCount: 0,
         isNew: false,
         environmentVariables: {},
-      }),
-    );
+      }));
 
     setConnections((prev) => {
       // Avoid duplicates if user already created connections with the same id
@@ -258,7 +259,7 @@ export default function StepAttachFlows() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 py-3">
-      <h2 className="text-lg font-semibold">Attach Flows</h2>
+      <h2 className="text-lg font-semibold">Flows</h2>
 
       <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border border-border">
         <FlowListPanel

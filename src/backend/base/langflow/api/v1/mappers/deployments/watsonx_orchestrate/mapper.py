@@ -13,6 +13,7 @@ from lfx.services.adapters.deployment.schema import (
     BaseDeploymentDataUpdate,
     ConfigListResult,
     DeploymentCreateResult,
+    DeploymentGetResult,
     DeploymentListLlmsResult,
     DeploymentListResult,
     DeploymentUpdateResult,
@@ -48,6 +49,7 @@ from langflow.api.v1.mappers.deployments.contracts import (
     CreateSnapshotBinding,
     CreateSnapshotBindings,
     FlowVersionPatch,
+    ProviderSnapshotBinding,
     UpdateSnapshotBinding,
     UpdateSnapshotBindings,
 )
@@ -316,6 +318,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         return parsed.model_dump(mode="json", exclude_none=True)
 
+    def resolve_load_from_provider_deployment_list_params(self) -> dict[str, Any] | None:
+        """Force provider-backed list mode to draft agents only."""
+        return {"environment": "draft"}
+
     def resolve_credentials(
         self,
         *,
@@ -498,6 +504,28 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         return DeploymentCreateResult(
             id=existing_resource_key,
             provider_result=create_provider_result,
+        )
+
+    def util_create_result_from_existing_resource(
+        self,
+        *,
+        existing_resource_key: str,
+    ) -> DeploymentCreateResult:
+        """Build a create-style result payload for DB-only onboarding.
+
+        This path is used when create request includes ``existing_agent_id``
+        without create-time mutation operations. ``created_*`` fields represent
+        what this request created, so they are intentionally empty here.
+        """
+        create_provider_result = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create_result,
+            slot_name="deployment_create_result",
+            raw={"app_ids": [], "tools_with_refs": []},
+            operation="building the create response for the existing resource",
+        )
+        return DeploymentCreateResult(
+            id=existing_resource_key,
+            provider_result=create_provider_result.model_dump(mode="json"),
         )
 
     async def _resolve_provider_payload_from_create_api(
@@ -757,14 +785,45 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             provider_data=provider_payload,
         )
 
-    def util_snapshot_ids_to_verify(
+    def extract_snapshot_bindings(self, provider_view) -> list[ProviderSnapshotBinding]:
+        bindings: list[ProviderSnapshotBinding] = []
+        for item in provider_view.deployments:
+            if not item.id:
+                msg = "deployment id is required from wxO adapter."
+                raise ValueError(msg)
+            resource_key = str(item.id)
+
+            tool_ids = item.provider_data.get("tool_ids", None)
+            if tool_ids is None:
+                msg = "tool_ids is required from wxO adapter."
+                raise ValueError(msg)
+            bindings.extend(
+                ProviderSnapshotBinding(resource_key=resource_key, snapshot_id=str(snapshot_id))
+                for snapshot_id in tool_ids
+            )
+        return bindings
+
+    def extract_snapshot_bindings_for_get(
         self,
-        attachments: list[Any],
-    ) -> list[str]:
+        get_result: DeploymentGetResult,
+        *,
+        resource_key: str,
+    ) -> list[ProviderSnapshotBinding]:
+        if get_result.provider_data is None:
+            msg = "An internal error occured. provider_data is required from wxO adapter for get()."
+            raise ValueError(msg)
+        if "tool_ids" not in get_result.provider_data:
+            msg = "An internal error occured. provider_data must contain 'tool_ids' from wxO adapter for get()."
+            raise ValueError(msg)
+
+        tool_ids = get_result.provider_data["tool_ids"]
+
+        if not isinstance(tool_ids, list):
+            msg = "An internal error occured. provider_data['tool_ids'] must be a list from wxO adapter for get()."
+            raise ValueError(msg)  # noqa: TRY004
+
         return [
-            att.provider_snapshot_id
-            for att in attachments
-            if getattr(att, "provider_snapshot_id", None) and att.provider_snapshot_id.strip()
+            ProviderSnapshotBinding(resource_key=resource_key, snapshot_id=str(snapshot_id)) for snapshot_id in tool_ids
         ]
 
     async def resolve_rollback_update(
@@ -1339,6 +1398,25 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Invalid deployment list item provider_data payload: {detail}",
             ) from exc
+
+    def shape_deployment_get_data(self, provider_data: AdapterPayload | None) -> dict[str, Any] | None:
+        if provider_data is None:
+            msg = "An internal error occured. provider_data is required from wxO adapter for get()."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+
+        if "llm" not in provider_data:
+            msg = "An internal error occured. provider_data must contain 'llm' from wxO adapter for get()."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+
+        llm = provider_data["llm"]
+
+        if not isinstance(llm, str) or not llm.strip():
+            msg = (
+                "An internal error occured. provider_data['llm'] must be a non-empty string from wxO adapter for get()."
+            )
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+
+        return {"llm": llm}
 
     def shape_config_item_data(self, provider_data: dict[str, Any]) -> WatsonxApiConfigListItem:
         return self._parse_required_payload_slot(
