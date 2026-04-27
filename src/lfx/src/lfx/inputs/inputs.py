@@ -3,7 +3,7 @@ from collections.abc import AsyncIterator, Iterator
 from typing import Any, TypeAlias, get_args
 
 from pandas import DataFrame
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 
 from lfx.inputs.validators import CoalesceBool
 from lfx.schema.data import Data
@@ -35,6 +35,25 @@ from .input_mixin import (
 )
 
 
+def _reject_secret_in_non_password_field(v: Any, info) -> None:
+    """Reject Credential-typed global variables in non-secret fields with a clear message.
+
+    Variable-driven wrapping in VariableService.get_variable returns SecretStr for CREDENTIAL
+    variables. Routing one into a non-password input would leak the value through Message.text,
+    status, traces, etc., so we fail at validation with an actionable error.
+    """
+    if isinstance(v, SecretStr) and not info.data.get("password"):
+        input_name = info.data.get("name", "<unknown>")
+        msg = (
+            f"Cannot use a Credential-typed global variable in '{input_name}'. "
+            "Credential variables are only allowed in secret fields (API keys, tokens, etc.) "
+            "to prevent the value from being exposed in component outputs, logs, or traces. "
+            "Either select a Generic-typed variable, or change this variable's type to Generic "
+            "if it is not actually sensitive."
+        )
+        raise ValueError(msg)
+
+
 class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.TABLE
     is_list: bool = True
@@ -42,7 +61,8 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
 
     @field_validator("value")
     @classmethod
-    def validate_value(cls, v: Any, _info):
+    def validate_value(cls, v: Any, info):
+        _reject_secret_in_non_password_field(v, info)
         # Convert single dict or Data instance into a list.
         if isinstance(v, dict | Data):
             v = [v]
@@ -270,6 +290,7 @@ class StrInput(
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
+        _reject_secret_in_non_password_field(v, info)
         if not isinstance(v, str) and v is not None:
             # Keep the warning for now, but we should change it to an error
             if info.data.get("input_types") and v.__class__.__name__ not in info.data.get("input_types"):
@@ -308,7 +329,8 @@ class MessageInput(StrInput, InputTraceMixin):
     input_types: list[str] = ["Message"]
 
     @staticmethod
-    def _validate_value(v: Any, _info):
+    def _validate_value(v: Any, info):
+        _reject_secret_in_non_password_field(v, info)
         # If v is a instance of Message, then its fine
         if isinstance(v, dict):
             return Message(**v)
@@ -352,6 +374,9 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMi
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
+        _reject_secret_in_non_password_field(v, info)
+        if isinstance(v, SecretStr):
+            return v
         value: str | AsyncIterator | Iterator | None = None
         if isinstance(v, dict):
             v = Message(**v)
@@ -407,6 +432,15 @@ class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     password: CoalesceBool = Field(default=True)
     track_in_telemetry: CoalesceBool = False  # Never track secret inputs
 
+    @staticmethod
+    def _validate_value(v: Any, info):
+        # Password-typed input: accept SecretStr from credential variable resolution.
+        # The base MessageTextInput validator can't see ``password`` via info.data
+        # because of field-validation order, so short-circuit here.
+        if isinstance(v, SecretStr):
+            return v
+        return MessageTextInput._validate_value(v, info)  # noqa: SLF001
+
 
 class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
     """Represents a field with password field type.
@@ -440,8 +474,13 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
-        value: str | AsyncIterator | Iterator | None = None
-        if isinstance(v, str):
+        value: str | SecretStr | AsyncIterator | Iterator | None = None
+        if isinstance(v, SecretStr):
+            # Credential-typed global variables arrive pre-wrapped from VariableService.
+            # Preserve the wrapper here; consumers unwrap with .get_secret_value() at the
+            # provider boundary.
+            value = v
+        elif isinstance(v, str):
             value = v
         elif isinstance(v, Message):
             value = v.text
@@ -497,6 +536,7 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
+        _reject_secret_in_non_password_field(v, info)
         if isinstance(v, int):
             return v
         if isinstance(v, float):
@@ -553,6 +593,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
+        _reject_secret_in_non_password_field(v, info)
         if isinstance(v, float):
             return v
         if isinstance(v, int):
@@ -616,6 +657,7 @@ class NestedDictInput(
     @field_validator("value", mode="before")
     @classmethod
     def validate_value(cls, v: Any, info):
+        _reject_secret_in_non_password_field(v, info)
         if v is None or isinstance(v, dict):
             return v
         if isinstance(v, Message):
@@ -796,7 +838,8 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
 
     @field_validator("value")
     @classmethod
-    def validate_value(cls, v: Any, _info):
+    def validate_value(cls, v: Any, info):
+        _reject_secret_in_non_password_field(v, info)
         # Check if value is a list of dicts
         if not isinstance(v, list):
             msg = f"MultiselectInput value must be a list. Value: '{v}'"

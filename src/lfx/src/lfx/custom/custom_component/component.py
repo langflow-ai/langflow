@@ -13,7 +13,7 @@ import nanoid
 import pandas as pd
 import yaml
 from langchain_core.tools import StructuredTool
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, SecretStr, ValidationError
 
 from lfx.base.tools.constants import (
     TOOL_OUTPUT_DISPLAY_NAME,
@@ -71,6 +71,22 @@ def get_component_toolkit():
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
 CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name", "_metadata"]
+
+
+def _wrap_if_secret(input_obj: Any, value: Any) -> Any:
+    """Wrap a resolved value in pydantic.SecretStr when its input field is sensitive.
+
+    The wrapper prevents the secret from leaking into Message.text, status,
+    vertex artifacts, traces, and logs (its __str__/__repr__ render as
+    "**********"). Consumers that legitimately need the underlying value call
+    .get_secret_value() at the boundary (e.g. provider client construction).
+    """
+    if value is None or isinstance(value, SecretStr):
+        return value
+    if not isinstance(value, str) or not value:
+        return value
+    is_secret = bool(input_obj is not None and getattr(input_obj, "password", False))
+    return SecretStr(value) if is_secret else value
 
 
 class PlaceholderGraph(NamedTuple):
@@ -1118,10 +1134,10 @@ class Component(CustomComponent):
                     f"that is a reserved word and cannot be used."
                 )
                 raise ValueError(msg)
-            attributes[key] = value
+            attributes[key] = _wrap_if_secret(self._inputs.get(key), value)
         for key, input_obj in self._inputs.items():
             if key not in attributes and key not in self._attributes:
-                attributes[key] = input_obj.value or None
+                attributes[key] = _wrap_if_secret(input_obj, input_obj.value or None)
 
         self._attributes.update(attributes)
 

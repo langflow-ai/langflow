@@ -19,13 +19,20 @@ from .provider_queries import (
 )
 
 
-def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: str | None = None) -> str | None:
+def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
     """Get API key from component input or global variables.
 
     When api_key is set to an environment variable name (e.g. ANTHROPIC_API_KEY),
     that name is resolved from os.environ or global variables so imported flows
     can reference credentials without storing the raw key.
     """
+    # SecretStrInput-backed fields now arrive as pydantic.SecretStr to prevent
+    # leakage via __str__/serialization. Unwrap once so the var-name detection
+    # below can do plain string operations.
+    from pydantic import SecretStr
+
+    if isinstance(api_key, SecretStr):
+        api_key = api_key.get_secret_value()
 
     # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from env or global vars
     def _resolve_var_name(var_name: str) -> str | None:
