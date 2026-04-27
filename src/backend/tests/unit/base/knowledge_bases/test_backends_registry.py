@@ -53,9 +53,7 @@ class TestBackendRegistry:
     def test_stubbed_backends_are_not_registered(self):
         registered = registered_backends()
         for stubbed in (BackendType.ASTRA, BackendType.MONGODB, BackendType.POSTGRES):
-            assert stubbed not in registered, (
-                f"{stubbed.value} is stubbed in this phase and must not be registered"
-            )
+            assert stubbed not in registered, f"{stubbed.value} is stubbed in this phase and must not be registered"
             with pytest.raises(ValueError, match="not registered"):
                 get_backend_class(stubbed)
 

@@ -25,10 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 
-_DISABLED_MESSAGE = (
-    "Microsoft Graph (OneDrive / SharePoint) ingestion sources are not "
-    "available in this build."
-)
+_DISABLED_MESSAGE = "Microsoft Graph (OneDrive / SharePoint) ingestion sources are not available in this build."
 
 
 class MicrosoftGraphSource(OAuthConnectorBase):

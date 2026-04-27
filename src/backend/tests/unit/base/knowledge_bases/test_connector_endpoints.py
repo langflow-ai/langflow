@@ -26,12 +26,8 @@ _STUBBED_SOURCE_TYPES = ("s3", "google_drive", "onedrive", "sharepoint")
 
 
 class TestConnectorCatalog:
-    async def test_returns_only_registered_connectors(
-        self, client: AsyncClient, logged_in_headers
-    ):
-        response = await client.get(
-            "api/v1/knowledge_bases/connectors", headers=logged_in_headers
-        )
+    async def test_returns_only_registered_connectors(self, client: AsyncClient, logged_in_headers):
+        response = await client.get("api/v1/knowledge_bases/connectors", headers=logged_in_headers)
         assert response.status_code == 200
         entries = response.json()
         types = {entry["source_type"] for entry in entries}
@@ -46,8 +42,7 @@ class TestConnectorCatalog:
         # the UI picker doesn't surface a non-functional choice.
         for stubbed in _STUBBED_SOURCE_TYPES:
             assert stubbed not in types, (
-                f"{stubbed!r} is stubbed in this phase and must be hidden from "
-                "the connector catalog"
+                f"{stubbed!r} is stubbed in this phase and must be hidden from the connector catalog"
             )
 
 
@@ -131,9 +126,7 @@ class TestConnectorIngest:
         )
         assert response.status_code == 400
 
-    async def test_rejects_unbounded_chunk_parameters(
-        self, client: AsyncClient, logged_in_headers
-    ):
+    async def test_rejects_unbounded_chunk_parameters(self, client: AsyncClient, logged_in_headers):
         response = await client.post(
             "api/v1/knowledge_bases/connector_kb/ingest/connector",
             headers=logged_in_headers,
@@ -148,9 +141,7 @@ class TestConnectorIngest:
         assert response.status_code == 422
         assert "chunk_size" in response.text
 
-    async def test_folder_ingest_rejects_unbounded_chunk_parameters(
-        self, client: AsyncClient, logged_in_headers
-    ):
+    async def test_folder_ingest_rejects_unbounded_chunk_parameters(self, client: AsyncClient, logged_in_headers):
         response = await client.post(
             "api/v1/knowledge_bases/folder_kb/ingest/folder",
             headers=logged_in_headers,

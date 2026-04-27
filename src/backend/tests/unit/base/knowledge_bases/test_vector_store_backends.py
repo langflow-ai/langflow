@@ -29,7 +29,6 @@ from lfx.base.knowledge_bases.backends import (
     registered_backends,
 )
 
-
 _STUBBED_BACKENDS = (
     (BackendType.ASTRA, AstraBackend),
     (BackendType.MONGODB, MongoDBBackend),

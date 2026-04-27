@@ -21,10 +21,7 @@ if TYPE_CHECKING:
     from langchain_core.vectorstores import VectorStore
 
 
-_DISABLED_MESSAGE = (
-    "AstraDB knowledge-base backend is not available in this build. "
-    "Use Chroma or OpenSearch instead."
-)
+_DISABLED_MESSAGE = "AstraDB knowledge-base backend is not available in this build. Use Chroma or OpenSearch instead."
 
 
 class AstraBackend(BaseVectorStoreBackend):

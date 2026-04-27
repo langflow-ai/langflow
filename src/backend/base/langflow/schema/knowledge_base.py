@@ -14,9 +14,7 @@ _REQUIRED_BACKEND_CONFIG: dict[str, tuple[str, ...]] = {
 # values exist as stubs so existing DB rows referencing them can still
 # be read back, but creating a new KB on a stubbed backend would just
 # fail at ingest time. Reject up front instead.
-_CREATION_ALLOWED_BACKENDS: frozenset[str] = frozenset(
-    {BackendType.CHROMA.value, BackendType.OPENSEARCH.value}
-)
+_CREATION_ALLOWED_BACKENDS: frozenset[str] = frozenset({BackendType.CHROMA.value, BackendType.OPENSEARCH.value})
 
 
 class KnowledgeBaseInfo(BaseModel):
@@ -74,10 +72,7 @@ class CreateKnowledgeBaseRequest(BaseModel):
             raise ValueError(msg) from exc
         if backend not in _CREATION_ALLOWED_BACKENDS:
             allowed = ", ".join(sorted(_CREATION_ALLOWED_BACKENDS))
-            msg = (
-                f"Vector-store backend {backend!r} is not enabled in this build. "
-                f"Available backends: {allowed}."
-            )
+            msg = f"Vector-store backend {backend!r} is not enabled in this build. Available backends: {allowed}."
             raise ValueError(msg)
         return backend
 

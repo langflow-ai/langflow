@@ -23,8 +23,7 @@ if TYPE_CHECKING:
 
 
 _DISABLED_MESSAGE = (
-    "Postgres (pgvector) knowledge-base backend is not available in this build. "
-    "Use Chroma or OpenSearch instead."
+    "Postgres (pgvector) knowledge-base backend is not available in this build. Use Chroma or OpenSearch instead."
 )
 
 

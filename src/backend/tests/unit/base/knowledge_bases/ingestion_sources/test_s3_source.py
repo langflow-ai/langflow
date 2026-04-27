@@ -24,7 +24,6 @@ from lfx.base.knowledge_bases.ingestion_sources import (
     registered_sources,
 )
 
-
 _STUBBED_SOURCES = (
     (SourceType.S3, S3Source),
     (SourceType.GOOGLE_DRIVE, GoogleDriveSource),
@@ -55,7 +54,8 @@ class TestStubbedSourcesNotRegistered:
 class TestStubbedSourceDirectInstantiation:
     """A direct constructor still produces a class whose ``validate_config``
     raises ``NotImplementedError`` so any caller that bypasses the registry
-    fails fast rather than partially executing."""
+    fails fast rather than partially executing.
+    """
 
     @pytest.mark.parametrize(
         ("_source_type", "source_class"),
