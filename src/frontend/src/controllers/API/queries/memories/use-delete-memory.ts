@@ -6,7 +6,6 @@ import {
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import { removeMemoryFromMemoriesCache } from "./memories-cache-helpers";
 import { memoriesRetryDelay } from "./memoriesQueryConfig";
 import type { DeleteMemoryParams } from "./types";
 
@@ -46,8 +45,8 @@ export const useDeleteMemory: useMutationFunctionType<
         queryKey: ["useGetMemory", variables.memoryId],
       });
 
-      // Keep cached lists consistent without forcing a refetch.
-      removeMemoryFromMemoriesCache(queryClient, variables.memoryId);
+      // Invalidate list queries so pagination metadata stays consistent with the server.
+      queryClient.invalidateQueries({ queryKey: ["useGetMemoriesInfinite"] });
 
       userOnSuccess?.(data, variables, onMutateResult, context);
     },

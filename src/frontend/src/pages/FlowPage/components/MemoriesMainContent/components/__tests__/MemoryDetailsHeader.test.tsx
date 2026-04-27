@@ -85,6 +85,7 @@ describe("MemoryDetailsHeader", () => {
       setSelectedSession: jest.fn(),
       deleteMutation: { mutate: jest.fn(), isPending: false },
       handleToggleActive: jest.fn(),
+      isAutoCapturePending: false,
       onRefresh: jest.fn(),
       fetchNextSessionsPage: jest.fn(),
       hasNextSessionsPage: false,

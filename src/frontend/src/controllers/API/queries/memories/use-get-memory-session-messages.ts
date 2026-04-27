@@ -4,6 +4,7 @@ import {
   type UseInfiniteQueryResult,
   useInfiniteQuery,
 } from "@tanstack/react-query";
+import { prepareSessionIdForAPI } from "@/utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import {
@@ -77,7 +78,8 @@ export const useGetMemorySessionMessages = (
       throw new Error("sessionId is required");
     }
 
-    const baseUrl = `${getURL("MEMORIES")}/${memoryId}/sessions/${sessionId}/messages`;
+    const encodedSessionId = prepareSessionIdForAPI(sessionId);
+    const baseUrl = `${getURL("MEMORIES")}/${memoryId}/sessions/${encodedSessionId}/messages`;
     const url = new URL(baseUrl, window.location.origin);
     url.searchParams.set("page", String(pageParam));
     url.searchParams.set("size", String(size));

@@ -79,6 +79,7 @@ export function useMemoriesData({
     data: memory,
     isLoading,
     isError,
+    error: memoryError,
   } = useGetMemory(
     { memoryId: selectedMemoryId ?? "" },
     {
@@ -137,10 +138,18 @@ export function useMemoriesData({
   });
 
   useEffect(() => {
-    if (isError && selectedMemoryId) {
+    if (!isError || !selectedMemoryId) return;
+    const status = (memoryError as { response?: { status?: number } } | null)
+      ?.response?.status;
+    if (status === 404) {
       onSelectMemory?.(null);
+    } else {
+      setErrorData({
+        title: "Failed to load memory",
+        list: extractApiErrorMessages(memoryError),
+      });
     }
-  }, [isError, selectedMemoryId, onSelectMemory]);
+  }, [isError, memoryError, selectedMemoryId, onSelectMemory, setErrorData]);
 
   const docsLoading = isLoading || memoryMessagesLoading;
 
@@ -169,8 +178,10 @@ export function useMemoriesData({
   const onRefresh = useCallback(() => {
     refetchMemories();
     refetchMemorySessions();
-    refetchMessages();
-  }, [refetchMemories, refetchMemorySessions, refetchMessages]);
+    if (effectiveSessionId) {
+      refetchMessages();
+    }
+  }, [refetchMemories, refetchMemorySessions, refetchMessages, effectiveSessionId]);
 
   const handleOpenDocumentPanel = (doc: MemoryDocumentItem) => {
     setSelectedDocument(doc);
@@ -215,6 +226,7 @@ export function useMemoriesData({
     deleteMutation,
     updateMemoryMutation,
     handleToggleActive,
+    isAutoCapturePending: updateMemoryMutation.isPending,
     onRefresh,
     fetchNextSessionsPage,
     hasNextSessionsPage,

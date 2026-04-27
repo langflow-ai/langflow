@@ -8,7 +8,6 @@ import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { mapMemoryApiToMemoryInfo } from "./mappers";
-import { addMemoryToMemoriesCache } from "./memories-cache-helpers";
 import { memoriesRetryDelay } from "./memoriesQueryConfig";
 import type { CreateMemoryPayload, MemoryApiDTO, MemoryInfo } from "./types";
 
@@ -49,8 +48,8 @@ export const useCreateMemory: useMutationFunctionType<
         // Seed the details cache for immediate render.
         queryClient.setQueryData(["useGetMemory", data.id], data);
 
-        // Patch cached lists without forcing a refetch.
-        addMemoryToMemoriesCache(queryClient, data);
+        // Invalidate list queries so pagination metadata stays consistent with the server.
+        queryClient.invalidateQueries({ queryKey: ["useGetMemoriesInfinite"] });
 
         userOnSuccess?.(data, variables, onMutateResult, context);
       },

@@ -16,15 +16,9 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
   getURL: () => "/api/v1/memories",
 }));
 
-const addMemoryToMemoriesCacheMock = jest.fn();
-const removeMemoryFromMemoriesCacheMock = jest.fn();
 const updateMemoryInMemoriesCacheMock = jest.fn();
 
 jest.mock("../memories-cache-helpers", () => ({
-  addMemoryToMemoriesCache: (...args: unknown[]) =>
-    addMemoryToMemoriesCacheMock(...args),
-  removeMemoryFromMemoriesCache: (...args: unknown[]) =>
-    removeMemoryFromMemoriesCacheMock(...args),
   updateMemoryInMemoriesCache: (...args: unknown[]) =>
     updateMemoryInMemoriesCacheMock(...args),
 }));
@@ -33,6 +27,7 @@ type QueryClientStub = {
   setQueryData: (queryKey: readonly unknown[], data: unknown) => void;
   cancelQueries: (filter: { queryKey: readonly unknown[] }) => Promise<void>;
   removeQueries: (filter: { queryKey: readonly unknown[] }) => void;
+  invalidateQueries: (filter: { queryKey: readonly unknown[] }) => void;
 };
 
 let queryClient: QueryClientStub;
@@ -99,11 +94,12 @@ describe("memories mutation hooks cache wiring", () => {
       setQueryData: jest.fn(),
       cancelQueries: jest.fn().mockResolvedValue(undefined),
       removeQueries: jest.fn(),
+      invalidateQueries: jest.fn(),
     };
     jest.clearAllMocks();
   });
 
-  it("useCreateMemory seeds details cache and inserts into memories list cache", async () => {
+  it("useCreateMemory seeds details cache and invalidates list queries", async () => {
     const dto = buildMemoryDto({
       id: "m3",
       flow_id: "flow-1",
@@ -127,17 +123,13 @@ describe("memories mutation hooks cache wiring", () => {
       ["useGetMemory", "m3"],
       created,
     );
-    expect(addMemoryToMemoriesCacheMock).toHaveBeenCalledWith(
-      queryClient,
-      created,
-    );
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetMemoriesInfinite"],
+    });
   });
 
-  it("useDeleteMemory removes details cache and removes from memories list cache", async () => {
+  it("useDeleteMemory removes details cache and invalidates list queries", async () => {
     apiDeleteMock.mockResolvedValueOnce({});
-
-    const dto = buildMemoryDto({ id: "m1", flow_id: "flow-1" });
-    const _memory = mapMemoryApiToMemoryInfo(dto);
 
     const { result } = renderHook(() => useDeleteMemory());
 
@@ -151,10 +143,9 @@ describe("memories mutation hooks cache wiring", () => {
     expect(queryClient.removeQueries).toHaveBeenCalledWith({
       queryKey: ["useGetMemory", "m1"],
     });
-    expect(removeMemoryFromMemoriesCacheMock).toHaveBeenCalledWith(
-      queryClient,
-      "m1",
-    );
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetMemoriesInfinite"],
+    });
   });
 
   it("useUpdateMemory patches details cache and updates item in memories list cache", async () => {

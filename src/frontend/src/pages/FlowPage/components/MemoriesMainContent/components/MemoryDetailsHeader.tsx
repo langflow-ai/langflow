@@ -16,6 +16,7 @@ export function MemoryDetailsHeader({
   setSelectedSession,
   deleteMutation,
   handleToggleActive,
+  isAutoCapturePending,
   onRefresh,
   fetchNextSessionsPage,
   hasNextSessionsPage,
@@ -127,6 +128,7 @@ export function MemoryDetailsHeader({
           onClick={() => handleToggleActive((prevIsActive) => !prevIsActive)}
           aria-pressed={memory.is_active}
           aria-label="Toggle auto-capture"
+          disabled={isAutoCapturePending}
           className="gap-2"
         >
           <IconComponent

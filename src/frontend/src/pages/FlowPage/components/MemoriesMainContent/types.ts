@@ -39,6 +39,7 @@ export type MemoryDetailsProps = {
   handleOpenDocumentPanel: (doc: MemoryDocumentItem) => void;
   deleteMutation: MemoryActionMutation;
   handleToggleActive: (nextIsActive: NextIsActive) => void;
+  isAutoCapturePending: boolean;
   onRefresh: () => void;
   fetchNextSessionsPage: () => void;
   hasNextSessionsPage?: boolean;
@@ -86,6 +87,7 @@ export type MemoryDetailsHeaderProps = {
   setSelectedSession: (value: string | null) => void;
   deleteMutation: MemoryActionMutation;
   handleToggleActive: (nextIsActive: NextIsActive) => void;
+  isAutoCapturePending: boolean;
   onRefresh: () => void;
   fetchNextSessionsPage: () => void;
   hasNextSessionsPage?: boolean;

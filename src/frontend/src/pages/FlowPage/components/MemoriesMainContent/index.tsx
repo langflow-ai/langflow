@@ -48,6 +48,7 @@ export default function MemoriesMainContent() {
     handleOpenDocumentPanel,
     deleteMutation,
     handleToggleActive,
+    isAutoCapturePending,
     onRefresh,
     fetchNextSessionsPage,
     hasNextSessionsPage,
@@ -99,6 +100,7 @@ export default function MemoriesMainContent() {
             handleOpenDocumentPanel={handleOpenDocumentPanel}
             deleteMutation={deleteMutation}
             handleToggleActive={handleToggleActive}
+            isAutoCapturePending={isAutoCapturePending}
             onRefresh={onRefresh}
             fetchNextSessionsPage={fetchNextSessionsPage}
             hasNextSessionsPage={hasNextSessionsPage}

@@ -17,6 +17,7 @@ export function MemoryDetails({
   handleOpenDocumentPanel,
   deleteMutation,
   handleToggleActive,
+  isAutoCapturePending,
   onRefresh,
   fetchNextSessionsPage,
   hasNextSessionsPage,
@@ -38,6 +39,7 @@ export function MemoryDetails({
         setSelectedSession={setSelectedSession}
         deleteMutation={deleteMutation}
         handleToggleActive={handleToggleActive}
+        isAutoCapturePending={isAutoCapturePending}
         onRefresh={onRefresh}
         fetchNextSessionsPage={fetchNextSessionsPage}
         hasNextSessionsPage={hasNextSessionsPage}
