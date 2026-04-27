@@ -32,22 +32,16 @@ import pkgutil
 import sys
 from pathlib import Path
 
-from langflow.utils.i18n_keys import (
-    component_field_key as _component_field_key,
-)
-from langflow.utils.i18n_keys import (
-    normalize_component_key as _normalize_component_key,
-)
-from langflow.utils.i18n_keys import (
-    safe_flow_key as _safe_key,
-)
-
 OUTPUT_PATH = Path(__file__).parent.parent.parent / "src/backend/base/langflow/locales/en.json"
 STARTER_PROJECTS_DIR = Path(__file__).parent.parent.parent / "src/backend/base/langflow/initial_setup/starter_projects"
 
 
 def collect_strings() -> dict[str, str]:
     """Walk lfx.components and extract all translatable display_name strings."""
+    from langflow.utils.i18n_keys import component_field_key as _component_field_key
+    from langflow.utils.i18n_keys import normalize_component_key as _normalize_component_key
+    from langflow.utils.i18n_keys import safe_flow_key as _safe_key
+
     try:
         import lfx.components as components_pkg
     except ImportError:
