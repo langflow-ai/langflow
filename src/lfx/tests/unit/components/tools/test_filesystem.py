@@ -141,8 +141,8 @@ class TestWindowsPortability:
 
     def test_should_not_trigger_on_single_dot(self, component: FileSystemToolComponent, sandbox: Path) -> None:
         # `./hello.txt` is just `hello.txt`. Should not trigger trailing-dot
-        # rule, and should resolve to the existing file (sandbox is populated
-        # via the `component` fixture chain).
+        # rule, and should resolve to the existing file.
+        assert (sandbox / "hello.txt").exists()
         result = component._read_file("./hello.txt")
         assert result.get("status") == "ok", f"Got: {result}"
 
