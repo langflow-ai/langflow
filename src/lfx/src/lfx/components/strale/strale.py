@@ -39,8 +39,8 @@ class ExecuteCapabilitySchema(BaseModel):
 class StraleComponent(LCToolComponent):
     display_name = "Strale"
     description = (
-        "Access 290+ quality-tested data capabilities — company verification, "
-        "sanctions screening, VAT validation, and more"
+        "Access Strale’s data capability catalog — company verification, "
+        "sanctions screening, VAT validation, web extraction, and more"
     )
     name = "Strale"
     icon = "Shield"
@@ -224,7 +224,7 @@ class StraleComponent(LCToolComponent):
         return StructuredTool.from_function(
             name="strale_search_and_execute",
             description=(
-                "Search Strale's 290+ quality-tested data capabilities and execute the best match. "
+                "Search Strale's capability catalog and execute the best match. "
                 "Covers company verification, sanctions screening, VAT validation, invoice extraction, "
                 "and more. Describe what data you need in natural language."
             ),
