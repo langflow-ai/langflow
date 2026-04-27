@@ -1,5 +1,4 @@
-"""Integration tests for the connector endpoints in their current,
-trimmed-down state.
+"""Integration tests for the connector endpoints in their trimmed-down state.
 
 The catalog (``GET /knowledge_bases/connectors``) and dispatcher
 (``POST /{kb_name}/ingest/connector``) endpoints are kept as
@@ -97,7 +96,8 @@ class TestConnectorIngest:
         active_user,
         tmp_path,
     ):
-        """Stubbed cloud connectors are unregistered, so the dispatcher
+        """Stubbed cloud connectors are unregistered.
+
         treats them as user-typo 400s — not 500s. Keeps the contract
         identical to a typo'd source type from the user's perspective.
         """

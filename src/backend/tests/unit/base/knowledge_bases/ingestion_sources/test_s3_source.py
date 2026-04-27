@@ -52,7 +52,8 @@ class TestStubbedSourcesNotRegistered:
 
 
 class TestStubbedSourceDirectInstantiation:
-    """A direct constructor still produces a class whose ``validate_config``
+    """A direct constructor still produces a class whose ``validate_config``.
+
     raises ``NotImplementedError`` so any caller that bypasses the registry
     fails fast rather than partially executing.
     """

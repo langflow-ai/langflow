@@ -17,7 +17,7 @@ the implementation.
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from lfx.base.knowledge_bases.backends import (
@@ -28,6 +28,9 @@ from lfx.base.knowledge_bases.backends import (
     create_backend,
     registered_backends,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _STUBBED_BACKENDS = (
     (BackendType.ASTRA, AstraBackend),
