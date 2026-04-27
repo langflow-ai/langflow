@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-REDACTED_PLACEHOLDER_TEMPLATE = "[REDACTED: {name}]"
+REDACTED_PLACEHOLDER_TEMPLATE = "****"
 # Resolved values shorter than this are skipped to avoid mangling unrelated
 # output. Generic globals like a Split Text separator (``,``) or a single-line
 # delimiter (``\n``) would otherwise rewrite every matching character in the
