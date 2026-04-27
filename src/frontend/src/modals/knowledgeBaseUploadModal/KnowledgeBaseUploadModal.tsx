@@ -86,6 +86,15 @@ export default function KnowledgeBaseUploadModal({
     }
   };
 
+  const errorCount = Object.keys(form.validationErrors).length;
+  const modalBase =
+    !hideAdvanced && form.showAdvanced
+      ? MODAL_HEIGHT_WITH_ADVANCED
+      : MODAL_HEIGHT_DEFAULT;
+  const modalHeight = `${modalBase + errorCount * VALIDATION_ERROR_LINE_HEIGHT}`;
+
+  const showHelpButton = !hideAdvanced && form.currentStep === 1;
+
   return (
     <StepperModal
       open={open}
@@ -137,17 +146,13 @@ export default function KnowledgeBaseUploadModal({
               : t("knowledge.submitCreate")
           }
           helpLabel={
-            !hideAdvanced && form.currentStep === 1
+            showHelpButton
               ? form.showAdvanced
                 ? t("knowledge.helpHideConfiguration")
                 : t("knowledge.helpConfigureSources")
               : undefined
           }
-          onHelp={
-            !hideAdvanced && form.currentStep === 1
-              ? form.toggleAdvanced
-              : undefined
-          }
+          onHelp={showHelpButton ? form.toggleAdvanced : undefined}
         />
       }
     >

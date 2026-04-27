@@ -108,11 +108,17 @@ You can save versions of a flow from the <Icon name="History" aria-hidden="true"
 4. Select a previously saved version to preview the flow in read-only mode.
 5. To replace the current draft with the selected version, click **Restore**.
 
-When restoring a version, you can keep **Save current draft before restoring** enabled to create a backup of your current work before the selected version replaces it.
-
 From a saved version's <Icon name="EllipsesVertical" aria-hidden="true" /> menu, you can also **Export** or **Delete** that version.
 
 Saved flow versions are stored in the database configured for your Langflow deployment.
+
+When restoring a saved version, if **Save current draft before restoring** is enabled, then Langflow creates a backup of your current work before the selected version replaces it.
+
+[Flow auto-save](/environment-variables#visual-editor-and-playground-behavior) and flow versions serve different purposes.
+Auto-save keeps your current flow draft up to date in the background, but it doesn't create version entries.
+A saved _version_ is an explicit snapshot that you create when you want a restore point.
+
+When previewing a saved version, Langflow temporarily pauses auto-save so the preview doesn't overwrite your current draft.
 
 ### Lock a flow
 

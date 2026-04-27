@@ -34,7 +34,7 @@ const UploadFileButton = ({
         />
         <Button
           disabled={isBuilding}
-          className={`btn-playground-actions ${
+          className={`h-7 w-7 px-0 flex items-center justify-center ${
             isBuilding
               ? "cursor-not-allowed"
               : "text-muted-foreground hover:text-primary"
@@ -42,7 +42,7 @@ const UploadFileButton = ({
           onClick={handleClick}
           unstyled
         >
-          <ForwardedIconComponent name="File" />
+          <ForwardedIconComponent className="h-[18px] w-[18px]" name="File" />
         </Button>
       </div>
     </ShadTooltip>

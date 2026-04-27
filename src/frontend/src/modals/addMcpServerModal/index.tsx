@@ -56,6 +56,31 @@ const keyPairRowToObject = (arr: KeyPairRow[]): Record<string, string> => {
   }, {});
 };
 
+const buildKeyPairPayload = (
+  rows: KeyPairRow[],
+  existing?: Record<string, string>,
+) => {
+  const nextValue = keyPairRowToObject(rows);
+  if (Object.keys(nextValue).length > 0) {
+    return nextValue;
+  }
+  if (existing && Object.keys(existing).length > 0) {
+    return {};
+  }
+  return undefined;
+};
+
+const buildArgsPayload = (args: string[], existing?: string[]) => {
+  const nextValue = args.filter((arg) => arg.trim() !== "");
+  if (nextValue.length > 0) {
+    return nextValue;
+  }
+  if (existing && existing.length > 0) {
+    return [];
+  }
+  return undefined;
+};
+
 export default function AddMcpServerModal({
   children,
   initialData,
@@ -161,12 +186,14 @@ export default function AddMcpServerModal({
         "no_blank",
         "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
+      const argsPayload = buildArgsPayload(stdioArgs, initialData?.args);
+      const envPayload = buildKeyPairPayload(stdioEnv, initialData?.env);
       try {
         await modifyMCPServer({
           name,
           command: stdioCommand,
-          args: stdioArgs.filter((a) => a.trim() !== ""),
-          env: keyPairRowToObject(stdioEnv),
+          ...(argsPayload !== undefined ? { args: argsPayload } : {}),
+          ...(envPayload !== undefined ? { env: envPayload } : {}),
         });
         if (!initialData) {
           await queryClient.setQueryData(
@@ -211,12 +238,17 @@ export default function AddMcpServerModal({
         "no_blank",
         "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
+      const envPayload = buildKeyPairPayload(httpEnv, initialData?.env);
+      const headersPayload = buildKeyPairPayload(
+        httpHeaders,
+        initialData?.headers,
+      );
       try {
         await modifyMCPServer({
           name,
-          env: keyPairRowToObject(httpEnv),
           url: httpUrl,
-          headers: keyPairRowToObject(httpHeaders),
+          ...(envPayload !== undefined ? { env: envPayload } : {}),
+          ...(headersPayload !== undefined ? { headers: headersPayload } : {}),
         });
         if (!initialData) {
           await queryClient.setQueryData(

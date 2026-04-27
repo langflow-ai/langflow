@@ -11,6 +11,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
@@ -69,7 +70,7 @@ const ListComponent = ({
           title: t("flow.deletedSuccessfully"),
         });
       })
-      .catch(() => {
+      .catch((err) => {
         setErrorData({
           title: t("flow.errorDeleting"),
           list: [t("flow.errorDeletingRetry")],

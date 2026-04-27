@@ -53,6 +53,9 @@ def resolve_mcp_config(
     return server_config_from_value
 
 
+# TODO(legacy-cleanup): This file is ~800 lines, over the 500-line guideline. Split
+# helper functions (resolve_mcp_config, connection resolution) from the MCPToolsComponent
+# orchestration logic in a follow-up PR.
 class MCPToolsComponent(ComponentWithCache):
     """MCP Tools component.
 
@@ -337,35 +340,52 @@ class MCPToolsComponent(ComponentWithCache):
                     return self.tools, {"name": server_name, "config": server_config_from_value}
 
             try:
-                # Try to fetch from database first to ensure we have the latest config
-                # This ensures database updates (like editing a server) take effect
+                # Try to fetch from database first to ensure we have the latest config.
+                # This ensures database updates (like editing a server) take effect.
+                # When running in LFX standalone mode the full Langflow package and
+                # database may not be available — in that case we skip the DB lookup
+                # and fall back to the config embedded in the flow (server_config_from_value).
+                server_config_from_db = None
                 try:
                     from langflow.api.v2.mcp import get_server
                     from langflow.services.database.models.user.crud import get_user_by_id
 
                     from lfx.services.deps import get_settings_service
-                except ImportError as e:
-                    msg = (
-                        "Langflow MCP server functionality is not available. "
-                        "This feature requires the full Langflow installation."
+                except ModuleNotFoundError as e:
+                    # Deliberately `except ModuleNotFoundError` (not `except ImportError`): a
+                    # plain ImportError here means `get_server` / `get_user_by_id` was removed
+                    # from an installed Langflow — a real API break that should NOT be
+                    # swallowed as "standalone mode". ModuleNotFoundError alone covers the
+                    # "Langflow absent" case.
+                    #
+                    # Even within ModuleNotFoundError, only treat this as LFX standalone mode
+                    # when one of the target Langflow modules is itself missing. Transitive
+                    # ModuleNotFoundError (e.g. a dependency like sqlmodel failing to import
+                    # inside langflow.*) indicates a real bug in the full Langflow stack and
+                    # must surface — otherwise we would silently use a stale flow-embedded
+                    # config when DB config should have taken precedence.
+                    missing_module = e.name or ""
+                    is_langflow_standalone = missing_module == "langflow" or missing_module.startswith("langflow.")
+                    if not is_langflow_standalone:
+                        raise
+                    await logger.ainfo(
+                        "Langflow package not available; using MCP server config from flow value (LFX standalone mode)."
                     )
-                    raise ImportError(msg) from e
+                else:
+                    async with session_scope() as db:
+                        if not self.user_id:
+                            msg = "User ID is required for fetching MCP tools."
+                            raise ValueError(msg)
+                        current_user = await get_user_by_id(db, self.user_id)
 
-                server_config_from_db = None
-                async with session_scope() as db:
-                    if not self.user_id:
-                        msg = "User ID is required for fetching MCP tools."
-                        raise ValueError(msg)
-                    current_user = await get_user_by_id(db, self.user_id)
-
-                    # Try to get server config from DB/API
-                    server_config_from_db = await get_server(
-                        server_name,
-                        current_user,
-                        db,
-                        storage_service=get_storage_service(),
-                        settings_service=get_settings_service(),
-                    )
+                        # Try to get server config from DB/API
+                        server_config_from_db = await get_server(
+                            server_name,
+                            current_user,
+                            db,
+                            storage_service=get_storage_service(),
+                            settings_service=get_settings_service(),
+                        )
 
                 # Resolve config with proper precedence: DB takes priority, falls back to value
                 server_config = resolve_mcp_config(
