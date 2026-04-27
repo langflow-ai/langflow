@@ -39,7 +39,7 @@ class ExecuteCapabilitySchema(BaseModel):
 class StraleComponent(LCToolComponent):
     display_name = "Strale"
     description = (
-        "Access Strale’s data capability catalog — company verification, "
+        "Access Strale's data capability catalog — company verification, "
         "sanctions screening, VAT validation, web extraction, and more"
     )
     name = "Strale"
