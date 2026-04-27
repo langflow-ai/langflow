@@ -108,7 +108,10 @@ async def fetch_provider_resource_keys(
         )
     except DeploymentServiceError as exc:
         http_status = http_status_for_deployment_error(exc)
-        logger.exception("Adapter error (status=%s): %s", http_status, exc.message)
+        if status.HTTP_400_BAD_REQUEST <= http_status < status.HTTP_500_INTERNAL_SERVER_ERROR:
+            logger.info("Adapter error (status=%s): %s", http_status, exc.message)
+        else:
+            logger.error("Adapter error (status=%s): %s", http_status, exc.message, exc_info=exc)
         raise HTTPException(
             status_code=http_status,
             detail=exc.message,
@@ -145,7 +148,10 @@ async def fetch_provider_snapshot_keys(
         )
     except DeploymentServiceError as exc:
         http_status = http_status_for_deployment_error(exc)
-        logger.exception("Adapter error (status=%s): %s", http_status, exc.message)
+        if status.HTTP_400_BAD_REQUEST <= http_status < status.HTTP_500_INTERNAL_SERVER_ERROR:
+            logger.info("Adapter error (status=%s): %s", http_status, exc.message)
+        else:
+            logger.error("Adapter error (status=%s): %s", http_status, exc.message, exc_info=exc)
         raise HTTPException(
             status_code=http_status,
             detail=exc.message,

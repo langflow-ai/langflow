@@ -123,6 +123,16 @@ from langflow.services.deps import get_settings_service
 
 logger = logging.getLogger(__name__)
 
+
+def _log_credential_verification_failure(status_code: int | None, *, suffix: str | None = None) -> None:
+    # Log only the status code to avoid leaking sensitive provider response details.
+    detail = f"Credential verification failed: {suffix}" if suffix else "Credential verification failed"
+    if status_code is not None and status.HTTP_400_BAD_REQUEST <= status_code < status.HTTP_500_INTERNAL_SERVER_ERROR:
+        logger.info("%s (status=%s)", detail, status_code)
+    else:
+        logger.error("%s (status=%s)", detail, status_code)
+
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Any
@@ -922,12 +932,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         try:
             await asyncio.to_thread(authenticator.token_manager.get_token)
         except ApiException as exc:
-            # Log only the status code for diagnostics and avoid exposing
-            # provider response details that could include sensitive values.
-            logger.error(  # noqa: TRY400
-                "Credential verification failed (status=%s)",
-                exc.status_code,
-            )
+            _log_credential_verification_failure(exc.status_code)
             raise_deployment_error_from_status(
                 status_code=exc.status_code,
                 detail="Credential verification failed.",
@@ -949,10 +954,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             await asyncio.to_thread(_probe_instance_models)
         except ClientAPIException as exc:
             status_code = exc.response.status_code if exc.response is not None else None
-            logger.error(  # noqa: TRY400
-                "Credential verification failed: wxO instance probe rejected request (status=%s)",
-                status_code,
-            )
+            _log_credential_verification_failure(status_code, suffix="wxO instance probe rejected request")
             raise_deployment_error_from_status(
                 status_code=status_code,
                 detail="Credential verification failed.",

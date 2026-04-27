@@ -9,7 +9,12 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.log.logger import logger
-from lfx.services.adapters.deployment.exceptions import InvalidContentError, ResourceConflictError
+from lfx.services.adapters.deployment.exceptions import (
+    DeploymentServiceError,
+    InvalidContentError,
+    ResourceConflictError,
+    http_status_for_deployment_error,
+)
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import create_config, validate_connection
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
@@ -102,7 +107,12 @@ class ConnectionCreateBatchError(RuntimeError):
 def log_batch_errors(*, error_label: str, errors: list[Exception]) -> None:
     """Log each error from a concurrent batch while preserving first-failure raising."""
     for i, err in enumerate(errors):
-        logger.exception("%s [%d/%d]: %s", error_label, i + 1, len(errors), err)
+        if isinstance(err, DeploymentServiceError) and (
+            status.HTTP_400_BAD_REQUEST <= http_status_for_deployment_error(err) < status.HTTP_500_INTERNAL_SERVER_ERROR
+        ):
+            logger.info("%s [%d/%d]: %s", error_label, i + 1, len(errors), err)
+            continue
+        logger.error("%s [%d/%d]: %s", error_label, i + 1, len(errors), err, exc_info=err)
 
 
 @dataclass(slots=True)

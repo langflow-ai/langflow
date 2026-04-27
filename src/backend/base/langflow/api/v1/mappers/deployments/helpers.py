@@ -312,6 +312,13 @@ def raise_http_for_value_error(exc: ValueError) -> None:
     raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
+def log_adapter_error(http_status: int, message: str, *, exc: BaseException | None = None) -> None:
+    if status.HTTP_400_BAD_REQUEST <= http_status < status.HTTP_500_INTERNAL_SERVER_ERROR:
+        logger.info("Adapter error (status=%s): %s", http_status, message)
+    else:
+        logger.error("Adapter error (status=%s): %s", http_status, message, exc_info=exc)
+
+
 @contextmanager
 def handle_adapter_errors(*, mapper: BaseDeploymentMapper | None = None):
     """Map deployment adapter exceptions to appropriate HTTP responses.
@@ -333,7 +340,7 @@ def handle_adapter_errors(*, mapper: BaseDeploymentMapper | None = None):
                 resource=exc.resource,
                 resource_name=exc.resource_name,
             )
-        logger.exception("Adapter error (status=%s): %s", http_status, detail)
+        log_adapter_error(http_status, detail, exc=exc)
         raise HTTPException(
             status_code=http_status,
             detail=detail,
