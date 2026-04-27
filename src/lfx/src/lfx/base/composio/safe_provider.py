@@ -8,9 +8,10 @@ raw-subscript ``properties[name]["type"]``. When a Composio tool's
 ``anyOf``/``additionalProperties``), tool execution raises
 ``KeyError: 'type'`` (issues #12894, #12895).
 
-We sanitize ``tool.input_parameters`` in-place at wrap time so the cached Tool
-object that Composio reuses on ``execute`` already has a ``"type"`` for every
-node the file walker touches.
+We sanitize ``tool.input_parameters`` in-place at wrap time, and also patch
+both the FileHelper file-substitution helpers and the pydantic schema builder
+so the agent path, the direct ``execute_action`` path, and the legacy
+``tools.get`` path all see a schema with a ``"type"`` for every node.
 """
 
 from __future__ import annotations
@@ -18,9 +19,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 try:
+    from composio.core.models import _files as _composio_files
     from composio.core.models._files import FileHelper
+    from composio.utils import shared as _composio_shared
     from composio_langchain import LangchainProvider
 except ImportError:  # composio extra not installed; module becomes a no-op
+    _composio_files = None  # type: ignore[assignment]
+    _composio_shared = None  # type: ignore[assignment]
     FileHelper = None  # type: ignore[assignment]
     LangchainProvider = None  # type: ignore[assignment,misc]
     _COMPOSIO_AVAILABLE = False
@@ -95,6 +100,22 @@ if _COMPOSIO_AVAILABLE:
             return super().wrap_tool(tool=tool, execute_tool=execute_tool)
 
 
+def _extract_schema_arg(args: tuple, kwargs: dict, positional_index: int, keyword: str) -> Any:
+    """Pull a schema-shaped argument out of ``*args``/``**kwargs`` for sanitization.
+
+    Wrappers accept ``*args, **kwargs`` so they tolerate either calling
+    convention (Composio currently uses keywords, but a future release could
+    switch to positionals). We only need to *find* the schema dict — the
+    underlying call is forwarded verbatim, so we never need to rewrite the
+    arguments.
+    """
+    if keyword in kwargs:
+        return kwargs[keyword]
+    if len(args) > positional_index:
+        return args[positional_index]
+    return None
+
+
 def _patch_file_helper_once() -> None:
     """Wrap Composio's file substitution helpers so untyped properties don't KeyError.
 
@@ -119,17 +140,50 @@ def _patch_file_helper_once() -> None:
     original_uploads = FileHelper._substitute_file_uploads_recursively  # noqa: SLF001
     original_downloads = FileHelper._substitute_file_downloads_recursively  # noqa: SLF001
 
-    def safe_uploads(self, *, tool, schema, request):
-        _sanitize_schema(schema)
-        return original_uploads(self, tool=tool, schema=schema, request=request)
+    # ``*args, **kwargs`` keeps the wrapper signature tolerant of either
+    # positional or keyword invocation. Upstream Composio currently uses
+    # keywords (composio/core/models/_files.py:236-240, :309-312), but pinning
+    # the wrapper to a stricter signature would silently break if a future
+    # release switches to positionals.
+    def safe_uploads(self, *args, **kwargs):
+        _sanitize_schema(_extract_schema_arg(args, kwargs, positional_index=1, keyword="schema"))
+        return original_uploads(self, *args, **kwargs)
 
-    def safe_downloads(self, *, tool, schema, request):
-        _sanitize_schema(schema)
-        return original_downloads(self, tool=tool, schema=schema, request=request)
+    def safe_downloads(self, *args, **kwargs):
+        _sanitize_schema(_extract_schema_arg(args, kwargs, positional_index=1, keyword="schema"))
+        return original_downloads(self, *args, **kwargs)
 
     FileHelper._substitute_file_uploads_recursively = safe_uploads  # noqa: SLF001
     FileHelper._substitute_file_downloads_recursively = safe_downloads  # noqa: SLF001
     FileHelper._lfx_safe_patched = True  # noqa: SLF001
 
 
+def _patch_pydantic_builder_once() -> None:
+    """Wrap ``composio.utils.shared.pydantic_model_from_param_schema`` so untyped properties don't KeyError.
+
+    The builder raw-subscripts ``prop_info["type"]`` while iterating
+    ``properties`` (composio/utils/shared.py:232 in 0.9.2). It runs during
+    ``tools.get`` for the legacy direct-execute path that bypasses
+    ``configure_tools``'s cached-schema sanitizer, so the FileHelper patch
+    alone is not sufficient. Sanitizing the schema before delegation injects a
+    default ``"type"`` for every node and is a no-op for already-typed
+    schemas. Recursive calls inside the builder go through the module-level
+    name we just rebound, so they're sanitized (idempotently) too.
+
+    Idempotent via the ``_lfx_safe_patched`` sentinel on the module.
+    """
+    if not _COMPOSIO_AVAILABLE or getattr(_composio_shared, "_lfx_safe_patched", False):
+        return
+
+    original_builder = _composio_shared.pydantic_model_from_param_schema
+
+    def safe_builder(*args, **kwargs):
+        _sanitize_schema(_extract_schema_arg(args, kwargs, positional_index=0, keyword="param_schema"))
+        return original_builder(*args, **kwargs)
+
+    _composio_shared.pydantic_model_from_param_schema = safe_builder
+    _composio_shared._lfx_safe_patched = True  # noqa: SLF001
+
+
 _patch_file_helper_once()
+_patch_pydantic_builder_once()

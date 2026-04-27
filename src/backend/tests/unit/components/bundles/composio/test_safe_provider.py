@@ -125,6 +125,85 @@ class TestSafeLangchainProviderRegression:
         result = helper._substitute_file_uploads_recursively(tool=None, schema=schema, request=request)
         assert result == request
 
+    def test_file_helper_uploads_accepts_positional_args(self):
+        """Forward-compat guard: wrapper must tolerate positional invocation.
+
+        Upstream Composio currently uses keyword args for the recursive
+        self-calls, but a future release could switch to positionals. The
+        wrapper uses ``*args, **kwargs`` so either calling convention works.
+        """
+        from composio.core.models._files import FileHelper
+
+        helper = FileHelper.__new__(FileHelper)
+
+        schema = {"type": "object", "properties": {"payload": {"description": "blob"}}}
+        request = {"payload": {"foo": "bar"}}
+
+        # Positional call mirrors a hypothetical upstream signature change.
+        result = helper._substitute_file_uploads_recursively(None, schema, request)
+        assert result == request
+
+    def test_pydantic_builder_patched(self):
+        """``pydantic_model_from_param_schema`` must be wrapped on import.
+
+        The builder runs during ``tools.get`` for the direct-execute path that
+        bypasses ``configure_tools``, so without this patch Gmail/Calendar
+        actions would still KeyError on the legacy path.
+        """
+        from composio.utils import shared as composio_shared
+
+        assert getattr(composio_shared, "_lfx_safe_patched", False) is True
+
+    def test_pydantic_builder_no_keyerror_on_untyped_property(self):
+        """End-to-end guard for the third KeyError site.
+
+        Without the patch, ``prop_info["type"]`` would raise ``KeyError('type')``
+        on the typeless ``payload`` property. With it, the builder returns a
+        valid pydantic model.
+        """
+        from composio.utils.shared import pydantic_model_from_param_schema
+
+        schema = {
+            "title": "TestParams",
+            "properties": {"payload": {"title": "Payload", "description": "blob"}},
+        }
+        model = pydantic_model_from_param_schema(schema)
+        # Defaulted type is "string", which maps to ``str`` in Composio's type table.
+        assert "payload" in model.model_fields
+
+
+class TestNoOpOnAlreadyTypedSchemas:
+    """Regression preservation: schemas that worked pre-patch must round-trip unchanged.
+
+    The non-overwrite invariant in ``_sanitize_schema`` is the basis for the
+    "no regression" claim; these tests exercise the integration layer to
+    confirm that the patch is bit-identical for fully-typed schemas.
+    """
+
+    def test_sanitize_is_no_op_on_fully_typed_schema(self):
+        import copy
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "count": {"type": "integer"},
+                "tags": {"type": "array", "items": {"type": "string"}},
+                "meta": {"type": "object", "properties": {"k": {"type": "string"}}},
+            },
+        }
+        before = copy.deepcopy(schema)
+        _sanitize_schema(schema)
+        assert schema == before
+
+    def test_file_helper_uploads_unchanged_on_fully_typed_schema(self):
+        from composio.core.models._files import FileHelper
+
+        helper = FileHelper.__new__(FileHelper)
+        schema = {"type": "object", "properties": {"name": {"type": "string"}}}
+        request = {"name": "value"}
+        result = helper._substitute_file_uploads_recursively(tool=None, schema=schema, request=request)
+        assert result == request
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
