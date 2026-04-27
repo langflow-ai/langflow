@@ -29,7 +29,7 @@ export const FlowListPanel = memo(function FlowListPanel({
   return (
     <div className="flex w-[280px] flex-shrink-0 flex-col border-r border-border">
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
-        Available Flows
+        Available
       </div>
       <div className="flex-1 space-y-1 overflow-y-auto p-2">
         {flows.map((flow) => {
