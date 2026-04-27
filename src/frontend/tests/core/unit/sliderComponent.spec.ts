@@ -149,26 +149,14 @@ async function extractAndCleanCode(page: Page): Promise<string> {
   return codeContent.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
 
-// Reliably replace the Ace editor content cross-platform.
-//
-// Why not the obvious approaches:
-// - locator.fill() bypasses Ace's input handlers and on Windows strips
-//   newlines from the textarea's `.value` for single-line semantics.
-// - keyboard.insertText() drops embedded "\n" on Windows (the entire source
-//   ends up on line 1, and the backend rejects it as `invalid decimal
-//   literal`).
-// - pressSequentially() triggers Ace's Python auto-indent on every Enter.
-// - `window.ace.edit(el).setValue()` updates Ace's buffer but it turned out
-//   that react-ace's change listener isn't always invoked for programmatic
-//   setValue calls — the Ace buffer ends up correct, the React state never
-//   reflects it, and the unchanged code is what gets POSTed on save. That's
-//   the failure mode where the slider keeps rendering with the old range.
-//
-// What works: dispatch a synthetic `paste` event on Ace's hidden text-input
-// textarea. Ace's native paste handler reads `clipboardData.getData("text")`,
-// inserts the multi-line text via the same code path as a real user paste,
-// fires a `change` event that react-ace listens to, and the React state
-// updates. This is the only path that survived all four CI runs.
+// Set the Ace editor's content using the exact same pattern that
+// queryInputComponent.spec.ts uses successfully on Windows CI:
+// `textarea.last().fill(newCode)` against Ace's hidden text-input textarea.
+// Textareas (unlike single-line `<input>`s) preserve `\n` in `.value`, so
+// fill() reliably round-trips the multi-line source. Ace's text-input
+// listener picks up the resulting `input` event, applies it to the buffer,
+// and fires the `change` event that react-ace listens to — which is what
+// updates the React `code` state that gets POSTed on save.
 async function setAceEditorValue(page: Page, newCode: string): Promise<void> {
   const expectedNewlines = (newCode.match(/\n/g) || []).length;
   if (expectedNewlines < 10) {
@@ -177,59 +165,14 @@ async function setAceEditorValue(page: Page, newCode: string): Promise<void> {
     );
   }
 
-  await page.locator(".ace_editor").first().waitFor({ state: "visible" });
+  await page.locator("textarea").last().press("ControlOrMeta+a");
+  await page.keyboard.press("Backspace");
+  await page.locator("textarea").last().fill(newCode);
 
-  // Focus the editor and clear any existing content via real keyboard events,
-  // so Ace's selection/delete handlers run normally.
-  await page.locator(".ace_content").first().click();
-  await page.keyboard.press("ControlOrMeta+a");
-  await page.keyboard.press("Delete");
-
-  // Insert the new code via a synthetic paste event. We craft a real
-  // ClipboardEvent with DataTransfer so Ace's text-input paste listener
-  // receives `text/plain` exactly as it would from a user paste.
-  const insertResult = await page.evaluate(
-    ({ code, expectedNewlines }) => {
-      const incomingNewlines = (code.match(/\n/g) || []).length;
-      if (incomingNewlines !== expectedNewlines) {
-        return {
-          ok: false as const,
-          reason: `newlines lost crossing into evaluate: expected ${expectedNewlines}, got ${incomingNewlines}`,
-        };
-      }
-
-      const textInput = document.querySelector(
-        ".ace_text-input",
-      ) as HTMLTextAreaElement | null;
-      if (!textInput) {
-        return { ok: false as const, reason: ".ace_text-input not found" };
-      }
-      textInput.focus();
-
-      const dt = new DataTransfer();
-      dt.setData("text/plain", code);
-
-      const pasteEvent = new ClipboardEvent("paste", {
-        clipboardData: dt,
-        bubbles: true,
-        cancelable: true,
-      });
-
-      const dispatched = textInput.dispatchEvent(pasteEvent);
-      return { ok: true as const, dispatched };
-    },
-    { code: newCode, expectedNewlines },
-  );
-
-  if (!insertResult.ok) {
-    throw new Error(`setAceEditorValue: ${insertResult.reason}`);
-  }
-
-  // Wait for Ace's change event to propagate into the controlled React state.
-  // The `#codeValue` mirror is rendered by `<Input>` (single-line), so
-  // browsers strip newlines from its `.value` — newlines survive in React
-  // state, they just don't show up via that property. Matching the regex
-  // substring is enough to confirm the new code landed.
+  // Wait for the change to propagate into the controlled React state. The
+  // `#codeValue` mirror is rendered by `<Input>` (single-line), so browsers
+  // strip newlines from its `.value` — matching the substring is enough to
+  // confirm the new code landed.
   await expect(page.locator("#codeValue")).toHaveValue(
     /range_spec=RangeSpec\(min=3, max=30, step=1\)/,
     { timeout: 10000 },
