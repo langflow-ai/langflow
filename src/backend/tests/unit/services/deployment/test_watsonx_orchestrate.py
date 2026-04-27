@@ -5315,7 +5315,7 @@ async def test_list_deployments_with_names_filter(monkeypatch):
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": []},
         listed_agents=[
-            {"id": "dep-1", "name": "agent-1", "tools": []},
+            {"id": "dep-1", "name": "agent-1", "tools": [], "environments": [{"name": "draft"}]},
         ],
     )
     fake_clients = _with_wxo_wrappers(

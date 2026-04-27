@@ -8,6 +8,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from lfx.log.logger import logger
+from lfx.services.adapters.deployment.exceptions import InvalidContentError
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
@@ -108,7 +109,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS as WXO_ADAPTER_PAYLOAD_SCHEMAS,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.utils import normalize_wxo_name
+from langflow.services.adapters.deployment.watsonx_orchestrate.utils import normalize_wxo_name, validate_wxo_name
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 from langflow.services.database.models.deployment_provider_account.utils import (
     check_provider_url_allowed,
@@ -160,6 +161,29 @@ def _validate_tool_name(name: str) -> str:
             ),
         )
     return normalized
+
+
+def _validate_name_filter(name: str, *, resource: str) -> str:
+    """Normalize and validate a wxO name supplied as a list-endpoint filter.
+
+    ``resource`` names the entity being filtered (e.g. ``"deployment"``,
+    ``"snapshot"``) and is woven into the error detail by this helper.
+
+    Delegates the actual rules (non-empty after sanitisation, leading
+    letter) to :func:`validate_wxo_name` and re-raises the resulting
+    ``InvalidContentError`` as ``HTTPException(422)`` with caller
+    context, so the response makes clear which filter value was
+    rejected.  Failing fast here is preferable to silently dropping
+    invalid names — a single bad entry would otherwise collapse the
+    filter to ``None`` and return unfiltered results.
+    """
+    try:
+        return validate_wxo_name(name)
+    except InvalidContentError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid {resource} name filter '{name}': {exc.message}",
+        ) from exc
 
 
 @register_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
@@ -344,10 +368,12 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         provider_params: dict[str, Any] | None,
         db: AsyncSession,
     ) -> DeploymentListParams | None:
-        normalized = [name for n in names if (name := normalize_wxo_name(n))] if names else None
+        validated_names: list[str] | None = None
+        if names is not None:
+            validated_names = [_validate_name_filter(n, resource="deployment") for n in names]
         return await super().resolve_deployment_list_adapter_params(
             deployment_type=deployment_type,
-            names=normalized,
+            names=validated_names,
             provider_params=provider_params,
             db=db,
         )
@@ -360,10 +386,12 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         provider_params: dict[str, Any] | None,
         db: AsyncSession,
     ) -> SnapshotListParams:
-        normalized = [name for n in snapshot_names if (name := normalize_wxo_name(n))] if snapshot_names else None
+        validated_snapshot_names: list[str] | None = None
+        if snapshot_names is not None:
+            validated_snapshot_names = [_validate_name_filter(n, resource="snapshot") for n in snapshot_names]
         return await super().resolve_snapshot_list_adapter_params(
             deployment_resource_key=deployment_resource_key,
-            snapshot_names=normalized,
+            snapshot_names=validated_snapshot_names,
             provider_params=provider_params,
             db=db,
         )
