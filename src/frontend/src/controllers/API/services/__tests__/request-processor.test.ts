@@ -3,17 +3,17 @@ const mockQueryClient = {
   invalidateQueries: jest.fn(),
 };
 
-let capturedQueryOptions: any = null;
-let capturedMutationOptions: any = null;
+let mockCapturedQueryOptions: any = null;
+let mockCapturedMutationOptions: any = null;
 
 jest.mock("@tanstack/react-query", () => ({
   useQueryClient: jest.fn(() => mockQueryClient),
   useQuery: jest.fn((options: any) => {
-    capturedQueryOptions = options;
+    mockCapturedQueryOptions = options;
     return { data: undefined, isLoading: false };
   }),
   useMutation: jest.fn((options: any) => {
-    capturedMutationOptions = options;
+    mockCapturedMutationOptions = options;
     return { mutate: jest.fn(), mutateAsync: jest.fn() };
   }),
 }));
@@ -24,13 +24,19 @@ import { UseRequestProcessor } from "../request-processor";
 // Helpers
 // ---------------------------------------------------------------------------
 
-const axiosError = (status: number) => ({ response: { status } });
-const networkError = () => new Error("Network Error"); // no `.response`
+// `axios.isAxiosError` checks `error.isAxiosError === true`, so fixtures must
+// set that flag to be classified as HTTP errors rather than transient.
+const axiosError = (status: number) => ({
+  isAxiosError: true,
+  response: { status },
+});
+const axiosNetworkError = () => ({ isAxiosError: true, response: undefined });
+const nonAxiosError = () => new Error("Network Error");
 
 beforeEach(() => {
   jest.clearAllMocks();
-  capturedQueryOptions = null;
-  capturedMutationOptions = null;
+  mockCapturedQueryOptions = null;
+  mockCapturedMutationOptions = null;
 });
 
 // ---------------------------------------------------------------------------
@@ -41,7 +47,10 @@ describe("UseRequestProcessor.query retry policy", () => {
   const setup = (options: any = {}) => {
     const { query } = UseRequestProcessor();
     query(["k"], async () => ({}), options);
-    return capturedQueryOptions;
+    if (mockCapturedQueryOptions == null) {
+      throw new Error("query was not called by UseRequestProcessor");
+    }
+    return mockCapturedQueryOptions;
   };
 
   it("does not retry on any 4xx response", () => {
@@ -60,18 +69,19 @@ describe("UseRequestProcessor.query retry policy", () => {
     }
   });
 
-  it("retries up to 5 times on network errors with no response", () => {
+  it("retries up to 5 times on axios errors with no response", () => {
     const { retry } = setup();
-    expect(retry(0, networkError())).toBe(true);
-    expect(retry(4, networkError())).toBe(true);
-    expect(retry(5, networkError())).toBe(false);
+    expect(retry(0, axiosNetworkError())).toBe(true);
+    expect(retry(4, axiosNetworkError())).toBe(true);
+    expect(retry(5, axiosNetworkError())).toBe(false);
   });
 
-  it("treats non-numeric / missing status as transient (retries)", () => {
+  it("treats non-axios / unknown errors as transient (retries)", () => {
     const { retry } = setup();
     expect(retry(0, undefined)).toBe(true);
     expect(retry(0, {})).toBe(true);
     expect(retry(0, { response: {} })).toBe(true);
+    expect(retry(0, nonAxiosError())).toBe(true);
   });
 
   it("allows per-call options.retry to override the default", () => {
@@ -83,6 +93,12 @@ describe("UseRequestProcessor.query retry policy", () => {
     const { retry } = setup({ retry: 10 });
     expect(retry).toBe(10);
   });
+
+  it("allows per-call options.retryDelay to override the default", () => {
+    const customDelay = jest.fn(() => 42);
+    const { retryDelay } = setup({ retryDelay: customDelay });
+    expect(retryDelay).toBe(customDelay);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -93,7 +109,10 @@ describe("UseRequestProcessor.mutate retry policy", () => {
   const setup = (options: any = {}) => {
     const { mutate } = UseRequestProcessor();
     mutate(["k"], async () => ({}), options);
-    return capturedMutationOptions;
+    if (mockCapturedMutationOptions == null) {
+      throw new Error("mutate was not called by UseRequestProcessor");
+    }
+    return mockCapturedMutationOptions;
   };
 
   it("does not retry on any 4xx response", () => {
@@ -110,11 +129,11 @@ describe("UseRequestProcessor.mutate retry policy", () => {
     expect(retry(3, axiosError(500))).toBe(false);
   });
 
-  it("retries up to 3 times on network errors", () => {
+  it("retries up to 3 times on axios errors with no response", () => {
     const { retry } = setup();
-    expect(retry(0, networkError())).toBe(true);
-    expect(retry(2, networkError())).toBe(true);
-    expect(retry(3, networkError())).toBe(false);
+    expect(retry(0, axiosNetworkError())).toBe(true);
+    expect(retry(2, axiosNetworkError())).toBe(true);
+    expect(retry(3, axiosNetworkError())).toBe(false);
   });
 
   it("respects options.retry === false", () => {
@@ -132,6 +151,12 @@ describe("UseRequestProcessor.mutate retry policy", () => {
     const { retry } = setup({ retry: customRetry });
     expect(retry).toBe(customRetry);
   });
+
+  it("respects a custom options.retryDelay", () => {
+    const customDelay = jest.fn(() => 42);
+    const { retryDelay } = setup({ retryDelay: customDelay });
+    expect(retryDelay).toBe(customDelay);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -142,7 +167,7 @@ describe("UseRequestProcessor retryDelay", () => {
   it("uses exponential backoff capped at 30s for queries", () => {
     const { query } = UseRequestProcessor();
     query(["k"], async () => ({}));
-    const { retryDelay } = capturedQueryOptions;
+    const { retryDelay } = mockCapturedQueryOptions;
     expect(retryDelay(0)).toBe(1000);
     expect(retryDelay(1)).toBe(2000);
     expect(retryDelay(2)).toBe(4000);
@@ -155,7 +180,7 @@ describe("UseRequestProcessor retryDelay", () => {
   it("uses exponential backoff capped at 30s for mutations", () => {
     const { mutate } = UseRequestProcessor();
     mutate(["k"], async () => ({}));
-    const { retryDelay } = capturedMutationOptions;
+    const { retryDelay } = mockCapturedMutationOptions;
     expect(retryDelay(0)).toBe(1000);
     expect(retryDelay(1)).toBe(2000);
     expect(retryDelay(2)).toBe(4000);
