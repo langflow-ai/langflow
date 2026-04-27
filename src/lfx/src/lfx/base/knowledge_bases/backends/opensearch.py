@@ -295,10 +295,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
     async def delete_by(self, where: dict[str, Any]) -> None:
         """Delete documents via ``delete_by_query``.
 
-        ``where`` is translated to a bool-must match query on top-level
-        ``_source`` fields. This mirrors what the Mongo backend does
-        with its filter dict — keeping the cross-backend surface simple
-        rather than exposing the full OpenSearch DSL.
+        ``where`` is translated to a bool-must query. LangChain's
+        OpenSearch adapter stores ``Document.metadata`` under the nested
+        ``metadata`` source key, while older/manual indexes may expose
+        metadata fields at top level, so each key matches either shape.
         """
         await self.ensure_ready()
         client = getattr(self, "_os_client", None)
@@ -307,7 +307,18 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             client = self._os_client
         if not where:
             return
-        must = [{"match": {key: value}} for key, value in where.items()]
+        must = [
+            {
+                "bool": {
+                    "should": [
+                        {"match": {key: value}},
+                        {"match": {f"metadata.{key}": value}},
+                    ],
+                    "minimum_should_match": 1,
+                }
+            }
+            for key, value in where.items()
+        ]
         body = {"query": {"bool": {"must": must}}}
         try:
             await asyncio.to_thread(
