@@ -74,6 +74,95 @@ class TestValidatePath:
             component._validate_path("hello\x00.txt")
 
 
+class TestWindowsPortability:
+    """Slice 26 — proactively reject paths that would silently or confusingly
+    fail on Windows, so flows authored on macOS/Linux do not break in deploys.
+
+    These checks are pure-string and equally valid on every host OS.
+    """
+
+    @pytest.mark.parametrize("name", ["CON", "PRN", "AUX", "NUL", "COM1", "COM9", "LPT1", "LPT9"])
+    def test_should_reject_basename_that_is_a_windows_reserved_name(
+        self, component: FileSystemToolComponent, name: str
+    ) -> None:
+        result = component._read_file(name)
+        assert "error" in result
+        assert "reserved" in result["error"].lower()
+
+    def test_should_reject_reserved_name_with_extension(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # CON.txt is just as reserved as bare CON on Windows.
+        result = component._read_file("CON.txt")
+        assert "error" in result
+        assert "reserved" in result["error"].lower()
+
+    def test_should_reject_reserved_name_in_nested_path(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        result = component._read_file("nested/PRN.json")
+        assert "error" in result
+        assert "reserved" in result["error"].lower()
+
+    def test_should_be_case_insensitive_for_reserved_names(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # Lowercase "con" is treated identically by Windows.
+        result = component._read_file("con.log")
+        assert "error" in result
+        assert "reserved" in result["error"].lower()
+
+    def test_should_accept_reserved_name_as_substring(
+        self, component: FileSystemToolComponent, sandbox: Path
+    ) -> None:
+        # MyCon.txt is NOT reserved — only the exact stem CON is.
+        (sandbox / "MyCon.txt").write_text("data", encoding="utf-8")
+        result = component._read_file("MyCon.txt")
+        assert "error" not in result, f"Unexpected error: {result.get('error')}"
+
+    @pytest.mark.parametrize("char", ["<", ">", '"', "|", "?", "*"])
+    def test_should_reject_path_with_forbidden_windows_character(
+        self, component: FileSystemToolComponent, char: str
+    ) -> None:
+        result = component._read_file(f"bad{char}name.txt")
+        assert "error" in result
+        assert "forbidden" in result["error"].lower()
+
+    def test_should_reject_path_with_trailing_dot(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # Windows silently strips trailing "." — ambiguous and bug-prone.
+        result = component._write_file("badname.", "x")
+        assert "error" in result
+        assert "trailing" in result["error"].lower()
+
+    def test_should_reject_path_with_trailing_space(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        result = component._write_file("badname ", "x")
+        assert "error" in result
+        assert "trailing" in result["error"].lower()
+
+    def test_should_not_trigger_on_dotdot_relative_marker(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # `..` IS a path component but it is the parent-dir marker, not a
+        # filename with a trailing dot. It should pass the portability check
+        # and be caught only by the sandbox-boundary check downstream.
+        result = component._read_file("../outside.txt")
+        assert "error" in result
+        assert "trailing" not in result["error"].lower()
+        assert "boundary" in result["error"].lower() or "escape" in result["error"].lower()
+
+    def test_should_not_trigger_on_single_dot(
+        self, component: FileSystemToolComponent, sandbox: Path
+    ) -> None:
+        # `./hello.txt` is just `hello.txt`. Should not trigger trailing-dot
+        # rule, and should resolve to the existing file.
+        result = component._read_file("./hello.txt")
+        assert result.get("status") == "ok", f"Got: {result}"
+
+
 class TestReadFile:
     """Slices 7-9 — read_file returns content with metadata + adversarial cases."""
 
@@ -360,48 +449,104 @@ class TestGrepSearch:
         assert "error" in result
 
 
-class TestBuildTool:
-    """Slices 22-23 — tool registration respects read_only flag."""
+class TestGetTools:
+    """Slices 22-23 — tool registration respects read_only flag (modern Tool Mode pattern)."""
 
-    def test_should_register_all_five_tools_when_read_only_false(
+    async def test_should_register_all_five_tools_when_read_only_false(
         self, component: FileSystemToolComponent
     ) -> None:
-        tools = component.build_tool()
+        tools = await component._get_tools()
         names = {tool.name for tool in tools}
         assert names == {"read_file", "write_file", "edit_file", "glob_search", "grep_search"}
 
-    def test_should_not_register_write_and_edit_tools_in_read_only_mode(
+    async def test_should_not_register_write_and_edit_tools_in_read_only_mode(
         self, sandbox: Path
     ) -> None:
         component = FileSystemToolComponent(root_path=str(sandbox), read_only=True)
-        tools = component.build_tool()
+        tools = await component._get_tools()
         names = {tool.name for tool in tools}
         assert names == {"read_file", "glob_search", "grep_search"}
         assert "write_file" not in names
         assert "edit_file" not in names
 
-    def test_registered_read_tool_invokes_read_file(
+    async def test_registered_read_tool_invokes_read_file(
         self, component: FileSystemToolComponent
     ) -> None:
-        tools = {tool.name: tool for tool in component.build_tool()}
+        tools = {tool.name: tool for tool in await component._get_tools()}
         output = tools["read_file"].invoke({"path": "hello.txt"})
         assert "line1" in str(output)
 
+    async def test_every_tool_must_have_non_empty_tags(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # The framework's update_tools_metadata flow (component_tool.py:343)
+        # gates on `isinstance(tool, StructuredTool|BaseTool) AND tool.tags`.
+        # A tool without tags falls through to a misleading TypeError that
+        # claims a wrong type. Every tool MUST carry at least one tag matching
+        # its name so the metadata-merge step can identify it.
+        for tool in await component._get_tools():
+            assert tool.tags, f"Tool {tool.name!r} is missing tags"
+            assert tool.tags[0] == tool.name, (
+                f"Tool {tool.name!r} first tag ({tool.tags[0]!r}) must match name"
+            )
 
-class TestRunModel:
-    """Slice 24 — run_model returns introspective metadata (no I/O)."""
 
-    def test_should_return_sandbox_metadata_as_list_of_data(self, component: FileSystemToolComponent) -> None:
-        result = component.run_model()
-        assert isinstance(result, list)
-        assert len(result) == 1
-        data = result[0].data
-        assert data["root_path"] == component.root_path
-        assert data["read_only"] is False
-        assert set(data["tools_registered"]) == {
+class TestToolModeToggle:
+    """Slice 25 — modern UI contract: Tool Mode toggle is exposed in the UI."""
+
+    def test_should_set_add_tool_output_flag_at_class_level(self) -> None:
+        # Defensive runtime flag — read by Component._handle_tool_mode.
+        assert getattr(FileSystemToolComponent, "add_tool_output", False) is True
+
+    def test_should_have_at_least_one_input_with_tool_mode_true(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # The frontend toggle visibility is gated by `any(input.tool_mode)` in
+        # lfx.template.utils — without this, the "Tool Mode" header toggle does
+        # not render even if add_tool_output is True.
+        assert any(getattr(inp, "tool_mode", False) for inp in component.inputs)
+
+    def test_should_keep_root_path_visible_in_tool_mode(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # Frontend rule (parameter-filtering.ts :: isHidden): an input with
+        # tool_mode=True is hidden when the Tool Mode toggle is ON. The
+        # root_path field is component-level configuration and MUST remain
+        # user-editable in both modes — guard against accidentally setting
+        # tool_mode=True on it.
+        root_path_input = next(inp for inp in component.inputs if inp.name == "root_path")
+        assert getattr(root_path_input, "tool_mode", False) is False
+
+    def test_should_use_a_dedicated_hidden_synthetic_input_as_toggle_trigger(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # The trigger must be hidden (show=False) so it does not pollute the
+        # config UI. Pattern follows FileComponent.file_path_str.
+        triggers = [
+            inp
+            for inp in component.inputs
+            if getattr(inp, "tool_mode", False) and not getattr(inp, "show", True)
+        ]
+        assert len(triggers) >= 1, "Expected at least one hidden input with tool_mode=True"
+
+
+class TestBuildMetadata:
+    """Slice 24 — build_metadata returns introspective metadata (no I/O)."""
+
+    def test_should_return_sandbox_metadata_as_data(self, component: FileSystemToolComponent) -> None:
+        result = component.build_metadata()
+        assert result.data["root_path"] == component.root_path
+        assert result.data["read_only"] is False
+        assert set(result.data["tools_registered"]) == {
             "read_file",
             "write_file",
             "edit_file",
             "glob_search",
             "grep_search",
         }
+
+    def test_should_reflect_read_only_in_tools_registered(self, sandbox: Path) -> None:
+        component = FileSystemToolComponent(root_path=str(sandbox), read_only=True)
+        result = component.build_metadata()
+        assert result.data["read_only"] is True
+        assert set(result.data["tools_registered"]) == {"read_file", "glob_search", "grep_search"}

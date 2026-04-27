@@ -4,14 +4,19 @@ from __future__ import annotations
 
 import json
 import re
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+from typing import TYPE_CHECKING
 
-from langchain_core.tools import StructuredTool, Tool
+from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
-from lfx.base.langchain_utilities.model import LCToolComponent
+from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, StrInput
+from lfx.io import Output
 from lfx.schema.data import Data
+
+if TYPE_CHECKING:
+    from lfx.field_typing import Tool
 
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 BINARY_SNIFF_BYTES = 8 * 1024
@@ -19,9 +24,46 @@ GLOB_RESULT_LIMIT = 100
 GREP_LINE_LIMIT = 250
 GREP_OUTPUT_MODES = ("files_with_matches", "content", "count")
 
+# Windows portability rules (applied on every host OS so flows authored on
+# macOS/Linux do not silently break when run on Windows). Pure-string checks.
+_WINDOWS_RESERVED_NAMES = frozenset(
+    {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
+)
+# Note: ':' is NOT included — drive letters (C:) are valid; bare ':' inside a
+# basename will be caught by the OS at write time anyway.
+_WINDOWS_FORBIDDEN_CHARS = frozenset('<>"|?*')
+
 
 def _looks_binary(head: bytes) -> bool:
     return b"\x00" in head
+
+
+def _check_windows_portability(path: str) -> str | None:
+    """Return a human-readable error if the path has Windows-portability issues.
+
+    Why we run this on every host: paths that work on macOS/Linux can silently
+    fail on Windows (reserved names, forbidden characters, trailing dot/space
+    silently stripped by the OS). The agent should see the same structured
+    error regardless of where the flow runs.
+    """
+    # Use PureWindowsPath to parse separators consistently — it splits on both
+    # `/` and `\` and exposes drive markers as components ending in '\'.
+    for component in PureWindowsPath(path).parts:
+        # Skip root markers ('\\', '/', 'C:\\') and relative markers ('.', '..')
+        if component.endswith(("\\", "/")) or component in (".", ".."):
+            continue
+        # Reserved name (case-insensitive, with or without extension).
+        stem = component.split(".", 1)[0].upper()
+        if stem in _WINDOWS_RESERVED_NAMES:
+            return f"Path component {component!r} is a Windows reserved name"
+        # Forbidden characters in basename.
+        bad = sorted(set(component) & _WINDOWS_FORBIDDEN_CHARS)
+        if bad:
+            return f"Path component {component!r} contains forbidden character(s): {bad}"
+        # Trailing dot or space — Windows silently strips them.
+        if component != component.rstrip(". "):
+            return f"Path component {component!r} has trailing dot or space (silently stripped on Windows)"
+    return None
 
 
 class _ReadFileArgs(BaseModel):
@@ -58,11 +100,16 @@ class _GrepSearchArgs(BaseModel):
     )
 
 
-class FileSystemToolComponent(LCToolComponent):
+class FileSystemToolComponent(Component):
     display_name = "File System"
     description = "Sandboxed filesystem access for agents."
     icon = "folder"
     name = "FileSystemTool"
+
+    # Enables the "Tool Mode" toggle on the node header. When ON the framework
+    # calls _get_tools() and emits a Toolset output that connects to an Agent's
+    # "Tools" handle. When OFF, the JSON metadata output is the only handle.
+    add_tool_output = True
 
     inputs = [
         StrInput(
@@ -78,21 +125,49 @@ class FileSystemToolComponent(LCToolComponent):
             advanced=True,
             info="If true, write and edit operations are disabled.",
         ),
+        # Synthetic hidden input. Exists ONLY to make the "Tool Mode" toggle
+        # appear on the node header — see frontend rule in
+        # `src/frontend/src/CustomNodes/helpers/parameter-filtering.ts :: isHidden`
+        # and the backend gate in `src/lfx/src/lfx/template/utils.py` (toggle
+        # visibility = `any(input.tool_mode for input in inputs)`).
+        # `show=False` keeps it hidden from the config UI; `tool_mode=True`
+        # would otherwise hide a real input in tool mode (see same isHidden
+        # rule), so we keep root_path / read_only WITHOUT tool_mode=True so
+        # they remain user-editable when the toggle is on. _get_tools() ignores
+        # this field — each StructuredTool has its own per-operation schema.
+        StrInput(
+            name="tool_mode_trigger",
+            display_name="",
+            show=False,
+            tool_mode=True,
+            required=False,
+        ),
     ]
 
-    def run_model(self) -> list[Data]:
-        tools = [tool.name for tool in self.build_tool()]
-        return [
-            Data(
-                data={
-                    "root_path": self.root_path,
-                    "read_only": bool(self.read_only),
-                    "tools_registered": tools,
-                }
-            )
-        ]
+    outputs = [
+        Output(
+            display_name="JSON",
+            name="metadata",
+            method="build_metadata",
+            types=["Data"],
+        ),
+    ]
 
-    def build_tool(self) -> list[Tool]:
+    def build_metadata(self) -> Data:
+        """Return introspective metadata about the sandbox. No file I/O."""
+        registered = ["read_file", "glob_search", "grep_search"]
+        if not self.read_only:
+            registered.extend(["write_file", "edit_file"])
+        return Data(
+            data={
+                "root_path": self.root_path,
+                "read_only": bool(self.read_only),
+                "tools_registered": registered,
+            }
+        )
+
+    async def _get_tools(self) -> list[Tool]:
+        """Tool Mode entrypoint. Called by Component.to_toolkit()."""
         tools: list[Tool] = [
             self._make_read_tool(),
             self._make_glob_tool(),
@@ -116,6 +191,7 @@ class FileSystemToolComponent(LCToolComponent):
             ),
             func=_run,
             args_schema=_ReadFileArgs,
+            tags=["read_file"],
         )
 
     def _make_write_tool(self) -> StructuredTool:
@@ -127,6 +203,7 @@ class FileSystemToolComponent(LCToolComponent):
             description="Create or overwrite a text file inside the sandboxed workspace.",
             func=_run,
             args_schema=_WriteFileArgs,
+            tags=["write_file"],
         )
 
     def _make_edit_tool(self) -> StructuredTool:
@@ -143,6 +220,7 @@ class FileSystemToolComponent(LCToolComponent):
             ),
             func=_run,
             args_schema=_EditFileArgs,
+            tags=["edit_file"],
         )
 
     def _make_glob_tool(self) -> StructuredTool:
@@ -157,6 +235,7 @@ class FileSystemToolComponent(LCToolComponent):
             ),
             func=_run,
             args_schema=_GlobSearchArgs,
+            tags=["glob_search"],
         )
 
     def _make_grep_tool(self) -> StructuredTool:
@@ -187,6 +266,7 @@ class FileSystemToolComponent(LCToolComponent):
             ),
             func=_run,
             args_schema=_GrepSearchArgs,
+            tags=["grep_search"],
         )
 
     def _validate_path(self, path: str) -> Path:
@@ -198,6 +278,8 @@ class FileSystemToolComponent(LCToolComponent):
         if "\x00" in path:
             msg = "Path contains NUL byte"
             raise PermissionError(msg)
+        if portability_error := _check_windows_portability(path):
+            raise PermissionError(portability_error)
         root_resolved = Path(self.root_path).resolve()
         candidate = (root_resolved / path).resolve()
         if not candidate.is_relative_to(root_resolved):
