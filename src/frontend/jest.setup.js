@@ -87,12 +87,9 @@ jest.mock("@/components/common/shadTooltipComponent", () => ({
 }));
 
 // Return empty data — tests don't need QueryClientProvider context
-jest.mock(
-  "@/controllers/API/queries/flows/use-get-note-translations",
-  () => ({
-    useGetNoteTranslationsQuery: () => ({ data: undefined }),
-  }),
-);
+jest.mock("@/controllers/API/queries/flows/use-get-note-translations", () => ({
+  useGetNoteTranslationsQuery: () => ({ data: undefined }),
+}));
 
 jest.mock("lucide-react/dynamicIconImports", () => ({}), { virtual: true });
 

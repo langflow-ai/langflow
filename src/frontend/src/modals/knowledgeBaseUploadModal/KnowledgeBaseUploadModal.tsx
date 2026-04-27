@@ -4,7 +4,13 @@ import { StepperModal, StepperModalFooter } from "../stepperModal/StepperModal";
 import { FilesPanel } from "./components/FilesPanel";
 import { StepConfiguration } from "./components/StepConfiguration";
 import { StepReview } from "./components/StepReview";
-import { getStepDescriptions, getStepTitles, MODAL_HEIGHT_DEFAULT, MODAL_HEIGHT_WITH_ADVANCED, VALIDATION_ERROR_LINE_HEIGHT } from "./constants";
+import {
+  getStepDescriptions,
+  getStepTitles,
+  MODAL_HEIGHT_DEFAULT,
+  MODAL_HEIGHT_WITH_ADVANCED,
+  VALIDATION_ERROR_LINE_HEIGHT,
+} from "./constants";
 import { useKnowledgeBaseForm } from "./hooks/useKnowledgeBaseForm";
 import type { KnowledgeBaseUploadModalProps } from "./types";
 
