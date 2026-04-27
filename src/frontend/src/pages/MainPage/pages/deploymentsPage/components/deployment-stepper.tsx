@@ -4,20 +4,20 @@ import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
 export const CREATE_STEPS = [
   { number: 1, label: "Provider" },
   { number: 2, label: "Type" },
-  { number: 3, label: "Configure" },
+  { number: 3, label: "Flows" },
   { number: 4, label: "Review" },
 ] as const;
 
 export const CREATE_DEPLOYED_STEPS = [
   { number: 1, label: "Provider" },
   { number: 2, label: "Type" },
-  { number: 3, label: "Configure" },
+  { number: 3, label: "Flows" },
   { number: 4, label: "Deployed" },
 ] as const;
 
 const EDIT_STEPS = [
   { number: 1, label: "Type" },
-  { number: 2, label: "Configure" },
+  { number: 2, label: "Flows" },
   { number: 3, label: "Review" },
 ] as const;
 
