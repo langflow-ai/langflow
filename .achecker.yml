@@ -1,0 +1,3 @@
+outputFormat: json, html
+baselineFolder: test/baselines
+outputFolder: coverage/accessibility-reports

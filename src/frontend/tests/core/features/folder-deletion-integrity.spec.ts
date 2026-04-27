@@ -87,6 +87,8 @@ test(
     await expect(page.getByTestId("add-project-button")).toBeVisible({
       timeout: 5000,
     });
+
+    await (page as any).runA11yScan(test.info().title);
   },
 );
 

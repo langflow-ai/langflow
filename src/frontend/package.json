@@ -153,6 +153,7 @@
   },
   "proxy": "http://localhost:7860",
   "devDependencies": {
+    "accessibility-checker": "^4.0.15",
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
     "@modelcontextprotocol/server-everything": "^2026.1.14",

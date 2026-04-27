@@ -1,6 +1,7 @@
 // tests/fixtures.ts
 import { test as base, expect, Page } from "@playwright/test";
 import "./playwrightCoverage";
+import * as aChecker from "accessibility-checker";
 
 // Extend test to log backend errors
 export const test = base.extend({
@@ -225,6 +226,44 @@ export const test = base.extend({
         }
       }
     });
+
+    // a11y scanning helper to be used per test, per nav or modal opening
+    (page as any).runA11yScan = async (label?: string) => {
+      if (process.env.RUN_A11Y !== "true") return;
+
+      const html = await page.content();
+      const testLabel = label || page.url();
+
+      try {
+        const results = await aChecker.getCompliance(html, testLabel);
+
+        // Optional: log summary (non-blocking)
+        if (results?.report) {
+          console.log(`♿ A11y scan completed for: ${testLabel}`);
+        }
+      } catch (err) {
+        // Don't fail test — just log
+        console.error(`A11y scan failed for ${testLabel}`, err);
+      } finally {
+        await aChecker.close(); // REQUIRED for report generation
+      }
+    };
+
+    // (page as any).runA11yScan = async (label?: string) => {
+    //   if (process.env.RUN_A11Y !== "true") return;
+
+    //   const html = await page.content();
+    //   const testLabel = label || page.url();
+
+    //   const results = await aChecker.getCompliance(html, testLabel);
+
+    //   if (results.report && aChecker.assertCompliance(results.report) !== 0) {
+    //     console.error(aChecker.stringifyResults(results.report));
+    //     throw new Error(`Accessibility violations found for ${testLabel}`);
+    //   }
+
+    //   await aChecker.close();
+    // };
 
     await use(page);
 
