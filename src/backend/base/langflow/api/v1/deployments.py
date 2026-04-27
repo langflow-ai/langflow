@@ -128,12 +128,12 @@ def _make_telemetry_dep(action: str, log_method_name: str):
         ctx = DeploymentTelemetryCtx()
         started_at = time.perf_counter()
         success: bool = True
-        error: Exception | None = None
+        error_message: str = ""
         try:
             yield ctx
         except Exception as exc:
             success = False
-            error = exc
+            error_message = str(exc)
             raise
         finally:
             try:
@@ -143,7 +143,7 @@ def _make_telemetry_dep(action: str, log_method_name: str):
                     deployment_provider=ctx.provider,
                     deployment_seconds=time.perf_counter() - started_at,
                     deployment_success=success,
-                    deployment_error_type=type(error).__name__ if error else None,
+                    deployment_error_message=error_message,
                     wxo_tenant_id=ctx.wxo_tenant_id,
                 )
                 await getattr(ts, log_method_name)(payload)

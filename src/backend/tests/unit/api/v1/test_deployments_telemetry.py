@@ -296,7 +296,7 @@ async def test_create_provider_account_telemetry_error(
     assert payload.deployment_action == "provider.create"
     assert payload.deployment_provider == "watsonx-orchestrate"
     assert payload.deployment_success is False
-    assert payload.deployment_error_type == "HTTPException"
+    assert payload.deployment_error_message == "400: Invalid credentials"
     # verify_credentials raises before the row is created, so the tenant_id is not yet set.
     assert payload.wxo_tenant_id is None
 
@@ -318,6 +318,8 @@ async def test_cross_route_smoke_exception_after_provider_set(
     assert payload.deployment_action == "deployment.create"
     assert payload.deployment_provider == "watsonx-orchestrate"  # Provider should be captured!
     assert payload.deployment_success is False
-    assert payload.deployment_error_type == "HTTPException"
+    assert payload.deployment_error_message == (
+        "500: An unexpected error occurred while communicating with the deployment provider."
+    )
     # tenant_id is captured before the adapter call that raises.
     assert payload.wxo_tenant_id == "tenant-test"

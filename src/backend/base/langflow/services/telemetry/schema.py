@@ -24,7 +24,7 @@ class DeploymentPayload(BasePayload):
     deployment_provider: str = Field(serialization_alias="deploymentProvider")
     deployment_seconds: float = Field(serialization_alias="deploymentSeconds")
     deployment_success: bool = Field(serialization_alias="deploymentSuccess")
-    deployment_error_type: str | None = Field(default=None, serialization_alias="deploymentErrorType")
+    deployment_error_message: str = Field(default="", serialization_alias="deploymentErrorMessage")
     wxo_tenant_id: str | None = Field(default=None, serialization_alias="wxoTenantId")
 
 
