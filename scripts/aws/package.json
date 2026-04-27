@@ -26,6 +26,7 @@
     "constructs": "^10.3.0",
     "deploy-time-build": "^0.3.21",
     "dotenv": "^16.4.5",
+    "minimatch": "^9.0.6",
     "source-map-support": "^0.5.21"
   }
 }
