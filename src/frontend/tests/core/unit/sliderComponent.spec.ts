@@ -41,6 +41,16 @@ test(
 
     const cleanCode = await extractAndCleanCode(page);
 
+    // Sanity-check: the original Ollama source has many lines. If we read it
+    // back as a single concatenated line, the textarea-value path is the
+    // problem and Ace surgery downstream cannot save us.
+    const cleanCodeNewlines = (cleanCode.match(/\n/g) || []).length;
+    if (cleanCodeNewlines < 50) {
+      throw new Error(
+        `extractAndCleanCode returned code with only ${cleanCodeNewlines} newlines (length ${cleanCode.length}); expected the multi-line Ollama source. The hidden #codeValue textarea may be returning a stripped value on this platform.`,
+      );
+    }
+
     // Replace the multiline string in the code.
     // Use a regex so the match is resilient to line-ending differences
     // (LF on macOS/Linux vs CRLF on Windows after git checkout).
@@ -111,31 +121,98 @@ async function extractAndCleanCode(page: Page): Promise<string> {
   return codeContent.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
 
-// Reliably replace the Ace editor content. The keyboard-based approaches are
-// all flaky on at least one platform: locator.fill() bypasses Ace's internal
-// buffer so the editor never sees the change, keyboard.insertText() drops
-// embedded "\n" characters on Windows (flattening the code into a single
-// invalid line), and pressSequentially() triggers Ace's Python auto-indent and
-// corrupts whitespace. Instead, drive Ace through its own API: ace-builds
-// exposes `window.ace` globally and `ace.edit(element)` returns the existing
-// editor instance, so setValue() applies the change atomically.
+// Reliably replace the Ace editor content cross-platform. Every keyboard route
+// fails on at least one OS: locator.fill() bypasses Ace's internal buffer,
+// keyboard.insertText() silently drops embedded "\n" characters on Windows
+// (flattening the code into a single invalid line — the `invalid decimal
+// literal (<unknown>, line 1)` failure mode), and pressSequentially() triggers
+// Ace's Python auto-indent and corrupts whitespace.
+//
+// Instead, drive Ace via its own API: ace-builds exposes `window.ace` and
+// `ace.edit(element)` returns the existing editor instance, so setValue()
+// applies the change atomically. We also assert at each step that newlines
+// survived, so a future regression surfaces a precise diagnostic instead of
+// the same opaque backend 400.
 async function setAceEditorValue(page: Page, newCode: string): Promise<void> {
-  await page.locator(".ace_editor").first().waitFor({ state: "visible" });
-  await page.evaluate((code) => {
-    const aceEl = document.querySelector(".ace_editor");
-    const globalAce = (window as unknown as { ace?: { edit: (el: Element) => { setValue: (v: string, cursorPos?: number) => void } } }).ace;
-    if (!aceEl || !globalAce) {
-      throw new Error("Ace editor not found on the page");
-    }
-    globalAce.edit(aceEl).setValue(code, -1);
-  }, newCode);
+  const expectedNewlines = (newCode.match(/\n/g) || []).length;
+  if (expectedNewlines < 10) {
+    throw new Error(
+      `setAceEditorValue: newCode has only ${expectedNewlines} newlines (length ${newCode.length}); the slider replacement template alone should produce >=11. Upstream extractAndCleanCode likely lost newlines.`,
+    );
+  }
 
-  // Wait for Ace to propagate the change to the controlled React state so the
-  // hidden #codeValue mirror contains the expected value before we save.
+  await page.locator(".ace_editor").first().waitFor({ state: "visible" });
+
+  const result = await page.evaluate(
+    ({ code, expectedNewlines }) => {
+      const aceEl = document.querySelector(".ace_editor");
+      const globalAce = (
+        window as unknown as {
+          ace?: {
+            edit: (el: Element) => {
+              setValue: (v: string, cursorPos?: number) => void;
+              getValue: () => string;
+              session: { setNewLineMode: (mode: string) => void };
+            };
+          };
+        }
+      ).ace;
+
+      if (!aceEl) return { ok: false as const, reason: "ace_editor element not found" };
+      if (!globalAce?.edit)
+        return { ok: false as const, reason: "window.ace not exposed" };
+
+      const incomingNewlines = (code.match(/\n/g) || []).length;
+      if (incomingNewlines !== expectedNewlines) {
+        return {
+          ok: false as const,
+          reason: `newlines lost crossing into evaluate: expected ${expectedNewlines}, got ${incomingNewlines}`,
+        };
+      }
+
+      const editor = globalAce.edit(aceEl);
+      // Force LF so getValue() returns exactly what we set, regardless of the
+      // platform's autodetected line ending.
+      editor.session.setNewLineMode("unix");
+      editor.setValue(code, -1);
+
+      const out = editor.getValue();
+      const outNewlines = (out.match(/\n/g) || []).length;
+      return {
+        ok: true as const,
+        incomingNewlines,
+        outNewlines,
+        outLength: out.length,
+      };
+    },
+    { code: newCode, expectedNewlines },
+  );
+
+  if (!result.ok) {
+    throw new Error(`setAceEditorValue: ${result.reason}`);
+  }
+  if (result.outNewlines < result.incomingNewlines) {
+    throw new Error(
+      `Ace dropped newlines: setValue input had ${result.incomingNewlines}, getValue returned ${result.outNewlines} (length ${result.outLength}).`,
+    );
+  }
+
+  // Wait for Ace's change event to propagate into the controlled React state.
+  // We assert against the full code length, not just the regex marker, so that
+  // a newline-stripped value is rejected here rather than reaching the backend.
   await expect(page.locator("#codeValue")).toHaveValue(
     /range_spec=RangeSpec\(min=3, max=30, step=1\)/,
     { timeout: 10000 },
   );
+
+  const reactNewlines = await page
+    .locator("#codeValue")
+    .evaluate((el) => ((el as HTMLTextAreaElement).value.match(/\n/g) || []).length);
+  if (reactNewlines < result.incomingNewlines) {
+    throw new Error(
+      `React state dropped newlines after Ace change: ace=${result.outNewlines}, react=${reactNewlines}.`,
+    );
+  }
 }
 
 async function mutualValidation(page: Page) {
