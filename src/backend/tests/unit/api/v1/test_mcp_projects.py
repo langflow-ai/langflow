@@ -26,6 +26,7 @@ from langflow.services.deps import get_settings_service
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.services.deps import session_scope
+from lfx.services.mcp_composer.service import COMPOSER_BACKEND_AUTH_HEADER
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
@@ -352,6 +353,34 @@ async def test_streamable_oauth_project_accepts_valid_api_key(
     )
 
     assert response.status_code == status.HTTP_200_OK
+    mock_streamable_http_manager.handle_request.assert_called_once()
+
+
+async def test_streamable_oauth_project_accepts_valid_composer_backend_token(
+    client: AsyncClient,
+    user_test_project,
+    mock_streamable_http_manager,
+    enable_mcp_composer,
+):
+    """The in-process MCP Composer token must authenticate Composer's backend hop."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(user_test_project.id, "oauth")
+
+    composer_service = MagicMock()
+    composer_service.validate_backend_auth_token.return_value = True
+
+    with patch("langflow.api.v1.mcp_projects.get_service", return_value=composer_service):
+        response = await client.post(
+            f"api/v1/mcp/project/{user_test_project.id}/streamable",
+            headers={COMPOSER_BACKEND_AUTH_HEADER: "valid-composer-token"},
+            json={"type": "test", "content": "message"},
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    composer_service.validate_backend_auth_token.assert_called_once_with(
+        str(user_test_project.id),
+        "valid-composer-token",
+    )
     mock_streamable_http_manager.handle_request.assert_called_once()
 
 

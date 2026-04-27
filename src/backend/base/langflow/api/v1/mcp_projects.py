@@ -21,7 +21,11 @@ from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.log import logger
 from lfx.services.deps import get_settings_service, session_scope
-from lfx.services.mcp_composer.service import MCPComposerError, MCPComposerService
+from lfx.services.mcp_composer.service import (
+    COMPOSER_BACKEND_AUTH_HEADER,
+    MCPComposerError,
+    MCPComposerService,
+)
 from lfx.services.schema import ServiceType
 from mcp import types
 from mcp.server import NotificationOptions, Server
@@ -80,8 +84,9 @@ router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 async def verify_project_auth(
     db: AsyncSession,
     project_id: UUID,
-    query_param: str,
-    header_param: str,
+    query_param: str | None,
+    header_param: str | None,
+    composer_backend_token: str | None = None,
 ) -> User:
     """MCP-specific user authentication that allows fallback to username lookup when not using API key auth.
 
@@ -101,6 +106,17 @@ async def verify_project_auth(
         auth_settings = AuthSettings(**project.auth_settings)
 
     project_auth_type = auth_settings.auth_type if auth_settings else None
+    if project_auth_type == "oauth" and composer_backend_token:
+        mcp_composer_service: MCPComposerService = cast(
+            MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+        )
+        if mcp_composer_service.validate_backend_auth_token(str(project_id), composer_backend_token):
+            if project.user_id:
+                project_user = await db.get(User, project.user_id)
+                if project_user:
+                    return project_user
+            raise HTTPException(status_code=404, detail="Project owner not found")
+
     # OAuth projects must present a valid API key at the Langflow transport endpoint: network-level
     # trust (loopback / same-host proxy) is unsafe because it cannot distinguish the local MCP
     # Composer subprocess from another loopback peer behind a reverse proxy or sidecar. The
@@ -188,6 +204,7 @@ async def verify_project_auth_conditional(
         # Extract API keys
         api_key_query_value = request.query_params.get("x-api-key")
         api_key_header_value = request.headers.get("x-api-key")
+        composer_backend_token = request.headers.get(COMPOSER_BACKEND_AUTH_HEADER)
 
         # Check if this project requires API key only authentication
         if get_settings_service().settings.mcp_composer_enabled:
@@ -196,6 +213,7 @@ async def verify_project_auth_conditional(
                 project_id,
                 api_key_query_value,
                 api_key_header_value,
+                composer_backend_token,
             )
 
         # For all other cases, use standard MCP authentication (allows JWT + API keys)
