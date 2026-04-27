@@ -3,7 +3,7 @@ from requests.auth import HTTPBasicAuth
 
 from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES
 from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import DropdownInput, SecretStrInput, StrInput
+from lfx.inputs.inputs import DropdownInput, SecretStrInput
 from lfx.io import MessageTextInput, Output
 from lfx.schema.data import Data
 from lfx.schema.message import Message
@@ -25,7 +25,7 @@ class CombinatorialReasonerComponent(Component):
             value="OPENAI_API_KEY",
             required=True,
         ),
-        StrInput(
+        SecretStrInput(
             name="username",
             display_name="Username",
             info="Username to authenticate access to Icosa CR API",
