@@ -17,8 +17,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from composio.core.models._files import FileHelper
-from composio_langchain import LangchainProvider
+try:
+    from composio.core.models._files import FileHelper
+    from composio_langchain import LangchainProvider
+except ImportError:  # composio extra not installed; module becomes a no-op
+    FileHelper = None  # type: ignore[assignment]
+    LangchainProvider = None  # type: ignore[assignment,misc]
+    _COMPOSIO_AVAILABLE = False
+else:
+    _COMPOSIO_AVAILABLE = True
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -78,12 +85,14 @@ def _sanitize_schema(schema: Any) -> None:
                 _sanitize_schema(sub)
 
 
-class SafeLangchainProvider(LangchainProvider, name="langchain"):
-    """LangchainProvider that patches tool schemas before delegating."""
+if _COMPOSIO_AVAILABLE:
 
-    def wrap_tool(self, tool: Tool, execute_tool: Callable[..., Any]) -> StructuredTool:
-        _sanitize_schema(tool.input_parameters)
-        return super().wrap_tool(tool=tool, execute_tool=execute_tool)
+    class SafeLangchainProvider(LangchainProvider, name="langchain"):
+        """LangchainProvider that patches tool schemas before delegating."""
+
+        def wrap_tool(self, tool: Tool, execute_tool: Callable[..., Any]) -> StructuredTool:
+            _sanitize_schema(tool.input_parameters)
+            return super().wrap_tool(tool=tool, execute_tool=execute_tool)
 
 
 def _patch_file_helper_once() -> None:
@@ -94,18 +103,27 @@ def _patch_file_helper_once() -> None:
     methods run on every ``composio.tools.execute`` call (including direct component
     runs that don't go through ``configure_tools``), so we patch them here once at
     import time.
+
+    Side effects: this mutates ``composio.core.models._files.FileHelper`` for the
+    entire Python process. Any other consumer that imports Composio in the same
+    runtime (Astra integrations, plugin bundles, scripts) will see the patched
+    methods. Intentional — the upstream raw subscript is a bug, and the wrapper
+    only inserts missing ``"type"`` keys before delegating to the original
+    helpers, so it is a strict superset of the original behavior. Idempotent via
+    the ``_lfx_safe_patched`` sentinel; safe across repeated imports / pytest
+    process reuse.
     """
-    if getattr(FileHelper, "_lfx_safe_patched", False):
+    if not _COMPOSIO_AVAILABLE or getattr(FileHelper, "_lfx_safe_patched", False):
         return
 
     original_uploads = FileHelper._substitute_file_uploads_recursively  # noqa: SLF001
     original_downloads = FileHelper._substitute_file_downloads_recursively  # noqa: SLF001
 
-    def safe_uploads(self, tool, schema, request):
+    def safe_uploads(self, *, tool, schema, request):
         _sanitize_schema(schema)
         return original_uploads(self, tool=tool, schema=schema, request=request)
 
-    def safe_downloads(self, tool, schema, request):
+    def safe_downloads(self, *, tool, schema, request):
         _sanitize_schema(schema)
         return original_downloads(self, tool=tool, schema=schema, request=request)
 
