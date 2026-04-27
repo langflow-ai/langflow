@@ -72,7 +72,9 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
                 className="h-4 w-4 group-aria-expanded/collapsible:text-accent-pink-foreground"
               />
               <ShadTooltip
-                content={t(item.display_name, { defaultValue: item.display_name })}
+                content={t(item.display_name, {
+                  defaultValue: item.display_name,
+                })}
                 styleClasses="z-50"
               >
                 <span className="flex-1 min-w-0 truncate group-aria-expanded/collapsible:font-semibold">

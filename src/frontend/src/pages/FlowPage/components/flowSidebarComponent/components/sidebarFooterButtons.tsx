@@ -95,7 +95,10 @@ const SidebarMenuButtons = ({
           name="Plus"
           className="h-4 w-4 text-muted-foreground"
         />
-        <ShadTooltip content={t("sidebar.newCustomComponent")} styleClasses="z-50">
+        <ShadTooltip
+          content={t("sidebar.newCustomComponent")}
+          styleClasses="z-50"
+        >
           <span className="group-data-[state=open]/collapsible:font-semibold">
             {t("sidebar.newCustomComponent")}
           </span>

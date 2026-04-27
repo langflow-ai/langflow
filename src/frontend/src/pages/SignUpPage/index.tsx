@@ -99,7 +99,10 @@ export default function SignUp(): JSX.Element {
           <div className="mb-3 w-full">
             <Form.Field name="username">
               <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
-                <ShadTooltip content={t("auth.usernameLabel")} styleClasses="z-50">
+                <ShadTooltip
+                  content={t("auth.usernameLabel")}
+                  styleClasses="z-50"
+                >
                   <span className="truncate">{t("auth.usernameLabel")}</span>
                 </ShadTooltip>
                 <span className="shrink-0 font-medium text-destructive">*</span>
@@ -126,7 +129,10 @@ export default function SignUp(): JSX.Element {
           <div className="mb-3 w-full">
             <Form.Field name="password" serverInvalid={password != cnfPassword}>
               <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
-                <ShadTooltip content={t("auth.passwordLabel")} styleClasses="z-50">
+                <ShadTooltip
+                  content={t("auth.passwordLabel")}
+                  styleClasses="z-50"
+                >
                   <span className="truncate">{t("auth.passwordLabel")}</span>
                 </ShadTooltip>
                 <span className="shrink-0 font-medium text-destructive">*</span>
@@ -160,8 +166,13 @@ export default function SignUp(): JSX.Element {
               serverInvalid={password != cnfPassword}
             >
               <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
-                <ShadTooltip content={t("auth.confirmPasswordLabel")} styleClasses="z-50">
-                  <span className="truncate">{t("auth.confirmPasswordLabel")}</span>
+                <ShadTooltip
+                  content={t("auth.confirmPasswordLabel")}
+                  styleClasses="z-50"
+                >
+                  <span className="truncate">
+                    {t("auth.confirmPasswordLabel")}
+                  </span>
                 </ShadTooltip>
                 <span className="shrink-0 font-medium text-destructive">*</span>
               </Form.Label>

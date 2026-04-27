@@ -145,7 +145,11 @@ export default function LoginPage(): JSX.Element {
                 content={`${t("auth.noAccount")} ${t("auth.signUpLink")}`}
                 styleClasses="z-50"
               >
-                <Button className="w-full overflow-hidden" variant="outline" type="button">
+                <Button
+                  className="w-full overflow-hidden"
+                  variant="outline"
+                  type="button"
+                >
                   <span className="truncate">
                     {t("auth.noAccount")}&nbsp;<b>{t("auth.signUpLink")}</b>
                   </span>
