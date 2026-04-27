@@ -366,7 +366,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         deployment_type: DeploymentType | None,
         names: list[str] | None = None,
         provider_params: dict[str, Any] | None,
-        db: AsyncSession,
     ) -> DeploymentListParams | None:
         validated_names: list[str] | None = None
         if names is not None:
@@ -375,7 +374,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             deployment_type=deployment_type,
             names=validated_names,
             provider_params=provider_params,
-            db=db,
         )
 
     async def resolve_snapshot_list_adapter_params(
@@ -384,7 +382,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         deployment_resource_key: str | None,
         snapshot_names: list[str] | None = None,
         provider_params: dict[str, Any] | None,
-        db: AsyncSession,
     ) -> SnapshotListParams:
         validated_snapshot_names: list[str] | None = None
         if snapshot_names is not None:
@@ -393,7 +390,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             deployment_resource_key=deployment_resource_key,
             snapshot_names=validated_snapshot_names,
             provider_params=provider_params,
-            db=db,
         )
 
     def resolve_provider_account_create(

@@ -675,7 +675,6 @@ async def list_deployments(
                 deployment_type=deployment_type,
                 names=names,
                 provider_params=provider_list_params,
-                db=session,
             )
             provider_view = await deployment_adapter.list(
                 user_id=current_user.id,
@@ -883,7 +882,6 @@ async def list_deployment_configs(
     adapter_params = await deployment_mapper.resolve_config_list_adapter_params(
         deployment_resource_key=deployment_row.resource_key if deployment_row is not None else None,
         provider_params=None,
-        db=session,
     )
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_account.id):
         config_result = await deployment_adapter.list_configs(
@@ -940,7 +938,6 @@ async def list_deployment_snapshots(
         deployment_resource_key=deployment_row.resource_key if deployment_row is not None else None,
         snapshot_names=names,
         provider_params=None,
-        db=session,
     )
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_account.id):
         snapshot_result = await deployment_adapter.list_snapshots(

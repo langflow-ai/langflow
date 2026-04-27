@@ -901,7 +901,6 @@ class TestDeploymentNamesFilter:
             deployment_type=None,
             names=names,
             provider_params={"environment": "draft"},
-            db=ANY,
         )
         adapter.list.assert_awaited_once_with(
             user_id=ANY,
@@ -1022,7 +1021,6 @@ class TestConfigAndSnapshotListRoutes:
         mapper.resolve_config_list_adapter_params.assert_awaited_once_with(
             deployment_resource_key=None,
             provider_params=None,
-            db=ANY,
         )
         call_params = adapter.list_configs.call_args.kwargs["params"]
         assert call_params is adapter_params
@@ -1082,7 +1080,6 @@ class TestConfigAndSnapshotListRoutes:
             deployment_resource_key="dep-key",
             snapshot_names=None,
             provider_params=None,
-            db=ANY,
         )
         call_params = adapter.list_snapshots.call_args.kwargs["params"]
         assert call_params is adapter_params
@@ -1156,7 +1153,6 @@ class TestConfigAndSnapshotListRoutes:
             deployment_resource_key=None,
             snapshot_names=["my_tool", "other_tool"],
             provider_params=None,
-            db=ANY,
         )
 
 

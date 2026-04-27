@@ -325,7 +325,6 @@ async def test_base_mapper_resolve_deployment_list_adapter_params_passthrough() 
         deployment_type=DeploymentType.AGENT,
         names=["A", "B"],
         provider_params={"env": "prod"},
-        db=None,
     )
     assert params.deployment_types == [DeploymentType.AGENT]
     assert params.deployment_names == ["A", "B"]
@@ -339,7 +338,6 @@ async def test_base_mapper_resolve_deployment_list_adapter_params_returns_none_w
         deployment_type=None,
         names=None,
         provider_params=None,
-        db=None,
     )
     assert params is None
 
@@ -350,7 +348,6 @@ async def test_base_mapper_resolve_config_list_adapter_params_passthrough() -> N
     params = await mapper.resolve_config_list_adapter_params(
         deployment_resource_key="dep-key-1",
         provider_params={"tag": "release"},
-        db=None,
     )
     assert params.deployment_ids == ["dep-key-1"]
     assert params.provider_params == {"tag": "release"}
@@ -362,7 +359,6 @@ async def test_base_mapper_resolve_config_list_adapter_params_omits_deployment_i
     params = await mapper.resolve_config_list_adapter_params(
         deployment_resource_key=None,
         provider_params=None,
-        db=None,
     )
     assert params.deployment_ids is None
     assert params.provider_params is None
@@ -375,7 +371,6 @@ async def test_base_mapper_resolve_snapshot_list_adapter_params_passthrough() ->
         deployment_resource_key="dep-key-1",
         snapshot_names=["snap-a", "snap-b"],
         provider_params={"tag": "nightly"},
-        db=None,
     )
     assert params.deployment_ids == ["dep-key-1"]
     assert params.snapshot_names == ["snap-a", "snap-b"]
@@ -389,7 +384,6 @@ async def test_base_mapper_resolve_snapshot_list_adapter_params_normalizes_empty
         deployment_resource_key="dep-key-1",
         snapshot_names=[],
         provider_params=None,
-        db=None,
     )
     assert params.deployment_ids == ["dep-key-1"]
     assert params.snapshot_names is None
@@ -402,7 +396,6 @@ async def test_base_mapper_resolve_snapshot_list_adapter_params_omits_deployment
         deployment_resource_key=None,
         snapshot_names=None,
         provider_params=None,
-        db=None,
     )
     assert params.deployment_ids is None
     assert params.snapshot_names is None

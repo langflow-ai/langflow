@@ -82,7 +82,6 @@ async def test_watsonx_mapper_resolve_deployment_list_adapter_params_passthrough
         deployment_type=DeploymentType.AGENT,
         names=["A", "B"],
         provider_params={"env": "prod"},
-        db=_FakeDb([]),
     )
     assert params.deployment_types == [DeploymentType.AGENT]
     assert params.deployment_names == ["A", "B"]
@@ -97,7 +96,6 @@ async def test_watsonx_mapper_resolve_deployment_list_normalizes_names() -> None
         deployment_type=DeploymentType.AGENT,
         names=["My Agent", "Other-Agent"],
         provider_params=None,
-        db=_FakeDb([]),
     )
     assert params is not None
     assert params.deployment_names == ["My_Agent", "Other_Agent"]
@@ -111,7 +109,6 @@ async def test_watsonx_mapper_resolve_deployment_list_passes_none_through() -> N
         deployment_type=None,
         names=None,
         provider_params=None,
-        db=_FakeDb([]),
     )
     assert params is None
 
@@ -134,7 +131,6 @@ async def test_watsonx_mapper_resolve_deployment_list_rejects_invalid_name(
             deployment_type=None,
             names=[bad_name],
             provider_params=None,
-            db=_FakeDb([]),
         )
     assert exc_info.value.status_code == 422
     detail = str(exc_info.value.detail)
@@ -151,7 +147,6 @@ async def test_watsonx_mapper_resolve_deployment_list_fails_fast_on_first_invali
             deployment_type=None,
             names=["Valid_Name", "!!!"],
             provider_params=None,
-            db=_FakeDb([]),
         )
     assert exc_info.value.status_code == 422
     assert "'!!!'" in str(exc_info.value.detail)
@@ -164,7 +159,6 @@ async def test_watsonx_mapper_resolve_snapshot_list_normalizes_names() -> None:
         deployment_resource_key="dep-key",
         snapshot_names=["My Snapshot", "tool-1"],
         provider_params=None,
-        db=_FakeDb([]),
     )
     assert params.snapshot_names == ["My_Snapshot", "tool_1"]
 
@@ -176,7 +170,6 @@ async def test_watsonx_mapper_resolve_snapshot_list_passes_none_through() -> Non
         deployment_resource_key="dep-key",
         snapshot_names=None,
         provider_params=None,
-        db=_FakeDb([]),
     )
     assert params.snapshot_names is None
 
@@ -198,7 +191,6 @@ async def test_watsonx_mapper_resolve_snapshot_list_rejects_invalid_name(
             deployment_resource_key="dep-key",
             snapshot_names=[bad_name],
             provider_params=None,
-            db=_FakeDb([]),
         )
     assert exc_info.value.status_code == 422
     detail = str(exc_info.value.detail)
@@ -214,7 +206,6 @@ async def test_watsonx_mapper_resolve_snapshot_list_fails_fast_on_first_invalid(
             deployment_resource_key="dep-key",
             snapshot_names=["Valid_Name", "!!!"],
             provider_params=None,
-            db=_FakeDb([]),
         )
     assert exc_info.value.status_code == 422
     assert "'!!!'" in str(exc_info.value.detail)

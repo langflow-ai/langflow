@@ -285,9 +285,7 @@ class BaseDeploymentMapper:
         deployment_type: DeploymentType | None,
         names: list[str] | None = None,
         provider_params: dict[str, Any] | None,
-        db: AsyncSession,
     ) -> DeploymentListParams | None:
-        _ = db
         if deployment_type is None and not names and provider_params is None:
             return None
         return DeploymentListParams(
@@ -301,9 +299,7 @@ class BaseDeploymentMapper:
         *,
         deployment_resource_key: str | None,
         provider_params: dict[str, Any] | None,
-        db: AsyncSession,
     ) -> ConfigListParams:
-        _ = db
         return ConfigListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
             provider_params=provider_params,
@@ -315,9 +311,7 @@ class BaseDeploymentMapper:
         deployment_resource_key: str | None,
         snapshot_names: list[str] | None = None,
         provider_params: dict[str, Any] | None,
-        db: AsyncSession,
     ) -> SnapshotListParams:
-        _ = db
         return SnapshotListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
             snapshot_names=snapshot_names or None,
