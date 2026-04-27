@@ -60,6 +60,11 @@ def register(app: typer.Typer) -> None:
             show_default=True,
             help="Include detailed timing information in output",
         ),
+        session_id: str | None = typer.Option(
+            None,
+            "--session-id",
+            help="Session ID to attach to the run. If omitted, a random one is generated.",
+        ),
     ) -> None:
         """Run a flow directly (lazy-loaded)."""
         from pathlib import Path
@@ -81,6 +86,7 @@ def register(app: typer.Typer) -> None:
             verbose_detailed=verbose_detailed,
             verbose_full=verbose_full,
             timing=timing,
+            session_id=session_id,
         )
 
     @app.command(name="serve", help="Serve a flow as an API", no_args_is_help=True, rich_help_panel="Running")

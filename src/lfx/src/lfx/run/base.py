@@ -4,6 +4,7 @@ import json
 import re
 import sys
 import time
+import uuid
 from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -227,11 +228,14 @@ async def run_flow(
             if verbosity > 0:
                 logger.info(f"Set graph user_id: {user_id}")
 
-        # Set session_id on graph if provided (isolates memory between requests)
-        if session_id:
-            graph.session_id = session_id
-            if verbosity > 0:
-                logger.info(f"Set graph session_id: {session_id}")
+        # Set session_id on graph: caller-provided takes precedence; otherwise auto-generate
+        # so message-store paths (e.g. streaming LLM -> ChatOutput) don't fail validation in
+        # astore_message when no session is supplied.
+        if not session_id:
+            session_id = uuid.uuid4().hex
+        graph.session_id = session_id
+        if verbosity > 0:
+            logger.info(f"Set graph session_id: {session_id}")
 
         # Inject global variables into graph context
         if global_variables:

@@ -340,16 +340,26 @@ class LCModelComponent(Component):
                 session_id = self._session_id
             else:
                 session_id = None
-            model_message = Message(
-                text=runnable.astream(inputs),
-                sender=MESSAGE_SENDER_AI,
-                sender_name="AI",
-                properties={"icon": self.icon, "state": "partial"},
-                session_id=session_id,
-            )
-            model_message.properties.source = self._build_source(self._id, self.display_name, self)
-            lf_message = await self.send_message(model_message)
-            result = lf_message.text or ""
+            # Streaming requires both: a session_id (so astore_message validates) and an
+            # event_manager (so the chunk iterator actually gets consumed by _stream_message).
+            # In lfx run there is no event_manager, so the iterator would be stored but never
+            # drained — the resulting message text is empty. Fall back to ainvoke instead.
+            event_manager = getattr(self, "_event_manager", None)
+            if session_id and event_manager:
+                model_message = Message(
+                    text=runnable.astream(inputs),
+                    sender=MESSAGE_SENDER_AI,
+                    sender_name="AI",
+                    properties={"icon": self.icon, "state": "partial"},
+                    session_id=session_id,
+                )
+                model_message.properties.source = self._build_source(self._id, self.display_name, self)
+                lf_message = await self.send_message(model_message)
+                result = lf_message.text or ""
+            else:
+                ai_message = await runnable.ainvoke(inputs)
+                result = ai_message.content if hasattr(ai_message, "content") else ai_message
+                result = _normalize_message_content(result)
         else:
             ai_message = await runnable.ainvoke(inputs)
             result = ai_message.content if hasattr(ai_message, "content") else ai_message
