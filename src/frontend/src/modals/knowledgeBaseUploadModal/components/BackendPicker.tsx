@@ -187,7 +187,7 @@ function BackendConfigSection({ children }: { children: React.ReactNode }) {
       </span>
       <span className="text-[11px] text-muted-foreground">
         Credential fields accept Langflow variable <em>names</em>. Store the
-        actual secrets via the provider settings page.
+        actual values via the Knowledge Backends settings page.
       </span>
       <div className="grid grid-cols-1 gap-2">{children}</div>
     </div>
