@@ -139,7 +139,7 @@ class TestWindowsPortability:
         assert "trailing" not in result["error"].lower()
         assert "boundary" in result["error"].lower() or "escape" in result["error"].lower()
 
-    def test_should_not_trigger_on_single_dot(self, component: FileSystemToolComponent) -> None:
+    def test_should_not_trigger_on_single_dot(self, component: FileSystemToolComponent, sandbox: Path) -> None:
         # `./hello.txt` is just `hello.txt`. Should not trigger trailing-dot
         # rule, and should resolve to the existing file (sandbox is populated
         # via the `component` fixture chain).
