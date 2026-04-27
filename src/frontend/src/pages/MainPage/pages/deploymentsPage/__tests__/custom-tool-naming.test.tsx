@@ -180,4 +180,18 @@ describe("Custom tool naming", () => {
       "Tool Beta",
     );
   });
+
+  it("rejects create payload when agent name does not start with a letter", () => {
+    const { result } = renderStepperHook();
+
+    act(() => {
+      result.current.setDeploymentName("1 Agent");
+      result.current.setSelectedLlm("test-model");
+      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+    });
+
+    expect(() => result.current.buildDeploymentPayload("provider-1")).toThrow(
+      "Deployment name must start with a letter",
+    );
+  });
 });
