@@ -1,0 +1,117 @@
+"""Schema-hardening wrapper around composio_langchain.LangchainProvider.
+
+Composio's runtime file-substitution helpers (composio.core.models._files) and
+its Pydantic schema builder (composio.utils.shared.pydantic_model_from_param_schema)
+raw-subscript ``properties[name]["type"]``. When a Composio tool's
+``input_parameters`` schema contains a property without an explicit ``"type"``
+(common for Gmail/Calendar actions whose properties only specify
+``anyOf``/``additionalProperties``), tool execution raises
+``KeyError: 'type'`` (issues #12894, #12895).
+
+We sanitize ``tool.input_parameters`` in-place at wrap time so the cached Tool
+object that Composio reuses on ``execute`` already has a ``"type"`` for every
+node the file walker touches.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from composio.core.models._files import FileHelper
+from composio_langchain import LangchainProvider
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from composio.types import Tool
+    from composio_langchain.provider import StructuredTool
+
+
+def _sanitize_schema(schema: Any) -> None:
+    """Recursively guarantee every JSON-schema node has a ``type`` key.
+
+    Composio's runtime walkers raw-subscript ``properties[name]["type"]`` (see
+    ``composio.core.models._files`` lines 235/308 and
+    ``composio.utils.shared.pydantic_model_from_param_schema`` line 232). They
+    don't resolve ``$ref``/``anyOf``/``oneOf``/``allOf`` before that lookup, so
+    *any* property without a literal ``"type"`` key crashes with
+    ``KeyError('type')`` even if a union arm or referenced ``$def`` would have
+    provided one.
+
+    We mutate ``schema`` in place with these inference rules:
+      - has ``properties`` -> ``type`` defaults to ``"object"``
+      - has ``items``      -> ``type`` defaults to ``"array"``
+      - otherwise          -> ``type`` defaults to ``"string"``
+
+    Existing ``type`` keys are never overwritten. The string default is
+    deliberately conservative: composio compares ``type == "object"`` to decide
+    whether to recurse into a nested file-substitution walk, so defaulting to
+    ``"string"`` is a safe no-op for that branch.
+    """
+    if not isinstance(schema, dict):
+        return
+
+    has_type = "type" in schema
+    has_props = "properties" in schema
+    has_items = "items" in schema
+
+    if not has_type:
+        if has_props:
+            schema["type"] = "object"
+        elif has_items:
+            schema["type"] = "array"
+        else:
+            schema["type"] = "string"
+
+    if has_props:
+        for sub in schema["properties"].values():
+            _sanitize_schema(sub)
+    if has_items:
+        _sanitize_schema(schema["items"])
+    for union_key in ("anyOf", "oneOf", "allOf"):
+        for sub in schema.get(union_key, []) or []:
+            _sanitize_schema(sub)
+    for defs_key in ("$defs", "definitions"):
+        defs = schema.get(defs_key)
+        if isinstance(defs, dict):
+            for sub in defs.values():
+                _sanitize_schema(sub)
+
+
+class SafeLangchainProvider(LangchainProvider, name="langchain"):
+    """LangchainProvider that patches tool schemas before delegating."""
+
+    def wrap_tool(self, tool: Tool, execute_tool: Callable[..., Any]) -> StructuredTool:
+        _sanitize_schema(tool.input_parameters)
+        return super().wrap_tool(tool=tool, execute_tool=execute_tool)
+
+
+def _patch_file_helper_once() -> None:
+    """Wrap Composio's file substitution helpers so untyped properties don't KeyError.
+
+    ``_substitute_file_uploads_recursively`` and ``_substitute_file_downloads_recursively``
+    raw-subscript ``params[name]["type"]`` while walking ``tool.input_parameters``. The
+    methods run on every ``composio.tools.execute`` call (including direct component
+    runs that don't go through ``configure_tools``), so we patch them here once at
+    import time.
+    """
+    if getattr(FileHelper, "_lfx_safe_patched", False):
+        return
+
+    original_uploads = FileHelper._substitute_file_uploads_recursively  # noqa: SLF001
+    original_downloads = FileHelper._substitute_file_downloads_recursively  # noqa: SLF001
+
+    def safe_uploads(self, tool, schema, request):
+        _sanitize_schema(schema)
+        return original_uploads(self, tool=tool, schema=schema, request=request)
+
+    def safe_downloads(self, tool, schema, request):
+        _sanitize_schema(schema)
+        return original_downloads(self, tool=tool, schema=schema, request=request)
+
+    FileHelper._substitute_file_uploads_recursively = safe_uploads  # noqa: SLF001
+    FileHelper._substitute_file_downloads_recursively = safe_downloads  # noqa: SLF001
+    FileHelper._lfx_safe_patched = True  # noqa: SLF001
+
+
+_patch_file_helper_once()
