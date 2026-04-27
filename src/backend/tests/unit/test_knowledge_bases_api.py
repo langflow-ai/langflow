@@ -245,6 +245,10 @@ class TestKnowledgeBaseAPI:
         assert "unknown vector-store backend" in response.text.lower()
 
     async def test_create_knowledge_base_rejects_missing_backend_config(self, client: AsyncClient, logged_in_headers):
+        # OpenSearch is the only non-Chroma backend exposed for new KB
+        # creation in this phase (mongodb / astra / postgres are stubbed),
+        # so it's the one path where ``_REQUIRED_BACKEND_CONFIG`` still
+        # rejects an empty ``backend_config``.
         response = await client.post(
             "api/v1/knowledge_bases",
             headers=logged_in_headers,
@@ -252,13 +256,44 @@ class TestKnowledgeBaseAPI:
                 "name": "Missing_Backend_Config_KB",
                 "embedding_provider": "OpenAI",
                 "embedding_model": "text-embedding-3-small",
-                "backend_type": "postgres",
+                "backend_type": "opensearch",
                 "backend_config": {},
             },
         )
 
         assert response.status_code == 422
-        assert "collection_name" in response.text
+        assert "index_name" in response.text
+
+    async def test_create_knowledge_base_rejects_stubbed_backend(self, client: AsyncClient, logged_in_headers):
+        """Stubbed backends fail at the schema layer with a "not enabled" message.
+
+        The ``BackendType`` enum still includes ``mongodb``/``astra``/``postgres``
+        for DB row compatibility, but ``validate_backend_type`` rejects them so
+        a user posting one gets a clear 422 instead of a successful create
+        followed by ingest-time NotImplementedError.
+        """
+        for stubbed in ("mongodb", "astra", "postgres"):
+            response = await client.post(
+                "api/v1/knowledge_bases",
+                headers=logged_in_headers,
+                json={
+                    "name": f"Stubbed_{stubbed}_KB",
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "text-embedding-3-small",
+                    "backend_type": stubbed,
+                    # Provide config that *would* have been valid pre-stub
+                    # so the rejection is unambiguously about the backend
+                    # being disabled, not about missing required fields.
+                    "backend_config": {
+                        "collection_name": "x",
+                        "database": "x",
+                        "collection": "x",
+                    },
+                },
+            )
+
+            assert response.status_code == 422, (stubbed, response.text)
+            assert "not enabled" in response.text.lower(), (stubbed, response.text)
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_kb_path_traversal_single_level(

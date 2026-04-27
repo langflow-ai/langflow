@@ -24,18 +24,40 @@ from lfx.base.knowledge_bases.backends.registry import _resolve_backend_type
 class _DummyBackend(BaseVectorStoreBackend):
     """Minimal in-memory backend used for registry tests."""
 
-    backend_type = BackendType.MONGODB  # reuse a reserved identifier
+    # ``MONGODB`` is one of the stubbed-but-not-registered backends, so the
+    # registry has a free slot under that key without colliding with anything
+    # the framework registers on import.
+    backend_type = BackendType.MONGODB
 
     def _build_vector_store(self):  # pragma: no cover — not exercised here
         raise NotImplementedError
 
 
 class TestBackendRegistry:
-    """The registry is the swap point for future DB backends (MongoDB, Astra, Postgres)."""
+    """The registry is the swap point for the supported DB backends.
+
+    In this phase only Chroma and OpenSearch are registered. The Astra /
+    MongoDB / Postgres backends ship as stubs that exist for type and
+    enum compatibility but are intentionally not in the registry, so
+    ``create_backend('astra')`` (etc.) raises.
+    """
 
     def test_chroma_registered_by_default(self):
         assert BackendType.CHROMA in registered_backends()
         assert get_backend_class(BackendType.CHROMA) is ChromaBackend
+
+    def test_opensearch_registered_by_default(self):
+        # OpenSearch is the second supported backend in this phase.
+        assert BackendType.OPENSEARCH in registered_backends()
+
+    def test_stubbed_backends_are_not_registered(self):
+        registered = registered_backends()
+        for stubbed in (BackendType.ASTRA, BackendType.MONGODB, BackendType.POSTGRES):
+            assert stubbed not in registered, (
+                f"{stubbed.value} is stubbed in this phase and must not be registered"
+            )
+            with pytest.raises(ValueError, match="not registered"):
+                get_backend_class(stubbed)
 
     def test_registered_backends_returns_stable_ordering(self):
         backends = registered_backends()
@@ -55,30 +77,6 @@ class TestBackendRegistry:
     def test_create_backend_accepts_string_identifier(self, tmp_path: Path):
         backend = create_backend("chroma", kb_name="kb2", kb_path=tmp_path)
         assert isinstance(backend, ChromaBackend)
-
-    def test_get_backend_class_rejects_unregistered_enum_value(self):
-        """Unregistered enum values fail loudly.
-
-        Phase 4 registered astra/mongodb/postgres. If a future enum
-        member lands without a matching ``register_backend`` call,
-        the registry must fail loudly rather than silently degrade.
-        """
-        # Patch the registry to simulate an identifier that's been added
-        # to the enum but never wired up.
-        from unittest.mock import patch
-
-        from lfx.base.knowledge_bases.backends import registry
-
-        with patch.dict(registry._BACKEND_REGISTRY, clear=False) as _:
-            registry._BACKEND_REGISTRY.pop(BackendType.ASTRA, None)
-            try:
-                with pytest.raises(ValueError, match="not registered"):
-                    get_backend_class(BackendType.ASTRA)
-            finally:
-                # Re-register for the rest of the suite.
-                from lfx.base.knowledge_bases.backends import AstraBackend
-
-                registry._BACKEND_REGISTRY[BackendType.ASTRA] = AstraBackend
 
     def test_resolve_backend_type_rejects_garbage_strings(self):
         with pytest.raises(ValueError, match="Unknown vector-store backend"):

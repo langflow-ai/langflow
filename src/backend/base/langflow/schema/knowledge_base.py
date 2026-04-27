@@ -7,11 +7,16 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from langflow.utils.kb_constants import MAX_CHUNK_OVERLAP, MAX_CHUNK_SIZE, MIN_CHUNK_OVERLAP, MIN_CHUNK_SIZE
 
 _REQUIRED_BACKEND_CONFIG: dict[str, tuple[str, ...]] = {
-    BackendType.MONGODB.value: ("database", "collection"),
-    BackendType.ASTRA.value: ("collection_name",),
-    BackendType.POSTGRES.value: ("collection_name",),
     BackendType.OPENSEARCH.value: ("index_name",),
 }
+
+# Backends the API accepts for *new* KB creation. Other ``BackendType``
+# values exist as stubs so existing DB rows referencing them can still
+# be read back, but creating a new KB on a stubbed backend would just
+# fail at ingest time. Reject up front instead.
+_CREATION_ALLOWED_BACKENDS: frozenset[str] = frozenset(
+    {BackendType.CHROMA.value, BackendType.OPENSEARCH.value}
+)
 
 
 class KnowledgeBaseInfo(BaseModel):
@@ -60,12 +65,21 @@ class CreateKnowledgeBaseRequest(BaseModel):
     @field_validator("backend_type")
     @classmethod
     def validate_backend_type(cls, value: str) -> str:
+        normalized = value or BackendType.CHROMA.value
         try:
-            return BackendType(value or BackendType.CHROMA.value).value
+            backend = BackendType(normalized).value
         except ValueError as exc:
-            allowed = ", ".join(backend.value for backend in BackendType)
-            msg = f"Unknown vector-store backend {value!r}. Expected one of: {allowed}."
+            allowed = ", ".join(sorted(_CREATION_ALLOWED_BACKENDS))
+            msg = f"Unknown vector-store backend {normalized!r}. Expected one of: {allowed}."
             raise ValueError(msg) from exc
+        if backend not in _CREATION_ALLOWED_BACKENDS:
+            allowed = ", ".join(sorted(_CREATION_ALLOWED_BACKENDS))
+            msg = (
+                f"Vector-store backend {backend!r} is not enabled in this build. "
+                f"Available backends: {allowed}."
+            )
+            raise ValueError(msg)
+        return backend
 
     @model_validator(mode="after")
     def validate_backend_config(self) -> "CreateKnowledgeBaseRequest":

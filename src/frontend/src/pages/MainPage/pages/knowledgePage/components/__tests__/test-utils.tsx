@@ -52,8 +52,8 @@ export const mockKnowledgeBaseList: KnowledgeBaseInfo[] = [
     characters: 400000,
     chunks: 150,
     avg_chunk_size: 2666,
-    backend_type: "postgres",
-    backend_config: { collection_name: "second_kb" },
+    backend_type: "opensearch",
+    backend_config: { index_name: "second_kb" },
   },
   {
     id: "kb-3",

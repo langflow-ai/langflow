@@ -3,8 +3,7 @@
 Ingestion sources supply items to ``KBIngestionHelper.perform_ingestion``.
 The same helper handles chunking, embedding, and vector-store writes
 regardless of where the items came from — file upload, local folder
-walk, or a future cloud connector (Google Drive, S3, OneDrive,
-SharePoint).
+walk, or a future cloud connector.
 
 Public surface:
 
@@ -17,8 +16,13 @@ Public surface:
 * ``register_source`` / ``create_source`` / ``registered_sources`` —
   the registry entry points.
 
-Built-in sources (``FileUploadSource``, ``FolderSource``) register on
-import so call sites don't have to remember to import them separately.
+In this phase only **file_upload** and **folder** are registered. The
+S3 / Google Drive / OneDrive / SharePoint classes are preserved as
+stubs so the framework wiring (enum values, type imports, DB-stored
+``source_type`` strings on existing ``ingestion_run`` rows) keeps
+round-tripping, but they are not instantiable through ``create_source``
+and the picker UI hides them. Reinstate by restoring the full source
+class and re-adding ``register_source(...)`` for that source below.
 """
 
 from lfx.base.knowledge_bases.ingestion_sources.base import (
@@ -51,13 +55,11 @@ from lfx.base.knowledge_bases.ingestion_sources.registry import (
 from lfx.base.knowledge_bases.ingestion_sources.s3 import S3Source
 from lfx.base.knowledge_bases.ingestion_sources.sharepoint import SharePointSource
 
-# Register built-in sources on import.
+# Register the supported built-in sources on import. S3Source /
+# GoogleDriveSource / OneDriveSource / SharePointSource are intentionally
+# NOT registered while they're stubbed out — see each module's docstring.
 register_source(SourceType.FILE_UPLOAD, FileUploadSource)
 register_source(SourceType.FOLDER, FolderSource)
-register_source(SourceType.S3, S3Source)
-register_source(SourceType.GOOGLE_DRIVE, GoogleDriveSource)
-register_source(SourceType.ONEDRIVE, OneDriveSource)
-register_source(SourceType.SHAREPOINT, SharePointSource)
 
 __all__ = [
     "FileUploadSource",

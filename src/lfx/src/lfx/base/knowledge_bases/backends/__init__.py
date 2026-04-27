@@ -1,8 +1,7 @@
 """Vector-store backend abstraction for Knowledge Bases.
 
 Provides a thin wrapper over LangChain's ``VectorStore`` base so Langflow's KB
-subsystem can address multiple vector databases (Chroma today; MongoDB, Astra,
-Postgres in later phases) through a single interface.
+subsystem can address multiple vector databases through a single interface.
 
 Public surface:
 
@@ -12,7 +11,13 @@ Public surface:
 * ``BackendType`` — enum of registered backend identifiers.
 * ``register_backend`` / ``create_backend`` — registry entry points.
 
-Chroma is registered on import so existing call sites keep working.
+In this phase only **Chroma** and **OpenSearch** are registered. The
+``AstraBackend`` / ``MongoDBBackend`` / ``PostgresBackend`` classes are
+preserved as stubs so the framework wiring (enum values, type imports,
+DB-stored ``backend_type`` strings on existing rows) keeps round-tripping,
+but they are not instantiable through ``create_backend`` and the picker UI
+hides them. Reinstate by re-introducing the full implementation and
+re-adding ``register_backend(...)`` for that backend below.
 """
 
 from lfx.base.knowledge_bases.backends.astra import AstraBackend
@@ -33,11 +38,10 @@ from lfx.base.knowledge_bases.backends.registry import (
     registered_backends,
 )
 
-# Register built-in backends on import.
+# Register the supported built-in backends on import. AstraBackend /
+# MongoDBBackend / PostgresBackend are intentionally NOT registered while
+# they're stubbed out — see each module's docstring.
 register_backend(BackendType.CHROMA, ChromaBackend)
-register_backend(BackendType.MONGODB, MongoDBBackend)
-register_backend(BackendType.ASTRA, AstraBackend)
-register_backend(BackendType.POSTGRES, PostgresBackend)
 register_backend(BackendType.OPENSEARCH, OpenSearchBackend)
 
 __all__ = [

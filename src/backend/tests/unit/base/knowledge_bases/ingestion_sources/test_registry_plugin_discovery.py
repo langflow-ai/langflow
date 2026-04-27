@@ -97,25 +97,22 @@ async def _reset_registry(monkeypatch, tmp_path):
 
 
 def _reinstall_builtin_sources() -> None:
-    """Re-register the six built-in sources.
+    """Re-register the built-in sources.
 
     These normally register via module-level side effects in
     ``lfx.base.knowledge_bases.ingestion_sources.__init__`` at import
     time; after ``_reset_registries`` we reinstall them explicitly.
+
+    In this phase only ``file_upload`` and ``folder`` are registered.
+    The S3 / Google Drive / OneDrive / SharePoint stubs are NOT
+    re-registered because the production import path doesn't register
+    them either — see the ``__init__`` module's docstring.
     """
     from lfx.base.knowledge_bases.ingestion_sources.file_upload import FileUploadSource
     from lfx.base.knowledge_bases.ingestion_sources.folder import FolderSource
-    from lfx.base.knowledge_bases.ingestion_sources.google_drive import GoogleDriveSource
-    from lfx.base.knowledge_bases.ingestion_sources.onedrive import OneDriveSource
-    from lfx.base.knowledge_bases.ingestion_sources.s3 import S3Source
-    from lfx.base.knowledge_bases.ingestion_sources.sharepoint import SharePointSource
 
     ingestion_registry.register_source(SourceType.FILE_UPLOAD, FileUploadSource)
     ingestion_registry.register_source(SourceType.FOLDER, FolderSource)
-    ingestion_registry.register_source(SourceType.S3, S3Source)
-    ingestion_registry.register_source(SourceType.GOOGLE_DRIVE, GoogleDriveSource)
-    ingestion_registry.register_source(SourceType.ONEDRIVE, OneDriveSource)
-    ingestion_registry.register_source(SourceType.SHAREPOINT, SharePointSource)
 
 
 def _make_ensure_discovered(config_dir):
@@ -177,18 +174,18 @@ def test_builtin_sources_are_not_shadowed_by_entry_points(monkeypatch):
     """
     # Ensure the built-in is registered first (as it would be in
     # production — modules self-register at import time).
-    from lfx.base.knowledge_bases.ingestion_sources.s3 import S3Source
+    from lfx.base.knowledge_bases.ingestion_sources.folder import FolderSource
 
-    ingestion_registry.register_source(SourceType.S3, S3Source)
+    ingestion_registry.register_source(SourceType.FOLDER, FolderSource)
 
     def fake_entry_points(*, group: str):
         if group == AdapterType.INGESTION_SOURCE.entry_point_group:
-            return [_StubEntryPoint("s3", _StubSource)]
+            return [_StubEntryPoint("folder", _StubSource)]
         return []
 
     monkeypatch.setattr("importlib.metadata.entry_points", fake_entry_points)
 
-    assert ingestion_registry.get_source_class(SourceType.S3) is S3Source
+    assert ingestion_registry.get_source_class(SourceType.FOLDER) is FolderSource
 
 
 # --------------------------------------------------------------------- #
