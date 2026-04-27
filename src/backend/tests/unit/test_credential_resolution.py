@@ -100,3 +100,32 @@ class TestGetApiKeyForProviderDbFallback:
         result = get_api_key_for_provider(user_id, "OpenAI", None)
 
         assert result == "sk-from-database"
+
+    @patch("lfx.base.models.unified_models.credentials.get_model_provider_variable_mapping")
+    def test_should_fallback_to_env_when_user_id_is_none(self, mock_mapping, monkeypatch):
+        """No user_id (lfx run) must still resolve credentials from os.environ.
+
+        Reproducer: a flow exported with empty api_key + load_from_db=False is executed
+        via `lfx run`. user_id is None, api_key is empty/None — the function should still
+        try the canonical env var (e.g. WATSONX_APIKEY) before giving up.
+        """
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
+
+        mock_mapping.return_value = {"IBM WatsonX": "WATSONX_APIKEY"}
+        monkeypatch.setenv("WATSONX_APIKEY", "shell-exported-key")
+
+        result = get_api_key_for_provider(None, "IBM WatsonX", None)
+
+        assert result == "shell-exported-key"
+
+    @patch("lfx.base.models.unified_models.credentials.get_model_provider_variable_mapping")
+    def test_should_return_none_when_user_id_none_and_env_unset(self, mock_mapping, monkeypatch):
+        """No user_id and no env var: nothing to return."""
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
+
+        mock_mapping.return_value = {"IBM WatsonX": "WATSONX_APIKEY"}
+        monkeypatch.delenv("WATSONX_APIKEY", raising=False)
+
+        result = get_api_key_for_provider(None, "IBM WatsonX", None)
+
+        assert result is None
