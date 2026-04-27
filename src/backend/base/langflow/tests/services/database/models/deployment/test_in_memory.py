@@ -101,6 +101,7 @@ async def folder(db: AsyncSession, user: User) -> Folder:
 async def provider_account(db: AsyncSession, user: User) -> DeploymentProviderAccount:
     acct = DeploymentProviderAccount(
         user_id=user.id,
+        name="provider-account-1",
         provider_tenant_id="tenant-1",
         provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
         provider_url="https://provider.example.com",
@@ -125,6 +126,7 @@ async def deployment(
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-1",
         name="my-deployment",
+        deployment_type=DeploymentType.AGENT,
     )
     db.add(d)
     await db.commit()
@@ -153,6 +155,7 @@ class TestProviderAccountModel:
     ):
         dup = DeploymentProviderAccount(
             user_id=user.id,
+            name="provider-account-duplicate",
             provider_tenant_id=provider_account.provider_tenant_id,
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url=provider_account.provider_url,
@@ -167,6 +170,7 @@ class TestProviderAccountModel:
         for i in range(2):
             acct = DeploymentProviderAccount(
                 user_id=user.id,
+                name=f"null-tenant-{i}",
                 provider_tenant_id=None,
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
                 provider_url="https://same-url.example.com",
@@ -256,6 +260,7 @@ class TestDeploymentModel:
     ):
         other_acct = DeploymentProviderAccount(
             user_id=user.id,
+            name="provider-account-2",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://other.example.com",
             api_key="enc-other",  # pragma: allowlist secret
@@ -367,9 +372,9 @@ class TestProviderAccountCRUD:
         accounts = await list_provider_accounts(db, user_id=user.id)
         assert len(accounts) == 3
 
-    async def test_update(self, db: AsyncSession, user: User):
+    async def test_update_api_key(self, db: AsyncSession, user: User):
         with patch(_ENCRYPT_TARGET) as mock_auth:
-            mock_auth.encrypt_api_key.return_value = "enc"
+            mock_auth.encrypt_api_key.return_value = "enc-initial"
             acct = await create_provider_account(
                 db,
                 user_id=user.id,
@@ -381,15 +386,18 @@ class TestProviderAccountCRUD:
             )
             await db.commit()
 
-        updated = await update_provider_account(
-            db,
-            provider_account=acct,
-            provider_tenant_id="new-tenant",
-        )
-        await db.commit()
+        with patch(_ENCRYPT_TARGET) as mock_auth:
+            mock_auth.encrypt_api_key.return_value = "enc-rotated"
+            updated = await update_provider_account(
+                db,
+                provider_account=acct,
+                api_key="rotated-key",  # pragma: allowlist secret
+            )
+            await db.commit()
 
         assert updated.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
-        assert updated.provider_tenant_id == "new-tenant"
+        assert updated.provider_tenant_id is None
+        assert updated.api_key == "enc-rotated"  # pragma: allowlist secret
 
     async def test_delete(self, db: AsyncSession, user: User):
         with patch(_ENCRYPT_TARGET) as mock_auth:

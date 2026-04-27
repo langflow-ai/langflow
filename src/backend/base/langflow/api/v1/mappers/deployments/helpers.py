@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
@@ -17,7 +16,6 @@ from lfx.services.adapters.deployment.exceptions import (
 )
 from lfx.services.adapters.deployment.schema import (
     BaseFlowArtifact,
-    DeploymentListParams,
     DeploymentType,
     DeploymentUpdateResult,
     SnapshotListParams,
@@ -31,6 +29,13 @@ from lfx.services.interfaces import DeploymentServiceProtocol
 from sqlalchemy import and_, literal, union_all
 from sqlmodel import col, func, select
 
+from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
+from langflow.api.v1.mappers.deployments.sync import (
+    extract_verified_provider_snapshot_ids,
+    extract_verified_snapshot_ids,
+    fetch_provider_resource_keys,
+    sync_attachment_snapshot_ids,
+)
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
     DeploymentUpdateRequest,
@@ -53,22 +58,26 @@ from langflow.services.database.models.deployment_provider_account.model import 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+    count_attachments_by_deployment_ids,
     count_deployment_attachments,
     create_deployment_attachment,
     delete_deployment_attachment,
+    delete_unbound_attachments,
     get_deployment_attachment,
-    list_attachments_by_deployment_ids,
     list_deployment_attachments,
     list_deployment_attachments_with_versions,
     update_deployment_attachment_provider_snapshot_id,
 )
-from langflow.services.database.models.flow_version_deployment_attachment.model import (
-    FlowVersionDeploymentAttachment,
-)
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.utils import require_non_empty
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from langflow.api.utils import DbSession
+    from langflow.services.database.models.flow_version_deployment_attachment.model import (
+        FlowVersionDeploymentAttachment,
+    )
 
     from .base import BaseDeploymentMapper
 
@@ -387,12 +396,16 @@ async def resolve_adapter_mapper_from_provider_id(
 def resolve_deployment_adapter(
     provider_key: str,
 ) -> DeploymentServiceProtocol:
-    adapter_key = (provider_key or "").strip()
-    if not adapter_key:
+    try:
+        adapter_key = require_non_empty(
+            provider_key,
+            "Deployment provider account has no provider_key configured.",
+        )
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Deployment provider account has no provider_key configured.",
-        )
+            detail=str(exc),
+        ) from exc
 
     try:
         deployment_adapter = get_deployment_adapter(adapter_key)
@@ -673,212 +686,6 @@ async def rollback_provider_update(
         )
 
 
-async def fetch_provider_resource_keys(
-    *,
-    deployment_adapter: DeploymentServiceProtocol,
-    user_id: UUID,
-    provider_id: UUID,
-    db: DbSession,
-    resource_keys: list[str],
-    deployment_type: DeploymentType | None = None,
-) -> set[str]:
-    """Ask the provider which *resource_keys* it recognises.
-
-    Returns the set of provider-side IDs that matched.
-    """
-    try:
-        provider_view = await deployment_adapter.list(
-            user_id=user_id,
-            db=db,
-            params=DeploymentListParams(
-                deployment_types=[deployment_type] if deployment_type is not None else None,
-                provider_params={"ids": resource_keys},
-            ),
-        )
-    except Exception as exc:
-        logger.exception(
-            "Provider list call failed for provider %s",
-            provider_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to list deployments from provider: {exc}",
-        ) from exc
-    return {str(item.id) for item in provider_view.deployments if item.id}
-
-
-async def fetch_provider_snapshot_keys(
-    *,
-    deployment_adapter: DeploymentServiceProtocol,
-    user_id: UUID,
-    provider_id: UUID,
-    db: DbSession,
-    snapshot_ids: list[str],
-) -> set[str]:
-    """Ask the provider which *snapshot_ids* it recognises.
-
-    Mirrors ``fetch_provider_resource_keys`` but for snapshots.
-    Returns the set of provider-side snapshot IDs that matched.
-    """
-    if not snapshot_ids:
-        return set()
-    try:
-        snapshot_view = await deployment_adapter.list_snapshots(
-            user_id=user_id,
-            db=db,
-            params=SnapshotListParams(snapshot_ids=snapshot_ids),
-        )
-    except Exception as exc:
-        logger.exception(
-            "Provider list_snapshots call failed for provider %s",
-            provider_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to list snapshots from provider: {exc}",
-        ) from exc
-    return {str(item.id) for item in snapshot_view.snapshots if item.id}
-
-
-async def sync_attachment_snapshot_ids(
-    *,
-    user_id: UUID,
-    deployment_ids: list[UUID],
-    attachments: list[FlowVersionDeploymentAttachment],
-    known_snapshot_ids: set[str],
-    db: DbSession,
-) -> dict[UUID, int]:
-    """Delete stale attachment rows and return corrected attached counts.
-
-    Any attachment whose ``provider_snapshot_id`` is not in
-    *known_snapshot_ids* is deleted.  Returns a map of
-    ``deployment_id -> remaining_attached_count`` with an entry for every
-    ID in *deployment_ids* (defaulting to 0 when all attachments were stale).
-
-    Accepts an already-fetched list of attachments to avoid per-deployment
-    queries.
-    """
-    corrected_counts: dict[UUID, int] = dict.fromkeys(deployment_ids, 0)
-    for attachment in attachments:
-        snapshot_id = (attachment.provider_snapshot_id or "").strip()
-        if snapshot_id and snapshot_id not in known_snapshot_ids:
-            logger.warning(
-                "Snapshot %s for deployment %s not found on provider — deleting stale attachment",
-                snapshot_id,
-                attachment.deployment_id,
-            )
-            await delete_deployment_attachment(
-                db,
-                user_id=user_id,
-                flow_version_id=attachment.flow_version_id,
-                deployment_id=attachment.deployment_id,
-            )
-        else:
-            corrected_counts[attachment.deployment_id] = corrected_counts.get(attachment.deployment_id, 0) + 1
-    return corrected_counts
-
-
-async def sync_provider_attachment_snapshots(
-    *,
-    deployment_adapter: DeploymentServiceProtocol,
-    deployment_mapper: BaseDeploymentMapper,
-    user_id: UUID,
-    provider_id: UUID,
-    db: DbSession,
-    attachments: list[FlowVersionDeploymentAttachment],
-    deployment_ids: list[UUID] | None = None,
-) -> dict[UUID, int] | None:
-    """Validate attachment snapshot IDs against the provider inside a savepoint.
-
-    Returns corrected ``deployment_id -> attached_count`` values, or ``None``
-    when none of the supplied attachments carry provider-verifiable snapshot
-    IDs.
-    """
-    snapshot_ids = list(dict.fromkeys(deployment_mapper.util_snapshot_ids_to_verify(attachments)))
-    if not snapshot_ids:
-        return None
-
-    known_snapshots = await fetch_provider_snapshot_keys(
-        deployment_adapter=deployment_adapter,
-        user_id=user_id,
-        provider_id=provider_id,
-        db=db,
-        snapshot_ids=snapshot_ids,
-    )
-    if deployment_ids is None:
-        deployment_ids = list(dict.fromkeys(attachment.deployment_id for attachment in attachments))
-
-    async with db.begin_nested():
-        return await sync_attachment_snapshot_ids(
-            user_id=user_id,
-            deployment_ids=deployment_ids,
-            attachments=attachments,
-            known_snapshot_ids=known_snapshots,
-            db=db,
-        )
-
-
-async def sync_flow_version_attachments(
-    *,
-    db: DbSession,
-    flow_id: UUID,
-    user_id: UUID,
-) -> None:
-    """Best-effort snapshot-level sync for all attachments of a flow's versions.
-
-    Groups attachments by provider account, resolves the adapter/mapper for
-    each, and prunes attachment rows whose ``provider_snapshot_id`` is no
-    longer recognised by the provider.  Errors for individual providers are
-    logged and skipped so that a single provider outage does not block the
-    flow version read path.
-    """
-    from collections import defaultdict
-
-    from langflow.api.v1.mappers.deployments.registry import get_deployment_mapper
-    from langflow.services.database.models.flow_version_deployment_attachment.crud import (
-        list_attachments_for_flow_with_provider_info,
-    )
-
-    rows = await list_attachments_for_flow_with_provider_info(db, user_id=user_id, flow_id=flow_id)
-    if not rows:
-        return
-
-    # Group attachments by (provider_account_id, provider_key).
-    grouped: dict[tuple[UUID, str], list[FlowVersionDeploymentAttachment]] = defaultdict(list)
-    for attachment, provider_account_id, provider_key in rows:
-        grouped[(provider_account_id, provider_key)].append(attachment)
-
-    for (provider_account_id, provider_key), attachments in grouped.items():
-        try:
-            deployment_adapter = get_deployment_adapter(provider_key)
-            deployment_mapper = get_deployment_mapper(provider_key)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Failed to resolve adapter/mapper for provider_key=%s during flow version sync; skipping",
-                provider_key,
-                exc_info=True,
-            )
-            continue
-
-        try:
-            with deployment_provider_scope(provider_account_id):
-                await sync_provider_attachment_snapshots(
-                    deployment_adapter=deployment_adapter,
-                    deployment_mapper=deployment_mapper,
-                    user_id=user_id,
-                    provider_id=provider_account_id,
-                    db=db,
-                    attachments=attachments,
-                )
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Snapshot-level sync failed for provider %s (flow %s); skipping",
-                provider_account_id,
-                flow_id,
-                exc_info=True,
-            )
-
-
 async def list_deployments_synced(
     *,
     deployment_adapter: DeploymentServiceProtocol,
@@ -899,10 +706,13 @@ async def list_deployments_synced(
     not advance for deleted rows (deletion shifts subsequent offsets down).
     """
     accepted: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]] = []
+    accepted_deployment_ids: list[UUID] = []
+    provider_bindings: list[ProviderSnapshotBinding] = []
     cursor = page_offset(page, size)
-    guard = 0
-    while len(accepted) < size and guard < (size * 4 + 20):
-        guard += 1
+    max_sync_rounds = 2  # Initial pass + one refill pass.
+    for _ in range(max_sync_rounds):
+        if len(accepted) >= size:
+            break
         batch = await list_deployments_page(
             db,
             user_id=user_id,
@@ -915,7 +725,7 @@ async def list_deployments_synced(
         if not batch:
             break
 
-        known = await fetch_provider_resource_keys(
+        known, provider_view = await fetch_provider_resource_keys(
             deployment_adapter=deployment_adapter,
             user_id=user_id,
             provider_id=provider_id,
@@ -923,9 +733,11 @@ async def list_deployments_synced(
             resource_keys=[row.resource_key for row, _, _ in batch],
             deployment_type=deployment_type,
         )
+        provider_bindings.extend(deployment_mapper.extract_snapshot_bindings(provider_view))
 
         for row, attached_count, matched_flow_versions in batch:
             if row.resource_key not in known:
+                # Provider `known` is type-filtered; skip other local types instead of deleting as stale.
                 if deployment_type is not None and row.deployment_type != deployment_type:
                     cursor += 1
                     continue
@@ -938,32 +750,29 @@ async def list_deployments_synced(
                 await delete_deployment_by_id(db, user_id=user_id, deployment_id=row.id)
                 continue
             accepted.append((row, attached_count, matched_flow_versions))
+            accepted_deployment_ids.append(row.id)
             cursor += 1
 
-    # Phase 2: snapshot-level sync.
-    # Ask the mapper which attachment snapshot IDs are provider-verifiable,
-    # verify them in a single batched provider call, and delete stale rows.
-    # Best-effort — a provider outage should not block the list response.
+    # Phase 2: binding-level sync.
+    # Remove stale local attachments based on provider bindings, then recount.
+    # Best-effort - provider or DB failures should not block the list response.
     if accepted:
         try:
-            deployment_ids_for_sync = [row.id for row, _count, _matched in accepted]
-            all_attachments = await list_attachments_by_deployment_ids(
-                db, user_id=user_id, deployment_ids=deployment_ids_for_sync
-            )
-            corrected_counts = await sync_provider_attachment_snapshots(
-                deployment_adapter=deployment_adapter,
-                deployment_mapper=deployment_mapper,
+            async with db.begin_nested():
+                await delete_unbound_attachments(
+                    db,
+                    user_id=user_id,
+                    provider_account_id=provider_id,
+                    deployment_ids=accepted_deployment_ids,
+                    bindings=provider_bindings,
+                )
+
+            corrected_counts = await count_attachments_by_deployment_ids(
+                db,
                 user_id=user_id,
-                provider_id=provider_id,
-                db=db,
-                attachments=all_attachments,
-                deployment_ids=deployment_ids_for_sync,
+                deployment_ids=accepted_deployment_ids,
             )
-            if corrected_counts is not None:
-                accepted = [(row, corrected_counts[row.id], matched) for row, _attached_count, matched in accepted]
-            # else: no attachments carry a provider-verifiable snapshot ID,
-            # so there is nothing to check against the provider. The
-            # original attached_count from the DB is kept as-is.
+            accepted = [(row, corrected_counts[row.id], matched) for row, _attached_count, matched in accepted]
         except Exception:  # noqa: BLE001
             logger.warning(
                 "Snapshot-level sync failed for list_deployments_synced; returning unverified attachment counts",
@@ -983,7 +792,6 @@ async def list_deployments_synced(
 async def list_deployment_flow_versions_synced(
     *,
     deployment_adapter: DeploymentServiceProtocol,
-    deployment_mapper: BaseDeploymentMapper,
     user_id: UUID,
     provider_id: UUID,
     deployment_id: UUID,
@@ -1005,7 +813,8 @@ async def list_deployment_flow_versions_synced(
         flow_ids=flow_ids,
     )
     snapshot_result: SnapshotListResult | None = None
-    snapshot_ids = list(dict.fromkeys(deployment_mapper.util_snapshot_ids_to_verify(attachments)))
+    verified_snapshot_ids = extract_verified_snapshot_ids(attachments)
+    snapshot_ids = list(dict.fromkeys(verified_snapshot_ids))
     if snapshot_ids:
         try:
             snapshot_result = await deployment_adapter.list_snapshots(
@@ -1013,24 +822,24 @@ async def list_deployment_flow_versions_synced(
                 db=db,
                 params=SnapshotListParams(snapshot_ids=snapshot_ids),
             )
-            known_snapshot_ids = {str(item.id) for item in snapshot_result.snapshots if item.id}
+            known_snapshot_ids = extract_verified_provider_snapshot_ids(snapshot_result)
 
             async with db.begin_nested():
                 await sync_attachment_snapshot_ids(
                     user_id=user_id,
-                    deployment_ids=[deployment_id],
                     attachments=attachments,
                     known_snapshot_ids=known_snapshot_ids,
                     db=db,
                 )
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
             snapshot_result = None
             logger.warning(
                 "Snapshot-level sync failed while listing deployment flow versions for deployment %s "
-                "(provider %s); "
+                "(provider %s): %s; "
                 "returning DB rows without provider enrichment",
                 deployment_id,
                 provider_id,
+                exc,
                 exc_info=True,
             )
 
@@ -1063,12 +872,17 @@ async def attach_flow_versions(
         return
 
     for flow_version_id in flow_version_ids:
+        snapshot_id = require_non_empty(
+            (snapshot_id_by_flow_version_id or {}).get(flow_version_id),
+            "Missing provider snapshot binding for flow version "
+            f"{flow_version_id} during deployment attachment creation.",
+        )
         await create_deployment_attachment(
             db,
             user_id=user_id,
             flow_version_id=flow_version_id,
             deployment_id=deployment_row_id,
-            provider_snapshot_id=(snapshot_id_by_flow_version_id or {}).get(flow_version_id),
+            provider_snapshot_id=snapshot_id,
         )
 
 
