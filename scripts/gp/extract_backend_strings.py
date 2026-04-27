@@ -135,7 +135,7 @@ def collect_strings() -> dict[str, str]:
         try:
             with project_file.open(encoding="utf-8") as f:
                 project = json.load(f)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S112
             continue
         name = project.get("name")
         description = project.get("description", "")
@@ -155,7 +155,7 @@ def collect_strings() -> dict[str, str]:
         try:
             with project_file.open(encoding="utf-8") as f:
                 project = json.load(f)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S112
             continue
         nodes = project.get("data", {}).get("nodes", [])
         for node in nodes:
