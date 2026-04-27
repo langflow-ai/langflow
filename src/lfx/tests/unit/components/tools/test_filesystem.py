@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from lfx.components.tools.filesystem import FileSystemToolComponent
 
 
@@ -89,32 +88,24 @@ class TestWindowsPortability:
         assert "error" in result
         assert "reserved" in result["error"].lower()
 
-    def test_should_reject_reserved_name_with_extension(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_reject_reserved_name_with_extension(self, component: FileSystemToolComponent) -> None:
         # CON.txt is just as reserved as bare CON on Windows.
         result = component._read_file("CON.txt")
         assert "error" in result
         assert "reserved" in result["error"].lower()
 
-    def test_should_reject_reserved_name_in_nested_path(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_reject_reserved_name_in_nested_path(self, component: FileSystemToolComponent) -> None:
         result = component._read_file("nested/PRN.json")
         assert "error" in result
         assert "reserved" in result["error"].lower()
 
-    def test_should_be_case_insensitive_for_reserved_names(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_be_case_insensitive_for_reserved_names(self, component: FileSystemToolComponent) -> None:
         # Lowercase "con" is treated identically by Windows.
         result = component._read_file("con.log")
         assert "error" in result
         assert "reserved" in result["error"].lower()
 
-    def test_should_accept_reserved_name_as_substring(
-        self, component: FileSystemToolComponent, sandbox: Path
-    ) -> None:
+    def test_should_accept_reserved_name_as_substring(self, component: FileSystemToolComponent, sandbox: Path) -> None:
         # MyCon.txt is NOT reserved — only the exact stem CON is.
         (sandbox / "MyCon.txt").write_text("data", encoding="utf-8")
         result = component._read_file("MyCon.txt")
@@ -128,24 +119,18 @@ class TestWindowsPortability:
         assert "error" in result
         assert "forbidden" in result["error"].lower()
 
-    def test_should_reject_path_with_trailing_dot(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_reject_path_with_trailing_dot(self, component: FileSystemToolComponent) -> None:
         # Windows silently strips trailing "." — ambiguous and bug-prone.
         result = component._write_file("badname.", "x")
         assert "error" in result
         assert "trailing" in result["error"].lower()
 
-    def test_should_reject_path_with_trailing_space(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_reject_path_with_trailing_space(self, component: FileSystemToolComponent) -> None:
         result = component._write_file("badname ", "x")
         assert "error" in result
         assert "trailing" in result["error"].lower()
 
-    def test_should_not_trigger_on_dotdot_relative_marker(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_not_trigger_on_dotdot_relative_marker(self, component: FileSystemToolComponent) -> None:
         # `..` IS a path component but it is the parent-dir marker, not a
         # filename with a trailing dot. It should pass the portability check
         # and be caught only by the sandbox-boundary check downstream.
@@ -154,9 +139,7 @@ class TestWindowsPortability:
         assert "trailing" not in result["error"].lower()
         assert "boundary" in result["error"].lower() or "escape" in result["error"].lower()
 
-    def test_should_not_trigger_on_single_dot(
-        self, component: FileSystemToolComponent, sandbox: Path
-    ) -> None:
+    def test_should_not_trigger_on_single_dot(self, component: FileSystemToolComponent, sandbox: Path) -> None:
         # `./hello.txt` is just `hello.txt`. Should not trigger trailing-dot
         # rule, and should resolve to the existing file.
         result = component._read_file("./hello.txt")
@@ -207,23 +190,17 @@ class TestReadFile:
         assert "error" in result
         assert "size" in result["error"].lower() or "limit" in result["error"].lower()
 
-    def test_should_return_structured_error_when_file_does_not_exist(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_return_structured_error_when_file_does_not_exist(self, component: FileSystemToolComponent) -> None:
         result = component._read_file("does_not_exist.txt")
         assert "error" in result
         assert "not found" in result["error"].lower() or "no such" in result["error"].lower()
 
-    def test_should_return_structured_error_when_path_is_a_directory(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_return_structured_error_when_path_is_a_directory(self, component: FileSystemToolComponent) -> None:
         result = component._read_file("nested")
         assert "error" in result
         assert "directory" in result["error"].lower()
 
-    def test_should_return_structured_error_when_path_escapes_sandbox(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_return_structured_error_when_path_escapes_sandbox(self, component: FileSystemToolComponent) -> None:
         result = component._read_file("../outside.txt")
         assert "error" in result
         assert "escape" in result["error"].lower() or "boundary" in result["error"].lower()
@@ -259,9 +236,7 @@ class TestWriteFile:
         assert "error" in result
         assert "directory" in result["error"].lower() or "parent" in result["error"].lower()
 
-    def test_should_return_structured_error_when_path_escapes_sandbox(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_return_structured_error_when_path_escapes_sandbox(self, component: FileSystemToolComponent) -> None:
         result = component._write_file("../escape.txt", "x")
         assert "error" in result
         assert "escape" in result["error"].lower() or "boundary" in result["error"].lower()
@@ -283,18 +258,14 @@ class TestEditFile:
         assert result["replacements"] == 1
         assert (sandbox / "hello.txt").read_text(encoding="utf-8") == "line1\nLINE_TWO\nline3\n"
 
-    def test_should_replace_all_when_replace_all_true(
-        self, component: FileSystemToolComponent, sandbox: Path
-    ) -> None:
+    def test_should_replace_all_when_replace_all_true(self, component: FileSystemToolComponent, sandbox: Path) -> None:
         (sandbox / "repeat.txt").write_text("foo\nfoo\nfoo\n", encoding="utf-8")
         result = component._edit_file("repeat.txt", old_string="foo", new_string="bar", replace_all=True)
         assert result["status"] == "ok"
         assert result["replacements"] == 3
         assert (sandbox / "repeat.txt").read_text(encoding="utf-8") == "bar\nbar\nbar\n"
 
-    def test_should_reject_edit_when_old_string_not_found(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_reject_edit_when_old_string_not_found(self, component: FileSystemToolComponent) -> None:
         result = component._edit_file("hello.txt", old_string="absent", new_string="whatever")
         assert "error" in result
         assert "not found" in result["error"].lower()
@@ -307,16 +278,12 @@ class TestEditFile:
         assert "error" in result
         assert "multiple" in result["error"].lower() or "ambiguous" in result["error"].lower()
 
-    def test_should_return_structured_error_when_file_does_not_exist(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_return_structured_error_when_file_does_not_exist(self, component: FileSystemToolComponent) -> None:
         result = component._edit_file("missing.txt", old_string="x", new_string="y")
         assert "error" in result
         assert "not found" in result["error"].lower()
 
-    def test_should_return_structured_error_when_path_escapes(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_return_structured_error_when_path_escapes(self, component: FileSystemToolComponent) -> None:
         result = component._edit_file("../escape.txt", old_string="x", new_string="y")
         assert "error" in result
         assert "escape" in result["error"].lower() or "boundary" in result["error"].lower()
@@ -349,9 +316,7 @@ class TestGlobSearch:
         assert result["truncated"] is True
         assert len(result["matches"]) == 100
 
-    def test_should_scope_glob_to_path_argument(
-        self, component: FileSystemToolComponent, sandbox: Path
-    ) -> None:
+    def test_should_scope_glob_to_path_argument(self, component: FileSystemToolComponent, sandbox: Path) -> None:
         (sandbox / "nested" / "only_here.md").write_text("x", encoding="utf-8")
         (sandbox / "top.md").write_text("x", encoding="utf-8")
         result = component._glob_search("*.md", path="nested")
@@ -359,9 +324,7 @@ class TestGlobSearch:
         assert any("only_here.md" in p for p in result["matches"])
         assert not any("top.md" in p for p in result["matches"])
 
-    def test_should_return_structured_error_when_scope_path_escapes(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_return_structured_error_when_scope_path_escapes(self, component: FileSystemToolComponent) -> None:
         result = component._glob_search("*.txt", path="../")
         assert "error" in result
 
@@ -384,9 +347,7 @@ class TestGrepSearch:
         assert any(f.endswith("c.md") for f in files)
         assert not any(f.endswith("b.txt") for f in files)  # FOO is uppercase, default is case-sensitive
 
-    def test_should_return_content_with_line_numbers_in_content_mode(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_return_content_with_line_numbers_in_content_mode(self, component: FileSystemToolComponent) -> None:
         result = component._grep_search(r"foo", output_mode="content")
         assert result["status"] == "ok"
         assert result["output_mode"] == "content"
@@ -428,23 +389,17 @@ class TestGrepSearch:
         assert result["truncated"] is True
         assert len(result["matches"]) == 5
 
-    def test_should_scope_grep_to_single_file_path(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_scope_grep_to_single_file_path(self, component: FileSystemToolComponent) -> None:
         result = component._grep_search(r"foo", path="a.txt", output_mode="content")
         assert result["status"] == "ok"
         assert all("a.txt" in entry["path"] for entry in result["matches"])
 
-    def test_should_return_structured_error_for_invalid_regex(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_return_structured_error_for_invalid_regex(self, component: FileSystemToolComponent) -> None:
         result = component._grep_search(r"[invalid")
         assert "error" in result
         assert "regex" in result["error"].lower() or "pattern" in result["error"].lower()
 
-    def test_should_return_structured_error_when_scope_path_escapes(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_return_structured_error_when_scope_path_escapes(self, component: FileSystemToolComponent) -> None:
         result = component._grep_search(r"foo", path="../")
         assert "error" in result
 
@@ -459,9 +414,7 @@ class TestGetTools:
         names = {tool.name for tool in tools}
         assert names == {"read_file", "write_file", "edit_file", "glob_search", "grep_search"}
 
-    async def test_should_not_register_write_and_edit_tools_in_read_only_mode(
-        self, sandbox: Path
-    ) -> None:
+    async def test_should_not_register_write_and_edit_tools_in_read_only_mode(self, sandbox: Path) -> None:
         component = FileSystemToolComponent(root_path=str(sandbox), read_only=True)
         tools = await component._get_tools()
         names = {tool.name for tool in tools}
@@ -469,16 +422,12 @@ class TestGetTools:
         assert "write_file" not in names
         assert "edit_file" not in names
 
-    async def test_registered_read_tool_invokes_read_file(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    async def test_registered_read_tool_invokes_read_file(self, component: FileSystemToolComponent) -> None:
         tools = {tool.name: tool for tool in await component._get_tools()}
         output = tools["read_file"].invoke({"path": "hello.txt"})
         assert "line1" in str(output)
 
-    async def test_every_tool_must_have_non_empty_tags(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    async def test_every_tool_must_have_non_empty_tags(self, component: FileSystemToolComponent) -> None:
         # The framework's update_tools_metadata flow (component_tool.py:343)
         # gates on `isinstance(tool, StructuredTool|BaseTool) AND tool.tags`.
         # A tool without tags falls through to a misleading TypeError that
@@ -486,9 +435,7 @@ class TestGetTools:
         # its name so the metadata-merge step can identify it.
         for tool in await component._get_tools():
             assert tool.tags, f"Tool {tool.name!r} is missing tags"
-            assert tool.tags[0] == tool.name, (
-                f"Tool {tool.name!r} first tag ({tool.tags[0]!r}) must match name"
-            )
+            assert tool.tags[0] == tool.name, f"Tool {tool.name!r} first tag ({tool.tags[0]!r}) must match name"
 
 
 class TestToolModeToggle:
@@ -498,17 +445,13 @@ class TestToolModeToggle:
         # Defensive runtime flag — read by Component._handle_tool_mode.
         assert getattr(FileSystemToolComponent, "add_tool_output", False) is True
 
-    def test_should_have_at_least_one_input_with_tool_mode_true(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_have_at_least_one_input_with_tool_mode_true(self, component: FileSystemToolComponent) -> None:
         # The frontend toggle visibility is gated by `any(input.tool_mode)` in
         # lfx.template.utils — without this, the "Tool Mode" header toggle does
         # not render even if add_tool_output is True.
         assert any(getattr(inp, "tool_mode", False) for inp in component.inputs)
 
-    def test_should_keep_root_path_visible_in_tool_mode(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_keep_root_path_visible_in_tool_mode(self, component: FileSystemToolComponent) -> None:
         # Frontend rule (parameter-filtering.ts :: isHidden): an input with
         # tool_mode=True is hidden when the Tool Mode toggle is ON. The
         # root_path field is component-level configuration and MUST remain
@@ -523,9 +466,7 @@ class TestToolModeToggle:
         # The trigger must be hidden (show=False) so it does not pollute the
         # config UI. Pattern follows FileComponent.file_path_str.
         triggers = [
-            inp
-            for inp in component.inputs
-            if getattr(inp, "tool_mode", False) and not getattr(inp, "show", True)
+            inp for inp in component.inputs if getattr(inp, "tool_mode", False) and not getattr(inp, "show", True)
         ]
         assert len(triggers) >= 1, "Expected at least one hidden input with tool_mode=True"
 
