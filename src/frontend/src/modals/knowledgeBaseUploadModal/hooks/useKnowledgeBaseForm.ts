@@ -1,11 +1,13 @@
 import { type AxiosError } from "axios";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
+import { getDefaultKnowledgeBackendConfig } from "@/constants/knowledgeBackendConstants";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { useCreateKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-create-knowledge-base";
 import { useGetIngestionJobStatus } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-job-status";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import type { BackendValue } from "@/modals/knowledgeBaseUploadModal/components/BackendPicker";
 import useAlertStore from "@/stores/alertStore";
 import {
@@ -68,6 +70,9 @@ export function useKnowledgeBaseForm({
 
   // Fetch embedding model data from API
   const { data: modelProviders = [] } = useGetModelProviders({});
+  const { data: globalVariables = [], isFetched: areGlobalVariablesFetched } =
+    useGetGlobalVariables();
+  const hasAppliedBackendDefaults = useRef(false);
 
   // Transform provider data into ModelOption[] for embedding models only
   const embeddingModelOptions = useMemo<ModelOption[]>(() => {
@@ -118,6 +123,11 @@ export function useKnowledgeBaseForm({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const defaultBackendSelection = useMemo(
+    () => getDefaultKnowledgeBackendConfig(globalVariables),
+    [globalVariables],
+  );
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
 
   // Preview state
@@ -208,6 +218,29 @@ export function useKnowledgeBaseForm({
     }
   }, [existingKnowledgeBase, open, embeddingModelOptions]);
 
+  useEffect(() => {
+    if (!open) {
+      hasAppliedBackendDefaults.current = false;
+      return;
+    }
+    if (
+      existingKnowledgeBase ||
+      hasAppliedBackendDefaults.current ||
+      !areGlobalVariablesFetched
+    ) {
+      return;
+    }
+
+    setBackendType(defaultBackendSelection.backendType);
+    setBackendConfig(defaultBackendSelection.backendConfig);
+    hasAppliedBackendDefaults.current = true;
+  }, [
+    areGlobalVariablesFetched,
+    defaultBackendSelection,
+    existingKnowledgeBase,
+    open,
+  ]);
+
   const resetForm = useCallback(() => {
     setSourceName("");
     setFiles([]);
@@ -228,6 +261,7 @@ export function useKnowledgeBaseForm({
     setShowAdvanced(false);
     setIngestionJobId(null);
     setValidationErrors({});
+    hasAppliedBackendDefaults.current = false;
   }, []);
 
   const toggleAdvanced = useCallback(() => {
