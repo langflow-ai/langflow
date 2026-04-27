@@ -5,9 +5,9 @@ Delegates to the same two abstractions ingestion uses:
 * ``get_embeddings`` from ``lfx.base.models.unified_models`` resolves
   the embedding provider + API key via the user's provider settings,
   so the component stays credential-free.
-* ``ChromaBackend`` from ``lfx.base.knowledge_bases.backends`` wraps
-  the vector store lookup, which keeps the component working unchanged
-  as MongoDB / Astra / Postgres backends land in Phase 4.
+* ``create_backend`` from ``lfx.base.knowledge_bases.backends`` opens
+  the configured vector store through the backend registry, so Chroma,
+  MongoDB, Astra, Postgres, and OpenSearch share the same retrieval path.
 """
 
 from __future__ import annotations
@@ -256,7 +256,7 @@ class KnowledgeBaseComponent(Component):
         3. Hand that model_selection to ``get_embeddings`` so the
            unified-models layer instantiates the right provider + pulls
            the API key from the user's provider settings.
-        4. Open a ``ChromaBackend`` against the KB and run the query.
+        4. Open the configured vector-store backend and run the query.
         """
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
 
@@ -302,7 +302,7 @@ class KnowledgeBaseComponent(Component):
             backend_config=backend_config,
             embedding_function=embedding_function,
             # Forward for variable_service-based credential resolution on
-            # Mongo/Astra/Postgres backends. Chroma ignores this.
+            # remote backends. Chroma ignores this.
             user_id=self.user_id,
         )
         try:
@@ -314,9 +314,8 @@ class KnowledgeBaseComponent(Component):
             )
 
             # Build an id → embedding map via the backend-agnostic iterator
-            # rather than reaching into Chroma's private ``_collection`` API
-            # (which Mongo/Astra/Postgres don't expose). Scoped to the KB's
-            # doc ids so the pass stays bounded.
+            # rather than reaching into backend-specific private APIs.
+            # Scoped to the KB's doc ids so the pass stays bounded.
             id_to_embedding: dict[str, list[float]] = {}
             if self.include_embeddings and results:
                 doc_ids = {doc.metadata.get("_id") for doc, _score in results if doc.metadata.get("_id")}
