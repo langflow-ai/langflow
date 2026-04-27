@@ -102,7 +102,7 @@ export default function CreateMemoryModal({
         <div className="flex flex-col gap-2">
           <Label htmlFor="memory-batch-size">Batch Size</Label>
           <span className="text-xs text-muted-foreground">
-            Messages to accumulate before ingestion triggers (min 1)
+            Messages per ingestion batch (min 1)
           </span>
           <Input
             id="memory-batch-size"
@@ -180,7 +180,7 @@ export default function CreateMemoryModal({
       <BaseModal.Footer
         submit={{
           label: "Create Memory",
-          icon: <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />,
+          icon: <ForwardedIconComponent name="Plus" className="h-4 w-4" />,
           loading: createMemoryMutation.isPending,
           disabled:
             !name.trim() ||

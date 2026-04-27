@@ -1,19 +1,18 @@
 import {
-  useInfiniteQuery,
   type InfiniteData,
   type UseInfiniteQueryOptions,
   type UseInfiniteQueryResult,
+  useInfiniteQuery,
 } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import type { GetMemoriesApiResponse, GetMemoriesParams } from "./types";
 import { mapGetMemoriesApiResponse } from "./mappers";
 import {
   MEMORIES_PAGE_SIZE,
-  MEMORIES_RETRY_BASE_DELAY_MS,
   MEMORIES_RETRY_MAX_ATTEMPTS,
-  MEMORIES_RETRY_MAX_DELAY_MS,
-} from "@/pages/FlowPage/components/MemoriesMainContent/MemoriesMainContent.constants";
+  memoriesRetryDelay,
+} from "./memoriesQueryConfig";
+import type { GetMemoriesApiResponse, GetMemoriesParams } from "./types";
 
 type MemoriesPage = ReturnType<typeof mapGetMemoriesApiResponse>;
 
@@ -70,11 +69,7 @@ export const useGetMemories = (
       lastPage.page < lastPage.pages ? lastPage.page + 1 : undefined,
     refetchOnWindowFocus: false,
     retry: MEMORIES_RETRY_MAX_ATTEMPTS,
-    retryDelay: (attemptIndex) =>
-      Math.min(
-        MEMORIES_RETRY_BASE_DELAY_MS * 2 ** attemptIndex,
-        MEMORIES_RETRY_MAX_DELAY_MS,
-      ),
+    retryDelay: memoriesRetryDelay,
     ...(options ?? {}),
   });
 };

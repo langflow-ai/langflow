@@ -23,8 +23,7 @@ type MemoriesPageFixture = {
 };
 
 // ---------------------------------------------------------------------------
-// Fixture factories — provide required-field defaults so tests only specify
-// the fields they actually exercise.
+// Fixture factories
 // ---------------------------------------------------------------------------
 
 function makeMemoryInfo(
@@ -76,7 +75,7 @@ jest.mock("@/stores/alertStore", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Mutable fixture state (reset in beforeEach; mutated in individual tests)
+// Mutable fixture state (reset in beforeEach)
 // ---------------------------------------------------------------------------
 
 let memories: MemoryInfo[] = [
@@ -89,9 +88,10 @@ let memories: MemoryInfo[] = [
   }),
 ];
 
-// Override to simulate multiple pages; undefined means use the default single-page shape.
+// Set in individual tests to simulate multiple pages; undefined = single page.
 let memoriesPages: MemoriesPageFixture[] | undefined;
 
+const mockRefetchMemories = jest.fn();
 jest.mock("@/controllers/API/queries/memories/use-get-memories", () => ({
   useGetMemories: () => {
     const pages: MemoriesPageFixture[] = memoriesPages ?? [
@@ -102,6 +102,7 @@ jest.mock("@/controllers/API/queries/memories/use-get-memories", () => ({
       fetchNextPage: jest.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
+      refetch: mockRefetchMemories,
     };
   },
 }));
@@ -139,12 +140,26 @@ let memorySessionsData: MemorySessionInfo[] = [
   },
 ];
 
+const mockRefetchSessions = jest.fn();
+const mockFetchNextSessionsPage = jest.fn();
 jest.mock("@/controllers/API/queries/memories/use-get-memory-sessions", () => ({
   useGetMemorySessions: () => ({
-    data: memorySessionsData,
-    isLoading: false,
-    isError: false,
-    refetch: jest.fn(),
+    data: {
+      pages: [
+        {
+          items: memorySessionsData,
+          total: memorySessionsData.length,
+          page: 1,
+          size: 50,
+          pages: 1,
+        },
+      ],
+      pageParams: [1],
+    },
+    refetch: mockRefetchSessions,
+    fetchNextPage: mockFetchNextSessionsPage,
+    hasNextPage: false,
+    isFetchingNextPage: false,
   }),
 }));
 
@@ -154,7 +169,7 @@ let messagesBySession: Record<string, MemorySessionMessageApiItem[]> = {
       timestamp: "2026-04-01T19:29:07",
       sender: "User",
       sender_name: "User",
-      ingestion_job_id: "job-1",
+      job_id: "job-1",
       ingestion_timestamp: "2026-04-02T20:51:06.951803",
       session_id: "s1",
       text: "Hello.",
@@ -166,7 +181,7 @@ let messagesBySession: Record<string, MemorySessionMessageApiItem[]> = {
       timestamp: "2026-04-01T19:29:08",
       sender: "Machine",
       sender_name: "AI",
-      ingestion_job_id: "job-2",
+      job_id: "job-2",
       ingestion_timestamp: "2026-04-02T20:51:06.951803",
       session_id: "s2",
       text: "Hi.",
@@ -175,6 +190,7 @@ let messagesBySession: Record<string, MemorySessionMessageApiItem[]> = {
   ],
 };
 
+const mockRefetchMessages = jest.fn();
 jest.mock(
   "@/controllers/API/queries/memories/use-get-memory-session-messages",
   () => ({
@@ -190,6 +206,7 @@ jest.mock(
         fetchNextPage: jest.fn(),
         hasNextPage: false,
         isFetchingNextPage: false,
+        refetch: mockRefetchMessages,
       };
     },
   }),
@@ -248,7 +265,7 @@ describe("useMemoriesData", () => {
           timestamp: "2026-04-01T19:29:07",
           sender: "User",
           sender_name: "User",
-          ingestion_job_id: "job-1",
+          job_id: "job-1",
           ingestion_timestamp: "2026-04-02T20:51:06.951803",
           session_id: "s1",
           text: "Hello.",
@@ -260,7 +277,7 @@ describe("useMemoriesData", () => {
           timestamp: "2026-04-01T19:29:08",
           sender: "Machine",
           sender_name: "AI",
-          ingestion_job_id: "job-2",
+          job_id: "job-2",
           ingestion_timestamp: "2026-04-02T20:51:06.951803",
           session_id: "s2",
           text: "Hi.",
@@ -402,8 +419,6 @@ describe("useMemoriesData", () => {
     expect(Array.from(result.current.groupedBySession.keys())).toEqual(["s2"]);
   });
 
-  // --- adversarial ---
-
   it("deselects stale memory when the list comes back empty", () => {
     memories = [];
     const onSelectMemory = jest.fn();
@@ -455,10 +470,39 @@ describe("useMemoriesData", () => {
       result.current.setSelectedSession("ghost-session-xyz");
     });
 
-    // effectiveSessionId must resolve to one of the real sessions, never the ghost
     const keys = Array.from(result.current.groupedBySession.keys());
     expect(keys).not.toContain("ghost-session-xyz");
     expect(result.current.groupedBySession.size).toBeGreaterThan(0);
+  });
+
+  it("exposes onRefresh as a function", () => {
+    const { result } = renderHook(() =>
+      useMemoriesData({
+        currentFlowId: "flow-1",
+        selectedMemoryId: "m1",
+        onSelectMemory: jest.fn(),
+      }),
+    );
+
+    expect(typeof result.current.onRefresh).toBe("function");
+  });
+
+  it("onRefresh calls refetchMemories, refetchMemorySessions and refetchMessages", () => {
+    const { result } = renderHook(() =>
+      useMemoriesData({
+        currentFlowId: "flow-1",
+        selectedMemoryId: "m1",
+        onSelectMemory: jest.fn(),
+      }),
+    );
+
+    act(() => {
+      result.current.onRefresh();
+    });
+
+    expect(mockRefetchMemories).toHaveBeenCalledTimes(1);
+    expect(mockRefetchSessions).toHaveBeenCalled();
+    expect(mockRefetchMessages).toHaveBeenCalledTimes(1);
   });
 
   it("flattens memories across multiple API pages into a single array", () => {
@@ -488,6 +532,21 @@ describe("useMemoriesData", () => {
     );
 
     expect(result.current.memories).toHaveLength(2);
-    expect(result.current.memories.map((m) => m.id)).toEqual(["m1", "m2"]);
+    expect(result.current.memories[0].id).toBe("m1");
+    expect(result.current.memories[1].id).toBe("m2");
+  });
+
+  it("exposes fetchNextSessionsPage, hasNextSessionsPage and isFetchingNextSessionsPage", () => {
+    const { result } = renderHook(() =>
+      useMemoriesData({
+        currentFlowId: "flow-1",
+        selectedMemoryId: "m1",
+        onSelectMemory: jest.fn(),
+      }),
+    );
+
+    expect(result.current.fetchNextSessionsPage).toBe(mockFetchNextSessionsPage);
+    expect(result.current.hasNextSessionsPage).toBe(false);
+    expect(result.current.isFetchingNextSessionsPage).toBe(false);
   });
 });

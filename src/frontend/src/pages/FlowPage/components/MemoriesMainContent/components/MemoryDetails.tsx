@@ -1,8 +1,8 @@
-import { SummaryCard } from "./SummaryCard";
 import { formatDate } from "../helpers";
 import { MemoryDetailsProps } from "../types";
 import { MemoryDetailsHeader } from "./MemoryDetailsHeader";
 import { MemoryKnowledgeBaseSection } from "./MemoryKnowledgeBaseSection";
+import { SummaryCard } from "./SummaryCard";
 
 export function MemoryDetails({
   memory,
@@ -17,7 +17,18 @@ export function MemoryDetails({
   handleOpenDocumentPanel,
   deleteMutation,
   handleToggleActive,
+  onRefresh,
+  fetchNextSessionsPage,
+  hasNextSessionsPage,
+  isFetchingNextSessionsPage,
 }: MemoryDetailsProps) {
+  const pendingLabel =
+    memory.batch_size > 1 ? "Pending (this batch)" : "Pending Messages";
+  const pendingValue =
+    memory.batch_size > 1
+      ? `${memory.pending_messages_count}/${memory.batch_size}`
+      : memory.pending_messages_count;
+
   return (
     <>
       <MemoryDetailsHeader
@@ -27,24 +38,20 @@ export function MemoryDetails({
         setSelectedSession={setSelectedSession}
         deleteMutation={deleteMutation}
         handleToggleActive={handleToggleActive}
+        onRefresh={onRefresh}
+        fetchNextSessionsPage={fetchNextSessionsPage}
+        hasNextSessionsPage={hasNextSessionsPage}
+        isFetchingNextSessionsPage={isFetchingNextSessionsPage}
       />
 
       <div className="flex flex-1 flex-col overflow-auto p-4">
         <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
           <SummaryCard
-            label="Messages Processed"
+            label="Processed Messages"
             value={memory.total_messages_processed}
             icon="MessageSquare"
           />
-          <SummaryCard
-            label="Pending Messages"
-            value={
-              memory.batch_size > 1
-                ? `${memory.pending_messages_count}/${memory.batch_size}`
-                : memory.pending_messages_count
-            }
-            icon="Timer"
-          />
+          <SummaryCard label={pendingLabel} value={pendingValue} icon="Timer" />
           <SummaryCard
             label="Last Generated"
             value={formatDate(memory.last_generated_at)}
@@ -70,7 +77,9 @@ export function MemoryDetails({
             <>
               <span>&middot;</span>
               <span>
-                <span className="font-medium text-foreground">Batch Size:</span>{" "}
+                <span className="font-medium text-foreground">
+                  Messages per batch:
+                </span>{" "}
                 {memory.batch_size}
               </span>
             </>
@@ -94,8 +103,6 @@ export function MemoryDetails({
           fetchNextMessagesPage={fetchNextMessagesPage}
           hasNextMessagesPage={hasNextMessagesPage}
           isFetchingNextMessagesPage={isFetchingNextMessagesPage}
-          selectedSession={selectedSession}
-          setSelectedSession={setSelectedSession}
           groupedBySession={groupedBySession}
           handleOpenDocumentPanel={handleOpenDocumentPanel}
         />

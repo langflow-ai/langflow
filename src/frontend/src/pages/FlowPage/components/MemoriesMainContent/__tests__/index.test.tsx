@@ -44,8 +44,12 @@ jest.mock("../components/MemoriesSidebar", () => ({
   ),
 }));
 
+const capturedMemoryDetailsProps: Record<string, unknown> = {};
 jest.mock("../components/MemoryDetails", () => ({
-  MemoryDetails: () => <div>MemoryDetails</div>,
+  MemoryDetails: (props: any) => {
+    Object.assign(capturedMemoryDetailsProps, props);
+    return <div>MemoryDetails</div>;
+  },
 }));
 
 jest.mock("../components/MemoryDocumentPanel", () => ({
@@ -64,6 +68,9 @@ jest.mock("@/modals/createMemoryModal", () => ({
 describe("MemoriesMainContent", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.keys(capturedMemoryDetailsProps).forEach(
+      (k) => delete capturedMemoryDetailsProps[k],
+    );
     mockedHookValue = {
       memories: [],
       filteredMemories: [],
@@ -84,6 +91,10 @@ describe("MemoriesMainContent", () => {
       deleteMutation: { mutate: jest.fn(), isPending: false },
       updateMemoryMutation: { isPending: false },
       handleToggleActive: jest.fn(),
+      onRefresh: jest.fn(),
+      fetchNextSessionsPage: jest.fn(),
+      hasNextSessionsPage: false,
+      isFetchingNextSessionsPage: false,
       createModalOpen: false,
       setCreateModalOpen: mockSetCreateModalOpen,
       fetchNextMessagesPage: jest.fn(),
@@ -133,5 +144,25 @@ describe("MemoriesMainContent", () => {
 
     fireEvent.click(screen.getByText("create-success"));
     expect(screen.getByText("selected:m-created")).toBeInTheDocument();
+  });
+
+  it("passes onRefresh, fetchNextSessionsPage and session pagination flags to MemoryDetails", () => {
+    const onRefresh = jest.fn();
+    const fetchNextSessionsPage = jest.fn();
+    mockedHookValue.memory = { id: "m1" };
+    mockedHookValue.onRefresh = onRefresh;
+    mockedHookValue.fetchNextSessionsPage = fetchNextSessionsPage;
+    mockedHookValue.hasNextSessionsPage = true;
+    mockedHookValue.isFetchingNextSessionsPage = true;
+
+    render(<MemoriesMainContent />);
+    fireEvent.click(screen.getByText("select-memory"));
+
+    expect(capturedMemoryDetailsProps.onRefresh).toBe(onRefresh);
+    expect(capturedMemoryDetailsProps.fetchNextSessionsPage).toBe(
+      fetchNextSessionsPage,
+    );
+    expect(capturedMemoryDetailsProps.hasNextSessionsPage).toBe(true);
+    expect(capturedMemoryDetailsProps.isFetchingNextSessionsPage).toBe(true);
   });
 });

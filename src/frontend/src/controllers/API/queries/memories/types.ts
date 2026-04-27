@@ -27,7 +27,7 @@ export interface MemoryInfo {
   description?: string;
   kb_name: string;
   embedding_model: string;
-  embedding_provider: string;
+  embedding_provider?: string;
   is_active: boolean;
   total_messages_processed: number;
   sessions_count: number;
@@ -47,7 +47,7 @@ export interface MemoryDocumentItem {
   sender: string;
   session_id: string;
   timestamp: string;
-  ingestion_job_id?: string;
+  job_id?: string;
   ingestion_timestamp?: string;
   message_id: string;
 }

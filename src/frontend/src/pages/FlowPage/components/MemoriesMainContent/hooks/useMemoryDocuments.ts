@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import { useGetMemorySessionMessages } from "@/controllers/API/queries/memories/use-get-memory-session-messages";
 import type {
   MemoryDocumentItem,
   MemorySessionInfo,
 } from "@/controllers/API/queries/memories/types";
+import { useGetMemorySessionMessages } from "@/controllers/API/queries/memories/use-get-memory-session-messages";
 
 type UseMemoryDocumentsArgs = {
   memoryId?: string | null;
@@ -24,6 +24,7 @@ export const useMemoryDocuments = ({
     fetchNextPage: fetchNextMessagesPage,
     hasNextPage: hasNextMessagesPage,
     isFetchingNextPage: isFetchingNextMessagesPage,
+    refetch: refetchMessages,
   } = useGetMemorySessionMessages(
     {
       memoryId: memoryId ?? "",
@@ -40,16 +41,22 @@ export const useMemoryDocuments = ({
 
     const rawDocuments: MemoryDocumentItem[] = pages
       .flatMap((p) => p?.items ?? [])
-      .map((m) => {
-        const ingestionJobId = String(m?.ingestion_job_id ?? "");
+      .map((m, idx) => {
+        const ingestionJobId = String(m?.job_id ?? "");
         const ingestionTimestamp = String(m?.ingestion_timestamp ?? "");
         const timestamp = String(m?.timestamp ?? "");
         const sender = String(m?.sender ?? "");
         const sessionIdFromMessage = String(m?.session_id ?? "");
-        const messageId =
-          ingestionJobId || timestamp || sender
-            ? [ingestionJobId, timestamp, sender].filter(Boolean).join(":")
-            : "";
+        // Include idx as a tiebreaker so messages sharing sender/timestamp/job are distinct.
+        const messageId = [
+          sessionIdFromMessage,
+          ingestionJobId,
+          timestamp,
+          sender,
+          String(idx),
+        ]
+          .filter(Boolean)
+          .join(":");
 
         return {
           message_id: messageId,
@@ -57,7 +64,7 @@ export const useMemoryDocuments = ({
           sender,
           content: String(m?.text ?? ""),
           timestamp,
-          ...(ingestionJobId ? { ingestion_job_id: ingestionJobId } : {}),
+          ...(ingestionJobId ? { job_id: ingestionJobId } : {}),
           ...(ingestionTimestamp
             ? { ingestion_timestamp: ingestionTimestamp }
             : {}),
@@ -94,5 +101,6 @@ export const useMemoryDocuments = ({
     fetchNextMessagesPage,
     hasNextMessagesPage,
     isFetchingNextMessagesPage,
+    refetchMessages,
   };
 };

@@ -1,14 +1,18 @@
 import {
+  type UseMutationOptions,
   useMutation,
   useQueryClient,
-  type UseMutationOptions,
 } from "@tanstack/react-query";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import type { MemoryApiDTO, MemoryInfo, UpdateMemoryParams } from "./types";
 import { mapMemoryApiToMemoryInfo } from "./mappers";
+import {
+  MEMORIES_RETRY_MAX_ATTEMPTS,
+  memoriesRetryDelay,
+} from "./memoriesQueryConfig";
 import { updateMemoryInMemoriesCache } from "./memories-cache-helpers";
+import type { MemoryApiDTO, MemoryInfo, UpdateMemoryParams } from "./types";
 
 export const useUpdateMemory: useMutationFunctionType<
   undefined,
@@ -52,12 +56,12 @@ export const useUpdateMemory: useMutationFunctionType<
   >({
     mutationKey: ["useUpdateMemory"],
     mutationFn: updateMemoryFn,
+    retry: MEMORIES_RETRY_MAX_ATTEMPTS,
+    retryDelay: memoriesRetryDelay,
     ...restOptions,
     onSettled: (data, error, variables, onMutateResult, context) => {
       userOnSettled?.(data, error, variables, onMutateResult, context);
     },
-    retry: restOptions.retry ?? 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   return mutation;

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryKnowledgeBaseSection } from "../MemoryKnowledgeBaseSection";
-import type { MemoryKnowledgeBaseSectionProps } from "../../types";
 import type { MemoryDocumentItem } from "@/controllers/API/queries/memories/types";
+import type { MemoryKnowledgeBaseSectionProps } from "../../types";
+import { MemoryKnowledgeBaseSection } from "../MemoryKnowledgeBaseSection";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -20,7 +20,7 @@ describe("MemoryKnowledgeBaseSection", () => {
         message_id: "msg-1",
         session_id: "session-1",
         sender: "user",
-        ingestion_job_id: "job-1",
+        job_id: "job-1",
         ingestion_timestamp: "2025-01-01T10:00:01.000Z",
         content: "hello",
         timestamp: "2025-01-01T10:00:00.000Z",
@@ -37,8 +37,6 @@ describe("MemoryKnowledgeBaseSection", () => {
       fetchNextMessagesPage: jest.fn(),
       hasNextMessagesPage: false,
       isFetchingNextMessagesPage: false,
-      selectedSession: null,
-      setSelectedSession: jest.fn(),
       groupedBySession: new Map([["session-1", documents]]),
       handleOpenDocumentPanel: jest.fn(),
     };

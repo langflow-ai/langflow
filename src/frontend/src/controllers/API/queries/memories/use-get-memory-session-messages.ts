@@ -1,18 +1,22 @@
 import {
-  useInfiniteQuery,
   type InfiniteData,
   type UseInfiniteQueryOptions,
   type UseInfiniteQueryResult,
+  useInfiniteQuery,
 } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import { MEMORIES_PAGE_SIZE } from "@/pages/FlowPage/components/MemoriesMainContent/MemoriesMainContent.constants";
+import {
+  MEMORIES_PAGE_SIZE,
+  MEMORIES_RETRY_MAX_ATTEMPTS,
+  memoriesRetryDelay,
+} from "./memoriesQueryConfig";
 
 export type MemorySessionMessageApiItem = {
   timestamp: string;
   sender: string;
   sender_name?: string;
-  ingestion_job_id?: string;
+  job_id?: string;
   ingestion_timestamp?: string;
   session_id: string;
   text: string;
@@ -104,7 +108,8 @@ export const useGetMemorySessionMessages = (
     getNextPageParam: (lastPage) =>
       lastPage.page < lastPage.pages ? lastPage.page + 1 : undefined,
     refetchOnWindowFocus: false,
-    retry: false,
+    retry: MEMORIES_RETRY_MAX_ATTEMPTS,
+    retryDelay: memoriesRetryDelay,
     enabled: !!memoryId && !!sessionId,
     ...(options ?? {}),
   });

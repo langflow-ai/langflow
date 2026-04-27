@@ -20,7 +20,6 @@ export function MemoryKnowledgeBaseSection({
   fetchNextMessagesPage,
   hasNextMessagesPage,
   isFetchingNextMessagesPage,
-  setSelectedSession,
   groupedBySession,
   handleOpenDocumentPanel,
 }: MemoryKnowledgeBaseSectionProps) {
@@ -61,9 +60,8 @@ export function MemoryKnowledgeBaseSection({
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-32 text-xs">Session</TableHead>
                 <TableHead className="w-24 text-xs">Sender</TableHead>
-                <TableHead className="w-40 text-xs">Ingestion Job</TableHead>
+                <TableHead className="w-40 text-xs">Job ID</TableHead>
                 <TableHead className="text-xs">Content</TableHead>
                 <TableHead className="w-44 text-xs">
                   Ingestion Timestamp
@@ -72,43 +70,22 @@ export function MemoryKnowledgeBaseSection({
             </TableHeader>
             <TableBody>
               {Array.from(groupedBySession.entries()).map(([sessionId, docs]) =>
-                docs.map((doc, index) => (
+                docs.map((doc, idx) => (
                   <TableRow
-                    key={`${sessionId}-${doc.message_id}-${index}`}
+                    key={`${sessionId}-${doc.message_id}`}
                     className={cn(
                       "cursor-pointer",
-                      index === 0 && sessionId !== "(no session)"
+                      idx === 0 && sessionId !== "(no session)"
                         ? "border-t-2 border-t-border"
                         : "",
                     )}
                     onClick={() => handleOpenDocumentPanel(doc)}
                   >
                     <TableCell className="text-xs text-muted-foreground">
-                      {index === 0 ? (
-                        <span
-                          className="cursor-pointer truncate font-medium text-foreground hover:underline"
-                          title={sessionId}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setSelectedSession(sessionId);
-                          }}
-                        >
-                          {sessionId === "(no session)"
-                            ? sessionId
-                            : sessionId.length > 12
-                              ? `${sessionId.slice(0, 12)}...`
-                              : sessionId}
-                        </span>
-                      ) : (
-                        ""
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
                       {doc.sender || "-"}
                     </TableCell>
                     <TableCell className="max-w-40 truncate text-xs text-muted-foreground">
-                      {doc.ingestion_job_id || "-"}
+                      {doc.job_id || "-"}
                     </TableCell>
                     <TableCell className="max-w-md text-xs">
                       <div className="line-clamp-2" title={doc.content}>
@@ -126,7 +103,7 @@ export function MemoryKnowledgeBaseSection({
 
               {isFetchingNextMessagesPage && (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={5} className="py-4">
+                  <TableCell colSpan={4} className="py-4">
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                       <Loading size={16} className="text-muted-foreground" />
                       Loading more...

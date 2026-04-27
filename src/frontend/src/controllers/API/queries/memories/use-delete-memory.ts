@@ -1,13 +1,14 @@
 import {
+  type UseMutationOptions,
   useMutation,
   useQueryClient,
-  type UseMutationOptions,
 } from "@tanstack/react-query";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import type { DeleteMemoryParams } from "./types";
 import { removeMemoryFromMemoriesCache } from "./memories-cache-helpers";
+import { memoriesRetryDelay } from "./memoriesQueryConfig";
+import type { DeleteMemoryParams } from "./types";
 
 export const useDeleteMemory: useMutationFunctionType<
   undefined,
@@ -22,31 +23,36 @@ export const useDeleteMemory: useMutationFunctionType<
         "mutationFn" | "mutationKey"
       >
     | undefined;
-  const { onSettled: userOnSettled, ...restOptions } = typedOptions ?? {};
+  const {
+    onSuccess: userOnSuccess,
+    onSettled: userOnSettled,
+    ...restOptions
+  } = typedOptions ?? {};
 
   const deleteMemoryFn = async (params: DeleteMemoryParams): Promise<void> => {
     await api.delete(`${getURL("MEMORIES")}/${params.memoryId}`);
-
-    // Avoid refetching a resource that no longer exists.
-    await queryClient.cancelQueries({
-      queryKey: ["useGetMemory", params.memoryId],
-    });
-    queryClient.removeQueries({ queryKey: ["useGetMemory", params.memoryId] });
-
-    // Keep cached lists consistent without forcing a refetch.
-    removeMemoryFromMemoriesCache(queryClient, params.memoryId);
   };
 
   const mutation = useMutation<void, unknown, DeleteMemoryParams, unknown>({
     mutationKey: ["useDeleteMemory"],
     mutationFn: deleteMemoryFn,
     ...restOptions,
+    onSuccess: (data, variables, onMutateResult, context) => {
+      // Cancel in-flight fetches for the deleted resource so a 404 doesn't land after removal.
+      queryClient.cancelQueries({ queryKey: ["useGetMemory", variables.memoryId] });
+      queryClient.removeQueries({ queryKey: ["useGetMemory", variables.memoryId] });
+
+      // Keep cached lists consistent without forcing a refetch.
+      removeMemoryFromMemoriesCache(queryClient, variables.memoryId);
+
+      userOnSuccess?.(data, variables, onMutateResult, context);
+    },
     onSettled: (data, error, variables, onMutateResult, context) => {
       userOnSettled?.(data, error, variables, onMutateResult, context);
     },
     // DELETE is not safe to retry by default (may produce confusing 404s).
-    retry: restOptions.retry ?? false,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    retry: false,
+    retryDelay: memoriesRetryDelay,
   });
 
   return mutation;

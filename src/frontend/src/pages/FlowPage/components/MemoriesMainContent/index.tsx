@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import Loading from "@/components/ui/loading";
 import CreateMemoryModal from "@/modals/createMemoryModal";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useMemoriesData } from "./hooks/useMemoriesData";
-import { NoMemorySelected } from "./components/NoMemorySelected";
 import { MemoriesSidebar } from "./components/MemoriesSidebar";
 import { MemoryDetails } from "./components/MemoryDetails";
 import { MemoryDocumentPanel } from "./components/MemoryDocumentPanel";
+import { NoMemorySelected } from "./components/NoMemorySelected";
+import { useMemoriesData } from "./hooks/useMemoriesData";
 
 export default function MemoriesMainContent() {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -48,6 +48,10 @@ export default function MemoriesMainContent() {
     handleOpenDocumentPanel,
     deleteMutation,
     handleToggleActive,
+    onRefresh,
+    fetchNextSessionsPage,
+    hasNextSessionsPage,
+    isFetchingNextSessionsPage,
     createModalOpen,
     setCreateModalOpen,
   } = useMemoriesData({
@@ -95,6 +99,10 @@ export default function MemoriesMainContent() {
             handleOpenDocumentPanel={handleOpenDocumentPanel}
             deleteMutation={deleteMutation}
             handleToggleActive={handleToggleActive}
+            onRefresh={onRefresh}
+            fetchNextSessionsPage={fetchNextSessionsPage}
+            hasNextSessionsPage={hasNextSessionsPage}
+            isFetchingNextSessionsPage={isFetchingNextSessionsPage}
           />
         )}
       </div>
