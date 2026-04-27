@@ -39,6 +39,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         return {
             "_type": "Agent",
             "add_current_date_tool": True,
+            "add_calculator_tool": True,
             "agent_description": "A helpful agent",
             "model": MockLanguageModel(),
             "handle_parsing_errors": True,
@@ -449,6 +450,199 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs["max_tokens"] == 1000
         # Note: The provider-specific field name mapping happens inside get_llm,
         # so we just verify max_tokens is passed correctly
+
+    async def test_should_append_calculator_tool_when_add_calculator_toggle_is_true(
+        self, component_class, default_kwargs
+    ):
+        """Calculator tool is appended when the toggle is enabled.
+
+        Given add_calculator_tool=True, When get_agent_requirements runs,
+        Then self.tools contains a StructuredTool derived from CalculatorComponent.
+        """
+        from unittest.mock import AsyncMock
+
+        from langchain_core.tools import StructuredTool
+
+        default_kwargs["add_calculator_tool"] = True
+        default_kwargs["add_current_date_tool"] = False  # isolate: only calculator
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            _, _, tools = await component.get_agent_requirements()
+
+        assert len(tools) == 1
+        assert isinstance(tools[0], StructuredTool)
+        assert "evaluate" in tools[0].name.lower(), f"Expected a Calculator-derived tool; got name={tools[0].name!r}"
+
+    async def test_should_not_append_calculator_tool_when_add_calculator_toggle_is_false(
+        self, component_class, default_kwargs
+    ):
+        """Calculator tool is skipped when the toggle is disabled.
+
+        Given add_calculator_tool=False, When get_agent_requirements runs,
+        Then no Calculator tool is appended to self.tools.
+        """
+        from unittest.mock import AsyncMock
+
+        default_kwargs["add_calculator_tool"] = False
+        default_kwargs["add_current_date_tool"] = False
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            _, _, tools = await component.get_agent_requirements()
+
+        assert tools == []
+
+    def test_should_replace_current_date_and_model_name_when_both_placeholders_present(self, component_class):
+        """Unit test: helper replaces both placeholders with concrete values."""
+        component = component_class()
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
+        prompt = "Today is {current_date}. You are powered by {model_name}."
+        result = component._inject_dynamic_prompt_values(prompt)
+
+        assert "{current_date}" not in result
+        assert "{model_name}" not in result
+        assert "gpt-4o" in result
+
+    def test_should_leave_literal_braces_untouched_when_prompt_has_no_known_placeholders(self, component_class):
+        """Adversarial: prompts with literal JSON like {"key": 1} must not raise and must stay intact."""
+        component = component_class()
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
+        prompt = 'Respond with JSON: {"key": 1, "nested": {"a": [1, 2]}}.'
+        result = component._inject_dynamic_prompt_values(prompt)
+
+        assert result == prompt
+
+    def test_should_return_empty_when_prompt_is_empty(self, component_class):
+        """Edge case: empty/None prompt is returned as-is without raising."""
+        component = component_class()
+        assert component._inject_dynamic_prompt_values("") == ""
+        assert component._inject_dynamic_prompt_values(None) is None
+
+    async def test_should_inject_dynamic_values_into_system_prompt_when_message_response_runs(
+        self, component_class, default_kwargs
+    ):
+        """Integration: message_response must call self.set with the resolved system_prompt."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        default_kwargs["system_prompt"] = "Powered by {model_name}."
+        default_kwargs["add_calculator_tool"] = False
+        default_kwargs["add_current_date_tool"] = False
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+
+        captured: dict = {}
+
+        def fake_set(**kwargs):
+            captured.update(kwargs)
+            return component
+
+        component.set = fake_set
+        component.create_agent_runnable = MagicMock(return_value=MagicMock())
+        component.run_agent = AsyncMock(return_value=MagicMock())
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            await component.message_response()
+
+        assert captured.get("system_prompt") == "Powered by gpt-4o."
+
+    async def test_should_not_mutate_format_instructions_when_json_response_runs(self, component_class, default_kwargs):
+        """Regression: injection must only touch agent_instructions, not format_instructions.
+
+        Ensures literal {current_date}/{model_name} tokens in user-authored
+        format_instructions survive intact while the main system_prompt is
+        still replaced by the helper.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        default_kwargs["system_prompt"] = "Powered by {model_name}."
+        default_kwargs["format_instructions"] = "Return JSON with fields {current_date} and {model_name} preserved."
+        default_kwargs["add_calculator_tool"] = False
+        default_kwargs["add_current_date_tool"] = False
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+
+        captured: dict = {}
+
+        def fake_set(**kwargs):
+            captured.update(kwargs)
+            return component
+
+        component.set = fake_set
+        component.create_agent_runnable = MagicMock(return_value=MagicMock())
+        component.run_agent = AsyncMock(return_value=MagicMock(content="{}"))
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            await component.json_response()
+
+        prompt = captured.get("system_prompt") or ""
+        assert "Powered by gpt-4o." in prompt, "agent_instructions should have placeholders replaced"
+        assert "{current_date}" in prompt, "format_instructions literal braces must survive"
+        assert "{model_name} preserved" in prompt, "format_instructions literal braces must survive"
+
+    async def test_should_accept_add_calculator_tool_in_default_keys(self, component_class, default_kwargs):
+        """update_build_config's default_keys validation must include add_calculator_tool."""
+        from lfx.schema.dotdict import dotdict
+
+        with patch("lfx.components.models_and_agents.agent.get_language_model_options") as mock_opts:
+            mock_opts.return_value = [
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ]
+            component = await self.component_setup(component_class, default_kwargs)
+            frontend_node = component.to_frontend_node()
+            build_config = frontend_node["data"]["node"]["template"]
+
+            # add_calculator_tool must be present in the build_config already; if not,
+            # update_build_config will error listing it as missing.
+            assert "add_calculator_tool" in build_config
+
+            updated_config = await component.update_build_config(
+                dotdict(build_config), mock_opts.return_value, field_name="model"
+            )
+            assert "add_calculator_tool" in updated_config
+
+    def test_should_have_placeholders_in_default_system_prompt(self, component_class):
+        """Default system_prompt ships with placeholders for the dynamic injection.
+
+        Ensures {current_date} and {model_name} are visible on a fresh agent so
+        that the dynamic injection has an observable effect out-of-the-box.
+        """
+        prompt_input = next(
+            (inp for inp in component_class.inputs if getattr(inp, "name", None) == "system_prompt"),
+            None,
+        )
+        assert prompt_input is not None
+        assert "{current_date}" in prompt_input.value
+        assert "{model_name}" in prompt_input.value
 
 
 class TestAgentComponentWithClient(ComponentTestBaseWithClient):
