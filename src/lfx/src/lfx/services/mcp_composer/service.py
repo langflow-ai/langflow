@@ -1532,10 +1532,12 @@ class MCPComposerService(Service):
 
                 if poll_result is not None:
                     # Process died
-                    stdout_content, stderr_content, startup_error_msg = (
-                        await self._read_process_output_and_extract_error(
-                            process, oauth_server_url, stdout_file=stdout_file, stderr_file=stderr_file
-                        )
+                    (
+                        stdout_content,
+                        stderr_content,
+                        startup_error_msg,
+                    ) = await self._read_process_output_and_extract_error(
+                        process, oauth_server_url, stdout_file=stdout_file, stderr_file=stderr_file
                     )
                     await self._log_startup_error_details(
                         project_id, cmd, host, port, stdout_content, stderr_content, startup_error_msg, poll_result
