@@ -218,6 +218,42 @@ describe("Create mode — canGoNext validation", () => {
 
       expect(result.current.canGoNext).toBe(true);
     });
+
+    it("blocks when trimmed name does not start with a letter", () => {
+      const { result } = renderCreateHook({
+        initialProvider: mockProvider,
+        initialInstance: mockInstance,
+      });
+
+      act(() => result.current.handleNext()); // → step 2
+
+      act(() => {
+        result.current.setDeploymentName(" 1 Agent");
+        result.current.setSelectedLlm("gpt-4");
+      });
+
+      expect(result.current.canGoNext).toBe(false);
+      expect(result.current.isDeploymentNameValid).toBe(false);
+      expect(result.current.hasDeploymentNameFormatError).toBe(true);
+    });
+
+    it("allows when trimmed name starts with a unicode letter", () => {
+      const { result } = renderCreateHook({
+        initialProvider: mockProvider,
+        initialInstance: mockInstance,
+      });
+
+      act(() => result.current.handleNext()); // → step 2
+
+      act(() => {
+        result.current.setDeploymentName(" Ágent");
+        result.current.setSelectedLlm("gpt-4");
+      });
+
+      expect(result.current.canGoNext).toBe(true);
+      expect(result.current.isDeploymentNameValid).toBe(true);
+      expect(result.current.hasDeploymentNameFormatError).toBe(false);
+    });
   });
 
   describe("Step 3 (Attach Flows)", () => {
