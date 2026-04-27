@@ -463,3 +463,86 @@ class TestDeploymentListItemFlowVersionIds:
     def test_accepts_empty_list(self):
         item = self._make_item(flow_version_ids=[])
         assert item.flow_version_ids == []
+
+
+# ---------------------------------------------------------------------------
+# DeploymentConfigListResponse — pagination & empty configs
+# ---------------------------------------------------------------------------
+
+
+class TestDeploymentConfigListResponsePagination:
+    def test_rejects_page_less_than_one(self):
+        with pytest.raises(ValidationError):
+            DeploymentConfigListResponse(page=0, size=10, total=0)
+
+    def test_rejects_size_less_than_one(self):
+        with pytest.raises(ValidationError):
+            DeploymentConfigListResponse(page=1, size=0, total=0)
+
+    def test_rejects_negative_total(self):
+        with pytest.raises(ValidationError):
+            DeploymentConfigListResponse(page=1, size=10, total=-1)
+
+
+# ---------------------------------------------------------------------------
+# ExecutionCreateRequest — required fields, provider_data validation
+# ---------------------------------------------------------------------------
+
+
+class TestRunCreateRequest:
+    def test_rejects_extra_fields(self):
+        from langflow.api.v1.schemas.deployments import RunCreateRequest
+
+        with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+            RunCreateRequest(provider_data={"input": "x"}, unknown_field="y")
+
+
+# ---------------------------------------------------------------------------
+# ExecutionCreateResponse — all fields including nullable provider_data
+# ---------------------------------------------------------------------------
+
+
+class TestRunCreateResponse:
+    def test_required_deployment_id(self):
+        from langflow.api.v1.schemas.deployments import RunCreateResponse
+
+        with pytest.raises(ValidationError, match="deployment_id"):
+            RunCreateResponse()
+
+
+# ---------------------------------------------------------------------------
+# SnapshotUpdateRequest — required fields
+# ---------------------------------------------------------------------------
+
+
+class TestSnapshotUpdateRequest:
+    def test_requires_flow_version_id(self):
+        from langflow.api.v1.schemas.deployments import SnapshotUpdateRequest
+
+        with pytest.raises(ValidationError, match="flow_version_id"):
+            SnapshotUpdateRequest()
+
+    def test_rejects_extra_fields(self):
+        from langflow.api.v1.schemas.deployments import SnapshotUpdateRequest
+
+        with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+            SnapshotUpdateRequest(flow_version_id=uuid4(), extra_field="bad")
+
+
+# ---------------------------------------------------------------------------
+# SnapshotUpdateResponse — response fields
+# ---------------------------------------------------------------------------
+
+
+class TestSnapshotUpdateResponse:
+    def test_requires_flow_version_id(self):
+        from langflow.api.v1.schemas.deployments import SnapshotUpdateResponse
+
+        with pytest.raises(ValidationError, match="flow_version_id"):
+            SnapshotUpdateResponse(provider_snapshot_id="snap-1")
+
+    def test_requires_provider_snapshot_id(self):
+        from langflow.api.v1.schemas.deployments import SnapshotUpdateResponse
+
+        with pytest.raises(ValidationError, match="provider_snapshot_id"):
+            SnapshotUpdateResponse(flow_version_id=uuid4())
