@@ -494,7 +494,7 @@ class WatsonxApiDeploymentListItemProviderData(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    environments: list[str] = Field(default_factory=list)
+    environments: list[str]
 
 
 class WatsonxApiDeploymentListProviderData(BaseModel):

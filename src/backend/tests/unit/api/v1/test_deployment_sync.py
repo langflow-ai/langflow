@@ -1004,6 +1004,17 @@ def test_watsonx_mapper_shape_deployment_get_data_requires_provider_data():
 
 
 def test_base_mapper_extract_snapshot_bindings_for_get_raises_not_implemented():
+    """Locks in the destructive-deletion safety contract for GET-sync.
+
+    The base implementation MUST raise ``NotImplementedError`` rather than
+    return ``[]``. An empty list would flow into
+    ``delete_unbound_attachments`` (which treats empty ``bindings`` plus
+    non-empty ``deployment_ids`` as a wipe of every local attachment for
+    the GETted deployment). Raising prevents that destructive
+    interpretation for any provider that hasn't overridden the method —
+    the GET call site catches ``NotImplementedError`` and skips the sync
+    instead of wiping local attachment state.
+    """
     mapper = BaseDeploymentMapper()
     get_result = DeploymentGetResult(
         id="agent-1",
@@ -1014,6 +1025,27 @@ def test_base_mapper_extract_snapshot_bindings_for_get_raises_not_implemented():
 
     with pytest.raises(NotImplementedError, match="extract_snapshot_bindings_for_get"):
         mapper.extract_snapshot_bindings_for_get(get_result, resource_key="agent-1")
+
+
+def test_base_mapper_extract_snapshot_bindings_raises_not_implemented():
+    """Locks in the destructive-deletion safety contract for list-sync.
+
+    The base implementation MUST raise ``NotImplementedError`` rather than
+    return ``[]``. An empty list would flow into
+    ``delete_unbound_attachments`` (which treats empty ``bindings`` plus
+    non-empty ``deployment_ids`` as a wipe of every local attachment for
+    those deployments). Raising prevents that destructive interpretation
+    for any provider that hasn't overridden the method.
+    """
+    mapper = BaseDeploymentMapper()
+    provider_view = _mock_provider_view(
+        [
+            SimpleNamespace(id="agent-1", provider_data={"tool_ids": ["tool-1"]}),
+        ]
+    )
+
+    with pytest.raises(NotImplementedError, match="extract_snapshot_bindings"):
+        mapper.extract_snapshot_bindings(provider_view)
 
 
 def test_resolve_flow_version_patch_for_update_watsonx_operations():
