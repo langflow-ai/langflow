@@ -39,6 +39,10 @@ export type MemoryDetailsProps = {
   handleOpenDocumentPanel: (doc: MemoryDocumentItem) => void;
   deleteMutation: MemoryActionMutation;
   handleToggleActive: (nextIsActive: NextIsActive) => void;
+  onRefresh: () => void;
+  fetchNextSessionsPage: () => void;
+  hasNextSessionsPage?: boolean;
+  isFetchingNextSessionsPage?: boolean;
 };
 
 export type MemoriesSidebarProps = {
@@ -71,8 +75,6 @@ export type MemoryKnowledgeBaseSectionProps = {
   fetchNextMessagesPage: () => void;
   hasNextMessagesPage?: boolean;
   isFetchingNextMessagesPage?: boolean;
-  selectedSession: string | null;
-  setSelectedSession: (value: string | null) => void;
   groupedBySession: Map<string, MemoryDocumentItem[]>;
   handleOpenDocumentPanel: (doc: MemoryDocumentItem) => void;
 };
@@ -84,4 +86,8 @@ export type MemoryDetailsHeaderProps = {
   setSelectedSession: (value: string | null) => void;
   deleteMutation: MemoryActionMutation;
   handleToggleActive: (nextIsActive: NextIsActive) => void;
+  onRefresh: () => void;
+  fetchNextSessionsPage: () => void;
+  hasNextSessionsPage?: boolean;
+  isFetchingNextSessionsPage?: boolean;
 };

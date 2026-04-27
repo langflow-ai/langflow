@@ -45,7 +45,7 @@ export function MemoriesSidebar({
             onClick={onCreateMemory}
             disabled={!currentFlowId}
           >
-            <IconComponent name="Plus" className="mr-1.5 h-3.5 w-3.5" />
+            <IconComponent name="Plus" className="h-3.5 w-3.5" />
             Create
           </Button>
         </div>
@@ -75,18 +75,6 @@ export function MemoriesSidebar({
             <p className="text-xs text-muted-foreground">
               {memoriesSearch.trim() ? "No memories found" : "No memories yet"}
             </p>
-            {!memoriesSearch.trim() && (
-              <Button
-                className="mt-3"
-                size="sm"
-                variant="outline"
-                onClick={onCreateMemory}
-                disabled={!currentFlowId}
-              >
-                <IconComponent name="Plus" className="mr-1.5 h-3.5 w-3.5" />
-                Create Memory
-              </Button>
-            )}
           </div>
         ) : (
           <div className="flex flex-col gap-1">

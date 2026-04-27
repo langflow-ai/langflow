@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
-import useAlertStore from "@/stores/alertStore";
-import { useGetMemories } from "@/controllers/API/queries/memories/use-get-memories";
-import { useGetMemory } from "@/controllers/API/queries/memories/use-get-memory";
-import { useDeleteMemory } from "@/controllers/API/queries/memories/use-delete-memory";
-import { useUpdateMemory } from "@/controllers/API/queries/memories/use-update-memory";
-import { UseMemoriesDataProps } from "../types";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   MemoryDocumentItem,
   MemoryInfo,
 } from "@/controllers/API/queries/memories/types";
-import { useMemorySessionResolver } from "./useMemorySessionResolver";
+import { useDeleteMemory } from "@/controllers/API/queries/memories/use-delete-memory";
+import { useGetMemories } from "@/controllers/API/queries/memories/use-get-memories";
+import { useGetMemory } from "@/controllers/API/queries/memories/use-get-memory";
+import { useUpdateMemory } from "@/controllers/API/queries/memories/use-update-memory";
+import useAlertStore from "@/stores/alertStore";
+import { UseMemoriesDataProps } from "../types";
 import { useAutoCaptureDebouncedToggle } from "./useAutoCaptureDebouncedToggle";
 import { useMemoryDocuments } from "./useMemoryDocuments";
-import { AUTO_CAPTURE_DEBOUNCE_MS } from "../MemoriesMainContent.constants";
 import { extractApiErrorMessages } from "@/utils/apiError";
+import { useMemorySessionResolver } from "./useMemorySessionResolver";
 
 const EMPTY_MEMORIES: MemoryInfo[] = [];
 
@@ -35,6 +34,7 @@ export function useMemoriesData({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    refetch: refetchMemories,
   } = useGetMemories(
     { flowId: currentFlowId ?? undefined },
     { enabled: !!currentFlowId },
@@ -83,7 +83,6 @@ export function useMemoriesData({
     { memoryId: selectedMemoryId ?? "" },
     {
       enabled: !!selectedMemoryId,
-      retry: false,
     },
   );
 
@@ -92,6 +91,10 @@ export function useMemoriesData({
     selectedSession,
     setSelectedSession,
     effectiveSessionId,
+    refetchMemorySessions,
+    fetchNextSessionsPage,
+    hasNextSessionsPage,
+    isFetchingNextSessionsPage,
   } = useMemorySessionResolver({ memoryId: selectedMemoryId });
 
   const deleteMutation = useDeleteMemory({
@@ -118,7 +121,6 @@ export function useMemoriesData({
     useAutoCaptureDebouncedToggle({
       memory,
       updateMemoryMutation,
-      debounceMs: AUTO_CAPTURE_DEBOUNCE_MS,
     });
 
   const {
@@ -127,6 +129,7 @@ export function useMemoriesData({
     fetchNextMessagesPage,
     hasNextMessagesPage,
     isFetchingNextMessagesPage,
+    refetchMessages,
   } = useMemoryDocuments({
     memoryId: selectedMemoryId,
     sessionId: effectiveSessionId,
@@ -163,6 +166,12 @@ export function useMemoriesData({
     return nextMemory;
   }, [memory, autoCaptureDraft, effectiveSessionId, memorySessions]);
 
+  const onRefresh = useCallback(() => {
+    refetchMemories();
+    refetchMemorySessions();
+    refetchMessages();
+  }, [refetchMemories, refetchMemorySessions, refetchMessages]);
+
   const handleOpenDocumentPanel = (doc: MemoryDocumentItem) => {
     setSelectedDocument(doc);
     setDocumentPanelOpen(true);
@@ -173,13 +182,12 @@ export function useMemoriesData({
     const map = new Map<string, MemoryDocumentItem[]>();
     for (const doc of docsData.documents) {
       const sid = doc.session_id || "(no session)";
-      if (effectiveSessionId && sid !== effectiveSessionId) continue;
       const list = map.get(sid) || [];
       list.push(doc);
       map.set(sid, list);
     }
     return map;
-  }, [docsData, effectiveSessionId]);
+  }, [docsData]);
 
   return {
     memories,
@@ -207,6 +215,10 @@ export function useMemoriesData({
     deleteMutation,
     updateMemoryMutation,
     handleToggleActive,
+    onRefresh,
+    fetchNextSessionsPage,
+    hasNextSessionsPage,
+    isFetchingNextSessionsPage,
     createModalOpen,
     setCreateModalOpen,
   };

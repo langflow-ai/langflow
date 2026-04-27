@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import type { UpdateMemoryParams } from "@/controllers/API/queries/memories/types";
-import type { MemoryInfo } from "@/controllers/API/queries/memories/types";
 import { AUTO_CAPTURE_DEBOUNCE_MS } from "../MemoriesMainContent.constants";
+import type {
+  MemoryInfo,
+  UpdateMemoryParams,
+} from "@/controllers/API/queries/memories/types";
 
 type UpdateMemoryMutation = {
   mutate: (
     variables: UpdateMemoryParams,
-    options?: { onSuccess?: () => void },
+    options?: { onSuccess?: () => void; onError?: () => void },
   ) => void;
 };
 
@@ -99,16 +101,20 @@ export const useAutoCaptureDebouncedToggle = ({
         return;
       }
 
+      const clearDraft = () => {
+        setAutoCaptureDraft(null);
+        draftIsActiveRef.current = null;
+      };
+
       updateMemoryMutation.mutate(
         {
           memoryId: memory.id,
           auto_capture: nextIsActive,
         },
         {
-          onSuccess: () => {
-            setAutoCaptureDraft(null);
-            draftIsActiveRef.current = null;
-          },
+          onSuccess: clearDraft,
+          // On failure the draft never resolved — reset so UI reflects server state.
+          onError: clearDraft,
         },
       );
       autoCaptureTimerRef.current = null;

@@ -3,9 +3,13 @@ import type { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import type { GetMemoryParams, MemoryApiDTO, MemoryInfo } from "./types";
 import { mapMemoryApiToMemoryInfo } from "./mappers";
+import {
+  MEMORIES_RETRY_MAX_ATTEMPTS,
+  memoriesRetryDelay,
+} from "./memoriesQueryConfig";
 import { ensureRequiredParam } from "./validation";
+import type { GetMemoryParams, MemoryApiDTO, MemoryInfo } from "./types";
 
 export const useGetMemory: useQueryFunctionType<GetMemoryParams, MemoryInfo> = (
   params,
@@ -28,6 +32,8 @@ export const useGetMemory: useQueryFunctionType<GetMemoryParams, MemoryInfo> = (
     {
       enabled: !!params?.memoryId,
       refetchOnWindowFocus: false,
+      retry: MEMORIES_RETRY_MAX_ATTEMPTS,
+      retryDelay: memoriesRetryDelay,
       ...options,
     },
   );

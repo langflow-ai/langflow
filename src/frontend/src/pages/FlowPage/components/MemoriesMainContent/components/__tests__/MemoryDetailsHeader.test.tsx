@@ -1,11 +1,44 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryDetailsHeader } from "../MemoryDetailsHeader";
-import type { MemoryDetailsHeaderProps } from "../../types";
 import type { MemoryInfo } from "@/controllers/API/queries/memories/types";
+import type { MemoryDetailsHeaderProps } from "../../types";
+import { MemoryDetailsHeader } from "../MemoryDetailsHeader";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
   default: ({ name }: { name: string }) => <span>{name}</span>,
+}));
+
+jest.mock("@/components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  DropdownMenuContent: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => <div className={className}>{children}</div>,
+  DropdownMenuItem: ({
+    children,
+    onSelect,
+    className,
+  }: {
+    children: React.ReactNode;
+    onSelect?: (e: Event) => void;
+    className?: string;
+  }) => (
+    <div
+      role="menuitem"
+      className={className}
+      onClick={(e) => onSelect?.(e as unknown as Event)}
+    >
+      {children}
+    </div>
+  ),
 }));
 
 jest.mock("@/modals/deleteConfirmationModal", () => ({
@@ -52,6 +85,10 @@ describe("MemoryDetailsHeader", () => {
       setSelectedSession: jest.fn(),
       deleteMutation: { mutate: jest.fn(), isPending: false },
       handleToggleActive: jest.fn(),
+      onRefresh: jest.fn(),
+      fetchNextSessionsPage: jest.fn(),
+      hasNextSessionsPage: false,
+      isFetchingNextSessionsPage: false,
     };
     return { ...base, ...(overrides ?? {}) };
   };
@@ -64,7 +101,7 @@ describe("MemoryDetailsHeader", () => {
     expect(screen.getByText("Memory One")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Toggle auto-capture" }),
-    ).toHaveTextContent("Auto-capture: Enabled");
+    ).toHaveTextContent("Auto-capture");
   });
 
   it("calls mutate handlers for actions", () => {
@@ -94,19 +131,151 @@ describe("MemoryDetailsHeader", () => {
     const props = makeProps({ sessions: ["session-1", "session-2"] });
     render(<MemoryDetailsHeader {...props} />);
 
-    expect(screen.getByLabelText("Session filter")).toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: "session-1" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: "session-2" }),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("Session filter")).not.toBeDisabled();
+    const sessionTrigger = screen.getByRole("button", {
+      name: "Session filter",
+    });
+    expect(sessionTrigger).toBeInTheDocument();
+    expect(sessionTrigger).not.toBeDisabled();
   });
 
-  it("disables the session selector when only one session exists", () => {
-    const props = makeProps({ sessions: ["session-1"] });
+  it("disables the session selector when only one session and no more pages", () => {
+    const props = makeProps({
+      sessions: ["session-1"],
+      hasNextSessionsPage: false,
+    });
     render(<MemoryDetailsHeader {...props} />);
-    expect(screen.getByLabelText("Session filter")).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Session filter" }),
+    ).toBeDisabled();
+  });
+
+  it("renders the reload button with correct aria-label", () => {
+    const props = makeProps();
+    render(<MemoryDetailsHeader {...props} />);
+    expect(
+      screen.getByRole("button", { name: "Reload sessions and messages" }),
+    ).toBeInTheDocument();
+  });
+
+  it("calls onRefresh when the reload button is clicked", () => {
+    const onRefresh = jest.fn();
+    const props = makeProps({ onRefresh });
+    render(<MemoryDetailsHeader {...props} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reload sessions and messages" }),
+    );
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the RefreshCw icon inside the reload button", () => {
+    const props = makeProps();
+    render(<MemoryDetailsHeader {...props} />);
+    const reloadBtn = screen.getByRole("button", {
+      name: "Reload sessions and messages",
+    });
+    expect(reloadBtn).toHaveTextContent("RefreshCw");
+  });
+
+  it("calls fetchNextSessionsPage on scroll when near bottom and more pages exist", () => {
+    const fetchNextSessionsPage = jest.fn();
+    const props = makeProps({
+      sessions: ["s1", "s2", "s3"],
+      hasNextSessionsPage: true,
+      isFetchingNextSessionsPage: false,
+      fetchNextSessionsPage,
+    });
+    const { container } = render(<MemoryDetailsHeader {...props} />);
+
+    const scrollDiv = container.querySelector(".overflow-y-auto");
+    if (!scrollDiv) return;
+
+    Object.defineProperty(scrollDiv, "scrollHeight", {
+      value: 400,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "scrollTop", {
+      value: 200,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "clientHeight", {
+      value: 240,
+      configurable: true,
+    });
+
+    fireEvent.scroll(scrollDiv);
+    expect(fetchNextSessionsPage).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call fetchNextSessionsPage when already fetching next page", () => {
+    const fetchNextSessionsPage = jest.fn();
+    const props = makeProps({
+      sessions: ["s1", "s2", "s3"],
+      hasNextSessionsPage: true,
+      isFetchingNextSessionsPage: true,
+      fetchNextSessionsPage,
+    });
+    const { container } = render(<MemoryDetailsHeader {...props} />);
+
+    const scrollDiv = container.querySelector(".overflow-y-auto");
+    if (!scrollDiv) return;
+
+    Object.defineProperty(scrollDiv, "scrollHeight", {
+      value: 400,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "scrollTop", {
+      value: 200,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "clientHeight", {
+      value: 240,
+      configurable: true,
+    });
+
+    fireEvent.scroll(scrollDiv);
+    expect(fetchNextSessionsPage).not.toHaveBeenCalled();
+  });
+
+  it("does not call fetchNextSessionsPage when no more pages exist", () => {
+    const fetchNextSessionsPage = jest.fn();
+    const props = makeProps({
+      sessions: ["s1", "s2"],
+      hasNextSessionsPage: false,
+      isFetchingNextSessionsPage: false,
+      fetchNextSessionsPage,
+    });
+    const { container } = render(<MemoryDetailsHeader {...props} />);
+
+    const scrollDiv = container.querySelector(".overflow-y-auto");
+    if (!scrollDiv) return;
+
+    Object.defineProperty(scrollDiv, "scrollHeight", {
+      value: 400,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "scrollTop", {
+      value: 300,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "clientHeight", {
+      value: 240,
+      configurable: true,
+    });
+
+    fireEvent.scroll(scrollDiv);
+    expect(fetchNextSessionsPage).not.toHaveBeenCalled();
+  });
+
+  it("shows a loading indicator while fetching next page", () => {
+    const props = makeProps({
+      sessions: ["s1", "s2"],
+      hasNextSessionsPage: true,
+      isFetchingNextSessionsPage: true,
+    });
+    const { container } = render(<MemoryDetailsHeader {...props} />);
+
+    const scrollDiv = container.querySelector(".overflow-y-auto");
+    expect(scrollDiv).not.toBeNull();
+    expect(scrollDiv).toHaveTextContent("Loading");
   });
 });

@@ -1,15 +1,16 @@
 import {
-  useMutation,
-  useQueryClient,
   type UseMutationOptions,
   type UseMutationResult,
+  useMutation,
+  useQueryClient,
 } from "@tanstack/react-query";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import type { CreateMemoryPayload, MemoryApiDTO, MemoryInfo } from "./types";
 import { mapMemoryApiToMemoryInfo } from "./mappers";
 import { addMemoryToMemoriesCache } from "./memories-cache-helpers";
+import { memoriesRetryDelay } from "./memoriesQueryConfig";
+import type { CreateMemoryPayload, MemoryApiDTO, MemoryInfo } from "./types";
 
 export const useCreateMemory: useMutationFunctionType<
   undefined,
@@ -57,8 +58,8 @@ export const useCreateMemory: useMutationFunctionType<
         userOnSettled?.(data, error, variables, onMutateResult, context);
       },
       // POST is not safe to retry by default (risk of duplicates).
-      retry: restOptions.retry ?? false,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retry: false,
+      retryDelay: memoriesRetryDelay,
     });
 
   return mutation;

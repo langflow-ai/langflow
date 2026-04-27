@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { MemorySessionInfo } from "@/controllers/API/queries/memories/types";
 import { useGetMemorySessions } from "@/controllers/API/queries/memories/use-get-memory-sessions";
 import { resolveDefaultSessionId } from "./memorySessionResolverHelpers";
 
@@ -11,14 +12,23 @@ export const useMemorySessionResolver = ({
 }: UseMemorySessionResolverArgs) => {
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
 
-  const { data: memorySessions = [], refetch: refetchMemorySessions } =
-    useGetMemorySessions(
-      { memoryId: memoryId ?? "" },
-      {
-        enabled: !!memoryId,
-        retry: false,
-      },
-    );
+  const {
+    data: sessionsInfinite,
+    refetch: refetchMemorySessions,
+    fetchNextPage: fetchNextSessionsPage,
+    hasNextPage: hasNextSessionsPage,
+    isFetchingNextPage: isFetchingNextSessionsPage,
+  } = useGetMemorySessions(
+    { memoryId: memoryId ?? "" },
+    {
+      enabled: !!memoryId,
+    },
+  );
+
+  const memorySessions = useMemo<MemorySessionInfo[]>(() => {
+    const pages = sessionsInfinite?.pages ?? [];
+    return pages.flatMap((p) => p?.items ?? []);
+  }, [sessionsInfinite]);
 
   useEffect(() => {
     setSelectedSession(null);
@@ -61,5 +71,9 @@ export const useMemorySessionResolver = ({
     selectedSession,
     setSelectedSession,
     effectiveSessionId,
+    refetchMemorySessions,
+    fetchNextSessionsPage,
+    hasNextSessionsPage,
+    isFetchingNextSessionsPage,
   };
 };
