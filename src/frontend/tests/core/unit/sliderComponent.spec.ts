@@ -226,21 +226,17 @@ async function setAceEditorValue(page: Page, newCode: string): Promise<void> {
   }
 
   // Wait for Ace's change event to propagate into the controlled React state.
-  // We assert against the full code length, not just the regex marker, so that
-  // a newline-stripped value is rejected here rather than reaching the backend.
+  // We can't compare newline counts on the mirror's `.value` because
+  // `#codeValue` is rendered by `<Input>` (a single-line input element) and
+  // browsers strip `\n`/`\r` from `.value` of single-line inputs by spec —
+  // newlines DO survive in React state, they just don't show up via that
+  // property. The regex marker below is enough to confirm the new code
+  // landed; the `value="..."` HTML attribute on the input still carries the
+  // full multi-line source for any downstream test that needs to read it.
   await expect(page.locator("#codeValue")).toHaveValue(
     /range_spec=RangeSpec\(min=3, max=30, step=1\)/,
     { timeout: 10000 },
   );
-
-  const reactNewlines = await page
-    .locator("#codeValue")
-    .evaluate((el) => ((el as HTMLTextAreaElement).value.match(/\n/g) || []).length);
-  if (reactNewlines < result.incomingNewlines) {
-    throw new Error(
-      `React state dropped newlines after Ace change: ace=${result.outNewlines}, react=${reactNewlines}.`,
-    );
-  }
 }
 
 async function mutualValidation(page: Page) {
