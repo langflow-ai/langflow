@@ -13,10 +13,7 @@ if TYPE_CHECKING:
     from langchain_core.tools import Tool
 
 from lfx.base.agents.agent import LCToolsAgentComponent
-from lfx.base.agents.default_system_prompt import (
-    DEFAULT_SYSTEM_PROMPT_TEMPLATE,
-    substitute_env_placeholders,
-)
+from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.unified_models import (
     get_language_model_options,
@@ -334,17 +331,21 @@ class AgentComponent(ToolCallingAgentComponent):
         """Replace known env placeholders in the system prompt.
 
         Handles {current_date}, {model_name}, and {optional_user_context} (the
-        last one ships with the structured DEFAULT_SYSTEM_PROMPT_TEMPLATE).
+        last one ships with the structured DEFAULT_SYSTEM_PROMPT_TEMPLATE and
+        is currently unused at the AgentComponent layer, so it resolves to "").
         Uses str.replace (not str.format) so user prompts containing literal
         braces such as JSON examples ({"key": 1}) never break the agent.
         """
         if not prompt:
             return prompt
-        return substitute_env_placeholders(
-            prompt,
-            current_date=datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
-            model_name=self._get_resolved_model_name(),
-        )
+        replacements = {
+            "{current_date}": datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "{model_name}": self._get_resolved_model_name(),
+            "{optional_user_context}": "",
+        }
+        for placeholder, value in replacements.items():
+            prompt = prompt.replace(placeholder, value)
+        return prompt
 
     async def message_response(self) -> Message:
         try:
