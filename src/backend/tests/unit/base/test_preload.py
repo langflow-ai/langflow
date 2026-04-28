@@ -290,6 +290,19 @@ def test_reset_clears_all_fields():
     assert _STATE.flows_loaded is False
 
 
+def test_reset_cleanup_calls_temp_directories():
+    """reset() must call cleanup() on each TemporaryDirectory before dropping references."""
+    tmp_a = MagicMock()
+    tmp_b = MagicMock()
+    _STATE.temp_dirs = [tmp_a, tmp_b]
+
+    _STATE.reset()
+
+    tmp_a.cleanup.assert_called_once_with()
+    tmp_b.cleanup.assert_called_once_with()
+    assert _STATE.temp_dirs == []
+
+
 # ---------------------------------------------------------------------------
 # preload_master() function tests
 # ---------------------------------------------------------------------------

@@ -70,10 +70,17 @@ class _PreloadState:
         a partially-completed preload never leaves inconsistent state behind
         (e.g. ``master_pid`` set while ``preloaded`` is False, or best-effort
         completion flags set for steps that ran before the failure point).
+        Cleans up bundle ``TemporaryDirectory`` instances before clearing
+        ``temp_dirs`` so failed preloads do not leak on-disk directories.
         After reset, workers take the full non-preload code path.
         """
         self.preloaded = False
         self.master_pid = None
+        for tmp_dir in self.temp_dirs:
+            try:
+                tmp_dir.cleanup()
+            except Exception:  # noqa: BLE001
+                logger.exception("[preload] failed to cleanup preload temporary directory")
         self.temp_dirs = []
         self.bundles_components_paths = []
         self.profile_pictures_copied = False
