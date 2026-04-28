@@ -6,7 +6,6 @@ import {
   getKnowledgeBaseBackendLabel,
   getKnowledgeBaseBackendTarget,
 } from "../utils/backendMetadata";
-import ConnectorsSection from "./ConnectorsSection";
 import IngestionRunsSection from "./IngestionRunsSection";
 
 interface KnowledgeBaseDrawerProps {
@@ -96,10 +95,6 @@ const KnowledgeBaseDrawer = ({
               No linked flows available.
             </div>
           </div>
-
-          <Separator />
-
-          <ConnectorsSection kbName={knowledgeBase.dir_name} />
 
           <Separator />
 

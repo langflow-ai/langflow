@@ -1,10 +1,14 @@
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 
+/**
+ * Display labels for the backends actually exposed in the UI.
+ *
+ * Stubbed backends (mongodb / astra / postgres) are intentionally
+ * absent; if a legacy KB row carries one of those values the helper
+ * falls back to the raw identifier so it's still visible.
+ */
 const BACKEND_LABELS: Record<string, string> = {
   chroma: "Chroma (local)",
-  mongodb: "MongoDB Atlas",
-  astra: "Astra DB",
-  postgres: "Postgres (pgvector)",
   opensearch: "OpenSearch",
 };
 
@@ -21,39 +25,6 @@ export const getKnowledgeBaseBackendTarget = (
 
   if (backendType === "chroma") {
     return "Stored locally in Langflow";
-  }
-
-  if (backendType === "mongodb") {
-    const database = backendConfig.database;
-    const collection = backendConfig.collection;
-    if (typeof database === "string" && typeof collection === "string") {
-      return `${database}.${collection}`;
-    }
-    if (typeof collection === "string") {
-      return collection;
-    }
-  }
-
-  if (backendType === "astra") {
-    const namespace = backendConfig.namespace;
-    const collectionName = backendConfig.collection_name;
-    if (
-      typeof namespace === "string" &&
-      namespace &&
-      typeof collectionName === "string"
-    ) {
-      return `${namespace}.${collectionName}`;
-    }
-    if (typeof collectionName === "string") {
-      return collectionName;
-    }
-  }
-
-  if (backendType === "postgres") {
-    const collectionName = backendConfig.collection_name;
-    if (typeof collectionName === "string") {
-      return collectionName;
-    }
   }
 
   if (backendType === "opensearch") {

@@ -245,6 +245,10 @@ class TestKnowledgeBaseAPI:
         assert "unknown vector-store backend" in response.text.lower()
 
     async def test_create_knowledge_base_rejects_missing_backend_config(self, client: AsyncClient, logged_in_headers):
+        # OpenSearch is the only non-Chroma backend exposed for new KB
+        # creation in this phase (mongodb / astra / postgres are stubbed),
+        # so it's the one path where ``_REQUIRED_BACKEND_CONFIG`` still
+        # rejects an empty ``backend_config``.
         response = await client.post(
             "api/v1/knowledge_bases",
             headers=logged_in_headers,
@@ -252,13 +256,44 @@ class TestKnowledgeBaseAPI:
                 "name": "Missing_Backend_Config_KB",
                 "embedding_provider": "OpenAI",
                 "embedding_model": "text-embedding-3-small",
-                "backend_type": "postgres",
+                "backend_type": "opensearch",
                 "backend_config": {},
             },
         )
 
         assert response.status_code == 422
-        assert "collection_name" in response.text
+        assert "index_name" in response.text
+
+    async def test_create_knowledge_base_rejects_stubbed_backend(self, client: AsyncClient, logged_in_headers):
+        """Stubbed backends fail at the schema layer with a "not enabled" message.
+
+        The ``BackendType`` enum still includes ``mongodb``/``astra``/``postgres``
+        for DB row compatibility, but ``validate_backend_type`` rejects them so
+        a user posting one gets a clear 422 instead of a successful create
+        followed by ingest-time NotImplementedError.
+        """
+        for stubbed in ("mongodb", "astra", "postgres"):
+            response = await client.post(
+                "api/v1/knowledge_bases",
+                headers=logged_in_headers,
+                json={
+                    "name": f"Stubbed_{stubbed}_KB",
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "text-embedding-3-small",
+                    "backend_type": stubbed,
+                    # Provide config that *would* have been valid pre-stub
+                    # so the rejection is unambiguously about the backend
+                    # being disabled, not about missing required fields.
+                    "backend_config": {
+                        "collection_name": "x",
+                        "database": "x",
+                        "collection": "x",
+                    },
+                },
+            )
+
+            assert response.status_code == 422, (stubbed, response.text)
+            assert "not enabled" in response.text.lower(), (stubbed, response.text)
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_kb_path_traversal_single_level(
@@ -1169,6 +1204,78 @@ class TestPerformIngestionTask:
         written_docs = [doc for call in mock_backend.add_documents.call_args_list for doc in call.args[0]]
         assert written_docs, "expected at least one chunk document to be written"
         assert all(doc.metadata.get("source_type") == "file_upload" for doc in written_docs)
+
+    @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.create_backend")
+    @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.get_metadata")
+    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
+    @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics_via_backend", new_callable=AsyncMock)
+    async def test_perform_ingestion_routes_through_configured_backend(
+        self,
+        mock_update_metrics,
+        mock_size,
+        mock_meta,
+        mock_build,
+        mock_create_backend,
+        mock_get_kb,
+        mock_create_run,
+        mock_mark_running,  # noqa: ARG002
+        mock_finalize_run,  # noqa: ARG002
+        mock_kb_path,
+        sample_text_file,
+    ):
+        mock_embeddings = MagicMock()
+        mock_build.return_value = mock_embeddings
+
+        kb_record = MagicMock()
+        kb_record.id = uuid.uuid4()
+        kb_record.backend_type = "opensearch"
+        kb_record.backend_config = {"index_name": "kb_idx", "url_variable": "OPENSEARCH_URL"}
+        mock_get_kb.return_value = kb_record
+
+        mock_backend = MagicMock()
+        mock_backend.add_documents = AsyncMock()
+        mock_backend.teardown = AsyncMock()
+        mock_create_backend.return_value = mock_backend
+
+        run_id = uuid.uuid4()
+        mock_create_run.return_value = run_id
+        mock_meta.return_value = {"chunks": 0, "size": 0, "source_types": []}
+        mock_size.return_value = 0
+
+        file_name, file_content = sample_text_file
+        current_user = MagicMock()
+        current_user.id = uuid.uuid4()
+
+        result = await KBIngestionHelper.perform_ingestion(
+            kb_name="test_kb",
+            kb_path=mock_kb_path,
+            files_data=[(file_name, file_content.encode())],
+            chunk_size=100,
+            chunk_overlap=20,
+            separator="\n",
+            source_name="src",
+            current_user=current_user,
+            embedding_provider="OpenAI",
+            embedding_model="model",
+            task_job_id=uuid.uuid4(),
+            job_service=AsyncMock(),
+        )
+
+        assert result["ingestion_run_id"] == str(run_id)
+        mock_create_run.assert_awaited_once()
+        assert mock_create_run.await_args.kwargs["kb_id"] == kb_record.id
+        mock_create_backend.assert_called_once()
+        assert mock_create_backend.call_args.args == ("opensearch",)
+        backend_kwargs = mock_create_backend.call_args.kwargs
+        assert backend_kwargs["backend_config"] == kb_record.backend_config
+        assert backend_kwargs["embedding_function"] is mock_embeddings
+        assert backend_kwargs["user_id"] == current_user.id
+        mock_update_metrics.assert_awaited_once_with(mock_meta.return_value, mock_backend)
 
     @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)

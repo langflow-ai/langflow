@@ -16,9 +16,14 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Keep in sync with ``lfx.base.knowledge_bases.backends.BackendType``.
- * The order controls the dropdown ordering and is deliberate: Chroma
- * first because it's the zero-config default; cloud backends after.
+ * Keep in sync with the backends actually registered by
+ * ``lfx.base.knowledge_bases.backends`` (see ``backends/__init__.py``).
+ *
+ * In this phase only Chroma and OpenSearch are exposed in the UI.
+ * MongoDB / Astra / Postgres are stubbed on the backend; their picker
+ * options were dropped here so the dropdown only surfaces what's
+ * actually wired through end-to-end. Restore the dropped options when
+ * the corresponding backend stubs are reinstated.
  */
 export const BACKEND_OPTIONS = [
   {
@@ -26,22 +31,6 @@ export const BACKEND_OPTIONS = [
     label: "Chroma (local)",
     description:
       "Zero-config local vector store. Good for desktop and single-user self-hosted.",
-  },
-  {
-    value: "mongodb",
-    label: "MongoDB Atlas",
-    description: "MongoDB Atlas Vector Search. Uses the Atlas Data API.",
-  },
-  {
-    value: "astra",
-    label: "Astra DB",
-    description:
-      "DataStax Astra DB serverless vector store. Uses the Data API over HTTP.",
-  },
-  {
-    value: "postgres",
-    label: "Postgres (pgvector)",
-    description: "Self-hosted Postgres with the pgvector extension.",
   },
   {
     value: "opensearch",
@@ -77,10 +66,9 @@ export interface BackendPickerProps {
  * Vector-store backend picker for the KB creation dialog.
  *
  * Renders a dropdown to choose between the registered backends
- * (Chroma / MongoDB / Astra / Postgres / OpenSearch) plus a compact per-backend
- * config form. Every credential field accepts a *variable name*,
- * not a raw secret — the actual value lives in Langflow's variable
- * settings.
+ * (Chroma / OpenSearch) plus a compact per-backend config form. Every
+ * credential field accepts a *variable name*, not a raw secret — the
+ * actual value lives in Langflow's variable settings.
  */
 export function BackendPicker({
   value,
@@ -113,9 +101,8 @@ export function BackendPicker({
               </TooltipTrigger>
               <TooltipContent className="max-w-[300px]">
                 Where this KB's vectors live. Chroma stores them on disk next to
-                Langflow. MongoDB / Astra / Postgres / OpenSearch send them to
-                an external service you've configured. The choice is immutable
-                after creation.
+                Langflow. OpenSearch sends them to an external cluster you've
+                configured. The choice is immutable after creation.
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -140,95 +127,6 @@ export function BackendPicker({
           {activeOption.description}
         </span>
       </div>
-
-      {value === "mongodb" && (
-        <BackendConfigSection>
-          <FieldInput
-            label="Connection URI variable"
-            placeholder="MONGODB_ATLAS_URI"
-            value={config.connection_uri_variable ?? ""}
-            onChange={(v) => setField("connection_uri_variable", v)}
-            disabled={disabled}
-          />
-          <FieldInput
-            label="Database"
-            placeholder="my_db"
-            value={config.database ?? ""}
-            onChange={(v) => setField("database", v)}
-            required
-            disabled={disabled}
-          />
-          <FieldInput
-            label="Collection"
-            placeholder="my_collection"
-            value={config.collection ?? ""}
-            onChange={(v) => setField("collection", v)}
-            required
-            disabled={disabled}
-          />
-          <FieldInput
-            label="Index name"
-            placeholder="vector_index"
-            value={config.index_name ?? ""}
-            onChange={(v) => setField("index_name", v)}
-            disabled={disabled}
-          />
-        </BackendConfigSection>
-      )}
-
-      {value === "astra" && (
-        <BackendConfigSection>
-          <FieldInput
-            label="API endpoint variable"
-            placeholder="ASTRA_DB_API_ENDPOINT"
-            value={config.api_endpoint_variable ?? ""}
-            onChange={(v) => setField("api_endpoint_variable", v)}
-            disabled={disabled}
-          />
-          <FieldInput
-            label="Token variable"
-            placeholder="ASTRA_DB_APPLICATION_TOKEN"
-            value={config.token_variable ?? ""}
-            onChange={(v) => setField("token_variable", v)}
-            disabled={disabled}
-          />
-          <FieldInput
-            label="Collection name"
-            placeholder="my_collection"
-            value={config.collection_name ?? ""}
-            onChange={(v) => setField("collection_name", v)}
-            required
-            disabled={disabled}
-          />
-          <FieldInput
-            label="Namespace (optional)"
-            placeholder="default_keyspace"
-            value={config.namespace ?? ""}
-            onChange={(v) => setField("namespace", v)}
-            disabled={disabled}
-          />
-        </BackendConfigSection>
-      )}
-
-      {value === "postgres" && (
-        <BackendConfigSection>
-          <FieldInput
-            label="Connection URL variable"
-            placeholder="POSTGRES_CONNECTION_URL"
-            value={config.connection_uri_variable ?? ""}
-            onChange={(v) => setField("connection_uri_variable", v)}
-            disabled={disabled}
-          />
-          <FieldInput
-            label="Collection name"
-            placeholder="my_kb"
-            value={config.collection_name ?? ""}
-            onChange={(v) => setField("collection_name", v)}
-            required
-            disabled={disabled}
-          />
-        </BackendConfigSection>
-      )}
 
       {value === "opensearch" && (
         <BackendConfigSection>
@@ -289,7 +187,7 @@ function BackendConfigSection({ children }: { children: React.ReactNode }) {
       </span>
       <span className="text-[11px] text-muted-foreground">
         Credential fields accept Langflow variable <em>names</em>. Store the
-        actual secrets via the provider settings page.
+        actual values via the Knowledge Backends settings page.
       </span>
       <div className="grid grid-cols-1 gap-2">{children}</div>
     </div>

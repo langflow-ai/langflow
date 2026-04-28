@@ -21,19 +21,16 @@ export interface CreateKnowledgeBaseRequest {
     identifier: boolean;
   }>;
   /**
-   * Phase 4: vector-store backend selector. Defaults to "chroma" on
-   * the server when omitted so existing callers keep working unchanged.
+   * Vector-store backend selector. Defaults to "chroma" on the server
+   * when omitted so existing callers keep working unchanged. In this
+   * phase only "chroma" and "opensearch" are accepted; the server
+   * rejects other values.
    */
   backend_type?: string;
   /**
    * Per-backend configuration. Shape depends on ``backend_type``:
    *
    * - ``"chroma"``: ``{}`` (no config — uses the on-disk KB directory)
-   * - ``"mongodb"``: ``{ connection_uri_variable, database, collection,
-   *   index_name?, text_key?, embedding_key? }``
-   * - ``"astra"``: ``{ api_endpoint_variable?, token_variable?,
-   *   collection_name, namespace? }``
-   * - ``"postgres"``: ``{ connection_uri_variable?, collection_name }``
    * - ``"opensearch"``: ``{ url_variable?, username_variable?,
    *   password_variable?, index_name, vector_field?, text_field? }``
    *
