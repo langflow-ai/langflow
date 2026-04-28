@@ -396,14 +396,16 @@ def test_preload_master_calls_gc_freeze(mock_asyncio_run, mock_gc):
 @patch("langflow.preload.gc")
 @patch("langflow.preload.logger")
 @patch("langflow.preload.asyncio.run")
-def test_preload_master_continues_if_gc_freeze_fails(mock_asyncio_run, mock_logger, mock_gc):
-    """gc.freeze() failure must not roll back the successful preload."""
+def test_preload_master_resets_state_when_gc_freeze_fails(mock_asyncio_run, mock_logger, mock_gc):
+    """If gc.freeze() fails after async preload, state is reset and the exception propagates."""
     mock_asyncio_run.return_value = None
     mock_gc.freeze.side_effect = RuntimeError("gc.freeze() failed")
 
-    preload_master()
+    with pytest.raises(RuntimeError, match=r"gc\.freeze\(\) failed"):
+        preload_master()
 
-    assert _STATE.preloaded is True
+    assert _STATE.preloaded is False
+    assert _STATE.master_pid is None
     mock_logger.exception.assert_called()
 
 

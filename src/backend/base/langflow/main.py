@@ -304,23 +304,21 @@ def get_lifespan(*, fix_migration=False, version=None):
                         )
 
             # Gate: Initialize agentic global variables (when agentic_experience enabled)
-            if not get_settings_service().settings.agentic_experience:
-                pass  # Skip when feature is disabled
-            elif is_step_complete(PreloadStep.AGENTIC_GLOBALS):
-                await logger.adebug("Skipping agentic global variables: master already completed it during preload")
-            else:
-                from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
+            if get_settings_service().settings.agentic_experience:
+                if is_step_complete(PreloadStep.AGENTIC_GLOBALS):
+                    await logger.adebug("Skipping agentic global variables: master already completed it during preload")
+                else:
+                    from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
 
-                current_time = asyncio.get_event_loop().time()
-                await logger.ainfo("Initializing agentic global variables...")
-                try:
-                    async with session_scope() as session:
-                        await initialize_agentic_global_variables(session)
-                    await logger.adebug(
-                        f"Agentic global variables initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
-                    )
-                except Exception as e:  # noqa: BLE001
-                    await logger.awarning(f"Failed to initialize agentic global variables: {e}")
+                    current_time = asyncio.get_event_loop().time()
+                    await logger.ainfo("Initializing agentic global variables...")
+                    try:
+                        async with session_scope() as session:
+                            await initialize_agentic_global_variables(session)
+                        elapsed = asyncio.get_event_loop().time() - current_time
+                        await logger.adebug(f"Agentic global variables initialized in {elapsed:.2f}s")
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"Failed to initialize agentic global variables: {e}")
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Starting telemetry service")
@@ -336,23 +334,23 @@ def get_lifespan(*, fix_migration=False, version=None):
             )
 
             # Gate: Auto-configure agentic MCP server (when agentic_experience enabled)
-            if not get_settings_service().settings.agentic_experience:
-                pass  # Skip when feature is disabled
-            elif is_step_complete(PreloadStep.AGENTIC_MCP):
-                await logger.adebug("Skipping agentic MCP server config: master already completed it during preload")
-            else:
-                from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
-
-                current_time = asyncio.get_event_loop().time()
-                await logger.ainfo("Configuring Agentic MCP server...")
-                try:
-                    async with session_scope() as session:
-                        await auto_configure_agentic_mcp_server(session)
+            if get_settings_service().settings.agentic_experience:
+                if is_step_complete(PreloadStep.AGENTIC_MCP):
                     await logger.adebug(
-                        f"Agentic MCP server configured in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                        "Skipping agentic MCP server config: master already completed it during preload"
                     )
-                except Exception as e:  # noqa: BLE001
-                    await logger.awarning(f"Failed to configure agentic MCP server: {e}")
+                else:
+                    from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
+
+                    current_time = asyncio.get_event_loop().time()
+                    await logger.ainfo("Configuring Agentic MCP server...")
+                    try:
+                        async with session_scope() as session:
+                            await auto_configure_agentic_mcp_server(session)
+                        elapsed = asyncio.get_event_loop().time() - current_time
+                        await logger.adebug(f"Agentic MCP server configured in {elapsed:.2f}s")
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"Failed to configure agentic MCP server: {e}")
 
             # Gate: Load flows from directory
             current_time = asyncio.get_event_loop().time()

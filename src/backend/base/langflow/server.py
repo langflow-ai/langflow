@@ -156,9 +156,11 @@ class LangflowApplication(BaseApplication):
             # before forking workers. Take this opportunity to run all fork-safe
             # one-time initialization so workers inherit the big in-memory state
             # (component types dict, bundle Python modules, starter projects, etc.)
-            # via copy-on-write. Fork-unsafe resources (DB pools, telemetry threads,
-            # MCP asyncio tasks, prometheus server, ...) are explicitly NOT started
-            # here; each worker still sets them up in its own FastAPI lifespan.
+            # via copy-on-write. Preload may open the DB engine transiently for
+            # migrations/seeding and dispose it before fork; long-lived pools and
+            # other fork-unsafe resources (telemetry threads, MCP asyncio tasks,
+            # prometheus server, ...) are not left running in the master. Each
+            # worker still sets them up in its own FastAPI lifespan.
             if self.cfg.preload_app:
                 from langflow.preload import preload_master
 

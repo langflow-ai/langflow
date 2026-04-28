@@ -10,20 +10,23 @@ inherit the result via copy-on-write. The dominant memory wins are:
   which is typically tens of MB per worker.
 - Starter-project graphs and related in-process state.
 
-Fork-unsafe resources (DB connection pools, cache-service sockets,
-prometheus HTTP servers, telemetry threads, MCP composer asyncio tasks,
-queue service, per-worker background tasks, etc.) are deliberately NOT
-started here. Each worker continues to set those up in its own FastAPI
-``lifespan`` after fork, so workers remain fully independent and can
-each serve any request on their own.
+Fork-unsafe resources must not survive across ``fork`` (live DB connection
+pools, cache-service sockets, prometheus HTTP servers, telemetry threads, MCP
+composer asyncio tasks, queue service, per-worker background tasks, etc.).
+Preload may open the SQLAlchemy engine transiently to run migrations and
+seeding, then ``dispose()`` it before workers are forked; it does not leave a
+pool open for request serving in the master. Other services are torn down or
+never started here. Each worker continues to set up its own pools and services
+in its own FastAPI ``lifespan`` after fork, so workers remain fully independent
+and can each serve any request on their own.
 
 Failure contract:
     Fork-safety-critical steps (DB engine disposal, cache service teardown)
     that fail will propagate their exception and abort preload. Best-effort
-    steps (profile pictures, starter projects, agentic MCP, flows) that fail
-    will log the exception with traceback, clear their completion flag, and allow preload to
-    continue so workers inherit partial progress. Workers re-run any
-    incomplete step during their lifespan.
+    steps (profile pictures, starter projects, agentic globals, agentic MCP,
+    flows) that fail will log the exception with traceback, clear their
+    completion flag, and allow preload to continue so workers inherit partial
+    progress. Workers re-run any incomplete step during their lifespan.
 
 Notes on CPython and copy-on-write:
     CPython mutates ``ob_refcnt`` on every attribute access, which
@@ -46,6 +49,7 @@ from typing import TYPE_CHECKING, Final
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable
     from tempfile import TemporaryDirectory
 
 
@@ -146,6 +150,15 @@ class _PreloadState:
 _STATE = _PreloadState()
 
 
+async def _best_effort(step: PreloadStep, log_suffix: str, awaitable: Awaitable[None]) -> None:
+    """Run *awaitable* and mark *step* complete on success; log and continue on failure."""
+    try:
+        await awaitable
+        mark_step_complete(step)
+    except Exception:  # noqa: BLE001
+        await logger.aexception(f"[preload] {log_suffix}")
+
+
 def is_preloaded() -> bool:
     """Return True iff the master ran the preload hook.
 
@@ -206,11 +219,11 @@ async def _run_master_preload() -> None:
     await initialize_services(fix_migration=False)
 
     await logger.adebug("[preload] copying profile pictures")
-    try:
-        await copy_profile_pictures()
-        mark_step_complete(PreloadStep.PROFILE_PICTURES)
-    except Exception:  # noqa: BLE001
-        await logger.aexception("[preload] copy_profile_pictures failed")
+    await _best_effort(
+        PreloadStep.PROFILE_PICTURES,
+        "copy_profile_pictures failed",
+        copy_profile_pictures(),
+    )
 
     await logger.ainfo("[preload] loading bundles")
     temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
@@ -226,11 +239,11 @@ async def _run_master_preload() -> None:
     all_types_dict = component_cache.all_types_dict
     if all_types_dict is not None:
         await logger.adebug("[preload] creating/updating starter projects")
-        try:
-            await create_or_update_starter_projects(all_types_dict)
-            mark_step_complete(PreloadStep.STARTER_PROJECTS)
-        except Exception:  # noqa: BLE001
-            await logger.aexception("[preload] starter projects init failed")
+        await _best_effort(
+            PreloadStep.STARTER_PROJECTS,
+            "starter projects init failed",
+            create_or_update_starter_projects(all_types_dict),
+        )
 
     if settings_service.settings.agentic_experience:
         from langflow.api.utils.mcp.agentic_mcp import (
@@ -239,27 +252,35 @@ async def _run_master_preload() -> None:
         )
 
         await logger.adebug("[preload] initializing agentic global variables")
-        try:
+
+        async def _run_agentic_globals() -> None:
             async with session_scope() as session:
                 await initialize_agentic_global_variables(session)
-            mark_step_complete(PreloadStep.AGENTIC_GLOBALS)
-        except Exception:  # noqa: BLE001
-            await logger.aexception("[preload] initialize agentic global variables failed")
+
+        await _best_effort(
+            PreloadStep.AGENTIC_GLOBALS,
+            "initialize agentic global variables failed",
+            _run_agentic_globals(),
+        )
 
         await logger.adebug("[preload] auto-configuring agentic MCP server")
-        try:
+
+        async def _run_agentic_mcp() -> None:
             async with session_scope() as session:
                 await auto_configure_agentic_mcp_server(session)
-            mark_step_complete(PreloadStep.AGENTIC_MCP)
-        except Exception:  # noqa: BLE001
-            await logger.aexception("[preload] auto-configure agentic MCP server failed")
+
+        await _best_effort(
+            PreloadStep.AGENTIC_MCP,
+            "auto-configure agentic MCP server failed",
+            _run_agentic_mcp(),
+        )
 
     await logger.adebug("[preload] loading flows from directory")
-    try:
-        await load_flows_from_directory()
-        mark_step_complete(PreloadStep.FLOWS)
-    except Exception:  # noqa: BLE001
-        await logger.aexception("[preload] load_flows_from_directory failed")
+    await _best_effort(
+        PreloadStep.FLOWS,
+        "load_flows_from_directory failed",
+        load_flows_from_directory(),
+    )
 
     # CRITICAL: dispose the DB engine before the master returns control to
     # gunicorn. If we fork with an open connection pool, child workers
@@ -305,14 +326,17 @@ def preload_master() -> None:
         _STATE.reset()
         return
 
-    _STATE.preloaded = True
-
     # Help COW: move preload-allocated objects into the permanent generation
     # so the cyclic GC won't touch (and unshare) their pages in workers.
     try:
         gc.collect()
         gc.freeze()
-    except Exception:  # noqa: BLE001
-        logger.exception("[preload] gc.freeze() failed")
+    except Exception:
+        logger.exception(
+            "[preload] gc.collect()/gc.freeze() failed after async preload; resetting state and re-raising"
+        )
+        _STATE.reset()
+        raise
 
+    _STATE.preloaded = True
     logger.info("[preload] master preload complete; workers will inherit shared state via COW")
