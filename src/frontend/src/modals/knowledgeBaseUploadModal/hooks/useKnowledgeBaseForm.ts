@@ -44,8 +44,11 @@ export function useKnowledgeBaseForm({
   // Wizard state
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
 
-  // Fetch embedding model data from API
-  const { data: modelProviders = [] } = useGetModelProviders({});
+  // Fetch embedding model data from API. Include deprecated entries so the
+  // picker can surface them with a "Deprecated" badge instead of dropping them.
+  const { data: modelProviders = [] } = useGetModelProviders({
+    includeDeprecated: true,
+  });
 
   // Transform provider data into ModelOption[] for embedding models only
   const embeddingModelOptions = useMemo<ModelOption[]>(() => {

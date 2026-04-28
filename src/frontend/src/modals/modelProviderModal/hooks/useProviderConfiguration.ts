@@ -105,7 +105,7 @@ export const useProviderConfiguration = ({
   const { refreshAllModelInputs } = useRefreshModelInputs();
   const { data: modelProviders = [], isFetching: isFetchingModels } =
     useGetModelProviders(
-      {},
+      { includeDeprecated: true },
       {
         refetchInterval:
           syncedSelectedProvider?.provider?.toLowerCase() === "ollama"

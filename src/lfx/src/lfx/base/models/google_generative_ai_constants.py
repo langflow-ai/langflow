@@ -113,6 +113,8 @@ GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS = [
 ]
 
 # Embedding models as detailed metadata
+# Marked deprecated: not natively supported by the Knowledge Base ingestion
+# flow; hidden from the embedding model picker until support is added.
 GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED = [
     create_model_metadata(
         provider="Google Generative AI",
@@ -120,6 +122,7 @@ GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED = [
         icon="GoogleGenerativeAI",
         model_type="embeddings",
         default=True,
+        deprecated=True,
     )
     for name in GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS
 ]
