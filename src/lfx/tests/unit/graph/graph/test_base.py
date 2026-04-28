@@ -1,3 +1,4 @@
+import contextvars
 from collections import deque
 
 import pytest
@@ -362,3 +363,34 @@ def test_graph_raw_event_metrics_no_optional_fields():
 
     # Assert only timestamp is present (no optional fields)
     assert len(metrics) == 1
+
+
+@pytest.mark.asyncio
+async def test_end_all_traces_in_context_runs_on_python_3_10():
+    """end_all_traces_in_context must work on Python 3.10.
+
+    Regression: the original implementation called
+    ``asyncio.create_task(coro, context=context)``, but the ``context=`` kwarg
+    was added in Python 3.11. On 3.10 it raised ``TypeError``. The fix routes
+    the create_task call through ``context.run`` on 3.10 so the new Task copies
+    the captured context as its current context.
+    """
+    graph = Graph()
+    captured_marker = contextvars.ContextVar("test_marker", default="default")
+
+    seen: dict[str, str] = {}
+
+    async def fake_end_all_traces(outputs=None, error=None):  # noqa: ARG001
+        seen["marker"] = captured_marker.get()
+
+    graph.end_all_traces = fake_end_all_traces  # type: ignore[assignment]
+
+    # Set the contextvar before capturing so the captured context carries it.
+    captured_marker.set("captured_value")
+    callable_ = graph.end_all_traces_in_context()
+
+    # Move to a different value to prove end_all_traces sees the captured one.
+    captured_marker.set("other_value")
+    await callable_()
+
+    assert seen["marker"] == "captured_value"

@@ -38,10 +38,35 @@ from lfx.services.adapters.deployment.schema import (
 from pydantic import ValidationError
 
 
-def test_snapshot_items_requires_raw_payloads() -> None:
-    with pytest.raises(ValidationError, match="Field required"):
+def test_snapshot_items_requires_at_least_one_source() -> None:
+    with pytest.raises(ValidationError, match="At least one of 'raw_payloads' or 'ids'"):
         SnapshotItems()
 
+
+def test_snapshot_items_accepts_ids_only() -> None:
+    snap_uuid = uuid4()
+    payload = SnapshotItems(ids=[snap_uuid, f"  {snap_uuid}  ", "snap_1", "snap_1"])
+    assert payload.raw_payloads is None
+    assert payload.ids == [str(snap_uuid), "snap_1"]
+
+
+def test_snapshot_items_accepts_raw_payloads_and_ids() -> None:
+    snap_uuid = uuid4()
+    payload = SnapshotItems(
+        raw_payloads=[
+            {
+                "id": uuid4(),
+                "name": "Flow",
+                "data": {"nodes": [], "edges": []},
+            }
+        ],
+        ids=[snap_uuid],
+    )
+    assert payload.raw_payloads is not None
+    assert payload.ids == [str(snap_uuid)]
+
+
+def test_snapshot_items_rejects_unknown_fields() -> None:
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         SnapshotItems(
             raw_payloads=[
@@ -278,6 +303,11 @@ def test_snapshot_items_rejects_empty_raw_payload_list() -> None:
         SnapshotItems(raw_payloads=[])
 
 
+def test_snapshot_items_rejects_empty_ids_without_raw_payloads() -> None:
+    with pytest.raises(ValidationError, match="At least one of 'raw_payloads' or 'ids'"):
+        SnapshotItems(ids=[])
+
+
 def test_base_flow_artifact_allows_extra_fields() -> None:
     flow = BaseFlowArtifact(
         id=uuid4(),
@@ -372,6 +402,16 @@ def test_execution_create_accepts_uuid_deployment_id() -> None:
     assert payload.deployment_id == dep_uuid
 
 
+def test_execution_create_accepts_deployment_type() -> None:
+    payload = ExecutionCreate(deployment_id="dep_1", deployment_type=DeploymentType.AGENT)
+    assert payload.deployment_type == DeploymentType.AGENT
+
+
+def test_execution_create_rejects_invalid_deployment_type() -> None:
+    with pytest.raises(ValidationError, match="deployment_type"):
+        ExecutionCreate(deployment_id="dep_1", deployment_type="invalid-type")
+
+
 def test_execution_create_rejects_blank_deployment_id() -> None:
     with pytest.raises(ValidationError):
         ExecutionCreate(deployment_id="   ")
@@ -406,14 +446,10 @@ def test_execution_create_and_status_results_have_same_shape() -> None:
     assert create_result.model_dump() == status_result.model_dump()
 
 
-def test_deployment_update_result_snapshot_ids_defaults_empty() -> None:
+def test_deployment_update_result_uses_base_operation_shape() -> None:
     result = DeploymentUpdateResult(id="dep_1")
-    assert result.snapshot_ids == []
-
-
-def test_deployment_update_result_carries_snapshot_ids() -> None:
-    result = DeploymentUpdateResult(id="dep_1", snapshot_ids=["snap_1", "snap_2"])
-    assert result.snapshot_ids == ["snap_1", "snap_2"]
+    assert result.id == "dep_1"
+    assert result.provider_result is None
 
 
 def test_operation_results_share_provider_result_contract() -> None:
@@ -513,9 +549,6 @@ def test_deployment_create_happy_path_with_snapshot_and_config() -> None:
 def test_deployment_create_result_defaults() -> None:
     result = DeploymentCreateResult(
         id="dep_1",
-        name="deployment",
-        description="",
-        type=DeploymentType.AGENT,
     )
     assert result.snapshot_ids == []
     assert result.config_id is None
@@ -567,7 +600,6 @@ def test_config_list_item_accepts_minimal_fields() -> None:
     assert item.name == "Config"
     assert item.created_at is None
     assert item.updated_at is None
-    assert item.provider_data is None
 
 
 def test_config_list_item_accepts_uuid_id() -> None:
@@ -589,11 +621,9 @@ def test_config_list_item_accepts_all_fields() -> None:
         name="Config",
         created_at=now,
         updated_at=now,
-        provider_data={"region": "us-east-1"},
     )
     assert item.created_at == now
     assert item.updated_at == now
-    assert item.provider_data == {"region": "us-east-1"}
 
 
 # ---------------------------------------------------------------------------

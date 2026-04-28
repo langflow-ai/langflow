@@ -35,16 +35,67 @@ from langflow.utils.kb_constants import (
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_in_schema=False)
 
 
+def _validate_kb_path_containment(kb_user_path: Path, kb_path: Path, kb_name: str, username: str) -> None:
+    """Raise 403 if kb_path is not contained within kb_user_path.
+
+    Uses is_relative_to() instead of startswith() to prevent path traversal attacks.
+    startswith() has a prefix-ambiguity bug: a user named "alice" would incorrectly allow
+    paths under "alice_evil/" because the string starts with "alice". is_relative_to() performs
+    proper path containment checking.
+    """
+    if not kb_path.is_relative_to(kb_user_path):
+        logger.warning(
+            "Path traversal attempt blocked: user=%s kb_name=%r resolved_path=%s",
+            username,
+            kb_name,
+            kb_path,
+        )
+        raise HTTPException(status_code=403, detail=f"Access denied for knowledge base '{kb_name}'.")
+
+
 def _resolve_kb_path(kb_name: str, current_user: CurrentActiveUser) -> Path:
-    """Resolve and validate KB path, raising 404 if not found."""
+    """Resolve and validate KB path.
+
+    Raises 500 if root path not configured.
+    Raises 403 if path traversal is detected (kb_name escapes the user directory).
+    Raises 404 if the KB directory does not exist.
+    """
     kb_root_path = KBStorageHelper.get_root_path()
     if not kb_root_path:
         raise HTTPException(status_code=500, detail="Knowledge base root path not configured")
     kb_user = current_user.username
-    kb_path = kb_root_path / kb_user / kb_name
+    kb_user_path = (kb_root_path / kb_user).resolve()
+    kb_path = (kb_user_path / kb_name).resolve()
+
+    _validate_kb_path_containment(kb_user_path, kb_path, kb_name, kb_user)
+
     if not kb_path.exists() or not kb_path.is_dir():
         raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
     return kb_path
+
+
+def _is_memory_base_associated(metadata: dict[str, Any]) -> bool:
+    """Return True if the KB metadata indicates an association with a Memory Base."""
+    source_types = metadata.get("source_types")
+    return isinstance(source_types, list) and "memory" in source_types
+
+
+def _check_memory_base_association(kb_name: str, current_user: CurrentActiveUser) -> None:
+    """Raise 403 if the KB is associated with a Memory Base.
+
+    Designed as a FastAPI dependency for per-KB routes — FastAPI injects
+    ``kb_name`` from the path parameter and ``current_user`` via its own
+    dependency.  The list endpoint filters memory KBs inline using
+    ``_is_memory_base_associated`` directly.
+    """
+    kb_path = _resolve_kb_path(kb_name, current_user)
+
+    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
+    if _is_memory_base_associated(metadata):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access denied: knowledge base '{kb_name}' is managed by a Memory Base.",
+        )
 
 
 @router.post("", status_code=HTTPStatus.CREATED)
@@ -58,10 +109,16 @@ async def create_knowledge_base(
         kb_root_path = KBStorageHelper.get_root_path()
         kb_user = current_user.username
         kb_name = request.name.strip().replace(" ", "_")
-        kb_path = kb_root_path / kb_user / kb_name
         # Validate KB name
         if not kb_name or len(kb_name) < MIN_KB_NAME_LENGTH:
             raise HTTPException(status_code=400, detail="Knowledge base name must be at least 3 characters")
+
+        # Security: resolve paths and validate containment to prevent path traversal attacks.
+        # A crafted kb_name like "../victim/evil" or an absolute path like "/tmp/evil" must be
+        # rejected before any directory is created.
+        kb_user_path = (kb_root_path / kb_user).resolve()
+        kb_path = (kb_user_path / kb_name).resolve()
+        _validate_kb_path_containment(kb_user_path, kb_path, kb_name, kb_user)
 
         # Check if KB already exists
         if kb_path.exists():
@@ -242,7 +299,7 @@ async def preview_chunks(
         return {"files": file_previews}
 
 
-@router.post("/{kb_name}/ingest", status_code=HTTPStatus.OK)
+@router.post("/{kb_name}/ingest", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
 async def ingest_files_to_knowledge_base(
     kb_name: str,
     current_user: CurrentActiveUser,
@@ -334,7 +391,12 @@ async def ingest_files_to_knowledge_base(
 
         # Create job record in database for both async and sync paths
         await job_service.create_job(
-            job_id=job_id, flow_id=job_id, job_type=JobType.INGESTION, asset_id=asset_id, asset_type="knowledge_base"
+            job_id=job_id,
+            flow_id=job_id,
+            job_type=JobType.INGESTION,
+            asset_id=asset_id,
+            asset_type="knowledge_base",
+            user_id=current_user.id,
         )
 
         # Always use async path: fire and forget the ingestion logic wrapped in status updates
@@ -389,6 +451,8 @@ async def list_knowledge_bases(
             try:
                 # Use deep update (fast=False) to ensure legacy KBs are migrated on first view
                 metadata = KBAnalysisHelper.get_metadata(kb_dir, fast=False)
+                if _is_memory_base_associated(metadata):
+                    continue  # Skip KBs that are associated with a Memory Base
 
                 # Extract KB ID from metadata (stored as string, convert to UUID)
                 kb_id_str = metadata.get("id")
@@ -465,7 +529,7 @@ async def list_knowledge_bases(
         return knowledge_bases
 
 
-@router.get("/{kb_name}", status_code=HTTPStatus.OK)
+@router.get("/{kb_name}", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
 async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
     """Get detailed information about a specific knowledge base."""
     try:
@@ -505,7 +569,7 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
         raise HTTPException(status_code=500, detail="Error getting knowledge base.") from e
 
 
-@router.get("/{kb_name}/chunks", status_code=HTTPStatus.OK)
+@router.get("/{kb_name}/chunks", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
 async def get_knowledge_base_chunks(
     kb_name: str,
     current_user: CurrentActiveUser,
@@ -514,6 +578,7 @@ async def get_knowledge_base_chunks(
     search: Annotated[str, Query(description="Filter chunks whose text contains this substring")] = "",
 ) -> PaginatedChunkResponse:
     """Get chunks from a specific knowledge base with pagination."""
+    kb_path: Path | None = None
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
 
@@ -593,10 +658,11 @@ async def get_knowledge_base_chunks(
     finally:
         client = None
         chroma = None
-        KBStorageHelper.release_chroma_resources(kb_path)
+        if kb_path is not None:
+            KBStorageHelper.release_chroma_resources(kb_path)
 
 
-@router.delete("/{kb_name}", status_code=HTTPStatus.OK)
+@router.delete("/{kb_name}", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
 async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> dict[str, str]:
     """Delete a specific knowledge base."""
     try:
@@ -622,17 +688,17 @@ async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -
 async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: CurrentActiveUser) -> dict[str, object]:
     """Delete multiple knowledge bases."""
     try:
-        kb_root_path = KBStorageHelper.get_root_path()
-        kb_user_path = kb_root_path / current_user.username
         deleted_count = 0
         not_found_kbs = []
 
         for kb_name in request.kb_names:
-            kb_path = kb_user_path / kb_name
-
-            if not kb_path.exists() or not kb_path.is_dir():
-                not_found_kbs.append(kb_name)
-                continue
+            try:
+                kb_path = _resolve_kb_path(kb_name, current_user)
+            except HTTPException as exc:
+                if exc.status_code == HTTPStatus.NOT_FOUND:
+                    not_found_kbs.append(kb_name)
+                    continue
+                raise  # Re-raise 403 (traversal) and 500 errors
 
             try:
                 if KBStorageHelper.delete_storage(kb_path, kb_name):
@@ -663,7 +729,7 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
         return result
 
 
-@router.post("/{kb_name}/cancel", status_code=HTTPStatus.OK)
+@router.post("/{kb_name}/cancel", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
 async def cancel_ingestion(
     kb_name: str,
     current_user: CurrentActiveUser,

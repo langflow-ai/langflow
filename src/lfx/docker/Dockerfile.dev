@@ -27,9 +27,11 @@ RUN apt-get update \
 # Workspace root metadata + lockfile
 COPY pyproject.toml uv.lock ./
 
-# Member's pyproject so uv knows about workspace packages (no source yet, better cache)
+# Member pyproject files so uv knows about workspace packages (no source yet, better cache)
 COPY src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY src/lfx/README.md /app/src/lfx/README.md
+COPY src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+COPY src/sdk/README.md /app/src/sdk/README.md
 COPY src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 COPY src/backend/base/README.md /app/src/backend/base/README.md
 
@@ -40,6 +42,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # --- Now copy the source and tests (doesn't bust the deps layer) ---
 COPY src/lfx/src /app/src/lfx/src
 COPY src/lfx/tests /app/src/lfx/tests
+COPY src/sdk/src /app/src/sdk/src
 
 # Install the LFX package into the virtual environment (editable for dev)
 RUN --mount=type=cache,target=/root/.cache/uv \

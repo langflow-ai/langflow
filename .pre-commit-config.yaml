@@ -19,12 +19,14 @@ repos:
         language: system
         types_or: [python, pyi]
         args: [--fix]
+        exclude: ^docs/.*/API-Reference/python-examples/
       - id: ruff-format
         name: ruff format
         entry: uv run ruff format
         language: system
         types_or: [python, pyi]
         args: [--config, pyproject.toml]
+        exclude: ^docs/.*/API-Reference/python-examples/
       - id: validate-migrations
         name: Validate Alembic Migrations (Expand-Contract)
         entry: python src/backend/base/langflow/alembic/migration_validator.py
@@ -45,7 +47,7 @@ repos:
     hooks:
       - id: detect-secrets
         args: ["--baseline", ".secrets.baseline"]
-        exclude: '(^docs/|^SECURITY\.md$|src/lfx/src/lfx/_assets/component_index\.json$)'
+        exclude: '(^docs/|^SECURITY\.md$|src/lfx/src/lfx/_assets/component_index\.json$|src/lfx/README\.md$)'
   - repo: local
     hooks:
       - id: local-biome-check

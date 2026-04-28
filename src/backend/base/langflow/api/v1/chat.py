@@ -13,6 +13,11 @@ from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest, OutputValue
 from lfx.services.cache.utils import CacheMiss
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    validate_flow_for_current_settings,
+)
+from sqlmodel import select
 
 from langflow.api.build import cancel_flow_build, get_flow_events_response, start_flow_build
 from langflow.api.limited_background_tasks import LimitVertexBuildBackgroundTasks
@@ -37,12 +42,14 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildError
-from langflow.services.auth.utils import get_current_active_user
+from langflow.services.auth.utils import get_current_active_user, get_current_user_optional
 from langflow.services.chat.service import ChatService
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
+    get_settings_service,
     get_telemetry_service,
     session_scope,
 )
@@ -53,6 +60,22 @@ if TYPE_CHECKING:
     from lfx.graph.vertex.vertex_types import InterfaceVertex
 
 router = APIRouter(tags=["Chat"])
+
+
+async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, queue_service: JobQueueService) -> None:
+    """Raise HTTP 404 if the requesting user does not own the job.
+
+    Jobs with no registered owner (build_public_tmp) are accessible to any authenticated user.
+    """
+    job_owner = queue_service.get_job_owner(job_id)
+    if job_owner is not None and job_owner != current_user.id:
+        await logger.awarning(
+            "Ownership check failed: user %s tried to access job %s owned by %s",
+            current_user.id,
+            job_id,
+            job_owner,
+        )
+        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
 
 
 @router.post(
@@ -92,7 +115,6 @@ async def retrieve_vertices_order(
     components_count = None
     run_id = str(uuid.uuid4())
     try:
-        # First, we need to check if the flow_id is in the cache
         if not data:
             graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
         else:
@@ -130,6 +152,8 @@ async def retrieve_vertices_order(
             ),
         )
         if "stream or streaming set to True" in str(exc):
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if isinstance(exc, CustomComponentValidationError):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         await logger.aexception("Error checking build status")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -173,11 +197,34 @@ async def build_flow(
     Returns:
         Dict with job_id that can be used to poll for build status
     """
-    # First verify the flow exists
+    # Verify the flow exists and belongs to the requesting user (or is public).
+    # Returns 404 for both "not found" and "not owned" to avoid UUID enumeration.
+    # Note: intentionally extends _read_flow (flows.py) to also allow PUBLIC flows,
+    # since build is a valid operation on shared flows.
     async with session_scope() as session:
-        flow = await session.get(Flow, flow_id)
+        stmt = (
+            select(Flow)
+            .where(Flow.id == flow_id)
+            .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
+        )
+        flow = (await session.exec(stmt)).first()
         if not flow:
+            await logger.awarning(
+                "Flow access denied for user %s: flow %s not found or not owned",
+                current_user.id,
+                flow_id,
+            )
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+
+    try:
+        if data:
+            validate_flow_for_current_settings(data.model_dump())
+        elif flow and flow.data:
+            validate_flow_for_current_settings(flow.data)
+    except CustomComponentValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     job_id = await start_flow_build(
         flow_id=flow_id,
@@ -192,6 +239,7 @@ async def build_flow(
         queue_service=queue_service,
         flow_name=flow_name,
     )
+    queue_service.register_job_owner(job_id, current_user.id)
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
     if event_delivery != EventDeliveryType.DIRECT:
@@ -203,17 +251,23 @@ async def build_flow(
     )
 
 
-@router.get("/build/{job_id}/events", dependencies=[Depends(get_current_active_user)])
+@router.get("/build/{job_id}/events")
 async def get_build_events(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+    current_user: CurrentActiveUser,
     *,
     event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
     """Get events for a specific build job.
 
-    Requires authentication to prevent unauthorized access to build events.
+    Requires authentication and ownership verification. A job owner is registered
+    when build_flow is called; if a registered owner does not match the requesting
+    user the endpoint returns 404 to avoid leaking job existence.
+    Jobs started via build_public_tmp have no registered owner and remain accessible
+    to any authenticated user.
     """
+    await _verify_job_ownership(job_id, current_user, queue_service)
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
@@ -224,16 +278,20 @@ async def get_build_events(
 @router.post(
     "/build/{job_id}/cancel",
     response_model=CancelFlowResponse,
-    dependencies=[Depends(get_current_active_user)],
 )
 async def cancel_build(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+    current_user: CurrentActiveUser,
 ):
     """Cancel a specific build job.
 
-    Requires authentication to prevent unauthorized build cancellation.
+    Requires authentication and ownership verification to prevent a user from
+    aborting another user's running build (DoS via job cancellation).
+    Jobs with no registered owner (build_public_tmp) are accessible to any
+    authenticated user, consistent with get_build_events.
     """
+    await _verify_job_ownership(job_id, current_user, queue_service)
     try:
         # Cancel the flow build and check if it was successful
         cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
@@ -305,7 +363,6 @@ async def build_vertex(
         if isinstance(cache, CacheMiss):
             # If there's no cache
             await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-
             async with session_scope() as session:
                 graph = await build_graph_from_db(
                     flow_id=flow_id,
@@ -425,6 +482,8 @@ async def build_vertex(
                 component_run_id=run_id if "run_id" in locals() else None,
             ),
         )
+        if isinstance(exc, CustomComponentValidationError):
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         await logger.aexception("Error building Component")
         message = parse_exception(exc)
         raise HTTPException(status_code=500, detail=message) from exc
@@ -583,7 +642,6 @@ async def build_public_tmp(
     background_tasks: LimitVertexBuildBackgroundTasks,
     flow_id: uuid.UUID,
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
-    data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
     files: list[str] | None = None,
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
@@ -591,6 +649,7 @@ async def build_public_tmp(
     flow_name: str | None = None,
     request: Request,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+    authenticated_user: Annotated[User | None, Depends(get_current_user_optional)] = None,
     event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
 ):
     """Build a public flow without requiring authentication.
@@ -598,10 +657,16 @@ async def build_public_tmp(
     This endpoint is specifically for public flows that don't require authentication.
     It uses a client_id cookie to create a deterministic flow ID for tracking purposes.
 
+    Security Note:
+    - The 'data' parameter is NOT accepted to prevent flow definition tampering
+    - Public flows must execute the stored flow definition only
+    - The flow definition is always loaded from the database
+
     The endpoint:
     1. Verifies the requested flow is marked as public in the database
     2. Creates a deterministic UUID based on client_id and flow_id
     3. Uses the flow owner's permissions to build the flow
+    4. Always loads the flow definition from the database
 
     Requirements:
     - The flow must be marked as PUBLIC in the database
@@ -611,7 +676,6 @@ async def build_public_tmp(
         flow_id: UUID of the public flow to build
         background_tasks: Background tasks manager
         inputs: Optional input values for the flow
-        data: Optional flow data
         files: Optional files to include
         stop_component_id: Optional ID of component to stop at
         start_component_id: Optional ID of component to start from
@@ -619,6 +683,7 @@ async def build_public_tmp(
         flow_name: Optional name for the flow
         request: FastAPI request object (needed for cookie access)
         queue_service: Queue service for job management
+        authenticated_user: Optional authenticated user (resolved from cookie/token if present)
         event_delivery: Optional event delivery type - default is streaming
 
     Returns:
@@ -627,7 +692,23 @@ async def build_public_tmp(
     try:
         # Verify this is a public flow and get the associated user
         client_id = request.cookies.get("client_id")
-        owner_user, new_flow_id = await verify_public_flow_and_get_user(flow_id=flow_id, client_id=client_id)
+        # Only use authenticated user_id when auto-login is disabled.
+        # When AUTO_LOGIN=TRUE, the frontend uses client_id for UUID v5,
+        # so the backend must match to avoid flow_id mismatch.
+        auth_settings = get_settings_service().auth_settings
+        authenticated_user_id = authenticated_user.id if authenticated_user and not auth_settings.AUTO_LOGIN else None
+        owner_user, new_flow_id = await verify_public_flow_and_get_user(
+            flow_id=flow_id,
+            client_id=client_id,
+            authenticated_user_id=authenticated_user_id,
+        )
+
+        # Validate the stored flow data after the public-access boundary.
+        # Public flows never accept client-supplied data.
+        async with session_scope() as session:
+            flow = await session.get(Flow, flow_id)
+            if flow and flow.data:
+                validate_flow_for_current_settings(flow.data)
 
         # flow_id=new_flow_id for tracking/sessions/messages (virtual, per-user isolation).
         # source_flow_id=flow_id to load the actual flow data from the database.
@@ -636,15 +717,20 @@ async def build_public_tmp(
             source_flow_id=flow_id,
             background_tasks=background_tasks,
             inputs=inputs,
-            data=data,
+            data=None,  # Always None - public flows load from database only
             files=files,
             stop_component_id=stop_component_id,
             start_component_id=start_component_id,
             log_builds=log_builds or False,
             current_user=owner_user,
             queue_service=queue_service,
-            flow_name=flow_name or f"{client_id}_{flow_id}",
+            flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
         )
+    except CustomComponentValidationError as exc:
+        await logger.awarning(f"Public flow validation failed: {exc}")
+        raise HTTPException(status_code=400, detail="This flow cannot be executed.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         await logger.aexception("Error building public flow")
         if isinstance(exc, HTTPException):

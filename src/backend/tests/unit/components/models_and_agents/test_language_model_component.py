@@ -202,26 +202,16 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs["google_api_key"] == "google-test-key"
         assert model == mock_instance
 
-    @patch("lfx.base.models.unified_models.get_variable_service")
-    async def test_build_model_openai_missing_api_key(self, mock_get_variable_service, component_class, default_kwargs):
-        # Mock get_variable_service to return None (no API key found)
-        mock_service = MagicMock()
-        mock_service.get_variable.return_value = None
-        mock_get_variable_service.return_value = mock_service
-
+    @patch("lfx.base.models.unified_models.get_api_key_for_provider", return_value=None)
+    async def test_build_model_openai_missing_api_key(self, mock_get_api_key, component_class, default_kwargs):  # noqa: ARG002
         component = component_class(**default_kwargs)
         component.api_key = None
 
         with pytest.raises(ValueError, match="OpenAI API key is required when using OpenAI provider"):
             component.build_model()
 
-    @patch("lfx.base.models.unified_models.get_variable_service")
-    async def test_build_model_anthropic_missing_api_key(self, mock_get_variable_service, component_class):
-        # Mock get_variable_service to return None (no API key found)
-        mock_service = MagicMock()
-        mock_service.get_variable.return_value = None
-        mock_get_variable_service.return_value = mock_service
-
+    @patch("lfx.base.models.unified_models.get_api_key_for_provider", return_value=None)
+    async def test_build_model_anthropic_missing_api_key(self, mock_get_api_key, component_class):  # noqa: ARG002
         component = component_class(
             model=[
                 {
@@ -240,13 +230,8 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="Anthropic API key is required when using Anthropic provider"):
             component.build_model()
 
-    @patch("lfx.base.models.unified_models.get_variable_service")
-    async def test_build_model_google_missing_api_key(self, mock_get_variable_service, component_class):
-        # Mock get_variable_service to return None (no API key found)
-        mock_service = MagicMock()
-        mock_service.get_variable.return_value = None
-        mock_get_variable_service.return_value = mock_service
-
+    @patch("lfx.base.models.unified_models.get_api_key_for_provider", return_value=None)
+    async def test_build_model_google_missing_api_key(self, mock_get_api_key, component_class):  # noqa: ARG002
         component = component_class(
             model=[
                 {
@@ -390,3 +375,83 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
 
         model = component.build_model()
         assert isinstance(model, ChatGoogleGenerativeAI)
+
+    # ---------------------------------------------------------------------------
+    # update_build_config field-visibility tests (#2 + #5)
+    # ---------------------------------------------------------------------------
+
+    def _get_build_config(self, component):
+        """Helper to get a fresh build_config dict from the component's frontend node."""
+        return component.to_frontend_node()["data"]["node"]["template"]
+
+    @patch("lfx.base.models.unified_models.get_language_model_options")
+    async def test_update_build_config_shows_ollama_url_when_ollama_selected(
+        self, mock_opts, component_class, default_kwargs
+    ):
+        """Selecting Ollama shows ollama_base_url and hides WatsonX-specific fields."""
+        ollama_model = [{"name": "llama3.2", "provider": "Ollama", "metadata": {}}]
+        mock_opts.return_value = ollama_model
+        component = component_class(**default_kwargs)
+        component._user_id = None
+
+        build_config = self._get_build_config(component)
+
+        updated = component.update_build_config(build_config, ollama_model, field_name="model")
+
+        assert updated["ollama_base_url"]["show"] is True
+        assert updated["base_url_ibm_watsonx"]["show"] is False
+        assert updated["project_id"]["show"] is False
+
+    @patch("lfx.base.models.unified_models.get_language_model_options")
+    async def test_update_build_config_hides_ollama_url_when_openai_selected(
+        self, mock_opts, component_class, default_kwargs
+    ):
+        """Selecting OpenAI hides ollama_base_url and WatsonX-specific fields."""
+        openai_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        mock_opts.return_value = openai_model
+        component = component_class(**default_kwargs)
+        component._user_id = None
+
+        build_config = self._get_build_config(component)
+
+        updated = component.update_build_config(build_config, openai_model, field_name="model")
+
+        assert updated["ollama_base_url"]["show"] is False
+        assert updated["base_url_ibm_watsonx"]["show"] is False
+        assert updated["project_id"]["show"] is False
+
+    @patch("lfx.base.models.unified_models.get_language_model_options")
+    async def test_update_build_config_shows_watsonx_fields_when_watsonx_selected(
+        self, mock_opts, component_class, default_kwargs
+    ):
+        """Selecting IBM WatsonX shows both watsonx URL and project_id fields."""
+        watsonx_model = [{"name": "ibm/granite-13b-chat-v2", "provider": "IBM WatsonX", "metadata": {}}]
+        mock_opts.return_value = watsonx_model
+        component = component_class(**default_kwargs)
+        component._user_id = None
+
+        build_config = self._get_build_config(component)
+
+        updated = component.update_build_config(build_config, watsonx_model, field_name="model")
+
+        assert updated["base_url_ibm_watsonx"]["show"] is True
+        assert updated["base_url_ibm_watsonx"]["required"] is False
+        assert updated["project_id"]["show"] is True
+        assert updated["ollama_base_url"]["show"] is False
+
+    @patch("lfx.base.models.unified_models.get_language_model_options")
+    async def test_update_build_config_hides_all_provider_fields_with_no_model(
+        self, mock_opts, component_class, default_kwargs
+    ):
+        """With no model selected all provider-specific fields should be hidden."""
+        mock_opts.return_value = []
+        component = component_class(**default_kwargs)
+        component._user_id = None
+
+        build_config = self._get_build_config(component)
+
+        updated = component.update_build_config(build_config, "", field_name=None)
+
+        assert updated["ollama_base_url"]["show"] is False
+        assert updated["base_url_ibm_watsonx"]["show"] is False
+        assert updated["project_id"]["show"] is False

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
@@ -8,10 +9,6 @@ import FileManagerModal from "@/modals/fileManagerModal";
 import FilesRendererComponent from "@/modals/fileManagerModal/components/filesRendererComponent";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { cn } from "@/utils/utils";
-import {
-  CONSOLE_ERROR_MSG,
-  INVALID_FILE_ALERT,
-} from "../../../../../constants/alerts_constants";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import IconComponent, {
@@ -35,6 +32,7 @@ export default function InputFileComponent({
 }: InputProps<string, FileComponentType> & {
   allowFolderSelection?: boolean;
 }): JSX.Element {
+  const { t } = useTranslation();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { validateFileSize } = useFileSizeValidator();
@@ -82,7 +80,7 @@ export default function InputFileComponent({
         }
         if (!checkFileType(file.name)) {
           setErrorData({
-            title: INVALID_FILE_ALERT,
+            title: t("errors.invalidFile"),
             list: [fileTypes?.join(", ") || ""],
           });
           return;
@@ -100,7 +98,7 @@ export default function InputFileComponent({
                     { file, id: currentFlowId },
                     {
                       onError: (error) => {
-                        console.error(CONSOLE_ERROR_MSG);
+                        console.error(t("errors.uploadFile"));
                         setErrorData({
                           title: "Error uploading file",
                           list: [error.response?.data?.detail],

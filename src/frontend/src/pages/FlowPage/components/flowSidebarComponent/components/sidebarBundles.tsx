@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -26,6 +27,7 @@ export const MemoizedSidebarGroup = memo(
     showConfig,
     setShowConfig,
   }: SidebarGroupProps) => {
+    const { t } = useTranslation();
     const sortedBundles = useMemo(() => {
       return BUNDLES.toSorted((a, b) => {
         const referenceArray = search !== "" ? sortedCategories : BUNDLES;
@@ -43,7 +45,7 @@ export const MemoizedSidebarGroup = memo(
     return (
       <SidebarGroup className="p-3 pr-2">
         <SidebarGroupLabel className="cursor-default w-full flex items-center justify-between">
-          <span>Bundles</span>
+          <span>{t("sidebar.bundles")}</span>
           {showSearchConfigTrigger && ENABLE_NEW_SIDEBAR && (
             <SearchConfigTrigger
               showConfig={showConfig}

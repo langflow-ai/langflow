@@ -1,0 +1,127 @@
+---
+title: SQL Database
+slug: /sql-database
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+The **SQL Database** component executes SQL queries on [SQLAlchemy-compatible databases](https://docs.sqlalchemy.org/en/20/).
+It supports any SQLAlchemy-compatible database, such as PostgreSQL, MySQL, and SQLite.
+
+For CQL queries, see the [**DataStax** bundle](/bundles-datastax).
+
+## Query an SQL database with natural language prompts
+
+The following example demonstrates how to use the **SQL Database** component in a flow, and then modify the component to support natural language queries through an **Agent** component.
+
+This allows you to use the same **SQL Database** component for any query, rather than limiting it to a single manually entered query or requiring the user, application, or another component to provide valid SQL syntax as input.
+Users don't need to master SQL syntax because the **Agent** component translates the users' natural language prompts into SQL queries, passes the query to the **SQL Database** component, and then returns the results to the user.
+
+Additionally, input from applications and other components doesn't have to be extracted and transformed to exact SQL queries.
+Instead, you only need to provide enough context for the agent to understand that it should create and run a SQL query according to the incoming data.
+
+1. Use your own sample database or create a test database.
+
+    <details>
+    <summary>Create a test SQL database</summary>
+
+    1. Create a database called `test.db`:
+
+        ```shell
+        sqlite3 test.db
+        ```
+
+    2. Add some values to the database:
+
+        ```shell
+        sqlite3 test.db "
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            email TEXT,
+            age INTEGER
+        );
+
+        INSERT INTO users (name, email, age) VALUES
+            ('John Doe', 'john@example.com', 30),
+            ('Jane Smith', 'jane@example.com', 25),
+            ('Bob Johnson', 'bob@example.com', 35);
+        "
+        ```
+
+    3. Verify that the database has been created and contains your data:
+
+        ```shell
+        sqlite3 test.db "SELECT * FROM users;"
+        ```
+
+        The result should list the text data you entered in the previous step:
+
+        ```shell
+        1|John Doe|john@example.com
+        2|Jane Smith|jane@example.com
+        3|John Doe|john@example.com
+        4|Jane Smith|jane@example.com
+        ```
+
+    </details>
+
+2. Add an **SQL Database** component to your flow.
+
+3. In the **Database URL** field, add the connection string for your database, such as `sqlite:///test.db`.
+
+    At this point, you can enter an SQL query in the **SQL Query** field or use the [port](/concepts-components#component-ports) to pass a query from another component, such as a **Chat Input** component.
+    If you need more space, click <Icon name="Expand" aria-hidden="true"/> **Expand** to open a full-screen text field.
+
+    However, to make this component more dynamic in an agentic context, use an **Agent** component to transform natural language input to SQL queries, as explained in the following steps.
+
+4. Click the **SQL Database** component to expose the [component's header menu](/concepts-components#component-menus), and then enable **Tool Mode**.
+
+    You can now use this component as a tool for an agent.
+    In **Tool Mode**, no query is set in the **SQL Database** component because the agent will generate and send one if it determines that the tool is required to complete the user's request.
+    For more information, see [Configure tools for agents](/agents-tools).
+
+5. Add an **Agent** component to your flow, and then enter your OpenAI API key.
+
+    The default model is an OpenAI model.
+    If you want to use a different model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+
+    If you need to execute highly specialized queries, consider selecting a model that is trained for tasks like advanced SQL queries.
+    If your preferred model isn't in the **Agent** component's built-in model list, set **Model Provider** to **Connect other models**, and then connect any [language model component](/components-models).
+
+6. Connect the **SQL Database** component's **Toolset** output to the **Agent** component's **Tools** input.
+
+    ![SQL Database component connected to an Agent component](/img/component-sql-database.png)
+
+7. Click **Playground**, and then ask the agent a question about the data in your database, such as `Which users are in my database?`
+
+    The agent determines that it needs to query the database to answer the question, uses the LLM to generate an SQL query, and then uses the **SQL Database** component's `RUN_SQL_QUERY` action to run the query on your database.
+    Finally, it returns the results in a conversational format, unless you provide instructions to return raw results or a different format.
+
+    The following example queried a test database with little data, but with a more robust dataset you could ask more detailed or complex questions.
+
+    ```text
+    Here are the users in your database:
+
+    1. **John Doe** - Email: john@example.com
+    2. **Jane Smith** - Email: jane@example.com
+    3. **John Doe** - Email: john@example.com
+    4. **Jane Smith** - Email: jane@example.com
+
+    It seems there are duplicate entries for the users.
+    ```
+
+## SQL Database parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| database_url | Database URL | Input parameter. The SQLAlchemy-compatible database connection URL. |
+| query | SQL Query | Input parameter. The SQL query to execute, which can be entered directly, passed in from another component, or, in **Tool Mode**, automatically provided by an **Agent** component. |
+| include_columns | Include Columns | Input parameter. Whether to include column names in the result. The default is enabled (`true`). |
+| add_error | Add Error | Input parameter. If enabled, adds any error messages to the result, if any are returned. The default is disabled (`false`). |
+| run_sql_query | Result Table | Output parameter. The query results as a [`DataFrame`](/data-types#dataframe). |

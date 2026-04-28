@@ -43,11 +43,14 @@ def _to_str(value: Any) -> str | None:
 def get_model_name(llm, display_name: str | None = "Custom"):
     attributes_to_check = ["model_name", "model", "model_id", "deployment_name"]
 
-    # Use a generator expression with next() to find the first matching attribute
-    model_name = next((getattr(llm, attr) for attr in attributes_to_check if hasattr(llm, attr)), None)
-
-    # If no matching attribute is found, return the class name as a fallback
-    return model_name if model_name is not None else display_name
+    # Skip attributes whose value is None/empty so providers like AzureChatOpenAI
+    # (model_name=None, deployment_name=<actual>) and ChatWatsonx (model=None,
+    # model_id=<actual>) resolve correctly instead of falling back to display_name.
+    for attr in attributes_to_check:
+        value = getattr(llm, attr, None)
+        if value:
+            return value
+    return display_name
 
 
 async def is_valid_ollama_url(url: str) -> bool:

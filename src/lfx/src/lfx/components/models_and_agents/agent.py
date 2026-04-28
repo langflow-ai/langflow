@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
@@ -14,14 +15,13 @@ if TYPE_CHECKING:
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.unified_models import (
-    apply_provider_variable_config_to_build_config,
     get_language_model_options,
     get_llm,
-    get_provider_for_model_name,
-    update_model_options_in_build_config,
+    handle_model_input_update,
 )
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
-from lfx.components.helpers import CurrentDateComponent
+from lfx.components.agentics.helpers.model_config import validate_model_selection
+from lfx.components.helpers import CalculatorComponent, CurrentDateComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.field_typing.range_spec import RangeSpec
@@ -61,7 +61,7 @@ class AgentComponent(ToolCallingAgentComponent):
         SecretStrInput(
             name="api_key",
             display_name="API Key",
-            info="Model Provider API key",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
             real_time_refresh=True,
             advanced=True,
         ),
@@ -71,6 +71,7 @@ class AgentComponent(ToolCallingAgentComponent):
             info="The base URL of the API (IBM watsonx.ai only)",
             options=IBM_WATSONX_URLS,
             value=IBM_WATSONX_URLS[0],
+            combobox=True,
             show=False,
             real_time_refresh=True,
         ),
@@ -84,8 +85,14 @@ class AgentComponent(ToolCallingAgentComponent):
         MultilineInput(
             name="system_prompt",
             display_name="Agent Instructions",
-            info="System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
+            info=(
+                "System Prompt: Initial instructions and context provided to guide the agent's behavior. "
+                "Supports dynamic placeholders: {current_date}, {model_name}."
+            ),
+            value=(
+                "You are a helpful assistant that can use tools to answer questions and perform tasks. "
+                "Today is {current_date}. You are powered by {model_name}."
+            ),
             advanced=False,
         ),
         MessageTextInput(
@@ -181,10 +188,51 @@ class AgentComponent(ToolCallingAgentComponent):
             info="If true, will add a tool to the agent that returns the current date.",
             value=True,
         ),
+        BoolInput(
+            name="add_calculator_tool",
+            display_name="Calculator",
+            advanced=True,
+            info=(
+                "If true, adds a zero-config arithmetic calculator tool to the agent "
+                "(safe: only +, -, *, /, ** operators via AST)."
+            ),
+            value=True,
+        ),
     ]
     outputs = [
         Output(name="response", display_name="Response", method="message_response"),
     ]
+
+    def _resolve_selected_model(self):
+        """Resolve the selected model, including legacy agent_llm/model_name inputs."""
+        try:
+            from langchain_core.language_models import BaseLanguageModel
+
+            if isinstance(self.model, BaseLanguageModel):
+                return self.model
+        except ImportError:
+            pass
+
+        if isinstance(self.model, list) and self.model:
+            return self.model
+
+        legacy_provider = getattr(self, "agent_llm", None)
+        legacy_model_name = getattr(self, "model_name", None)
+        if not legacy_provider or not legacy_model_name:
+            return self.model
+
+        options = get_language_model_options(user_id=self.user_id)
+        for option in options:
+            if option.get("provider") == legacy_provider and option.get("name") == legacy_model_name:
+                return [option]
+
+        return [
+            {
+                "name": legacy_model_name,
+                "provider": legacy_provider,
+                "metadata": {},
+            }
+        ]
 
     def _get_max_tokens_value(self):
         """Return the user-supplied max_tokens or None when unset/zero."""
@@ -208,6 +256,19 @@ class AgentComponent(ToolCallingAgentComponent):
         """Get the agent requirements for the agent."""
         from langchain_core.tools import StructuredTool
 
+        selected_model = self._resolve_selected_model()
+        try:
+            from langchain_core.language_models import BaseLanguageModel
+
+            is_connected_model = isinstance(selected_model, BaseLanguageModel)
+        except ImportError:
+            is_connected_model = False
+
+        if not is_connected_model:
+            validate_model_selection(selected_model)
+
+        # Ensure _get_llm() uses the resolved model (e.g. from legacy agent_llm/model_name)
+        self.model = selected_model
         llm_model = self._get_llm()
         if llm_model is None:
             msg = "No language model selected. Please choose a model to proceed."
@@ -230,10 +291,59 @@ class AgentComponent(ToolCallingAgentComponent):
                 raise TypeError(msg)
             self.tools.append(current_date_tool)
 
+        # Add calculator tool if enabled (zero-config arithmetic)
+        if getattr(self, "add_calculator_tool", False):
+            if not isinstance(self.tools, list):  # type: ignore[has-type]
+                self.tools = []
+            calculator_tool = (await CalculatorComponent(**self.get_base_args()).to_toolkit()).pop(0)
+
+            if not isinstance(calculator_tool, StructuredTool):
+                msg = "CalculatorComponent must be converted to a StructuredTool"
+                raise TypeError(msg)
+            self.tools.append(calculator_tool)
+
         # Set shared callbacks for tracing the tools used by the agent
         self.set_tools_callbacks(self.tools, self._get_shared_callbacks())
 
         return llm_model, self.chat_history, self.tools
+
+    def _get_resolved_model_name(self) -> str:
+        """Best-effort human-readable model name for {model_name} injection."""
+        try:
+            from langchain_core.language_models import BaseLanguageModel
+
+            if isinstance(self.model, BaseLanguageModel):
+                return type(self.model).__name__
+        except ImportError:
+            pass
+
+        if isinstance(self.model, list) and self.model:
+            first = self.model[0]
+            if isinstance(first, dict):
+                name = first.get("name")
+                if isinstance(name, str) and name:
+                    return name
+
+        legacy_model_name = getattr(self, "model_name", None)
+        if isinstance(legacy_model_name, str) and legacy_model_name:
+            return legacy_model_name
+        return ""
+
+    def _inject_dynamic_prompt_values(self, prompt: str | None) -> str | None:
+        """Replace {current_date} / {model_name} placeholders in the system prompt.
+
+        Uses str.replace (not str.format) so user prompts containing literal braces
+        such as JSON examples ({"key": 1}) never break the agent.
+        """
+        if not prompt:
+            return prompt
+        replacements = {
+            "{current_date}": datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "{model_name}": self._get_resolved_model_name(),
+        }
+        for placeholder, value in replacements.items():
+            prompt = prompt.replace(placeholder, value)
+        return prompt
 
     async def message_response(self) -> Message:
         try:
@@ -244,7 +354,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 tools=self.tools or [],
                 chat_history=self.chat_history,
                 input_value=self.input_value,
-                system_prompt=self.system_prompt,
+                system_prompt=self._inject_dynamic_prompt_values(self.system_prompt),
             )
             agent = self.create_agent_runnable()
             result = await self.run_agent(agent)
@@ -348,8 +458,10 @@ class AgentComponent(ToolCallingAgentComponent):
         try:
             system_components = []
 
-            # 1. Agent Instructions (system_prompt)
-            agent_instructions = getattr(self, "system_prompt", "") or ""
+            # 1. Agent Instructions (system_prompt).
+            # Inject dynamic placeholders HERE so user-authored format_instructions
+            # and schema descriptions appended later keep their literal {...} tokens.
+            agent_instructions = self._inject_dynamic_prompt_values(getattr(self, "system_prompt", "") or "") or ""
             if agent_instructions:
                 system_components.append(f"{agent_instructions}")
 
@@ -379,7 +491,9 @@ class AgentComponent(ToolCallingAgentComponent):
                 except (ValidationError, ValueError, TypeError, KeyError) as e:
                     await logger.aerror(f"Could not build schema for prompt: {e}", exc_info=True)
 
-            # Combine all components
+            # Combine all components. Injection already applied on agent_instructions
+            # above; do NOT re-run it here so literal {...} tokens in format
+            # instructions / schema descriptions stay intact.
             combined_instructions = "\n\n".join(system_components) if system_components else ""
             llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
             self.set(
@@ -477,34 +591,20 @@ class AgentComponent(ToolCallingAgentComponent):
     ) -> dotdict:
         # Update model options with caching (for all field changes)
         # Agents require tool calling, so filter for only tool-calling capable models
-        def get_tool_calling_model_options(user_id=None):
-            return get_language_model_options(user_id=user_id, tool_calling=True)
-
-        build_config = update_model_options_in_build_config(
+        build_config = handle_model_input_update(
             component=self,
             build_config=dict(build_config),
-            cache_key_prefix="language_model_options_tool_calling",
-            get_options_func=get_tool_calling_model_options,
-            field_name=field_name,
             field_value=field_value,
+            field_name=field_name,
+            cache_key_prefix="language_model_options_tool_calling",
+            get_options_func=lambda user_id=None: get_language_model_options(user_id=user_id, tool_calling=True),
         )
         build_config = dotdict(build_config)
 
         if field_name == "model":
             build_config = self.update_input_types(build_config)
 
-        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
-        provider = ""
-        if isinstance(current_model_value, list) and current_model_value:
-            selected_model = current_model_value[0]
-            provider = (selected_model.get("provider") or "").strip()
-            if not provider and selected_model.get("name"):
-                provider = get_provider_for_model_name(str(selected_model["name"]))
-
-        if provider:
-            build_config = apply_provider_variable_config_to_build_config(build_config, provider)
-
-        if field_name == "model":
+            # Validate required keys
             default_keys = [
                 "code",
                 "_type",
@@ -512,6 +612,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 "tools",
                 "input_value",
                 "add_current_date_tool",
+                "add_calculator_tool",
                 "system_prompt",
                 "agent_description",
                 "max_iterations",

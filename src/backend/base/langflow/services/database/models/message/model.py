@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict, field_serializer, field_validator
-from sqlalchemy import Text
+from sqlalchemy import Index, Text, text
 from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.schema.content_block import ContentBlock
@@ -32,6 +32,7 @@ class MessageBase(SQLModel):
     properties: Properties = Field(default_factory=Properties)
     category: str = Field(default="message")
     content_blocks: list[ContentBlock] = Field(default_factory=list)
+    session_metadata: dict | None = Field(default=None)
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
@@ -59,7 +60,7 @@ class MessageBase(SQLModel):
         return value
 
     @classmethod
-    def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
+    def from_message(cls, message: "Message", flow_id: str | UUID | None = None, run_id: str | UUID | None = None):
         if message.text is None or not message.sender or not message.sender_name:
             msg = "The message does not have the required fields (text, sender, sender_name)."
             raise ValueError(msg)
@@ -119,6 +120,13 @@ class MessageBase(SQLModel):
                 msg = f"Flow ID {flow_id} is not a valid UUID"
                 raise ValueError(msg) from exc
 
+        if isinstance(run_id, str):
+            try:
+                run_id = UUID(run_id)
+            except ValueError as exc:
+                msg = f"Run ID {run_id} is not a valid UUID"
+                raise ValueError(msg) from exc
+
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
@@ -128,9 +136,11 @@ class MessageBase(SQLModel):
             files=message.files or [],
             timestamp=timestamp,
             flow_id=flow_id,
+            run_id=run_id,
             properties=properties,
             category=message.category,
             content_blocks=content_blocks,
+            session_metadata=getattr(message, "session_metadata", None),
         )
 
 
@@ -138,9 +148,23 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
 
     __tablename__ = "message"
+    __table_args__ = (
+        Index(
+            "ix_message_session_metadata_tenant",
+            text("(session_metadata->>'tenant_id')"),
+            postgresql_using="btree",
+        ),
+        Index(
+            "ix_message_session_metadata_user",
+            text("(session_metadata->>'user_id')"),
+            postgresql_using="btree",
+        ),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     flow_id: UUID | None = Field(default=None)
+    run_id: UUID | None = Field(default=None, index=True)
+    is_output: bool = Field(default=False)
 
     files: list[str] = Field(sa_column=Column(JSON))
     properties: dict | Properties = Field(  # type: ignore[assignment]
@@ -151,6 +175,13 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     content_blocks: list[dict | ContentBlock] = Field(  # type: ignore[assignment]
         default_factory=list,
         sa_column=Column(JSON),
+    )
+
+    # Enterprise session metadata - flexible JSON column for client-provided context
+    session_metadata: dict | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Session context data (e.g., user roles, custom tags, or analytics data).",
     )
 
     @field_validator("flow_id", mode="before")
@@ -178,7 +209,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
         return value
 
-    @field_validator("properties", "content_blocks", mode="before")
+    @field_validator("properties", "content_blocks", "session_metadata", mode="before")
     @classmethod
     def validate_properties_or_content_blocks(cls, value):
         if isinstance(value, list):
@@ -190,7 +221,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
         return cls._sanitize_json(value)
 
-    @field_serializer("properties", "content_blocks")
+    @field_serializer("properties", "content_blocks", "session_metadata")
     @classmethod
     def serialize_properties_or_content_blocks(cls, value) -> dict | list[dict]:
         # Redundant sanitization here acts as a defensive measure for rows
@@ -207,11 +238,13 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
 class MessageRead(MessageBase):
     id: UUID
-    flow_id: UUID | None = Field()
+    flow_id: UUID | None = None
+    session_metadata: dict | None = None
+    run_id: UUID | None = None
 
 
 class MessageCreate(MessageBase):
-    pass
+    session_metadata: dict | None = None
 
 
 class MessageUpdate(SQLModel):
@@ -224,3 +257,6 @@ class MessageUpdate(SQLModel):
     edit: bool | None = None
     error: bool | None = None
     properties: Properties | None = None
+    session_metadata: dict | None = None
+    category: str | None = None
+    content_blocks: list[ContentBlock] | None = None

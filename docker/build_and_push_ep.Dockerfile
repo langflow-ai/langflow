@@ -72,7 +72,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12.12-slim-trixie AS runtime
+FROM python:3.12.13-slim-trixie AS runtime
 
 RUN apt-get update \
     && apt-get upgrade -y \
@@ -95,8 +95,6 @@ RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
-RUN /app/.venv/bin/pip install --upgrade playwright \
-    && /app/.venv/bin/playwright install
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']

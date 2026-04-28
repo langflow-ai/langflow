@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 from lfx.components.agentics.constants import (
@@ -39,24 +40,36 @@ def validate_model_selection(model: Any) -> tuple[str, str]:
     return model_name, provider
 
 
+# ---------------------------------------------------------------------------
+# Deprecated - kept for backward compatibility only
+# These functions were superseded by handle_model_input_update() in
+# lfx.base.models.unified_models, which centralises provider-field show/hide
+# logic across all components.  They will be removed in a future release.
+# ---------------------------------------------------------------------------
+
+
 def update_provider_fields_visibility(
     build_config: dict,
     field_value: Any,
     field_name: str | None,
 ) -> dict:
-    """Update visibility of provider-specific fields based on the selected model.
+    """Deprecated. Use handle_model_input_update() from lfx.base.models.unified_models instead.
 
-    Dynamically shows/hides fields like WatsonX project_id or Ollama base_url
-    depending on which provider is currently selected.
+    Update visibility of provider-specific fields based on the selected model.
 
-    Args:
-        build_config: The build configuration dictionary to update.
-        field_value: The current field value being processed.
-        field_name: The name of the field being updated (e.g., "model").
-
-    Returns:
-        Updated build configuration with adjusted field visibility.
+    .. deprecated::
+        This function was replaced by the unified ``handle_model_input_update()``
+        helper, which additionally refreshes model options and pre-populates
+        credential fields from the variable service.  Custom components should
+        call ``handle_model_input_update(self, build_config, field_value, field_name)``
+        from their ``update_build_config`` method instead.
     """
+    warnings.warn(
+        "update_provider_fields_visibility is deprecated and will be removed in a future release. "
+        "Use handle_model_input_update() from lfx.base.models.unified_models instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
 
     if not isinstance(current_model_value, list) or len(current_model_value) == 0:
@@ -72,10 +85,7 @@ def update_provider_fields_visibility(
 
 
 def _update_watsonx_fields(build_config: dict, provider: str) -> None:
-    """Update visibility and requirements for IBM WatsonX-specific fields.
-
-    Shows base_url and project_id fields only when WatsonX is selected.
-    """
+    """Deprecated internal helper - absorbed into handle_model_input_update()."""
     is_watsonx = provider == PROVIDER_IBM_WATSONX
 
     if "base_url_ibm_watsonx" in build_config:
@@ -88,10 +98,7 @@ def _update_watsonx_fields(build_config: dict, provider: str) -> None:
 
 
 def _update_ollama_fields(build_config: dict, provider: str) -> None:
-    """Update visibility for Ollama-specific fields.
-
-    Shows ollama_base_url field only when Ollama is selected.
-    """
+    """Deprecated internal helper - absorbed into handle_model_input_update()."""
     is_ollama = provider == PROVIDER_OLLAMA
 
     if "ollama_base_url" in build_config:

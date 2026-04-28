@@ -12,7 +12,7 @@ from lfx.services.tracing.base import BaseTracingService
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_core.callbacks.base import BaseCallbackHandler
 
     from lfx.custom.custom_component.component import Component
 

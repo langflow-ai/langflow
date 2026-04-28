@@ -3,7 +3,6 @@ import { nanoid } from "nanoid";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,13 +20,12 @@ import { usePatchMCPServer } from "@/controllers/API/queries/mcp/use-patch-mcp-s
 import { CustomLink } from "@/customization/components/custom-link";
 import BaseModal from "@/modals/baseModal";
 import IOKeyPairInput, {
-  KeyPairRow,
+  type KeyPairRow,
 } from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
 import IOKeyPairInputWithVariables from "@/modals/IOModal/components/IOFieldView/components/key-pair-input-with-variables";
 import type { MCPServerType } from "@/types/mcp";
 import { extractMcpServersFromJson } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
-import { cn } from "@/utils/utils";
 
 const MCP_SETTINGS_PAGE = "/settings/mcp-servers";
 
@@ -55,6 +53,31 @@ const keyPairRowToObject = (arr: KeyPairRow[]): Record<string, string> => {
     }
     return obj;
   }, {});
+};
+
+const buildKeyPairPayload = (
+  rows: KeyPairRow[],
+  existing?: Record<string, string>,
+) => {
+  const nextValue = keyPairRowToObject(rows);
+  if (Object.keys(nextValue).length > 0) {
+    return nextValue;
+  }
+  if (existing && Object.keys(existing).length > 0) {
+    return {};
+  }
+  return undefined;
+};
+
+const buildArgsPayload = (args: string[], existing?: string[]) => {
+  const nextValue = args.filter((arg) => arg.trim() !== "");
+  if (nextValue.length > 0) {
+    return nextValue;
+  }
+  if (existing && existing.length > 0) {
+    return [];
+  }
+  return undefined;
 };
 
 export default function AddMcpServerModal({
@@ -161,12 +184,14 @@ export default function AddMcpServerModal({
         "no_blank",
         "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
+      const argsPayload = buildArgsPayload(stdioArgs, initialData?.args);
+      const envPayload = buildKeyPairPayload(stdioEnv, initialData?.env);
       try {
         await modifyMCPServer({
           name,
           command: stdioCommand,
-          args: stdioArgs.filter((a) => a.trim() !== ""),
-          env: keyPairRowToObject(stdioEnv),
+          ...(argsPayload !== undefined ? { args: argsPayload } : {}),
+          ...(envPayload !== undefined ? { env: envPayload } : {}),
         });
         if (!initialData) {
           await queryClient.setQueryData(
@@ -211,12 +236,17 @@ export default function AddMcpServerModal({
         "no_blank",
         "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
+      const envPayload = buildKeyPairPayload(httpEnv, initialData?.env);
+      const headersPayload = buildKeyPairPayload(
+        httpHeaders,
+        initialData?.headers,
+      );
       try {
         await modifyMCPServer({
           name,
-          env: keyPairRowToObject(httpEnv),
           url: httpUrl,
-          headers: keyPairRowToObject(httpHeaders),
+          ...(envPayload !== undefined ? { env: envPayload } : {}),
+          ...(headersPayload !== undefined ? { headers: headersPayload } : {}),
         });
         if (!initialData) {
           await queryClient.setQueryData(
@@ -294,7 +324,7 @@ export default function AddMcpServerModal({
       setOpen={setOpen}
       size="x-small-h-full"
       onSubmit={submitForm}
-      className="!p-0 min-h-[250px] flex-grow"
+      className="!p-0 min-h-[250px] max-h-[75vh] flex-grow"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content className="flex flex-1 flex-col overflow-hidden min-h-0">
@@ -314,7 +344,11 @@ export default function AddMcpServerModal({
               ) : (
                 <>
                   Add and save MCP servers. Manage servers in{" "}
-                  <CustomLink className="underline" to={MCP_SETTINGS_PAGE}>
+                  <CustomLink
+                    className="underline"
+                    to={MCP_SETTINGS_PAGE}
+                    onClick={() => setOpen(false)}
+                  >
                     settings
                   </CustomLink>
                   .
@@ -356,20 +390,13 @@ export default function AddMcpServerModal({
               </TabsList>
             </div>
             <div
-              className="flex w-full flex-1 flex-col border-y p-4 min-h-0"
+              className="flex w-full flex-1 flex-col overflow-y-auto border-y p-4 min-h-0"
               id="global-variable-modal-inputs"
             >
               {error && (
-                <ShadTooltip content={error}>
-                  <div
-                    className={cn(
-                      "absolute right-4 top-4 truncate text-xs font-medium text-destructive",
-                      type === "JSON" ? "w-3/5" : "w-4/5",
-                    )}
-                  >
-                    {error}
-                  </div>
-                </ShadTooltip>
+                <div className="mb-4 rounded-md bg-destructive/10 px-4 py-2 text-xs font-medium text-destructive">
+                  {error}
+                </div>
               )}
               <TabsContent value="JSON" className="flex flex-col p-0 m-0">
                 <Label className="!text-mmd mb-2">Paste in JSON config</Label>
@@ -495,7 +522,7 @@ export default function AddMcpServerModal({
             </div>
           </Tabs>
         </div>
-        <div className="flex justify-end gap-2 p-4">
+        <div className="flex shrink-0 justify-end gap-2 p-4">
           <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
             <span className="text-mmd font-normal">Cancel</span>
           </Button>

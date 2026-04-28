@@ -2,6 +2,13 @@ import { componentsToIgnoreUpdate } from "@/constants/constants";
 import type { OutputFieldType } from "@/types/api";
 import type { NodeDataType } from "../../types/flow";
 
+export type CodeValidityType = {
+  outdated: boolean;
+  blocked: boolean;
+  breakingChange: boolean;
+  userEdited: boolean;
+};
+
 // Returns true if the code is outdated (code string changed and not ignored)
 const codeIsOutdated = (
   currentCode: string,
@@ -53,7 +60,8 @@ const codeHasBreakingChange = (
 export const checkCodeValidity = (
   data: NodeDataType,
   templates: { [key: string]: any },
-) => {
+  allowCustomComponents = true,
+): CodeValidityType | undefined => {
   if (!data?.node || !templates) return;
   const template = templates[data.type]?.template;
   const currentCode = template?.code?.value;
@@ -62,6 +70,19 @@ export const checkCodeValidity = (
   const userOutputs = data.node?.outputs;
   const originalTemplate = template;
   const userTemplate = data.node?.template;
+  const hasNodeCode =
+    typeof thisNodesCode === "string" && thisNodesCode.length > 0;
+  const isBlocked = hasNodeCode && !template;
+
+  if (isBlocked) {
+    return {
+      outdated: false,
+      blocked: true,
+      breakingChange: false,
+      userEdited: data.node?.edited ?? false,
+    };
+  }
+
   const isOutdated = codeIsOutdated(currentCode, thisNodesCode, data.type);
 
   const hasBreakingChange = isOutdated
@@ -75,6 +96,7 @@ export const checkCodeValidity = (
 
   return {
     outdated: isOutdated,
+    blocked: false,
     breakingChange: hasBreakingChange,
     userEdited: data.node?.edited ?? false,
   };

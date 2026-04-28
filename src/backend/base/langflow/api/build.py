@@ -29,7 +29,15 @@ from langflow.exceptions.component import ComponentBuildError
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
+from langflow.services.database.models.jobs.model import JobType
+from langflow.services.deps import (
+    get_chat_service,
+    get_job_service,
+    get_memory_base_service,
+    get_task_service,
+    get_telemetry_service,
+    session_scope,
+)
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
 from langflow.services.telemetry.schema import ComponentInputsPayload, ComponentPayload, PlaygroundPayload
 
@@ -75,15 +83,15 @@ async def start_flow_build(
 
     Args:
         flow_id: The flow ID used for tracking, sessions, and messages.
-        background_tasks: FastAPI background tasks handler.
+        background_tasks: FastAPI background tasks for async operations.
         inputs: Optional input values for the flow.
         data: Optional flow data request.
         files: Optional list of file paths.
-        stop_component_id: Optional component ID to stop the build at.
-        start_component_id: Optional component ID to start the build from.
-        log_builds: Whether to log builds.
-        current_user: The current authenticated user.
-        queue_service: The job queue service.
+        stop_component_id: Optional component ID to stop at.
+        start_component_id: Optional component ID to start from.
+        log_builds: Whether to log build events.
+        current_user: The currently authenticated user.
+        queue_service: The job queue service instance.
         flow_name: Optional flow name override.
         source_flow_id: If provided, the actual flow ID to load from DB.
             Used by public flows where flow_id is a virtual UUID for session isolation
@@ -522,39 +530,86 @@ async def generate_flow_events(
         error_message = ErrorMessage(
             flow_id=flow_id,
             exception=e,
+            session_id=inputs.session,
         )
         event_manager.on_error(data=error_message.data)
         raise
+
+    # Create a WORKFLOW job record so memory-base on_flow_output can track this run.
+    # Best-effort: failures here must never break the build path.
+    _build_job_svc = None
+    _build_run_id: uuid.UUID | None = None
+    try:
+        _build_run_id = uuid.UUID(graph.run_id) if graph.run_id else None
+        if _build_run_id is not None:
+            _build_job_svc = get_job_service()
+            await _build_job_svc.create_job(
+                job_id=_build_run_id,
+                flow_id=flow_id,
+                user_id=current_user.id,
+                job_type=JobType.WORKFLOW,
+            )
+    except Exception:  # noqa: BLE001
+        await logger.awarning(
+            "Failed to create workflow job for /build — memory base tracking disabled for flow %s",
+            flow_id,
+            exc_info=True,
+        )
+        _build_job_svc = None
 
     event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
 
     vertex_timedeltas: list[float] = []
     event_manager.on_build_start(data={})
-    tasks = []
-    for vertex_id in ids:
-        task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager, vertex_timedeltas))
-        tasks.append(task)
-    try:
-        await asyncio.gather(*tasks)
-    except asyncio.CancelledError:
-        background_tasks.add_task(graph.end_all_traces_in_context())
-        raise
-    except Exception as e:
-        await logger.aerror(f"Error building vertices: {e}")
-        custom_component = graph.get_vertex(vertex_id).custom_component
-        trace_name = getattr(custom_component, "trace_name", None)
-        error_message = ErrorMessage(
-            flow_id=flow_id,
-            exception=e,
-            session_id=graph.session_id,
-            trace_name=trace_name,
-        )
-        event_manager.on_error(data=error_message.data)
-        raise
+
+    async def _run_vertex_build() -> None:
+        tasks = []
+        for vertex_id in ids:
+            task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager, vertex_timedeltas))
+            tasks.append(task)
+        try:
+            await asyncio.gather(*tasks)
+        except asyncio.CancelledError:
+            background_tasks.add_task(graph.end_all_traces_in_context())
+            raise
+        except Exception as e:
+            await logger.aerror(f"Error building vertices: {e}")
+            custom_component = graph.get_vertex(vertex_id).custom_component
+            trace_name = getattr(custom_component, "trace_name", None)
+            error_message = ErrorMessage(
+                flow_id=flow_id,
+                exception=e,
+                session_id=graph.session_id,
+                trace_name=trace_name,
+            )
+            event_manager.on_error(data=error_message.data)
+            raise
+
+    if _build_job_svc and _build_run_id:
+        await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
+    else:
+        await _run_vertex_build()
 
     build_duration = sum(vertex_timedeltas)
     event_manager.on_end(data={"build_duration": build_duration})
     await graph.end_all_traces()
+
+    # Fire memory-base auto-capture hook — non-blocking background effect.
+    # Must use fire_and_forget_task (not background_tasks.add_task) because
+    # generate_flow_events runs as an asyncio task; by the time the flow
+    # finishes, FastAPI has already drained the background_tasks queue and any
+    # tasks added after that point are silently dropped.
+    try:
+        _run_id_uuid = uuid.UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
+        await get_task_service().fire_and_forget_task(
+            get_memory_base_service().on_flow_output,
+            flow_id=flow_id,
+            session_id=graph.session_id or str(flow_id),
+            job_id=_run_id_uuid,
+        )
+    except (RuntimeError, ValueError, OSError):
+        await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
+
     await event_manager.queue.put((None, None, time.time()))
 
 

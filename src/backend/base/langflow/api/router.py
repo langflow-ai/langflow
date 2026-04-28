@@ -1,12 +1,13 @@
 # Router for base api
 from fastapi import APIRouter
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 
 from langflow.api.v1 import (
     api_key_router,
     chat_router,
-    deployment_router,
     endpoints_router,
     files_router,
+    flow_events_router,
     flow_version_router,
     flows_router,
     folders_router,
@@ -14,6 +15,7 @@ from langflow.api.v1 import (
     login_router,
     mcp_projects_router,
     mcp_router,
+    memories_router,
     model_options_router,
     models_router,
     monitor_router,
@@ -40,11 +42,21 @@ router_v2 = APIRouter(
     prefix="/v2",
 )
 
+
+def include_deployment_router(target_router: APIRouter) -> None:
+    """Mount deployment routes only when the deployments feature is enabled."""
+    if FEATURE_FLAGS.wxo_deployments:
+        from langflow.api.v1.deployments import router as deployment_router
+
+        target_router.include_router(deployment_router)
+
+
 router_v1.include_router(chat_router)
 router_v1.include_router(endpoints_router)
 router_v1.include_router(validate_router)
 router_v1.include_router(store_router)
 router_v1.include_router(flows_router)
+router_v1.include_router(flow_events_router)
 router_v1.include_router(flow_version_router)
 router_v1.include_router(users_router)
 router_v1.include_router(api_key_router)
@@ -57,13 +69,14 @@ router_v1.include_router(folders_router)
 router_v1.include_router(projects_router)
 router_v1.include_router(starter_projects_router)
 router_v1.include_router(knowledge_bases_router)
+router_v1.include_router(memories_router)
 router_v1.include_router(mcp_router)
 router_v1.include_router(voice_mode_router)
 router_v1.include_router(mcp_projects_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)
-router_v1.include_router(deployment_router)
+include_deployment_router(router_v1)
 
 
 # Agentic flow execution - lazy import to avoid circular dependency

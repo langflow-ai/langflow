@@ -158,8 +158,8 @@ def _get_distribution_version(import_name: str):
         if not dist_names:
             return None
 
-        # Take the first matching distribution
-        dist_name = dist_names[0]
+        # Sort for deterministic selection when multiple distributions provide the same import
+        dist_name = sorted(dist_names)[0]
         return md.distribution(dist_name).version
     except (ImportError, AttributeError, OSError, ValueError):
         return None

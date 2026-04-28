@@ -93,6 +93,19 @@ describe("SourceChunksPage", () => {
       render(<SourceChunksPage />);
       expect(screen.getByText("Failed to load chunks")).toBeInTheDocument();
     });
+
+    it("shows error message on 4xx errors", () => {
+      mockGetChunks.mockReturnValue({
+        isLoading: false,
+        isError: true,
+        data: undefined,
+        error: { response: { status: 404 } },
+      });
+
+      render(<SourceChunksPage />);
+
+      expect(screen.getByText("Failed to load chunks")).toBeInTheDocument();
+    });
   });
 
   describe("Empty state", () => {

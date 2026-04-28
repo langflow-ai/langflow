@@ -132,6 +132,11 @@ export const customDefaultShortcuts = [
     name: "Toggle Sidebar",
     shortcut: "mod+b",
   },
+  {
+    display_name: "AI Assistant",
+    name: "AI Assistant",
+    shortcut: "a",
+  },
 ];
 export const customCodeTabsClass = {
   step: "w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll",

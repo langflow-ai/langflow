@@ -39,6 +39,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         return {
             "_type": "Agent",
             "add_current_date_tool": True,
+            "add_calculator_tool": True,
             "agent_description": "A helpful agent",
             "model": MockLanguageModel(),
             "handle_parsing_errors": True,
@@ -52,240 +53,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             "output_schema": [],
         }
 
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_agent_has_dual_outputs(self, component_class, default_kwargs):
-        """Test that Agent component has both Response and Structured Response outputs."""
-        component = await self.component_setup(component_class, default_kwargs)
-
-        assert len(component.outputs) == 2
-        assert component.outputs[0].name == "response"
-        assert component.outputs[0].display_name == "Response"
-        assert component.outputs[0].method == "message_response"
-
-        assert component.outputs[1].name == "structured_response"
-        assert component.outputs[1].display_name == "Structured Response"
-        assert component.outputs[1].method == "json_response"
-        assert component.outputs[1].tool_mode is False
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_json_mode_filtered_from_openai_inputs(self, component_class, default_kwargs):
-        """Test that json_mode is filtered out from OpenAI inputs."""
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Check that json_mode is not in the agent's inputs
-        input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
-        assert "json_mode" not in input_names
-
-        # Verify other inputs are still present
-        assert "model" in input_names
-        assert "api_key" in input_names
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_json_response_parsing_valid_json(self, component_class, default_kwargs):
-        """Test that json_response correctly parses JSON from agent response."""
-        component = await self.component_setup(component_class, default_kwargs)
-        # Mock the get_agent_requirements method to avoid actual LLM calls
-        from unittest.mock import AsyncMock
-
-        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
-        component.create_agent_runnable = AsyncMock(return_value=None)
-        mock_result = type("MockResult", (), {"content": '{"name": "test", "value": 123}'})()
-        component.run_agent = AsyncMock(return_value=mock_result)
-
-        result = await component.json_response()
-
-        from lfx.schema.data import Data
-
-        assert isinstance(result, Data)
-        assert result.data == {"name": "test", "value": 123}
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_json_response_parsing_embedded_json(self, component_class, default_kwargs):
-        """Test that json_response handles text containing JSON."""
-        component = await self.component_setup(component_class, default_kwargs)
-        # Mock the get_agent_requirements method to avoid actual LLM calls
-        from unittest.mock import AsyncMock
-
-        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
-        component.create_agent_runnable = AsyncMock(return_value=None)
-        mock_result = type("MockResult", (), {"content": 'Here is the result: {"status": "success"} - done!'})()
-        component.run_agent = AsyncMock(return_value=mock_result)
-
-        result = await component.json_response()
-
-        from lfx.schema.data import Data
-
-        assert isinstance(result, Data)
-        assert result.data == {"status": "success"}
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_json_response_error_handling(self, component_class, default_kwargs):
-        """Test that json_response handles completely non-JSON responses."""
-        component = await self.component_setup(component_class, default_kwargs)
-        # Mock the get_agent_requirements method to avoid actual LLM calls
-        from unittest.mock import AsyncMock
-
-        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
-        component.create_agent_runnable = AsyncMock(return_value=None)
-        mock_result = type("MockResult", (), {"content": "This is just plain text with no JSON"})()
-        component.run_agent = AsyncMock(return_value=mock_result)
-
-        result = await component.json_response()
-
-        from lfx.schema.data import Data
-
-        assert isinstance(result, Data)
-        assert "error" in result.data
-        assert result.data["content"] == "This is just plain text with no JSON"
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_model_building_without_json_mode(self, component_class, default_kwargs):
-        """Test that model building works without json_mode attribute."""
-        component = await self.component_setup(component_class, default_kwargs)
-        component.model = "OpenAI"
-
-        # Mock component for testing
-        from unittest.mock import Mock
-
-        mock_component = Mock()
-        mock_component.set.return_value = mock_component
-
-        # Should not raise AttributeError for missing json_mode
-        result = component.set_component_params(mock_component)
-
-        assert result is not None
-        # Verify set was called (meaning no AttributeError occurred)
-        mock_component.set.assert_called_once()
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_json_response_with_schema_validation(self, component_class, default_kwargs):
-        """Test that json_response validates against provided schema."""
-        # Set up component with output schema
-        default_kwargs["output_schema"] = [
-            {"name": "name", "type": "str", "description": "Name field", "multiple": False},
-            {"name": "age", "type": "int", "description": "Age field", "multiple": False},
-        ]
-        component = await self.component_setup(component_class, default_kwargs)
-        # Mock the get_agent_requirements method
-        from unittest.mock import AsyncMock
-
-        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
-        component.create_agent_runnable = AsyncMock(return_value=None)
-        mock_result = type("MockResult", (), {"content": '{"name": "John", "age": 25}'})()
-        component.run_agent = AsyncMock(return_value=mock_result)
-
-        result = await component.json_response()
-
-        from langflow.schema.data import Data
-
-        assert isinstance(result, Data)
-        assert result.data == {"name": "John", "age": 25}
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_agent_component_initialization(self, component_class, default_kwargs):
-        """Test that Agent component initializes correctly with filtered inputs."""
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Should not raise any errors during initialization
-        assert component.display_name == "Agent"
-        assert component.name == "Agent"
-        assert len(component.inputs) > 0
-        assert len(component.outputs) == 2
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_frontend_node_structure(self, component_class, default_kwargs):
-        """Test that frontend node has correct structure with filtered inputs."""
-        component = await self.component_setup(component_class, default_kwargs)
-
-        frontend_node = component.to_frontend_node()
-        build_config = frontend_node["data"]["node"]["template"]
-
-        # Verify json_mode is not in build config
-        assert "json_mode" not in build_config
-
-        # Verify other expected fields are present
-        assert "model" in build_config
-        assert "system_prompt" in build_config
-        assert "add_current_date_tool" in build_config
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_preprocess_schema(self, component_class, default_kwargs):
-        """Test that _preprocess_schema correctly handles schema validation."""
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Test schema preprocessing
-        raw_schema = [
-            {"name": "field1", "type": "str", "description": "Test field", "multiple": "true"},
-            {"name": "field2", "type": "int", "description": "Another field", "multiple": False},
-        ]
-
-        processed = component._preprocess_schema(raw_schema)
-
-        assert len(processed) == 2
-        assert processed[0]["multiple"] is True  # String "true" should be converted to bool
-        assert processed[1]["multiple"] is False
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_build_structured_output_base_with_validation(self, component_class, default_kwargs):
-        """Test build_structured_output_base with schema validation."""
-        default_kwargs["output_schema"] = [
-            {"name": "name", "type": "str", "description": "Name field", "multiple": False},
-            {"name": "count", "type": "int", "description": "Count field", "multiple": False},
-        ]
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Test valid JSON that matches schema
-        valid_content = '{"name": "test", "count": 42}'
-        result = await component.build_structured_output_base(valid_content)
-        assert result == [{"name": "test", "count": 42}]
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_build_structured_output_base_without_schema(self, component_class, default_kwargs):
-        """Test build_structured_output_base without schema validation."""
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Test with no output_schema
-        content = '{"any": "data", "number": 123}'
-        result = await component.build_structured_output_base(content)
-        assert result == {"any": "data", "number": 123}
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_build_structured_output_base_embedded_json(self, component_class, default_kwargs):
-        """Test extraction of JSON from embedded text."""
-        component = await self.component_setup(component_class, default_kwargs)
-
-        content = 'Here is some text with {"embedded": "json"} inside it.'
-        result = await component.build_structured_output_base(content)
-        assert result == {"embedded": "json"}
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_build_structured_output_base_no_json(self, component_class, default_kwargs):
-        """Test handling of content with no JSON."""
-        component = await self.component_setup(component_class, default_kwargs)
-
-        content = "This is just plain text with no JSON at all."
-        result = await component.build_structured_output_base(content)
-        assert "error" in result
-        assert result["content"] == content
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_new_input_fields_present(self, component_class, default_kwargs):
-        """Test that new input fields are present in the component."""
-        component = await self.component_setup(component_class, default_kwargs)
-
-        input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
-
-        # Test for new fields
-        assert "format_instructions" in input_names
-        assert "output_schema" in input_names
-        assert "n_messages" in input_names
-
-        # Verify default values
-        assert hasattr(component, "format_instructions")
-        assert hasattr(component, "output_schema")
-        assert hasattr(component, "n_messages")
-        assert component.n_messages == 100
-
     async def test_max_tokens_input_field_present(self, component_class, default_kwargs):
         """Test that max_tokens input field is present in the agent component."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -297,26 +64,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         # Verify the component has the attribute
         assert hasattr(component, "max_tokens"), "Component should have max_tokens attribute"
-
-    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
-    async def test_agent_has_correct_outputs(self, component_class, default_kwargs):
-        """Test that Agent component has the correct output configuration."""
-        component = await self.component_setup(component_class, default_kwargs)
-
-        assert len(component.outputs) == 2
-
-        # Test response output
-        response_output = component.outputs[0]
-        assert response_output.name == "response"
-        assert response_output.display_name == "Response"
-        assert response_output.method == "message_response"
-
-        # Test structured response output
-        structured_output = component.outputs[1]
-        assert structured_output.name == "structured_response"
-        assert structured_output.display_name == "Structured Response"
-        assert structured_output.method == "json_response"
-        assert structured_output.tool_mode is False
 
     async def test_agent_filters_empty_chat_history_messages(self):
         """Test that empty messages in chat history are filtered out."""
@@ -437,15 +184,10 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert watsonx_url_input.show is False
         assert project_id_input.show is False
 
-    async def test_update_build_config_shows_watsonx_fields(self, component_class, default_kwargs):
+    @patch("lfx.components.models_and_agents.agent.get_language_model_options")
+    async def test_update_build_config_shows_watsonx_fields(self, mock_opts, component_class, default_kwargs):
         """Test that update_build_config shows WatsonX fields when IBM WatsonX is selected."""
         from lfx.schema.dotdict import dotdict
-
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Get the frontend node to get the build_config
-        frontend_node = component.to_frontend_node()
-        build_config = frontend_node["data"]["node"]["template"]
 
         # Simulate selecting an IBM WatsonX model
         watsonx_model_value = [
@@ -460,6 +202,13 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
                 },
             }
         ]
+        mock_opts.return_value = watsonx_model_value
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Get the frontend node to get the build_config
+        frontend_node = component.to_frontend_node()
+        build_config = frontend_node["data"]["node"]["template"]
 
         # Call update_build_config with WatsonX model selected
         updated_config = await component.update_build_config(
@@ -472,15 +221,12 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert updated_config["base_url_ibm_watsonx"]["required"] is False
         assert updated_config["project_id"]["required"] is False
 
-    async def test_update_build_config_hides_watsonx_fields_for_other_providers(self, component_class, default_kwargs):
+    @patch("lfx.components.models_and_agents.agent.get_language_model_options")
+    async def test_update_build_config_hides_watsonx_fields_for_other_providers(
+        self, mock_opts, component_class, default_kwargs
+    ):
         """Test that update_build_config hides WatsonX fields when other providers are selected."""
         from lfx.schema.dotdict import dotdict
-
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Get the frontend node to get the build_config
-        frontend_node = component.to_frontend_node()
-        build_config = frontend_node["data"]["node"]["template"]
 
         # Simulate selecting an OpenAI model
         openai_model_value = [
@@ -495,6 +241,13 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
                 },
             }
         ]
+        mock_opts.return_value = openai_model_value
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Get the frontend node to get the build_config
+        frontend_node = component.to_frontend_node()
+        build_config = frontend_node["data"]["node"]["template"]
 
         # Call update_build_config with OpenAI model selected
         updated_config = await component.update_build_config(
@@ -544,6 +297,58 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             assert call_kwargs.get("watsonx_url") == "https://us-south.ml.cloud.ibm.com"
             assert call_kwargs.get("watsonx_project_id") == "test-project-id"
 
+    @patch("lfx.components.models_and_agents.agent.get_language_model_options")
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_get_agent_requirements_supports_legacy_agent_llm_model_name(
+        self, mock_get_llm, mock_get_options, component_class, default_kwargs
+    ):
+        """Legacy agent_llm/model_name inputs should still resolve to a valid model selection."""
+        from unittest.mock import AsyncMock
+
+        default_kwargs["model"] = ""
+        component = await self.component_setup(component_class, default_kwargs)
+        component.agent_llm = "OpenAI"
+        component.model_name = "gpt-4o"
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+        mock_get_options.return_value = [
+            {
+                "name": "gpt-4o",
+                "provider": "OpenAI",
+                "metadata": {
+                    "model_class": "ChatOpenAI",
+                    "model_name_param": "model",
+                    "api_key_param": "api_key",
+                },
+            }
+        ]
+        mock_get_llm.return_value = MockLanguageModel()
+
+        await component.get_agent_requirements()
+
+        assert mock_get_llm.call_args.kwargs["model"] == [mock_get_options.return_value[0]]
+
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_get_agent_requirements_accepts_connected_model_instance(
+        self, mock_get_llm, component_class, default_kwargs
+    ):
+        """Connected BaseLanguageModel instances should bypass model-selection validation."""
+        from unittest.mock import AsyncMock
+
+        connected_model = MockLanguageModel()
+        default_kwargs["model"] = connected_model
+        component = await self.component_setup(component_class, default_kwargs)
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+        mock_get_llm.return_value = connected_model
+
+        llm_model, _, _ = await component.get_agent_requirements()
+
+        assert llm_model is connected_model
+        assert mock_get_llm.call_args.kwargs["model"] is connected_model
+
     @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
     @patch("lfx.components.models_and_agents.agent.get_llm")
     async def test_agent_passes_max_tokens_to_get_llm(
@@ -562,6 +367,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         default_kwargs["max_tokens"] = 500
 
         component = await self.component_setup(component_class, default_kwargs)
+
+        # validate_model_selection requires a list — set a valid model selection
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
 
         # Call get_agent_requirements which internally calls get_llm
         await component.get_agent_requirements()
@@ -592,6 +400,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             del default_kwargs["max_tokens"]
 
         component = await self.component_setup(component_class, default_kwargs)
+
+        # validate_model_selection requires a list — set a valid model selection
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
 
         # Call get_agent_requirements which internally calls get_llm
         await component.get_agent_requirements()
@@ -625,6 +436,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         component = await self.component_setup(component_class, default_kwargs)
 
+        # validate_model_selection requires a list — set a valid model selection
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
         # Call get_agent_requirements which internally calls get_llm
         await component.get_agent_requirements()
 
@@ -636,6 +450,199 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs["max_tokens"] == 1000
         # Note: The provider-specific field name mapping happens inside get_llm,
         # so we just verify max_tokens is passed correctly
+
+    async def test_should_append_calculator_tool_when_add_calculator_toggle_is_true(
+        self, component_class, default_kwargs
+    ):
+        """Calculator tool is appended when the toggle is enabled.
+
+        Given add_calculator_tool=True, When get_agent_requirements runs,
+        Then self.tools contains a StructuredTool derived from CalculatorComponent.
+        """
+        from unittest.mock import AsyncMock
+
+        from langchain_core.tools import StructuredTool
+
+        default_kwargs["add_calculator_tool"] = True
+        default_kwargs["add_current_date_tool"] = False  # isolate: only calculator
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            _, _, tools = await component.get_agent_requirements()
+
+        assert len(tools) == 1
+        assert isinstance(tools[0], StructuredTool)
+        assert "evaluate" in tools[0].name.lower(), f"Expected a Calculator-derived tool; got name={tools[0].name!r}"
+
+    async def test_should_not_append_calculator_tool_when_add_calculator_toggle_is_false(
+        self, component_class, default_kwargs
+    ):
+        """Calculator tool is skipped when the toggle is disabled.
+
+        Given add_calculator_tool=False, When get_agent_requirements runs,
+        Then no Calculator tool is appended to self.tools.
+        """
+        from unittest.mock import AsyncMock
+
+        default_kwargs["add_calculator_tool"] = False
+        default_kwargs["add_current_date_tool"] = False
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            _, _, tools = await component.get_agent_requirements()
+
+        assert tools == []
+
+    def test_should_replace_current_date_and_model_name_when_both_placeholders_present(self, component_class):
+        """Unit test: helper replaces both placeholders with concrete values."""
+        component = component_class()
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
+        prompt = "Today is {current_date}. You are powered by {model_name}."
+        result = component._inject_dynamic_prompt_values(prompt)
+
+        assert "{current_date}" not in result
+        assert "{model_name}" not in result
+        assert "gpt-4o" in result
+
+    def test_should_leave_literal_braces_untouched_when_prompt_has_no_known_placeholders(self, component_class):
+        """Adversarial: prompts with literal JSON like {"key": 1} must not raise and must stay intact."""
+        component = component_class()
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
+        prompt = 'Respond with JSON: {"key": 1, "nested": {"a": [1, 2]}}.'
+        result = component._inject_dynamic_prompt_values(prompt)
+
+        assert result == prompt
+
+    def test_should_return_empty_when_prompt_is_empty(self, component_class):
+        """Edge case: empty/None prompt is returned as-is without raising."""
+        component = component_class()
+        assert component._inject_dynamic_prompt_values("") == ""
+        assert component._inject_dynamic_prompt_values(None) is None
+
+    async def test_should_inject_dynamic_values_into_system_prompt_when_message_response_runs(
+        self, component_class, default_kwargs
+    ):
+        """Integration: message_response must call self.set with the resolved system_prompt."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        default_kwargs["system_prompt"] = "Powered by {model_name}."
+        default_kwargs["add_calculator_tool"] = False
+        default_kwargs["add_current_date_tool"] = False
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+
+        captured: dict = {}
+
+        def fake_set(**kwargs):
+            captured.update(kwargs)
+            return component
+
+        component.set = fake_set
+        component.create_agent_runnable = MagicMock(return_value=MagicMock())
+        component.run_agent = AsyncMock(return_value=MagicMock())
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            await component.message_response()
+
+        assert captured.get("system_prompt") == "Powered by gpt-4o."
+
+    async def test_should_not_mutate_format_instructions_when_json_response_runs(self, component_class, default_kwargs):
+        """Regression: injection must only touch agent_instructions, not format_instructions.
+
+        Ensures literal {current_date}/{model_name} tokens in user-authored
+        format_instructions survive intact while the main system_prompt is
+        still replaced by the helper.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        default_kwargs["system_prompt"] = "Powered by {model_name}."
+        default_kwargs["format_instructions"] = "Return JSON with fields {current_date} and {model_name} preserved."
+        default_kwargs["add_calculator_tool"] = False
+        default_kwargs["add_current_date_tool"] = False
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+
+        captured: dict = {}
+
+        def fake_set(**kwargs):
+            captured.update(kwargs)
+            return component
+
+        component.set = fake_set
+        component.create_agent_runnable = MagicMock(return_value=MagicMock())
+        component.run_agent = AsyncMock(return_value=MagicMock(content="{}"))
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            await component.json_response()
+
+        prompt = captured.get("system_prompt") or ""
+        assert "Powered by gpt-4o." in prompt, "agent_instructions should have placeholders replaced"
+        assert "{current_date}" in prompt, "format_instructions literal braces must survive"
+        assert "{model_name} preserved" in prompt, "format_instructions literal braces must survive"
+
+    async def test_should_accept_add_calculator_tool_in_default_keys(self, component_class, default_kwargs):
+        """update_build_config's default_keys validation must include add_calculator_tool."""
+        from lfx.schema.dotdict import dotdict
+
+        with patch("lfx.components.models_and_agents.agent.get_language_model_options") as mock_opts:
+            mock_opts.return_value = [
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ]
+            component = await self.component_setup(component_class, default_kwargs)
+            frontend_node = component.to_frontend_node()
+            build_config = frontend_node["data"]["node"]["template"]
+
+            # add_calculator_tool must be present in the build_config already; if not,
+            # update_build_config will error listing it as missing.
+            assert "add_calculator_tool" in build_config
+
+            updated_config = await component.update_build_config(
+                dotdict(build_config), mock_opts.return_value, field_name="model"
+            )
+            assert "add_calculator_tool" in updated_config
+
+    def test_should_have_placeholders_in_default_system_prompt(self, component_class):
+        """Default system_prompt ships with placeholders for the dynamic injection.
+
+        Ensures {current_date} and {model_name} are visible on a fresh agent so
+        that the dynamic injection has an observable effect out-of-the-box.
+        """
+        prompt_input = next(
+            (inp for inp in component_class.inputs if getattr(inp, "name", None) == "system_prompt"),
+            None,
+        )
+        assert prompt_input is not None
+        assert "{current_date}" in prompt_input.value
+        assert "{model_name}" in prompt_input.value
 
 
 class TestAgentComponentWithClient(ComponentTestBaseWithClient):

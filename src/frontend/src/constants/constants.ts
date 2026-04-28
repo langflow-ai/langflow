@@ -846,13 +846,9 @@ export const MAX_BATCH_SIZE = 50;
 export const MODAL_CLASSES =
   "nopan nodelete nodrag  noflow fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
 
-export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg"];
+export * from "./file-upload-constants";
 
 export const componentsToIgnoreUpdate = ["CustomComponent"];
-
-export const FS_ERROR_TEXT =
-  "Please ensure your file has one of the following extensions:";
-export const SN_ERROR_TEXT = ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ");
 
 export const ERROR_UPDATING_COMPONENT =
   "An unexpected error occurred while updating the Component. Please try again.";

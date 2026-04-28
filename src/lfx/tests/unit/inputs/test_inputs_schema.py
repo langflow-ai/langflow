@@ -3,9 +3,10 @@ from types import NoneType
 from typing import Union
 
 import pytest
-from lfx.inputs.inputs import BoolInput, DictInput, FloatInput, InputTypes, IntInput, MessageTextInput
+from lfx.inputs.inputs import BoolInput, DictInput, FloatInput, InputTypes, IntInput, MessageTextInput, NestedDictInput
 from lfx.io.schema import schema_to_langflow_inputs
 from lfx.schema.data import Data
+from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.template import Input, Output
 from lfx.template.field.base import UNDEFINED
 from lfx.type_extraction.type_extraction import post_process_type
@@ -225,6 +226,52 @@ def test_schema_to_langflow_inputs():
     list_input = find_input("list_field")
     assert list_input.is_list is True
     assert isinstance(list_input, MessageTextInput)
+
+
+def test_schema_to_langflow_inputs_preserves_optional_defaults_and_nullable_objects():
+    schema = {
+        "type": "object",
+        "properties": {
+            "task": {"type": "string"},
+            "model": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "default": "claude-sonnet-4.6",
+            },
+            "keep_alive": {
+                "anyOf": [{"type": "boolean"}, {"type": "null"}],
+                "default": False,
+            },
+            "output_schema": {
+                "anyOf": [{"type": "object"}, {"type": "null"}],
+                "default": None,
+            },
+            "proxy_country": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "default": "us",
+            },
+        },
+        "required": ["task"],
+    }
+    model = create_input_schema_from_json_schema(schema)
+
+    inputs = {input_.name: input_ for input_ in schema_to_langflow_inputs(model)}
+
+    assert isinstance(inputs["task"], MessageTextInput)
+    assert inputs["task"].required is True
+    assert inputs["task"].value == ""
+
+    assert isinstance(inputs["model"], MessageTextInput)
+    assert inputs["model"].value == "claude-sonnet-4.6"
+
+    assert isinstance(inputs["keep_alive"], BoolInput)
+    assert inputs["keep_alive"].value is False
+
+    assert isinstance(inputs["output_schema"], NestedDictInput)
+    assert inputs["output_schema"].required is False
+    assert inputs["output_schema"].value is None
+
+    assert isinstance(inputs["proxy_country"], MessageTextInput)
+    assert inputs["proxy_country"].value == "us"
 
 
 def test_schema_to_langflow_inputs_invalid_type():

@@ -1,8 +1,10 @@
 import contextlib
+import logging
 import tempfile
 import unicodedata
 from collections.abc import Callable
 from concurrent import futures
+from contextvars import copy_context
 from io import BytesIO
 from pathlib import Path
 
@@ -16,6 +18,8 @@ from lfx.base.data.storage_utils import read_file_bytes
 from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
+
+logger = logging.getLogger(__name__)
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -143,6 +147,28 @@ def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | Non
     return Data(text=text, data=metadata)
 
 
+def _detect_encoding_with_fallbacks(raw_data: bytes) -> list[str]:
+    """Detect encoding and build a fallback chain for decoding.
+
+    Returns a list of encodings to try in order, ending with latin-1
+    which always succeeds as it maps all 256 byte values.
+    """
+    result = chardet.detect(raw_data)
+    detected_encoding = result.get("encoding") if result else None
+
+    if detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
+        detected_encoding = "utf-8"
+
+    encodings: list[str] = []
+    if detected_encoding:
+        encodings.append(detected_encoding)
+    for fallback in ("utf-8", "gb18030"):
+        if fallback not in encodings:
+            encodings.append(fallback)
+    encodings.append("latin-1")
+    return encodings
+
+
 def read_text_file(file_path: str) -> str:
     """Read a text file with automatic encoding detection.
 
@@ -154,13 +180,15 @@ def read_text_file(file_path: str) -> str:
     """
     file_path_ = Path(file_path)
     raw_data = file_path_.read_bytes()
-    result = chardet.detect(raw_data)
-    encoding = result["encoding"]
 
-    if encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
-        encoding = "utf-8"
+    for enc in _detect_encoding_with_fallbacks(raw_data):
+        try:
+            return file_path_.read_text(encoding=enc)
+        except (UnicodeDecodeError, LookupError):
+            logger.debug("Encoding '%s' failed for %s, trying next fallback", enc, file_path)
 
-    return file_path_.read_text(encoding=encoding)
+    # Unreachable: latin-1 in the fallback chain always succeeds
+    return raw_data.decode("latin-1")
 
 
 async def read_text_file_async(file_path: str) -> str:
@@ -177,15 +205,14 @@ async def read_text_file_async(file_path: str) -> str:
     # Use storage-aware read to get bytes
     raw_data = await read_file_bytes(file_path)
 
-    # Auto-detect encoding
-    result = chardet.detect(raw_data)
-    encoding = result.get("encoding")
+    for enc in _detect_encoding_with_fallbacks(raw_data):
+        try:
+            return raw_data.decode(enc)
+        except (UnicodeDecodeError, LookupError):
+            logger.debug("Encoding '%s' failed for %s, trying next fallback", enc, file_path)
 
-    # If encoding detection fails (e.g., binary file), default to utf-8
-    if not encoding or encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
-        encoding = "utf-8"
-
-    return raw_data.decode(encoding, errors="replace")
+    # Unreachable: latin-1 in the fallback chain always succeeds
+    return raw_data.decode("latin-1")
 
 
 def read_docx_file(file_path: str) -> str:
@@ -379,10 +406,13 @@ def parallel_load_data(
     max_concurrency: int,
     load_function: Callable = parse_text_file_to_data,
 ) -> list[Data | None]:
+    # Each thread gets its own context copy so ContextVars (e.g. component_context_var)
+    # are available in thread pool workers across all Python versions.
+    def _run_in_context(file_path: str) -> Data | None:
+        ctx = copy_context()
+        return ctx.run(load_function, file_path, silent_errors=silent_errors)
+
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
-        loaded_files = executor.map(
-            lambda file_path: load_function(file_path, silent_errors=silent_errors),
-            file_paths,
-        )
+        loaded_files = executor.map(_run_in_context, file_paths)
     # loaded_files is an iterator, so we need to convert it to a list
     return list(loaded_files)

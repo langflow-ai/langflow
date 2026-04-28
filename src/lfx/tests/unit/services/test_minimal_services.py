@@ -87,36 +87,85 @@ class TestLocalStorageService:
 
 
 class TestTelemetryService:
-    """Tests for minimal TelemetryService."""
+    """Tests for TelemetryService."""
 
     @pytest.fixture
     def telemetry(self):
-        """Create a telemetry service."""
-        return TelemetryService()
+        """Create a telemetry service with do_not_track so it doesn't hit the network."""
+        return TelemetryService(do_not_track=True)
 
     def test_service_ready(self, telemetry):
         """Test that service is ready."""
         assert telemetry.ready is True
         assert telemetry.name == "telemetry_service"
 
+    def test_do_not_track_from_env(self):
+        """Test DO_NOT_TRACK env var is respected."""
+        os.environ["DO_NOT_TRACK"] = "1"
+        try:
+            svc = TelemetryService()
+            assert svc.do_not_track is True
+        finally:
+            del os.environ["DO_NOT_TRACK"]
+
+    def test_start_skipped_when_do_not_track(self, telemetry):
+        """Start is a no-op when do_not_track is set."""
+        telemetry.start()
+        assert telemetry._running is False
+        assert telemetry._worker_task is None
+        assert telemetry._client is None
+
+    @pytest.mark.asyncio
+    async def test_start_and_stop_lifecycle(self):
+        """Test that start creates worker/client and stop cleans them up."""
+        svc = TelemetryService(base_url="http://localhost:0")
+        svc.start()
+        assert svc._running is True
+        assert svc._worker_task is not None
+        assert svc._client is not None
+
+        await svc.stop()
+        assert svc._running is False
+        assert svc._client is None
+
+    @pytest.mark.asyncio
+    async def test_enqueue_skipped_when_do_not_track(self, telemetry):
+        """Enqueue is a no-op when do_not_track is set."""
+        from lfx.services.telemetry.schema import MCPToolPayload
+
+        await telemetry.log_mcp_tool(MCPToolPayload(tool="test", success=True, ms=5))
+        assert telemetry._queue.empty()
+
+    @pytest.mark.asyncio
+    async def test_flush_when_do_not_track(self, telemetry):
+        """Flush should not raise when do_not_track is set."""
+        await telemetry.flush()
+
     @pytest.mark.asyncio
     async def test_log_exception(self, telemetry):
-        """Test logging an exception (noop)."""
-        # Should not raise
+        """Test logging an exception."""
         exc = ValueError("test error")
         await telemetry.log_exception(exc, "test_context")
 
     @pytest.mark.asyncio
     async def test_log_package_version(self, telemetry):
-        """Test logging package version (noop)."""
-        # Should not raise
+        """Test logging package version."""
         await telemetry.log_package_version()
 
     @pytest.mark.asyncio
     async def test_teardown(self, telemetry):
         """Test service teardown."""
         await telemetry.teardown()
-        # Should not raise
+
+    @pytest.mark.asyncio
+    async def test_teardown_after_start(self):
+        """Test that teardown properly stops a started service."""
+        svc = TelemetryService(base_url="http://localhost:0")
+        svc.start()
+        assert svc._running is True
+        await svc.teardown()
+        assert svc._running is False
+        assert svc._client is None
 
 
 class TestTracingService:

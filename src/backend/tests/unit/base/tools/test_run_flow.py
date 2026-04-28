@@ -5,10 +5,12 @@ import pytest
 from lfx.base.tools.run_flow import RunFlowBaseComponent
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
+from lfx.interface.components import component_cache
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.services.cache.utils import CacheMiss
 from lfx.template.field.base import Output
+from lfx.utils.flow_validation import CustomComponentValidationError
 
 
 @pytest.fixture
@@ -223,6 +225,47 @@ class TestRunFlowBaseComponentFlowRetrieval:
             assert result == fresh_graph
             # Should have called cache "get", "delete", and "set"
             assert mock_cache_call.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_get_graph_blocks_custom_components_when_disabled(self, monkeypatch):
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        component.cache_flow = False
+        blocked_flow = Data(
+            data={
+                "data": {
+                    "nodes": [
+                        {
+                            "id": "node-1",
+                            "data": {
+                                "id": "node-1",
+                                "type": "TotallyCustom",
+                                "node": {
+                                    "display_name": "Blocked Node",
+                                    "template": {
+                                        "code": {"value": "print('blocked')"},
+                                    },
+                                },
+                            },
+                        }
+                    ],
+                    "edges": [],
+                },
+                "description": "Blocked flow",
+            }
+        )
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: MagicMock(settings=MagicMock(allow_custom_components=False)),
+        )
+        monkeypatch.setattr(component_cache, "type_to_current_hash", {"ChatInput": "known-hash"})
+        monkeypatch.setattr(component_cache, "all_types_dict", None)
+
+        with patch.object(component, "get_flow", new_callable=AsyncMock) as mock_get_flow:
+            mock_get_flow.return_value = blocked_flow
+            with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
+                await component.get_graph(flow_name_selected="blocked-flow", flow_id_selected=str(uuid4()))
 
 
 class TestRunFlowBaseComponentFlowCaching:

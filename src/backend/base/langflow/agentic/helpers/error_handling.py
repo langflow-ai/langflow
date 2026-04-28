@@ -4,7 +4,10 @@ MAX_ERROR_MESSAGE_LENGTH = 150
 MIN_MEANINGFUL_PART_LENGTH = 10
 
 ERROR_PATTERNS: list[tuple[list[str], str]] = [
-    (["rate_limit", "rate limit", "429"], "Rate limit exceeded. Please wait a moment and try again."),
+    (
+        ["rate_limit", "rate limit", "429", "consumption_limit"],
+        "Rate limit exceeded. Please wait a moment and try again.",
+    ),
     (["authentication", "api_key", "unauthorized", "401"], "Authentication failed. Check your API key."),
     (["quota", "billing", "insufficient"], "API quota exceeded. Please check your account billing."),
     (["timeout", "timed out"], "Request timed out. Please try again."),
@@ -16,6 +19,16 @@ ERROR_PATTERNS: list[tuple[list[str], str]] = [
 def extract_friendly_error(error_msg: str) -> str:
     """Convert technical API errors into user-friendly messages."""
     error_lower = error_msg.lower()
+
+    # Pydantic schema validation errors — checked BEFORE the generic pattern loop
+    # so a message like "HTTPException 500: 1 validation error for InputSchema..."
+    # is not masked by the "500" → "Server error" fallback.
+    schema_error_terms = ("validation error for", "input should be a valid", "pydantic.validationerror")
+    if any(term in error_lower for term in schema_error_terms):
+        return (
+            "The selected model produced output that didn't match the expected schema. "
+            "Try again or use a more capable model."
+        )
 
     for patterns, friendly_message in ERROR_PATTERNS:
         if any(pattern in error_lower or pattern in error_msg for pattern in patterns):

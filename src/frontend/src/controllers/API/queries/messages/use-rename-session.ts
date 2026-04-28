@@ -1,6 +1,8 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
+import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import type { useMutationFunctionType } from "@/types/api";
@@ -29,6 +31,38 @@ export const useUpdateSessionName: useMutationFunctionType<
     const isPlayground = isPlaygroundFromFlow || isPlaygroundFromPlayground;
     // if we are in playground we will edit the local storage instead of the API
     if (isPlayground && flowId) {
+      // Authenticated users on playground: rename via shared API endpoint
+      if (isAuthenticatedPlayground()) {
+        const sourceFlowId = useFlowsManagerStore.getState().currentFlowId;
+        const result = await api.patch(
+          `${getURL("MESSAGES")}/shared/session/${data.old_session_id}`,
+          null,
+          {
+            params: {
+              new_session_id: data.new_session_id,
+              source_flow_id: sourceFlowId,
+            },
+          },
+        );
+
+        if (result.data && flowId) {
+          const newCacheKey = [
+            "useGetMessagesQuery",
+            { id: flowId, session_id: data.new_session_id },
+          ];
+          queryClient.setQueryData(newCacheKey, result.data);
+
+          const oldCacheKey = [
+            "useGetMessagesQuery",
+            { id: flowId, session_id: data.old_session_id },
+          ];
+          queryClient.removeQueries({ queryKey: oldCacheKey });
+        }
+
+        return result.data;
+      }
+
+      // Anonymous/auto-login: rename in sessionStorage (original behavior)
       const messages = JSON.parse(sessionStorage.getItem(flowId) || "[]");
       const messagesWithNewSessionId = messages.map((message: Message) => {
         if (message.session_id === data.old_session_id) {

@@ -4,10 +4,11 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import MultiselectComponent from "@/components/core/parameterRenderComponent/components/multiselectComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ProviderVariable } from "@/constants/providerConstants";
+import type { ProviderVariable } from "@/constants/providerConstants";
+import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
 import DisconnectWarning from "./DisconnectWarning";
-import { Provider } from "./types";
+import type { Provider } from "./types";
 
 const PROVIDER_KEY_PREVIEW: Record<
   string,
@@ -145,11 +146,7 @@ const ProviderConfigurationForm = ({
               className="underline cursor-pointer hover:text-primary"
               onClick={() => {
                 if (selectedProvider.api_docs_url) {
-                  window.open(
-                    selectedProvider.api_docs_url,
-                    "_blank",
-                    "noopener,noreferrer",
-                  );
+                  customOpenNewTab(selectedProvider.api_docs_url);
                 }
               }}
             >

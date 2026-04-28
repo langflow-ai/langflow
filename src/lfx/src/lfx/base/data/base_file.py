@@ -239,15 +239,31 @@ class BaseFileComponent(Component, ABC):
                         file.path.unlink()
 
     def load_files_core(self) -> list[Data]:
-        """Load files and return as Data objects.
+        """Load files and return as Data objects, with per-instance caching.
+
+        Results are cached keyed by the ``markdown`` attribute so that multiple
+        output methods that share the same processing parameters (e.g.
+        ``load_files_message`` and ``load_files_dataframe`` when both run with
+        ``markdown=False``) do not trigger redundant file processing.
 
         Returns:
             list[Data]: List of Data objects from all files
         """
+        # Use the markdown flag (default False) as the cache key so that
+        # structured and markdown outputs are cached independently.
+        markdown_flag = getattr(self, "markdown", False)
+        cache_attr = f"_load_files_core_cache_{markdown_flag}"
+        cache_paths_attr = f"_load_files_core_paths_{markdown_flag}"
+
+        current_paths = tuple(getattr(self, "path", []) or [])
+        if hasattr(self, cache_attr) and getattr(self, cache_paths_attr, None) == current_paths:
+            return getattr(self, cache_attr)
+
         data_list = self.load_files_base()
-        if not data_list:
-            return [Data()]
-        return data_list
+        result = data_list if data_list else [Data()]
+        setattr(self, cache_attr, result)
+        setattr(self, cache_paths_attr, current_paths)
+        return result
 
     def _extract_file_metadata(self, data_item) -> dict:
         """Extract metadata from a data item with file_path."""

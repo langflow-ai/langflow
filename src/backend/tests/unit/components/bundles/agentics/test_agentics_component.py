@@ -10,7 +10,7 @@ try:
 except ImportError:
     pytest.skip("agentics-py and crewai not installed", allow_module_level=True)
 
-from lfx.components.agentics import SemanticAggregator, SemanticMap, SyntheticDataGenerator
+from lfx.components.agentics import AgenerateComponent, AMapComponent, AreduceComponent
 from lfx.components.agentics.constants import (
     TRANSDUCTION_AMAP,
     TRANSDUCTION_AREDUCE,
@@ -20,25 +20,25 @@ from lfx.components.agentics.inputs.common_inputs import GENERATED_FIELDS_TABLE_
 
 
 @pytest.mark.unit
-class TestSemanticMapComponent:
-    """Tests for SemanticMap (aMap) component metadata."""
+class TestAMapComponent:
+    """Tests for AMapComponent (aMap) component metadata."""
 
     def test_should_have_correct_display_name(self):
         """Test that component has correct display name."""
-        assert SemanticMap.display_name == "aMap"
+        assert AMapComponent.display_name == "aMap"
 
     def test_should_have_correct_icon(self):
         """Test that component has correct icon."""
-        assert SemanticMap.icon == "Agentics"
+        assert AMapComponent.icon == "Agentics"
 
     def test_should_have_correct_description(self):
         """Test that component has correct description."""
-        assert "augment" in SemanticMap.description.lower()
-        assert "dataframe" in SemanticMap.description.lower()
+        assert "augment" in AMapComponent.description.lower()
+        assert "dataframe" in AMapComponent.description.lower()
 
     def test_should_have_required_inputs(self):
         """Test that component has all required inputs."""
-        input_names = {i.name for i in SemanticMap.inputs}
+        input_names = {i.name for i in AMapComponent.inputs}
 
         assert "model" in input_names
         assert "api_key" in input_names
@@ -48,12 +48,12 @@ class TestSemanticMapComponent:
 
     def test_should_have_dataframe_output(self):
         """Test that component has DataFrame output."""
-        output_names = {o.name for o in SemanticMap.outputs}
+        output_names = {o.name for o in AMapComponent.outputs}
         assert "states" in output_names
 
     def test_should_have_provider_specific_inputs(self):
         """Test that component has provider-specific inputs."""
-        input_names = {i.name for i in SemanticMap.inputs}
+        input_names = {i.name for i in AMapComponent.inputs}
 
         assert "base_url_ibm_watsonx" in input_names
         assert "project_id" in input_names
@@ -67,13 +67,13 @@ class TestSemanticMapComponent:
 
     def test_should_have_model_input_with_real_time_refresh(self):
         """Test that model input has real_time_refresh enabled."""
-        model_input = next((i for i in SemanticMap.inputs if i.name == "model"), None)
+        model_input = next((i for i in AMapComponent.inputs if i.name == "model"), None)
         assert model_input is not None
         assert model_input.real_time_refresh is True
 
     def test_should_have_schema_input_with_table_schema(self):
         """Test that schema input has table_schema defined."""
-        schema_input = next((i for i in SemanticMap.inputs if i.name == "schema"), None)
+        schema_input = next((i for i in AMapComponent.inputs if i.name == "schema"), None)
         assert schema_input is not None
         assert schema_input.table_schema is not None
         assert len(schema_input.table_schema) > 0
@@ -86,20 +86,20 @@ class TestSemanticMapComponent:
 
 
 @pytest.mark.unit
-class TestSemanticAggregatorComponent:
-    """Tests for SemanticAggregator (aReduce) component metadata."""
+class TestAreduceComponent:
+    """Tests for AreduceComponent (aReduce) component metadata."""
 
     def test_should_have_correct_display_name(self):
         """Test that component has correct display name."""
-        assert SemanticAggregator.display_name == "aReduce"
+        assert AreduceComponent.display_name == "aReduce"
 
     def test_should_have_correct_icon(self):
         """Test that component has correct icon."""
-        assert SemanticAggregator.icon == "Agentics"
+        assert AreduceComponent.icon == "Agentics"
 
     def test_should_have_required_inputs(self):
         """Test that component has all required inputs."""
-        input_names = {i.name for i in SemanticAggregator.inputs}
+        input_names = {i.name for i in AreduceComponent.inputs}
 
         assert "model" in input_names
         assert "api_key" in input_names
@@ -108,30 +108,30 @@ class TestSemanticAggregatorComponent:
 
     def test_should_have_states_output(self):
         """Test that component has states output."""
-        output_names = {o.name for o in SemanticAggregator.outputs}
+        output_names = {o.name for o in AreduceComponent.outputs}
         assert "states" in output_names
 
 
 @pytest.mark.unit
-class TestSyntheticDataGeneratorComponent:
-    """Tests for SyntheticDataGenerator (aGenerate) component metadata."""
+class TestAgenerateComponent:
+    """Tests for AgenerateComponent (aGenerate) component metadata."""
 
     def test_should_have_correct_display_name(self):
         """Test that component has correct display name."""
-        assert SyntheticDataGenerator.display_name == "aGenerate"
+        assert AgenerateComponent.display_name == "aGenerate"
 
     def test_should_have_correct_icon(self):
         """Test that component has correct icon."""
-        assert SyntheticDataGenerator.icon == "Agentics"
+        assert AgenerateComponent.icon == "Agentics"
 
     def test_should_have_batch_size_input(self):
         """Test that component has batch_size input."""
-        input_names = {i.name for i in SyntheticDataGenerator.inputs}
+        input_names = {i.name for i in AgenerateComponent.inputs}
         assert "batch_size" in input_names
 
     def test_should_have_states_output(self):
         """Test that component has states output."""
-        output_names = {o.name for o in SyntheticDataGenerator.outputs}
+        output_names = {o.name for o in AgenerateComponent.outputs}
         assert "states" in output_names
 
 
