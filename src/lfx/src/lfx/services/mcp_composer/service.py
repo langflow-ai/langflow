@@ -580,6 +580,8 @@ class MCPComposerService(Service):
         try:
             # On Windows with temp files, read from files instead of pipes
             if stdout_file and stderr_file:
+                stdout_path = Path(stdout_file.name)
+                stderr_path = Path(stderr_file.name)
                 # Close file handles to flush and allow reading
                 try:
                     stdout_file.close()
@@ -593,7 +595,7 @@ class MCPComposerService(Service):
                     def read_file(filepath):
                         return Path(filepath).read_bytes()
 
-                    stdout_bytes = await asyncio.to_thread(read_file, stdout_file.name)
+                    stdout_bytes = await asyncio.to_thread(read_file, stdout_path)
                     stdout_content = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
                 except Exception as e:  # noqa: BLE001
                     await logger.adebug(f"Error reading stdout file: {e}")
@@ -603,15 +605,15 @@ class MCPComposerService(Service):
                     def read_file(filepath):
                         return Path(filepath).read_bytes()
 
-                    stderr_bytes = await asyncio.to_thread(read_file, stderr_file.name)
+                    stderr_bytes = await asyncio.to_thread(read_file, stderr_path)
                     stderr_content = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
                 except Exception as e:  # noqa: BLE001
                     await logger.adebug(f"Error reading stderr file: {e}")
 
                 # Clean up temp files
                 try:
-                    Path(stdout_file.name).unlink()
-                    Path(stderr_file.name).unlink()
+                    stdout_path.unlink()
+                    stderr_path.unlink()
                 except Exception as e:  # noqa: BLE001
                     await logger.adebug(f"Error removing temp files: {e}")
             else:
@@ -887,15 +889,18 @@ class MCPComposerService(Service):
             streamable_http_url,
             legacy_sse_url=legacy_sse_url,
         )
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            delete=False,
+        fd, config_path = tempfile.mkstemp(
             prefix=f"mcp_composer_{project_id}_config_",
             suffix=".json",
-        ) as config_file:
-            json.dump(config, config_file)
-            return Path(config_file.name)
+        )
+        path = Path(config_path)
+        try:
+            with os.fdopen(fd, mode="w", encoding="utf-8") as config_file:
+                json.dump(config, config_file)
+        except Exception:
+            path.unlink(missing_ok=True)
+            raise
+        return path
 
     @staticmethod
     def _normalize_config_value(value: Any) -> Any:
@@ -1436,6 +1441,8 @@ class MCPComposerService(Service):
         stderr_handle: int | typing.IO[bytes] = subprocess.PIPE
         stdout_file = None
         stderr_file = None
+        stdout_path: Path | None = None
+        stderr_path: Path | None = None
 
         if platform.system() == "Windows":
             # Create temp files for stdout/stderr on Windows to avoid pipe deadlocks
@@ -1449,9 +1456,9 @@ class MCPComposerService(Service):
             )
             stdout_handle = stdout_file
             stderr_handle = stderr_file
-            stdout_name = stdout_file.name
-            stderr_name = stderr_file.name
-            await logger.adebug(f"Using temp files for MCP Composer logs: stdout={stdout_name}, stderr={stderr_name}")
+            stdout_path = Path(stdout_file.name)
+            stderr_path = Path(stderr_file.name)
+            await logger.adebug(f"Using temp files for MCP Composer logs: stdout={stdout_path}, stderr={stderr_path}")
 
         try:
             process = subprocess.Popen(cmd, env=env, stdout=stdout_handle, stderr=stderr_handle)  # noqa: ASYNC220, S603
@@ -1564,8 +1571,10 @@ class MCPComposerService(Service):
                 try:
                     stdout_file.close()
                     stderr_file.close()
-                    Path(stdout_file.name).unlink()
-                    Path(stderr_file.name).unlink()
+                    if stdout_path:
+                        stdout_path.unlink(missing_ok=True)
+                    if stderr_path:
+                        stderr_path.unlink(missing_ok=True)
                 except Exception as e:  # noqa: BLE001
                     await logger.adebug(f"Error cleaning up temp files on success: {e}")
             else:
