@@ -9,6 +9,7 @@ from uuid import UUID
 
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from pydantic import ValidationError
 from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
@@ -437,11 +438,14 @@ async def upload_file(
 
     # Normalise code fields: if exported with code-as-lines format, rejoin to
     # strings before creating the Pydantic models so the DB always stores strings.
-    if "flows" in data:
-        data = {**data, "flows": [normalize_code_for_import(f) for f in data["flows"]]}
-        flow_list = FlowListCreate(**data)
-    else:
-        flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(data))])
+    try:
+        if "flows" in data:
+            data = {**data, "flows": [normalize_code_for_import(f) for f in data["flows"]]}
+            flow_list = FlowListCreate(**data)
+        else:
+            flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(data))])
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
     # TODO: Full-version import is planned as a follow-up feature.
     # When implemented, extract raw flow dicts here to read embedded "version"
