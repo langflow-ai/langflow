@@ -17,6 +17,7 @@ import {
   getKnowledgeBackendOption,
   isKnowledgeBackendConfigured,
   KNOWLEDGE_BACKEND_OPTIONS,
+  type KnowledgeBackendConfigValue,
   type KnowledgeBackendId,
   type KnowledgeBackendOption,
 } from "@/constants/knowledgeBackendConstants";
@@ -26,7 +27,7 @@ import { cn } from "@/utils/utils";
 
 export type KnowledgeBackendSelection = {
   backend_type: AvailableKnowledgeBackendId;
-  backend_config: Record<string, string>;
+  backend_config: Record<string, KnowledgeBackendConfigValue>;
 };
 
 interface KnowledgeBackendInputProps {
@@ -36,7 +37,7 @@ interface KnowledgeBackendInputProps {
   disabled?: boolean;
   onValueChange: (
     backendType: AvailableKnowledgeBackendId,
-    backendConfig: Record<string, string>,
+    backendConfig: Record<string, KnowledgeBackendConfigValue>,
   ) => void;
 }
 

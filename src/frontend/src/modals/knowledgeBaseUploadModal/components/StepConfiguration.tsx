@@ -19,7 +19,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { AvailableKnowledgeBackendId } from "@/constants/knowledgeBackendConstants";
+import type {
+  AvailableKnowledgeBackendId,
+  KnowledgeBackendConfigValue,
+} from "@/constants/knowledgeBackendConstants";
 import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
 import { ACCEPTED_FILE_TYPES } from "../constants";
@@ -50,7 +53,9 @@ interface StepConfigurationProps {
   onColumnConfigChange: (value: ColumnConfigRow[]) => void;
   backendType: AvailableKnowledgeBackendId;
   onBackendTypeChange: (value: AvailableKnowledgeBackendId) => void;
-  onBackendConfigChange: (value: Record<string, string>) => void;
+  onBackendConfigChange: (
+    value: Record<string, KnowledgeBackendConfigValue>,
+  ) => void;
   globalVariables: GlobalVariable[];
 }
 

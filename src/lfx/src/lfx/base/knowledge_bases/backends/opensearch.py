@@ -60,8 +60,42 @@ DEFAULT_USERNAME_VARIABLE = "OPENSEARCH_USERNAME"
 DEFAULT_PASSWORD_VARIABLE = "OPENSEARCH_PASSWORD"  # noqa: S105 — variable name, not a secret  # pragma: allowlist secret
 DEFAULT_VECTOR_FIELD = "vector_field"
 DEFAULT_TEXT_FIELD = "text"
-DEFAULT_ENGINE = "jvector"
+# ``faiss`` is part of the core OpenSearch k-NN plugin on every
+# released version (1.x → 3.x) and works without extra cluster setup.
+# ``jvector`` was tempting (it's faster on OpenSearch 3.2+) but it
+# requires the JVector plugin to be explicitly enabled, and rejects
+# index creation with ``mapper_parsing_exception: Invalid engine``
+# when it isn't — silently failing first-time ingestion. Prefer
+# correctness over peak speed for the default; operators chasing
+# JVector latency can still set ``engine`` in ``backend_config``.
+DEFAULT_ENGINE = "faiss"
 DEFAULT_SPACE_TYPE = "l2"
+
+
+def _coerce_bool(value: Any, *, default: bool) -> bool:
+    """Coerce a config value to ``bool`` with explicit string handling.
+
+    The Pydantic ``backend_config: dict[str, Any]`` happily round-trips
+    JSON ``true``/``false`` as Python booleans, but rows persisted via
+    the variable_service (or older clients) may surface ``"true"`` /
+    ``"false"`` as strings. ``bool("false")`` is ``True`` in Python, so
+    a naive cast silently flips the toggle. Accept the obvious string
+    forms and fall back to ``default`` for anything ambiguous.
+    """
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off", ""}:
+            return False
+        return default
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return default
 
 
 class OpenSearchBackend(BaseVectorStoreBackend):
@@ -115,8 +149,20 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         text_field = self.backend_config.get("text_field") or DEFAULT_TEXT_FIELD
         engine = self.backend_config.get("engine") or DEFAULT_ENGINE
         space_type = self.backend_config.get("space_type") or DEFAULT_SPACE_TYPE
-        use_ssl = bool(self.backend_config.get("use_ssl", True))
-        verify_certs = bool(self.backend_config.get("verify_certs", True))
+        # Honor the URL scheme as the SSL default so ``http://localhost:9200``
+        # actually talks plain HTTP. opensearch-py treats ``hosts=[url]`` +
+        # ``use_ssl=True`` as "force HTTPS" regardless of the URL scheme,
+        # which silently rewrites ``http://`` to ``https://`` and fails
+        # connection-refused against HTTP-only clusters. Explicit
+        # ``use_ssl`` / ``verify_certs`` in backend_config still wins so
+        # operators running TLS over an unusual scheme can override.
+        scheme = url.split("://", 1)[0].lower() if "://" in url else ""
+        scheme_implies_ssl = scheme != "http"
+        use_ssl = _coerce_bool(self.backend_config.get("use_ssl"), default=scheme_implies_ssl)
+        # ``verify_certs`` is moot when SSL is off; mirror the SSL default
+        # rather than blindly enabling cert verification on a plain-HTTP
+        # connection (which raises confusing TLS errors).
+        verify_certs = _coerce_bool(self.backend_config.get("verify_certs"), default=use_ssl)
 
         try:
             from langchain_community.vectorstores import OpenSearchVectorSearch
@@ -157,6 +203,36 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             engine=engine,
             space_type=space_type,
         )
+
+    async def similarity_search(
+        self,
+        query: str,
+        k: int,
+        *,
+        filter: dict[str, Any] | None = None,  # noqa: A002 — matches LangChain VectorStore API
+        with_scores: bool = False,
+    ) -> list[tuple[Any, float]]:
+        """Override the base impl to omit ``filter`` when it's ``None``.
+
+        LangChain's ``OpenSearchVectorSearch`` forwards ``filter=None``
+        directly into the k-NN query body as ``"filter": null``, and
+        OpenSearch rejects that with::
+
+            x_content_parse_exception:
+              [knn] filter doesn't support values of type: VALUE_NULL
+
+        Dropping the kwarg lets the wrapper build the body without the
+        key, which is what every Langflow callsite that doesn't pass a
+        filter actually wants.
+        """
+        await self.ensure_ready()
+        kwargs: dict[str, Any] = {"query": query, "k": k}
+        if filter:
+            kwargs["filter"] = filter
+        if with_scores:
+            return await self.vector_store.asimilarity_search_with_score(**kwargs)
+        docs = await self.vector_store.asimilarity_search(**kwargs)
+        return [(doc, 0.0) for doc in docs]
 
     async def count(self) -> int:
         await self.ensure_ready()
