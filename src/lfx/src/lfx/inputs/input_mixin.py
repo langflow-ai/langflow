@@ -39,6 +39,7 @@ class FieldTypes(str, Enum):
     TOOLS = "tools"
     MCP = "mcp"
     MODEL = "model"
+    KNOWLEDGE_BACKEND = "knowledge_backend"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]

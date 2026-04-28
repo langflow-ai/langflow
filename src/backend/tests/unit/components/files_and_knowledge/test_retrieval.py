@@ -5,7 +5,7 @@ provider ``_build_embeddings`` + ``_resolve_api_key`` +
 ``_resolve_provider_variables`` surface. All three are gone now —
 retrieval delegates credential resolution to
 ``lfx.base.models.unified_models.get_embeddings`` (same as ingestion)
-and vector access to ``ChromaBackend``.
+and vector access to the configured backend registry entry.
 
 The rewritten suite covers the actual retrieval contract:
 
@@ -14,7 +14,7 @@ The rewritten suite covers the actual retrieval contract:
   the legacy string fields, with a clear error when neither is
   present and the string doesn't map to a current catalog entry.
 * ``retrieve_data`` orchestrating ``get_embeddings`` +
-  ``ChromaBackend.similarity_search`` against the right KB path.
+  backend-registry ``similarity_search`` against the right KB path.
 * User-scoping + required-field guards that make retrieval safe
   across sessions.
 """

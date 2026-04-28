@@ -7,6 +7,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  type AvailableKnowledgeBackendId,
+  getKnowledgeBackendOption,
+} from "@/constants/knowledgeBackendConstants";
 import { cn } from "@/utils/utils";
 import type { ChunkPreview } from "../types";
 import { ChunkPreviewCard } from "./ChunkPreviewCard";
@@ -26,6 +30,7 @@ interface StepReviewProps {
   chunkOverlap: number;
   separator: string;
   selectedEmbeddingModel: ModelOption[];
+  backendType: AvailableKnowledgeBackendId;
 }
 
 export function StepReview({
@@ -42,7 +47,10 @@ export function StepReview({
   chunkOverlap,
   separator,
   selectedEmbeddingModel,
+  backendType,
 }: StepReviewProps) {
+  const selectedBackend = getKnowledgeBackendOption(backendType);
+
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
       {/* Chunk Preview Header */}
@@ -217,6 +225,19 @@ export function StepReview({
             <span className="text-sm font-medium">
               {selectedEmbeddingModel[0]?.name || "Not selected"}
             </span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between py-1.5">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <ForwardedIconComponent name="Database" className="h-4 w-4" />
+            <span>Knowledge Backend</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <ForwardedIconComponent
+              name={selectedBackend.icon}
+              className="h-3.5 w-3.5"
+            />
+            <span className="text-sm font-medium">{selectedBackend.label}</span>
           </div>
         </div>
       </div>

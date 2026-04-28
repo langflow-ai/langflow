@@ -1,12 +1,18 @@
 import { type AxiosError } from "axios";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
+import {
+  type AvailableKnowledgeBackendId,
+  getDefaultKnowledgeBackendConfig,
+  getKnowledgeBackendOption,
+  isKnowledgeBackendConfigured,
+} from "@/constants/knowledgeBackendConstants";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { useCreateKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-create-knowledge-base";
 import { useGetIngestionJobStatus } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-job-status";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
-import type { BackendValue } from "@/modals/knowledgeBaseUploadModal/components/BackendPicker";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useAlertStore from "@/stores/alertStore";
 import {
   DEFAULT_CHUNK_OVERLAP,
@@ -32,12 +38,12 @@ import { formatFileSize } from "../utils";
  * the user sees the problem inline before the request ever lands.
  *
  * Only the actively-registered backends (Chroma + OpenSearch) are
- * validated here — see ``BackendPicker`` for the UI side. Stubbed
+ * validated here — see ``KnowledgeBackendInput`` for the UI side. Stubbed
  * backends (mongodb / astra / postgres) are rejected up front by the
  * server schema validator.
  */
 function validateBackendConfig(
-  backendType: BackendValue,
+  backendType: AvailableKnowledgeBackendId,
   config: Record<string, string>,
 ): string | null {
   if (backendType === "opensearch") {
@@ -68,6 +74,9 @@ export function useKnowledgeBaseForm({
 
   // Fetch embedding model data from API
   const { data: modelProviders = [] } = useGetModelProviders({});
+  const { data: globalVariables = [], isFetched: areGlobalVariablesFetched } =
+    useGetGlobalVariables();
+  const hasAppliedBackendDefaults = useRef(false);
 
   // Transform provider data into ModelOption[] for embedding models only
   const embeddingModelOptions = useMemo<ModelOption[]>(() => {
@@ -107,17 +116,20 @@ export function useKnowledgeBaseForm({
   const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState<
     ModelOption[]
   >([]);
-  // Phase 4 vector-store backend picker. Defaults keep existing KBs
-  // on the local Chroma store. Backend is immutable after create.
-  // Typed as the ``BackendValue`` union so ``StepConfiguration`` no
-  // longer needs an unsound ``as BackendValue`` cast. Any value that
-  // isn't in ``BACKEND_OPTIONS`` becomes a TypeScript error here.
-  const [backendType, setBackendType] = useState<BackendValue>("chroma");
+  // Defaults keep existing KBs on the local Chroma store. Backend is immutable
+  // after create, so add-sources mode displays the existing backend read-only.
+  const [backendType, setBackendType] =
+    useState<AvailableKnowledgeBackendId>("chroma");
   const [backendConfig, setBackendConfig] = useState<Record<string, string>>(
     {},
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const defaultBackendSelection = useMemo(
+    () => getDefaultKnowledgeBackendConfig(globalVariables),
+    [globalVariables],
+  );
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
 
   // Preview state
@@ -199,14 +211,38 @@ export function useKnowledgeBaseForm({
         setColumnConfig(existingKnowledgeBase.columnConfig);
       }
       setBackendType(
-        (existingKnowledgeBase.backendType as BackendValue | undefined) ||
-          "chroma",
+        existingKnowledgeBase.backendType === "opensearch"
+          ? "opensearch"
+          : "chroma",
       );
       setBackendConfig(
         (existingKnowledgeBase.backendConfig as Record<string, string>) || {},
       );
     }
   }, [existingKnowledgeBase, open, embeddingModelOptions]);
+
+  useEffect(() => {
+    if (!open) {
+      hasAppliedBackendDefaults.current = false;
+      return;
+    }
+    if (
+      existingKnowledgeBase ||
+      hasAppliedBackendDefaults.current ||
+      !areGlobalVariablesFetched
+    ) {
+      return;
+    }
+
+    setBackendType(defaultBackendSelection.backendType);
+    setBackendConfig(defaultBackendSelection.backendConfig);
+    hasAppliedBackendDefaults.current = true;
+  }, [
+    areGlobalVariablesFetched,
+    defaultBackendSelection,
+    existingKnowledgeBase,
+    open,
+  ]);
 
   const resetForm = useCallback(() => {
     setSourceName("");
@@ -228,6 +264,7 @@ export function useKnowledgeBaseForm({
     setShowAdvanced(false);
     setIngestionJobId(null);
     setValidationErrors({});
+    hasAppliedBackendDefaults.current = false;
   }, []);
 
   const toggleAdvanced = useCallback(() => {
@@ -333,9 +370,14 @@ export function useKnowledgeBaseForm({
       errors.embeddingModel = "Embedding model is required";
     }
     if (!isAddSourcesMode) {
-      const backendErrors = validateBackendConfig(backendType, backendConfig);
-      if (backendErrors) {
-        errors.backend = backendErrors;
+      const selectedBackend = getKnowledgeBackendOption(backendType);
+      if (!isKnowledgeBackendConfigured(backendType, globalVariables)) {
+        errors.backend = `${selectedBackend.label} must be configured in Knowledge Backends settings before it can be used.`;
+      } else {
+        const backendErrors = validateBackendConfig(backendType, backendConfig);
+        if (backendErrors) {
+          errors.backend = backendErrors;
+        }
       }
     }
     const totalBytes = files.reduce((acc, file) => acc + file.size, 0);
@@ -349,6 +391,7 @@ export function useKnowledgeBaseForm({
     selectedEmbeddingModel,
     backendType,
     backendConfig,
+    globalVariables,
     files,
     existingKnowledgeBaseNames,
   ]);
@@ -558,6 +601,7 @@ export function useKnowledgeBaseForm({
     setBackendType,
     backendConfig,
     setBackendConfig,
+    globalVariables,
 
     // Validation
     validationErrors,

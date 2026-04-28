@@ -21,7 +21,11 @@ from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.log import logger
 from lfx.services.deps import get_settings_service, session_scope
-from lfx.services.mcp_composer.service import MCPComposerError, MCPComposerService
+from lfx.services.mcp_composer.service import (
+    COMPOSER_BACKEND_AUTH_HEADER,
+    MCPComposerError,
+    MCPComposerService,
+)
 from lfx.services.schema import ServiceType
 from mcp import types
 from mcp.server import NotificationOptions, Server
@@ -66,7 +70,7 @@ from langflow.services.auth.constants import AUTO_LOGIN_WARNING
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import check_key, create_api_key
-from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
+from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service
@@ -80,8 +84,9 @@ router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 async def verify_project_auth(
     db: AsyncSession,
     project_id: UUID,
-    query_param: str,
-    header_param: str,
+    query_param: str | None,
+    header_param: str | None,
+    composer_backend_token: str | None = None,
 ) -> User:
     """MCP-specific user authentication that allows fallback to username lookup when not using API key auth.
 
@@ -89,7 +94,6 @@ async def verify_project_auth(
     or checks if the API key is valid.
     """
     settings_service = get_settings_service()
-    result: ApiKey | User | None
 
     project = (await db.exec(select(Folder).where(Folder.id == project_id))).first()
 
@@ -101,14 +105,42 @@ async def verify_project_auth(
     if project.auth_settings:
         auth_settings = AuthSettings(**project.auth_settings)
 
-    if (not auth_settings and not settings_service.auth_settings.AUTO_LOGIN) or (
-        auth_settings and auth_settings.auth_type == "apikey"
-    ):
+    project_auth_type = auth_settings.auth_type if auth_settings else None
+    if project_auth_type == "oauth" and composer_backend_token:
+        mcp_composer_service: MCPComposerService = cast(
+            MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+        )
+        if mcp_composer_service.validate_backend_auth_token(str(project_id), composer_backend_token):
+            if project.user_id:
+                project_user = await db.get(User, project.user_id)
+                if project_user:
+                    return project_user
+            raise HTTPException(status_code=404, detail="Project owner not found")
+
+    # OAuth projects must present a valid API key at the Langflow transport endpoint: network-level
+    # trust (loopback / same-host proxy) is unsafe because it cannot distinguish the local MCP
+    # Composer subprocess from another loopback peer behind a reverse proxy or sidecar. The
+    # composer-to-Langflow hop should be authenticated explicitly once mcp-composer can forward
+    # a project-scoped backend credential; until then, direct backend access requires a key.
+    requires_api_key = (not auth_settings and not settings_service.auth_settings.AUTO_LOGIN) or (
+        project_auth_type in {"apikey", "oauth"}
+    )
+
+    if requires_api_key:
         api_key = query_param or header_param
         if not api_key:
+            if project_auth_type == "oauth":
+                detail = (
+                    "This project is configured for OAuth authentication, but the MCP transport endpoint "
+                    "currently requires a valid x-api-key header or query parameter for backend access. "
+                    "Credential forwarding from MCP Composer is not yet available; use an API key in the "
+                    "meantime."
+                )
+            else:
+                detail = "API key required for this project. Provide x-api-key header or query parameter."
             raise HTTPException(
                 status_code=401,
-                detail="API key required for this project. Provide x-api-key header or query parameter.",
+                detail=detail,
             )
 
         # Validate the API key
@@ -126,13 +158,16 @@ async def verify_project_auth(
 
         return user
 
-    # Get the first user
+    return await _superuser_fallback(db, settings_service)
+
+
+async def _superuser_fallback(db: AsyncSession, settings_service) -> User:
+    """Resolve the configured superuser for unauthenticated MCP paths that allow fallback."""
     if not settings_service.auth_settings.SUPERUSER:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Missing superuser username in auth settings",
         )
-    # For MCP endpoints, always fall back to username lookup when no API key is provided
     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
     if result:
         logger.warning(AUTO_LOGIN_WARNING)
@@ -169,10 +204,17 @@ async def verify_project_auth_conditional(
         # Extract API keys
         api_key_query_value = request.query_params.get("x-api-key")
         api_key_header_value = request.headers.get("x-api-key")
+        composer_backend_token = request.headers.get(COMPOSER_BACKEND_AUTH_HEADER)
 
         # Check if this project requires API key only authentication
         if get_settings_service().settings.mcp_composer_enabled:
-            return await verify_project_auth(session, project_id, api_key_query_value, api_key_header_value)
+            return await verify_project_auth(
+                session,
+                project_id,
+                api_key_query_value,
+                api_key_header_value,
+                composer_backend_token,
+            )
 
         # For all other cases, use standard MCP authentication (allows JWT + API keys)
         # Call the MCP auth function directly

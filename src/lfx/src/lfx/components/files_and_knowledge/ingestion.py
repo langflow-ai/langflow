@@ -16,6 +16,7 @@ from langchain_chroma import Chroma
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
 
+from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend, create_backend
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
 from lfx.components.processing.converter import convert_to_dataframe
@@ -25,6 +26,7 @@ from lfx.io import (
     DropdownInput,
     HandleInput,
     IntInput,
+    KnowledgeBackendInput,
     ModelInput,
     Output,
     SecretStrInput,
@@ -46,6 +48,15 @@ _KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
 
 # Error message to raise if we're in Astra cloud environment and the component is not supported.
 astra_error_msg = "Knowledge ingestion is not supported in Astra cloud environment."
+
+_DEFAULT_OPENSEARCH_CONFIG = {
+    "url_variable": "OPENSEARCH_URL",
+    "username_variable": "OPENSEARCH_USERNAME",
+    "password_variable": "OPENSEARCH_PASSWORD",  # pragma: allowlist secret
+    "index_name": "",
+    "vector_field": "vector_field",
+    "text_field": "text",
+}
 
 
 def _get_knowledge_bases_root_path() -> Path:
@@ -87,6 +98,7 @@ class KnowledgeIngestionComponent(Component):
                         "field_order": [
                             "01_new_kb_name",
                             "02_embedding_model",
+                            "03_knowledge_backend",
                         ],
                         "template": {
                             "01_new_kb_name": StrInput(
@@ -104,6 +116,16 @@ class KnowledgeIngestionComponent(Component):
                                 ),
                                 required=True,
                                 model_type="embedding",
+                            ),
+                            "03_knowledge_backend": KnowledgeBackendInput(
+                                name="knowledge_backend",
+                                display_name="Knowledge Backend",
+                                info=(
+                                    "Select where this knowledge base stores vectors. "
+                                    "OpenSearch uses the global Knowledge Backends settings."
+                                ),
+                                value={"backend_type": BackendType.CHROMA.value, "backend_config": {}},
+                                required=True,
                             ),
                         },
                     },
@@ -243,6 +265,8 @@ class KnowledgeIngestionComponent(Component):
         self,
         model_selection: list[dict[str, Any]],
         api_key: str | None = None,
+        backend_type: str = BackendType.CHROMA.value,
+        backend_config: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Build embedding model metadata from a model selection dict.
 
@@ -250,6 +274,8 @@ class KnowledgeIngestionComponent(Component):
             model_selection: Model selection list from ModelInput
                 (e.g. [{'name': ..., 'provider': ..., 'metadata': ...}])
             api_key: Optional runtime API key override.
+            backend_type: Knowledge backend identifier for vector storage.
+            backend_config: Backend-specific config persisted with the KB.
         """
         model_dict = model_selection[0] if isinstance(model_selection, list) else model_selection
         embedding_model = model_dict.get("name", "")
@@ -276,6 +302,8 @@ class KnowledgeIngestionComponent(Component):
             "api_key": encrypted_api_key,
             "api_key_used": bool(api_key),
             "chunk_size": self.chunk_size,
+            "backend_type": backend_type,
+            "backend_config": backend_config or {},
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -284,10 +312,26 @@ class KnowledgeIngestionComponent(Component):
         kb_path: Path,
         model_selection: list[dict[str, Any]],
         api_key: str | None = None,
+        backend_type: str | None = None,
+        backend_config: dict[str, Any] | None = None,
     ) -> None:
         """Save embedding model metadata."""
-        embedding_metadata = self._build_embedding_metadata(model_selection, api_key)
         metadata_path = kb_path / "embedding_metadata.json"
+        existing_metadata: dict[str, Any] = {}
+        if metadata_path.exists():
+            try:
+                existing_metadata = json.loads(metadata_path.read_text())
+            except (OSError, json.JSONDecodeError):
+                existing_metadata = {}
+
+        embedding_metadata = self._build_embedding_metadata(
+            model_selection,
+            api_key,
+            backend_type=backend_type or existing_metadata.get("backend_type") or BackendType.CHROMA.value,
+            backend_config=backend_config
+            if backend_config is not None
+            else existing_metadata.get("backend_config") or {},
+        )
         metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
 
     def _update_metadata_metrics(self, kb_path: Path, chroma: Chroma) -> None:
@@ -312,6 +356,103 @@ class KnowledgeIngestionComponent(Component):
             metadata_path.write_text(json.dumps(metadata, indent=2))
         except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
             self.log(f"Warning: Could not update metadata metrics: {e}")
+
+    async def _update_backend_metadata_metrics(self, kb_path: Path, backend: BaseVectorStoreBackend) -> None:
+        """Update metadata metrics for non-Chroma backends."""
+        metadata_path = kb_path / "embedding_metadata.json"
+        if not metadata_path.exists():
+            return
+
+        try:
+            metadata = json.loads(metadata_path.read_text())
+            chunks = await backend.count()
+            characters = 0
+            words = 0
+            async for batch in backend.iter_documents():
+                for document in batch:
+                    characters += len(document.content)
+                    words += len(document.content.split())
+
+            metadata["chunks"] = chunks
+            metadata["characters"] = characters
+            metadata["words"] = words
+            metadata["avg_chunk_size"] = characters / chunks if chunks else 0.0
+            metadata["size"] = await backend.storage_size_bytes()
+            metadata_path.write_text(json.dumps(metadata, indent=2))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as e:
+            self.log(f"Warning: Could not update backend metadata metrics: {e}")
+
+    @staticmethod
+    def _normalize_backend_selection(value: Any) -> tuple[str, dict[str, Any]]:
+        """Normalize a KnowledgeBackendInput value into backend type/config."""
+        if not value:
+            return BackendType.CHROMA.value, {}
+
+        if isinstance(value, str):
+            backend_type = value if value == BackendType.OPENSEARCH.value else BackendType.CHROMA.value
+            return (
+                backend_type,
+                _DEFAULT_OPENSEARCH_CONFIG.copy() if backend_type == BackendType.OPENSEARCH.value else {},
+            )
+
+        if not isinstance(value, dict):
+            return BackendType.CHROMA.value, {}
+
+        backend_type = str(value.get("backend_type") or value.get("id") or BackendType.CHROMA.value)
+        if backend_type != BackendType.OPENSEARCH.value:
+            return BackendType.CHROMA.value, {}
+
+        backend_config = value.get("backend_config") or value.get("config") or {}
+        if not isinstance(backend_config, dict):
+            backend_config = {}
+        merged_config = {**_DEFAULT_OPENSEARCH_CONFIG, **backend_config}
+        return BackendType.OPENSEARCH.value, merged_config
+
+    @staticmethod
+    def _get_backend_from_metadata(kb_path: Path) -> tuple[str, dict[str, Any]]:
+        metadata_path = kb_path / "embedding_metadata.json"
+        if not metadata_path.exists():
+            return BackendType.CHROMA.value, {}
+        try:
+            metadata = json.loads(metadata_path.read_text())
+        except (OSError, json.JSONDecodeError):
+            return BackendType.CHROMA.value, {}
+
+        backend_type = str(metadata.get("backend_type") or BackendType.CHROMA.value)
+        backend_config = metadata.get("backend_config") or {}
+        if not isinstance(backend_config, dict):
+            backend_config = {}
+        return backend_type, backend_config
+
+    async def _create_knowledge_base_record(
+        self,
+        *,
+        user_id: Any,
+        name: str,
+        model_selection: list[dict[str, Any]],
+        backend_type: str,
+        backend_config: dict[str, Any],
+    ) -> None:
+        """Persist the component-created KB in the DB when Langflow is available."""
+        try:
+            from langflow.api.utils import knowledge_base_service
+        except ImportError:
+            return
+
+        model_dict = model_selection[0] if isinstance(model_selection, list) else model_selection
+        try:
+            await knowledge_base_service.create_record(
+                user_id=user_id,
+                name=name,
+                embedding_provider=model_dict.get("provider", "Unknown"),
+                embedding_model=model_dict.get("name", ""),
+                model_selection=model_selection,
+                column_config=self.column_config if isinstance(self.column_config, list) else [],
+                backend_type=backend_type,
+                backend_config=backend_config,
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Warning: could not persist knowledge base record: {exc}")
 
     def _save_kb_files(
         self,
@@ -369,11 +510,8 @@ class KnowledgeIngestionComponent(Component):
         df_source: pd.DataFrame,
         config_list: list[dict[str, Any]],
         embedding_function,
-    ) -> Chroma:
-        """Create vector store following Local DB component pattern.
-
-        Returns the Chroma instance so callers can use it for metrics updates.
-        """
+    ) -> BaseVectorStoreBackend:
+        """Create vector store using the configured knowledge backend."""
         # Set up vector store directory
         vector_store_dir = await self._kb_path()
         if not vector_store_dir:
@@ -381,15 +519,28 @@ class KnowledgeIngestionComponent(Component):
             raise ValueError(msg)
         vector_store_dir.mkdir(parents=True, exist_ok=True)
 
-        # Convert DataFrame to Data objects (following Local DB pattern)
-        data_objects = await self._convert_df_to_data_objects(df_source, config_list)
-
-        # Create vector store
-        chroma = Chroma(
-            persist_directory=str(vector_store_dir),
+        backend_type, backend_config = self._get_backend_from_metadata(vector_store_dir)
+        backend = create_backend(
+            backend_type,
+            kb_name=self.knowledge_base,
+            kb_path=vector_store_dir,
+            backend_config=backend_config,
             embedding_function=embedding_function,
-            collection_name=self.knowledge_base,
+            user_id=self.user_id,
         )
+        await backend.ensure_ready()
+
+        existing_ids = None
+        if backend_type != BackendType.CHROMA.value and not self.allow_duplicates:
+            existing_ids = set()
+            async for batch in backend.iter_documents():
+                for document in batch:
+                    doc_id = document.metadata.get("_id")
+                    if doc_id:
+                        existing_ids.add(doc_id)
+
+        # Convert DataFrame to Data objects (following Local DB pattern)
+        data_objects = await self._convert_df_to_data_objects(df_source, config_list, existing_ids=existing_ids)
 
         # Convert Data objects to LangChain Documents
         documents = []
@@ -399,31 +550,35 @@ class KnowledgeIngestionComponent(Component):
 
         # Add documents to vector store
         if documents:
-            chroma.add_documents(documents)
+            await backend.add_documents(documents)
             self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
 
-        return chroma
+        return backend
 
     async def _convert_df_to_data_objects(
-        self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]
+        self,
+        df_source: pd.DataFrame,
+        config_list: list[dict[str, Any]],
+        existing_ids: set[str] | None = None,
     ) -> list[Data]:
         """Convert DataFrame to Data objects for vector store."""
         data_objects: list[Data] = []
 
-        # Set up vector store directory
-        kb_path = await self._kb_path()
+        if existing_ids is None:
+            # Set up vector store directory
+            kb_path = await self._kb_path()
 
-        # If we don't allow duplicates, we need to get the existing hashes
-        chroma = Chroma(
-            persist_directory=str(kb_path),
-            collection_name=self.knowledge_base,
-        )
+            # If we don't allow duplicates, we need to get the existing hashes
+            chroma = Chroma(
+                persist_directory=str(kb_path),
+                collection_name=self.knowledge_base,
+            )
 
-        # Get all documents and their metadata
-        all_docs = chroma.get()
+            # Get all documents and their metadata
+            all_docs = chroma.get()
 
-        # Extract all _id values from metadata
-        id_list = [metadata.get("_id") for metadata in all_docs["metadatas"] if metadata.get("_id")]
+            # Extract all _id values from metadata
+            existing_ids = {metadata.get("_id") for metadata in all_docs["metadatas"] if metadata.get("_id")}
 
         # Get column roles
         content_cols = []
@@ -471,7 +626,7 @@ class KnowledgeIngestionComponent(Component):
             data_dict["_id"] = page_content_hash
 
             # If duplicates are disallowed, and hash exists, prevent adding this row
-            if not self.allow_duplicates and page_content_hash in id_list:
+            if not self.allow_duplicates and page_content_hash in existing_ids:
                 self.log(f"Skipping duplicate row with hash {page_content_hash}")
                 continue
 
@@ -635,15 +790,24 @@ class KnowledgeIngestionComponent(Component):
                 chunk_size=self.chunk_size,
             )
 
-            # Create vector store following Local DB component pattern
-            chroma = await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
+            # Create vector store using the configured knowledge backend
+            backend = await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
 
             # Save KB files (using File Component storage patterns)
             self._save_kb_files(kb_path, config_list)
 
             # Update embedding_metadata.json with accurate text metrics
             # so the KB modal and API show correct chunks/words/characters
-            self._update_metadata_metrics(kb_path, chroma)
+            try:
+                if not isinstance(backend, BaseVectorStoreBackend):
+                    pass
+                elif backend.backend_type == BackendType.CHROMA and hasattr(backend, "raw_langchain_store"):
+                    self._update_metadata_metrics(kb_path, backend.raw_langchain_store())
+                else:
+                    await self._update_backend_metadata_metrics(kb_path, backend)
+            finally:
+                if isinstance(backend, BaseVectorStoreBackend):
+                    await backend.teardown()
 
             # Build metadata response
             meta: dict[str, Any] = {
@@ -713,6 +877,10 @@ class KnowledgeIngestionComponent(Component):
                 if isinstance(model_selection, dict):
                     model_selection = [model_selection]
 
+                backend_type, backend_config = self._normalize_backend_selection(
+                    field_value.get("03_knowledge_backend")
+                )
+
                 # Build and validate the embedding model via the shared utility
                 embed_model = get_embeddings(
                     model=model_selection,
@@ -741,6 +909,15 @@ class KnowledgeIngestionComponent(Component):
                 self._save_embedding_metadata(
                     kb_path=kb_path,
                     model_selection=model_selection,
+                    backend_type=backend_type,
+                    backend_config=backend_config,
+                )
+                await self._create_knowledge_base_record(
+                    user_id=self.user_id,
+                    name=field_value["01_new_kb_name"],
+                    model_selection=model_selection,
+                    backend_type=backend_type,
+                    backend_config=backend_config,
                 )
 
             # Update the knowledge base options dynamically
