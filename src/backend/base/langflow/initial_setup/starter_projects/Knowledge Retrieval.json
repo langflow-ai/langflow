@@ -545,7 +545,7 @@
                   },
                   {
                     "name": "cryptography",
-                    "version": "46.0.7"
+                    "version": "47.0.0"
                   },
                   {
                     "name": "langchain_chroma",
@@ -565,7 +565,7 @@
                   },
                   {
                     "name": "langchain_openai",
-                    "version": "1.2.0"
+                    "version": "1.2.1"
                   },
                   {
                     "name": "langchain_huggingface",
@@ -585,7 +585,7 @@
                   },
                   {
                     "name": "langchain_ibm",
-                    "version": "1.0.6"
+                    "version": "1.0.7"
                   }
                 ],
                 "total_dependencies": 12
