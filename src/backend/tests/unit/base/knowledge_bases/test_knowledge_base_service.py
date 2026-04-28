@@ -95,6 +95,21 @@ class TestUpdates:
         assert fetched.chunk_overlap == 64
         assert fetched.separator == "\n"
 
+    async def test_update_stats_can_clear_separator(self, active_user):
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="phase_15_kb_separator_clear",
+            embedding_provider="OpenAI",
+            embedding_model="m",
+            separator="\n",
+        )
+
+        await knowledge_base_service.update_stats(record.id, separator=None)
+
+        fetched = await knowledge_base_service.get_by_id(record.id)
+        assert fetched is not None
+        assert fetched.separator is None
+
     async def test_update_stats_missing_row_is_silent(self, active_user):  # noqa: ARG002
         import uuid
 
@@ -224,6 +239,11 @@ class TestBackfillFromDisk:
                         "embedding_model": "m",
                         "chunk_size": 512,
                         "chunk_overlap": 50,
+                        "chunks": 161,
+                        "words": 3200,
+                        "characters": 18000,
+                        "size": 4096,
+                        "source_types": ["txt", "pdf"],
                     }
                 )
             )
@@ -235,6 +255,62 @@ class TestBackfillFromDisk:
         assert a is not None
         assert a.embedding_provider == "OpenAI"
         assert a.chunk_size == 512
+        assert a.chunks == 161
+        assert a.words == 3200
+        assert a.characters == 18000
+        assert a.size_bytes > 0
+        assert a.source_types == ["pdf", "txt"]
+
+    async def test_backfill_uses_recounted_disk_stats(self, active_user, tmp_path: Path, monkeypatch):
+        kb_root = tmp_path / active_user.username
+        kb_root.mkdir()
+        kb_dir = kb_root / "legacy_with_chunks"
+        kb_dir.mkdir()
+        (kb_dir / "chroma.sqlite3").write_text("legacy vector data")
+        (kb_dir / "embedding_metadata.json").write_text(
+            json.dumps(
+                {
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "m",
+                    "chunk_size": 512,
+                    "chunk_overlap": 50,
+                    "chunks": 0,
+                    "words": 0,
+                    "characters": 0,
+                    "size": 0,
+                    "source_types": [],
+                }
+            )
+        )
+
+        def fake_get_metadata(kb_path: Path, *, fast: bool = False) -> dict:
+            assert kb_path == kb_dir
+            assert fast is False
+            return {
+                "embedding_provider": "OpenAI",
+                "embedding_model": "m",
+                "chunk_size": 512,
+                "chunk_overlap": 50,
+                "chunks": 161,
+                "words": 3200,
+                "characters": 18000,
+                "size": 4096,
+                "source_types": ["file_upload"],
+            }
+
+        monkeypatch.setattr("langflow.api.utils.kb_helpers.KBAnalysisHelper.get_metadata", fake_get_metadata)
+
+        inserted = await knowledge_base_service.backfill_from_disk(user_id=active_user.id, kb_user_root=kb_root)
+        assert inserted == 1
+
+        record = await knowledge_base_service.get_by_user_and_name(active_user.id, "legacy_with_chunks")
+        assert record is not None
+        assert record.chunks == 161
+        assert record.words == 3200
+        assert record.characters == 18000
+        assert record.size_bytes == 4096
+        assert record.source_types == ["file_upload"]
+        assert knowledge_base_service.record_to_metadata_dict(record)["status"] == KnowledgeBaseStatus.READY.value
 
     async def test_backfill_is_idempotent(self, active_user, tmp_path: Path):
         kb_root = tmp_path / active_user.username
