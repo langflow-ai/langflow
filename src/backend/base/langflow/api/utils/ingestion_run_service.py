@@ -38,6 +38,7 @@ async def create_run(
     job_id: UUID | None,
     user_id: UUID | None,
     kb_id: UUID | None = None,
+    user_metadata: dict | None = None,
 ) -> UUID:
     """Insert a PENDING ``ingestion_run`` row and return its id.
 
@@ -48,6 +49,11 @@ async def create_run(
     ``kb_name`` as the legacy pointer, so a run still records a row
     even if the KB doesn't yet have a ``knowledge_base`` DB entry
     (backfill will link them on the next list).
+
+    ``user_metadata`` carries the run-level tags supplied at the API
+    boundary (already validated by ``parse_user_metadata``). Stored as
+    its own column so the run-history UI can render the tags without
+    decoding the per-chunk ``source_metadata`` blobs.
     """
     run_id = uuid4()
     description = source.describe()
@@ -66,6 +72,7 @@ async def create_run(
             source_config=source_config,
             status=IngestionRunStatus.PENDING.value,
             items=[],
+            user_metadata=user_metadata or {},
         )
         session.add(row)
         await session.commit()

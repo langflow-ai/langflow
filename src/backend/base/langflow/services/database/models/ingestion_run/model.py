@@ -109,6 +109,16 @@ class IngestionRunBase(SQLModel):
         sa_column=Column(JsonVariant, nullable=False),
     )
 
+    # User-supplied run-level metadata (tags, categories, custom fields).
+    # Persisted here so the run-history UI can render the tags applied to
+    # the batch without scanning chunk-level ``source_metadata`` blobs.
+    # Per-file overrides are NOT stored here — they live on each chunk's
+    # ``source_metadata`` and on the per-item entries in ``items``.
+    user_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JsonVariant, nullable=False, server_default="{}"),
+    )
+
     # ``server_default=func.now()`` keeps ``started_at`` populated on
     # raw-SQL inserts. Indexed because list endpoints order by this
     # column — without the index, large run histories sequential-scan.

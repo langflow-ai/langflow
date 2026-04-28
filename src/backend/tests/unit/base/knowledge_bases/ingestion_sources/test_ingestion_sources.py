@@ -277,3 +277,68 @@ class TestIngestionSummary:
         assert summary.total_bytes == 150
         assert summary.chunks_created == 3
         assert len(summary.items) == 3
+
+
+class TestPerFileMetadata:
+    async def test_file_upload_per_file_metadata_propagates(self):
+        payload = [("a.txt", b"alpha"), ("b.txt", b"beta")]
+        source = FileUploadSource(
+            user_id=None,
+            source_config={
+                "files": payload,
+                "source_name": "batch",
+                "per_file_metadata": {"a.txt": {"category": "invoice", "tag": ["urgent"]}},
+            },
+        )
+        items = [item async for item in source.list_items()]
+        # ``a.txt`` carries both the run-level source_name and its per-file overrides.
+        assert items[0].source_metadata["category"] == "invoice"
+        assert items[0].source_metadata["tag"] == ["urgent"]
+        assert items[0].source_metadata["source_name"] == "batch"
+        # ``b.txt`` only carries the source_name — no per-file override registered.
+        assert items[1].source_metadata == {"source_name": "batch"}
+
+    async def test_file_upload_describe_counts_metadata(self):
+        source = FileUploadSource(
+            user_id=None,
+            source_config={
+                "files": [("a.txt", b"x"), ("b.txt", b"y")],
+                "per_file_metadata": {"a.txt": {"tag": "x"}},
+            },
+        )
+        described = source.describe()
+        assert described["config"]["files_with_metadata"] == 1
+
+    async def test_folder_per_file_metadata_relative_path_wins(self, tmp_path: Path):
+        nested = tmp_path / "nested"
+        nested.mkdir()
+        (tmp_path / "doc.md").write_text("root-doc")
+        (nested / "doc.md").write_text("nested-doc")
+
+        source = FolderSource(
+            user_id=None,
+            source_config={
+                "path": str(tmp_path),
+                "allowed_roots": [str(tmp_path)],
+                "per_file_metadata": {
+                    # Bare basename should not override the relative-path key
+                    # for the nested file.
+                    "doc.md": {"tier": "default"},
+                    "nested/doc.md": {"tier": "nested"},
+                },
+            },
+        )
+        items = {item.item_id: item async for item in source.list_items()}
+        assert items["doc.md"].source_metadata["tier"] == "default"
+        assert items["nested/doc.md"].source_metadata["tier"] == "nested"
+
+    async def test_folder_metadata_absent_for_unmatched_files(self, tmp_path: Path):
+        (tmp_path / "doc.md").write_text("hello")
+        source = FolderSource(
+            user_id=None,
+            source_config={"path": str(tmp_path), "allowed_roots": [str(tmp_path)]},
+        )
+        items = [item async for item in source.list_items()]
+        # No per_file_metadata configured → only the source's own provenance keys remain.
+        assert "tier" not in items[0].source_metadata
+        assert items[0].source_metadata.get("relative_path") == "doc.md"

@@ -27,6 +27,7 @@ import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
 import { ACCEPTED_FILE_TYPES } from "../constants";
 import type { ColumnConfigRow } from "../types";
+import { MetadataEditor, type MetadataPair } from "./MetadataEditor";
 
 interface StepConfigurationProps {
   isAddSourcesMode: boolean;
@@ -57,6 +58,8 @@ interface StepConfigurationProps {
     value: Record<string, KnowledgeBackendConfigValue>,
   ) => void;
   globalVariables: GlobalVariable[];
+  metadataPairs: MetadataPair[];
+  onMetadataPairsChange: (pairs: MetadataPair[]) => void;
 }
 
 export function StepConfiguration({
@@ -86,6 +89,8 @@ export function StepConfiguration({
   onBackendTypeChange,
   onBackendConfigChange,
   globalVariables,
+  metadataPairs,
+  onMetadataPairsChange,
 }: StepConfigurationProps) {
   return (
     <div className="relative">
@@ -457,6 +462,21 @@ export function StepConfiguration({
                   data-testid="kb-separator-input"
                 />
               </div>
+
+              {/* Metadata */}
+              <Separator className="my-2" />
+              <div className="flex items-center gap-2">
+                <ForwardedIconComponent
+                  name="Tag"
+                  className="h-4 w-4 text-muted-foreground"
+                />
+                <span className="text-sm font-medium">Metadata</span>
+              </div>
+              <MetadataEditor
+                pairs={metadataPairs}
+                onPairsChange={onMetadataPairsChange}
+                testIdScope="kb-run"
+              />
             </div>
           </div>
         </div>

@@ -15,6 +15,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetKnowledgeBaseChunks } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-base-chunks";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import ChunkCard from "./components/ChunkCard";
+import { ChunksMetadataFilter } from "./components/ChunksMetadataFilter";
 import { CHUNKS_PER_PAGE, PAGE_SIZE_OPTIONS } from "./constants";
 
 export const SourceChunksPage = () => {
@@ -26,7 +27,22 @@ export const SourceChunksPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sourceTypeFilter, setSourceTypeFilter] = useState<string>("all");
+  const [metadataFilter, setMetadataFilter] = useState<
+    Record<string, string[]>
+  >({});
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const removeMetadataChip = useCallback((key: string, value: string) => {
+    setMetadataFilter((prev) => {
+      const remaining = (prev[key] ?? []).filter((entry) => entry !== value);
+      if (remaining.length === 0) {
+        const { [key]: _drop, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [key]: remaining };
+    });
+    setCurrentPage(1);
+  }, []);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
@@ -58,6 +74,8 @@ export const SourceChunksPage = () => {
     limit: pageSize,
     search: debouncedSearch || undefined,
     source_type: sourceTypeFilter === "all" ? undefined : sourceTypeFilter,
+    metadata_filter:
+      Object.keys(metadataFilter).length > 0 ? metadataFilter : undefined,
   });
 
   const handleBack = () => {
@@ -169,7 +187,43 @@ export const SourceChunksPage = () => {
                   <SelectItem value="template">Flow Template</SelectItem>
                 </SelectContent>
               </Select>
+              <ChunksMetadataFilter
+                onAdd={(key, value) =>
+                  setMetadataFilter((prev) => {
+                    const existing = prev[key] ?? [];
+                    if (existing.includes(value)) return prev;
+                    return { ...prev, [key]: [...existing, value] };
+                  })
+                }
+              />
             </div>
+            {Object.keys(metadataFilter).length > 0 && (
+              <div
+                className="mt-2 flex flex-wrap gap-1.5 xl:w-7/12"
+                data-testid="chunks-metadata-filter-chips"
+              >
+                {Object.entries(metadataFilter).flatMap(([key, values]) =>
+                  values.map((value) => (
+                    <button
+                      key={`${key}=${value}`}
+                      type="button"
+                      onClick={() => removeMetadataChip(key, value)}
+                      className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs hover:bg-muted-foreground/10"
+                      data-testid={`chunks-metadata-chip-${key}-${value}`}
+                    >
+                      <span className="font-medium text-muted-foreground">
+                        {key}:
+                      </span>
+                      <span>{value}</span>
+                      <ForwardedIconComponent
+                        name="X"
+                        className="h-3 w-3 text-muted-foreground"
+                      />
+                    </button>
+                  )),
+                )}
+              </div>
+            )}
           </div>
         </div>
 

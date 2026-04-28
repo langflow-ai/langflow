@@ -69,11 +69,20 @@ class FolderSource(KBIngestionSource):
             "extensions": ["pdf", "md"], # default: DEFAULT_TEXT_EXTENSIONS
             "max_file_size_bytes": 10_000_000,  # default: DEFAULT_MAX_FILE_SIZE_BYTES
             "allowed_roots": ["/home/alice"],  # required for safety
+            "per_file_metadata": {
+                "relative/path.pdf": {"category": "invoice"},
+                "basename.txt": {"tag": ["urgent"]},
+            },
         }
 
     ``allowed_roots`` comes from settings at the call site — sources
     don't reach into settings themselves so tests can drive the
     constraint directly.
+
+    ``per_file_metadata`` is matched on either the relative path under
+    the resolved root (``item_id``) or the bare filename, with the
+    relative-path lookup taking precedence so two files with the same
+    basename in different subfolders can be tagged independently.
     """
 
     source_type = SourceType.FOLDER
@@ -135,6 +144,7 @@ class FolderSource(KBIngestionSource):
         recursive = bool(self.source_config.get("recursive", True))
         extensions = self._extension_whitelist()
         max_size = self._max_size()
+        per_file_metadata: dict[str, dict[str, Any]] = self.source_config.get("per_file_metadata") or {}
 
         iterator = root.rglob("*") if recursive else root.iterdir()
         for file_path in iterator:
@@ -161,15 +171,22 @@ class FolderSource(KBIngestionSource):
             # Use path relative to root as item_id so duplicate basenames
             # in different subfolders don't collide.
             rel = file_path.relative_to(root)
+            item_metadata: dict[str, Any] = {
+                "relative_path": str(rel),
+                "modified_at": stat.st_mtime if stat is not None else None,
+            }
+            # Prefer the relative-path lookup so two files named ``invoice.pdf``
+            # in different subfolders can carry different tags. Fall back to
+            # bare filename for ergonomic batch tagging.
+            override = per_file_metadata.get(str(rel)) or per_file_metadata.get(file_path.name)
+            if override:
+                item_metadata.update(override)
             yield IngestionItem(
                 item_id=str(rel),
                 display_name=file_path.name,
                 mime_type=mimetypes.guess_type(file_path.name)[0],
                 source_url=file_path.as_uri(),
-                source_metadata={
-                    "relative_path": str(rel),
-                    "modified_at": stat.st_mtime if stat is not None else None,
-                },
+                source_metadata=item_metadata,
                 size_bytes=size_bytes,
             )
 

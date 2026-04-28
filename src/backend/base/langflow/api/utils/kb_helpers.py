@@ -7,6 +7,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import chromadb
 import chromadb.errors
@@ -515,6 +516,7 @@ class KBIngestionHelper:
         source_type: str = DEFAULT_INGESTION_SOURCE_TYPE,
         source_metadata: dict | None = None,
         source: KBIngestionSource | None = None,
+        per_file_metadata: dict[str, dict] | None = None,
     ) -> dict[str, object]:
         """Orchestrate the ingestion of content into a knowledge base.
 
@@ -541,9 +543,12 @@ class KBIngestionHelper:
             if not files_data:
                 msg = "perform_ingestion requires either 'source' or non-empty 'files_data'."
                 raise ValueError(msg)
+            source_config: dict[str, Any] = {"files": files_data, "source_name": source_name}
+            if per_file_metadata:
+                source_config["per_file_metadata"] = per_file_metadata
             source = FileUploadSource(
                 user_id=current_user.id,
-                source_config={"files": files_data, "source_name": source_name},
+                source_config=source_config,
             )
 
         try:
@@ -558,6 +563,7 @@ class KBIngestionHelper:
             user_id=current_user.id,
             job_id=task_job_id,
             source_config=source.describe().get("config") or {},
+            user_metadata=dict(source_metadata or {}),
         )
         # Link the run to the ``knowledge_base`` row when one exists.
         # During the Phase 1.5 rollout some KBs still only exist in
@@ -567,6 +573,7 @@ class KBIngestionHelper:
         kb_record_id = kb_record.id if kb_record is not None else None
         run_id = await ingestion_run_service.create_run(
             kb_name=kb_name,
+            user_metadata=dict(source_metadata or {}),
             source=source,
             job_id=task_job_id,
             user_id=current_user.id,
@@ -657,11 +664,15 @@ class KBIngestionHelper:
                     )
                     continue
 
-                # Collapse per-item + run-level metadata into one blob so
-                # Phase 2 can render either view.
-                combined_metadata: dict = dict(item.source_metadata or {})
-                if source_metadata:
-                    combined_metadata.update(source_metadata)
+                # Collapse run-level + per-item metadata into one blob so
+                # Phase 2 can render either view. Per-item wins on key
+                # collision: callers that set both run-level and per-file
+                # tags expect the file-specific value to override the
+                # batch default (e.g. ``confidential=true`` on one file
+                # in an otherwise public batch).
+                combined_metadata: dict = dict(source_metadata or {})
+                if item.source_metadata:
+                    combined_metadata.update(item.source_metadata)
                 item_metadata_tag = json.dumps(combined_metadata) if combined_metadata else encoded_metadata_tag
 
                 chunks = text_splitter.split_text(text)

@@ -33,11 +33,20 @@ class FileUploadSource(KBIngestionSource):
         {
             "files": [(file_name, raw_bytes), ...],
             "source_name": "optional-display-grouping",
+            "per_file_metadata": {
+                "filename.pdf": {"category": "invoice", ...},
+                ...
+            },
         }
 
     The bytes payload lives entirely in memory — intended only for
     direct HTTP uploads. For anything large or durable, use
     ``FolderSource`` (local walk) or a cloud connector (Phase 3).
+
+    ``per_file_metadata`` is optional. When present, each entry is merged
+    onto the matching file's ``IngestionItem.source_metadata`` so the
+    ingestion pipeline can persist user-supplied per-file tags on every
+    chunk produced from that file.
     """
 
     source_type = SourceType.FILE_UPLOAD
@@ -67,12 +76,22 @@ class FileUploadSource(KBIngestionSource):
     async def list_items(self) -> AsyncIterator[IngestionItem]:
         files: list[tuple[str, bytes]] = self.source_config.get("files", [])
         source_name = self.source_config.get("source_name")
+        per_file_metadata: dict[str, dict[str, Any]] = self.source_config.get("per_file_metadata") or {}
         for idx, (name, content) in enumerate(files):
+            item_metadata: dict[str, Any] = {}
+            if source_name:
+                item_metadata["source_name"] = source_name
+            file_overrides = per_file_metadata.get(name)
+            if file_overrides:
+                # User-supplied keys win over the source-level ``source_name``
+                # tag. The validator at the API boundary already blocked any
+                # reserved keys, so this merge is safe.
+                item_metadata.update(file_overrides)
             yield IngestionItem(
                 item_id=f"{idx}:{name}",
                 display_name=name,
                 source_url=f"upload://{name}",
-                source_metadata={"source_name": source_name} if source_name else {},
+                source_metadata=item_metadata,
                 size_bytes=len(content),
             )
 
@@ -100,10 +119,12 @@ class FileUploadSource(KBIngestionSource):
         """
         base = super().describe()
         files: list[tuple[str, bytes]] = self.source_config.get("files", [])
+        per_file_metadata: dict[str, dict[str, Any]] = self.source_config.get("per_file_metadata") or {}
         base["config"] = {
             "source_name": self.source_config.get("source_name"),
             "file_count": len(files),
             "file_names": [name for name, _ in files],
             "total_bytes": sum(len(content) for _, content in files),
+            "files_with_metadata": sum(1 for name, _ in files if per_file_metadata.get(name)),
         }
         return base

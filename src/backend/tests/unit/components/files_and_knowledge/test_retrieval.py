@@ -512,3 +512,74 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         assert call_kwargs["model"][0]["name"] == "sentence-transformers/all-MiniLM-L6-v2"
         assert call_kwargs["chunk_size"] == 1000
         assert call_kwargs["user_id"] == default_kwargs["_user_id"]
+
+
+class TestMetadataFilterHelpers:
+    """Direct coverage for the JSON-decode + match helpers.
+
+    Kept separate from the orchestration tests because the helpers don't
+    need a component fixture or DB session — exercising them in isolation
+    locks down the "AND across keys, OR within values" contract documented
+    in the chunks endpoint, which retrieval mirrors.
+    """
+
+    def test_parse_returns_empty_when_unset(self):
+        from lfx.components.files_and_knowledge.retrieval import _parse_metadata_filter
+
+        assert _parse_metadata_filter(None) == {}
+        assert _parse_metadata_filter("") == {}
+        assert _parse_metadata_filter("   ") == {}
+
+    def test_parse_normalizes_scalar_to_list(self):
+        from lfx.components.files_and_knowledge.retrieval import _parse_metadata_filter
+
+        assert _parse_metadata_filter('{"tag": "invoice"}') == {"tag": ["invoice"]}
+
+    def test_parse_preserves_array_values(self):
+        from lfx.components.files_and_knowledge.retrieval import _parse_metadata_filter
+
+        assert _parse_metadata_filter('{"tag": ["a", "b"]}') == {"tag": ["a", "b"]}
+
+    def test_parse_swallows_invalid_json(self):
+        from lfx.components.files_and_knowledge.retrieval import _parse_metadata_filter
+
+        # Malformed JSON returns an empty filter so retrieval falls back to
+        # the unfiltered path rather than blowing up the canvas run.
+        assert _parse_metadata_filter("{not-json") == {}
+
+    def test_parse_swallows_non_dict(self):
+        from lfx.components.files_and_knowledge.retrieval import _parse_metadata_filter
+
+        assert _parse_metadata_filter("[1, 2, 3]") == {}
+
+    def test_chunk_match_requires_every_key(self):
+        import json
+
+        from lfx.components.files_and_knowledge.retrieval import _chunk_matches_filter
+
+        meta = {"source_metadata": json.dumps({"tag": "invoice", "year": "2026"})}
+        assert _chunk_matches_filter(meta, {"tag": ["invoice"], "year": ["2026"]}) is True
+        assert _chunk_matches_filter(meta, {"tag": ["report"]}) is False
+        assert _chunk_matches_filter(meta, {"tag": ["invoice"], "owner": ["alice"]}) is False
+
+    def test_chunk_match_array_value(self):
+        import json
+
+        from lfx.components.files_and_knowledge.retrieval import _chunk_matches_filter
+
+        meta = {"source_metadata": json.dumps({"tag": ["invoice", "audit"]})}
+        # Array stored, scalar filter — overlap returns True.
+        assert _chunk_matches_filter(meta, {"tag": ["audit"]}) is True
+        # Array stored, multi-select filter — any overlap returns True.
+        assert _chunk_matches_filter(meta, {"tag": ["report", "audit"]}) is True
+
+    def test_chunk_match_missing_metadata_is_false(self):
+        from lfx.components.files_and_knowledge.retrieval import _chunk_matches_filter
+
+        assert _chunk_matches_filter({}, {"tag": ["invoice"]}) is False
+        assert _chunk_matches_filter(None, {"tag": ["invoice"]}) is False
+
+    def test_chunk_match_empty_filter_passes_through(self):
+        from lfx.components.files_and_knowledge.retrieval import _chunk_matches_filter
+
+        assert _chunk_matches_filter({"source_metadata": "{}"}, {}) is True

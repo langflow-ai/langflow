@@ -70,6 +70,8 @@ export default function KnowledgeBaseUploadModal({
             onBackendTypeChange={form.setBackendType}
             onBackendConfigChange={form.setBackendConfig}
             globalVariables={form.globalVariables}
+            metadataPairs={form.metadataPairs}
+            onMetadataPairsChange={form.setMetadataPairs}
           />
         );
 
@@ -128,7 +130,12 @@ export default function KnowledgeBaseUploadModal({
       width="w-[700px]"
       showProgress={false}
       sidePanel={
-        <FilesPanel files={form.files} onRemoveFile={form.handleRemoveFile} />
+        <FilesPanel
+          files={form.files}
+          onRemoveFile={form.handleRemoveFile}
+          perFileMetadata={form.perFileMetadata}
+          onPerFileMetadataChange={form.setPerFileMetadata}
+        />
       }
       sidePanelOpen={form.files.length > 0}
       footer={

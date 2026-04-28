@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import chromadb.errors
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
 from lfx.base.knowledge_bases.backends import BackendType, create_backend
@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
 from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
+from langflow.api.utils.kb_metadata import parse_per_file_metadata, parse_user_metadata
 from langflow.api.v1.schemas import TaskResponse
 from langflow.schema.knowledge_base import (
     BulkDeleteRequest,
@@ -619,6 +620,14 @@ async def ingest_files_to_knowledge_base(
     chunk_overlap: Annotated[int, Form(ge=MIN_CHUNK_OVERLAP, le=MAX_CHUNK_OVERLAP)] = 200,
     separator: Annotated[str, Form()] = "",
     column_config: Annotated[str, Form()] = "",
+    metadata: Annotated[
+        str,
+        Form(description="JSON object of run-level user metadata applied to every chunk."),
+    ] = "",
+    per_file_metadata: Annotated[
+        str,
+        Form(description="JSON object keyed by filename mapping to per-file metadata overrides."),
+    ] = "",
 ) -> dict[str, object] | TaskResponse:
     """Upload and ingest files directly into a knowledge base.
 
@@ -627,10 +636,25 @@ async def ingest_files_to_knowledge_base(
     2. Extracts text and chunks the content
     3. Creates embeddings using the KB's configured embedding model
     4. Stores the vectors in the knowledge base
+
+    User-supplied metadata flows through two channels:
+
+    * ``metadata`` — applied to every chunk produced by this run.
+    * ``per_file_metadata`` — overrides keyed by filename; merged on top of
+      the run-level dict, with per-file keys winning on collision.
+
+    Both are validated server-side; reserved keys + oversized values raise 422
+    so the UI can surface the rejection inline.
     """
     try:
         settings = get_settings_service().settings
         max_file_size_upload = settings.max_file_size_upload
+
+        # Parse + validate metadata before reading any file bytes so a bad
+        # metadata payload fails fast with 422 instead of paying the upload
+        # cost first.
+        run_metadata = parse_user_metadata(metadata)
+        per_file_metadata_dict = parse_per_file_metadata(per_file_metadata)
 
         files_data = []
 
@@ -727,6 +751,8 @@ async def ingest_files_to_knowledge_base(
             embedding_model=embedding_model,
             task_job_id=job_id,
             job_service=job_service,
+            source_metadata=run_metadata or None,
+            per_file_metadata=per_file_metadata_dict or None,
         )
         return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
 
@@ -767,6 +793,14 @@ class IngestFolderRequest(BaseModel):
         description="Chunk overlap in characters.",
     )
     separator: str = Field("", description="Custom separator (\\n → newline).")
+    metadata: dict[str, Any] | None = Field(
+        None,
+        description="Run-level user metadata applied to every chunk. Same rules as the upload endpoint.",
+    )
+    per_file_metadata: dict[str, dict[str, Any]] | None = Field(
+        None,
+        description="Per-file metadata overrides keyed by absolute path or basename.",
+    )
 
 
 @router.post("/{kb_name}/ingest/folder", status_code=HTTPStatus.OK)
@@ -789,6 +823,26 @@ async def ingest_folder_to_knowledge_base(
     try:
         settings = get_settings_service().settings
         allowed_roots = settings.kb_allowed_folder_roots or []
+
+        # Validate user-supplied metadata before resolving the KB path so a
+        # malformed payload responds with 422 rather than 404 if the KB name
+        # also happens to be wrong.
+        from langflow.api.utils.kb_metadata import (
+            validate_user_metadata as _validate_user_metadata,
+        )
+
+        run_user_metadata: dict[str, Any] = {}
+        if payload.metadata:
+            run_user_metadata = _validate_user_metadata(dict(payload.metadata))
+        per_file_user_metadata: dict[str, dict[str, Any]] = {}
+        if payload.per_file_metadata:
+            for filename, file_meta in payload.per_file_metadata.items():
+                if not isinstance(filename, str) or not filename:
+                    raise HTTPException(
+                        status_code=422,
+                        detail="Per-file metadata keys must be non-empty filename strings.",
+                    )
+                per_file_user_metadata[filename] = _validate_user_metadata(dict(file_meta or {}))
 
         kb_path = _resolve_kb_path(kb_name, current_user)
         metadata = KBAnalysisHelper.get_metadata(kb_path, fast=False)
@@ -818,6 +872,8 @@ async def ingest_folder_to_knowledge_base(
             source_config["extensions"] = payload.extensions
         if payload.max_file_size_bytes is not None:
             source_config["max_file_size_bytes"] = payload.max_file_size_bytes
+        if per_file_user_metadata:
+            source_config["per_file_metadata"] = per_file_user_metadata
 
         folder_source = FolderSource(user_id=current_user.id, source_config=source_config)
         try:
@@ -855,6 +911,7 @@ async def ingest_folder_to_knowledge_base(
             task_job_id=job_id,
             job_service=job_service,
             source=folder_source,
+            source_metadata=run_user_metadata or None,
         )
         return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
 
@@ -1031,6 +1088,7 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
 async def get_knowledge_base_chunks(
     kb_name: str,
     current_user: CurrentActiveUser,
+    request: Request,
     page: Annotated[int, Query(ge=1)] = 1,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     search: Annotated[str, Query(description="Filter chunks whose text contains this substring")] = "",
@@ -1053,6 +1111,24 @@ async def get_knowledge_base_chunks(
     directly onto the metadata keys every chunk receives at ingestion
     time, so a UI can drill from a run row down to the chunks that run
     produced without pulling the whole collection into memory.
+
+    Repeating ``meta_<key>=<value>`` query params filters chunks by
+    user-supplied tags. A chunk matches when every key is present in its
+    ``source_metadata`` and the value compares equal (for primitives) or
+    overlaps (when the stored value is an array). Multiple keys AND;
+    repeating the same key OR-s the values for that key, allowing
+    multi-select chips in the UI without re-encoding into JSON.
+
+    Filtering runs client-side on the iterated chunk stream — every
+    supported backend has a different filter dialect, so a uniform
+    Python pass keeps behaviour consistent across Chroma / OpenSearch /
+    future backends.
+
+    Note: a JSON-blob ``metadata_filter`` query param would be more
+    ergonomic, but this router sits behind a global query-string
+    flatten-on-comma middleware that would split a JSON object value at
+    every comma. Repeated key=value params side-step that without
+    invasive middleware changes.
     """
     kb_path: Path | None = None
     backend = None
@@ -1090,6 +1166,47 @@ async def get_knowledge_base_chunks(
 
         search_term = search.strip().lower()
 
+        # Build a {key: [values...]} dict from every ``meta_<key>=<value>``
+        # query param. Multiple values for the same key form an OR set;
+        # different keys AND together at match time.
+        metadata_filter_dict: dict[str, list[str]] = {}
+        for key, value in request.query_params.multi_items():
+            if not key.startswith("meta_"):
+                continue
+            metadata_key = key[len("meta_") :]
+            if not metadata_key:
+                continue
+            metadata_filter_dict.setdefault(metadata_key, []).append(value)
+
+        def _user_metadata_matches(meta: dict[str, Any]) -> bool:
+            if not metadata_filter_dict:
+                return True
+            # ``source_metadata`` is stored as a JSON string on each chunk
+            # so the value space stays portable across vector stores
+            # whose metadata APIs only accept primitive values.
+            raw = meta.get("source_metadata")
+            if not raw:
+                return False
+            try:
+                stored = json.loads(raw) if isinstance(raw, str) else raw
+            except json.JSONDecodeError:
+                return False
+            if not isinstance(stored, dict):
+                return False
+            for key, expected_values in metadata_filter_dict.items():
+                # Compare as strings — query-string values are always strings
+                # while stored metadata may be a number, bool, or list. Casting
+                # both sides keeps the contract simple ("tag=invoice" matches
+                # whether stored as string or in a string array).
+                actual = stored.get(key)
+                if actual is None:
+                    return False
+                actual_set = {str(entry) for entry in actual} if isinstance(actual, list) else {str(actual)}
+                expected_set = {str(value) for value in expected_values}
+                if not actual_set & expected_set:
+                    return False
+            return True
+
         def matches_filters(metadata: dict[str, Any] | None, content: str) -> bool:
             meta = metadata or {}
             if source_type and meta.get("source_type") != source_type:
@@ -1097,6 +1214,8 @@ async def get_knowledge_base_chunks(
             if file_name and meta.get("file_name") != file_name:
                 return False
             if job_id and meta.get("job_id") != job_id:
+                return False
+            if not _user_metadata_matches(meta):
                 return False
             return not (search_term and search_term not in (content or "").lower())
 
@@ -1334,6 +1453,10 @@ async def get_ingestion_run(
 
 def _run_row_to_info(row) -> IngestionRunInfo:
     """Translate an ``IngestionRun`` row into its list-response shape."""
+    # ``user_metadata`` is a JSON column; some legacy rows pre-migration
+    # may surface as None until the column default backfills on next
+    # write. Coerce to ``{}`` so the API contract stays stable.
+    user_metadata = getattr(row, "user_metadata", None) or {}
     return IngestionRunInfo(
         id=str(row.id),
         kb_name=row.kb_name,
@@ -1350,6 +1473,7 @@ def _run_row_to_info(row) -> IngestionRunInfo:
         chunks_created=row.chunks_created,
         started_at=row.started_at,
         finished_at=row.finished_at,
+        user_metadata=user_metadata,
     )
 
 

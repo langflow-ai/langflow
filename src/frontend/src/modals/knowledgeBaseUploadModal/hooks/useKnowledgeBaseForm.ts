@@ -16,6 +16,10 @@ import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-m
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useAlertStore from "@/stores/alertStore";
 import {
+  metadataPairsToFormValue,
+  type MetadataPair,
+} from "../components/MetadataEditor";
+import {
   DEFAULT_CHUNK_OVERLAP,
   DEFAULT_CHUNK_SIZE,
   DEFAULT_SEPARATOR,
@@ -107,6 +111,10 @@ export function useKnowledgeBaseForm({
   const [chunkSize, setChunkSize] = useState(0);
   const [chunkOverlap, setChunkOverlap] = useState(0);
   const [separator, setSeparator] = useState("");
+  const [metadataPairs, setMetadataPairs] = useState<MetadataPair[]>([]);
+  const [perFileMetadata, setPerFileMetadata] = useState<
+    Record<string, MetadataPair[]>
+  >({});
   const [columnConfig, setColumnConfig] = useState<ColumnConfigRow[]>([
     { column_name: "text", vectorize: true, identifier: true },
   ]);
@@ -263,6 +271,8 @@ export function useKnowledgeBaseForm({
     setSelectedEmbeddingModel([]);
     setBackendType("chroma");
     setBackendConfig({});
+    setMetadataPairs([]);
+    setPerFileMetadata({});
     setChunkPreviews([]);
     setCurrentChunkIndex(0);
     setSelectedPreviewFileIndex(0);
@@ -465,6 +475,31 @@ export function useKnowledgeBaseForm({
         formData.append("separator", separator);
         formData.append("column_config", JSON.stringify(columnConfig));
 
+        // User-supplied metadata is sent as JSON strings so the same
+        // multipart payload carries run-level + per-file overrides.
+        // Empty strings are sent through as-is and the API treats them as
+        // ``no metadata supplied``.
+        const runMetadata = metadataPairsToFormValue(metadataPairs);
+        if (runMetadata) {
+          formData.append("metadata", runMetadata);
+        }
+        const perFileMetadataPayload: Record<
+          string,
+          Record<string, string>
+        > = {};
+        for (const [fileName, pairs] of Object.entries(perFileMetadata)) {
+          const encoded = metadataPairsToFormValue(pairs);
+          if (encoded) {
+            perFileMetadataPayload[fileName] = JSON.parse(encoded);
+          }
+        }
+        if (Object.keys(perFileMetadataPayload).length > 0) {
+          formData.append(
+            "per_file_metadata",
+            JSON.stringify(perFileMetadataPayload),
+          );
+        }
+
         // Don't await — fire and forget. Polling will track status.
         api
           .post(`${getURL("KNOWLEDGE_BASES")}/${kbName}/ingest`, formData, {
@@ -623,6 +658,12 @@ export function useKnowledgeBaseForm({
     // Column config
     columnConfig,
     setColumnConfig,
+
+    // User metadata
+    metadataPairs,
+    setMetadataPairs,
+    perFileMetadata,
+    setPerFileMetadata,
 
     // Preview
     chunkPreviews,

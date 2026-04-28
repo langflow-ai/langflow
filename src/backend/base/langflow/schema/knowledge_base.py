@@ -139,6 +139,9 @@ class IngestionRunInfo(BaseModel):
     chunks_created: int = 0
     started_at: datetime
     finished_at: datetime | None = None
+    # User-supplied run-level metadata (tags, categories, custom fields).
+    # Empty when the run was kicked off without a ``metadata`` payload.
+    user_metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class IngestionRunDetail(IngestionRunInfo):
