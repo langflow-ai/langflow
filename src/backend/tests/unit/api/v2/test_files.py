@@ -657,8 +657,8 @@ async def test_download_file_non_ascii_content_disposition(
     assert expected_rfc5987 in content_disposition
     rfc5987_value = content_disposition.split("filename*=UTF-8''")[-1].split(";")[0].strip()
     decoded = unquote(rfc5987_value)
-    # The decoded name (without extension) must be present in the original filename
-    assert decoded.rsplit(".", 1)[0] in filename
+    # The original filename stem must appear in the server-returned decoded name
+    assert filename.rsplit(".", 1)[0] in decoded
 
 
 async def test_batch_download_files_non_ascii_content_disposition(files_client, files_created_api_key):

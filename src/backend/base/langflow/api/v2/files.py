@@ -573,7 +573,7 @@ async def download_files_batch(
         current_time = datetime.now(tz=ZoneInfo("UTC")).astimezone().strftime("%Y%m%d_%H%M%S")
         filename = f"{current_time}_langflow_files.zip"
 
-        encoded_filename = quote(filename)
+        encoded_filename = quote(filename, safe="")
         cd = f"attachment; filename=\"{filename}\"; filename*=UTF-8''{encoded_filename}"
         return StreamingResponse(
             zip_stream,
@@ -678,7 +678,7 @@ async def download_file(
 
         # Return the file as a streaming response
         ascii_fallback = filename_with_extension.encode("ascii", "replace").decode("ascii")
-        encoded_fn = quote(filename_with_extension)
+        encoded_fn = quote(filename_with_extension, safe="")
         cd = f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{encoded_fn}"
         return StreamingResponse(
             byte_stream,

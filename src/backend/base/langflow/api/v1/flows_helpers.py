@@ -580,7 +580,7 @@ def _build_flows_download_response(
         current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
         filename = f"{current_time}_langflow_flows.zip"
 
-        encoded_filename = quote(filename)
+        encoded_filename = quote(filename, safe="")
         cd = f"attachment; filename=\"{filename}\"; filename*=UTF-8''{encoded_filename}"
         return StreamingResponse(
             zip_stream,
