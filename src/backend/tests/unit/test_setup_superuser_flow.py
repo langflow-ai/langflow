@@ -51,8 +51,8 @@ async def test_initialize_services_creates_default_superuser_when_auto_login_tru
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(30)
-async def test_teardown_superuser_preserves_default_if_never_logged(initialized_services):  # noqa: ARG001
-    """Teardown no longer deletes the default superuser (avoids FK errors); never-logged stays too."""
+async def test_teardown_superuser_removes_default_if_never_logged(initialized_services):  # noqa: ARG001
+    """AUTO_LOGIN=False removes the default superuser when they have never signed in."""
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = False
 
@@ -80,10 +80,7 @@ async def test_teardown_superuser_preserves_default_if_never_logged(initialized_
 
     async with session_scope() as session:
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
-        user = (await session.exec(stmt)).first()
-        assert user is not None
-        assert user.is_superuser is True
-        assert user.last_login_at is None
+        assert (await session.exec(stmt)).first() is None
 
 
 @pytest.mark.asyncio

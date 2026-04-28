@@ -282,13 +282,14 @@ async def migrate_orphaned_mcp_servers_config(
 
 
 async def teardown_superuser(settings_service: SettingsService, session: AsyncSession) -> None:
-    """Teardown the superuser."""
-    # If AUTO_LOGIN is False, remove the default superuser from the database.
-    # However, if the superuser has any data (flows, folders, etc.), skip deletion
-    # to avoid foreign key constraint errors.
+    """Remove the default superuser when AUTO_LOGIN is disabled and it was never used to sign in.
 
+    If the default account has ``last_login_at`` set, it is kept. Deletion can still fail with
+    an integrity error when the user owns rows (e.g. flows) without ORM cascade — callers see
+    ``RuntimeError`` so startup or shutdown does not silently ignore the problem.
+    """
     if not settings_service.auth_settings.AUTO_LOGIN:
-        await logger.adebug("AUTO_LOGIN is set to False. Checking default superuser status.")
+        await logger.adebug("AUTO_LOGIN is set to False. Removing default superuser if unused.")
         try:
             username = DEFAULT_SUPERUSER
             from langflow.services.database.models.user.model import User
@@ -297,21 +298,13 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
             result = await session.exec(stmt)
             user = result.first()
 
-            # Only attempt deletion if:
-            # 1. User exists
-            # 2. User is a superuser
-            # 3. User has never logged in
-            # 4. User has no associated data (checked implicitly by trying delete)
             if user and user.is_superuser is True and not user.last_login_at:
-                # Simply skip deletion - it's safer to leave the user than risk
-                # FK constraint errors from relationships without cascade delete
-                await logger.adebug(
-                    f"Default superuser '{username}' exists but will be preserved to avoid potential FK errors."
-                )
-        except Exception as exc:  # noqa: BLE001
-            # Silently ignore any errors during teardown - this is a best-effort cleanup
-            # and should never block application startup
-            await logger.adebug(f"Teardown superuser check failed (non-critical): {exc}")
+                await session.delete(user)
+                await logger.adebug("Default superuser removed successfully.")
+        except Exception as exc:
+            await logger.aexception("Could not remove default superuser.")
+            msg = "Could not remove default superuser."
+            raise RuntimeError(msg) from exc
 
 
 async def teardown_services() -> None:
