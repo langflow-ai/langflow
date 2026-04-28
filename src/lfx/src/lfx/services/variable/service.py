@@ -11,6 +11,8 @@ class VariableService(Service):
 
     This is a lightweight implementation for LFX that maintains in-memory
     variables and falls back to environment variables for reads. No database storage.
+    
+    Automatically exposes WXO OAuth tokens from environment variables as global variables.
     """
 
     name = "variable_service"
@@ -19,13 +21,38 @@ class VariableService(Service):
         """Initialize the variable service."""
         super().__init__()
         self._variables: dict[str, str] = {}
+        self._load_wxo_oauth_tokens()
         self.set_ready()
         logger.debug("Variable service initialized (env vars only)")
+
+    def _load_wxo_oauth_tokens(self) -> None:
+        """Load WXO OAuth tokens from environment variables.
+        
+        Scans environment for variables ending with '_access_token' and makes them
+        available as global variables. This enables automatic OAuth token injection
+        for WXO connections without requiring a separate component.
+        
+        For example, if WXO injects 'github_oauth_access_token', it becomes available
+        as a global variable that can be referenced in flows as {github_oauth_access_token}.
+        """
+        oauth_tokens = {}
+        for key, value in os.environ.items():
+            if key.endswith('_access_token'):
+                oauth_tokens[key] = value
+                # Also create formatted versions for common use cases
+                base_name = key[:-len('_access_token')]
+                oauth_tokens[f"{base_name}_bearer_token"] = f"Bearer {value}"
+        
+        if oauth_tokens:
+            self._variables.update(oauth_tokens)
+            logger.info(f"Loaded {len(oauth_tokens)} WXO OAuth token variables from environment")
+            logger.debug(f"Available OAuth tokens: {list(oauth_tokens.keys())}")
 
     def get_variable(self, name: str, **kwargs) -> str | None:  # noqa: ARG002
         """Get a variable value.
 
-        First checks in-memory cache, then environment variables.
+        First checks in-memory cache (including auto-loaded OAuth tokens),
+        then environment variables.
 
         Args:
             name: Variable name
@@ -34,7 +61,7 @@ class VariableService(Service):
         Returns:
             Variable value or None if not found
         """
-        # Check in-memory first
+        # Check in-memory first (includes auto-loaded OAuth tokens)
         if name in self._variables:
             return self._variables[name]
 
