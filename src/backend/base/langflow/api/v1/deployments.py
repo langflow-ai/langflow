@@ -628,9 +628,9 @@ async def list_deployments(
         Query(
             description=(
                 "Optional deployment names (pass as repeated query params, "
-                "e.g. ?names=A&names=B). Filters deployments by exact name match. "
-                "When load_from_provider is false (default), filters deployments in the Langflow DB. "
-                "Otherwise, filters deployments directly from the provider."
+                "e.g. ?names=A&names=B). Filters deployments by name match. "
+                "When load_from_provider is false (default), filters Langflow-tracked deployments in the DB. "
+                "Otherwise, filters provider deployments directly, including deployments not tracked by Langflow."
             )
         ),
     ] = None,
