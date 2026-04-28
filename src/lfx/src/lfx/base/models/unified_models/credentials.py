@@ -9,8 +9,6 @@ import re
 from typing import Any
 from uuid import UUID
 
-from pydantic import SecretStr
-
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
@@ -23,7 +21,7 @@ from .provider_queries import (
 
 def _secret_value(value: Any) -> str | None:
     """Return the real string value, unwrapping SecretStr at credential boundaries."""
-    if isinstance(value, SecretStr):
+    if hasattr(value, "get_secret_value"):
         return value.get_secret_value()
     if value is None:
         return None
