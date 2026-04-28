@@ -496,9 +496,7 @@ function BackendConfigurationPanel({
                   field.variableKey,
                 )}
                 disabled={isPending}
-                onChange={(value) =>
-                  onVariableChange(field.variableKey, value)
-                }
+                onChange={(value) => onVariableChange(field.variableKey, value)}
                 onFocus={() => {
                   const existing = getGlobalVariableValue(
                     globalVariables,
