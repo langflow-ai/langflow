@@ -1,5 +1,6 @@
 """Unit tests for FileSystemToolComponent (sandboxed filesystem agent tool)."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -694,3 +695,210 @@ class TestEditFileSizeProjection:
         result = component._edit_file("hello.txt", old_string="line2", new_string="LINE_TWO")
         assert result["status"] == "ok"
         assert (sandbox / "hello.txt").read_text(encoding="utf-8") == "line1\nLINE_TWO\nline3\n"
+
+
+class TestEditFileIdempotency:
+    """Slice 30 — re-running the same edit must not re-modify the file.
+
+    Idempotence here is "second run is a structured no-op": the first call
+    succeeds, the second call returns a structured "not found" error (because
+    old_string is gone after the first replacement), and the on-disk content
+    is identical before and after the second call.
+    """
+
+    def test_should_be_idempotent_when_same_edit_runs_twice(
+        self, component: FileSystemToolComponent, sandbox: Path
+    ) -> None:
+        first = component._edit_file("hello.txt", old_string="line2", new_string="LINE_TWO")
+        assert first["status"] == "ok"
+        assert first["replacements"] == 1
+        post_first = (sandbox / "hello.txt").read_text(encoding="utf-8")
+        assert post_first == "line1\nLINE_TWO\nline3\n"
+
+        second = component._edit_file("hello.txt", old_string="line2", new_string="LINE_TWO")
+        assert "error" in second, f"Expected structured error on re-run, got: {second}"
+        assert "not found" in second["error"].lower()
+
+        # Disk state must be byte-identical to the post-first state — proves
+        # the second call did not re-apply the edit nor corrupt the file.
+        assert (sandbox / "hello.txt").read_text(encoding="utf-8") == post_first
+
+    def test_should_be_idempotent_when_replace_all_runs_twice(
+        self, component: FileSystemToolComponent, sandbox: Path
+    ) -> None:
+        # Replace_all variant: a second run with no remaining matches must
+        # still return "not found" rather than silently succeeding.
+        (sandbox / "repeat.txt").write_text("foo\nfoo\nfoo\n", encoding="utf-8")
+        first = component._edit_file("repeat.txt", old_string="foo", new_string="bar", replace_all=True)
+        assert first["status"] == "ok"
+        assert first["replacements"] == 3
+        post_first = (sandbox / "repeat.txt").read_text(encoding="utf-8")
+        assert post_first == "bar\nbar\nbar\n"
+
+        second = component._edit_file("repeat.txt", old_string="foo", new_string="bar", replace_all=True)
+        assert "error" in second
+        assert "not found" in second["error"].lower()
+        assert (sandbox / "repeat.txt").read_text(encoding="utf-8") == post_first
+
+
+class TestGlobNestedDirectories:
+    """Slice 31 — glob_search descends through multiple nested directory levels.
+
+    Cross-platform: uses forward-slash glob patterns (Path.glob normalizes)
+    and Path API for tree creation.
+    """
+
+    def test_should_find_file_in_deeply_nested_directory(
+        self, component: FileSystemToolComponent, sandbox: Path
+    ) -> None:
+        deep = sandbox / "a" / "b" / "c" / "d"
+        deep.mkdir(parents=True)
+        (deep / "leaf.py").write_text("x = 1\n", encoding="utf-8")
+        result = component._glob_search("**/*.py")
+        assert result["status"] == "ok"
+        assert any(p.endswith("leaf.py") for p in result["matches"])
+
+    def test_should_find_files_across_multiple_nested_branches(
+        self, component: FileSystemToolComponent, sandbox: Path
+    ) -> None:
+        for branch in ("alpha/inner", "beta/inner", "gamma/inner"):
+            target = sandbox / Path(branch)
+            target.mkdir(parents=True)
+            (target / "leaf.py").write_text("x = 1\n", encoding="utf-8")
+        result = component._glob_search("**/*.py")
+        assert result["status"] == "ok"
+        leaf_matches = [p for p in result["matches"] if p.endswith("leaf.py")]
+        # Three new branches must all be reachable via `**` traversal.
+        assert len(leaf_matches) >= 3, f"Expected >=3 leaf.py matches across branches, got: {leaf_matches}"
+
+    def test_should_scope_nested_glob_to_subdirectory(self, component: FileSystemToolComponent, sandbox: Path) -> None:
+        # Confirms that descending traversal also respects the `path` scope —
+        # i.e., **/*.py inside `nested/` should not see siblings outside it.
+        deep = sandbox / "nested" / "deeper" / "deepest"
+        deep.mkdir(parents=True)
+        (deep / "scoped.py").write_text("x = 1\n", encoding="utf-8")
+        (sandbox / "outside.py").write_text("x = 1\n", encoding="utf-8")
+        result = component._glob_search("**/*.py", path="nested")
+        assert result["status"] == "ok"
+        assert any(p.endswith("scoped.py") for p in result["matches"])
+        assert not any(p.endswith("outside.py") for p in result["matches"])
+
+
+class TestSandboxStructuredErrorAtPublicLevel:
+    """Slice 32 — sandbox violations surface as structured errors via public methods.
+
+    The agent never sees a raised PermissionError; it always sees a
+    JSON-serializable dict with an `error` key. This locks in the contract
+    for all three escape forms (`..` traversal, symlink-out, absolute-path-out).
+    Cross-platform: uses tmp_path.parent for "absolute path outside root"
+    instead of POSIX-only paths like /etc/passwd.
+    """
+
+    def test_read_file_should_return_structured_error_for_absolute_path_outside_root(
+        self, component: FileSystemToolComponent, tmp_path: Path
+    ) -> None:
+        outside_abs = str(tmp_path.parent)
+        result = component._read_file(outside_abs)
+        assert "error" in result
+        assert "escape" in result["error"].lower() or "boundary" in result["error"].lower()
+
+    def test_read_file_should_return_structured_error_for_symlink_escaping_root(
+        self, component: FileSystemToolComponent, sandbox: Path, tmp_path: Path
+    ) -> None:
+        outside = tmp_path.parent / f"{tmp_path.name}-public-escape.txt"
+        outside.write_text("secret", encoding="utf-8")
+        symlink = sandbox / "escape_link_public"
+        try:
+            symlink.symlink_to(outside)
+        except (OSError, NotImplementedError) as exc:
+            # Windows without Developer Mode rejects unprivileged symlinks.
+            # In that case the test premise can't be set up; skip rather than
+            # fail spuriously, since the production guard is the same.
+            pytest.skip(f"Symlink creation unsupported in this environment: {exc}")
+        result = component._read_file("escape_link_public")
+        assert "error" in result
+        assert "escape" in result["error"].lower() or "boundary" in result["error"].lower()
+
+    def test_write_file_should_return_structured_error_for_absolute_path_outside_root(
+        self, component: FileSystemToolComponent, tmp_path: Path
+    ) -> None:
+        outside_abs = str(tmp_path.parent / "should_not_be_created.txt")
+        result = component._write_file(outside_abs, "x")
+        assert "error" in result
+        assert "escape" in result["error"].lower() or "boundary" in result["error"].lower()
+        # And the side effect MUST NOT have happened.
+        assert not (tmp_path.parent / "should_not_be_created.txt").exists()
+
+    def test_edit_file_should_return_structured_error_for_absolute_path_outside_root(
+        self, component: FileSystemToolComponent, tmp_path: Path
+    ) -> None:
+        outside_abs = str(tmp_path.parent)
+        result = component._edit_file(outside_abs, old_string="x", new_string="y")
+        assert "error" in result
+        assert "escape" in result["error"].lower() or "boundary" in result["error"].lower()
+
+    def test_glob_search_should_return_structured_error_for_absolute_scope_outside_root(
+        self, component: FileSystemToolComponent, tmp_path: Path
+    ) -> None:
+        result = component._glob_search("*.txt", path=str(tmp_path.parent))
+        assert "error" in result
+        assert "escape" in result["error"].lower() or "boundary" in result["error"].lower()
+
+    def test_grep_search_should_return_structured_error_for_absolute_scope_outside_root(
+        self, component: FileSystemToolComponent, tmp_path: Path
+    ) -> None:
+        result = component._grep_search("foo", path=str(tmp_path.parent))
+        assert "error" in result
+        assert "escape" in result["error"].lower() or "boundary" in result["error"].lower()
+
+
+class TestStructuredToolErrorEnvelope:
+    """Slice 33 — StructuredTool wrappers serialize errors as JSON envelopes.
+
+    The Tool Mode contract: the agent invokes a StructuredTool and receives a
+    string. That string MUST be JSON-decodable into a dict whose `error` key
+    explains the failure — never an unhandled Python exception that surfaces
+    as a tool-call crash to the agent loop.
+    """
+
+    async def test_read_tool_wrapper_should_return_json_error_for_dotdot_escape(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        tools = {tool.name: tool for tool in await component._get_tools()}
+        output = tools["read_file"].invoke({"path": "../escape.txt"})
+        payload = json.loads(output)
+        assert "error" in payload
+
+    async def test_glob_tool_wrapper_should_return_json_error_for_dotdot_scope(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        tools = {tool.name: tool for tool in await component._get_tools()}
+        output = tools["glob_search"].invoke({"pattern": "*.txt", "path": "../"})
+        payload = json.loads(output)
+        assert "error" in payload
+
+    async def test_grep_tool_wrapper_should_return_json_error_for_dotdot_scope(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        tools = {tool.name: tool for tool in await component._get_tools()}
+        output = tools["grep_search"].invoke({"pattern": "foo", "path": "../"})
+        payload = json.loads(output)
+        assert "error" in payload
+
+    async def test_write_tool_wrapper_should_return_json_error_for_dotdot_escape(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        tools = {tool.name: tool for tool in await component._get_tools()}
+        output = tools["write_file"].invoke({"path": "../escape.txt", "content": "x"})
+        payload = json.loads(output)
+        assert "error" in payload
+
+    async def test_edit_tool_wrapper_should_return_json_error_for_dotdot_escape(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        tools = {tool.name: tool for tool in await component._get_tools()}
+        output = tools["edit_file"].invoke(
+            {"path": "../escape.txt", "old_string": "x", "new_string": "y"},
+        )
+        payload = json.loads(output)
+        assert "error" in payload
