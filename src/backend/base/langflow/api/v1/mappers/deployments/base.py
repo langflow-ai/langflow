@@ -322,7 +322,9 @@ class BaseDeploymentMapper:
         rows_with_counts: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]],
         has_flow_filter: bool = False,
         provider_key: str,
+        provider_data_by_resource_key: dict[str, dict[str, Any]] | None = None,
     ) -> list[DeploymentListItem]:
+        _ = provider_data_by_resource_key
         return [
             DeploymentListItem(
                 id=row.id,
@@ -659,11 +661,38 @@ class BaseDeploymentMapper:
         the authoritative binding state on the provider. Deployments absent
         from the response (e.g. deleted) produce no entries.
 
-        Base returns empty — providers that don't track per-deployment
-        snapshot bindings get a no-op attachment sync.
+        Subclasses MUST override this method.
+
+        Why this raises instead of returning ``[]``:
+        the downstream consumer ``delete_unbound_attachments`` treats an
+        empty ``bindings`` list together with a non-empty ``deployment_ids``
+        set as the explicit instruction "delete every local attachment for
+        these deployments." A silent ``return []`` from this method would
+        therefore trigger a **destructive mass-delete of user attachment
+        data** for any provider that inherits the base implementation.
+        Raising ``NotImplementedError`` prevents that destructive
+        interpretation entirely: call sites either guard with
+        ``except NotImplementedError`` (skipping the destructive sync) or
+        surface a loud failure pointing at the unimplemented method.
         """
         _ = provider_view
-        return []
+        msg = (
+            "BaseDeploymentMapper does not implement extract_snapshot_bindings; "
+            "Must be implemented by subclasses. (e.g. watsonx_orchestrate)"
+        )
+        raise NotImplementedError(msg)
+
+    def extract_list_item_provider_data(
+        self,
+        provider_view: DeploymentListResult,
+    ) -> dict[str, dict[str, Any]]:
+        """Extract per-deployment list-item provider_data from an already-fetched provider list response.
+
+        Returns a {resource_key -> provider_data} dict. Base returns an empty
+        dict so providers without per-item list metadata omit provider_data.
+        """
+        _ = provider_view
+        return {}
 
     def extract_snapshot_bindings_for_get(
         self,
@@ -673,10 +702,20 @@ class BaseDeploymentMapper:
     ) -> list[ProviderSnapshotBinding]:
         """Extract bindings from a single-deployment provider GET payload.
 
-        Provider mappers that support binding-aware sync for ``get_deployment``
-        must override this method. The base implementation raises intentionally
-        so callers never interpret an implicit empty-list fallback as
-        "delete all attachments for this deployment."
+        Subclasses MUST override this method.
+
+        Why this raises instead of returning ``[]``:
+        the downstream consumer ``delete_unbound_attachments`` treats an
+        empty ``bindings`` list together with a non-empty ``deployment_ids``
+        set as the explicit instruction "delete every local attachment for
+        this deployment." A silent ``return []`` from this method would
+        therefore trigger a **destructive mass-delete of user attachment
+        data** for the GETted deployment for any provider that inherits
+        the base implementation. Raising ``NotImplementedError`` prevents
+        that destructive interpretation entirely: the GET call site
+        guards with ``except NotImplementedError`` and skips the
+        destructive sync (returning unverified attachment counts) rather
+        than wiping local state.
         """
         _ = get_result, resource_key
         msg = (

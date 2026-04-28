@@ -187,7 +187,7 @@ def test_watsonx_mapper_provider_list_entry_flattens_provider_data_and_uses_id()
         updated_at=now,
         provider_data={
             "tool_ids": ["tool-1", "  ", "tool-2"],
-            "environments": ["draft", "draft", "live"],
+            "environments": ["draft", "live"],
         },
     )
 
@@ -263,6 +263,114 @@ def test_watsonx_mapper_deployment_list_result_rejects_unknown_flattened_entry_f
 
     assert exc_info.value.status_code == 500
     assert "Invalid deployment list item provider_data payload:" in str(exc_info.value.detail)
+
+
+def test_watsonx_mapper_extracts_list_item_provider_data_environments_only() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    provider_view = SimpleNamespace(
+        deployments=[
+            SimpleNamespace(
+                id="agent-1",
+                provider_data={
+                    "tool_ids": ["tool-1"],
+                    "environments": ["draft", "live"],
+                },
+            )
+        ]
+    )
+
+    provider_data_by_resource_key = mapper.extract_list_item_provider_data(provider_view)
+
+    assert provider_data_by_resource_key == {"agent-1": {"environments": ["draft", "live"]}}
+
+
+@pytest.mark.parametrize(
+    ("item", "expected_message"),
+    [
+        (
+            SimpleNamespace(id=None, provider_data={"tool_ids": ["tool-1"], "environments": ["draft"]}),
+            "deployment id is required from wxO adapter.",
+        ),
+        (
+            SimpleNamespace(id="", provider_data={"tool_ids": ["tool-1"], "environments": ["draft"]}),
+            "deployment id is required from wxO adapter.",
+        ),
+        (
+            SimpleNamespace(id="agent-1", provider_data="bad-payload-type"),
+            "provider_data is required from wxO adapter for list().",
+        ),
+        (
+            SimpleNamespace(id="agent-1", provider_data={"tool_ids": ["tool-1"]}),
+            "environments is required from wxO adapter.",
+        ),
+    ],
+)
+def test_watsonx_mapper_extract_list_item_provider_data_contract_breaks_raise_value_error(
+    item: SimpleNamespace,
+    expected_message: str,
+) -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+
+    with pytest.raises(ValueError, match=expected_message):
+        mapper.extract_list_item_provider_data(SimpleNamespace(deployments=[item]))
+
+
+def test_watsonx_mapper_shapes_synced_list_items_with_provider_data() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    row = SimpleNamespace(
+        id=uuid4(),
+        deployment_provider_account_id=uuid4(),
+        deployment_type=DeploymentType.AGENT,
+        name="Agent 1",
+        description="desc",
+        resource_key="agent-1",
+        created_at=None,
+        updated_at=None,
+    )
+    fv_id = uuid4()
+
+    items = mapper.shape_deployment_list_items(
+        rows_with_counts=[(row, 2, [(fv_id, "tool-1")])],
+        has_flow_filter=True,
+        provider_key=WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+        provider_data_by_resource_key={"agent-1": {"environments": ["draft"]}},
+    )
+
+    assert len(items) == 1
+    assert items[0].resource_key == "agent-1"
+    assert items[0].flow_version_ids == [fv_id]
+    assert items[0].provider_data == {"environments": ["draft"]}
+
+
+def test_watsonx_mapper_shape_synced_list_items_requires_provider_data_map() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+
+    with pytest.raises(ValueError, match="provider_data_by_resource_key is required"):
+        mapper.shape_deployment_list_items(
+            rows_with_counts=[],
+            provider_key=WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+        )
+
+
+def test_watsonx_mapper_shape_synced_list_items_rejects_missing_provider_data_key() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    row = SimpleNamespace(
+        id=uuid4(),
+        deployment_provider_account_id=uuid4(),
+        deployment_type=DeploymentType.AGENT,
+        name="Agent 1",
+        description=None,
+        resource_key="agent-1",
+        created_at=None,
+        updated_at=None,
+    )
+
+    with pytest.raises(ValueError, match="Missing provider_data for wxO deployment resource_key='agent-1'"):
+        mapper.shape_deployment_list_items(
+            rows_with_counts=[(row, 0, [])],
+            provider_key=WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+            provider_data_by_resource_key={},
+        )
 
 
 @pytest.mark.parametrize(
