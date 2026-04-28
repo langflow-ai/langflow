@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { KnowledgeBackendInput } from "@/components/core/parameterRenderComponent/components/knowledgeBackendInputComponent";
 import ModelInputComponent, {
   type ModelOption,
 } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
@@ -18,10 +19,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { AvailableKnowledgeBackendId } from "@/constants/knowledgeBackendConstants";
+import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
 import { ACCEPTED_FILE_TYPES } from "../constants";
 import type { ColumnConfigRow } from "../types";
-import { BackendPicker, type BackendValue } from "./BackendPicker";
 
 interface StepConfigurationProps {
   isAddSourcesMode: boolean;
@@ -46,10 +48,10 @@ interface StepConfigurationProps {
   onFieldChange?: () => void;
   columnConfig: ColumnConfigRow[];
   onColumnConfigChange: (value: ColumnConfigRow[]) => void;
-  backendType: BackendValue;
-  onBackendTypeChange: (value: BackendValue) => void;
-  backendConfig: Record<string, string>;
+  backendType: AvailableKnowledgeBackendId;
+  onBackendTypeChange: (value: AvailableKnowledgeBackendId) => void;
   onBackendConfigChange: (value: Record<string, string>) => void;
+  globalVariables: GlobalVariable[];
 }
 
 export function StepConfiguration({
@@ -77,8 +79,8 @@ export function StepConfiguration({
   onColumnConfigChange,
   backendType,
   onBackendTypeChange,
-  backendConfig,
   onBackendConfigChange,
+  globalVariables,
 }: StepConfigurationProps) {
   return (
     <div className="relative">
@@ -152,29 +154,39 @@ export function StepConfiguration({
           )}
         </div>
 
-        {/* Vector Store Backend (Phase 4) — immutable once the KB
-            is created, so we hide it in add-sources mode. */}
-        {!isAddSourcesMode && (
-          <div className="flex flex-col gap-2 pt-4">
-            <BackendPicker
+        {/* Backend Selection */}
+        <div className="flex flex-col gap-2 pt-4">
+          <Label className="text-sm font-medium">
+            Knowledge Backend <span className="text-destructive">*</span>
+          </Label>
+          <div
+            className={cn(
+              "rounded-md",
+              validationErrors.backend && "[&_button]:border-destructive",
+            )}
+          >
+            <KnowledgeBackendInput
+              id="kb-knowledge-backend"
               value={backendType}
-              onValueChange={(v) => {
-                onBackendTypeChange(v);
-                onFieldChange?.();
-              }}
-              config={backendConfig}
-              onConfigChange={(c) => {
-                onBackendConfigChange(c);
+              globalVariables={globalVariables}
+              disabled={isAddSourcesMode}
+              onValueChange={(nextBackendType, nextBackendConfig) => {
+                onBackendTypeChange(nextBackendType);
+                onBackendConfigChange(nextBackendConfig);
                 onFieldChange?.();
               }}
             />
-            {validationErrors.backend && (
-              <span className="text-xs text-destructive">
-                {validationErrors.backend}
-              </span>
-            )}
           </div>
-        )}
+          <span className="text-xs text-muted-foreground">
+            The backend controls where this knowledge base stores vectors.
+            Existing knowledge bases keep their original backend.
+          </span>
+          {validationErrors.backend && (
+            <span className="text-xs text-destructive">
+              {validationErrors.backend}
+            </span>
+          )}
+        </div>
 
         {/* Hidden file inputs */}
         <input

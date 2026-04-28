@@ -18,6 +18,11 @@ export type KnowledgeBackendId =
   | "mongodb"
   | "postgres";
 
+export type AvailableKnowledgeBackendId = Extract<
+  KnowledgeBackendId,
+  "chroma" | "opensearch"
+>;
+
 export interface KnowledgeBackendConfigField {
   label: string;
   variableKey: string;
@@ -129,7 +134,13 @@ export const KNOWLEDGE_BACKEND_OPTIONS: KnowledgeBackendOption[] = [
 ];
 
 export const AVAILABLE_KNOWLEDGE_BACKEND_OPTIONS =
-  KNOWLEDGE_BACKEND_OPTIONS.filter((backend) => backend.status === "available");
+  KNOWLEDGE_BACKEND_OPTIONS.filter(
+    (
+      backend,
+    ): backend is KnowledgeBackendOption & {
+      id: AvailableKnowledgeBackendId;
+    } => backend.status === "available",
+  );
 
 export function getGlobalVariableValue(
   variables: GlobalVariable[],
@@ -141,7 +152,7 @@ export function getGlobalVariableValue(
 
 export function getActiveKnowledgeBackend(
   variables: GlobalVariable[],
-): "chroma" | "opensearch" {
+): AvailableKnowledgeBackendId {
   const configuredBackend = getGlobalVariableValue(
     variables,
     ACTIVE_KNOWLEDGE_BACKEND_VARIABLE,
@@ -149,30 +160,61 @@ export function getActiveKnowledgeBackend(
   return configuredBackend === "opensearch" ? "opensearch" : "chroma";
 }
 
-export function getDefaultKnowledgeBackendConfig(variables: GlobalVariable[]): {
-  backendType: "chroma" | "opensearch";
-  backendConfig: Record<string, string>;
-} {
-  const backendType = getActiveKnowledgeBackend(variables);
+export function getKnowledgeBackendOption(
+  backendId: KnowledgeBackendId | string | undefined,
+): KnowledgeBackendOption {
+  return (
+    KNOWLEDGE_BACKEND_OPTIONS.find((backend) => backend.id === backendId) ??
+    KNOWLEDGE_BACKEND_OPTIONS[0]
+  );
+}
+
+export function getKnowledgeBackendConfig(
+  backendType: AvailableKnowledgeBackendId,
+  variables: GlobalVariable[],
+): Record<string, string> {
   if (backendType !== "opensearch") {
-    return { backendType: "chroma", backendConfig: {} };
+    return {};
   }
 
   return {
+    url_variable: OPENSEARCH_VARIABLES.URL,
+    username_variable: OPENSEARCH_VARIABLES.USERNAME,
+    password_variable: OPENSEARCH_VARIABLES.PASSWORD,
+    index_name:
+      getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.INDEX_NAME) ?? "",
+    vector_field:
+      getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.VECTOR_FIELD) ??
+      "vector_field",
+    text_field:
+      getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.TEXT_FIELD) ??
+      "text",
+  };
+}
+
+export function isKnowledgeBackendConfigured(
+  backendType: AvailableKnowledgeBackendId,
+  variables: GlobalVariable[],
+): boolean {
+  if (backendType === "chroma") {
+    return true;
+  }
+
+  const backend = getKnowledgeBackendOption(backendType);
+  return backend.configFields
+    .filter((field) => field.required)
+    .every((field) =>
+      Boolean(getGlobalVariableValue(variables, field.variableKey)),
+    );
+}
+
+export function getDefaultKnowledgeBackendConfig(variables: GlobalVariable[]): {
+  backendType: AvailableKnowledgeBackendId;
+  backendConfig: Record<string, string>;
+} {
+  const backendType = getActiveKnowledgeBackend(variables);
+  return {
     backendType,
-    backendConfig: {
-      url_variable: OPENSEARCH_VARIABLES.URL,
-      username_variable: OPENSEARCH_VARIABLES.USERNAME,
-      password_variable: OPENSEARCH_VARIABLES.PASSWORD,
-      index_name:
-        getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.INDEX_NAME) ??
-        "",
-      vector_field:
-        getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.VECTOR_FIELD) ??
-        "vector_field",
-      text_field:
-        getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.TEXT_FIELD) ??
-        "text",
-    },
+    backendConfig: getKnowledgeBackendConfig(backendType, variables),
   };
 }

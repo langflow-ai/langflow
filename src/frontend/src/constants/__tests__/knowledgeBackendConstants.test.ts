@@ -2,6 +2,7 @@ import {
   ACTIVE_KNOWLEDGE_BACKEND_VARIABLE,
   getActiveKnowledgeBackend,
   getDefaultKnowledgeBackendConfig,
+  isKnowledgeBackendConfigured,
   OPENSEARCH_VARIABLES,
 } from "../knowledgeBackendConstants";
 
@@ -49,5 +50,20 @@ describe("knowledgeBackendConstants", () => {
         text_field: "content",
       },
     });
+  });
+
+  it("requires OpenSearch required settings before it can be selected", () => {
+    expect(
+      isKnowledgeBackendConfigured("opensearch", [
+        variable(OPENSEARCH_VARIABLES.INDEX_NAME, "kb-index"),
+      ]),
+    ).toBe(false);
+
+    expect(
+      isKnowledgeBackendConfigured("opensearch", [
+        variable(OPENSEARCH_VARIABLES.URL, "https://search.example.com:9200"),
+        variable(OPENSEARCH_VARIABLES.INDEX_NAME, "kb-index"),
+      ]),
+    ).toBe(true);
   });
 });
