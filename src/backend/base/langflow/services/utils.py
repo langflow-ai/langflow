@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from enum import Enum
 from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -24,6 +25,16 @@ from .deps import get_auth_service, get_db_service, get_service, get_settings_se
 if TYPE_CHECKING:
     from lfx.services.settings.manager import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+class SetupSuperuserResult(str, Enum):
+    """Distinct outcomes from ``setup_superuser`` (AUTO_LOGIN and credential paths)."""
+
+    AUTO_LOGIN_INITIALIZED = "auto_login_initialized"
+    AUTO_LOGIN_ALREADY_SATISFIED = "auto_login_already_satisfied"
+    AUTO_LOGIN_LOCK_TIMEOUT_SUPERUSER_PRESENT = "auto_login_lock_timeout_superuser_present"
+    SUPERUSER_CREATED = "superuser_created"
+    SUPERUSER_UNCHANGED = "superuser_unchanged"
 
 
 async def get_or_create_super_user(session: AsyncSession, username, password, is_default):
@@ -70,7 +81,7 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
     return await auth.create_super_user(username, password, db=session)
 
 
-async def setup_superuser(settings_service: SettingsService, session: AsyncSession) -> None:
+async def setup_superuser(settings_service: SettingsService, session: AsyncSession) -> SetupSuperuserResult:
     if settings_service.auth_settings.AUTO_LOGIN:
         await logger.adebug("AUTO_LOGIN is set to True. Creating default superuser with full initialization.")
         # Use file lock to prevent race conditions in multi-worker environments
@@ -108,6 +119,8 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
 
                     _ = await get_or_create_default_folder(session, super_user.id)
                     await logger.adebug("Auto-login superuser initialized successfully")
+                    return SetupSuperuserResult.AUTO_LOGIN_INITIALIZED
+                return SetupSuperuserResult.AUTO_LOGIN_ALREADY_SATISFIED
         except TimeoutError as exc:
             # Another worker may be handling it - but a stale/abandoned lock or dead holder
             # yields the same timeout with no initialization.
@@ -131,7 +144,7 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                 )
                 await logger.aerror(msg)
                 raise RuntimeError(msg) from exc
-        return
+            return SetupSuperuserResult.AUTO_LOGIN_LOCK_TIMEOUT_SUPERUSER_PRESENT
     # Remove the default superuser if it exists
     await teardown_superuser(settings_service, session)
     # If AUTO_LOGIN is disabled, attempt to use configured credentials
@@ -155,10 +168,15 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         )
         if user is not None:
             await logger.adebug("Superuser created successfully.")
+            outcome = SetupSuperuserResult.SUPERUSER_CREATED
+        else:
+            outcome = SetupSuperuserResult.SUPERUSER_UNCHANGED
     except Exception as exc:
         await logger.aexception(f"Failed to create superuser: {exc}")
         msg = "Could not create superuser. Please create a superuser manually."
         raise RuntimeError(msg) from exc
+    else:
+        return outcome
     finally:
         # Scrub credentials from in-memory settings after setup
         settings_service.auth_settings.reset_credentials()

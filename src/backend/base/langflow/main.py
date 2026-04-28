@@ -150,7 +150,7 @@ def get_lifespan(*, fix_migration=False, version=None):
     async def lifespan(_app: FastAPI):
         from lfx.interface.components import component_cache, get_and_cache_all_types_dict
 
-        from langflow.preload import _STATE, get_owned_temp_dirs
+        from langflow.preload import PreloadStep, get_owned_temp_dirs, is_step_complete
 
         configure()
 
@@ -202,7 +202,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             # Gate: Copy profile pictures
-            if _STATE.profile_pictures_copied:
+            if is_step_complete(PreloadStep.PROFILE_PICTURES):
                 await logger.adebug("Skipping profile-picture copy: master already completed it during preload")
             else:
                 current_time = asyncio.get_event_loop().time()
@@ -236,7 +236,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             telemetry_service = get_telemetry_service()
 
             # Gate: Load bundles
-            if _STATE.bundles_loaded:
+            if is_step_complete(PreloadStep.BUNDLES):
                 # Inherit bundle paths from master via COW.
                 # get_owned_temp_dirs() returns the preloaded dirs if this is
                 # the master, or an empty list if this is a worker (workers
@@ -254,7 +254,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             # When types_cached is True, workers inherited the populated cache via COW; we still need a
             # local handle for create_or_update_starter_projects. starter_projects_created can remain False
             # if the master failed after caching types but before finishing starter projects.
-            if _STATE.types_cached:
+            if is_step_complete(PreloadStep.TYPES_CACHED):
                 await logger.adebug("Skipping types cache: inherited from master")
                 all_types_dict = component_cache.all_types_dict
                 if all_types_dict is None:
@@ -272,7 +272,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             # Gate: Create/update starter projects
-            if _STATE.starter_projects_created:
+            if is_step_complete(PreloadStep.STARTER_PROJECTS):
                 await logger.adebug("Skipping starter projects: inherited from master")
             else:
                 # Use file-based lock to prevent multiple workers from creating duplicate starter projects
@@ -306,7 +306,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Gate: Initialize agentic global variables (when agentic_experience enabled)
             if not get_settings_service().settings.agentic_experience:
                 pass  # Skip when feature is disabled
-            elif _STATE.agentic_globals_initialized:
+            elif is_step_complete(PreloadStep.AGENTIC_GLOBALS):
                 await logger.adebug("Skipping agentic global variables: master already completed it during preload")
             else:
                 from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
@@ -338,7 +338,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Gate: Auto-configure agentic MCP server (when agentic_experience enabled)
             if not get_settings_service().settings.agentic_experience:
                 pass  # Skip when feature is disabled
-            elif _STATE.agentic_mcp_configured:
+            elif is_step_complete(PreloadStep.AGENTIC_MCP):
                 await logger.adebug("Skipping agentic MCP server config: master already completed it during preload")
             else:
                 from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
@@ -356,7 +356,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             # Gate: Load flows from directory
             current_time = asyncio.get_event_loop().time()
-            if _STATE.flows_loaded:
+            if is_step_complete(PreloadStep.FLOWS):
                 await logger.adebug("Skipping flows load: master already completed it during preload")
             else:
                 await logger.adebug("Loading flows")

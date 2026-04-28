@@ -3,7 +3,7 @@ import pytest
 from langflow.services.auth.utils import verify_password
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_auth_service, get_settings_service, session_scope
-from langflow.services.utils import setup_superuser, teardown_superuser
+from langflow.services.utils import SetupSuperuserResult, setup_superuser, teardown_superuser
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from sqlmodel import select
 
@@ -43,7 +43,11 @@ async def test_initialize_services_creates_default_superuser_when_auto_login_tru
     settings.auth_settings.AUTO_LOGIN = True
 
     async with session_scope() as session:
-        await setup_superuser(settings, session)
+        result = await setup_superuser(settings, session)
+        assert result in (
+            SetupSuperuserResult.AUTO_LOGIN_INITIALIZED,
+            SetupSuperuserResult.AUTO_LOGIN_ALREADY_SATISFIED,
+        )
 
     async with session_scope() as session:
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
@@ -138,7 +142,8 @@ async def test_setup_superuser_with_no_configured_credentials(initialized_servic
 
     async with session_scope() as session:
         # This should create a default superuser since no credentials are provided
-        await setup_superuser(settings, session)
+        result = await setup_superuser(settings, session)
+        assert result == SetupSuperuserResult.SUPERUSER_CREATED
 
         # Verify default superuser was created
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
@@ -176,7 +181,7 @@ async def test_setup_superuser_with_custom_credentials(initialized_services):  #
             await session.commit()
 
     async with session_scope() as session:
-        await setup_superuser(settings, session)
+        assert await setup_superuser(settings, session) == SetupSuperuserResult.SUPERUSER_CREATED
 
         # Verify custom superuser was created
         stmt = select(User).where(User.username == "custom_admin")
@@ -260,7 +265,9 @@ async def test_setup_superuser_auto_login_lock_timeout_ok_when_superuser_exists(
     monkeypatch.setattr(filelock, "FileLock", _FailingLock)
 
     async with session_scope() as session:
-        await setup_superuser(settings, session)
+        assert (
+            await setup_superuser(settings, session) == SetupSuperuserResult.AUTO_LOGIN_LOCK_TIMEOUT_SUPERUSER_PRESENT
+        )
 
     async with session_scope() as session:
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)

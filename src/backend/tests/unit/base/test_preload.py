@@ -12,10 +12,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langflow.preload import (
     _STATE,
+    PreloadStep,
     _run_master_preload,
     get_owned_temp_dirs,
     is_master,
     is_preloaded,
+    mark_step_complete,
     preload_master,
 )
 
@@ -205,6 +207,20 @@ def _fail_and_close(exc):
 # ---------------------------------------------------------------------------
 # Helper function tests
 # ---------------------------------------------------------------------------
+
+
+def test_mark_step_complete_enforces_prerequisite_order():
+    """Steps that declare prerequisites cannot complete while prerequisites are incomplete."""
+    _STATE.reset()
+    with pytest.raises(RuntimeError, match="incomplete prerequisites"):
+        mark_step_complete(PreloadStep.TYPES_CACHED)
+
+
+def test_mark_step_complete_succeeds_when_prerequisites_met():
+    _STATE.reset()
+    mark_step_complete(PreloadStep.BUNDLES)
+    mark_step_complete(PreloadStep.TYPES_CACHED)
+    assert _STATE.types_cached is True
 
 
 def test_is_preloaded_false_by_default():

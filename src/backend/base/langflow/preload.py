@@ -40,12 +40,63 @@ import asyncio
 import gc
 import os
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from enum import Enum
+from typing import TYPE_CHECKING, Final
 
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
+
+
+class PreloadStep(Enum):
+    """Ordered preload phases; completion flags must advance via ``mark_step_complete`` only."""
+
+    PROFILE_PICTURES = "profile_pictures"
+    BUNDLES = "bundles"
+    TYPES_CACHED = "types_cached"
+    STARTER_PROJECTS = "starter_projects"
+    AGENTIC_GLOBALS = "agentic_globals"
+    AGENTIC_MCP = "agentic_mcp"
+    FLOWS = "flows"
+
+
+_STEP_ATTR: Final[dict[PreloadStep, str]] = {
+    PreloadStep.PROFILE_PICTURES: "profile_pictures_copied",
+    PreloadStep.BUNDLES: "bundles_loaded",
+    PreloadStep.TYPES_CACHED: "types_cached",
+    PreloadStep.STARTER_PROJECTS: "starter_projects_created",
+    PreloadStep.AGENTIC_GLOBALS: "agentic_globals_initialized",
+    PreloadStep.AGENTIC_MCP: "agentic_mcp_configured",
+    PreloadStep.FLOWS: "flows_loaded",
+}
+
+# Explicit prerequisite DAG matching ``_run_master_preload`` ordering (comments + pipeline).
+_STEP_PREREQUISITES: Final[dict[PreloadStep, tuple[PreloadStep, ...]]] = {
+    PreloadStep.PROFILE_PICTURES: (),
+    PreloadStep.BUNDLES: (),
+    PreloadStep.TYPES_CACHED: (PreloadStep.BUNDLES,),
+    PreloadStep.STARTER_PROJECTS: (PreloadStep.TYPES_CACHED,),
+    PreloadStep.AGENTIC_GLOBALS: (PreloadStep.TYPES_CACHED,),
+    # MCP config may succeed even when globals failed (separate try/except in preload).
+    PreloadStep.AGENTIC_MCP: (PreloadStep.TYPES_CACHED,),
+    PreloadStep.FLOWS: (PreloadStep.TYPES_CACHED,),
+}
+
+
+def is_step_complete(step: PreloadStep) -> bool:
+    """Return True if *step* finished successfully during preload (workers inherit via fork)."""
+    attr = _STEP_ATTR[step]
+    return bool(getattr(_STATE, attr))
+
+
+def mark_step_complete(step: PreloadStep) -> None:
+    """Record successful completion of *step*, enforcing declared prerequisite ordering."""
+    missing = [p for p in _STEP_PREREQUISITES[step] if not is_step_complete(p)]
+    if missing:
+        msg = f"Cannot complete preload step {step.value!r}: incomplete prerequisites {[m.value for m in missing]}"
+        raise RuntimeError(msg)
+    setattr(_STATE, _STEP_ATTR[step], True)
 
 
 @dataclass
@@ -157,7 +208,7 @@ async def _run_master_preload() -> None:
     await logger.adebug("[preload] copying profile pictures")
     try:
         await copy_profile_pictures()
-        _STATE.profile_pictures_copied = True
+        mark_step_complete(PreloadStep.PROFILE_PICTURES)
     except Exception:  # noqa: BLE001
         await logger.aexception("[preload] copy_profile_pictures failed")
 
@@ -166,18 +217,18 @@ async def _run_master_preload() -> None:
     _STATE.temp_dirs = list(temp_dirs)
     _STATE.bundles_components_paths = list(bundles_components_paths)
     settings_service.settings.components_path.extend(bundles_components_paths)
-    _STATE.bundles_loaded = True
+    mark_step_complete(PreloadStep.BUNDLES)
 
     await logger.ainfo("[preload] building component types cache")
     await get_and_cache_all_types_dict(settings_service, get_telemetry_service())
-    _STATE.types_cached = True
+    mark_step_complete(PreloadStep.TYPES_CACHED)
 
     all_types_dict = component_cache.all_types_dict
     if all_types_dict is not None:
         await logger.adebug("[preload] creating/updating starter projects")
         try:
             await create_or_update_starter_projects(all_types_dict)
-            _STATE.starter_projects_created = True
+            mark_step_complete(PreloadStep.STARTER_PROJECTS)
         except Exception:  # noqa: BLE001
             await logger.aexception("[preload] starter projects init failed")
 
@@ -191,7 +242,7 @@ async def _run_master_preload() -> None:
         try:
             async with session_scope() as session:
                 await initialize_agentic_global_variables(session)
-            _STATE.agentic_globals_initialized = True
+            mark_step_complete(PreloadStep.AGENTIC_GLOBALS)
         except Exception:  # noqa: BLE001
             await logger.aexception("[preload] initialize agentic global variables failed")
 
@@ -199,14 +250,14 @@ async def _run_master_preload() -> None:
         try:
             async with session_scope() as session:
                 await auto_configure_agentic_mcp_server(session)
-            _STATE.agentic_mcp_configured = True
+            mark_step_complete(PreloadStep.AGENTIC_MCP)
         except Exception:  # noqa: BLE001
             await logger.aexception("[preload] auto-configure agentic MCP server failed")
 
     await logger.adebug("[preload] loading flows from directory")
     try:
         await load_flows_from_directory()
-        _STATE.flows_loaded = True
+        mark_step_complete(PreloadStep.FLOWS)
     except Exception:  # noqa: BLE001
         await logger.aexception("[preload] load_flows_from_directory failed")
 
