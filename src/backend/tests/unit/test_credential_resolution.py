@@ -118,12 +118,13 @@ class TestGetApiKeyForProviderDbFallback:
         assert result == "sk-from-database"
 
     @patch("lfx.base.models.unified_models.credentials.run_until_complete")
-    def test_should_unwrap_secretstr_from_explicit_variable_name_lookup(self, mock_run):
+    def test_should_unwrap_secretstr_from_explicit_variable_name_lookup(self, mock_run, monkeypatch):
         """Explicit var-name inputs should resolve to the raw secret, not SecretStr's mask."""
         from lfx.base.models.unified_models.credentials import get_api_key_for_provider
 
         user_id = str(uuid4())
         mock_run.return_value = SecretStr("sk-from-database")
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
         result = get_api_key_for_provider(user_id, "OpenAI", "OPENAI_API_KEY")
 
