@@ -40,7 +40,11 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         assert component.description == "All AI Models in One API 500+ AI Models"
         assert component.icon == "CometAPI"
         assert component.name == "CometAPIModel"
-        assert component.api_key == "test-cometapi-key"
+        api_key = component.api_key
+        raw_api_key = api_key.get_secret_value() if hasattr(api_key, "get_secret_value") else api_key
+        assert raw_api_key == "test-cometapi-key"
+        if hasattr(api_key, "get_secret_value"):
+            assert str(api_key) == "**********"
         assert component.model_name == "gpt-4o-mini"
         assert component.temperature == 0.7
         assert component.max_tokens == 1000
