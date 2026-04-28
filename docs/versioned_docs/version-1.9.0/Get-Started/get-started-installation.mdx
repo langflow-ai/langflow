@@ -179,19 +179,6 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     uv pip install langflow
     ```
 
-    To install a specific version of the Langflow package, add the required version to the command, such as `uv pip install langflow==1.4.22`.
-
-    <details>
-    <summary>Reinstall or upgrade Langflow</summary>
-
-    To reinstall Langflow and all of its dependencies, run `uv pip install langflow --force-reinstall`.
-
-    To upgrade Langflow to the latest version, run `uv pip install langflow -U`.
-    However, the Langflow team recommends taking steps to backup your existing installation before you upgrade Langflow.
-    For more information, see [Prepare to upgrade](/release-notes#prepare-to-upgrade).
-
-    </details>
-
 4. Start Langflow:
 
     ```bash
@@ -204,9 +191,15 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
 6. Create your first flow with the [Quickstart](/get-started-quickstart).
 
-For upgrade information, see the [Release notes](/release-notes).
+### Manage the Langflow OSS version
 
-For information about optional dependency groups and support for custom dependencies to extend Langflow OSS functionality, see [Install custom dependencies](/install-custom-dependencies).
+To upgrade Langflow to the latest version, run `uv pip install langflow -U`.
+However, the Langflow team recommends taking steps to backup your existing installation before you upgrade Langflow.
+For more information, see [Prepare to upgrade](/release-notes#prepare-to-upgrade).
+
+To install a specific version of the Langflow package, add the required version to the command, such as `uv pip install langflow==1.4.22`.
+
+To reinstall Langflow and all of its dependencies, run `uv pip install langflow --force-reinstall`.
 
 ## Next steps
 
