@@ -1,10 +1,13 @@
+import filelock
 import pytest
 from langflow.services.auth.utils import verify_password
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.deps import get_auth_service, get_settings_service, session_scope
 from langflow.services.utils import setup_superuser, teardown_superuser
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from sqlmodel import select
+
+_MOCK_AUTO_LOGIN_LOCK_TIMEOUT_MSG = "mock lock timeout"
 
 
 @pytest.fixture
@@ -199,3 +202,68 @@ async def test_setup_superuser_with_custom_credentials(initialized_services):  #
         if created_custom:
             await session.delete(created_custom)
             await session.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(30)
+async def test_setup_superuser_auto_login_lock_timeout_raises_when_no_superuser(initialized_services, monkeypatch):  # noqa: ARG001
+    """If the AUTO_LOGIN lock times out and no default superuser exists, startup must fail loudly."""
+    settings = get_settings_service()
+    settings.auth_settings.AUTO_LOGIN = True
+
+    class _FailingLock:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            msg = _MOCK_AUTO_LOGIN_LOCK_TIMEOUT_MSG
+            raise TimeoutError(msg)
+
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr(filelock, "FileLock", _FailingLock)
+
+    async with session_scope() as session:
+        with pytest.raises(
+            RuntimeError,
+            match="AUTO_LOGIN is enabled but the default superuser was not initialized",
+        ):
+            await setup_superuser(settings, session)
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(30)
+async def test_setup_superuser_auto_login_lock_timeout_ok_when_superuser_exists(initialized_services, monkeypatch):  # noqa: ARG001
+    """If the lock times out but the default superuser already exists, setup continues without error."""
+    settings = get_settings_service()
+    settings.auth_settings.AUTO_LOGIN = True
+
+    async with session_scope() as session:
+        await get_auth_service().create_super_user(
+            DEFAULT_SUPERUSER,
+            DEFAULT_SUPERUSER_PASSWORD.get_secret_value(),
+            db=session,
+        )
+
+    class _FailingLock:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            msg = _MOCK_AUTO_LOGIN_LOCK_TIMEOUT_MSG
+            raise TimeoutError(msg)
+
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr(filelock, "FileLock", _FailingLock)
+
+    async with session_scope() as session:
+        await setup_superuser(settings, session)
+
+    async with session_scope() as session:
+        stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
+        user = (await session.exec(stmt)).first()
+        assert user is not None
+        assert user.is_superuser is True

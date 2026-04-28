@@ -108,9 +108,29 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
 
                     _ = await get_or_create_default_folder(session, super_user.id)
                     await logger.adebug("Auto-login superuser initialized successfully")
-        except TimeoutError:
-            # Another worker is handling it - all operations are idempotent
-            await logger.adebug("Another worker is initializing auto-login superuser, skipping")
+        except TimeoutError as exc:
+            # Another worker may be handling it - but a stale/abandoned lock or dead holder
+            # yields the same timeout with no initialization.
+            await logger.awarning(
+                "Timed out waiting for AUTO_LOGIN superuser initialization lock "
+                "(another worker may hold it, or the lock file may be stale). "
+                "Verifying whether the default superuser exists.",
+            )
+            from langflow.services.database.models.user.model import User
+
+            stmt = select(User).where(
+                User.username == username,
+                User.is_superuser == True,  # noqa: E712
+            )
+            exists = (await session.exec(stmt)).first() is not None
+            if not exists:
+                msg = (
+                    "AUTO_LOGIN is enabled but the default superuser was not initialized: "
+                    "could not acquire the initialization lock within the timeout and no matching "
+                    "superuser exists in the database. Retry startup or create a superuser manually."
+                )
+                await logger.aerror(msg)
+                raise RuntimeError(msg) from exc
         return
     # Remove the default superuser if it exists
     await teardown_superuser(settings_service, session)
