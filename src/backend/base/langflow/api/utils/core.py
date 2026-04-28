@@ -4,6 +4,7 @@ import json as _json
 from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
+from urllib.parse import quote
 
 from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
@@ -460,3 +461,16 @@ def raise_error_if_astra_cloud_env():
         raise_error_if_astra_cloud_disable_component(disable_endpoint_in_astra_cloud_msg)
     except Exception as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+
+
+def build_content_disposition(filename: str) -> str:
+    """Build a RFC 5987-compliant Content-Disposition header value.
+
+    Produces a dual-param header with an ASCII fallback and a percent-encoded
+    UTF-8 param so both legacy and modern clients receive an unambiguous name.
+    Internal double-quotes in the ASCII fallback are escaped per RFC 6266 §4.1
+    to prevent header-injection via parameter smuggling.
+    """
+    ascii_fallback = filename.encode("ascii", "replace").decode("ascii").replace('"', '\\"')
+    encoded = quote(filename, safe="")
+    return f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{encoded}"

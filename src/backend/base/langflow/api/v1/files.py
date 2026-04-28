@@ -5,7 +5,6 @@ from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
 from typing import Annotated
-from urllib.parse import quote
 from uuid import UUID
 
 import anyio
@@ -14,7 +13,13 @@ from fastapi.responses import StreamingResponse
 from lfx.services.settings.service import SettingsService
 from lfx.utils.helpers import build_content_type_from_extension
 
-from langflow.api.utils import CurrentActiveUser, DbSession, ValidatedFileName, ValidatedFolderName
+from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
+    ValidatedFileName,
+    ValidatedFolderName,
+    build_content_disposition,
+)
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
@@ -127,10 +132,8 @@ async def download_file(
 
     try:
         file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)
-        ascii_fallback = file_name.encode("ascii", "replace").decode("ascii")
-        encoded_name = quote(file_name, safe="")
         headers = {
-            "Content-Disposition": f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{encoded_name}",
+            "Content-Disposition": build_content_disposition(file_name),
             "Content-Type": "application/octet-stream",
             "Content-Length": str(len(file_content)),
         }
