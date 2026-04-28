@@ -122,7 +122,10 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
         }
 
         api_key_value = self.api_key
-        if isinstance(api_key_value, SecretStr):
+        # Duck-type so we unwrap both pydantic.v1.SecretStr (legacy import) and
+        # pydantic.SecretStr (the v2 form produced by the attribute-wrapping
+        # layer added in #12908).
+        if hasattr(api_key_value, "get_secret_value"):
             api_key_value = api_key_value.get_secret_value()
 
         if bool(self.space_id) == bool(self.project_id):

@@ -72,7 +72,9 @@ class LiteLLMProxyComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:
         """Build the LiteLLM proxy model."""
         api_key = self.api_key
-        if isinstance(api_key, SecretStr):
+        # Duck-type so we unwrap both pydantic.v1.SecretStr (legacy import) and
+        # pydantic.SecretStr (the v2 form added in #12908).
+        if hasattr(api_key, "get_secret_value"):
             api_key = api_key.get_secret_value()
 
         self._validate_proxy_connection(api_key)

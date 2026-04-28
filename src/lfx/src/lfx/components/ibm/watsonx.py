@@ -198,9 +198,11 @@ class WatsonxAIComponent(LCModelComponent):
         }
 
         # Pass API key as plain string to avoid SecretStr serialization issues
-        # when model is configured with with_config() or used in batch operations
+        # when model is configured with with_config() or used in batch operations.
+        # Duck-type so both pydantic.v1.SecretStr (legacy import) and
+        # pydantic.SecretStr (the v2 form added in #12908) unwrap correctly.
         api_key_value = self.api_key
-        if isinstance(api_key_value, SecretStr):
+        if hasattr(api_key_value, "get_secret_value"):
             api_key_value = api_key_value.get_secret_value()
 
         if bool(self.space_id) == bool(self.project_id):

@@ -92,10 +92,16 @@ class CometAPIComponent(LCModelComponent):
         url = f"{base_url}/models"
 
         headers = {"Content-Type": "application/json"}
-        # Add Bearer Authorization when API key is available
+        # Add Bearer Authorization when API key is available.
+        # Duck-type ``get_secret_value`` so both pydantic.v1.SecretStr (legacy
+        # imports here) and pydantic.SecretStr (the v2 form produced by the
+        # attribute-wrapping layer in #12908) unwrap correctly.
         api_key_source = token_override if token_override else getattr(self, "api_key", None)
         if api_key_source:
-            token = api_key_source.get_secret_value() if isinstance(api_key_source, SecretStr) else str(api_key_source)
+            if hasattr(api_key_source, "get_secret_value"):
+                token = api_key_source.get_secret_value()
+            else:
+                token = str(api_key_source)
             headers["Authorization"] = f"Bearer {token}"
 
         try:
@@ -144,8 +150,12 @@ class CometAPIComponent(LCModelComponent):
             msg = "Please select a valid CometAPI model."
             raise ValueError(msg)
         try:
-            # Extract raw API key safely
-            _api_key = api_key.get_secret_value() if isinstance(api_key, SecretStr) else api_key
+            # Extract raw API key safely. Duck-type on ``get_secret_value`` so we
+            # unwrap both pydantic.v1.SecretStr (legacy import in this module) and
+            # pydantic.SecretStr (the v2 form produced by the attribute-wrapping
+            # layer added in #12908). Without this, a v2 SecretStr propagates
+            # straight into ChatOpenAI as a SecretStr object instead of a str.
+            _api_key = api_key.get_secret_value() if hasattr(api_key, "get_secret_value") else api_key
             output = ChatOpenAI(
                 model=model_name,
                 api_key=_api_key or None,
