@@ -699,7 +699,7 @@ async def list_deployments_synced(
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
     names: list[str] | None = None,
-) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int]:
+) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int, dict[str, dict[str, Any]]]:
     """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
 
     Fetches DB rows in batches, sends each batch's resource keys to the
@@ -709,6 +709,7 @@ async def list_deployments_synced(
     accepted: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]] = []
     accepted_deployment_ids: list[UUID] = []
     provider_bindings: list[ProviderSnapshotBinding] = []
+    provider_data_by_resource_key: dict[str, dict[str, Any]] = {}
     cursor = page_offset(page, size)
     max_sync_rounds = 2  # Initial pass + one refill pass.
     for _ in range(max_sync_rounds):
@@ -736,6 +737,7 @@ async def list_deployments_synced(
             deployment_type=deployment_type,
         )
         provider_bindings.extend(deployment_mapper.extract_snapshot_bindings(provider_view))
+        provider_data_by_resource_key.update(deployment_mapper.extract_list_item_provider_data(provider_view))
 
         for row, attached_count, matched_flow_versions in batch:
             if row.resource_key not in known:
@@ -789,7 +791,7 @@ async def list_deployments_synced(
         project_id=project_id,
         names=names,
     )
-    return accepted, total
+    return accepted, total, provider_data_by_resource_key
 
 
 async def list_deployment_flow_versions_synced(

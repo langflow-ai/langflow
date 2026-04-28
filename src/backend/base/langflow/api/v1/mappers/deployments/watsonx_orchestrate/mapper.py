@@ -73,6 +73,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiDeploymentCreatePayload,
     WatsonxApiDeploymentCreateResultData,
     WatsonxApiDeploymentFlowVersionItemData,
+    WatsonxApiDeploymentListItemProviderData,
     WatsonxApiDeploymentListProviderData,
     WatsonxApiDeploymentLlmListResultData,
     WatsonxApiDeploymentUpdatePayload,
@@ -93,6 +94,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentCreateResponse,
     DeploymentFlowVersionListItem,
     DeploymentFlowVersionListResponse,
+    DeploymentListItem,
     DeploymentListResponse,
     DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
@@ -835,6 +837,9 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 raise ValueError(msg)
             resource_key = str(item.id)
 
+            if not isinstance(item.provider_data, dict):
+                msg = "provider_data is required from wxO adapter for list()."
+                raise ValueError(msg)  # noqa: TRY004
             tool_ids = item.provider_data.get("tool_ids", None)
             if tool_ids is None:
                 msg = "tool_ids is required from wxO adapter."
@@ -844,6 +849,33 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 for snapshot_id in tool_ids
             )
         return bindings
+
+    def extract_list_item_provider_data(
+        self,
+        provider_view: DeploymentListResult,
+    ) -> dict[str, dict[str, Any]]:
+        provider_data_by_resource_key: dict[str, dict[str, Any]] = {}
+        for item in provider_view.deployments:
+            if not item.id:
+                msg = "deployment id is required from wxO adapter."
+                raise ValueError(msg)
+            resource_key = str(item.id)
+
+            if not isinstance(item.provider_data, dict):
+                msg = "provider_data is required from wxO adapter for list()."
+                raise ValueError(msg)  # noqa: TRY004
+
+            environments = item.provider_data.get("environments")
+
+            if environments is None:
+                msg = "environments is required from wxO adapter."
+                raise ValueError(msg)
+
+            provider_data_by_resource_key[resource_key] = WatsonxApiDeploymentListItemProviderData(
+                environments=environments,
+            ).model_dump(mode="json")
+
+        return provider_data_by_resource_key
 
     def extract_snapshot_bindings_for_get(
         self,
@@ -1224,6 +1256,42 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             deployments=None,
             provider_data=validated_payload,
         )
+
+    def shape_deployment_list_items(
+        self,
+        *,
+        rows_with_counts: list[tuple[Any, int, list[tuple[UUID, str | None]]]],
+        has_flow_filter: bool = False,
+        provider_key: str,
+        provider_data_by_resource_key: dict[str, dict[str, Any]] | None = None,
+    ) -> list[DeploymentListItem]:
+        if provider_data_by_resource_key is None:
+            msg = "provider_data_by_resource_key is required from wxO list sync."
+            raise ValueError(msg)
+
+        items: list[DeploymentListItem] = []
+        for row, attached_count, matched_attachments in rows_with_counts:
+            provider_data = provider_data_by_resource_key.get(row.resource_key)
+            if provider_data is None:
+                msg = f"Missing provider_data for wxO deployment resource_key={row.resource_key!r}."
+                raise ValueError(msg)
+            items.append(
+                DeploymentListItem(
+                    id=row.id,
+                    provider_id=row.deployment_provider_account_id,
+                    provider_key=provider_key,
+                    resource_key=row.resource_key,
+                    type=row.deployment_type,
+                    name=row.name,
+                    description=row.description,
+                    attached_count=attached_count,
+                    created_at=row.created_at,
+                    updated_at=row.updated_at,
+                    flow_version_ids=[fv_id for fv_id, _ in matched_attachments] if has_flow_filter else None,
+                    provider_data=provider_data,
+                )
+            )
+        return items
 
     def shape_config_list_result(
         self,

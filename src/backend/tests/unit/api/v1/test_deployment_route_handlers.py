@@ -708,7 +708,7 @@ class TestListDeploymentsFlowIdsFilter:
         mapper.shape_deployment_list_items.return_value = []
         mock_get_mapper.return_value = mapper
 
-        mock_list_synced.return_value = ([], 0)
+        mock_list_synced.return_value = ([], 0, {})
 
         await list_deployments(
             provider_id=pa.id,
@@ -770,7 +770,7 @@ class TestListDeploymentsProjectIdFilter:
         mapper = MagicMock()
         mapper.shape_deployment_list_items.return_value = []
         mock_get_mapper.return_value = mapper
-        mock_list_synced.return_value = ([], 0)
+        mock_list_synced.return_value = ([], 0, {})
 
         pid = uuid4()
         await list_deployments(
@@ -807,7 +807,7 @@ class TestListDeploymentsProjectIdFilter:
         mapper = MagicMock()
         mapper.shape_deployment_list_items.return_value = []
         mock_get_mapper.return_value = mapper
-        mock_list_synced.return_value = ([], 0)
+        mock_list_synced.return_value = ([], 0, {})
 
         await list_deployments(
             provider_id=pa.id,
@@ -1619,7 +1619,7 @@ class TestProviderAccountRoutes:
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 1))
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 1, {}))
     @patch(f"{ROUTES_MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -1655,7 +1655,7 @@ class TestProviderAccountRoutes:
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 0))
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 0, {}))
     @patch(f"{ROUTES_MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -1694,7 +1694,7 @@ class TestProviderAccountRoutes:
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 0))
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 0, {}))
     @patch(f"{ROUTES_MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -1728,7 +1728,7 @@ class TestProviderAccountRoutes:
         async def capture_scope(*_args, **_kwargs):
             current = DeploymentProviderIDContext.get_current()
             observed_provider_ids.append(None if current is None else current.provider_id)
-            return ([], 0)
+            return ([], 0, {})
 
         mock_list_synced.side_effect = capture_scope
 

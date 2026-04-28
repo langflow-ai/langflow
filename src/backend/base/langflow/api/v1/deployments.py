@@ -195,7 +195,7 @@ async def _count_provider_deployments_after_reconciliation(
         deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
         deployment_mapper = get_deployment_mapper(provider_account.provider_key)
         with deployment_provider_scope(provider_account.id):
-            _, deployment_count = await list_deployments_synced(
+            _, deployment_count, _ = await list_deployments_synced(
                 deployment_adapter=deployment_adapter,
                 deployment_mapper=deployment_mapper,
                 user_id=user_id,
@@ -684,7 +684,7 @@ async def list_deployments(
         return deployment_mapper.shape_deployment_list_result(provider_view)
 
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
-        rows_with_counts, total = await list_deployments_synced(
+        rows_with_counts, total, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=deployment_adapter,
             deployment_mapper=deployment_mapper,
             user_id=current_user.id,
@@ -704,6 +704,7 @@ async def list_deployments(
         # (empty lists are rejected by validation)
         has_flow_filter=bool(flow_version_ids or flow_ids),
         provider_key=provider_account.provider_key,
+        provider_data_by_resource_key=provider_data_by_resource_key,
     )
     return DeploymentListResponse(
         deployments=deployments,

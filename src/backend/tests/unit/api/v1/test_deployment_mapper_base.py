@@ -587,6 +587,7 @@ def test_shape_deployment_list_items_without_filter() -> None:
     assert items[0].provider_id == provider_account_id
     assert items[0].provider_key == "test-provider"
     assert items[0].flow_version_ids is None
+    assert items[0].provider_data is None
 
 
 def test_shape_deployment_list_items_with_filter() -> None:
@@ -613,6 +614,7 @@ def test_shape_deployment_list_items_with_filter() -> None:
     assert items[0].provider_id == provider_account_id
     assert items[0].provider_key == "test-provider"
     assert items[0].flow_version_ids == [fv_id]
+    assert items[0].provider_data is None
 
 
 def test_shape_deployment_list_items_with_filter_empty_matches() -> None:
@@ -638,6 +640,7 @@ def test_shape_deployment_list_items_with_filter_empty_matches() -> None:
     assert items[0].provider_id == provider_account_id
     assert items[0].provider_key == "test-provider"
     assert items[0].flow_version_ids == []
+    assert items[0].provider_data is None
 
 
 def test_base_mapper_execution_provider_data_shapers_passthrough() -> None:
