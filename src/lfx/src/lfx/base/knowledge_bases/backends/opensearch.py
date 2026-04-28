@@ -169,7 +169,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             result = await asyncio.to_thread(client.count, index=self._os_index)
             return int(result.get("count") or 0)
         except Exception as exc:  # noqa: BLE001
-            logger.debug("OpenSearch count() failed for %s: %s", self.kb_name, exc)
+            # ``warning`` (not ``debug``) so an unreachable cluster /
+            # missing index surfaces in default-level server logs and
+            # the user can correlate a 0-chunk count with the real cause.
+            logger.warning("OpenSearch count() failed for %s: %s", self.kb_name, exc)
             return 0
 
     async def iter_documents(
@@ -269,7 +272,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                     try:
                         scanner.close()
                     except Exception as exc:  # noqa: BLE001
-                        logger.debug("OpenSearch scan close failed: %s", exc)
+                        logger.warning("OpenSearch scan close failed: %s", exc)
                 batch_queue.put(sentinel)
 
         worker = asyncio.create_task(asyncio.to_thread(_stream_batches))
@@ -281,7 +284,13 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                     sentinel_seen = True
                     break
                 if isinstance(item, Exception):
-                    logger.debug("OpenSearch iter_documents worker failed: %s", item)
+                    # Bumped from ``debug`` to ``warning`` so cluster
+                    # auth / connection errors surface during ingestion
+                    # metric refresh instead of silently truncating the
+                    # iterator. Callers that need the exception to
+                    # propagate should rely on ``count`` / ``add_documents``
+                    # which let it bubble.
+                    logger.warning("OpenSearch iter_documents worker failed for %s: %s", self.kb_name, item)
                     await asyncio.to_thread(batch_queue.get)
                     sentinel_seen = True
                     break
@@ -328,7 +337,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 refresh=True,
             )
         except Exception as exc:  # noqa: BLE001
-            logger.debug("OpenSearch delete_by_query failed for %s: %s", self.kb_name, exc)
+            # ``delete_by`` is the rollback path; a silent debug log
+            # would let stale chunks linger after a failed ingestion
+            # without the operator ever knowing.
+            logger.warning("OpenSearch delete_by_query failed for %s: %s", self.kb_name, exc)
 
     async def storage_size_bytes(self) -> int:
         await self.ensure_ready()
@@ -338,7 +350,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         try:
             stats = await asyncio.to_thread(client.indices.stats, index=self._os_index)
         except Exception as exc:  # noqa: BLE001
-            logger.debug("OpenSearch indices.stats failed for %s: %s", self.kb_name, exc)
+            logger.warning("OpenSearch indices.stats failed for %s: %s", self.kb_name, exc)
             return 0
         try:
             return int(stats["_all"]["total"]["store"]["size_in_bytes"])
@@ -351,7 +363,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             try:
                 await asyncio.to_thread(client.close)
             except Exception as exc:  # noqa: BLE001
-                logger.debug("OpenSearch client.close failed: %s", exc)
+                # ``teardown`` runs in ``finally`` blocks; a leaked
+                # connection during shutdown is worth a default-level
+                # warning so it doesn't silently exhaust pool slots.
+                logger.warning("OpenSearch client.close failed: %s", exc)
         self._os_client = None
         self._vector_store = None
 
@@ -364,4 +379,4 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         try:
             await asyncio.to_thread(client.indices.delete, index=self._os_index, ignore_unavailable=True)
         except Exception as exc:  # noqa: BLE001
-            logger.debug("OpenSearch indices.delete failed for %s: %s", self.kb_name, exc)
+            logger.warning("OpenSearch indices.delete failed for %s: %s", self.kb_name, exc)
