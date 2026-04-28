@@ -41,7 +41,7 @@ withEventDeliveryModes(
       .nth(0)
       .fill("https://www.originaldiving.com/blog/top-ten-turtle-facts");
 
-    await page.getByTestId("textarea_str_input_value").click();
+    await page.getByText("Instructions", { exact: true }).last().click();
 
     await page
       .getByTestId("textarea_str_input_value")

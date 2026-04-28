@@ -1433,8 +1433,6 @@ export function syncNodeTranslations(): void {
         ...node.data,
         node: {
           ...node.data.node!,
-          display_name: freshDef.display_name,
-          description: freshDef.description,
           template: updatedTemplate,
           ...(updatedOutputs && { outputs: updatedOutputs }),
         },
