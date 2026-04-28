@@ -92,6 +92,8 @@ export default function KnowledgeBaseUploadModal({
             separator={form.separator}
             selectedEmbeddingModel={form.selectedEmbeddingModel}
             backendType={form.backendType}
+            metadataPairs={form.metadataPairs}
+            perFileMetadata={form.perFileMetadata}
           />
         );
     }

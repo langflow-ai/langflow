@@ -14,6 +14,7 @@ import {
 import { cn } from "@/utils/utils";
 import type { ChunkPreview } from "../types";
 import { ChunkPreviewCard } from "./ChunkPreviewCard";
+import type { MetadataPair } from "./MetadataEditor";
 import { SummaryItem } from "./SummaryItem";
 
 interface StepReviewProps {
@@ -31,6 +32,8 @@ interface StepReviewProps {
   separator: string;
   selectedEmbeddingModel: ModelOption[];
   backendType: AvailableKnowledgeBackendId;
+  metadataPairs?: MetadataPair[];
+  perFileMetadata?: Record<string, MetadataPair[]>;
 }
 
 export function StepReview({
@@ -48,8 +51,16 @@ export function StepReview({
   separator,
   selectedEmbeddingModel,
   backendType,
+  metadataPairs = [],
+  perFileMetadata = {},
 }: StepReviewProps) {
   const selectedBackend = getKnowledgeBackendOption(backendType);
+  const populatedRunPairs = metadataPairs.filter(
+    (pair) => pair.key.trim() && pair.value.trim(),
+  );
+  const filesWithOverrides = Object.values(perFileMetadata).filter((pairs) =>
+    pairs.some((pair) => pair.key.trim() && pair.value.trim()),
+  ).length;
 
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
@@ -240,6 +251,41 @@ export function StepReview({
             <span className="text-sm font-medium">{selectedBackend.label}</span>
           </div>
         </div>
+
+        {(populatedRunPairs.length > 0 || filesWithOverrides > 0) && (
+          <div
+            className="flex items-start justify-between py-1.5"
+            data-testid="kb-summary-metadata"
+          >
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <ForwardedIconComponent name="Tag" className="h-4 w-4" />
+              <span>Metadata</span>
+            </div>
+            <div className="flex max-w-[60%] flex-wrap justify-end gap-1">
+              {populatedRunPairs.map((pair) => (
+                <span
+                  key={`${pair.key}=${pair.value}`}
+                  className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs"
+                  data-testid={`kb-summary-tag-${pair.key}`}
+                >
+                  <span className="font-medium text-muted-foreground">
+                    {pair.key}:
+                  </span>
+                  <span className="ml-1">{pair.value}</span>
+                </span>
+              ))}
+              {filesWithOverrides > 0 && (
+                <span
+                  className="inline-flex items-center rounded-full bg-accent-emerald/20 px-2 py-0.5 text-xs text-accent-emerald-foreground"
+                  data-testid="kb-summary-per-file-count"
+                >
+                  +{filesWithOverrides} file override
+                  {filesWithOverrides === 1 ? "" : "s"}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
