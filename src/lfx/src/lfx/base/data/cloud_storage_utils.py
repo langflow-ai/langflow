@@ -78,6 +78,9 @@ def parse_google_service_account_key(service_account_key: str) -> dict:
     Raises:
         ValueError: If all parsing strategies fail
     """
+    if hasattr(service_account_key, "get_secret_value"):
+        service_account_key = service_account_key.get_secret_value()
+
     credentials_dict = None
     parse_errors = []
 
