@@ -1249,9 +1249,6 @@ async def initialize_auto_login_default_superuser() -> None:
 
     username = DEFAULT_SUPERUSER
     password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
-    if not username or not password:
-        msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
-        raise ValueError(msg)
 
     async with session_scope() as async_session:
         super_user = await get_auth_service().create_super_user(username, password, db=async_session)

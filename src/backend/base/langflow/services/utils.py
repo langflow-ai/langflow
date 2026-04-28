@@ -92,10 +92,6 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         username = DEFAULT_SUPERUSER
         password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
 
-        if not username or not password:
-            msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
-            raise ValueError(msg)
-
         # Use file lock similar to starter projects
         lock_file = Path(gettempdir()) / "langflow_auto_login_superuser.lock"
         lock = FileLock(lock_file, timeout=5)
