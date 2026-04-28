@@ -1132,6 +1132,78 @@ class TestPerformIngestionTask:
     @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.create_backend")
+    @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.get_metadata")
+    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
+    @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics_via_backend", new_callable=AsyncMock)
+    async def test_perform_ingestion_routes_through_configured_backend(
+        self,
+        mock_update_metrics,
+        mock_size,
+        mock_meta,
+        mock_build,
+        mock_create_backend,
+        mock_get_kb,
+        mock_create_run,
+        mock_mark_running,  # noqa: ARG002
+        mock_finalize_run,  # noqa: ARG002
+        mock_kb_path,
+        sample_text_file,
+    ):
+        mock_embeddings = MagicMock()
+        mock_build.return_value = mock_embeddings
+
+        kb_record = MagicMock()
+        kb_record.id = uuid.uuid4()
+        kb_record.backend_type = "opensearch"
+        kb_record.backend_config = {"index_name": "kb_idx", "url_variable": "OPENSEARCH_URL"}
+        mock_get_kb.return_value = kb_record
+
+        mock_backend = MagicMock()
+        mock_backend.add_documents = AsyncMock()
+        mock_backend.teardown = AsyncMock()
+        mock_create_backend.return_value = mock_backend
+
+        run_id = uuid.uuid4()
+        mock_create_run.return_value = run_id
+        mock_meta.return_value = {"chunks": 0, "size": 0, "source_types": []}
+        mock_size.return_value = 0
+
+        file_name, file_content = sample_text_file
+        current_user = MagicMock()
+        current_user.id = uuid.uuid4()
+
+        result = await KBIngestionHelper.perform_ingestion(
+            kb_name="test_kb",
+            kb_path=mock_kb_path,
+            files_data=[(file_name, file_content.encode())],
+            chunk_size=100,
+            chunk_overlap=20,
+            separator="\n",
+            source_name="src",
+            current_user=current_user,
+            embedding_provider="OpenAI",
+            embedding_model="model",
+            task_job_id=uuid.uuid4(),
+            job_service=AsyncMock(),
+        )
+
+        assert result["ingestion_run_id"] == str(run_id)
+        mock_create_run.assert_awaited_once()
+        assert mock_create_run.await_args.kwargs["kb_id"] == kb_record.id
+        mock_create_backend.assert_called_once()
+        assert mock_create_backend.call_args.args == ("opensearch",)
+        backend_kwargs = mock_create_backend.call_args.kwargs
+        assert backend_kwargs["backend_config"] == kb_record.backend_config
+        assert backend_kwargs["embedding_function"] is mock_embeddings
+        assert backend_kwargs["user_id"] == current_user.id
+        mock_update_metrics.assert_awaited_once_with(mock_meta.return_value, mock_backend)
+
+    @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.create_backend")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.cleanup_chroma_chunks_by_job", new_callable=AsyncMock)

@@ -46,6 +46,6 @@ export const KB_NAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]$/;
 export const MAX_TOTAL_FILE_SIZE = 1024 * 1024 * 1024; // 1 GB
 
 // Modal height constants
-export const MODAL_HEIGHT_WITH_ADVANCED = 690;
-export const MODAL_HEIGHT_DEFAULT = 347;
+export const MODAL_HEIGHT_WITH_ADVANCED = 760;
+export const MODAL_HEIGHT_DEFAULT = 455;
 export const VALIDATION_ERROR_LINE_HEIGHT = 16;

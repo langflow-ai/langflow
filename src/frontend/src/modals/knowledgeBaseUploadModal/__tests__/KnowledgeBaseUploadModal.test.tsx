@@ -204,6 +204,16 @@ describe("KnowledgeBaseUploadModal", () => {
       expect(screen.getByText("Embedding Model")).toBeInTheDocument();
     });
 
+    it("renders knowledge backend selector defaulting to Chroma", () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByText("Knowledge Backend")).toBeInTheDocument();
+      expect(screen.getByTestId("kb-knowledge-backend")).toHaveTextContent(
+        "Chroma",
+      );
+    });
+
     it("renders Configure Sources toggle button in footer", () => {
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
@@ -804,6 +814,24 @@ describe("KnowledgeBaseUploadModal", () => {
       expect(
         screen.queryByTestId("embedding-model-select"),
       ).not.toBeInTheDocument();
+    });
+
+    it("shows the existing knowledge backend as read-only", async () => {
+      render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={{ ...existingKB, backendType: "opensearch" }}
+        />,
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-knowledge-backend")).toBeDisabled(),
+      );
+      expect(screen.getByTestId("kb-knowledge-backend")).toHaveTextContent(
+        "OpenSearch",
+      );
     });
 
     it('labels the submit button "Add Sources"', async () => {

@@ -68,8 +68,8 @@ export default function KnowledgeBaseUploadModal({
             onColumnConfigChange={form.setColumnConfig}
             backendType={form.backendType}
             onBackendTypeChange={form.setBackendType}
-            backendConfig={form.backendConfig}
             onBackendConfigChange={form.setBackendConfig}
+            globalVariables={form.globalVariables}
           />
         );
 
@@ -89,6 +89,7 @@ export default function KnowledgeBaseUploadModal({
             chunkOverlap={form.chunkOverlap}
             separator={form.separator}
             selectedEmbeddingModel={form.selectedEmbeddingModel}
+            backendType={form.backendType}
           />
         );
     }
