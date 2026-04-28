@@ -29,6 +29,7 @@ from lfx.cli.script_loader import (
     load_graph_from_script,
 )
 from lfx.load import load_flow_from_json
+from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 
 if TYPE_CHECKING:
@@ -317,7 +318,29 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
     """
     if not session_id:
         session_id = uuid.uuid4().hex
+        logger.warning(
+            f"No session_id provided; auto-generated {session_id}. "
+            "Memory/MessageHistory components will not see prior conversation state across runs."
+        )
     graph.session_id = session_id
+    # Auto-generate a ceremonial user_id when the graph doesn't already have one. The
+    # precheck in custom_component.get_variable requires a non-empty user_id before any
+    # variable lookup; lfx's env-fallback VariableService ignores it. See run/base.py
+    # for the same rationale on the CLI run path.
+    if not getattr(graph, "user_id", None):
+        graph.user_id = uuid.uuid4().hex
+        logger.debug(f"No user_id on graph; auto-generated {graph.user_id} to satisfy component prechecks.")
+    # Propagate session_id to Memory/MessageHistory inputs the way Langflow's
+    # build_graph_from_data does (api/utils/flow_utils.py). async_start bypasses
+    # Graph._run's has_session_id_vertices loop, so components reading
+    # `self.session_id` would otherwise see "" even when --session-id is set.
+    # Hardcoded values on the component win, matching the playground's behavior.
+    for vertex_id in graph.has_session_id_vertices:
+        vertex = graph.get_vertex(vertex_id)
+        if vertex is None:
+            continue
+        if not vertex.raw_params.get("session_id"):
+            vertex.update_raw_params({"session_id": session_id}, overwrite=True)
 
     # Create input request
     inputs = InputValueRequest(input_value=input_value) if input_value else None

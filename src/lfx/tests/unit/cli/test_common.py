@@ -288,6 +288,88 @@ class TestGraphExecution:
 
         assert mock_graph.session_id == "fixed-session"
 
+    @pytest.mark.asyncio
+    async def test_execute_graph_propagates_session_id_to_vertices(self):
+        """Session_id must reach Memory/MessageHistory inputs on the lfx serve path.
+
+        ``execute_graph_with_capture`` uses ``graph.async_start``, which bypasses
+        the propagation loop in ``Graph._run``. The helper has to replicate it
+        so served ``/run`` and ``/stream`` requests behave like the playground.
+        """
+
+        async def mock_async_start(inputs):  # noqa: ARG001
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+        memory_vertex = MagicMock()
+        memory_vertex.raw_params = {}
+        memory_vertex.update_raw_params = MagicMock()
+        mock_graph.has_session_id_vertices = ["memory-1"]
+        mock_graph.get_vertex = MagicMock(return_value=memory_vertex)
+
+        await execute_graph_with_capture(mock_graph, "test input", session_id="my-conversation")
+
+        memory_vertex.update_raw_params.assert_called_once_with({"session_id": "my-conversation"}, overwrite=True)
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_does_not_overwrite_hardcoded_session_id(self):
+        """Hardcoded session_id on a Memory component (set in flow JSON) wins over the request value.
+
+        Mirrors Langflow's playground precedence in ``build_graph_from_data``.
+        """
+
+        async def mock_async_start(inputs):  # noqa: ARG001
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+        pinned_vertex = MagicMock()
+        pinned_vertex.raw_params = {"session_id": "hardcoded-in-flow"}
+        pinned_vertex.update_raw_params = MagicMock()
+        mock_graph.has_session_id_vertices = ["memory-pinned"]
+        mock_graph.get_vertex = MagicMock(return_value=pinned_vertex)
+
+        await execute_graph_with_capture(mock_graph, "test input", session_id="from-request")
+
+        pinned_vertex.update_raw_params.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_autogenerates_user_id_when_unset(self):
+        """When the graph arrives without a user_id (typical for lfx serve), assign a UUID.
+
+        AgentComponent's variable lookup precheck requires a non-empty user_id; the
+        env-fallback variable service does not use it for scoping, so a random UUID is
+        ceremonial but necessary.
+        """
+
+        async def mock_async_start(inputs):  # noqa: ARG001
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+        mock_graph.user_id = None
+
+        await execute_graph_with_capture(mock_graph, "test input")
+
+        assert mock_graph.user_id, "user_id should be auto-assigned when graph has none"
+        assert isinstance(mock_graph.user_id, str)
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_preserves_existing_user_id(self):
+        """A user_id already set on the graph (e.g., by an upstream caller) is left alone."""
+
+        async def mock_async_start(inputs):  # noqa: ARG001
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+        mock_graph.user_id = "preset-user-uuid"
+
+        await execute_graph_with_capture(mock_graph, "test input")
+
+        assert mock_graph.user_id == "preset-user-uuid"
+
 
 class TestResultExtraction:
     """Test result data extraction."""

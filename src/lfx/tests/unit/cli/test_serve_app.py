@@ -506,6 +506,31 @@ class TestServeAppEndpoints:
         assert response.status_code == 200
         assert captured["session_id"] == "my-conversation"
 
+    def test_stream_endpoint_forwards_session_id(self, app_client):
+        """The /stream endpoint must forward session_id from StreamRequest to the executor."""
+        captured: dict = {}
+
+        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+            captured["session_id"] = session_id
+            return [], ""
+
+        request_data = {"input_value": "Test input", "session_id": "my-stream-conversation"}
+        headers = {"x-api-key": "test-api-key"}
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_capture),
+            # Drain the streaming response so the background task completes before we assert.
+            app_client.stream(
+                "POST", "/flows/test-flow-id/stream", json=request_data, headers=headers
+            ) as response,
+        ):
+            assert response.status_code == 200
+            for _ in response.iter_bytes():
+                pass
+
+        assert captured["session_id"] == "my-stream-conversation"
+
     def test_list_flows_endpoint(self, multi_flow_client):
         """Test listing flows in multi-flow mode."""
         response = multi_flow_client.get("/flows")

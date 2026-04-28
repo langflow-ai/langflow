@@ -222,18 +222,46 @@ async def run_flow(
             error_msg = "No input source provided"
             raise ValueError(error_msg)
 
-        # Set user_id on graph if provided (required for some components like AgentComponent)
-        if user_id:
-            graph.user_id = user_id
-            if verbosity > 0:
-                logger.info(f"Set graph user_id: {user_id}")
+        # Set user_id on graph: caller-provided takes precedence; otherwise auto-generate
+        # a UUID so the precheck in custom_component.get_variable (which guards DB lookups
+        # by requiring a non-empty user_id) doesn't fail before the env-fallback variable
+        # service can answer. This UUID is ceremonial — lfx's VariableService ignores it
+        # and serves variables from os.getenv; cross-user scoping isn't a concept in lfx
+        # CLI mode. If a langflow DatabaseVariableService ever gets registered here (e.g.,
+        # to read per-user DB-backed variables), pass the real user_id explicitly.
+        if not user_id:
+            user_id = uuid.uuid4().hex
+            logger.debug(
+                f"No user_id provided; auto-generated {user_id} to satisfy component prechecks. "
+                "lfx's variable service is env-backed, so user_id is not used for variable scoping."
+            )
+        graph.user_id = user_id
+        if verbosity > 0:
+            logger.info(f"Set graph user_id: {user_id}")
 
         # Set session_id on graph: caller-provided takes precedence; otherwise auto-generate
         # so message-store paths (e.g. streaming LLM -> ChatOutput) don't fail validation in
         # astore_message when no session is supplied.
         if not session_id:
             session_id = uuid.uuid4().hex
+            logger.warning(
+                f"No session_id provided; auto-generated {session_id}. "
+                "Memory/MessageHistory components will not see prior conversation state across runs."
+            )
         graph.session_id = session_id
+        # Propagate session_id to Memory/MessageHistory inputs the way Langflow's
+        # build_graph_from_data does (api/utils/flow_utils.py). The lfx run path uses
+        # graph.async_start instead of graph.arun, so it bypasses Graph._run's
+        # has_session_id_vertices loop. Without this, components reading
+        # `self.session_id` from their input field (e.g. Memory.retrieve_messages)
+        # would see "" regardless of --session-id. Hardcoded values on the component
+        # win, matching the playground's behavior.
+        for vertex_id in graph.has_session_id_vertices:
+            vertex = graph.get_vertex(vertex_id)
+            if vertex is None:
+                continue
+            if not vertex.raw_params.get("session_id"):
+                vertex.update_raw_params({"session_id": session_id}, overwrite=True)
         if verbosity > 0:
             logger.info(f"Set graph session_id: {session_id}")
 

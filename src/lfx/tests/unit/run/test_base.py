@@ -385,6 +385,212 @@ class TestRunFlowSessionId:
             assert graph_a.session_id != graph_b.session_id
 
 
+class TestRunFlowSessionIdPropagation:
+    """Session_id must reach Memory/MessageHistory components on the lfx run path.
+
+    lfx run uses ``graph.async_start`` (not ``graph.arun``), so it bypasses the
+    ``has_session_id_vertices`` propagation loop in ``Graph._run``. ``run_flow``
+    must replicate that loop after assigning ``graph.session_id`` so components
+    that read ``self.session_id`` from their input field (Memory.retrieve_messages
+    etc.) actually see the configured value. Mirrors what
+    ``langflow/api/utils/flow_utils.build_graph_from_data`` does for the playground.
+    """
+
+    @staticmethod
+    def _mock_graph_with_vertices(vertex_specs):
+        """Build a mock graph whose has_session_id_vertices loop drives ``vertex_specs``.
+
+        Each spec is (vertex_id, raw_params_dict). Returns the graph plus the
+        list of vertex mocks so tests can assert on update_raw_params calls.
+        """
+        graph = MagicMock()
+        graph.context = {}
+        graph.vertices = []
+        graph.edges = []
+        graph.prepare = MagicMock()
+
+        async def _async_start(_inputs, **_kwargs):
+            yield
+
+        graph.async_start = _async_start
+
+        vertex_mocks = {}
+        for vertex_id, raw_params in vertex_specs:
+            vertex = MagicMock()
+            vertex.raw_params = dict(raw_params)
+            vertex.update_raw_params = MagicMock()
+            vertex_mocks[vertex_id] = vertex
+
+        graph.has_session_id_vertices = list(vertex_mocks.keys())
+        graph.get_vertex = MagicMock(side_effect=lambda vid: vertex_mocks.get(vid))
+        return graph, vertex_mocks
+
+    @staticmethod
+    def _patches():
+        return (
+            patch("lfx.run.base.find_graph_variable"),
+            patch("lfx.run.base.load_graph_from_script"),
+            patch("lfx.run.base.validate_global_variables_for_env"),
+            patch("lfx.run.base.extract_structured_result"),
+        )
+
+    @pytest.mark.asyncio
+    async def test_session_id_propagates_to_vertex_with_empty_input(self, tmp_path):
+        """A Memory vertex with no hardcoded session_id receives the run's session_id."""
+        script_path = tmp_path / "test.py"
+        script_path.write_text("graph = None")
+        graph, vertices = self._mock_graph_with_vertices([("memory-1", {})])
+
+        find_p, load_p, validate_p, extract_p = self._patches()
+        with find_p as mock_find, load_p as mock_load, validate_p as mock_validate, extract_p as mock_extract:
+            mock_find.return_value = {"line_number": 1, "type": "Graph", "source_line": "graph = Graph(...)"}
+            mock_load.return_value = graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "test"}
+
+            await run_flow(script_path=script_path, session_id="from-cli")
+
+        vertices["memory-1"].update_raw_params.assert_called_once_with({"session_id": "from-cli"}, overwrite=True)
+
+    @pytest.mark.asyncio
+    async def test_session_id_does_not_overwrite_hardcoded_vertex_value(self, tmp_path):
+        """If the flow JSON pinned session_id on the Memory component, the CLI must not clobber it.
+
+        Matches Langflow's playground behavior: ``build_graph_from_data`` only writes
+        when ``raw_params.get("session_id")`` is falsy.
+        """
+        script_path = tmp_path / "test.py"
+        script_path.write_text("graph = None")
+        graph, vertices = self._mock_graph_with_vertices([("memory-pinned", {"session_id": "hardcoded-in-flow"})])
+
+        find_p, load_p, validate_p, extract_p = self._patches()
+        with find_p as mock_find, load_p as mock_load, validate_p as mock_validate, extract_p as mock_extract:
+            mock_find.return_value = {"line_number": 1, "type": "Graph", "source_line": "graph = Graph(...)"}
+            mock_load.return_value = graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "test"}
+
+            await run_flow(script_path=script_path, session_id="from-cli")
+
+        vertices["memory-pinned"].update_raw_params.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_session_id_propagation_handles_missing_vertex(self, tmp_path):
+        """A stale vertex_id in has_session_id_vertices (get_vertex returns None) is skipped, not raised."""
+        script_path = tmp_path / "test.py"
+        script_path.write_text("graph = None")
+        graph, vertices = self._mock_graph_with_vertices([("real-vertex", {})])
+        graph.has_session_id_vertices = ["real-vertex", "ghost-vertex"]
+
+        find_p, load_p, validate_p, extract_p = self._patches()
+        with find_p as mock_find, load_p as mock_load, validate_p as mock_validate, extract_p as mock_extract:
+            mock_find.return_value = {"line_number": 1, "type": "Graph", "source_line": "graph = Graph(...)"}
+            mock_load.return_value = graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "test"}
+
+            await run_flow(script_path=script_path, session_id="from-cli")
+
+        vertices["real-vertex"].update_raw_params.assert_called_once()
+
+
+class TestRunFlowUserId:
+    """user_id auto-generation on the lfx run path.
+
+    AgentComponent (and any component that resolves variables) hits a precheck
+    in ``custom_component.get_variable`` that requires a non-empty ``self.user_id``.
+    lfx run has no notion of authenticated users, but the precheck still has to
+    pass so the env-fallback variable service can answer. ``run_flow`` therefore
+    auto-generates a ceremonial UUID when none is supplied; the value is unused
+    for variable scoping in lfx (env vars are process-global) but exists to keep
+    component initialization unblocked.
+    """
+
+    @staticmethod
+    def _mock_graph():
+        graph = MagicMock()
+        graph.context = {}
+        graph.vertices = []
+        graph.edges = []
+        graph.prepare = MagicMock()
+
+        async def _async_start(_inputs, **_kwargs):
+            yield
+
+        graph.async_start = _async_start
+        return graph
+
+    @pytest.mark.asyncio
+    async def test_user_id_autogenerated_when_not_provided(self, tmp_path):
+        """run_flow assigns a UUID user_id so the component precheck passes."""
+        script_path = tmp_path / "test.py"
+        script_path.write_text("graph = None")
+        mock_graph = self._mock_graph()
+
+        with (
+            patch("lfx.run.base.find_graph_variable") as mock_find,
+            patch("lfx.run.base.load_graph_from_script") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_find.return_value = {"line_number": 1, "type": "Graph", "source_line": "graph = Graph(...)"}
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "test"}
+
+            await run_flow(script_path=script_path)
+
+            assert mock_graph.user_id, "user_id should be auto-generated when not provided"
+            assert isinstance(mock_graph.user_id, str)
+
+    @pytest.mark.asyncio
+    async def test_caller_user_id_is_preserved(self, tmp_path):
+        """An explicit user_id wins over auto-generation."""
+        script_path = tmp_path / "test.py"
+        script_path.write_text("graph = None")
+        mock_graph = self._mock_graph()
+
+        with (
+            patch("lfx.run.base.find_graph_variable") as mock_find,
+            patch("lfx.run.base.load_graph_from_script") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_find.return_value = {"line_number": 1, "type": "Graph", "source_line": "graph = Graph(...)"}
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "test"}
+
+            await run_flow(script_path=script_path, user_id="real-user-uuid")
+
+            assert mock_graph.user_id == "real-user-uuid"
+
+    @pytest.mark.asyncio
+    async def test_autogenerated_user_ids_are_unique_across_runs(self, tmp_path):
+        """Each run without a user_id should produce a distinct value (ceremonial UUIDs differ)."""
+        script_path = tmp_path / "test.py"
+        script_path.write_text("graph = None")
+        graph_a = self._mock_graph()
+        graph_b = self._mock_graph()
+
+        with (
+            patch("lfx.run.base.find_graph_variable") as mock_find,
+            patch("lfx.run.base.load_graph_from_script") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_find.return_value = {"line_number": 1, "type": "Graph", "source_line": "graph = Graph(...)"}
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "test"}
+
+            mock_load.return_value = graph_a
+            await run_flow(script_path=script_path)
+            mock_load.return_value = graph_b
+            await run_flow(script_path=script_path)
+
+            assert graph_a.user_id != graph_b.user_id
+
+
 class TestRunFlowGlobalVariables:
     """Tests for run_flow global variables injection."""
 
