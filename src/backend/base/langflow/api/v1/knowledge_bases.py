@@ -177,6 +177,18 @@ def _build_kb_info(
     size: int | None = None,
 ) -> KnowledgeBaseInfo:
     chunks_count = metadata.get("chunks") or 0
+    # Trust a persisted "failed" status (set by ``perform_ingestion``)
+    # so the UI can surface ``failure_reason`` after a backend error.
+    # Otherwise fall back to the chunks-derived ready/empty heuristic
+    # — that path covers freshly created KBs that have never been
+    # ingested into and pre-status-tracking legacy rows.
+    metadata_status = metadata.get("status")
+    if metadata_status == "failed":
+        status = "failed"
+        failure_reason = metadata.get("failure_reason")
+    else:
+        status = "ready" if chunks_count > 0 else "empty"
+        failure_reason = None
     return KnowledgeBaseInfo(
         id=str(metadata.get("id") or dir_name),
         dir_name=dir_name,
@@ -191,8 +203,8 @@ def _build_kb_info(
         chunk_size=metadata.get("chunk_size"),
         chunk_overlap=metadata.get("chunk_overlap"),
         separator=metadata.get("separator"),
-        status="ready" if chunks_count > 0 else "empty",
-        failure_reason=None,
+        status=status,
+        failure_reason=failure_reason,
         last_job_id=None,
         source_types=metadata.get("source_types", []),
         column_config=metadata.get("column_config"),

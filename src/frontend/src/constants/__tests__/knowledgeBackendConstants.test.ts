@@ -48,7 +48,38 @@ describe("knowledgeBackendConstants", () => {
         index_name: "kb-index",
         vector_field: "embedding",
         text_field: "content",
+        // Defaults when no toggle has been saved.
+        use_ssl: true,
+        verify_certs: true,
       },
+    });
+  });
+
+  it("emits SSL toggle booleans from stored global variables", () => {
+    expect(
+      getDefaultKnowledgeBackendConfig([
+        variable(ACTIVE_KNOWLEDGE_BACKEND_VARIABLE, "opensearch"),
+        variable(OPENSEARCH_VARIABLES.INDEX_NAME, "kb-index"),
+        variable(OPENSEARCH_VARIABLES.USE_SSL, "false"),
+        variable(OPENSEARCH_VARIABLES.VERIFY_CERTS, "false"),
+      ]).backendConfig,
+    ).toMatchObject({
+      use_ssl: false,
+      verify_certs: false,
+    });
+  });
+
+  it("treats unrecognized SSL variable values as the default", () => {
+    expect(
+      getDefaultKnowledgeBackendConfig([
+        variable(ACTIVE_KNOWLEDGE_BACKEND_VARIABLE, "opensearch"),
+        variable(OPENSEARCH_VARIABLES.INDEX_NAME, "kb-index"),
+        variable(OPENSEARCH_VARIABLES.USE_SSL, "yeah"),
+        variable(OPENSEARCH_VARIABLES.VERIFY_CERTS, "1"),
+      ]).backendConfig,
+    ).toMatchObject({
+      use_ssl: true, // garbage falls back to default (true)
+      verify_certs: true, // "1" parses as true
     });
   });
 

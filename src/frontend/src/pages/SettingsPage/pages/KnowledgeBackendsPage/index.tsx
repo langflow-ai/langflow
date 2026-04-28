@@ -3,13 +3,17 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   ACTIVE_KNOWLEDGE_BACKEND_VARIABLE,
   getActiveKnowledgeBackend,
   getGlobalVariableValue,
   KNOWLEDGE_BACKEND_OPTIONS,
+  type KnowledgeBackendBooleanField,
   type KnowledgeBackendConfigField,
   type KnowledgeBackendOption,
+  type KnowledgeBackendTextField,
+  parseBooleanGlobalVariable,
 } from "@/constants/knowledgeBackendConstants";
 import { VARIABLE_CATEGORY } from "@/constants/providerConstants";
 import {
@@ -123,9 +127,17 @@ export default function KnowledgeBackendsPage() {
     });
   };
 
-  const getFieldValue = (field: KnowledgeBackendConfigField) => {
+  const getFieldValue = (field: KnowledgeBackendConfigField): string => {
     if (field.variableKey in variableValues) {
       return variableValues[field.variableKey];
+    }
+    if (field.kind === "boolean") {
+      const stored = parseBooleanGlobalVariable(
+        globalVariables,
+        field.variableKey,
+        field.defaultValue,
+      );
+      return stored ? "true" : "false";
     }
     return (
       getGlobalVariableValue(globalVariables, field.variableKey) ??
@@ -137,8 +149,13 @@ export default function KnowledgeBackendsPage() {
   const hasConfiguredValue = (variableKey: string) =>
     globalVariables.some((variable) => variable.name === variableKey);
 
+  // Boolean fields always have a defined value (toggle is never blank),
+  // so they don't gate the save button — only required text fields do.
   const canSave = selectedBackend.configFields
-    .filter((field) => field.required)
+    .filter(
+      (field): field is KnowledgeBackendTextField =>
+        field.kind !== "boolean" && field.required,
+    )
     .every((field) => getFieldValue(field).trim());
 
   const handleSave = async () => {
@@ -148,7 +165,12 @@ export default function KnowledgeBackendsPage() {
         title: "Missing required configuration",
         list: [
           `${selectedBackend.label} requires ${selectedBackend.configFields
-            .filter((field) => field.required && !getFieldValue(field).trim())
+            .filter(
+              (field): field is KnowledgeBackendTextField =>
+                field.kind !== "boolean" &&
+                field.required &&
+                !getFieldValue(field).trim(),
+            )
             .map((field) => field.label)
             .join(", ")}.`,
         ],
@@ -158,6 +180,13 @@ export default function KnowledgeBackendsPage() {
 
     try {
       const fieldsToSave = selectedBackend.configFields.filter((field) => {
+        if (field.kind === "boolean") {
+          // Persist booleans only when the user actually flipped them
+          // this session — otherwise we'd write the default to a
+          // global variable on every save, polluting the variables
+          // page with values the user never set.
+          return field.variableKey in variableValues;
+        }
         const nextValue = getFieldValue(field).trim();
         return (
           nextValue && (field.variableKey in variableValues || field.required)
@@ -165,13 +194,17 @@ export default function KnowledgeBackendsPage() {
       });
 
       await Promise.all(
-        fieldsToSave.map((field) =>
-          setVariable({
+        fieldsToSave.map((field) => {
+          const value =
+            field.kind === "boolean"
+              ? getFieldValue(field) // already "true" / "false"
+              : getFieldValue(field).trim();
+          return setVariable({
             name: field.variableKey,
-            value: getFieldValue(field).trim(),
-            isSecret: field.isSecret,
-          }),
-        ),
+            value,
+            isSecret: field.kind === "boolean" ? false : field.isSecret,
+          });
+        }),
       );
       await activateBackend(selectedBackend);
       setVariableValues({});
@@ -242,7 +275,10 @@ export default function KnowledgeBackendsPage() {
               isConfigured={
                 backend.id === "chroma" ||
                 backend.configFields
-                  .filter((field) => field.required)
+                  .filter(
+                    (field): field is KnowledgeBackendTextField =>
+                      field.kind !== "boolean" && field.required,
+                  )
                   .every((field) => hasConfiguredValue(field.variableKey))
               }
               onSelect={() => {
@@ -434,60 +470,55 @@ function BackendConfigurationPanel({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {backend.configFields.map((field) => {
-            const existingValue = getGlobalVariableValue(
-              globalVariables,
-              field.variableKey,
-            );
-            const hasNewValue = field.variableKey in variableValues;
-            const isEditingSecret = editingSecret[field.variableKey];
-            const inputValue =
-              field.isSecret &&
-              existingValue &&
-              !hasNewValue &&
-              !isEditingSecret
-                ? MASKED_VALUE
-                : getFieldValue(field);
-
-            return (
-              <label key={field.variableKey} className="flex flex-col gap-1">
-                <span className="text-[12px] font-medium text-muted-foreground">
-                  {field.label}
-                  {field.required && (
-                    <span className="ml-1 text-destructive">*</span>
-                  )}
-                </span>
-                <Input
-                  placeholder={field.placeholder}
-                  value={inputValue}
-                  type={
-                    field.isSecret && (isEditingSecret || hasNewValue)
-                      ? "password"
-                      : "text"
+          {backend.configFields.map((field) =>
+            field.kind === "boolean" ? (
+              <BooleanFieldRow
+                key={field.variableKey}
+                field={field}
+                value={getFieldValue(field) === "true"}
+                disabled={isPending}
+                onChange={(checked) =>
+                  onVariableChange(
+                    field.variableKey,
+                    checked ? "true" : "false",
+                  )
+                }
+              />
+            ) : (
+              <TextFieldRow
+                key={field.variableKey}
+                field={field}
+                value={getFieldValue(field)}
+                hasNewValue={field.variableKey in variableValues}
+                isEditingSecret={Boolean(editingSecret[field.variableKey])}
+                existingValue={getGlobalVariableValue(
+                  globalVariables,
+                  field.variableKey,
+                )}
+                disabled={isPending}
+                onChange={(value) => onVariableChange(field.variableKey, value)}
+                onFocus={() => {
+                  const existing = getGlobalVariableValue(
+                    globalVariables,
+                    field.variableKey,
+                  );
+                  if (
+                    field.isSecret &&
+                    existing &&
+                    !(field.variableKey in variableValues)
+                  ) {
+                    onSecretEditingChange(field.variableKey, true);
+                    onVariableChange(field.variableKey, "");
                   }
-                  disabled={isPending}
-                  onChange={(event) =>
-                    onVariableChange(field.variableKey, event.target.value)
+                }}
+                onBlur={() => {
+                  if (!variableValues[field.variableKey]) {
+                    onSecretEditingChange(field.variableKey, false);
                   }
-                  onFocus={() => {
-                    if (field.isSecret && existingValue && !hasNewValue) {
-                      onSecretEditingChange(field.variableKey, true);
-                      onVariableChange(field.variableKey, "");
-                    }
-                  }}
-                  onBlur={() => {
-                    if (!variableValues[field.variableKey]) {
-                      onSecretEditingChange(field.variableKey, false);
-                    }
-                  }}
-                />
-                <span className="text-[11px] text-muted-foreground">
-                  Saved as global variable{" "}
-                  <span className="font-mono">{field.variableKey}</span>
-                </span>
-              </label>
-            );
-          })}
+                }}
+              />
+            ),
+          )}
           <div className="flex justify-end">
             <Button
               onClick={onSave}
@@ -500,6 +531,95 @@ function BackendConfigurationPanel({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function TextFieldRow({
+  field,
+  value,
+  hasNewValue,
+  isEditingSecret,
+  existingValue,
+  disabled,
+  onChange,
+  onFocus,
+  onBlur,
+}: {
+  field: KnowledgeBackendTextField;
+  value: string;
+  hasNewValue: boolean;
+  isEditingSecret: boolean;
+  existingValue: string | undefined;
+  disabled: boolean;
+  onChange: (value: string) => void;
+  onFocus: () => void;
+  onBlur: () => void;
+}) {
+  const inputValue =
+    field.isSecret && existingValue && !hasNewValue && !isEditingSecret
+      ? MASKED_VALUE
+      : value;
+
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[12px] font-medium text-muted-foreground">
+        {field.label}
+        {field.required && <span className="ml-1 text-destructive">*</span>}
+      </span>
+      <Input
+        placeholder={field.placeholder}
+        value={inputValue}
+        type={
+          field.isSecret && (isEditingSecret || hasNewValue)
+            ? "password"
+            : "text"
+        }
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        onFocus={onFocus}
+        onBlur={onBlur}
+      />
+      <span className="text-[11px] text-muted-foreground">
+        Saved as global variable{" "}
+        <span className="font-mono">{field.variableKey}</span>
+      </span>
+    </label>
+  );
+}
+
+function BooleanFieldRow({
+  field,
+  value,
+  disabled,
+  onChange,
+}: {
+  field: KnowledgeBackendBooleanField;
+  value: boolean;
+  disabled: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-muted/20 px-3 py-2">
+      <div className="flex min-w-0 flex-col">
+        <span className="text-[12px] font-medium">{field.label}</span>
+        {field.helperText && (
+          <span className="pt-0.5 text-[11px] text-muted-foreground">
+            {field.helperText}
+          </span>
+        )}
+        <span className="pt-1 text-[11px] text-muted-foreground">
+          Saved as global variable{" "}
+          <span className="font-mono">{field.variableKey}</span>
+        </span>
+      </div>
+      <Switch
+        checked={value}
+        onCheckedChange={onChange}
+        disabled={disabled}
+        aria-label={field.label}
+        data-testid={`knowledge-backend-toggle-${field.variableKey}`}
+      />
     </div>
   );
 }
