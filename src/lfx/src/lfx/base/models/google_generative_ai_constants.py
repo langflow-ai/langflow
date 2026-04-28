@@ -112,9 +112,15 @@ GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS = [
     "models/embedding-001",
 ]
 
-# Embedding models as detailed metadata
-# Marked deprecated: not natively supported by the Knowledge Base ingestion
-# flow; hidden from the embedding model picker until support is added.
+# Embedding models as detailed metadata.
+# `text-embedding-004` and `embedding-001` are marked deprecated because they
+# are no longer served by the Google Generative AI v1beta endpoint used by KB
+# ingestion (404). `gemini-embedding-001` is the current supported model.
+_GOOGLE_DEPRECATED_EMBEDDING_MODELS = {
+    "models/text-embedding-004",
+    "models/embedding-001",
+}
+
 GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED = [
     create_model_metadata(
         provider="Google Generative AI",
@@ -122,7 +128,7 @@ GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED = [
         icon="GoogleGenerativeAI",
         model_type="embeddings",
         default=True,
-        deprecated=True,
+        deprecated=name in _GOOGLE_DEPRECATED_EMBEDDING_MODELS,
     )
     for name in GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS
 ]
