@@ -194,8 +194,8 @@ async def _run_master_preload() -> None:
     """Run fork-safe one-time initialization inside an asyncio event loop.
 
     This function opens the DB engine (for migrations and seeding) and
-    always disposes it before returning so no connections / file
-    descriptors leak into forked workers.
+    always disposes it before returning — including on failure paths — so
+    no connections / file descriptors leak into forked workers.
     """
     from lfx.interface.components import component_cache, get_and_cache_all_types_dict
 
@@ -218,90 +218,98 @@ async def _run_master_preload() -> None:
     await logger.ainfo("[preload] initializing services in master")
     await initialize_services(fix_migration=False)
 
-    await logger.adebug("[preload] copying profile pictures")
-    await _best_effort(
-        PreloadStep.PROFILE_PICTURES,
-        "copy_profile_pictures failed",
-        copy_profile_pictures(),
-    )
-
-    await logger.ainfo("[preload] loading bundles")
-    temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
-    _STATE.temp_dirs = list(temp_dirs)
-    _STATE.bundles_components_paths = list(bundles_components_paths)
-    settings_service.settings.components_path.extend(bundles_components_paths)
-    mark_step_complete(PreloadStep.BUNDLES)
-
-    await logger.ainfo("[preload] building component types cache")
-    await get_and_cache_all_types_dict(settings_service, get_telemetry_service())
-    mark_step_complete(PreloadStep.TYPES_CACHED)
-
-    all_types_dict = component_cache.all_types_dict
-    if all_types_dict is not None:
-        await logger.adebug("[preload] creating/updating starter projects")
+    # Wrap all post-initialization work in try/finally so the DB engine and
+    # cache service are always torn down before returning, even on failure.
+    # Without this, any exception raised between here and the dispose() calls
+    # would leave an open connection pool in the master process, and that pool
+    # would be inherited (fork-unsafe) by every worker.
+    try:
+        await logger.adebug("[preload] copying profile pictures")
         await _best_effort(
-            PreloadStep.STARTER_PROJECTS,
-            "starter projects init failed",
-            create_or_update_starter_projects(all_types_dict),
+            PreloadStep.PROFILE_PICTURES,
+            "copy_profile_pictures failed",
+            copy_profile_pictures(),
         )
 
-    if settings_service.settings.agentic_experience:
-        from langflow.api.utils.mcp.agentic_mcp import (
-            auto_configure_agentic_mcp_server,
-            initialize_agentic_global_variables,
-        )
+        await logger.ainfo("[preload] loading bundles")
+        temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
+        _STATE.temp_dirs = list(temp_dirs)
+        _STATE.bundles_components_paths = list(bundles_components_paths)
+        settings_service.settings.components_path.extend(bundles_components_paths)
+        mark_step_complete(PreloadStep.BUNDLES)
 
-        await logger.adebug("[preload] initializing agentic global variables")
+        await logger.ainfo("[preload] building component types cache")
+        await get_and_cache_all_types_dict(settings_service, get_telemetry_service())
+        mark_step_complete(PreloadStep.TYPES_CACHED)
 
-        async def _run_agentic_globals() -> None:
-            async with session_scope() as session:
-                await initialize_agentic_global_variables(session)
+        all_types_dict = component_cache.all_types_dict
+        if all_types_dict is not None:
+            await logger.adebug("[preload] creating/updating starter projects")
+            await _best_effort(
+                PreloadStep.STARTER_PROJECTS,
+                "starter projects init failed",
+                create_or_update_starter_projects(all_types_dict),
+            )
 
+        if settings_service.settings.agentic_experience:
+            from langflow.api.utils.mcp.agentic_mcp import (
+                auto_configure_agentic_mcp_server,
+                initialize_agentic_global_variables,
+            )
+
+            await logger.adebug("[preload] initializing agentic global variables")
+
+            async def _run_agentic_globals() -> None:
+                async with session_scope() as session:
+                    await initialize_agentic_global_variables(session)
+
+            await _best_effort(
+                PreloadStep.AGENTIC_GLOBALS,
+                "initialize agentic global variables failed",
+                _run_agentic_globals(),
+            )
+
+            await logger.adebug("[preload] auto-configuring agentic MCP server")
+
+            async def _run_agentic_mcp() -> None:
+                async with session_scope() as session:
+                    await auto_configure_agentic_mcp_server(session)
+
+            await _best_effort(
+                PreloadStep.AGENTIC_MCP,
+                "auto-configure agentic MCP server failed",
+                _run_agentic_mcp(),
+            )
+
+        await logger.adebug("[preload] loading flows from directory")
         await _best_effort(
-            PreloadStep.AGENTIC_GLOBALS,
-            "initialize agentic global variables failed",
-            _run_agentic_globals(),
+            PreloadStep.FLOWS,
+            "load_flows_from_directory failed",
+            load_flows_from_directory(),
         )
 
-        await logger.adebug("[preload] auto-configuring agentic MCP server")
+    finally:
+        # CRITICAL: dispose the DB engine before the master returns control to
+        # gunicorn regardless of whether the steps above succeeded or failed.
+        # Forking with an open connection pool causes workers to inherit the
+        # same TCP / file descriptors, making SQLAlchemy / the DB driver
+        # behave unpredictably. After dispose(), the engine object is still
+        # usable: on first access in a worker it opens a fresh pool for that
+        # process.
+        await logger.adebug("[preload] disposing master DB engine before fork")
+        await get_db_service().engine.dispose()
 
-        async def _run_agentic_mcp() -> None:
-            async with session_scope() as session:
-                await auto_configure_agentic_mcp_server(session)
+        # Close cache service socket (e.g. Redis) to prevent sharing across fork.
+        # ExternalAsyncBaseCacheService declares teardown() abstract, so any
+        # concrete implementation is guaranteed to have it. A failure here is
+        # fork-safety-critical and must propagate (no try/except).
+        from langflow.services.cache.base import ExternalAsyncBaseCacheService
+        from langflow.services.deps import get_service
+        from langflow.services.schema import ServiceType
 
-        await _best_effort(
-            PreloadStep.AGENTIC_MCP,
-            "auto-configure agentic MCP server failed",
-            _run_agentic_mcp(),
-        )
-
-    await logger.adebug("[preload] loading flows from directory")
-    await _best_effort(
-        PreloadStep.FLOWS,
-        "load_flows_from_directory failed",
-        load_flows_from_directory(),
-    )
-
-    # CRITICAL: dispose the DB engine before the master returns control to
-    # gunicorn. If we fork with an open connection pool, child workers
-    # inherit the same TCP / file descriptors and SQLAlchemy / the DB
-    # driver will behave unpredictably. After dispose(), the engine object
-    # is still usable: on first access in a worker it will open a fresh
-    # connection pool for that process.
-    await logger.adebug("[preload] disposing master DB engine before fork")
-    await get_db_service().engine.dispose()
-
-    # Close cache service socket (e.g. Redis) to prevent sharing across fork.
-    # ExternalAsyncBaseCacheService declares teardown() abstract, so any
-    # concrete implementation is guaranteed to have it. A failure here is
-    # fork-safety-critical and must propagate (no try/except).
-    from langflow.services.cache.base import ExternalAsyncBaseCacheService
-    from langflow.services.deps import get_service
-    from langflow.services.schema import ServiceType
-
-    cache_service = get_service(ServiceType.CACHE_SERVICE)
-    if isinstance(cache_service, ExternalAsyncBaseCacheService):
-        await cache_service.teardown()
+        cache_service = get_service(ServiceType.CACHE_SERVICE)
+        if isinstance(cache_service, ExternalAsyncBaseCacheService):
+            await cache_service.teardown()
 
 
 def preload_master() -> None:
