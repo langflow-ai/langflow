@@ -384,13 +384,16 @@ test(
       "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
     );
 
-    const namesRequest = page.waitForRequest(
-      (req) =>
-        req.url().includes("/api/v1/deployments") &&
-        req.url().includes("names=Agent"),
-    );
+    let resolveNamesRequest: ((url: string) => void) | undefined;
+    const namesRequest = new Promise<string>((resolve) => {
+      resolveNamesRequest = resolve;
+    });
 
     await page.route("**/api/v1/deployments*", (route) => {
+      const url = route.request().url();
+      if (url.includes("names=Agent")) {
+        resolveNamesRequest?.(url);
+      }
       route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -398,14 +401,20 @@ test(
       });
     });
 
-    // Since there is no UI for names filter yet, we trigger the API call directly
-    // to verify the mock contract.
-    await page.evaluate(() => {
-      fetch("/api/v1/deployments?names=Agent+Alpha&names=Agent+Beta");
+    // Give the page a real app origin before issuing a synthetic fetch.
+    // Relative fetches from about:blank won't emit the request we assert on.
+    await page.goto("/");
+
+    // Since there is no UI for names filter yet, trigger the request directly
+    // and verify the query contract.
+    await page.evaluate(async () => {
+      await fetch("/api/v1/deployments?names=Agent+Alpha&names=Agent+Beta", {
+        headers: {},
+      });
     });
 
-    const req = await namesRequest;
-    expect(req.url()).toContain("names=Agent+Alpha");
-    expect(req.url()).toContain("names=Agent+Beta");
+    const requestUrl = await namesRequest;
+    expect(requestUrl).toContain("names=Agent+Alpha");
+    expect(requestUrl).toContain("names=Agent+Beta");
   },
 );
