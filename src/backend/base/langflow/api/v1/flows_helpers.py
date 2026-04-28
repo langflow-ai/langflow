@@ -11,6 +11,7 @@ import re
 import zipfile
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
+from urllib.parse import quote
 from uuid import UUID
 
 import aiofiles
@@ -579,9 +580,11 @@ def _build_flows_download_response(
         current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
         filename = f"{current_time}_langflow_flows.zip"
 
+        encoded_filename = quote(filename)
+        cd = f"attachment; filename=\"{filename}\"; filename*=UTF-8''{encoded_filename}"
         return StreamingResponse(
             zip_stream,
             media_type="application/x-zip-compressed",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
+            headers={"Content-Disposition": cd},
         )
     return normalised_flows[0]

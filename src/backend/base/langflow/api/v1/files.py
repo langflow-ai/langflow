@@ -5,6 +5,7 @@ from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import quote
 from uuid import UUID
 
 import anyio
@@ -126,8 +127,10 @@ async def download_file(
 
     try:
         file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)
+        ascii_fallback = file_name.encode("ascii", "replace").decode("ascii")
+        encoded_name = quote(file_name)
         headers = {
-            "Content-Disposition": f"attachment; filename={file_name} filename*=UTF-8''{file_name}",
+            "Content-Disposition": f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{encoded_name}",
             "Content-Type": "application/octet-stream",
             "Content-Length": str(len(file_content)),
         }

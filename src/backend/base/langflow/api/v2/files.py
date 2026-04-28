@@ -7,6 +7,7 @@ from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -572,10 +573,12 @@ async def download_files_batch(
         current_time = datetime.now(tz=ZoneInfo("UTC")).astimezone().strftime("%Y%m%d_%H%M%S")
         filename = f"{current_time}_langflow_files.zip"
 
+        encoded_filename = quote(filename)
+        cd = f"attachment; filename=\"{filename}\"; filename*=UTF-8''{encoded_filename}"
         return StreamingResponse(
             zip_stream,
             media_type="application/x-zip-compressed",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
+            headers={"Content-Disposition": cd},
         )
 
     except FileNotFoundError as e:
@@ -674,10 +677,13 @@ async def download_file(
         filename_with_extension = f"{file.name}{file_extension}"
 
         # Return the file as a streaming response
+        ascii_fallback = filename_with_extension.encode("ascii", "replace").decode("ascii")
+        encoded_fn = quote(filename_with_extension)
+        cd = f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{encoded_fn}"
         return StreamingResponse(
             byte_stream,
             media_type="application/octet-stream",
-            headers={"Content-Disposition": f'attachment; filename="{filename_with_extension}"'},
+            headers={"Content-Disposition": cd},
         )
 
     except HTTPException:

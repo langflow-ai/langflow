@@ -47,13 +47,22 @@ export const useGetDownloadFlows: useMutationFunctionType<
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
 
-      // Get the filename from the Content-Disposition header
+      // Get the filename from the Content-Disposition header (RFC 5987: filename*=UTF-8''<encoded>)
       const contentDisposition = response.headers.get("Content-Disposition");
       let filename = "flows.zip";
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename=(.+)/);
-        if (filenameMatch && filenameMatch[1]) {
-          filename = filenameMatch[1].replace(/["']/g, "");
+        const rfc5987Match = contentDisposition.match(
+          /filename\*=UTF-8''([^;]+)/i,
+        );
+        if (rfc5987Match && rfc5987Match[1]) {
+          filename = decodeURIComponent(rfc5987Match[1].trim());
+        } else {
+          const filenameMatch = contentDisposition.match(
+            /filename="?([^";\n]+)"?/,
+          );
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1].trim();
+          }
         }
       }
 
