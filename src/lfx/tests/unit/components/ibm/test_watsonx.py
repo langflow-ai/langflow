@@ -231,10 +231,15 @@ class TestWatsonxAIComponent:
         assert call_kwargs["streaming"] is True
         assert call_kwargs["params"]["stop"] == ["END"]
 
-    @patch("lfx.components.ibm.watsonx.SecretStr", MockSecretStr)
     @patch("lfx.components.ibm.watsonx.ChatWatsonx")
     def test_build_model_with_secret_str_api_key(self, mock_chatwatsonx, wx_component):
-        """Test that SecretStr API key is properly converted to string."""
+        """Test that SecretStr API key is properly converted to string.
+
+        ``WatsonxAIComponent.build_model`` duck-types ``get_secret_value`` so it
+        unwraps any SecretStr-shaped object (pydantic v1, pydantic v2, or this
+        in-test ``MockSecretStr``) without needing the symbol patched on the
+        module.
+        """
         wx_component.api_key = MockSecretStr("secret-api-key")
         wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
         wx_component.project_id = "test-project-id"
