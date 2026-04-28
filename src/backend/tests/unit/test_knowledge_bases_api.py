@@ -1132,6 +1132,80 @@ class TestPerformIngestionTask:
     @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.create_backend")
+    @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.get_metadata")
+    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
+    @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics_via_backend", new_callable=AsyncMock)
+    async def test_perform_ingestion_skipped_only_is_partial(
+        self,
+        mock_update_metrics,  # noqa: ARG002
+        mock_size,
+        mock_meta,
+        mock_build,
+        mock_backend_cls,
+        mock_create_run,
+        mock_mark_running,  # noqa: ARG002
+        mock_finalize_run,
+        mock_kb_path,
+        whitespace_text_file,
+    ):
+        """Files with no extractable text are SKIPPED.
+
+        Regression test for the QA-reported bug where a run that
+        produced 0 successful items but 1 skipped item was finalized
+        as SUCCEEDED. The expected outcome is PARTIAL so the UI can
+        signal that nothing was actually ingested.
+        """
+        mock_embeddings = MagicMock()
+        mock_build.return_value = mock_embeddings
+
+        mock_backend = MagicMock()
+        mock_backend.add_documents = AsyncMock()
+        mock_backend.teardown = AsyncMock()
+        mock_backend.raw_langchain_store = MagicMock(return_value=MagicMock())
+        mock_backend_cls.return_value = mock_backend
+
+        run_id = uuid.uuid4()
+        mock_create_run.return_value = run_id
+        mock_meta.return_value = {"chunks": 0, "size": 0, "source_types": []}
+        mock_size.return_value = 0
+
+        file_name, file_content = whitespace_text_file
+        files_data = [(file_name, file_content.encode())]
+
+        current_user = MagicMock()
+        current_user.id = uuid.uuid4()
+
+        await KBIngestionHelper.perform_ingestion(
+            kb_name="test_kb",
+            kb_path=mock_kb_path,
+            files_data=files_data,
+            chunk_size=100,
+            chunk_overlap=20,
+            separator="\n",
+            source_name="src",
+            current_user=current_user,
+            embedding_provider="OpenAI",
+            embedding_model="model",
+            task_job_id=uuid.uuid4(),
+            job_service=AsyncMock(),
+        )
+
+        from langflow.services.database.models.ingestion_run import IngestionRunStatus
+
+        mock_finalize_run.assert_awaited_once()
+        finalize_kwargs = mock_finalize_run.await_args.kwargs
+        assert finalize_kwargs["status"] is IngestionRunStatus.PARTIAL
+        assert finalize_kwargs["summary"].succeeded == 0
+        assert finalize_kwargs["summary"].failed == 0
+        assert finalize_kwargs["summary"].skipped == 1
+        # No docs should have been written when every item was skipped.
+        mock_backend.add_documents.assert_not_called()
+
+    @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
+    @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.create_backend")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)

@@ -7,6 +7,12 @@ import TableComponent from "@/components/core/parameterRenderComponent/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
+import { api } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
+import type {
+  IngestionRunInfo,
+  PaginatedIngestionRunResponse,
+} from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs";
 import { useGetKnowledgeBases } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
@@ -26,6 +32,79 @@ import { useOptimisticKnowledgeBase } from "../hooks/useOptimisticKnowledgeBase"
 import type { KnowledgeBasesTabProps } from "../types";
 import KnowledgeBaseEmptyState from "./KnowledgeBaseEmptyState";
 
+interface IngestionFinishedToast {
+  kind: "success" | "notice";
+  title: string;
+}
+
+const formatIngestionFinishedTitle = (
+  kbName: string,
+  fallbackChunks: number,
+  run: IngestionRunInfo | null,
+): IngestionFinishedToast => {
+  // Default fallback when the run lookup fails or returns nothing —
+  // matches the legacy KB-cumulative-chunks message.
+  if (!run) {
+    return {
+      kind: "success",
+      title: `"${kbName}" ingestion complete — ${fallbackChunks} chunks ready`,
+    };
+  }
+
+  const parts: string[] = [];
+  if (run.succeeded > 0) {
+    parts.push(`${run.succeeded} succeeded`);
+  }
+  if (run.skipped > 0) {
+    parts.push(`${run.skipped} skipped`);
+  }
+  if (run.failed > 0) {
+    parts.push(`${run.failed} failed`);
+  }
+
+  if (run.status === "succeeded") {
+    return {
+      kind: "success",
+      title: `"${kbName}" ingestion complete — ${run.chunks_created} chunks ingested`,
+    };
+  }
+
+  if (run.status === "partial") {
+    const breakdown =
+      parts.length > 0 ? parts.join(", ") : "no items processed";
+    const chunkSuffix =
+      run.chunks_created > 0 ? ` · ${run.chunks_created} chunks ingested` : "";
+    return {
+      kind: "notice",
+      title: `"${kbName}" ingestion finished with issues — ${breakdown}${chunkSuffix}`,
+    };
+  }
+
+  // Any other status (cancelled, failed reaching here unexpectedly, etc.)
+  // falls back to a neutral notice using the run breakdown.
+  const breakdown = parts.length > 0 ? parts.join(", ") : run.status;
+  return {
+    kind: "notice",
+    title: `"${kbName}" ingestion ${run.status} — ${breakdown}`,
+  };
+};
+
+const notifyOnIngestionFinished = async (
+  kbDirName: string,
+  kbDisplayName: string,
+  fallbackChunks: number,
+): Promise<IngestionFinishedToast> => {
+  try {
+    const res = await api.get<PaginatedIngestionRunResponse>(
+      `${getURL("KNOWLEDGE_BASES")}/${kbDirName}/runs?page=1&limit=1`,
+    );
+    const latest = res.data?.runs?.[0] ?? null;
+    return formatIngestionFinishedTitle(kbDisplayName, fallbackChunks, latest);
+  } catch {
+    return formatIngestionFinishedTitle(kbDisplayName, fallbackChunks, null);
+  }
+};
+
 const KnowledgeBasesTab = ({
   quickFilterText,
   setQuickFilterText,
@@ -38,10 +117,13 @@ const KnowledgeBasesTab = ({
   onViewChunks,
 }: KnowledgeBasesTabProps) => {
   const tableRef = useRef<AgGridReact<unknown>>(null);
-  const { setErrorData, setSuccessData } = useAlertStore((state) => ({
-    setErrorData: state.setErrorData,
-    setSuccessData: state.setSuccessData,
-  }));
+  const { setErrorData, setSuccessData, setNoticeData } = useAlertStore(
+    (state) => ({
+      setErrorData: state.setErrorData,
+      setSuccessData: state.setSuccessData,
+      setNoticeData: state.setNoticeData,
+    }),
+  );
 
   const examples = useFlowsManagerStore((state) => state.examples);
   const addFlow = useAddFlow();
@@ -72,9 +154,18 @@ const KnowledgeBasesTab = ({
             list: kb.failure_reason ? [kb.failure_reason] : undefined,
           });
         } else if (kb.status === "ready" && previousStatus === "ingesting") {
-          setSuccessData({
-            title: `"${kb.name}" ingestion complete — ${kb.chunks} chunks ready`,
-          });
+          // KB.status doesn't distinguish a fully-successful run from a
+          // partial one (some files skipped/failed), so look at the
+          // most recent run for an accurate, run-scoped message.
+          notifyOnIngestionFinished(kb.dir_name, kb.name, kb.chunks).then(
+            ({ kind, title }) => {
+              if (kind === "notice") {
+                setNoticeData({ title });
+              } else {
+                setSuccessData({ title });
+              }
+            },
+          );
         }
       }
     },
