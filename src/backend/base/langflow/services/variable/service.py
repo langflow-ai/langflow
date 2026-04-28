@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from lfx.services.settings.service import SettingsService
+    from pydantic import SecretStr
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -198,7 +199,7 @@ class DatabaseVariableService(VariableService, Service):
         name: str,
         field: str,
         session: AsyncSession,
-    ) -> str:
+    ) -> str | SecretStr:
         # we get the credential from the database
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
         variable = await self.get_variable_object(user_id, name, session)

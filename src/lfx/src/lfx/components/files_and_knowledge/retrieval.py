@@ -31,6 +31,14 @@ _KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
 astra_error_msg = "Knowledge retrieval is not supported in Astra cloud environment."
 
 
+def _secret_value(value: Any) -> str | None:
+    if isinstance(value, SecretStr):
+        return value.get_secret_value()
+    if value is None:
+        return None
+    return str(value).strip()
+
+
 def _get_knowledge_bases_root_path() -> Path:
     """Lazy load the knowledge bases root path from settings."""
     global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
@@ -185,8 +193,9 @@ class KnowledgeBaseComponent(Component):
                         field="",
                         session=session,
                     )
-                    if value and str(value).strip():
-                        result[var_key] = str(value)
+                    value = _secret_value(value)
+                    if value:
+                        result[var_key] = value
                 except (ValueError, KeyError, AttributeError) as e:
                     logger.debug(f"Variable service lookup failed for '{var_key}', falling back to environment: {e}")
                     env_value = os.environ.get(var_key)
@@ -210,12 +219,13 @@ class KnowledgeBaseComponent(Component):
             if variable_service is None:
                 return None
             try:
-                return await variable_service.get_variable(
+                value = await variable_service.get_variable(
                     user_id=user_id,
                     name=variable_name,
                     field="",
                     session=session,
                 )
+                return _secret_value(value)
             except (ValueError, KeyError, AttributeError):
                 return None
 

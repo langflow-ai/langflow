@@ -9,6 +9,7 @@ from lfx.base.models.unified_models import (
     get_unified_models_detailed,
 )
 from lfx.log.logger import logger
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from langflow.services.deps import get_variable_service
@@ -16,6 +17,12 @@ from langflow.services.variable.service import DatabaseVariableService, Variable
 
 # Preferred providers in order of priority
 PREFERRED_PROVIDERS = ["Anthropic", "OpenAI", "Google Generative AI", "Groq"]
+
+
+def _secret_value(value: str | SecretStr | None) -> str | None:
+    if isinstance(value, SecretStr):
+        return value.get_secret_value()
+    return value
 
 
 async def get_enabled_providers_for_user(
@@ -68,6 +75,7 @@ async def check_api_key(
     except ValueError:
         logger.debug(f"{key_name} not found in global variables, checking environment")
 
+    api_key = _secret_value(api_key)
     if not api_key:
         api_key = os.getenv(key_name)
 

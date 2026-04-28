@@ -9,6 +9,8 @@ import re
 from typing import Any
 from uuid import UUID
 
+from pydantic import SecretStr
+
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
@@ -19,6 +21,15 @@ from .provider_queries import (
 )
 
 
+def _secret_value(value: Any) -> str | None:
+    """Return the real string value, unwrapping SecretStr at credential boundaries."""
+    if isinstance(value, SecretStr):
+        return value.get_secret_value()
+    if value is None:
+        return None
+    return str(value).strip()
+
+
 def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
     """Get API key from component input or global variables.
 
@@ -26,13 +37,9 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     that name is resolved from os.environ or global variables so imported flows
     can reference credentials without storing the raw key.
     """
-    # SecretStrInput-backed fields now arrive as pydantic.SecretStr to prevent
-    # leakage via __str__/serialization. Unwrap once so the var-name detection
-    # below can do plain string operations.
-    from pydantic import SecretStr
-
-    if isinstance(api_key, SecretStr):
-        api_key = api_key.get_secret_value()
+    # SecretStrInput-backed fields arrive as SecretStr to prevent leakage through
+    # stringification. Unwrap here because provider clients need the raw value.
+    api_key = _secret_value(api_key)
 
     # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from env or global vars
     def _resolve_var_name(var_name: str) -> str | None:
@@ -57,8 +64,9 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                         return None
 
             value = run_until_complete(_get_by_var_name())
-            if value and str(value).strip():
-                return str(value).strip()
+            value = _secret_value(value)
+            if value:
+                return value
         return None
 
     if api_key and api_key.strip():
@@ -105,6 +113,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     except (ValueError, Exception):  # noqa: BLE001
         api_key = None
 
+    api_key = _secret_value(api_key)
     if api_key:
         return api_key
 
@@ -152,8 +161,9 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
                         field="",
                         session=session,
                     )
-                    if value and str(value).strip():
-                        values[var_key] = str(value)
+                    value = _secret_value(value)
+                    if value:
+                        values[var_key] = value
                 except (ValueError, Exception):  # noqa: BLE001
                     # Variable not found - check environment
                     env_value = os.environ.get(var_key)

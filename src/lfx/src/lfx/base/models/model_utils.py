@@ -5,6 +5,7 @@ from uuid import UUID
 
 import httpx
 import requests
+from pydantic import SecretStr
 
 from lfx.base.models.model_metadata import LIVE_MODEL_PROVIDERS, create_model_metadata
 from lfx.base.models.watsonx_constants import (
@@ -33,6 +34,8 @@ def _to_str(value: Any) -> str | None:
     """Safely coerce Message/Data or other values to string for URL/string params."""
     if value is None:
         return None
+    if isinstance(value, SecretStr):
+        return value.get_secret_value()
     if isinstance(value, str):
         return value
     if hasattr(value, "text"):
@@ -283,7 +286,7 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
                 session=session,
             )
 
-    return run_until_complete(_get_variable())
+    return _to_str(run_until_complete(_get_variable()))
 
 
 def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
