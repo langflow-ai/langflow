@@ -1,5 +1,6 @@
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
@@ -13,7 +14,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useTranslation } from "react-i18next";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import {
   usePatchFolders,
