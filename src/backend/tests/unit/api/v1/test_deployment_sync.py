@@ -65,6 +65,12 @@ def _mock_deployment_row(resource_key: str, deployment_type: str | None = None) 
     )
 
 
+class _NoSnapshotBindingMapper(BaseDeploymentMapper):
+    def extract_snapshot_bindings(self, provider_view) -> list[Any]:
+        _ = provider_view
+        return []
+
+
 class _AsyncNoopSavepoint:
     async def __aenter__(self):
         return None
@@ -300,7 +306,7 @@ class TestListDeploymentsSynced:
 
         accepted, total, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
-            deployment_mapper=BaseDeploymentMapper(),
+            deployment_mapper=_NoSnapshotBindingMapper(),
             user_id=uuid4(),
             provider_id=uuid4(),
             db=db,
@@ -352,7 +358,7 @@ class TestListDeploymentsSynced:
 
         accepted, _, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
-            deployment_mapper=BaseDeploymentMapper(),
+            deployment_mapper=_NoSnapshotBindingMapper(),
             user_id=uid,
             provider_id=uuid4(),
             db=db,
@@ -390,7 +396,7 @@ class TestListDeploymentsSynced:
     ):
         """Per-item provider_data is collected from each provider sync round."""
 
-        class _ProviderDataMapper(BaseDeploymentMapper):
+        class _ProviderDataMapper(_NoSnapshotBindingMapper):
             def extract_list_item_provider_data(self, provider_view) -> dict[str, dict[str, Any]]:
                 return {str(item.id): item.provider_data for item in provider_view.deployments}
 
@@ -502,7 +508,7 @@ class TestListDeploymentsSynced:
 
         accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
-            deployment_mapper=BaseDeploymentMapper(),
+            deployment_mapper=_NoSnapshotBindingMapper(),
             user_id=uuid4(),
             provider_id=uuid4(),
             db=db,
@@ -557,7 +563,7 @@ class TestListDeploymentsSynced:
 
         accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
-            deployment_mapper=BaseDeploymentMapper(),
+            deployment_mapper=_NoSnapshotBindingMapper(),
             user_id=uuid4(),
             provider_id=uuid4(),
             db=db,
@@ -616,7 +622,7 @@ class TestListDeploymentsSynced:
 
         accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
-            deployment_mapper=BaseDeploymentMapper(),
+            deployment_mapper=_NoSnapshotBindingMapper(),
             user_id=uuid4(),
             provider_id=uuid4(),
             db=AsyncMock(),
