@@ -6,6 +6,7 @@ import {
   getDefaultKnowledgeBackendConfig,
   getKnowledgeBackendOption,
   isKnowledgeBackendConfigured,
+  type KnowledgeBackendConfigValue,
 } from "@/constants/knowledgeBackendConstants";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
@@ -44,10 +45,13 @@ import { formatFileSize } from "../utils";
  */
 function validateBackendConfig(
   backendType: AvailableKnowledgeBackendId,
-  config: Record<string, string>,
+  config: Record<string, KnowledgeBackendConfigValue>,
 ): string | null {
   if (backendType === "opensearch") {
-    if (!config.index_name?.trim()) return "OpenSearch requires an index_name";
+    const indexName = config.index_name;
+    if (typeof indexName !== "string" || !indexName.trim()) {
+      return "OpenSearch requires an index_name";
+    }
   }
   return null;
 }
@@ -120,9 +124,9 @@ export function useKnowledgeBaseForm({
   // after create, so add-sources mode displays the existing backend read-only.
   const [backendType, setBackendType] =
     useState<AvailableKnowledgeBackendId>("chroma");
-  const [backendConfig, setBackendConfig] = useState<Record<string, string>>(
-    {},
-  );
+  const [backendConfig, setBackendConfig] = useState<
+    Record<string, KnowledgeBackendConfigValue>
+  >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -216,7 +220,10 @@ export function useKnowledgeBaseForm({
           : "chroma",
       );
       setBackendConfig(
-        (existingKnowledgeBase.backendConfig as Record<string, string>) || {},
+        (existingKnowledgeBase.backendConfig as Record<
+          string,
+          KnowledgeBackendConfigValue
+        >) || {},
       );
     }
   }, [existingKnowledgeBase, open, embeddingModelOptions]);
