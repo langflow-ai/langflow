@@ -75,6 +75,142 @@ class _FakeDb:
         return _FakeExecResult(self._rows)
 
 
+@pytest.mark.asyncio
+async def test_watsonx_mapper_resolve_deployment_list_adapter_params_passthrough() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    params = await mapper.resolve_deployment_list_adapter_params(
+        deployment_type=DeploymentType.AGENT,
+        names=["A", "B"],
+        provider_params={"env": "prod"},
+    )
+    assert params.deployment_types == [DeploymentType.AGENT]
+    assert params.deployment_names == ["A", "B"]
+    assert params.provider_params == {"env": "prod"}
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_resolve_deployment_list_normalizes_names() -> None:
+    """Filter names get normalized so callers can pass un-sanitised values that match wxO."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    params = await mapper.resolve_deployment_list_adapter_params(
+        deployment_type=DeploymentType.AGENT,
+        names=["My Agent", "Other-Agent"],
+        provider_params=None,
+    )
+    assert params is not None
+    assert params.deployment_names == ["My_Agent", "Other_Agent"]
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_resolve_deployment_list_passes_none_through() -> None:
+    """``names=None`` must remain ``None`` so the no-filter path is preserved."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    params = await mapper.resolve_deployment_list_adapter_params(
+        deployment_type=None,
+        names=None,
+        provider_params=None,
+    )
+    assert params is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("bad_name", "expected_reason_fragment"),
+    [
+        ("!!!", "alphanumeric"),
+        ("123abc", "start with a letter"),
+    ],
+)
+async def test_watsonx_mapper_resolve_deployment_list_rejects_invalid_name(
+    bad_name: str, expected_reason_fragment: str
+) -> None:
+    """Invalid filter values fail fast with a 422 instead of being silently dropped."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    with pytest.raises(HTTPException) as exc_info:
+        await mapper.resolve_deployment_list_adapter_params(
+            deployment_type=None,
+            names=[bad_name],
+            provider_params=None,
+        )
+    assert exc_info.value.status_code == 422
+    detail = str(exc_info.value.detail)
+    assert f"deployment name filter '{bad_name}'" in detail
+    assert expected_reason_fragment in detail
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_resolve_deployment_list_fails_fast_on_first_invalid() -> None:
+    """A single bad entry rejects the request — never partially applied or dropped."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    with pytest.raises(HTTPException) as exc_info:
+        await mapper.resolve_deployment_list_adapter_params(
+            deployment_type=None,
+            names=["Valid_Name", "!!!"],
+            provider_params=None,
+        )
+    assert exc_info.value.status_code == 422
+    assert "'!!!'" in str(exc_info.value.detail)
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_resolve_snapshot_list_normalizes_names() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    params = await mapper.resolve_snapshot_list_adapter_params(
+        deployment_resource_key="dep-key",
+        snapshot_names=["My Snapshot", "tool-1"],
+        provider_params=None,
+    )
+    assert params.snapshot_names == ["My_Snapshot", "tool_1"]
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_resolve_snapshot_list_passes_none_through() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    params = await mapper.resolve_snapshot_list_adapter_params(
+        deployment_resource_key="dep-key",
+        snapshot_names=None,
+        provider_params=None,
+    )
+    assert params.snapshot_names is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("bad_name", "expected_reason_fragment"),
+    [
+        ("!!!", "alphanumeric"),
+        ("123abc", "start with a letter"),
+    ],
+)
+async def test_watsonx_mapper_resolve_snapshot_list_rejects_invalid_name(
+    bad_name: str, expected_reason_fragment: str
+) -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    with pytest.raises(HTTPException) as exc_info:
+        await mapper.resolve_snapshot_list_adapter_params(
+            deployment_resource_key="dep-key",
+            snapshot_names=[bad_name],
+            provider_params=None,
+        )
+    assert exc_info.value.status_code == 422
+    detail = str(exc_info.value.detail)
+    assert f"snapshot name filter '{bad_name}'" in detail
+    assert expected_reason_fragment in detail
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_resolve_snapshot_list_fails_fast_on_first_invalid() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    with pytest.raises(HTTPException) as exc_info:
+        await mapper.resolve_snapshot_list_adapter_params(
+            deployment_resource_key="dep-key",
+            snapshot_names=["Valid_Name", "!!!"],
+            provider_params=None,
+        )
+    assert exc_info.value.status_code == 422
+    assert "'!!!'" in str(exc_info.value.detail)
+
+
 def test_watsonx_mapper_is_registered() -> None:
     mapper = get_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
     assert isinstance(mapper, WatsonxOrchestrateDeploymentMapper)
