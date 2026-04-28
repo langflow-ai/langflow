@@ -1,7 +1,6 @@
 from typing import Any
 
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
 
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES

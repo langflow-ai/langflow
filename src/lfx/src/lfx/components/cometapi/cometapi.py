@@ -2,7 +2,6 @@ import json
 
 import requests
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
 from typing_extensions import override
 
 from lfx.base.models.cometapi_constants import MODEL_NAMES

@@ -2,7 +2,6 @@ import json
 from typing import Any
 
 from langchain_ibm import ChatWatsonx
-from pydantic.v1 import SecretStr
 
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.model_utils import get_watsonx_llm_models

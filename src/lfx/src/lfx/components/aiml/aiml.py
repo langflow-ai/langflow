@@ -1,5 +1,4 @@
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
 from typing_extensions import override
 
 from lfx.base.models.aiml_constants import AimlModels
@@ -82,9 +81,7 @@ class AIMLModelComponent(LCModelComponent):
         # Duck-type ``get_secret_value`` to unwrap both pydantic.v1.SecretStr
         # (legacy import) and pydantic.SecretStr (the v2 form produced by the
         # attribute-wrapping layer added in #12908).
-        openai_api_key = (
-            aiml_api_key.get_secret_value() if hasattr(aiml_api_key, "get_secret_value") else aiml_api_key
-        )
+        openai_api_key = aiml_api_key.get_secret_value() if hasattr(aiml_api_key, "get_secret_value") else aiml_api_key
 
         # TODO: Once OpenAI fixes their o1 models, this part will need to be removed
         # to work correctly with o1 temperature settings.

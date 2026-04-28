@@ -2,7 +2,6 @@ from typing import Any
 
 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_ibm import WatsonxEmbeddings
-from pydantic.v1 import SecretStr
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.model_utils import get_watsonx_embedding_models

@@ -1,6 +1,5 @@
 import httpx
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
 
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
