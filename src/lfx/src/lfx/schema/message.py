@@ -86,6 +86,13 @@ class Message(Data):
             value = str(value)
         return value
 
+    @field_validator("text", mode="before")
+    @classmethod
+    def validate_text(cls, value):
+        if hasattr(value, "get_secret_value"):
+            return str(value)
+        return value
+
     @field_validator("content_blocks", mode="before")
     @classmethod
     def validate_content_blocks(cls, value):

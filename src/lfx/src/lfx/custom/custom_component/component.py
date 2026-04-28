@@ -89,6 +89,12 @@ def _wrap_if_secret(input_obj: Any, value: Any) -> Any:
     return SecretStr(value) if is_secret else value
 
 
+def _mask_secret_value(value: Any) -> Any:
+    if hasattr(value, "get_secret_value"):
+        return str(value)
+    return value
+
+
 class PlaceholderGraph(NamedTuple):
     """A placeholder graph structure for components, providing backwards compatibility.
 
@@ -1587,6 +1593,7 @@ class Component(CustomComponent):
         """
         if name is None:
             name = f"Log {len(self._logs) + 1}"
+        message = _mask_secret_value(message)
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
         if self.tracing_service and self._vertex:
