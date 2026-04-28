@@ -38,6 +38,7 @@ export default function StepType() {
     setDeploymentType,
     deploymentName,
     setDeploymentName,
+    hasDeploymentNameFormatError,
     deploymentDescription,
     setDeploymentDescription,
     selectedLlm,
@@ -243,12 +244,15 @@ export default function StepType() {
             placeholder="e.g., Sales Bot"
             className={cn(
               "bg-muted",
+              hasDeploymentNameFormatError &&
+                "border-destructive focus-visible:ring-0",
               hasAgentNameErrors &&
                 "border-destructive/50 focus-visible:ring-destructive/30",
             )}
             value={deploymentName}
             onChange={(e) => setDeploymentName(e.target.value)}
             disabled={isEditMode}
+            aria-invalid={hasDeploymentNameFormatError}
           />
           {isAgentNameValidationPending && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -256,6 +260,11 @@ export default function StepType() {
             </div>
           )}
         </div>
+        {hasDeploymentNameFormatError && (
+          <span className="mt-1 text-xs text-destructive">
+            Agent name must start with a letter.
+          </span>
+        )}
         {isEditMode ? (
           <span className="mt-1 text-xs text-muted-foreground">
             Name cannot be changed after creation.

@@ -73,6 +73,8 @@ interface DeploymentStepperContextType {
   setDeploymentType: (type: DeploymentType) => void;
   deploymentName: string;
   setDeploymentName: (name: string) => void;
+  isDeploymentNameValid: boolean;
+  hasDeploymentNameFormatError: boolean;
   deploymentDescription: string;
   setDeploymentDescription: (description: string) => void;
   selectedLlm: string;
@@ -174,6 +176,11 @@ export function DeploymentStepperProvider({
   >(initialState?.initialConnectionsByFlow ?? new Map());
 
   const [hasToolNameErrors, setHasToolNameErrors] = useState(false);
+  const trimmedDeploymentName = deploymentName.trim();
+  const hasDeploymentNameFormatError =
+    trimmedDeploymentName !== "" && !/^\p{L}/u.test(trimmedDeploymentName);
+  const isDeploymentNameValid =
+    trimmedDeploymentName !== "" && !hasDeploymentNameFormatError;
   const [hasAgentNameErrors, setHasAgentNameErrors] = useState(false);
   const [isAgentNameValidationPending, setIsAgentNameValidationPending] =
     useState(false);
@@ -263,7 +270,7 @@ export function DeploymentStepperProvider({
     }
     if (logical === 2) {
       return (
-        deploymentName.trim() !== "" &&
+        isDeploymentNameValid &&
         selectedLlm.trim() !== "" &&
         !hasAgentNameErrors &&
         !isAgentNameValidationPending
@@ -284,6 +291,7 @@ export function DeploymentStepperProvider({
     selectedInstance,
     hasValidCredentials,
     deploymentName,
+    isDeploymentNameValid,
     selectedLlm,
     selectedVersionByFlow,
     isEditMode,
@@ -373,6 +381,9 @@ export function DeploymentStepperProvider({
 
   const buildDeploymentPayload = useCallback(
     (providerId: string): DeploymentCreateRequest => {
+      if (!isDeploymentNameValid) {
+        throw new Error("Deployment name must start with a letter");
+      }
       const allConnectionIds = new Set<string>();
       Array.from(attachedConnectionByFlow.values()).forEach((ids) => {
         ids.forEach((id) => allConnectionIds.add(id));
@@ -397,7 +408,7 @@ export function DeploymentStepperProvider({
         ...(initialState?.projectId
           ? { project_id: initialState.projectId }
           : {}),
-        name: deploymentName,
+        name: trimmedDeploymentName,
         description: deploymentDescription,
         type: deploymentType,
         provider_data: {
@@ -412,10 +423,11 @@ export function DeploymentStepperProvider({
       buildConnectionPayloads,
       initialState?.projectId,
       deploymentDescription,
-      deploymentName,
       deploymentType,
+      isDeploymentNameValid,
       selectedLlm,
       selectedVersionByFlow,
+      trimmedDeploymentName,
       toolNameByFlow,
     ],
   );
@@ -426,6 +438,9 @@ export function DeploymentStepperProvider({
         throw new Error(
           "buildDeploymentUpdatePayload called outside edit mode",
         );
+      }
+      if (!isDeploymentNameValid) {
+        throw new Error("Deployment name must start with a letter");
       }
 
       const result: DeploymentUpdateRequest = {
@@ -526,6 +541,7 @@ export function DeploymentStepperProvider({
     }, [
       editingDeployment,
       deploymentDescription,
+      isDeploymentNameValid,
       selectedLlm,
       initialVersionByFlow,
       initialToolNameByFlow,
@@ -557,6 +573,8 @@ export function DeploymentStepperProvider({
       setDeploymentType,
       deploymentName,
       setDeploymentName,
+      isDeploymentNameValid,
+      hasDeploymentNameFormatError,
       deploymentDescription,
       setDeploymentDescription,
       selectedLlm,
@@ -601,6 +619,8 @@ export function DeploymentStepperProvider({
       credentials,
       deploymentType,
       deploymentName,
+      isDeploymentNameValid,
+      hasDeploymentNameFormatError,
       deploymentDescription,
       selectedLlm,
       connections,

@@ -13,6 +13,8 @@ const mockSetSelectedLlm = jest.fn();
 let mockIsEditMode = false;
 let mockDeploymentType = "agent";
 let mockDeploymentName = "";
+let mockIsDeploymentNameValid = false;
+let mockHasDeploymentNameFormatError = false;
 let mockDeploymentDescription = "";
 let mockSelectedLlm = "";
 let mockSelectedInstance: { id: string } | null = { id: "inst-1" };
@@ -30,6 +32,8 @@ jest.mock("../contexts/deployment-stepper-context", () => ({
     setDeploymentType: mockSetDeploymentType,
     deploymentName: mockDeploymentName,
     setDeploymentName: mockSetDeploymentName,
+    isDeploymentNameValid: mockIsDeploymentNameValid,
+    hasDeploymentNameFormatError: mockHasDeploymentNameFormatError,
     deploymentDescription: mockDeploymentDescription,
     setDeploymentDescription: mockSetDeploymentDescription,
     selectedLlm: mockSelectedLlm,
@@ -72,6 +76,8 @@ beforeEach(() => {
   mockIsEditMode = false;
   mockDeploymentType = "agent";
   mockDeploymentName = "";
+  mockIsDeploymentNameValid = false;
+  mockHasDeploymentNameFormatError = false;
   mockDeploymentDescription = "";
   mockSelectedLlm = "";
   mockSelectedInstance = { id: "inst-1" };
@@ -220,6 +226,30 @@ describe("Name input", () => {
     expect(
       screen.queryByText("Agent name is available."),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows validation error when name does not start with a letter", () => {
+    mockDeploymentName = "1 Agent";
+    mockHasDeploymentNameFormatError = true;
+    render(<StepType />);
+    expect(
+      screen.getByText("Agent name must start with a letter."),
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("e.g., Sales Bot")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  it("does not show validation error for empty name", () => {
+    render(<StepType />);
+    expect(
+      screen.queryByText("Agent name must start with a letter."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("e.g., Sales Bot")).toHaveAttribute(
+      "aria-invalid",
+      "false",
+    );
   });
 });
 
