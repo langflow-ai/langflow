@@ -155,6 +155,10 @@ chat_input = ChatInput(
     def test_execute_python_script_success(self, simple_chat_script, capsys):
         """Test executing a valid Python script."""
         # Test that Python script execution either succeeds or fails gracefully
+        # ``run`` is a typer command, so any parameter with a ``typer.Option(...)`` default
+        # (e.g. session_id) needs to be passed explicitly when invoking outside typer's
+        # parser — otherwise the default evaluates to a ``typer.models.OptionInfo``
+        # sentinel and propagates downstream.
         with contextlib.suppress(typer.Exit):
             run(
                 script_path=simple_chat_script,
@@ -164,6 +168,7 @@ chat_input = ChatInput(
                 output_format="json",
                 flow_json=None,
                 stdin=False,
+                session_id=None,
             )
 
         # Test passes as long as no unhandled exceptions occur
@@ -181,6 +186,7 @@ chat_input = ChatInput(
     def test_execute_python_script_verbose(self, simple_chat_script, capsys):
         """Test executing a Python script with verbose output."""
         # Test that verbose mode execution either succeeds or fails gracefully
+        # See note in ``test_execute_python_script_success`` re: session_id=None.
         with contextlib.suppress(typer.Exit):
             run(
                 script_path=simple_chat_script,
@@ -190,6 +196,7 @@ chat_input = ChatInput(
                 output_format="json",
                 flow_json=None,
                 stdin=False,
+                session_id=None,
             )
 
         # Test passes as long as no unhandled exceptions occur
