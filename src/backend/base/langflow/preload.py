@@ -21,7 +21,7 @@ Failure contract:
     Fork-safety-critical steps (DB engine disposal, cache service teardown)
     that fail will propagate their exception and abort preload. Best-effort
     steps (profile pictures, starter projects, agentic MCP, flows) that fail
-    will log a warning, clear their completion flag, and allow preload to
+    will log the exception with traceback, clear their completion flag, and allow preload to
     continue so workers inherit partial progress. Workers re-run any
     incomplete step during their lifespan.
 
@@ -151,8 +151,8 @@ async def _run_master_preload() -> None:
     try:
         await copy_profile_pictures()
         _STATE.profile_pictures_copied = True
-    except Exception as e:  # noqa: BLE001
-        await logger.awarning(f"[preload] copy_profile_pictures failed: {e}")
+    except Exception:  # noqa: BLE001
+        await logger.aexception("[preload] copy_profile_pictures failed")
 
     await logger.ainfo("[preload] loading bundles")
     temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
@@ -171,8 +171,8 @@ async def _run_master_preload() -> None:
         try:
             await create_or_update_starter_projects(all_types_dict)
             _STATE.starter_projects_created = True
-        except Exception as e:  # noqa: BLE001
-            await logger.awarning(f"[preload] starter projects init failed: {e}")
+        except Exception:  # noqa: BLE001
+            await logger.aexception("[preload] starter projects init failed")
 
     if settings_service.settings.agentic_experience:
         from langflow.api.utils.mcp.agentic_mcp import (
@@ -185,23 +185,23 @@ async def _run_master_preload() -> None:
             async with session_scope() as session:
                 await initialize_agentic_global_variables(session)
             _STATE.agentic_globals_initialized = True
-        except Exception as e:  # noqa: BLE001
-            await logger.awarning(f"[preload] initialize agentic global variables failed: {e}")
+        except Exception:  # noqa: BLE001
+            await logger.aexception("[preload] initialize agentic global variables failed")
 
         await logger.adebug("[preload] auto-configuring agentic MCP server")
         try:
             async with session_scope() as session:
                 await auto_configure_agentic_mcp_server(session)
             _STATE.agentic_mcp_configured = True
-        except Exception as e:  # noqa: BLE001
-            await logger.awarning(f"[preload] auto-configure agentic MCP server failed: {e}")
+        except Exception:  # noqa: BLE001
+            await logger.aexception("[preload] auto-configure agentic MCP server failed")
 
     await logger.adebug("[preload] loading flows from directory")
     try:
         await load_flows_from_directory()
         _STATE.flows_loaded = True
-    except Exception as e:  # noqa: BLE001
-        await logger.awarning(f"[preload] load_flows_from_directory failed: {e}")
+    except Exception:  # noqa: BLE001
+        await logger.aexception("[preload] load_flows_from_directory failed")
 
     # CRITICAL: dispose the DB engine before the master returns control to
     # gunicorn. If we fork with an open connection pool, child workers

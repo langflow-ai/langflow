@@ -404,7 +404,7 @@ async def test_run_master_preload_critical_step_failure_propagates():
 
 @pytest.mark.asyncio
 async def test_run_master_preload_best_effort_step_failure_continues():
-    """A best-effort step failure logs a warning and lets preload continue.
+    """A best-effort step failure logs an exception with traceback and lets preload continue.
 
     The completion flag for the failed step must remain False so workers
     re-run it during their lifespan. Critical steps (DB dispose) must
@@ -415,7 +415,7 @@ async def test_run_master_preload_best_effort_step_failure_continues():
     with _preload_env(copy_profile_pictures=failing_copy) as fx:
         await _run_master_preload()
 
-    assert any("copy_profile_pictures failed" in str(call) for call in fx.logger.awarning.call_args_list)
+    assert any("copy_profile_pictures failed" in str(call) for call in fx.logger.aexception.call_args_list)
     assert _STATE.profile_pictures_copied is False
     fx.db_engine.dispose.assert_awaited_once()
 
