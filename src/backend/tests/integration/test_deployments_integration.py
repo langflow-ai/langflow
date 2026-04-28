@@ -41,6 +41,12 @@ def _provider_deployment(deployment_id: str, name: str):
     )
 
 
+class _NoSnapshotBindingMapper(BaseDeploymentMapper):
+    def extract_snapshot_bindings(self, provider_view):
+        _ = provider_view
+        return []
+
+
 @pytest.mark.asyncio
 async def test_list_deployments_names_filter_db_mode(async_session, active_user):
     """Integration test: GET /deployments?names= filters correctly in DB mode."""
@@ -111,7 +117,7 @@ async def test_list_deployments_names_filter_db_mode(async_session, active_user)
             ),
             patch(
                 "langflow.api.v1.deployments.get_deployment_mapper",
-                return_value=BaseDeploymentMapper(),
+                return_value=_NoSnapshotBindingMapper(),
             ),
         ):
             # 1. Fetch without names filter
@@ -204,7 +210,7 @@ async def test_list_deployments_names_filter_provider_mode(async_session, active
             ),
             patch(
                 "langflow.api.v1.deployments.get_deployment_mapper",
-                return_value=BaseDeploymentMapper(),
+                return_value=_NoSnapshotBindingMapper(),
             ),
         ):
             # 1. Fetch without names filter
@@ -297,7 +303,7 @@ async def test_list_deployments_names_filter_combined(async_session, active_user
             ),
             patch(
                 "langflow.api.v1.deployments.get_deployment_mapper",
-                return_value=BaseDeploymentMapper(),
+                return_value=_NoSnapshotBindingMapper(),
             ),
         ):
             # Fetch with name filter AND project_id filter
