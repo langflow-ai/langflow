@@ -844,7 +844,7 @@ class TestDeploymentNamesFilter:
         mapper = MagicMock()
         mapper.shape_deployment_list_items.return_value = []
         mock_get_mapper.return_value = mapper
-        mock_list_synced.return_value = ([], 0)
+        mock_list_synced.return_value = ([], 0, {})
 
         names = ["A", "B"]
 
@@ -929,7 +929,7 @@ class TestDeploymentNamesFilter:
         mapper = MagicMock()
         mapper.shape_deployment_list_items.return_value = []
         mock_get_mapper.return_value = mapper
-        mock_list_synced.return_value = ([], 0)
+        mock_list_synced.return_value = ([], 0, {})
 
         names = ["A"]
         pid = uuid4()
