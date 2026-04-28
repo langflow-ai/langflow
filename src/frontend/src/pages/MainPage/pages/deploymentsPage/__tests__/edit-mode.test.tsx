@@ -92,6 +92,31 @@ describe("Edit mode — basic state", () => {
     expect(result.current.canGoNext).toBe(true);
   });
 
+  it("blocks update flow when existing name does not start with a letter", () => {
+    const invalidDeployment = { ...mockDeployment, name: "1 Agent" };
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <DeploymentStepperProvider
+        initialState={{
+          editingDeployment: invalidDeployment,
+          selectedVersionByFlow: initialVersions,
+          initialLlm: "test-model",
+          initialToolNameByFlow: initialToolNames,
+          initialConnectionsByFlow: initialConnections,
+        }}
+      >
+        {children}
+      </DeploymentStepperProvider>
+    );
+    const { result } = renderHook(() => useDeploymentStepper(), { wrapper });
+
+    expect(result.current.canGoNext).toBe(false);
+    expect(result.current.isDeploymentNameValid).toBe(false);
+    expect(result.current.hasDeploymentNameFormatError).toBe(true);
+    expect(() => result.current.buildDeploymentUpdatePayload()).toThrow(
+      "Deployment name must start with a letter",
+    );
+  });
+
   it("canGoNext on step 2 (Attach) allows proceeding in edit mode", () => {
     const { result } = renderEditHook();
     act(() => result.current.handleNext()); // step 2
