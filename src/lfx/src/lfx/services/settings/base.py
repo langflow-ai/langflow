@@ -319,6 +319,7 @@ class Settings(BaseSettings):
     max_flow_version_entries_per_flow: int = 50
     """Max version history entries per flow. Oldest entries pruned on next snapshot.
 
+
     If retroactively lowered below the current count for a flow,
     the oldest entries are deleted only when the next entry is created.
     """
@@ -336,6 +337,7 @@ class Settings(BaseSettings):
     max_items_length: int = MAX_ITEMS_LENGTH
     """Maximum number of items to store and display in the UI. Lists longer than this
     will be truncated when displayed in the UI. Does not affect data passed between components nor outputs."""
+    max_ingestion_timeout_secs: int = 600
 
     # MCP Server
     mcp_server_enabled: bool = True
