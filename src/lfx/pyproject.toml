@@ -55,6 +55,7 @@ dependencies = [
 [project.scripts]
 lfx = "lfx.__main__:main"
 lfx-mcp = "lfx.mcp.__main__:main"
+lfx-shell-mcp = "lfx.mcp.shell.__main__:main"
 
 [project.entry-points.pytest11]
 lfx = "lfx.testing"
