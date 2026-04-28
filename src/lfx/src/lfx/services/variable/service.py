@@ -34,7 +34,7 @@ class VariableService(Service):
         for key, value in os.environ.items():
             if key.endswith("_access_token"):
                 oauth_tokens[key] = value
-                base_name = key[:-len("_access_token")]
+                base_name = key[: -len("_access_token")]
                 oauth_tokens[f"{base_name}_bearer_token"] = f"Bearer {value}"
 
         if oauth_tokens:
