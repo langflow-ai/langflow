@@ -521,9 +521,7 @@ class TestServeAppEndpoints:
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
             patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_capture),
             # Drain the streaming response so the background task completes before we assert.
-            app_client.stream(
-                "POST", "/flows/test-flow-id/stream", json=request_data, headers=headers
-            ) as response,
+            app_client.stream("POST", "/flows/test-flow-id/stream", json=request_data, headers=headers) as response,
         ):
             assert response.status_code == 200
             for _ in response.iter_bytes():
