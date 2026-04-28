@@ -59,7 +59,7 @@ export default function KnowledgeBaseUploadModal({
             separator={form.separator}
             onSeparatorChange={form.setSeparator}
             showAdvanced={form.showAdvanced}
-            toggleAdvanced={form.toggleAdvanced}
+            hasFiles={form.files.length > 0}
             onFileSelect={form.handleFileSelect}
             onFolderSelect={form.handleFolderSelect}
             validationErrors={form.validationErrors}
@@ -91,13 +91,10 @@ export default function KnowledgeBaseUploadModal({
   };
 
   const errorCount = Object.keys(form.validationErrors).length;
-  const modalBase =
-    !hideAdvanced && form.showAdvanced
-      ? MODAL_HEIGHT_WITH_ADVANCED
-      : MODAL_HEIGHT_DEFAULT;
+  const modalBase = hideAdvanced
+    ? MODAL_HEIGHT_DEFAULT
+    : MODAL_HEIGHT_WITH_ADVANCED;
   const modalHeight = `${modalBase + errorCount * VALIDATION_ERROR_LINE_HEIGHT}`;
-
-  const showHelpButton = !hideAdvanced && form.currentStep === 1;
 
   return (
     <StepperModal
@@ -129,7 +126,7 @@ export default function KnowledgeBaseUploadModal({
       footer={
         <StepperModalFooter
           currentStep={form.currentStep}
-          totalSteps={!hideAdvanced && form.showAdvanced ? 2 : 1}
+          totalSteps={hideAdvanced ? 1 : 2}
           onBack={form.handleBack}
           onNext={form.handleNext}
           onSubmit={form.handleSubmit}
@@ -141,14 +138,6 @@ export default function KnowledgeBaseUploadModal({
           isSubmitting={form.isSubmitting}
           submitTestId="kb-create-button"
           submitLabel={form.isAddSourcesMode ? "Add Sources" : "Create"}
-          helpLabel={
-            showHelpButton
-              ? form.showAdvanced
-                ? "Hide Configuration"
-                : "Configure Sources"
-              : undefined
-          }
-          onHelp={showHelpButton ? form.toggleAdvanced : undefined}
         />
       }
     >

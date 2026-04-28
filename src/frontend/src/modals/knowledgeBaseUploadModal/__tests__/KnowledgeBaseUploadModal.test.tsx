@@ -204,13 +204,51 @@ describe("KnowledgeBaseUploadModal", () => {
       expect(screen.getByText("Embedding Model")).toBeInTheDocument();
     });
 
-    it("renders Configure Sources toggle button in footer", () => {
+    it("renders Ingest Content section open by default", () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByText(/Ingest Content/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Add Files/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("does not render the Hide Configuration footer toggle", () => {
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
       });
       expect(
-        screen.getByRole("button", { name: /Configure Sources/i }),
-      ).toBeInTheDocument();
+        screen.queryByRole("button", { name: /Hide Configuration/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /^Configure Sources$/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("disables chunking inputs until at least one source is added", async () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByTestId("kb-chunk-size-input")).toBeDisabled();
+      expect(screen.getByTestId("kb-chunk-overlap-input")).toBeDisabled();
+      expect(screen.getByTestId("kb-separator-input")).toBeDisabled();
+
+      const fileInput = document.getElementById(
+        "file-input",
+      ) as HTMLInputElement;
+      const event = {
+        target: {
+          files: [new File(["x"], "doc.txt", { type: "text/plain" })],
+        },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+      fireEvent.change(fileInput, event);
+
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-chunk-size-input")).not.toBeDisabled(),
+      );
+      expect(screen.getByTestId("kb-chunk-overlap-input")).not.toBeDisabled();
+      expect(screen.getByTestId("kb-separator-input")).not.toBeDisabled();
     });
 
     it('shows "Add Sources" title in add-sources mode', async () => {
@@ -272,14 +310,17 @@ describe("KnowledgeBaseUploadModal", () => {
   // ── Form Validation ────────────────────────────────────────────────────────
 
   describe("Form Validation", () => {
-    it("submit button is disabled when form is empty", () => {
+    it("step 1 shows Next Step button rather than submit", () => {
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
       });
-      expect(screen.getByTestId("kb-create-button")).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: /Next Step/i }),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("kb-create-button")).not.toBeInTheDocument();
     });
 
-    it("submit button is disabled when only source name is filled", async () => {
+    it("Next Step does not advance when only source name is filled", async () => {
       const user = userEvent.setup();
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
@@ -288,16 +329,23 @@ describe("KnowledgeBaseUploadModal", () => {
         screen.getByTestId("kb-source-name-input"),
         "MyKnowledgeBase",
       );
-      expect(screen.getByTestId("kb-create-button")).toBeDisabled();
+      await user.click(screen.getByRole("button", { name: /Next Step/i }));
+      expect(
+        screen.getByText("Embedding model is required"),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("kb-create-button")).not.toBeInTheDocument();
     });
 
-    it("submit button is enabled when name and embedding model are both provided", async () => {
+    it("submit button enabled on step 2 when name and embedding model are provided", async () => {
       const user = userEvent.setup();
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
       });
       await fillRequiredFields(user);
-      expect(screen.getByTestId("kb-create-button")).not.toBeDisabled();
+      await user.click(screen.getByRole("button", { name: /Next Step/i }));
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).not.toBeDisabled(),
+      );
     });
 
     it("shows inline error when name is shorter than 3 characters", async () => {
@@ -310,7 +358,7 @@ describe("KnowledgeBaseUploadModal", () => {
         screen.getByTestId("embedding-model-select"),
         "text-embedding-3-small",
       );
-      await user.click(screen.getByTestId("kb-create-button"));
+      await user.click(screen.getByRole("button", { name: /Next Step/i }));
       await waitFor(() =>
         expect(
           screen.getByText("Name must be between 3 and 512 characters"),
@@ -328,7 +376,7 @@ describe("KnowledgeBaseUploadModal", () => {
         screen.getByTestId("embedding-model-select"),
         "text-embedding-3-small",
       );
-      await user.click(screen.getByTestId("kb-create-button"));
+      await user.click(screen.getByRole("button", { name: /Next Step/i }));
       await waitFor(() =>
         expect(screen.getByText(/Name must only contain/)).toBeInTheDocument(),
       );
@@ -345,7 +393,7 @@ describe("KnowledgeBaseUploadModal", () => {
         { wrapper: createWrapper() },
       );
       await fillRequiredFields(user);
-      await user.click(screen.getByTestId("kb-create-button"));
+      await user.click(screen.getByRole("button", { name: /Next Step/i }));
       await waitFor(() =>
         expect(
           screen.getByText("A knowledge base with this name already exists"),
@@ -357,12 +405,22 @@ describe("KnowledgeBaseUploadModal", () => {
   // ── Form Submission ────────────────────────────────────────────────────────
 
   describe("Form Submission", () => {
+    const advanceToReview = async (
+      user: ReturnType<typeof userEvent.setup>,
+    ) => {
+      await fillRequiredFields(user);
+      await user.click(screen.getByRole("button", { name: /Next Step/i }));
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toBeInTheDocument(),
+      );
+    };
+
     it("calls mutateAsync with correct payload on valid submission", async () => {
       const user = userEvent.setup();
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
       });
-      await fillRequiredFields(user);
+      await advanceToReview(user);
       await user.click(screen.getByTestId("kb-create-button"));
       await waitFor(() =>
         expect(mockMutateAsync).toHaveBeenCalledWith({
@@ -381,7 +439,7 @@ describe("KnowledgeBaseUploadModal", () => {
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
       });
-      await fillRequiredFields(user);
+      await advanceToReview(user);
       await user.click(screen.getByTestId("kb-create-button"));
       await waitFor(() =>
         expect(mockSetSuccessData).toHaveBeenCalledWith({
@@ -396,7 +454,7 @@ describe("KnowledgeBaseUploadModal", () => {
       render(<KnowledgeBaseUploadModal open={true} setOpen={mockSetOpen} />, {
         wrapper: createWrapper(),
       });
-      await fillRequiredFields(user);
+      await advanceToReview(user);
       await user.click(screen.getByTestId("kb-create-button"));
       await waitFor(() => expect(mockSetOpen).toHaveBeenCalledWith(false));
     });
@@ -412,7 +470,7 @@ describe("KnowledgeBaseUploadModal", () => {
         />,
         { wrapper: createWrapper() },
       );
-      await fillRequiredFields(user);
+      await advanceToReview(user);
       await user.click(screen.getByTestId("kb-create-button"));
       await waitFor(() => expect(mockOnSubmit).toHaveBeenCalled());
       expect(mockOnSubmit.mock.calls[0][0]).toMatchObject({
@@ -429,7 +487,7 @@ describe("KnowledgeBaseUploadModal", () => {
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
       });
-      await fillRequiredFields(user);
+      await advanceToReview(user);
       await user.click(screen.getByTestId("kb-create-button"));
       await waitFor(() =>
         expect(mockSetErrorData).toHaveBeenCalledWith({
@@ -463,14 +521,11 @@ describe("KnowledgeBaseUploadModal", () => {
       expect(input).toHaveValue("");
     });
 
-    it("opens file-upload dropdown when Add Sources button is clicked", async () => {
+    it("opens file-upload dropdown when Add Files button is clicked", async () => {
       const user = userEvent.setup();
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
       });
-      await user.click(
-        screen.getByRole("button", { name: /Configure Sources/i }),
-      );
       await user.click(screen.getByTestId("kb-browse-btn"));
       expect(screen.getByText("Upload Files")).toBeInTheDocument();
       expect(screen.getByText("Upload Folder")).toBeInTheDocument();
@@ -623,9 +678,6 @@ describe("KnowledgeBaseUploadModal", () => {
       name = "TestKnowledgeBase",
     ) => {
       await fillRequiredFields(user, name);
-      await user.click(
-        screen.getByRole("button", { name: /Configure Sources/i }),
-      );
       await user.click(screen.getByRole("button", { name: /Next Step/i }));
     };
 
