@@ -79,6 +79,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     has_user = user_id is not None and not (isinstance(user_id, str) and user_id == "None")
     api_key = None
     if has_user:
+
         async def _get_variable():
             async with session_scope() as session:
                 variable_service = get_variable_service()
