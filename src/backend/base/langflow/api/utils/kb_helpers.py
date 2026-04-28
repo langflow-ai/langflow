@@ -711,10 +711,16 @@ class KBIngestionHelper:
                 if "." in content_obj.file_name:
                     source_extension_tags.add(content_obj.file_name.rsplit(".", 1)[-1].lower())
 
-            if summary.failed > 0 and summary.succeeded > 0:
-                final_status = IngestionRunStatus.PARTIAL
-            elif summary.failed > 0 and summary.succeeded == 0:
+            # Status order matters: a run with zero successes and any
+            # failure is FAILED; a run with mixed outcomes (some failed
+            # OR some skipped) is PARTIAL; otherwise SUCCEEDED. Skipped
+            # items (e.g. empty file, no extractable text) used to fall
+            # through to SUCCEEDED, which made notifications and the
+            # runs list misreport an ingestion that produced 0 chunks.
+            if summary.failed > 0 and summary.succeeded == 0:
                 final_status = IngestionRunStatus.FAILED
+            elif summary.failed > 0 or summary.skipped > 0:
+                final_status = IngestionRunStatus.PARTIAL
             else:
                 final_status = IngestionRunStatus.SUCCEEDED
 

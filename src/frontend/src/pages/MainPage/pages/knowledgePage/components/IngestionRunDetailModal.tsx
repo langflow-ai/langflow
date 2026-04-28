@@ -86,6 +86,11 @@ const IngestionRunDetailModal = ({
                 </div>
               )}
 
+              <div className="grid grid-cols-1 gap-2 rounded-md border border-border bg-card p-3 text-xs sm:grid-cols-2">
+                <IdField label="Run ID" value={data.id} />
+                <IdField label="Job ID" value={data.job_id} />
+              </div>
+
               <div>
                 <div className="mb-2 text-xs font-medium text-muted-foreground">
                   Files ({data.items.length})
@@ -152,6 +157,28 @@ function Metric({ label, value, tone }: MetricProps) {
     <div className="flex flex-col gap-1 rounded-md border border-border bg-card p-2">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className={`text-lg font-semibold ${toneClass}`}>{value}</div>
+    </div>
+  );
+}
+
+interface IdFieldProps {
+  label: string;
+  value: string | null | undefined;
+}
+
+function IdField({ label, value }: IdFieldProps) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+        {label}
+      </div>
+      <div
+        className="truncate font-mono text-xs text-foreground"
+        title={value ?? undefined}
+        data-testid={`run-detail-${label.toLowerCase().replace(/\s+/g, "-")}`}
+      >
+        {value ?? "—"}
+      </div>
     </div>
   );
 }

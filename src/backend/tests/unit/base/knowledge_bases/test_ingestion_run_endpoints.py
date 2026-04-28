@@ -97,7 +97,7 @@ class TestListIngestionRuns:
 
         mine = await _insert_run(user_id=active_user.id, kb_name="only_mine")
         other_user_id = uuid.uuid4()
-        await _insert_run(user_id=other_user_id, kb_name="only_mine")
+        foreign_run_id = await _insert_run(user_id=other_user_id, kb_name="only_mine")
 
         response = await client.get(
             "api/v1/knowledge_bases/only_mine/runs",
@@ -108,7 +108,7 @@ class TestListIngestionRuns:
         ids = {r["id"] for r in payload["runs"]}
         assert str(mine) in ids
         # Must not leak the other user's run even though kb_name matches
-        assert all(r["id"] != str(other_user_id) for r in payload["runs"])
+        assert str(foreign_run_id) not in ids
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_pagination(self, mock_root, client: AsyncClient, logged_in_headers, active_user, tmp_path):
