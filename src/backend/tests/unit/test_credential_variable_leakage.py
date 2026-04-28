@@ -66,7 +66,7 @@ async def _resolve(component, params, load_from_db_fields, get_variable_return):
 
 @pytest.mark.asyncio
 async def test_credential_variable_does_not_leak_into_text_input_output():
-    """Routing a CREDENTIAL global variable into TextInputComponent.input_value must:
+    """A CREDENTIAL variable must not leak into text input output.
 
     * keep the value wrapped as SecretStr through variable resolution
     * never surface the raw value via str()/repr()
@@ -103,11 +103,13 @@ async def test_credential_variable_does_not_leak_into_text_input_output():
 
 @pytest.mark.asyncio
 async def test_credential_variable_in_password_field_is_masked_on_attribute():
-    """Counterpart: a CREDENTIAL global variable routed into a password (SecretStrInput)
-    field is accepted, but the resulting component attribute is wrapped in SecretStr —
-    so any path that stringifies the attribute (Message.text, status, traces, logs)
-    surfaces the mask, not the raw value. Provider boundaries unwrap explicitly with
-    `.get_secret_value()`.
+    """A CREDENTIAL variable in a password field must remain masked.
+
+    A CREDENTIAL global variable routed into a password (SecretStrInput) field
+    is accepted, but the resulting component attribute is wrapped in SecretStr.
+    Any path that stringifies the attribute (Message.text, status, traces, logs)
+    surfaces the mask, not the raw value. Provider boundaries unwrap explicitly
+    with `.get_secret_value()`.
     """
 
     class _PasswordFieldComponent(Component):
@@ -137,9 +139,10 @@ async def test_credential_variable_in_password_field_is_masked_on_attribute():
 
 @pytest.mark.asyncio
 async def test_generic_variable_still_flows_into_text_input():
-    """Sanity: GENERIC-typed variables (returned as plain str by VariableService)
-    must continue to work in non-password fields — only CREDENTIAL-typed
-    (SecretStr) values are blocked.
+    """GENERIC-typed variables must still flow into text input.
+
+    Variables returned as plain str by VariableService must continue to work in
+    non-password fields. Only CREDENTIAL-typed (SecretStr) values are blocked.
     """
     plain_value = "non-sensitive-display-name"
     component = TextInputComponent(_user_id=str(uuid.uuid4()))
