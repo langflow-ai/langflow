@@ -491,17 +491,6 @@ class DeploymentListParams(_BaseListParams[T_DeploymentListParams]):
     def validate_entity_filter_ids(cls, value: list[IdLike] | None, info) -> list[str] | None:
         return cls._normalize_filter_id_values(value, field_name=info.field_name)
 
-    @field_validator("deployment_names")
-    @classmethod
-    def validate_deployment_names(cls, value: list[str] | None) -> list[str] | None:
-        if value is None:
-            return None
-        stripped = [name.strip() for name in value]
-        if any(not name for name in stripped):
-            msg = "deployment_names must not contain empty or whitespace-only entries."
-            raise ValueError(msg)
-        return stripped
-
 
 class ConfigListParams(_BaseListParams[T_ConfigListParams]):
     """Query params for config list operations."""
@@ -534,17 +523,6 @@ class SnapshotListParams(_BaseListParams[T_SnapshotListParams]):
     @classmethod
     def validate_snapshot_ids(cls, value: list[IdLike] | None, info) -> list[str] | None:
         return cls._normalize_filter_id_values(value, field_name=info.field_name)
-
-    @field_validator("snapshot_names")
-    @classmethod
-    def validate_snapshot_names(cls, value: list[str] | None) -> list[str] | None:
-        if value is None:
-            return None
-        stripped = [name.strip() for name in value]
-        if any(not name for name in stripped):
-            msg = "snapshot_names must not contain empty or whitespace-only entries."
-            raise ValueError(msg)
-        return stripped
 
 
 class DeploymentCreate(BaseModel):

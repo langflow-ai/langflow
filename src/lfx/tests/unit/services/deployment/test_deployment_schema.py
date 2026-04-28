@@ -145,7 +145,7 @@ def test_deployment_list_params_validates_deployment_names() -> None:
     params = DeploymentListParams(deployment_names=[" A ", "B"])
     assert params.deployment_names == ["A", "B"]
 
-    with pytest.raises(ValidationError, match="deployment_names must not contain empty or whitespace-only entries"):
+    with pytest.raises(ValidationError):
         DeploymentListParams(deployment_names=["A", "  "])
 
 

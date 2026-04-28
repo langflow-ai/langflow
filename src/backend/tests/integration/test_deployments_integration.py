@@ -1,14 +1,44 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
 from langflow.api.v1.deployments import list_deployments
+from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
 from langflow.services.database.models.deployment.crud import create_deployment
 from langflow.services.database.models.deployment_provider_account.crud import create_provider_account
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.utils import register_builtin_adapters
 from lfx.services.adapters.deployment.schema import DeploymentType
+
+
+class _FakeDeploymentAdapter:
+    def __init__(self, deployments):
+        self._deployments = deployments
+
+    async def list(self, *, user_id, db, params=None):  # noqa: ARG002
+        deployments = list(self._deployments)
+        deployment_ids = {str(value) for value in (getattr(params, "deployment_ids", None) or [])}
+        if deployment_ids:
+            deployments = [deployment for deployment in deployments if str(deployment.id) in deployment_ids]
+        deployment_names = set(getattr(params, "deployment_names", None) or [])
+        if deployment_names:
+            deployments = [deployment for deployment in deployments if deployment.name in deployment_names]
+        return SimpleNamespace(deployments=deployments)
+
+
+def _provider_deployment(deployment_id: str, name: str):
+    now = datetime.now(timezone.utc)
+    return SimpleNamespace(
+        id=deployment_id,
+        name=name,
+        description="",
+        type=DeploymentType.AGENT,
+        provider_data={"tool_ids": [], "environments": []},
+        created_at=now,
+        updated_at=now,
+    )
 
 
 @pytest.mark.asyncio
@@ -66,12 +96,23 @@ async def test_list_deployments_names_filter_db_mode(async_session, active_user)
 
         # Mock fetch_provider_resource_keys to return all keys so they aren't deleted
         async def mock_fetch_provider_resource_keys(*args, **kwargs):  # noqa: ARG001
-            return kwargs.get("resource_keys", [])
+            resource_keys = kwargs.get("resource_keys", [])
+            return set(resource_keys), SimpleNamespace(deployments=[])
 
-        with patch(
-            "langflow.api.v1.mappers.deployments.helpers.fetch_provider_resource_keys",
-            new_callable=AsyncMock,
-            side_effect=mock_fetch_provider_resource_keys,
+        with (
+            patch(
+                "langflow.api.v1.mappers.deployments.helpers.fetch_provider_resource_keys",
+                new_callable=AsyncMock,
+                side_effect=mock_fetch_provider_resource_keys,
+            ),
+            patch(
+                "langflow.api.v1.deployments.resolve_deployment_adapter",
+                return_value=SimpleNamespace(),
+            ),
+            patch(
+                "langflow.api.v1.deployments.get_deployment_mapper",
+                return_value=BaseDeploymentMapper(),
+            ),
         ):
             # 1. Fetch without names filter
             response = await list_deployments(
@@ -114,18 +155,18 @@ async def test_list_deployments_names_filter_db_mode(async_session, active_user)
             names = {d.name for d in response.deployments}
             assert names == {"Agent Alpha", "Agent Beta"}
 
-        # 4. Fetch with non-existent name
-        response = await list_deployments(
-            provider_id=provider_id,
-            session=async_session,
-            current_user=active_user,
-            params=params,
-            deployment_type=None,
-            load_from_provider=False,
-            names=["NonExistent"],
-        )
-        assert response.total == 0
-        assert len(response.deployments) == 0
+            # 4. Fetch with non-existent name
+            response = await list_deployments(
+                provider_id=provider_id,
+                session=async_session,
+                current_user=active_user,
+                params=params,
+                deployment_type=None,
+                load_from_provider=False,
+                names=["NonExistent"],
+            )
+            assert response.total == 0
+            assert len(response.deployments) == 0
 
 
 @pytest.mark.asyncio
@@ -150,41 +191,21 @@ async def test_list_deployments_names_filter_provider_mode(async_session, active
         provider_id = provider_account.id
         params = SimpleNamespace(page=1, size=20)
 
-        # Mock the adapter's list method directly
-        async def mock_adapter_list(user_id, db, params):  # noqa: ARG001
-            from datetime import datetime, timezone
-
-            now = datetime.now(timezone.utc)
-            # Simulate provider returning only what matches the names filter
-            all_agents = [
-                SimpleNamespace(
-                    id="p-1",
-                    name="Agent Alpha",
-                    description="",
-                    type=DeploymentType.AGENT,
-                    provider_data={},
-                    created_at=now,
-                    updated_at=now,
-                ),
-                SimpleNamespace(
-                    id="p-2",
-                    name="Agent Beta",
-                    description="",
-                    type=DeploymentType.AGENT,
-                    provider_data={},
-                    created_at=now,
-                    updated_at=now,
-                ),
+        fake_adapter = _FakeDeploymentAdapter(
+            [
+                _provider_deployment("p-1", "Agent Alpha"),
+                _provider_deployment("p-2", "Agent Beta"),
             ]
-            if params and params.deployment_names:
-                all_agents = [a for a in all_agents if a.name in params.deployment_names]
-
-            return SimpleNamespace(deployments=all_agents, total=len(all_agents), provider_data={})
-
-        with patch(
-            "langflow.services.adapters.deployment.watsonx_orchestrate.WatsonxOrchestrateDeploymentService.list",
-            new_callable=AsyncMock,
-            side_effect=mock_adapter_list,
+        )
+        with (
+            patch(
+                "langflow.api.v1.deployments.resolve_deployment_adapter",
+                return_value=fake_adapter,
+            ),
+            patch(
+                "langflow.api.v1.deployments.get_deployment_mapper",
+                return_value=BaseDeploymentMapper(),
+            ),
         ):
             # 1. Fetch without names filter
             response = await list_deployments(
@@ -261,12 +282,23 @@ async def test_list_deployments_names_filter_combined(async_session, active_user
         params = SimpleNamespace(page=1, size=20)
 
         async def mock_fetch_provider_resource_keys(*args, **kwargs):  # noqa: ARG001
-            return kwargs.get("resource_keys", [])
+            resource_keys = kwargs.get("resource_keys", [])
+            return set(resource_keys), SimpleNamespace(deployments=[])
 
-        with patch(
-            "langflow.api.v1.mappers.deployments.helpers.fetch_provider_resource_keys",
-            new_callable=AsyncMock,
-            side_effect=mock_fetch_provider_resource_keys,
+        with (
+            patch(
+                "langflow.api.v1.mappers.deployments.helpers.fetch_provider_resource_keys",
+                new_callable=AsyncMock,
+                side_effect=mock_fetch_provider_resource_keys,
+            ),
+            patch(
+                "langflow.api.v1.deployments.resolve_deployment_adapter",
+                return_value=SimpleNamespace(),
+            ),
+            patch(
+                "langflow.api.v1.deployments.get_deployment_mapper",
+                return_value=BaseDeploymentMapper(),
+            ),
         ):
             # Fetch with name filter AND project_id filter
             response = await list_deployments(
