@@ -15,10 +15,10 @@ from __future__ import annotations
 import pytest
 from langflow.services.database.models.traces.model import (
     SpanKind,
-    TraceSummaryRead,
     SpanStatus,
     SpanTable,
     SpanType,
+    TraceSummaryRead,
     TraceTable,
 )
 from sqlalchemy import Enum as SQLEnum
