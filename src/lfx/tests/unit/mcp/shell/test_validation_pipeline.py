@@ -101,3 +101,105 @@ def test_should_reject_empty_command(tmp_path: Path):
     result = run_validation_pipeline("   ", _config(tmp_path))
     assert result.is_ok is False
     assert result.reason == RejectionReason.UNKNOWN_CLASSIFICATION
+
+
+# ---- Sec 3 — write-redirect bypasses read_only ----
+
+
+def test_redirect_should_bypass_classification_and_be_treated_as_write_in_read_only(tmp_path: Path):
+    """``echo data > file`` looks read-only but actually writes."""
+    result = run_validation_pipeline(
+        "echo data > evil.txt",
+        _config(tmp_path, mode=ShellMode.READ_ONLY),
+    )
+    assert result.is_ok is False
+    assert result.reason == RejectionReason.MODE_VIOLATION
+
+
+def test_append_redirect_should_be_blocked_in_read_only(tmp_path: Path):
+    result = run_validation_pipeline(
+        "cat foo >> log.txt",
+        _config(tmp_path, mode=ShellMode.READ_ONLY),
+    )
+    assert result.is_ok is False
+    assert result.reason == RejectionReason.MODE_VIOLATION
+
+
+def test_stderr_redirect_should_be_blocked_in_read_only(tmp_path: Path):
+    result = run_validation_pipeline(
+        "cat foo 2> err.log",
+        _config(tmp_path, mode=ShellMode.READ_ONLY),
+    )
+    assert result.is_ok is False
+    assert result.reason == RejectionReason.MODE_VIOLATION
+
+
+def test_powershell_redirect_should_be_blocked_in_read_only(tmp_path: Path):
+    result = run_validation_pipeline(
+        "Get-ChildItem > listing.txt",
+        _config(tmp_path, mode=ShellMode.READ_ONLY),
+    )
+    assert result.is_ok is False
+    assert result.reason == RejectionReason.MODE_VIOLATION
+
+
+def test_redirect_should_be_allowed_in_read_write(tmp_path: Path):
+    """Redirects are normal usage in read_write — must keep working."""
+    result = run_validation_pipeline(
+        "echo data > out.txt",
+        _config(tmp_path, mode=ShellMode.READ_WRITE),
+    )
+    assert result.is_ok is True
+
+
+def test_redirect_in_quoted_string_should_not_trigger_escalation(tmp_path: Path):
+    result = run_validation_pipeline(
+        "echo 'data > file'",
+        _config(tmp_path, mode=ShellMode.READ_ONLY),
+    )
+    assert result.is_ok is True
+
+
+# ---- Sec 4 — command substitution must be refused ----
+
+
+def test_should_reject_dollar_paren_substitution(tmp_path: Path):
+    result = run_validation_pipeline("echo $(rm -rf /)", _config(tmp_path))
+    assert result.is_ok is False
+    assert result.reason == RejectionReason.SHELL_SUBSTITUTION_NOT_ALLOWED
+
+
+def test_should_reject_backtick_substitution(tmp_path: Path):
+    result = run_validation_pipeline("echo `whoami`", _config(tmp_path))
+    assert result.is_ok is False
+    assert result.reason == RejectionReason.SHELL_SUBSTITUTION_NOT_ALLOWED
+
+
+def test_should_reject_substitution_inside_double_quotes(tmp_path: Path):
+    result = run_validation_pipeline('printf "%s" "$(date)"', _config(tmp_path))
+    assert result.is_ok is False
+    assert result.reason == RejectionReason.SHELL_SUBSTITUTION_NOT_ALLOWED
+
+
+def test_should_reject_substitution_in_read_write_too(tmp_path: Path):
+    """Read_write doesn't soften the rule — substitution is always refused."""
+    result = run_validation_pipeline(
+        "echo $(whoami)",
+        _config(tmp_path, mode=ShellMode.READ_WRITE),
+    )
+    assert result.is_ok is False
+    assert result.reason == RejectionReason.SHELL_SUBSTITUTION_NOT_ALLOWED
+
+
+def test_should_allow_substitution_inside_single_quotes(tmp_path: Path):
+    """Single-quoted text is literal and never expanded."""
+    result = run_validation_pipeline("echo '$(rm -rf /)'", _config(tmp_path))
+    assert result.is_ok is True
+
+
+def test_should_allow_dollar_var_without_paren(tmp_path: Path):
+    """``$VAR`` is variable expansion, not command substitution."""
+    result = run_validation_pipeline("echo $HOME", _config(tmp_path))
+    # Note: $HOME triggers home-reference path validation -> path_traversal
+    # but NOT substitution — confirm rejection_reason isn't substitution.
+    assert result.reason != RejectionReason.SHELL_SUBSTITUTION_NOT_ALLOWED

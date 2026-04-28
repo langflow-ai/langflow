@@ -202,6 +202,16 @@ _INTENT_BY_BINARY: dict[str, CommandIntent] = {
     # ``setx`` always writes to persistent env. ``set`` itself is
     # contextual (see _classify_set below).
     "setx": CommandIntent.WRITE,
+    # ---- PowerShell eval-style cmdlets ----
+    # ``Invoke-Expression`` and ``Invoke-Command -ScriptBlock`` execute
+    # arbitrary strings as PowerShell code — same risk profile as
+    # ``eval`` / ``bash -c`` / ``python -c`` on POSIX. We override the
+    # generic ``invoke`` verb prefix (which maps to NETWORK for
+    # Invoke-WebRequest et al.) and force these specific cmdlets to
+    # UNKNOWN so the pipeline rejects them as fail-closed.
+    "invoke-expression": CommandIntent.UNKNOWN,
+    "invoke-command": CommandIntent.UNKNOWN,
+    "iex": CommandIntent.UNKNOWN,
 }
 
 # ---- PowerShell cmdlets (matched case-insensitively) ------------------------

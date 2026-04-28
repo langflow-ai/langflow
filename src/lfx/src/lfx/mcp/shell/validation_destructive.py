@@ -43,6 +43,21 @@ _DESTRUCTIVE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
         ),
     ),
     (
+        # Defense-in-depth against shell glob/brace expansion. The shell
+        # expands ``rm -rf /{etc,var}`` to ``rm -rf /etc /var`` *before*
+        # this regex sees the line, so we have to refuse any glob
+        # metachar (``*``, ``?``, ``[``, ``{``) close enough to ``/``
+        # that it can plausibly expand to a system root.
+        "rm -rf with glob/brace expansion near root",
+        re.compile(
+            r"(?:^|[\s;|&])"
+            r"(?:sudo\s+)?"
+            r"rm\s+(?:-[rRfF]+\s*)+"
+            r"(?:--no-preserve-root\s+)?"
+            r"/[A-Za-z]{0,3}[?*\[\]{}]",
+        ),
+    ),
+    (
         "mkfs over device",
         re.compile(r"(?:^|[\s;|&])(?:sudo\s+)?mkfs(?:\.[a-z0-9]+)?\s+/dev/"),
     ),
@@ -112,6 +127,29 @@ _DESTRUCTIVE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
             r"[^|;&]*?"
             rf"(?:{_WIN_DRIVE}[\\/](?:{_WIN_DANGER_DIRS})"
             rf"|{_WIN_DRIVE}[\\/]?(?=\s|$))",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        # Same defense-in-depth for Windows recursive delete with glob
+        # in shallow drive path (``del /S /Q C:\W*`` expands to
+        # ``C:\Windows``, ``rd /S /Q C:\?indows`` to the same).
+        "Windows recursive delete with glob/brace near drive root",
+        re.compile(
+            r"(?:^|[\s;|&])(?:del|erase|rd|rmdir)\b"
+            r"(?=[^|;&]*?\s/[Ss]\b)"
+            r"[^|;&]*?"
+            rf"{_WIN_DRIVE}[\\/][A-Za-z]{{0,3}}[?*\[\]{{}}]",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "PowerShell Remove-Item with glob/brace near drive root",
+        re.compile(
+            r"(?:^|[\s;|&])Remove-Item\b[^|;&]*?-Recurse\b[^|;&]*?-Force\b"
+            rf"[^|;&]*?{_WIN_DRIVE}[\\/][A-Za-z]{{0,3}}[?*\[\]{{}}]"
+            r"|(?:^|[\s;|&])Remove-Item\b[^|;&]*?-Force\b[^|;&]*?-Recurse\b"
+            rf"[^|;&]*?{_WIN_DRIVE}[\\/][A-Za-z]{{0,3}}[?*\[\]{{}}]",
             re.IGNORECASE,
         ),
     ),

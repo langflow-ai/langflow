@@ -37,6 +37,9 @@ class RejectionReason(Enum):
     PATH_TRAVERSAL = "path_traversal"
     UNKNOWN_CLASSIFICATION = "unknown_classification"
     INPUT_TOO_LARGE = "input_too_large"
+    # Refused construct: ``$(...)`` / `` `...` `` / similar shell
+    # substitution wrappers that embed an unvalidatable inner command.
+    SHELL_SUBSTITUTION_NOT_ALLOWED = "shell_substitution_not_allowed"
 
 
 @dataclass(frozen=True)
