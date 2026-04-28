@@ -20,8 +20,12 @@ from __future__ import annotations
 
 import re
 from pathlib import PurePosixPath
+from typing import TYPE_CHECKING
 
 from lfx.mcp.shell.shell_types import CommandIntent
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _INTENT_BY_BINARY: dict[str, CommandIntent] = {
     # Read-only inspection
@@ -195,6 +199,9 @@ _INTENT_BY_BINARY: dict[str, CommandIntent] = {
     "fsutil": CommandIntent.SYSTEM_ADMIN,
     "vssadmin": CommandIntent.SYSTEM_ADMIN,
     "wevtutil": CommandIntent.SYSTEM_ADMIN,
+    # ``setx`` always writes to persistent env. ``set`` itself is
+    # contextual (see _classify_set below).
+    "setx": CommandIntent.WRITE,
 }
 
 # ---- PowerShell cmdlets (matched case-insensitively) ------------------------
@@ -261,12 +268,18 @@ def classify_command(command: str) -> CommandIntent:
     # Direct match (case-insensitive — Windows shells ignore case and
     # POSIX names are all-lowercase by convention).
     lowered = leading.lower()
+    contextual = _CONTEXTUAL_CLASSIFIERS.get(lowered)
+    if contextual is not None:
+        return contextual(command)
     direct = _INTENT_BY_BINARY.get(lowered)
     if direct is not None:
         return direct
     # Family binaries like mkfs.ext4 / mkfs.xfs share intent with the base name.
     # On Windows we also strip ``.exe``, ``.bat``, ``.cmd``, etc.
     base = lowered.split(".", 1)[0]
+    contextual = _CONTEXTUAL_CLASSIFIERS.get(base)
+    if contextual is not None:
+        return contextual(command)
     direct = _INTENT_BY_BINARY.get(base)
     if direct is not None:
         return direct
@@ -278,6 +291,30 @@ def classify_command(command: str) -> CommandIntent:
         if powershell_intent is not None:
             return powershell_intent
     return CommandIntent.UNKNOWN
+
+
+# ---- Contextual classifiers --------------------------------------------------
+# Some shell builtins change intent depending on their arguments. ``set``
+# is the canonical example: ``set`` and ``set FOO`` are read-only on both
+# cmd.exe and POSIX sh, while ``set FOO=value`` writes the env.
+_BINARY_AND_AT_LEAST_ONE_ARG = 2
+
+
+def _classify_set(command: str) -> CommandIntent:
+    """Return WRITE if the args contain an assignment, READ_ONLY otherwise."""
+    # Drop the leading binary, look at the remainder for ``NAME=value``.
+    parts = command.strip().split(maxsplit=1)
+    if len(parts) < _BINARY_AND_AT_LEAST_ONE_ARG:
+        return CommandIntent.READ_ONLY
+    rest = parts[1]
+    # ``set FOO=bar``: the first token of ``rest`` contains ``=``.
+    first_token = rest.split(maxsplit=1)[0]
+    return CommandIntent.WRITE if "=" in first_token else CommandIntent.READ_ONLY
+
+
+_CONTEXTUAL_CLASSIFIERS: dict[str, Callable[[str], CommandIntent]] = {
+    "set": _classify_set,
+}
 
 
 def _leading_binary(command: str) -> str | None:

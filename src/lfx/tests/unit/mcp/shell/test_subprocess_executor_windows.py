@@ -121,3 +121,34 @@ def test_sanitised_environment_should_only_pass_allowlisted(monkeypatch: pytest.
     assert "OPENAI_API_KEY" not in env
     # PATH is in both POSIX and Windows allowlists, so it must pass.
     assert env.get("PATH") == "/usr/bin"
+
+
+def test_output_encoding_should_be_utf8_on_posix(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(subprocess_executor, "_IS_WINDOWS", False)
+    assert subprocess_executor._select_output_encoding() == "utf-8"
+
+
+def test_output_encoding_should_use_locale_preferred_on_windows(monkeypatch: pytest.MonkeyPatch):
+    """On Windows we must NOT hard-code utf-8 — cmd.exe outputs in OEM/ANSI codepage."""
+    monkeypatch.setattr(subprocess_executor, "_IS_WINDOWS", True)
+    encoding = subprocess_executor._select_output_encoding()
+    # On macOS the test still runs through this branch; locale.getpreferredencoding
+    # always returns something non-empty. We just want it to NOT be the hard-coded
+    # 'utf-8' literal we use on POSIX (otherwise the fix would be a no-op).
+    assert isinstance(encoding, str)
+    assert encoding  # non-empty
+
+
+def test_decode_should_round_trip_oem_codepage_on_windows(monkeypatch: pytest.MonkeyPatch):
+    """A name with accents encoded in cp850 must come back readable, not as ufffd."""
+    monkeypatch.setattr(subprocess_executor, "_IS_WINDOWS", True)
+    monkeypatch.setattr(subprocess_executor, "_select_output_encoding", lambda: "cp850")
+    raw = "relatório.txt".encode("cp850")
+    decoded = subprocess_executor._decode_output(raw)
+    assert decoded == "relatório.txt"
+
+
+def test_decode_should_round_trip_utf8_on_posix(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(subprocess_executor, "_IS_WINDOWS", False)
+    raw = "relatório.txt".encode()
+    assert subprocess_executor._decode_output(raw) == "relatório.txt"

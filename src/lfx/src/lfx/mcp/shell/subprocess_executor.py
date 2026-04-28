@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import locale
 import os
 import signal
 from typing import Any
@@ -62,17 +63,34 @@ async def execute_subprocess(
         await _kill_process_tree(proc)
         stdout_bytes, stderr_bytes = await _drain_after_kill(proc)
         return ExecutionResult(
-            stdout=stdout_bytes.decode(errors="replace"),
-            stderr=(stderr_bytes.decode(errors="replace") + f"\n[killed after timeout of {timeout}s]"),
+            stdout=_decode_output(stdout_bytes),
+            stderr=_decode_output(stderr_bytes) + f"\n[killed after timeout of {timeout}s]",
             exit_code=proc.returncode if proc.returncode is not None else _TIMEOUT_EXIT_CODE,
             timed_out=True,
         )
     return ExecutionResult(
-        stdout=stdout_bytes.decode(errors="replace"),
-        stderr=stderr_bytes.decode(errors="replace"),
+        stdout=_decode_output(stdout_bytes),
+        stderr=_decode_output(stderr_bytes),
         exit_code=proc.returncode if proc.returncode is not None else _TIMEOUT_EXIT_CODE,
         timed_out=False,
     )
+
+
+def _select_output_encoding() -> str:
+    """Encoding cmd.exe / sh emit on stdout.
+
+    POSIX shells consistently emit UTF-8 on modern systems. Windows
+    cmd.exe emits in the active OEM codepage (cp437/cp850/cp1252)
+    unless the user runs ``chcp 65001`` first — decoding as UTF-8
+    would corrupt accented filenames and box-drawing characters.
+    """
+    if _IS_WINDOWS:
+        return locale.getpreferredencoding(do_setlocale=False) or "cp1252"
+    return "utf-8"
+
+
+def _decode_output(raw: bytes) -> str:
+    return raw.decode(_select_output_encoding(), errors="replace")
 
 
 def _sanitised_environment() -> dict[str, str]:

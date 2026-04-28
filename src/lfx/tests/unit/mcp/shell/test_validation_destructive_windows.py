@@ -18,12 +18,33 @@ from lfx.mcp.shell.validation_destructive import validate_not_destructive
         "format C: /Q",
         "format D: /FS:NTFS",
         "format E: /Y",
+        # Flags BEFORE the drive letter — the spec for format.com accepts
+        # this and earlier versions of our regex missed it.
+        "format /Q C:",
+        "format /FS:NTFS D:",
+        "format /Y /Q E:",
+        "format /Q /FS:NTFS C:",
+        "FORMAT /Q C:",  # case-insensitive
+        "format.com /Q C:",  # explicit .com extension
     ],
 )
 def test_should_reject_format_drive(command: str):
     result = validate_not_destructive(command)
     assert result.is_ok is False
     assert result.reason == RejectionReason.DESTRUCTIVE_PATTERN
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "format",  # bare format prompts interactively, no drive — not actually destructive
+        "echo 'format /Q C:'",  # quoted, no execution
+        "format-config.txt",  # filename, not the binary
+    ],
+)
+def test_should_allow_format_without_drive_arg(command: str):
+    result = validate_not_destructive(command)
+    assert result.is_ok is True
 
 
 @pytest.mark.parametrize(

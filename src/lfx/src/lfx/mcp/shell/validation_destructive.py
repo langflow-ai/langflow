@@ -79,7 +79,16 @@ _DESTRUCTIVE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     # ---- Windows-flavoured destructive patterns ----
     (
         "format drive",
-        re.compile(rf"(?:^|[\s;|&])format(?:\.com)?\s+{_WIN_DRIVE}", re.IGNORECASE),
+        # ``format`` accepts flags before or after the drive letter
+        # (``format /Q C:`` and ``format C: /Q`` are both valid). We
+        # use a lookahead so the drive can appear anywhere in the
+        # command's args, not only immediately after the binary.
+        re.compile(
+            r"(?:^|[\s;|&])format(?:\.com)?\b"
+            rf"(?=[^|;&]*?\s{_WIN_DRIVE}(?:[\\/]|\s|$))"
+            rf"[^|;&]*?{_WIN_DRIVE}",
+            re.IGNORECASE,
+        ),
     ),
     (
         "recursive del/erase on drive root or system folder",
