@@ -148,7 +148,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        from lfx.interface.components import get_and_cache_all_types_dict
+        from lfx.interface.components import component_cache, get_and_cache_all_types_dict
 
         from langflow.preload import _STATE, get_owned_temp_dirs
 
@@ -251,12 +251,20 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             # Gate: Cache component types
-            # When types_cached is True, the types dict is inherited via COW and
-            # the local ``all_types_dict`` is intentionally not assigned: the
-            # only consumer below (create_or_update_starter_projects) is gated
-            # on starter_projects_created, which implies types_cached.
+            # When types_cached is True, workers inherited the populated cache via COW; we still need a
+            # local handle for create_or_update_starter_projects. starter_projects_created can remain False
+            # if the master failed after caching types but before finishing starter projects.
             if _STATE.types_cached:
                 await logger.adebug("Skipping types cache: inherited from master")
+                all_types_dict = component_cache.all_types_dict
+                if all_types_dict is None:
+                    # Inconsistent inherited state (e.g. rare fork/COW edge cases): rebuild instead of
+                    # skipping starter projects with an empty cache.
+                    await logger.awarning(
+                        "Component types cache is empty but preload marked types cached; "
+                        "rebuilding cache in this worker."
+                    )
+                    all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
             else:
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Caching types")
@@ -274,21 +282,26 @@ def get_lifespan(*, fix_migration=False, version=None):
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Creating/updating starter projects")
 
-                lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
-                lock = FileLock(lock_file, timeout=1)
-                try:
-                    with lock:
-                        await create_or_update_starter_projects(all_types_dict)
-                        await logger.adebug(
-                            f"Starter projects created/updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
-                        )
-                except TimeoutError:
-                    await logger.adebug("Another worker is creating starter projects, skipping")
-                except Exception as e:  # noqa: BLE001
+                if all_types_dict is None:
                     await logger.awarning(
-                        f"Failed to acquire lock for starter projects: {e}. "
-                        "Starter projects may not be created or updated."
+                        "Skipping starter projects: component types cache is still empty after cache build. "
+                        "Starter projects will not be created or updated."
                     )
+                else:
+                    lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
+                    lock = FileLock(lock_file, timeout=1)
+                    try:
+                        with lock:
+                            await create_or_update_starter_projects(all_types_dict)
+                            elapsed = asyncio.get_event_loop().time() - current_time
+                            await logger.adebug(f"Starter projects created/updated in {elapsed:.2f}s")
+                    except TimeoutError:
+                        await logger.adebug("Another worker is creating starter projects, skipping")
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(
+                            f"Failed to create or update starter projects: {e}. "
+                            "Starter projects may not be created or updated."
+                        )
 
             # Gate: Initialize agentic global variables (when agentic_experience enabled)
             if not get_settings_service().settings.agentic_experience:
