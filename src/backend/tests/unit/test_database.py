@@ -566,6 +566,40 @@ async def test_download_file(
 
 
 @pytest.mark.usefixtures("session")
+async def test_download_flows_non_ascii_content_disposition(client: AsyncClient, logged_in_headers):
+    """Downloading multiple flows must produce RFC 5987-encoded Content-Disposition for non-ASCII flow names."""
+    from urllib.parse import unquote
+
+    # Create two flows with Chinese names
+    chinese_names = ["龙流程", "测试下载"]
+    flow_ids = []
+    for name in chinese_names:
+        create_resp = await client.post(
+            "api/v1/flows/",
+            json={"name": name, "description": "", "data": {}},
+            headers=logged_in_headers,
+        )
+        assert create_resp.status_code == 201
+        flow_ids.append(create_resp.json()["id"])
+
+    download_response = await client.post(
+        "api/v1/flows/download/",
+        data=json.dumps(flow_ids),
+        headers={**logged_in_headers, "Content-Type": "application/json"},
+    )
+    assert download_response.status_code == 200
+    assert download_response.headers["Content-Type"] == "application/x-zip-compressed"
+
+    content_disposition = download_response.headers["Content-Disposition"]
+    assert "attachment" in content_disposition
+    assert "filename*=UTF-8''" in content_disposition
+    # The RFC 5987 value must be decodable and produce a valid filename
+    rfc5987_value = content_disposition.split("filename*=UTF-8''")[-1].split(";")[0].strip()
+    decoded = unquote(rfc5987_value)
+    assert decoded.endswith(".zip")
+
+
+@pytest.mark.usefixtures("session")
 async def test_download_single_flow_returns_normalized_json(client: AsyncClient, logged_in_headers):
     """Downloading a single flow returns normalized JSON rather than a ZIP archive."""
     code_value = "print('hello')\nprint('world')"
