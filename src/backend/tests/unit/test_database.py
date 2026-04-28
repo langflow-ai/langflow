@@ -562,15 +562,24 @@ async def test_download_file(
     # Check response data
     # Since the endpoint now returns a zip file, we need to check the content type and the filename in the headers
     assert response.headers["Content-Type"] == "application/x-zip-compressed"
-    assert "attachment; filename=" in response.headers["Content-Disposition"]
+    content_disposition = response.headers["Content-Disposition"]
+    assert "attachment" in content_disposition
+    assert 'filename="' in content_disposition
+    assert "filename*=UTF-8''" in content_disposition
 
 
 @pytest.mark.usefixtures("session")
-async def test_download_flows_non_ascii_content_disposition(client: AsyncClient, logged_in_headers):
-    """Downloading multiple flows must produce RFC 5987-encoded Content-Disposition for non-ASCII flow names."""
+async def test_download_flows_content_disposition_dual_param(client: AsyncClient, logged_in_headers):
+    """Downloading multiple flows must produce a dual-param RFC 5987 Content-Disposition header.
+
+    The ZIP filename is always timestamp-based (pure ASCII). This test verifies
+    that both the legacy 'filename=' param and the RFC 5987 'filename*=' param
+    are present and well-formed, as required for compatibility with both old
+    and new HTTP clients.
+    """
     from urllib.parse import unquote
 
-    # Create two flows with Chinese names
+    # Create two flows (names don't affect the ZIP filename, which is timestamp-based)
     chinese_names = ["龙流程", "测试下载"]
     flow_ids = []
     for name in chinese_names:
@@ -591,9 +600,11 @@ async def test_download_flows_non_ascii_content_disposition(client: AsyncClient,
     assert download_response.headers["Content-Type"] == "application/x-zip-compressed"
 
     content_disposition = download_response.headers["Content-Disposition"]
+    # Must include both params: ASCII fallback and RFC 5987
     assert "attachment" in content_disposition
+    assert 'filename="' in content_disposition
     assert "filename*=UTF-8''" in content_disposition
-    # The RFC 5987 value must be decodable and produce a valid filename
+    # The RFC 5987 value must decode to a .zip filename
     rfc5987_value = content_disposition.split("filename*=UTF-8''")[-1].split(";")[0].strip()
     decoded = unquote(rfc5987_value)
     assert decoded.endswith(".zip")

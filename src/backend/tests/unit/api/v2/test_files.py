@@ -625,11 +625,11 @@ async def test_unique_filename_path_storage(files_client, files_created_api_key)
 @pytest.mark.parametrize(
     ("filename", "expected_rfc5987"),
     [
-        ("龙.txt", "%E9%BE%99"),
-        ("测试文件.txt", "%E6%B5%8B%E8%AF%95%E6%96%87%E4%BB%B6"),
-        ("日本語ファイル.txt", "%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB"),
-        ("arquivo_com_acentuação.txt", "arquivo_com_acentua%C3%A7%C3%A3o"),
-        ("normal_file.txt", "normal_file"),
+        ("龙.txt", "%E9%BE%99.txt"),
+        ("测试文件.txt", "%E6%B5%8B%E8%AF%95%E6%96%87%E4%BB%B6.txt"),
+        ("日本語ファイル.txt", "%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.txt"),
+        ("arquivo_com_acentuação.txt", "arquivo_com_acentua%C3%A7%C3%A3o.txt"),
+        ("normal_file.txt", "normal_file.txt"),
     ],
 )
 async def test_download_file_non_ascii_content_disposition(
@@ -657,8 +657,9 @@ async def test_download_file_non_ascii_content_disposition(
     assert expected_rfc5987 in content_disposition
     rfc5987_value = content_disposition.split("filename*=UTF-8''")[-1].split(";")[0].strip()
     decoded = unquote(rfc5987_value)
-    # The original filename stem must appear in the server-returned decoded name
+    # The decoded RFC 5987 value must contain both the stem and the extension
     assert filename.rsplit(".", 1)[0] in decoded
+    assert decoded.endswith(".txt")
 
 
 async def test_batch_download_files_non_ascii_content_disposition(files_client, files_created_api_key):
