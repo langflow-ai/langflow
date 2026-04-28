@@ -591,6 +591,83 @@ class TestRunFlowUserId:
             assert graph_a.user_id != graph_b.user_id
 
 
+class TestRunFlowFallbackToEnvVars:
+    """run_flow must plumb fallback_to_env_vars into ``graph.async_start``.
+
+    Without this, a langflow ``DatabaseVariableService`` registered alongside
+    ``database_service`` would raise ``variable not found`` for any
+    ``load_from_db=True`` field whose user_id has no Variable row (e.g., the
+    ceremonial UUID lfx auto-generates). The flag tells
+    ``loading.update_params_with_load_from_db_fields`` to fall back to
+    ``os.environ`` when the DB lookup misses — same behavior as the langflow
+    API path in ``processing.process.run_graph_internal``.
+    """
+
+    @staticmethod
+    def _mock_graph_capturing_kwargs(captured: dict):
+        graph = MagicMock()
+        graph.context = {}
+        graph.vertices = []
+        graph.edges = []
+        graph.prepare = MagicMock()
+
+        async def _async_start(_inputs, **kwargs):
+            captured.update(kwargs)
+            yield
+
+        graph.async_start = _async_start
+        return graph
+
+    @pytest.mark.asyncio
+    async def test_passes_fallback_from_settings_default(self, tmp_path):
+        """Setting defaults True; run_flow forwards True into async_start."""
+        script_path = tmp_path / "test.py"
+        script_path.write_text("graph = None")
+        captured: dict = {}
+        mock_graph = self._mock_graph_capturing_kwargs(captured)
+
+        with (
+            patch("lfx.run.base.find_graph_variable") as mock_find,
+            patch("lfx.run.base.load_graph_from_script") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_find.return_value = {"line_number": 1, "type": "Graph", "source_line": "graph = Graph(...)"}
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "test"}
+
+            await run_flow(script_path=script_path)
+
+        assert captured.get("fallback_to_env_vars") is True
+
+    @pytest.mark.asyncio
+    async def test_respects_settings_when_disabled(self, tmp_path):
+        """When LANGFLOW_FALLBACK_TO_ENV_VAR=false, the flag plumbs through as False."""
+        script_path = tmp_path / "test.py"
+        script_path.write_text("graph = None")
+        captured: dict = {}
+        mock_graph = self._mock_graph_capturing_kwargs(captured)
+        mock_settings = MagicMock()
+        mock_settings.settings.fallback_to_env_var = False
+
+        with (
+            patch("lfx.run.base.find_graph_variable") as mock_find,
+            patch("lfx.run.base.load_graph_from_script") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+            patch("lfx.run.base.get_settings_service", return_value=mock_settings),
+        ):
+            mock_find.return_value = {"line_number": 1, "type": "Graph", "source_line": "graph = Graph(...)"}
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "test"}
+
+            await run_flow(script_path=script_path)
+
+        assert captured.get("fallback_to_env_vars") is False
+
+
 class TestRunFlowGlobalVariables:
     """Tests for run_flow global variables injection."""
 

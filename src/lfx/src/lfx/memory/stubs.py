@@ -5,6 +5,7 @@ service-based architecture. It mirrors the langflow.memory API but works with
 lfx's Message model and service interfaces.
 """
 
+import contextlib
 from uuid import UUID
 
 from lfx.log.logger import logger
@@ -41,10 +42,14 @@ async def astore_message(
         )
         raise ValueError(msg)
 
-    # Set flow_id if provided
+    # Set flow_id if provided. The stub is the fallback when no real database is
+    # registered, so be tolerant of non-UUID flow_ids (e.g. synthetic IDs from tests
+    # or callers that pass a string identifier). UUID parsing here only normalizes
+    # format; an invalid string is preserved verbatim.
     if flow_id:
         if isinstance(flow_id, str):
-            flow_id = UUID(flow_id)
+            with contextlib.suppress(ValueError):
+                flow_id = UUID(flow_id)
         message.flow_id = str(flow_id)
 
     # In lfx, we use the service architecture - this is a simplified implementation

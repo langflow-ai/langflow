@@ -31,6 +31,7 @@ from lfx.cli.script_loader import (
 from lfx.load import load_flow_from_json
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
+from lfx.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -353,10 +354,16 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
     original_stdout = sys.stdout
     original_stderr = sys.stderr
 
+    # Mirror langflow's API path: when a load_from_db variable misses, fall through
+    # to os.environ instead of erroring. Setting defaults True; users can opt out via
+    # LANGFLOW_FALLBACK_TO_ENV_VAR=false. Same rationale as run/base.py.
+    settings_service = get_settings_service()
+    fallback_to_env_vars = bool(settings_service and settings_service.settings.fallback_to_env_var)
+
     try:
         sys.stdout = captured_stdout
         sys.stderr = captured_stderr
-        results = [result async for result in graph.async_start(inputs)]
+        results = [result async for result in graph.async_start(inputs, fallback_to_env_vars=fallback_to_env_vars)]
     except Exception as exc:
         # Capture any error output that was written to stderr
         error_output = captured_stderr.getvalue()

@@ -18,6 +18,7 @@ from lfx.cli.script_loader import (
 from lfx.cli.validation import validate_global_variables_for_env
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
+from lfx.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from lfx.events.event_manager import EventManager
@@ -380,7 +381,19 @@ async def run_flow(
 
         logger.info("Starting graph execution...", level="DEBUG")
 
-        async for result in graph.async_start(inputs, event_manager=event_manager):
+        # Mirror langflow's API path (processing.process.run_graph_internal): when a
+        # load_from_db variable misses (e.g. random user_id has no Variable row), fall
+        # through to os.environ instead of failing the build. The setting defaults to
+        # True; users opting out via LANGFLOW_FALLBACK_TO_ENV_VAR=false get the strict
+        # behavior. Without this plumbing, the env fallback in
+        # `loading.update_params_with_load_from_db_fields` never fires under lfx run
+        # because async_start defaults the flag to False.
+        settings_service = get_settings_service()
+        fallback_to_env_vars = bool(settings_service and settings_service.settings.fallback_to_env_var)
+
+        async for result in graph.async_start(
+            inputs, event_manager=event_manager, fallback_to_env_vars=fallback_to_env_vars
+        ):
             result_count += 1
             if verbosity > 0:
                 logger.debug(f"Processing result #{result_count}")

@@ -208,7 +208,7 @@ class TestGraphExecution:
         # Mock graph and async iterator
         mock_result = MagicMock(results={"text": "Test result"})
 
-        async def mock_async_start(inputs):  # noqa: ARG001
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
             yield mock_result
 
         mock_graph = MagicMock()
@@ -229,7 +229,7 @@ class TestGraphExecution:
         # Ensure results attribute doesn't exist
         delattr(mock_result, "results")
 
-        async def mock_async_start(inputs):  # noqa: ARG001
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
             yield mock_result
 
         mock_graph = MagicMock()
@@ -244,7 +244,7 @@ class TestGraphExecution:
     async def test_execute_graph_with_capture_error(self):
         """Test graph execution with error."""
 
-        async def mock_async_start_error(inputs):  # noqa: ARG001
+        async def mock_async_start_error(inputs, **kwargs):  # noqa: ARG001
             msg = "Execution failed"
             raise RuntimeError(msg)
             yield  # This line never executes but makes it an async generator
@@ -263,7 +263,7 @@ class TestGraphExecution:
         to keep streaming/persistence paths functional in lfx serve.
         """
 
-        async def mock_async_start(inputs):  # noqa: ARG001
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
@@ -278,7 +278,7 @@ class TestGraphExecution:
     async def test_execute_graph_with_capture_preserves_caller_session_id(self):
         """An explicit session_id wins over auto-generation."""
 
-        async def mock_async_start(inputs):  # noqa: ARG001
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
@@ -297,7 +297,7 @@ class TestGraphExecution:
         so served ``/run`` and ``/stream`` requests behave like the playground.
         """
 
-        async def mock_async_start(inputs):  # noqa: ARG001
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
@@ -319,7 +319,7 @@ class TestGraphExecution:
         Mirrors Langflow's playground precedence in ``build_graph_from_data``.
         """
 
-        async def mock_async_start(inputs):  # noqa: ARG001
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
@@ -343,7 +343,7 @@ class TestGraphExecution:
         ceremonial but necessary.
         """
 
-        async def mock_async_start(inputs):  # noqa: ARG001
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
@@ -359,7 +359,7 @@ class TestGraphExecution:
     async def test_execute_graph_preserves_existing_user_id(self):
         """A user_id already set on the graph (e.g., by an upstream caller) is left alone."""
 
-        async def mock_async_start(inputs):  # noqa: ARG001
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
@@ -369,6 +369,45 @@ class TestGraphExecution:
         await execute_graph_with_capture(mock_graph, "test input")
 
         assert mock_graph.user_id == "preset-user-uuid"
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_passes_fallback_from_settings_default(self):
+        """Default settings (fallback_to_env_var=True) reach async_start.
+
+        Lets components fall through to os.environ when a load_from_db variable
+        has no DB row — matching langflow's API path behavior.
+        """
+        captured: dict = {}
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            captured.update(kwargs)
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+
+        await execute_graph_with_capture(mock_graph, "test input")
+
+        assert captured.get("fallback_to_env_vars") is True
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_respects_disabled_fallback_setting(self):
+        """When the user opts out of env fallback in settings, the flag is False."""
+        captured: dict = {}
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            captured.update(kwargs)
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+        mock_settings = MagicMock()
+        mock_settings.settings.fallback_to_env_var = False
+
+        with patch("lfx.cli.common.get_settings_service", return_value=mock_settings):
+            await execute_graph_with_capture(mock_graph, "test input")
+
+        assert captured.get("fallback_to_env_vars") is False
 
 
 class TestResultExtraction:
