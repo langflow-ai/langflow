@@ -43,6 +43,7 @@ from lfx.log import logger
 from langflow.api.utils import CurrentActiveUser
 from langflow.services.database.models.ingestion_run import IngestionRunStatus
 from langflow.services.database.models.jobs.model import JobStatus
+from langflow.services.database.models.knowledge_base.model import KnowledgeBaseStatus
 from langflow.services.deps import get_settings_service
 from langflow.services.jobs.service import JobService
 from langflow.utils.kb_constants import (
@@ -572,6 +573,18 @@ class KBIngestionHelper:
             kb_id=kb_record_id,
         )
         await ingestion_run_service.mark_running(run_id)
+        # Reflect the in-flight ingestion on the KB row so the UI can
+        # surface accurate status + failure_reason without re-deriving
+        # them from job state alone.
+        if kb_record_id is not None:
+            try:
+                await knowledge_base_service.update_status(
+                    kb_record_id,
+                    status=KnowledgeBaseStatus.INGESTING,
+                    failure_reason=None,
+                )
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning("KB status update to INGESTING lagged for %s: %s", kb_name, exc)
 
         # ``create_backend`` can return any ``BaseVectorStoreBackend``
         # subclass. Typing the local as the narrower ``ChromaBackend``
@@ -738,6 +751,17 @@ class KBIngestionHelper:
                     )
                 except Exception as exc:  # noqa: BLE001
                     await logger.awarning("KB DB stat update lagged for %s: %s", kb_name, exc)
+                # Clear any previous failure marker once the run finishes
+                # writing chunks; ``final_status`` (PARTIAL/SUCCEEDED) is
+                # not "failed", so the KB row should reflect READY.
+                try:
+                    await knowledge_base_service.update_status(
+                        kb_record_id,
+                        status=KnowledgeBaseStatus.READY,
+                        failure_reason=None,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning("KB status update to READY lagged for %s: %s", kb_name, exc)
 
             await logger.ainfo(
                 "Completed ingestion for %s (succeeded=%d failed=%d skipped=%d)",
@@ -768,11 +792,24 @@ class KBIngestionHelper:
                 backend_config=kb_record.backend_config if kb_record is not None else None,
                 user_id=getattr(current_user, "id", None),
             )
+            if kb_record_id is not None:
+                try:
+                    await knowledge_base_service.update_status(
+                        kb_record_id,
+                        status=KnowledgeBaseStatus.FAILED,
+                        failure_reason=final_error,
+                    )
+                except Exception as status_exc:  # noqa: BLE001
+                    await logger.awarning("KB status update to FAILED (cancel) lagged for %s: %s", kb_name, status_exc)
             return {"message": "Job cancelled", "ingestion_run_id": str(run_id)}
         except Exception as exc:
             final_status = IngestionRunStatus.FAILED
-            final_error = str(exc)
-            await logger.aerror("Error in background ingestion: %s. Initiating rollback.", exc)
+            final_error = str(exc) or exc.__class__.__name__
+            # ``aexception`` includes the traceback so the underlying
+            # backend error (e.g. OpenSearch auth / connection failure)
+            # is preserved in the server logs even when the UI surface
+            # is limited to a single-line ``failure_reason``.
+            await logger.aexception("Error in background ingestion for %s: %s. Initiating rollback.", kb_name, exc)
             await KBIngestionHelper.cleanup_chroma_chunks_by_job(
                 task_job_id,
                 kb_path,
@@ -781,6 +818,15 @@ class KBIngestionHelper:
                 backend_config=kb_record.backend_config if kb_record is not None else None,
                 user_id=getattr(current_user, "id", None),
             )
+            if kb_record_id is not None:
+                try:
+                    await knowledge_base_service.update_status(
+                        kb_record_id,
+                        status=KnowledgeBaseStatus.FAILED,
+                        failure_reason=final_error,
+                    )
+                except Exception as status_exc:  # noqa: BLE001
+                    await logger.awarning("KB status update to FAILED lagged for %s: %s", kb_name, status_exc)
             raise
         finally:
             if backend is not None:

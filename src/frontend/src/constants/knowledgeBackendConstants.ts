@@ -9,6 +9,11 @@ export const OPENSEARCH_VARIABLES = {
   INDEX_NAME: "OPENSEARCH_INDEX_NAME",
   VECTOR_FIELD: "OPENSEARCH_VECTOR_FIELD",
   TEXT_FIELD: "OPENSEARCH_TEXT_FIELD",
+  // Boolean toggles for TLS connection behavior. Persisted as
+  // "true"/"false" strings via the global-variable pipeline and
+  // coerced back to booleans inside ``getKnowledgeBackendConfig``.
+  USE_SSL: "OPENSEARCH_USE_SSL",
+  VERIFY_CERTS: "OPENSEARCH_VERIFY_CERTS",
 } as const;
 
 export type KnowledgeBackendId =
@@ -23,7 +28,8 @@ export type AvailableKnowledgeBackendId = Extract<
   "chroma" | "opensearch"
 >;
 
-export interface KnowledgeBackendConfigField {
+export interface KnowledgeBackendTextField {
+  kind?: "text";
   label: string;
   variableKey: string;
   required: boolean;
@@ -31,6 +37,18 @@ export interface KnowledgeBackendConfigField {
   placeholder: string;
   defaultValue?: string;
 }
+
+export interface KnowledgeBackendBooleanField {
+  kind: "boolean";
+  label: string;
+  variableKey: string;
+  helperText?: string;
+  defaultValue: boolean;
+}
+
+export type KnowledgeBackendConfigField =
+  | KnowledgeBackendTextField
+  | KnowledgeBackendBooleanField;
 
 export interface KnowledgeBackendOption {
   id: KnowledgeBackendId;
@@ -105,6 +123,22 @@ export const KNOWLEDGE_BACKEND_OPTIONS: KnowledgeBackendOption[] = [
         placeholder: "text",
         defaultValue: "text",
       },
+      {
+        kind: "boolean",
+        label: "Use TLS (HTTPS)",
+        variableKey: OPENSEARCH_VARIABLES.USE_SSL,
+        helperText:
+          "Connect over HTTPS. Disable for plain-HTTP clusters. Defaults to the URL scheme when unset.",
+        defaultValue: true,
+      },
+      {
+        kind: "boolean",
+        label: "Verify TLS certificate",
+        variableKey: OPENSEARCH_VARIABLES.VERIFY_CERTS,
+        helperText:
+          "Disable for self-signed certificates (the default OpenSearch container ships one).",
+        defaultValue: true,
+      },
     ],
   },
   {
@@ -150,6 +184,29 @@ export function getGlobalVariableValue(
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
+/**
+ * Parse a global-variable value as a boolean. Accepts "true"/"false"
+ * (case-insensitive) and the numeric "1"/"0" forms; falls back to
+ * ``defaultValue`` for anything else (including "" / undefined).
+ *
+ * Centralized here so the settings page and the KB-config resolver
+ * agree on what a stored "true" means — silently treating "false" as
+ * ``Boolean("false") === true`` was the original Python footgun this
+ * pipeline replaces.
+ */
+export function parseBooleanGlobalVariable(
+  variables: GlobalVariable[],
+  name: string,
+  defaultValue: boolean,
+): boolean {
+  const raw = getGlobalVariableValue(variables, name);
+  if (raw === undefined) return defaultValue;
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1") return true;
+  if (normalized === "false" || normalized === "0") return false;
+  return defaultValue;
+}
+
 export function getActiveKnowledgeBackend(
   variables: GlobalVariable[],
 ): AvailableKnowledgeBackendId {
@@ -169,10 +226,12 @@ export function getKnowledgeBackendOption(
   );
 }
 
+export type KnowledgeBackendConfigValue = string | boolean;
+
 export function getKnowledgeBackendConfig(
   backendType: AvailableKnowledgeBackendId,
   variables: GlobalVariable[],
-): Record<string, string> {
+): Record<string, KnowledgeBackendConfigValue> {
   if (backendType !== "opensearch") {
     return {};
   }
@@ -189,6 +248,19 @@ export function getKnowledgeBackendConfig(
     text_field:
       getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.TEXT_FIELD) ??
       "text",
+    // Resolve booleans on the client so the backend always sees real
+    // ``bool`` values; otherwise ``bool("false")`` evaluates to ``True``
+    // in Python and silently flips the toggle.
+    use_ssl: parseBooleanGlobalVariable(
+      variables,
+      OPENSEARCH_VARIABLES.USE_SSL,
+      true,
+    ),
+    verify_certs: parseBooleanGlobalVariable(
+      variables,
+      OPENSEARCH_VARIABLES.VERIFY_CERTS,
+      true,
+    ),
   };
 }
 
@@ -201,8 +273,13 @@ export function isKnowledgeBackendConfigured(
   }
 
   const backend = getKnowledgeBackendOption(backendType);
+  // Boolean fields always have a defined default, so they don't gate
+  // "configured" status — only required text fields do.
   return backend.configFields
-    .filter((field) => field.required)
+    .filter(
+      (field): field is KnowledgeBackendTextField =>
+        field.kind !== "boolean" && field.required,
+    )
     .every((field) =>
       Boolean(getGlobalVariableValue(variables, field.variableKey)),
     );
@@ -210,7 +287,7 @@ export function isKnowledgeBackendConfigured(
 
 export function getDefaultKnowledgeBackendConfig(variables: GlobalVariable[]): {
   backendType: AvailableKnowledgeBackendId;
-  backendConfig: Record<string, string>;
+  backendConfig: Record<string, KnowledgeBackendConfigValue>;
 } {
   const backendType = getActiveKnowledgeBackend(variables);
   return {
