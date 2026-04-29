@@ -64,7 +64,8 @@ def register(app: typer.Typer) -> None:
             None,
             "--session-id",
             help=(
-                "Session ID to attach to the run. Agent and Memory Components will use this to track conversation history."
+                "Session ID to attach to the run. "
+                "Agent and Memory Components will use this to track conversation history."
             ),
         ),
     ) -> None:
