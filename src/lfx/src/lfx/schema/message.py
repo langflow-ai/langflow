@@ -29,6 +29,7 @@ from lfx.schema.validators import timestamp_to_str, timestamp_to_str_validator
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 from lfx.utils.mustache_security import safe_mustache_render
+from lfx.utils.secrets import is_secret_value
 
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
@@ -89,7 +90,7 @@ class Message(Data):
     @field_validator("text", mode="before")
     @classmethod
     def validate_text(cls, value):
-        if hasattr(value, "get_secret_value"):
+        if is_secret_value(value):
             return str(value)
         return value
 

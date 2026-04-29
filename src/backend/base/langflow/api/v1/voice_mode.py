@@ -20,8 +20,8 @@ from elevenlabs import ElevenLabs
 from fastapi import APIRouter, BackgroundTasks
 from lfx.log import logger
 from lfx.schema.schema import InputValueRequest
+from lfx.utils.secrets import secret_value_to_str
 from openai import OpenAI
-from pydantic import SecretStr
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
@@ -37,12 +37,6 @@ from langflow.services.deps import get_variable_service, session_scope
 from langflow.utils.voice_utils import BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K, resample_24k_to_16k
 
 router = APIRouter(prefix="/voice", tags=["Voice"], include_in_schema=False)
-
-
-def _secret_value(value: str | SecretStr | None) -> str | None:
-    if isinstance(value, SecretStr):
-        return value.get_secret_value()
-    return value
 
 
 SILENCE_THRESHOLD = 0.1
@@ -113,7 +107,7 @@ async def authenticate_and_get_openai_key(session: DbSession, user: User, websoc
         openai_key_value = await variable_service.get_variable(
             user_id=user.id, name="OPENAI_API_KEY", field="openai_api_key", session=session
         )
-        openai_key = _secret_value(openai_key_value) or os.getenv("OPENAI_API_KEY", "")
+        openai_key = secret_value_to_str(openai_key_value) or os.getenv("OPENAI_API_KEY", "")
         if not openai_key or openai_key == "dummy":
             await websocket.send_json(
                 {
@@ -188,7 +182,7 @@ class ElevenLabsClientManager:
                         field="elevenlabs_api_key",
                         session=session,
                     )
-                    cls._api_key = _secret_value(cls._api_key)
+                    cls._api_key = secret_value_to_str(cls._api_key)
                 except (InvalidToken, ValueError) as e:
                     await logger.aerror(f"Error with ElevenLabs API key: {e}")
                     cls._api_key = os.getenv("ELEVENLABS_API_KEY", "")

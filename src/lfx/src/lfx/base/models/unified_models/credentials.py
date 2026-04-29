@@ -12,20 +12,12 @@ from uuid import UUID
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.secrets import secret_value_to_str
 
 from .provider_queries import (
     get_model_provider_variable_mapping,
     get_provider_all_variables,
 )
-
-
-def _secret_value(value: Any) -> str | None:
-    """Return the real string value, unwrapping SecretStr at credential boundaries."""
-    if hasattr(value, "get_secret_value"):
-        return value.get_secret_value()
-    if value is None:
-        return None
-    return str(value).strip()
 
 
 def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
@@ -37,7 +29,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     """
     # SecretStrInput-backed fields arrive as SecretStr to prevent leakage through
     # stringification. Unwrap here because provider clients need the raw value.
-    api_key = _secret_value(api_key)
+    api_key = secret_value_to_str(api_key, strip=True)
 
     # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from env or global vars
     def _resolve_var_name(var_name: str) -> str | None:
@@ -62,7 +54,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                         return None
 
             value = run_until_complete(_get_by_var_name())
-            value = _secret_value(value)
+            value = secret_value_to_str(value, strip=True)
             if value:
                 return value
         return None
@@ -111,7 +103,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     except (ValueError, Exception):  # noqa: BLE001
         api_key = None
 
-    api_key = _secret_value(api_key)
+    api_key = secret_value_to_str(api_key, strip=True)
     if api_key:
         return api_key
 
@@ -159,7 +151,7 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
                         field="",
                         session=session,
                     )
-                    value = _secret_value(value)
+                    value = secret_value_to_str(value, strip=True)
                     if value:
                         values[var_key] = value
                 except (ValueError, Exception):  # noqa: BLE001

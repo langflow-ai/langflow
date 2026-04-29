@@ -13,6 +13,7 @@ from lfx.inputs.inputs import (
     SliderInput,
     StrInput,
 )
+from lfx.utils.secrets import secret_value_to_str
 
 
 class AIMLModelComponent(LCModelComponent):
@@ -78,10 +79,7 @@ class AIMLModelComponent(LCModelComponent):
         model_kwargs = self.model_kwargs or {}
         aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com/v2"
 
-        # Duck-type ``get_secret_value`` to unwrap both pydantic.v1.SecretStr
-        # (legacy import) and pydantic.SecretStr (the v2 form produced by the
-        # attribute-wrapping layer added in #12908).
-        openai_api_key = aiml_api_key.get_secret_value() if hasattr(aiml_api_key, "get_secret_value") else aiml_api_key
+        openai_api_key = secret_value_to_str(aiml_api_key)
 
         # TODO: Once OpenAI fixes their o1 models, this part will need to be removed
         # to work correctly with o1 temperature settings.

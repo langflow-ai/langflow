@@ -41,6 +41,7 @@ from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.secrets import is_secret_value, unwrap_secret_value
 from lfx.utils.util import find_closest_match
 
 from .custom_component import CustomComponent
@@ -82,28 +83,20 @@ def _wrap_if_secret(input_obj: Any, value: Any) -> Any:
     unwrapping every call site.
     """
     if input_obj is not None and getattr(input_obj, "password", False):
-        return _unwrap_secret_value(value)
+        return unwrap_secret_value(value)
     return value
 
 
 def _mask_secret_value(value: Any) -> Any:
-    if hasattr(value, "get_secret_value"):
+    if is_secret_value(value):
         return str(value)
-    return value
-
-
-def _unwrap_secret_value(value: Any) -> Any:
-    seen: set[int] = set()
-    while hasattr(value, "get_secret_value") and id(value) not in seen:
-        seen.add(id(value))
-        value = value.get_secret_value()
     return value
 
 
 def _get_secret_text(input_obj: Any, value: Any) -> str | None:
     if input_obj is None or not getattr(input_obj, "password", False):
         return None
-    value = _unwrap_secret_value(value)
+    value = unwrap_secret_value(value)
     return value if isinstance(value, str) and value else None
 
 

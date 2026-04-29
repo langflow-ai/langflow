@@ -5,6 +5,7 @@ from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import IntInput, SecretStrInput, SliderInput, StrInput
+from lfx.utils.secrets import secret_value_to_str
 
 
 class LiteLLMProxyComponent(LCModelComponent):
@@ -70,11 +71,7 @@ class LiteLLMProxyComponent(LCModelComponent):
 
     def build_model(self) -> LanguageModel:
         """Build the LiteLLM proxy model."""
-        api_key = self.api_key
-        # Duck-type so we unwrap both pydantic.v1.SecretStr (legacy import) and
-        # pydantic.SecretStr (the v2 form added in #12908).
-        if hasattr(api_key, "get_secret_value"):
-            api_key = api_key.get_secret_value()
+        api_key = secret_value_to_str(self.api_key) or ""
 
         self._validate_proxy_connection(api_key)
 

@@ -5,7 +5,6 @@ from uuid import UUID
 
 import httpx
 import requests
-from pydantic import SecretStr
 
 from lfx.base.models.model_metadata import LIVE_MODEL_PROVIDERS, create_model_metadata
 from lfx.base.models.watsonx_constants import (
@@ -20,6 +19,7 @@ from lfx.base.models.watsonx_constants import (
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.secrets import unwrap_secret_value
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
@@ -32,10 +32,9 @@ WATSONX_DEFAULT_EMBEDDING_MODEL_NAMES = [m["name"] for m in WATSONX_EMBEDDING_ME
 
 def _to_str(value: Any) -> str | None:
     """Safely coerce Message/Data or other values to string for URL/string params."""
+    value = unwrap_secret_value(value)
     if value is None:
         return None
-    if isinstance(value, SecretStr):
-        return value.get_secret_value()
     if isinstance(value, str):
         return value
     if hasattr(value, "text"):

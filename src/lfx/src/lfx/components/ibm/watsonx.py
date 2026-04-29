@@ -10,6 +10,7 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
+from lfx.utils.secrets import secret_value_to_str
 
 
 class WatsonxAIComponent(LCModelComponent):
@@ -198,11 +199,7 @@ class WatsonxAIComponent(LCModelComponent):
 
         # Pass API key as plain string to avoid SecretStr serialization issues
         # when model is configured with with_config() or used in batch operations.
-        # Duck-type so both pydantic.v1.SecretStr (legacy import) and
-        # pydantic.SecretStr (the v2 form added in #12908) unwrap correctly.
-        api_key_value = self.api_key
-        if hasattr(api_key_value, "get_secret_value"):
-            api_key_value = api_key_value.get_secret_value()
+        api_key_value = secret_value_to_str(self.api_key)
 
         if bool(self.space_id) == bool(self.project_id):
             msg = "Exactly one of Project_ID or Space_ID must be selected"

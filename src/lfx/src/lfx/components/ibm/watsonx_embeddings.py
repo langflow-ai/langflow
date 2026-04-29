@@ -9,6 +9,7 @@ from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DropdownInput, IntInput, SecretStrInput, StrInput
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
+from lfx.utils.secrets import secret_value_to_str
 
 
 class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
@@ -120,12 +121,7 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
             EmbedTextParamsMetaNames.RETURN_OPTIONS: {"input_text": self.input_text},
         }
 
-        api_key_value = self.api_key
-        # Duck-type so we unwrap both pydantic.v1.SecretStr (legacy import) and
-        # pydantic.SecretStr (the v2 form produced by the attribute-wrapping
-        # layer added in #12908).
-        if hasattr(api_key_value, "get_secret_value"):
-            api_key_value = api_key_value.get_secret_value()
+        api_key_value = secret_value_to_str(self.api_key)
 
         if bool(self.space_id) == bool(self.project_id):
             msg = "Exactly one of Project_ID or Space_ID must be selected"

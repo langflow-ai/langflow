@@ -26,7 +26,7 @@ from ibm_cloud_sdk_core.authenticators import IAMAuthenticator, MCSPAuthenticato
 from ibm_watsonx_orchestrate_core.types.connections import KeyValueConnectionCredentials
 from lfx.services.adapters.deployment.exceptions import AuthSchemeError, CredentialResolutionError
 from lfx.services.adapters.deployment.schema import EnvVarSource, EnvVarValueSpec, IdLike
-from pydantic import SecretStr
+from lfx.utils.secrets import secret_value_to_str
 
 from langflow.services.adapters.deployment.context import DeploymentProviderIDContext
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import WxOAuthURL
@@ -41,12 +41,6 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from sqlalchemy.ext.asyncio import AsyncSession
-
-
-def _secret_value(value: str | SecretStr | None) -> str | None:
-    if isinstance(value, SecretStr):
-        return value.get_secret_value()
-    return value
 
 
 @dataclass(frozen=True, slots=True)
@@ -304,7 +298,7 @@ async def resolve_variable_value(
             field="value",
             session=db,
         )
-        value = _secret_value(value)
+        value = secret_value_to_str(value)
         if value is not None:
             return value
     except CredentialResolutionError:
