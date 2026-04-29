@@ -166,9 +166,9 @@ export default function KnowledgeBackendsPage() {
   // Returns ``true`` if the save fully succeeded so callers (the Test
   // Connection button) can chain a follow-up step. Errors are surfaced
   // via toast inside the function — callers should not duplicate them.
-  const handleSave = async (
-    options?: { silent?: boolean },
-  ): Promise<boolean> => {
+  const handleSave = async (options?: {
+    silent?: boolean;
+  }): Promise<boolean> => {
     if (selectedBackend.status !== "available") return false;
     if (!canSave) {
       setErrorData({
@@ -406,7 +406,9 @@ export default function KnowledgeBackendsPage() {
                     }
               }
               onTestConnection={
-                selectedBackend.id === "chroma" ? undefined : handleTestConnection
+                selectedBackend.id === "chroma"
+                  ? undefined
+                  : handleTestConnection
               }
               isTesting={isTesting}
             />

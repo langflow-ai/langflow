@@ -36,13 +36,9 @@ export const useTestKnowledgeBackendConnection: useMutationFunctionType<
     TestBackendConnectionResponse,
     Error,
     TestBackendConnectionRequest
-  > = mutate(
-    ["useTestKnowledgeBackendConnection"],
-    testBackendConnectionFn,
-    {
-      ...options,
-    },
-  );
+  > = mutate(["useTestKnowledgeBackendConnection"], testBackendConnectionFn, {
+    ...options,
+  });
 
   return mutation;
 };

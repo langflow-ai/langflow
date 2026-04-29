@@ -30,9 +30,7 @@ class _StubBackend(BaseVectorStoreBackend):
 
     backend_type = BackendType.CHROMA  # arbitrary; not exercised here
 
-    def __init__(
-        self, *, kb_path: Path, build_error: Exception | None = None
-    ) -> None:
+    def __init__(self, *, kb_path: Path, build_error: Exception | None = None) -> None:
         super().__init__(kb_name="stub_kb", kb_path=kb_path)
         self._build_error = build_error
 
@@ -58,12 +56,8 @@ class TestDefaultTestConnection:
         assert result.message
 
     @pytest.mark.asyncio
-    async def test_returns_failure_when_build_raises(
-        self, tmp_path: Path
-    ) -> None:
-        backend = _StubBackend(
-            kb_path=tmp_path, build_error=RuntimeError("boom")
-        )
+    async def test_returns_failure_when_build_raises(self, tmp_path: Path) -> None:
+        backend = _StubBackend(kb_path=tmp_path, build_error=RuntimeError("boom"))
         result = await backend.test_connection()
         assert result.ok is False
         assert "boom" in result.message
@@ -86,9 +80,7 @@ class TestChromaTestConnection:
         assert result.details.get("path") == str(kb_path)
 
     @pytest.mark.asyncio
-    async def test_returns_failure_for_unwritable_path(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_returns_failure_for_unwritable_path(self, tmp_path: Path) -> None:
         # Drop a read-only parent directory so mkdir cannot create the
         # KB subdirectory inside it. ``chmod`` semantics differ on
         # Windows; gate the test on POSIX where 0o500 reliably blocks
@@ -135,18 +127,17 @@ class TestOpenSearchTestConnection:
         return backend
 
     @pytest.mark.asyncio
-    async def test_returns_ok_when_cluster_info_succeeds(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_returns_ok_when_cluster_info_succeeds(self, tmp_path: Path) -> None:
         backend = self._make_backend(tmp_path)
         fake_client = MagicMock()
         fake_client.info.return_value = {
             "cluster_name": "my-cluster",
             "version": {"number": "2.11.0"},
         }
-        with patch(
-            "opensearchpy.OpenSearch", return_value=fake_client
-        ), patch("langchain_community.vectorstores.OpenSearchVectorSearch"):
+        with (
+            patch("opensearchpy.OpenSearch", return_value=fake_client),
+            patch("langchain_community.vectorstores.OpenSearchVectorSearch"),
+        ):
             result = await backend.test_connection()
         assert result.ok is True
         assert "my-cluster" in result.message
@@ -155,85 +146,71 @@ class TestOpenSearchTestConnection:
         fake_client.info.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_returns_auth_message_on_authentication_exception(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_returns_auth_message_on_authentication_exception(self, tmp_path: Path) -> None:
         from opensearchpy.exceptions import AuthenticationException
 
         backend = self._make_backend(tmp_path)
         fake_client = MagicMock()
-        fake_client.info.side_effect =AuthenticationException(
-            401, "auth failed", {}
-        )
-        with patch(
-            "opensearchpy.OpenSearch", return_value=fake_client
-        ), patch("langchain_community.vectorstores.OpenSearchVectorSearch"):
+        fake_client.info.side_effect = AuthenticationException(401, "auth failed", {})
+        with (
+            patch("opensearchpy.OpenSearch", return_value=fake_client),
+            patch("langchain_community.vectorstores.OpenSearchVectorSearch"),
+        ):
             result = await backend.test_connection()
         assert result.ok is False
         assert result.details.get("type") == "AuthenticationException"
         assert "Authentication failed" in result.message
 
     @pytest.mark.asyncio
-    async def test_returns_authorization_message_on_authorization_exception(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_returns_authorization_message_on_authorization_exception(self, tmp_path: Path) -> None:
         from opensearchpy.exceptions import AuthorizationException
 
         backend = self._make_backend(tmp_path)
         fake_client = MagicMock()
-        fake_client.info.side_effect =AuthorizationException(
-            403, "forbidden", {}
-        )
-        with patch(
-            "opensearchpy.OpenSearch", return_value=fake_client
-        ), patch("langchain_community.vectorstores.OpenSearchVectorSearch"):
+        fake_client.info.side_effect = AuthorizationException(403, "forbidden", {})
+        with (
+            patch("opensearchpy.OpenSearch", return_value=fake_client),
+            patch("langchain_community.vectorstores.OpenSearchVectorSearch"),
+        ):
             result = await backend.test_connection()
         assert result.ok is False
         assert result.details.get("type") == "AuthorizationException"
         assert "Authorization failed" in result.message
 
     @pytest.mark.asyncio
-    async def test_returns_connection_message_on_connection_error(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_returns_connection_message_on_connection_error(self, tmp_path: Path) -> None:
         from opensearchpy.exceptions import ConnectionError as OSConnectionError
 
         backend = self._make_backend(tmp_path)
         fake_client = MagicMock()
-        fake_client.info.side_effect =OSConnectionError(
-            "N/A", "refused", Exception("refused")
-        )
-        with patch(
-            "opensearchpy.OpenSearch", return_value=fake_client
-        ), patch("langchain_community.vectorstores.OpenSearchVectorSearch"):
+        fake_client.info.side_effect = OSConnectionError("N/A", "refused", Exception("refused"))
+        with (
+            patch("opensearchpy.OpenSearch", return_value=fake_client),
+            patch("langchain_community.vectorstores.OpenSearchVectorSearch"),
+        ):
             result = await backend.test_connection()
         assert result.ok is False
         assert result.details.get("type") == "ConnectionError"
         assert "Could not reach the cluster" in result.message
 
     @pytest.mark.asyncio
-    async def test_returns_ssl_message_on_ssl_error(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_returns_ssl_message_on_ssl_error(self, tmp_path: Path) -> None:
         from opensearchpy.exceptions import SSLError as OSSSLError
 
         backend = self._make_backend(tmp_path)
         fake_client = MagicMock()
-        fake_client.info.side_effect =OSSSLError(
-            "N/A", "ssl bad", Exception("ssl bad")
-        )
-        with patch(
-            "opensearchpy.OpenSearch", return_value=fake_client
-        ), patch("langchain_community.vectorstores.OpenSearchVectorSearch"):
+        fake_client.info.side_effect = OSSSLError("N/A", "ssl bad", Exception("ssl bad"))
+        with (
+            patch("opensearchpy.OpenSearch", return_value=fake_client),
+            patch("langchain_community.vectorstores.OpenSearchVectorSearch"),
+        ):
             result = await backend.test_connection()
         assert result.ok is False
         assert result.details.get("type") == "SSLError"
         assert "TLS handshake failed" in result.message
 
     @pytest.mark.asyncio
-    async def test_returns_failure_when_url_secret_missing(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_returns_failure_when_url_secret_missing(self, tmp_path: Path) -> None:
         # Force ensure_ready to fail by leaving the resolved URL unset.
         backend = OpenSearchBackend(
             kb_name="kb_os_missing_url",

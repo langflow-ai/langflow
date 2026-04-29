@@ -295,9 +295,7 @@ class TestKnowledgeBaseAPI:
             assert response.status_code == 422, (stubbed, response.text)
             assert "not enabled" in response.text.lower(), (stubbed, response.text)
 
-    async def test_test_connection_chroma_returns_ok(
-        self, client: AsyncClient, logged_in_headers
-    ):
+    async def test_test_connection_chroma_returns_ok(self, client: AsyncClient, logged_in_headers):
         """Chroma succeeds against a transient temp dir.
 
         The endpoint builds the backend in a tempfile that is cleaned
@@ -314,9 +312,7 @@ class TestKnowledgeBaseAPI:
         assert body["ok"] is True
         assert "Chroma" in body["message"]
 
-    async def test_test_connection_rejects_unknown_backend(
-        self, client: AsyncClient, logged_in_headers
-    ):
+    async def test_test_connection_rejects_unknown_backend(self, client: AsyncClient, logged_in_headers):
         response = await client.post(
             "api/v1/knowledge_bases/test-connection",
             headers=logged_in_headers,
@@ -325,9 +321,7 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 422
         assert "unknown vector-store backend" in response.text.lower()
 
-    async def test_test_connection_rejects_missing_required_field(
-        self, client: AsyncClient, logged_in_headers
-    ):
+    async def test_test_connection_rejects_missing_required_field(self, client: AsyncClient, logged_in_headers):
         response = await client.post(
             "api/v1/knowledge_bases/test-connection",
             headers=logged_in_headers,
