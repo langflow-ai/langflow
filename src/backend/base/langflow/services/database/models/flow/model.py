@@ -63,6 +63,10 @@ class FlowBase(SQLModel):
     tags: list[str] | None = None
     locked: bool | None = Field(default=False, nullable=True)
     mcp_enabled: bool | None = Field(default=False, nullable=True, description="Can be exposed in the MCP server")
+    flow_activity_enabled: bool = Field(
+        default=True,
+        description="When True, flow runs persist traces shown in Flow Activity",
+    )
     action_name: str | None = Field(
         default=None, nullable=True, description="The name of the action associated with the flow"
     )
@@ -254,6 +258,10 @@ class FlowHeader(BaseModel):
     mcp_enabled: bool | None = Field(None, description="Flag indicating whether the flow is exposed in the MCP server")
     action_name: str | None = Field(None, description="The name of the action associated with the flow")
     action_description: str | None = Field(None, description="The description of the action associated with the flow")
+    flow_activity_enabled: bool = Field(
+        default=True,
+        description="When True, flow runs persist traces shown in Flow Activity",
+    )
 
     @field_validator("data", mode="before")
     @classmethod
@@ -275,6 +283,7 @@ class FlowUpdate(SQLModel):
     action_description: str | None = None
     access_type: AccessTypeEnum | None = None
     fs_path: str | None = None
+    flow_activity_enabled: bool | None = None
 
     @field_validator("endpoint_name")
     @classmethod

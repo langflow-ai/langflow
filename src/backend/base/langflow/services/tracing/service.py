@@ -84,6 +84,8 @@ class TraceContext:
         user_id: str | None,
         session_id: str | None,
         flow_id: str | None = None,
+        *,
+        collect_flow_activity: bool = True,
     ):
         self.run_id: UUID | None = run_id
         self.run_name: str | None = run_name
@@ -91,6 +93,7 @@ class TraceContext:
         self.user_id: str | None = user_id
         self.session_id: str | None = session_id
         self.flow_id: str | None = flow_id
+        self.collect_flow_activity: bool = collect_flow_activity
         self.tracers: dict[str, BaseTracer] = {}
         self.all_inputs: dict[str, dict] = defaultdict(dict)
         self.all_outputs: dict[str, dict] = defaultdict(dict)
@@ -235,7 +238,7 @@ class TracingService(Service):
         )
 
     def _initialize_native_tracer(self, trace_context: TraceContext) -> None:
-        if self.deactivated:
+        if self.deactivated or not trace_context.collect_flow_activity:
             return
         native_tracer = _get_native_tracer()
         trace_context.tracers["native"] = native_tracer(
@@ -269,6 +272,8 @@ class TracingService(Service):
         session_id: str | None,
         project_name: str | None = None,
         flow_id: str | None = None,
+        *,
+        collect_flow_activity: bool = True,
     ) -> None:
         """Start a trace for a graph run.
 
@@ -280,7 +285,15 @@ class TracingService(Service):
             return
         try:
             project_name = project_name or os.getenv("LANGCHAIN_PROJECT", "Langflow")
-            trace_context = TraceContext(run_id, run_name, project_name, user_id, session_id, flow_id)
+            trace_context = TraceContext(
+                run_id,
+                run_name,
+                project_name,
+                user_id,
+                session_id,
+                flow_id,
+                collect_flow_activity=collect_flow_activity,
+            )
             trace_context_var.set(trace_context)
             await self._start(trace_context)
             self._initialize_langsmith_tracer(trace_context)
@@ -337,7 +350,7 @@ class TracingService(Service):
         self._end_all_tracers(trace_context, outputs, error)
 
         native_tracer = trace_context.tracers.get("native")
-        if native_tracer:
+        if native_tracer is not None:
             # Deferred import breaks the circular dependency between service.py and native.py.
             from langflow.services.tracing.native import NativeTracer
 

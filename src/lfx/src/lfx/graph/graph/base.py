@@ -132,6 +132,8 @@ class Graph:
         self._end_trace_tasks: set[asyncio.Task] = set()
         self._is_subgraph = False
 
+        self.flow_activity_enabled = True
+
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
             raise TypeError(msg)
@@ -672,6 +674,7 @@ class Graph:
                 user_id=self.user_id,
                 session_id=self.session_id,
                 flow_id=self.flow_id,
+                collect_flow_activity=self.flow_activity_enabled,
             )
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
@@ -1136,6 +1139,8 @@ class Graph:
             )
             # Deep copy vertices and edges
             new_graph.add_nodes_and_edges(copy.deepcopy(self._vertices, memo), copy.deepcopy(self._edges, memo))
+
+        new_graph.flow_activity_enabled = getattr(self, "flow_activity_enabled", True)
 
         # Store the newly created object in memo
         memo[id(self)] = new_graph

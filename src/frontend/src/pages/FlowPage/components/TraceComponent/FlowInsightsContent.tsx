@@ -22,6 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { useGetTracesQuery } from "@/controllers/API/queries/traces";
 import { TraceListItem } from "@/controllers/API/queries/traces/types";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -65,6 +73,37 @@ export function FlowInsightsContent({
     if (!resolvedFlowId) return state.currentFlow?.name;
     return state.getFlowById(resolvedFlowId)?.name ?? state.currentFlow?.name;
   });
+
+  // Derive recording state from the store without requiring currentFlow to match.
+  // We look at currentFlow first (most up-to-date) then fall back to the flows list.
+  // Default to true (enabled) when the field is absent or the flow isn't loaded yet.
+  const recordingEnabled = useFlowsManagerStore((state) => {
+    if (!resolvedFlowId) return true;
+    const target =
+      state.currentFlow?.id === resolvedFlowId
+        ? state.currentFlow
+        : (state.flows?.find((f) => f.id === resolvedFlowId) ?? null);
+    return target ? target.flow_activity_enabled !== false : true;
+  });
+
+  const { mutate: patchFlow, isPending: isPatchingFlow } = usePatchUpdateFlow();
+  const patchFlowField = useFlowsManagerStore((state) => state.patchFlowField);
+
+  const handleRecordingCheckedChange = useCallback(
+    (checked: boolean) => {
+      if (!resolvedFlowId || isPatchingFlow) return;
+      patchFlow(
+        { id: resolvedFlowId, flow_activity_enabled: checked },
+        {
+          onSuccess: (updated) => {
+            const newVal = updated?.flow_activity_enabled ?? checked;
+            patchFlowField(resolvedFlowId, { flow_activity_enabled: newVal });
+          },
+        },
+      );
+    },
+    [resolvedFlowId, isPatchingFlow, patchFlow, patchFlowField],
+  );
 
   const columns = useMemo(
     () =>
@@ -225,10 +264,36 @@ export function FlowInsightsContent({
       <div className="flex flex-1 flex-col overflow-hidden">
         {showFlowActivityHeader && (
           <div
-            className="border-b border-border px-4 py-3"
+            className="flex flex-nowrap items-center justify-between gap-3 border-b border-border px-4 py-3"
             data-testid="flow-activity-header"
           >
             <h2 className="text-base font-semibold">Flow Activity</h2>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex shrink-0 items-center">
+                    <Switch
+                      id="flow-activity-recording"
+                      checked={recordingEnabled}
+                      disabled={isPatchingFlow}
+                      onCheckedChange={handleRecordingCheckedChange}
+                      aria-label={
+                        recordingEnabled
+                          ? "Flow Activity recording on"
+                          : "Flow Activity recording off"
+                      }
+                      data-testid="flow-activity-recording-toggle"
+                      className="data-[state=checked]:bg-status-green"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[220px]">
+                  {recordingEnabled
+                    ? "Flow Activity is recording runs for this flow. Turn off to stop storing new traces."
+                    : "Flow Activity recording is off for this flow. Turn on to store traces for new runs."}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         )}
         <div className="flex flex-nowrap items-center justify-between gap-2 border-b px-4 py-2">

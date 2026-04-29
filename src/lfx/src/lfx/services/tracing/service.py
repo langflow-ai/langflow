@@ -49,6 +49,8 @@ class TracingService(BaseTracingService):
         session_id: str | None,
         project_name: str | None = None,
         flow_id: str | None = None,
+        *,
+        collect_flow_activity: bool = True,
     ) -> None:
         """Start tracers (minimal implementation - just logs).
 
@@ -59,6 +61,7 @@ class TracingService(BaseTracingService):
             user_id: User identifier
             session_id: Session identifier
             project_name: Project name
+            collect_flow_activity: Unused in minimal LFX (native Flow Activity is Langflow-specific)
         """
         logger.debug(f"Trace started: {run_name}")
 

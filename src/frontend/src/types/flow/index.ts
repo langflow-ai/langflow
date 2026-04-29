@@ -1,6 +1,10 @@
 import type { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
 import type { BuildStatus } from "../../constants/enums";
-import type { APIClassType, OutputFieldType } from "../api/index";
+import type {
+  APIClassType,
+  APITemplateType,
+  OutputFieldType,
+} from "../api/index";
 
 export type PaginatedFlowsType = {
   items: FlowType[];
@@ -34,6 +38,7 @@ export type FlowType = {
   public?: boolean;
   access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
   mcp_enabled?: boolean;
+  flow_activity_enabled?: boolean;
 };
 
 export type GenericNodeType = Node<NodeDataType, "genericNode">;
@@ -47,10 +52,7 @@ export type noteClassType = Pick<
   APIClassType,
   "description" | "display_name" | "documentation" | "tool_mode" | "frozen"
 > & {
-  template: {
-    backgroundColor?: string;
-    [key: string]: any;
-  };
+  template: APITemplateType;
   outputs?: OutputFieldType[];
 };
 

@@ -1,6 +1,7 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { ReactFlowJsonObject } from "@xyflow/react";
 import type { useMutationFunctionType } from "@/types/api";
+import type { FlowType } from "@/types/flow";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -14,6 +15,7 @@ interface IPatchUpdateFlow {
   endpoint_name?: string | null | undefined;
   locked?: boolean | null | undefined;
   access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
+  flow_activity_enabled?: boolean;
 }
 
 export const usePatchUpdateFlow: useMutationFunctionType<
@@ -25,13 +27,13 @@ export const usePatchUpdateFlow: useMutationFunctionType<
   const PatchUpdateFlowFn = async ({
     id,
     ...payload
-  }: IPatchUpdateFlow): Promise<any> => {
+  }: IPatchUpdateFlow): Promise<FlowType> => {
     const response = await api.patch(`${getURL("FLOWS")}/${id}`, payload);
 
     return response.data;
   };
 
-  const mutation: UseMutationResult<IPatchUpdateFlow, any, IPatchUpdateFlow> =
+  const mutation: UseMutationResult<IPatchUpdateFlow, Error, IPatchUpdateFlow> =
     mutate(["usePatchUpdateFlow"], PatchUpdateFlowFn, {
       onSettled: () => {
         queryClient.invalidateQueries({

@@ -142,6 +142,17 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       selectedFlowsComponentsCards: [],
     });
   },
+  patchFlowField: (flowId: string, patch: Partial<FlowType>) => {
+    set((state) => ({
+      currentFlow:
+        state.currentFlow?.id === flowId
+          ? { ...state.currentFlow, ...patch }
+          : state.currentFlow,
+      flows: state.flows?.map((f) =>
+        f.id === flowId ? { ...f, ...patch } : f,
+      ),
+    }));
+  },
 }));
 
 export default useFlowsManagerStore;

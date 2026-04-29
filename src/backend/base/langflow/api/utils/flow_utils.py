@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
-from lfx.services.deps import session_scope
+from lfx.services.deps import session_scope, session_scope_readonly
 from sqlalchemy import delete
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -29,26 +29,27 @@ if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
 
 
-async def _get_flow_name(flow_id: uuid.UUID) -> str:
-    async with session_scope() as session:
-        flow = await session.get(Flow, flow_id)
-        if flow is None:
-            msg = f"Flow {flow_id} not found"
-            raise ValueError(msg)
-    return flow.name
-
-
 async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwargs):
     """Build and cache the graph."""
-    # Get flow name
-    if "flow_name" not in kwargs:
-        flow_name = await _get_flow_name(flow_id if isinstance(flow_id, uuid.UUID) else uuid.UUID(flow_id))
-    else:
-        flow_name = kwargs["flow_name"]
+    flow_uuid = flow_id if isinstance(flow_id, uuid.UUID) else uuid.UUID(str(flow_id))
     str_flow_id = str(flow_id)
     session_id = kwargs.get("session_id") or str_flow_id
 
+    flow_name = kwargs.get("flow_name")
+    flow_activity_enabled = kwargs.get("flow_activity_enabled")
+    if flow_name is None or flow_activity_enabled is None:
+        async with session_scope_readonly() as session:
+            flow_row = await session.get(Flow, flow_uuid)
+            if flow_row is None:
+                msg = f"Flow {flow_id} not found"
+                raise ValueError(msg)
+            if flow_name is None:
+                flow_name = flow_row.name
+            if flow_activity_enabled is None:
+                flow_activity_enabled = flow_row.flow_activity_enabled
+
     graph = Graph.from_payload(payload, str_flow_id, flow_name, kwargs.get("user_id"))
+    graph.flow_activity_enabled = flow_activity_enabled
     for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
@@ -69,6 +70,7 @@ async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession
         msg = "Invalid flow ID"
         raise ValueError(msg)
     kwargs["user_id"] = kwargs.get("user_id") or str(flow.user_id)
+    kwargs["flow_activity_enabled"] = flow.flow_activity_enabled
     return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, **kwargs)
 
 

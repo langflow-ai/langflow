@@ -29,6 +29,7 @@ export type FlowsManagerStoreType = {
   IOModalOpen: boolean;
   setIOModalOpen: (IOModalOpen: boolean) => void;
   resetStore: () => void;
+  patchFlowField: (flowId: string, patch: Partial<FlowType>) => void;
 };
 
 export type UseUndoRedoOptions = {

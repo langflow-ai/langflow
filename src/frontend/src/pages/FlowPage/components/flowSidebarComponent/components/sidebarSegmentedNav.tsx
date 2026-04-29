@@ -8,6 +8,7 @@ import {
   type SidebarSection,
   useSidebar,
 } from "@/components/ui/sidebar";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../index";
@@ -68,6 +69,9 @@ const SidebarSegmentedNav = () => {
   const setPlaygroundFullscreen = usePlaygroundStore(
     (state) => state.setIsFullscreen,
   );
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const flowActivityRecordingEnabled =
+    currentFlow != null && currentFlow.flow_activity_enabled !== false;
 
   return (
     <div className="flex h-full flex-col border-r border-border bg-background">
@@ -112,7 +116,17 @@ const SidebarSegmentedNav = () => {
                 >
                   <ForwardedIconComponent
                     name={item.icon}
-                    className="h-5 w-5"
+                    strokeWidth={
+                      item.id === "traces" && flowActivityRecordingEnabled
+                        ? 2
+                        : undefined
+                    }
+                    className={cn(
+                      "h-5 w-5",
+                      item.id === "traces" &&
+                        flowActivityRecordingEnabled &&
+                        "text-status-green",
+                    )}
                   />
                   <span className="sr-only">{t(item.label)}</span>
                 </SidebarMenuButton>

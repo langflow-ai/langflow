@@ -37,6 +37,8 @@ class BaseTracingService(Service, ABC):
         session_id: str | None,
         project_name: str | None = None,
         flow_id: str | None = None,
+        *,
+        collect_flow_activity: bool = True,
     ) -> None:
         """Start tracers for a graph run.
 
@@ -47,6 +49,7 @@ class BaseTracingService(Service, ABC):
             session_id: Session identifier (optional)
             project_name: Project name (optional)
             flow_id: Flow identifier (optional)
+            collect_flow_activity: When False, Langflow may skip storing native Flow Activity traces
         """
 
     @abstractmethod

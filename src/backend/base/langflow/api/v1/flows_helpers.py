@@ -127,6 +127,7 @@ _UPDATABLE_FLOW_FIELDS: frozenset[str] = frozenset(
         "action_description",
         "access_type",
         "fs_path",
+        "flow_activity_enabled",
     }
 )
 

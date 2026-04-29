@@ -207,6 +207,29 @@ async def test_start_end_tracers(tracing_service):
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("mock_tracers")
+async def test_collect_flow_activity_false_skips_native_tracer(tracing_service):
+    """When disabled, Langflow skips the native tracer used for Flow Activity storage."""
+    run_id = uuid.uuid4()
+    run_name = "test_run"
+    user_id = "test_user"
+    session_id = "test_session"
+
+    await tracing_service.start_tracers(
+        run_id,
+        run_name,
+        user_id,
+        session_id,
+        collect_flow_activity=False,
+    )
+    trace_context = trace_context_var.get()
+    assert trace_context is not None
+    assert trace_context.collect_flow_activity is False
+    assert "native" not in trace_context.tracers
+    assert "langsmith" in trace_context.tracers
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
 async def test_trace_component(tracing_service, mock_component):
     """Test component tracing context manager."""
     run_id = uuid.uuid4()
