@@ -37,6 +37,7 @@ import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useAuthStore from "@/stores/authStore";
+import type { FlowType } from "@/types/flow";
 import type { FolderType } from "../../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
@@ -55,6 +56,9 @@ type SideBarFoldersButtonsComponentProps = {
   handleDeleteFolder?: (item: FolderType) => void;
   handleFilesClick?: () => void;
 };
+
+type UploadedFlowFile = FlowType | { flows: FlowType[] };
+
 const SideBarFoldersButtonsComponent = ({
   handleChangeFolder,
   handleDeleteFolder,
@@ -135,7 +139,7 @@ const SideBarFoldersButtonsComponent = ({
         return;
       }
 
-      getObjectsFromFilelist<any>(files)
+      getObjectsFromFilelist<UploadedFlowFile>(files)
         .then((objects) => {
           if (objects.every((flow) => flow.data?.nodes)) {
             uploadFlow({ files })
