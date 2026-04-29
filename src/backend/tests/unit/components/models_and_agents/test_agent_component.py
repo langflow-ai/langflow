@@ -617,6 +617,67 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "{current_date}" in prompt, "format_instructions literal braces must survive"
         assert "{model_name} preserved" in prompt, "format_instructions literal braces must survive"
 
+    async def test_should_not_emit_chat_message_when_json_response_uses_fallback(self, component_class, default_kwargs):
+        """Regression: fallback path must not emit a chat message via run_agent's send_message.
+
+        Bug: when output_schema is wired to Chat Output and tools are attached, the
+        playground shows two AI messages with the same JSON. run_agent streams the
+        agent's final answer through self.send_message (for message_response), and
+        the orchestrator-returned Data is rendered separately by the downstream
+        Chat Output. In the structured-response flow, only the latter should reach
+        the playground.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        from lfx.schema.message import Message
+
+        default_kwargs["add_calculator_tool"] = False
+        default_kwargs["add_current_date_tool"] = False
+        default_kwargs["output_schema"] = [
+            {"name": "answer", "type": "str", "description": "the answer", "multiple": False},
+        ]
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+        # A non-empty tools list forces the orchestrator into fallback mode
+        # (prefer_native=False), which is the path that triggers the duplication.
+        fake_tool = MagicMock()
+        fake_tool.name = "fake_tool"
+        component.tools = [fake_tool]
+
+        component.set = MagicMock(return_value=component)
+        component.create_agent_runnable = MagicMock(return_value=MagicMock())
+
+        chat_emissions: list[Message] = []
+
+        async def tracked_send_message(message, *_args, **_kwargs):
+            chat_emissions.append(message)
+            return message
+
+        component.send_message = tracked_send_message
+
+        # Reproduce production run_agent's side-effect: it streams the final
+        # message through self.send_message. The fix must intercept this so the
+        # fallback's intermediate output never reaches the playground.
+        async def fake_run_agent(_agent_runnable):
+            emitted = Message(text='{"answer": "42"}')
+            await component.send_message(emitted)
+            return emitted
+
+        component.run_agent = fake_run_agent
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            await component.json_response()
+
+        assert chat_emissions == [], (
+            "Fallback path must suppress run_agent's chat-message emission — the "
+            "Chat Output downstream renders the structured Data. "
+            f"Got {len(chat_emissions)} emission(s)."
+        )
+
     async def test_should_accept_add_calculator_tool_in_default_keys(self, component_class, default_kwargs):
         """update_build_config's default_keys validation must include add_calculator_tool."""
         from lfx.schema.dotdict import dotdict

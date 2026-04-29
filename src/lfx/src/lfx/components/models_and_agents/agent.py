@@ -420,7 +420,21 @@ class AgentComponent(ToolCallingAgentComponent):
                 system_prompt=augmented_prompt,
             )
             agent_runnable = self.create_agent_runnable()
-            result = await self.run_agent(agent_runnable)
+            # run_agent streams the agent's final answer through self.send_message,
+            # which is the right behavior for message_response. In json_response the
+            # orchestrator parses that text into structured Data which the downstream
+            # Chat Output emits — leaving the original emission in place produces a
+            # duplicate message in the playground.
+            original_send_message = self.send_message
+
+            async def _suppressed_send_message(message, *_args, **_kwargs):
+                return message
+
+            self.send_message = _suppressed_send_message  # type: ignore[method-assign]
+            try:
+                result = await self.run_agent(agent_runnable)
+            finally:
+                self.send_message = original_send_message  # type: ignore[method-assign]
             return _extract_text_content(result)
 
         try:
