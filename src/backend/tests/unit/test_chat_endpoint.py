@@ -591,6 +591,59 @@ async def test_build_public_tmp_checks_public_access_before_validation(
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_build_public_tmp_strips_attacker_controlled_session(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Security (CVE-2026-33017 follow-up / H1-3682787): inputs.session is dropped on the public path.
+
+    Regression guard: an unauthenticated caller could otherwise pass
+    inputs.session to read chat history for any session (e.g. an authenticated
+    /api/v1/run session whose ID defaults to the flow UUID). Verify that
+    build_public_tmp forwards inputs with session=None to start_flow_build,
+    forcing fallback to the per-user virtual flow ID derived from
+    client_id + flow_id.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Publish the flow.
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    captured: dict = {}
+
+    async def fake_start_flow_build(**kwargs):
+        captured.update(kwargs)
+        return "test-job-id"
+
+    monkeypatch.setattr("langflow.api.v1.chat.start_flow_build", fake_start_flow_build)
+
+    client.cookies.set("client_id", "test-session-strip-client")
+
+    attacker_session = "victim-session-id-from-authenticated-run"
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": attacker_session, "input_value": "hi"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.OK
+    assert response.json() == {"job_id": "test-job-id"}
+
+    forwarded_inputs = captured.get("inputs")
+    assert forwarded_inputs is not None, "start_flow_build should have been called with inputs"
+    assert forwarded_inputs.session is None, (
+        "build_public_tmp must drop attacker-controlled inputs.session before forwarding"
+    )
+    # Unrelated fields must be preserved (only `session` is stripped).
+    assert forwarded_inputs.input_value == "hi"
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_build_flow_cross_user_blocked(client, json_memory_chatbot_no_llm, logged_in_headers, user_two):
     """Security (GHSA-qj98-rhf8-v93f): authenticated user cannot build another user's private flow.
 

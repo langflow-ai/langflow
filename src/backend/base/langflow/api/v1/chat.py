@@ -661,6 +661,9 @@ async def build_public_tmp(
     - The 'data' parameter is NOT accepted to prevent flow definition tampering
     - Public flows must execute the stored flow definition only
     - The flow definition is always loaded from the database
+    - The 'inputs.session' field is ignored: public flows always use the per-user
+      virtual session ID derived from client_id and flow_id, so unauthenticated
+      callers cannot read chat history for arbitrary sessions
 
     The endpoint:
     1. Verifies the requested flow is marked as public in the database
@@ -702,6 +705,15 @@ async def build_public_tmp(
             client_id=client_id,
             authenticated_user_id=authenticated_user_id,
         )
+
+        # Security: drop attacker-controlled session selection on the public path.
+        # An unauthenticated caller could otherwise pass inputs.session to read chat
+        # history for any session, including authenticated /api/v1/run sessions whose
+        # IDs default to the flow UUID. With session=None, downstream falls back to
+        # the per-user virtual flow ID derived from client_id + flow_id.
+        # (CVE-2026-33017 follow-up / H1-3682787)
+        if inputs is not None and inputs.session is not None:
+            inputs = inputs.model_copy(update={"session": None})
 
         # Validate the stored flow data after the public-access boundary.
         # Public flows never accept client-supplied data.
