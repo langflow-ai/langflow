@@ -107,19 +107,19 @@ class _AsyncNoopSavepoint:
 
 
 class TestQueryParameterValidators:
-    def test_dedupe_snapshot_names_preserves_order(self):
-        from langflow.api.v1.deployments import _dedupe_snapshot_names
+    def test_dedupe_names_preserves_order(self):
+        from langflow.api.v1.deployments import _dedupe_names
 
-        assert _dedupe_snapshot_names(["my_tool", "other_tool", "my_tool", "third_tool"]) == [
+        assert _dedupe_names(["my_tool", "other_tool", "my_tool", "third_tool"]) == [
             "my_tool",
             "other_tool",
             "third_tool",
         ]
 
-    def test_dedupe_snapshot_names_keeps_none(self):
-        from langflow.api.v1.deployments import _dedupe_snapshot_names
+    def test_dedupe_names_keeps_none(self):
+        from langflow.api.v1.deployments import _dedupe_names
 
-        assert _dedupe_snapshot_names(None) is None
+        assert _dedupe_names(None) is None
 
 
 # ---------------------------------------------------------------------------
@@ -576,6 +576,8 @@ class TestListDeploymentsLoadFromProvider:
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
         expected = MagicMock()
+        resolved_params = DeploymentListParams(provider_params={"environment": "draft"})
+        mapper.resolve_deployment_list_adapter_params = AsyncMock(return_value=resolved_params)
         mapper.shape_deployment_list_result.return_value = expected
         mapper.resolve_load_from_provider_deployment_list_params.return_value = {"environment": "draft"}
         mock_get_mapper.return_value = mapper
@@ -592,10 +594,15 @@ class TestListDeploymentsLoadFromProvider:
 
         assert result is expected
         mock_list_synced.assert_not_awaited()
+        # The route handler must forward the mapper-supplied provider_params
+        # (e.g. WXO's `{"environment": "draft"}`) into resolve_deployment_list_adapter_params,
+        # otherwise the load_from_provider filter is silently dropped.
+        mapper.resolve_deployment_list_adapter_params.assert_awaited_once()
+        resolve_kwargs = mapper.resolve_deployment_list_adapter_params.await_args.kwargs
+        assert resolve_kwargs["provider_params"] == {"environment": "draft"}
         adapter.list.assert_awaited_once()
         list_call_kwargs = adapter.list.await_args.kwargs
-        assert isinstance(list_call_kwargs["params"], DeploymentListParams)
-        assert list_call_kwargs["params"].provider_params == {"environment": "draft"}
+        assert list_call_kwargs["params"] is resolved_params
         mapper.shape_deployment_list_result.assert_called_once()
 
     @pytest.mark.asyncio
@@ -701,7 +708,7 @@ class TestListDeploymentsFlowIdsFilter:
         mapper.shape_deployment_list_items.return_value = []
         mock_get_mapper.return_value = mapper
 
-        mock_list_synced.return_value = ([], 0)
+        mock_list_synced.return_value = ([], 0, {})
 
         await list_deployments(
             provider_id=pa.id,
@@ -763,7 +770,7 @@ class TestListDeploymentsProjectIdFilter:
         mapper = MagicMock()
         mapper.shape_deployment_list_items.return_value = []
         mock_get_mapper.return_value = mapper
-        mock_list_synced.return_value = ([], 0)
+        mock_list_synced.return_value = ([], 0, {})
 
         pid = uuid4()
         await list_deployments(
@@ -800,7 +807,7 @@ class TestListDeploymentsProjectIdFilter:
         mapper = MagicMock()
         mapper.shape_deployment_list_items.return_value = []
         mock_get_mapper.return_value = mapper
-        mock_list_synced.return_value = ([], 0)
+        mock_list_synced.return_value = ([], 0, {})
 
         await list_deployments(
             provider_id=pa.id,
@@ -813,6 +820,156 @@ class TestListDeploymentsProjectIdFilter:
 
         mock_list_synced.assert_awaited_once()
         assert mock_list_synced.call_args.kwargs["project_id"] is None
+
+
+class TestDeploymentNamesFilter:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_names_passed_to_db_helper(
+        self,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_list_synced,
+    ):
+        """When names is supplied in DB mode, it is forwarded to list_deployments_synced."""
+        from langflow.api.v1.deployments import list_deployments
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        mock_resolve_adapter.return_value = MagicMock()
+        mapper = MagicMock()
+        mapper.shape_deployment_list_items.return_value = []
+        mock_get_mapper.return_value = mapper
+        mock_list_synced.return_value = ([], 0, {})
+
+        names = ["A", "B"]
+
+        await list_deployments(
+            provider_id=pa.id,
+            session=AsyncMock(),
+            current_user=_fake_user(),
+            params=SimpleNamespace(page=1, size=20),
+            deployment_type=None,
+            load_from_provider=False,
+            names=names,
+        )
+
+        mock_list_synced.assert_awaited_once()
+        assert mock_list_synced.call_args.kwargs["names"] == names
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_names_pushed_to_provider_via_mapper(
+        self,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+    ):
+        """When names is supplied in provider mode, it is passed to resolve_deployment_list_adapter_params."""
+        from langflow.api.v1.deployments import list_deployments
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        adapter = AsyncMock()
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        adapter_params = MagicMock()
+        mapper.resolve_deployment_list_adapter_params = AsyncMock(return_value=adapter_params)
+        mapper.resolve_load_from_provider_deployment_list_params.return_value = {"environment": "draft"}
+        mapper.shape_deployment_list_result.return_value = MagicMock()
+        mock_get_mapper.return_value = mapper
+
+        names = ["A", "B"]
+
+        await list_deployments(
+            provider_id=pa.id,
+            session=AsyncMock(),
+            current_user=_fake_user(),
+            params=SimpleNamespace(page=1, size=20),
+            deployment_type=None,
+            load_from_provider=True,
+            names=names,
+        )
+
+        mapper.resolve_deployment_list_adapter_params.assert_awaited_once_with(
+            deployment_type=None,
+            names=names,
+            provider_params={"environment": "draft"},
+        )
+        adapter.list.assert_awaited_once_with(
+            user_id=ANY,
+            db=ANY,
+            params=adapter_params,
+        )
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_names_combined_with_project_id_and_flow_version_ids(
+        self,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_list_synced,
+    ):
+        """All three filters are forwarded to list_deployments_synced."""
+        from langflow.api.v1.deployments import list_deployments
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        mock_resolve_adapter.return_value = MagicMock()
+        mapper = MagicMock()
+        mapper.shape_deployment_list_items.return_value = []
+        mock_get_mapper.return_value = mapper
+        mock_list_synced.return_value = ([], 0, {})
+
+        names = ["A"]
+        pid = uuid4()
+        fvid = uuid4()
+
+        await list_deployments(
+            provider_id=pa.id,
+            session=AsyncMock(),
+            current_user=_fake_user(),
+            params=SimpleNamespace(page=1, size=20),
+            deployment_type=None,
+            load_from_provider=False,
+            names=names,
+            project_id=pid,
+            flow_version_ids=[fvid],
+        )
+
+        mock_list_synced.assert_awaited_once()
+        assert mock_list_synced.call_args.kwargs["names"] == names
+        assert mock_list_synced.call_args.kwargs["project_id"] == pid
+        assert mock_list_synced.call_args.kwargs["flow_version_ids"] == [fvid]
+
+    @pytest.mark.asyncio
+    async def test_blank_name_rejected(self):
+        """Pydantic validation rejects blank names."""
+        from langflow.api.v1.deployments import DeploymentNamesQuery
+        from pydantic import TypeAdapter, ValidationError
+
+        adapter = TypeAdapter(DeploymentNamesQuery)
+        with pytest.raises(ValidationError, match="String should have at least 1 character"):
+            adapter.validate_python(["   "])
+
+    @pytest.mark.asyncio
+    async def test_duplicate_names_deduped(self):
+        """Pydantic validation dedupes names."""
+        from langflow.api.v1.deployments import DeploymentNamesQuery
+        from pydantic import TypeAdapter
+
+        adapter = TypeAdapter(DeploymentNamesQuery)
+        assert adapter.validate_python(["A", " B ", "A", "C"]) == ["A", "B", "C"]
 
 
 # ---------------------------------------------------------------------------
@@ -864,7 +1021,6 @@ class TestConfigAndSnapshotListRoutes:
         mapper.resolve_config_list_adapter_params.assert_awaited_once_with(
             deployment_resource_key=None,
             provider_params=None,
-            db=ANY,
         )
         call_params = adapter.list_configs.call_args.kwargs["params"]
         assert call_params is adapter_params
@@ -924,7 +1080,6 @@ class TestConfigAndSnapshotListRoutes:
             deployment_resource_key="dep-key",
             snapshot_names=None,
             provider_params=None,
-            db=ANY,
         )
         call_params = adapter.list_snapshots.call_args.kwargs["params"]
         assert call_params is adapter_params
@@ -998,7 +1153,6 @@ class TestConfigAndSnapshotListRoutes:
             deployment_resource_key=None,
             snapshot_names=["my_tool", "other_tool"],
             provider_params=None,
-            db=ANY,
         )
 
 
@@ -1465,7 +1619,7 @@ class TestProviderAccountRoutes:
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 1))
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 1, {}))
     @patch(f"{ROUTES_MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -1501,7 +1655,7 @@ class TestProviderAccountRoutes:
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 0))
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 0, {}))
     @patch(f"{ROUTES_MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -1540,7 +1694,7 @@ class TestProviderAccountRoutes:
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 0))
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 0, {}))
     @patch(f"{ROUTES_MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
@@ -1574,7 +1728,7 @@ class TestProviderAccountRoutes:
         async def capture_scope(*_args, **_kwargs):
             current = DeploymentProviderIDContext.get_current()
             observed_provider_ids.append(None if current is None else current.provider_id)
-            return ([], 0)
+            return ([], 0, {})
 
         mock_list_synced.side_effect = capture_scope
 
