@@ -338,7 +338,7 @@ export default function Dropdown({
       variant="primary"
       size="xs"
     >
-      <LoadingTextComponent text="Loading options" />
+      <LoadingTextComponent text={t("dropdown.loadingOptions")} />
     </Button>
   );
 
@@ -680,7 +680,7 @@ export default function Dropdown({
   if (Object.keys(validOptions).length === 0 && !combobox && isLoading) {
     return (
       <div>
-        <span className="text-sm italic">Loading...</span>
+        <span className="text-sm italic">{t("dropdown.loadingOptions")}</span>
       </div>
     );
   }
