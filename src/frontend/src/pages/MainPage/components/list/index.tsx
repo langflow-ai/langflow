@@ -94,7 +94,9 @@ const ListComponent = ({
   const handleExport = () => {
     if (flowData.is_component) {
       downloadFlow(flowData, flowData.name, flowData.description);
-      setSuccessData({ title: t("success.flowExported", { name: flowData.name }) });
+      setSuccessData({
+        title: t("success.flowExported", { name: flowData.name }),
+      });
     } else {
       setOpenExportModal(true);
     }

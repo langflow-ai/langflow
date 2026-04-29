@@ -142,7 +142,11 @@ const ModelSelection = ({
         <>
           {modelType === "all" ? (
             <>
-              {renderModelSection(t("modelProviders.languageModels"), llmModels, "llm")}
+              {renderModelSection(
+                t("modelProviders.languageModels"),
+                llmModels,
+                "llm",
+              )}
               {renderModelSection(
                 t("modelProviders.embeddingModels"),
                 embeddingModels,
@@ -150,7 +154,11 @@ const ModelSelection = ({
               )}
             </>
           ) : modelType === "llm" ? (
-            renderModelSection(t("modelProviders.languageModels"), llmModels, "llm")
+            renderModelSection(
+              t("modelProviders.languageModels"),
+              llmModels,
+              "llm",
+            )
           ) : (
             renderModelSection(
               t("modelProviders.embeddingModels"),

@@ -74,7 +74,9 @@ export default function StepType() {
 
   return (
     <div className="flex w-full flex-col gap-6 overflow-y-auto py-3">
-      <h2 className="text-lg font-semibold">{t("deployments.deploymentType")}</h2>
+      <h2 className="text-lg font-semibold">
+        {t("deployments.deploymentType")}
+      </h2>
 
       <div className="flex flex-col gap-3">
         <span className="text-sm font-medium">

@@ -64,7 +64,11 @@ const MemoizedApiKeyButton = memo(
           className="h-4 w-4"
           aria-hidden="true"
         />
-        <span>{apiKey === "" ? t("mcpJson.generateApiKey") : t("mcpJson.apiKeyGenerated")}</span>
+        <span>
+          {apiKey === ""
+            ? t("mcpJson.generateApiKey")
+            : t("mcpJson.apiKeyGenerated")}
+        </span>
       </Button>
     );
   },
@@ -129,71 +133,73 @@ export const McpJsonContent = ({
 }: McpJsonContentProps) => {
   const { t } = useTranslation();
   return (
-  <>
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex-1">
-        <Tabs value={selectedPlatform} onValueChange={setSelectedPlatform}>
-          <TabsList>
-            {operatingSystemTabs.map((tab) => (
-              <TabsTrigger
-                className="flex items-center gap-2"
-                key={tab.name}
-                value={tab.name}
-              >
-                <ForwardedIconComponent name={tab.icon} aria-hidden="true" />
-                {tab.title}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      </div>
-      <div className="flex flex-col gap-2">
-        <span className="text-[13px] font-medium text-muted-foreground">
-          {t("mcpJson.transport")}
-        </span>
-        <Tabs
-          value={selectedTransport}
-          onValueChange={(value) => setSelectedTransport(value as MCPTransport)}
-        >
-          <TabsList>
-            <TabsTrigger value="sse">SSE</TabsTrigger>
-            <TabsTrigger value="streamablehttp">Streamable HTTP</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-    </div>
-    <div className="overflow-hidden rounded-lg border border-border">
-      <SyntaxHighlighter
-        style={createSyntaxHighlighterStyle(isDarkMode)}
-        CodeTag={({ children }: { children: ReactNode }) => (
-          <MemoizedCodeTag
-            isCopied={isCopied}
-            copyToClipboard={() => copyToClipboard(mcpJson)}
-            isAuthApiKey={isAuthApiKey}
-            apiKey={apiKey}
-            isGeneratingApiKey={isGeneratingApiKey}
-            generateApiKey={generateApiKey}
+    <>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex-1">
+          <Tabs value={selectedPlatform} onValueChange={setSelectedPlatform}>
+            <TabsList>
+              {operatingSystemTabs.map((tab) => (
+                <TabsTrigger
+                  className="flex items-center gap-2"
+                  key={tab.name}
+                  value={tab.name}
+                >
+                  <ForwardedIconComponent name={tab.icon} aria-hidden="true" />
+                  {tab.title}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-[13px] font-medium text-muted-foreground">
+            {t("mcpJson.transport")}
+          </span>
+          <Tabs
+            value={selectedTransport}
+            onValueChange={(value) =>
+              setSelectedTransport(value as MCPTransport)
+            }
           >
-            {children}
-          </MemoizedCodeTag>
-        )}
-        language="json"
-      >
-        {mcpJson}
-      </SyntaxHighlighter>
-    </div>
-    <div className="px-2 text-mmd text-muted-foreground">
-      {t("mcpJson.addConfigHint")}{" "}
-      <a
-        href="https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions"
-        target="_blank"
-        rel="noreferrer"
-        className="text-accent-pink-foreground"
-      >
-        {t("mcpJson.setupGuide")}
-      </a>
-      .
-    </div>
-  </>
+            <TabsList>
+              <TabsTrigger value="sse">SSE</TabsTrigger>
+              <TabsTrigger value="streamablehttp">Streamable HTTP</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      </div>
+      <div className="overflow-hidden rounded-lg border border-border">
+        <SyntaxHighlighter
+          style={createSyntaxHighlighterStyle(isDarkMode)}
+          CodeTag={({ children }: { children: ReactNode }) => (
+            <MemoizedCodeTag
+              isCopied={isCopied}
+              copyToClipboard={() => copyToClipboard(mcpJson)}
+              isAuthApiKey={isAuthApiKey}
+              apiKey={apiKey}
+              isGeneratingApiKey={isGeneratingApiKey}
+              generateApiKey={generateApiKey}
+            >
+              {children}
+            </MemoizedCodeTag>
+          )}
+          language="json"
+        >
+          {mcpJson}
+        </SyntaxHighlighter>
+      </div>
+      <div className="px-2 text-mmd text-muted-foreground">
+        {t("mcpJson.addConfigHint")}{" "}
+        <a
+          href="https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions"
+          target="_blank"
+          rel="noreferrer"
+          className="text-accent-pink-foreground"
+        >
+          {t("mcpJson.setupGuide")}
+        </a>
+        .
+      </div>
+    </>
   );
 };

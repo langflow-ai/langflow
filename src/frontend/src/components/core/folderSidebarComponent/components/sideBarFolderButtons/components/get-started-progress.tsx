@@ -94,7 +94,8 @@ export const GetStartedProgress: FC<{
         >
           {percentageGetStarted >= 100 ? (
             <>
-              <span>{t("sidebar.allSet")}</span> <span className="pl-1"> 🎉 </span>
+              <span>{t("sidebar.allSet")}</span>{" "}
+              <span className="pl-1"> 🎉 </span>
             </>
           ) : (
             t("sidebar.getStarted")

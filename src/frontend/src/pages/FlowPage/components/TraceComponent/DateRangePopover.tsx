@@ -80,7 +80,9 @@ export function DateRangePopover({
       <PopoverContent align="end" className="w-[260px] p-3">
         <div className="flex flex-col gap-2">
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">{t("trace.startDate")}</span>
+            <span className="text-xs text-muted-foreground">
+              {t("trace.startDate")}
+            </span>
             <Input
               type="date"
               value={startDate}
@@ -90,7 +92,9 @@ export function DateRangePopover({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">{t("trace.endDate")}</span>
+            <span className="text-xs text-muted-foreground">
+              {t("trace.endDate")}
+            </span>
             <Input
               type="date"
               value={endDate}

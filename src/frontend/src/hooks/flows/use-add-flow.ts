@@ -87,7 +87,9 @@ const useAddFlow = () => {
     // If no folder exists, create one with the appropriate name based on onboarding state
     if (!folder_id && (!folders || folders.length === 0)) {
       try {
-        const projectName = isOnboarding ? t("project.starterName") : t("project.newName");
+        const projectName = isOnboarding
+          ? t("project.starterName")
+          : t("project.newName");
         const newFolder = await postAddFolder({
           data: {
             name: projectName,

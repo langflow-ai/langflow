@@ -158,7 +158,9 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
         "Knowledge Base";
 
       setSuccessData({
-        title: t("success.knowledgeBaseNodeCreated", { name: knowledgeBaseName }),
+        title: t("success.knowledgeBaseNodeCreated", {
+          name: knowledgeBaseName,
+        }),
       });
 
       onCreated?.(knowledgeBaseName);

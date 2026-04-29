@@ -41,7 +41,9 @@ export function AssistantHeader({
         <ShadTooltip
           content={
             isAtSessionLimit
-              ? t("assistant.maxSessionsTooltip", { max: ASSISTANT_MAX_SESSIONS })
+              ? t("assistant.maxSessionsTooltip", {
+                  max: ASSISTANT_MAX_SESSIONS,
+                })
               : ""
           }
           side="bottom"
@@ -60,7 +62,9 @@ export function AssistantHeader({
                 name={isAtSessionLimit ? "AlertCircle" : "Plus"}
                 className="h-4 w-4"
               />
-              {isAtSessionLimit ? t("assistant.maxSessionsLabel") : t("assistant.newSession")}
+              {isAtSessionLimit
+                ? t("assistant.maxSessionsLabel")
+                : t("assistant.newSession")}
             </Button>
           </span>
         </ShadTooltip>

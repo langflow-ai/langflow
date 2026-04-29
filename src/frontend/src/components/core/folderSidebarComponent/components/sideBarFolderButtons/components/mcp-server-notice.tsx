@@ -21,7 +21,9 @@ export const MCPServerNotice: FC<{
       </Button>
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <div className="font-mono text-sm text-muted-foreground">{t("sidebar.mcpNewBadge")}</div>
+          <div className="font-mono text-sm text-muted-foreground">
+            {t("sidebar.mcpNewBadge")}
+          </div>
           <div className="">{t("sidebar.mcpProjectsTitle")}</div>
         </div>
         <img src={MCPLangflow} alt="MCP Notice Modal" className="rounded-xl" />

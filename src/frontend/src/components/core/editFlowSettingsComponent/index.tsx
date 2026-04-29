@@ -94,10 +94,13 @@ export const EditFlowSettings: React.FC<
       <Form.Field name="name">
         <div className="edit-flow-arrangement">
           <Form.Label className="text-mmd font-medium">
-            {t("flow.nameLabel")}{setName ? "" : ":"}
+            {t("flow.nameLabel")}
+            {setName ? "" : ":"}
           </Form.Label>
           {isMaxLength && (
-            <span className="edit-flow-span">{t("flow.characterLimitReached")}</span>
+            <span className="edit-flow-span">
+              {t("flow.characterLimitReached")}
+            </span>
           )}
           {isMinLength && (
             <span className="edit-flow-span">
@@ -105,7 +108,9 @@ export const EditFlowSettings: React.FC<
             </span>
           )}
           {isInvalidName && (
-            <span className="edit-flow-span">{t("flow.nameAlreadyExists")}</span>
+            <span className="edit-flow-span">
+              {t("flow.nameAlreadyExists")}
+            </span>
           )}
         </div>
         {setName ? (
@@ -145,10 +150,13 @@ export const EditFlowSettings: React.FC<
       <Form.Field name="description">
         <div className="edit-flow-arrangement mt-2">
           <Form.Label className="text-mmd font-medium">
-            {t("flow.descriptionLabel")}{setDescription ? "" : ":"}
+            {t("flow.descriptionLabel")}
+            {setDescription ? "" : ":"}
           </Form.Label>
           {isMaxDescriptionLength && (
-            <span className="edit-flow-span">{t("flow.characterLimitReached")}</span>
+            <span className="edit-flow-span">
+              {t("flow.characterLimitReached")}
+            </span>
           )}
         </div>
         {setDescription ? (

@@ -57,7 +57,9 @@ export default function ReviewPhaseContent({
 
         <div className="flex items-center gap-3">
           <div className="flex flex-1 flex-col items-center gap-1.5 rounded-lg border p-3">
-            <span className="text-xs text-muted-foreground">{t("deployments.current")}</span>
+            <span className="text-xs text-muted-foreground">
+              {t("deployments.current")}
+            </span>
             {isLoadingVersion ? (
               <ForwardedIconComponent
                 name="Loader2"
@@ -74,7 +76,9 @@ export default function ReviewPhaseContent({
           />
 
           <div className="flex flex-1 flex-col items-center gap-1.5 rounded-lg border p-3">
-            <span className="text-xs text-muted-foreground">{t("deployments.new")}</span>
+            <span className="text-xs text-muted-foreground">
+              {t("deployments.new")}
+            </span>
             <Badge variant="default">{newVersionTag}</Badge>
           </div>
         </div>

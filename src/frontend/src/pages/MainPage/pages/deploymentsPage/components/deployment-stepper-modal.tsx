@@ -288,14 +288,20 @@ function DeploymentStepperModalContent({
     setOpen(false);
   };
 
-  const actionLabel = isEditMode ? t("deployments.update") : t("deployments.deploy");
+  const actionLabel = isEditMode
+    ? t("deployments.update")
+    : t("deployments.deploy");
   const actionIcon = isEditMode ? "Save" : "Rocket";
-  const progressLabel = isEditMode ? t("deployments.updating") : t("deployments.deploying");
+  const progressLabel = isEditMode
+    ? t("deployments.updating")
+    : t("deployments.deploying");
 
   return (
     <>
       <DialogTitle className="sr-only">
-        {isEditMode ? t("deployments.updateDeployment") : t("deployments.createNewDeploymentTitle")}
+        {isEditMode
+          ? t("deployments.updateDeployment")
+          : t("deployments.createNewDeploymentTitle")}
       </DialogTitle>
       <DialogDescription className="sr-only">
         {t("deployments.stepOf", { current: currentStep, total: totalSteps })}
@@ -307,7 +313,9 @@ function DeploymentStepperModalContent({
           className="text-center text-2xl font-semibold"
           data-testid="stepper-modal-title"
         >
-          {isEditMode ? t("deployments.updateDeployment") : t("deployments.createNewDeploymentTitle")}
+          {isEditMode
+            ? t("deployments.updateDeployment")
+            : t("deployments.createNewDeploymentTitle")}
         </h2>
         <DeploymentStepper />
       </div>

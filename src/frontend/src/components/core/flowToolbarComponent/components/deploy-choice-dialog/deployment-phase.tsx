@@ -93,7 +93,9 @@ export default function DeploymentPhaseContent({
               htmlFor="deploy-new"
               className="flex flex-1 cursor-pointer flex-col gap-0.5"
             >
-              <span className="text-sm font-medium">{t("deployments.createNewDeployment")}</span>
+              <span className="text-sm font-medium">
+                {t("deployments.createNewDeployment")}
+              </span>
               <span className="text-xs text-muted-foreground">
                 {selectedProvider
                   ? `New deployment on ${selectedProvider.name}`

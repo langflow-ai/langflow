@@ -59,7 +59,9 @@ const ToolbarModals = memo(
         flow: flowComponent,
         override: true,
       });
-      setSuccessData({ title: t("success.componentOverridden", { id: data.id }) });
+      setSuccessData({
+        title: t("success.componentOverridden", { id: data.id }),
+      });
       setShowOverrideModal(false);
     };
 

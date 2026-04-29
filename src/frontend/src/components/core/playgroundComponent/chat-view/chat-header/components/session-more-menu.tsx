@@ -180,7 +180,9 @@ export function SessionMoreMenu({
                   name="Trash2"
                   className="mr-2 h-4 w-4"
                 />
-                {isDefaultSession ? t("playgroundComponent.clearSession") : t("playgroundComponent.deleteSession")}
+                {isDefaultSession
+                  ? t("playgroundComponent.clearSession")
+                  : t("playgroundComponent.deleteSession")}
               </div>
             </SelectItem>
           )}

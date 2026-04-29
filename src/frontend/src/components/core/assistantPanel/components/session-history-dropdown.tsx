@@ -105,7 +105,9 @@ export function SessionHistoryDropdown({
                     {entry.firstUserMessage}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    {t("assistant.messageCounts", { count: entry.messageCount })}
+                    {t("assistant.messageCounts", {
+                      count: entry.messageCount,
+                    })}
                     {" · "}
                     {moment(entry.lastActiveAt).fromNow()}
                   </span>

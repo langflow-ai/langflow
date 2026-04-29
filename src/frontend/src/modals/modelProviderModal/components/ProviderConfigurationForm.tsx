@@ -52,7 +52,11 @@ export interface ProviderConfigurationFormProps {
 }
 
 // Generate a stable random placeholder for a given variable type
-const getPlaceholder = (variableName: string, provider: string, t: (key: string, opts?: Record<string, string>) => string) => {
+const getPlaceholder = (
+  variableName: string,
+  provider: string,
+  t: (key: string, opts?: Record<string, string>) => string,
+) => {
   const name = variableName.toLowerCase();
   const providerLower = provider.toLowerCase();
 
@@ -155,12 +159,18 @@ const ProviderConfigurationForm = ({
                 }
               }}
             >
-              {t("modelProviders.credentialsLink", { provider: selectedProvider.provider })}
+              {t("modelProviders.credentialsLink", {
+                provider: selectedProvider.provider,
+              })}
             </span>{" "}
             {t("modelProviders.toEnableModels")}
           </>
         ) : (
-          <>{t("modelProviders.activateToEnable", { provider: selectedProvider.provider })}</>
+          <>
+            {t("modelProviders.activateToEnable", {
+              provider: selectedProvider.provider,
+            })}
+          </>
         )}
       </span>
       {requiresConfiguration ? (
@@ -353,8 +363,12 @@ const ProviderConfigurationForm = ({
             disabled={selectedProvider.is_enabled}
           >
             {selectedProvider.is_enabled
-              ? t("modelProviders.activatedButton", { provider: selectedProvider.provider })
-              : t("modelProviders.activateButton", { provider: selectedProvider.provider })}
+              ? t("modelProviders.activatedButton", {
+                  provider: selectedProvider.provider,
+                })
+              : t("modelProviders.activateButton", {
+                  provider: selectedProvider.provider,
+                })}
           </Button>
           {selectedProvider.is_enabled && (
             <Button
@@ -362,7 +376,9 @@ const ProviderConfigurationForm = ({
               onClick={() => setShowDisconnectWarning(true)}
               disabled={isDeleting || isPending}
             >
-              {t("modelProviders.deactivateButton", { provider: selectedProvider.provider })}
+              {t("modelProviders.deactivateButton", {
+                provider: selectedProvider.provider,
+              })}
             </Button>
           )}
         </div>
@@ -373,7 +389,9 @@ const ProviderConfigurationForm = ({
         message={
           requiresConfiguration
             ? t("modelProviders.disconnectApiKeyWarning")
-            : t("modelProviders.deactivateWarning", { provider: selectedProvider.provider })
+            : t("modelProviders.deactivateWarning", {
+                provider: selectedProvider.provider,
+              })
         }
         onCancel={() => setShowDisconnectWarning(false)}
         onConfirm={() => {

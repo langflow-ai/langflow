@@ -125,7 +125,9 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                   <div className="min-w-0">
                     <Input
                       icon="Search"
-                      placeholder={t("deployments.placeholderSearchConnections")}
+                      placeholder={t(
+                        "deployments.placeholderSearchConnections",
+                      )}
                       className="bg-muted"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -133,7 +135,9 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                   </div>
                   {filteredConnections.length === 0 ? (
                     <p className="py-6 text-center text-sm text-muted-foreground">
-                      {t("deployments.noConnectionsMatch", { query: searchQuery })}
+                      {t("deployments.noConnectionsMatch", {
+                        query: searchQuery,
+                      })}
                     </p>
                   ) : (
                     filteredConnections.map((conn) => (
@@ -159,7 +163,8 @@ export const ConnectionPanel = memo(function ConnectionPanel({
             <div className="flex flex-col gap-4">
               <div className="flex flex-col">
                 <span className="pb-2 text-sm font-medium">
-                  {t("deployments.connectionNameLabel")}<span className="text-destructive">*</span>
+                  {t("deployments.connectionNameLabel")}
+                  <span className="text-destructive">*</span>
                 </span>
                 <Input
                   placeholder={t("deployments.placeholderConnectionName")}
@@ -182,7 +187,9 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                 </span>
                 {detectedVarCount > 0 && (
                   <p className="mb-2 text-xs text-muted-foreground">
-                    {t("deployments.variablesAutoDetected", { count: detectedVarCount })}
+                    {t("deployments.variablesAutoDetected", {
+                      count: detectedVarCount,
+                    })}
                   </p>
                 )}
                 <div className="space-y-2">

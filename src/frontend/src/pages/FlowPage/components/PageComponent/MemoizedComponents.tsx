@@ -100,7 +100,9 @@ export const MemoizedCanvasControls = memo(
           />
           {effectiveLocked && (
             <span className="text-xs text-destructive">
-              {isAgentWorking ? t("canvas.agentWorking") : t("canvas.flowLocked")}
+              {isAgentWorking
+                ? t("canvas.agentWorking")
+                : t("canvas.flowLocked")}
             </span>
           )}
         </Button>

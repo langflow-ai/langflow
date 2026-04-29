@@ -127,7 +127,9 @@ export async function refreshAllModelInputs(
 
     if (showNotifications) {
       const count = nodesWithModelFields.length;
-      setSuccessData({ title: (i18n as any).t("alerts.modelsRefreshed", { count }) });
+      setSuccessData({
+        title: (i18n as any).t("alerts.modelsRefreshed", { count }),
+      });
     }
   } catch (error) {
     console.error("Error refreshing model inputs:", error);

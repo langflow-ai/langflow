@@ -18,7 +18,9 @@ export default function DeploymentFlowList({
         {t("deployments.attachedFlowsCount", { count: flowVersions.length })}
       </span>
       {flowVersions.length === 0 ? (
-        <span className="text-sm text-muted-foreground">{t("deployments.noFlowsAttached")}</span>
+        <span className="text-sm text-muted-foreground">
+          {t("deployments.noFlowsAttached")}
+        </span>
       ) : (
         <div className="flex flex-col gap-2">
           {flowVersions.map((fv) => (
