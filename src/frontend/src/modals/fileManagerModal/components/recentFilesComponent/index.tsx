@@ -69,7 +69,6 @@ export default function RecentFilesComponent({
       }),
     [filesWithDisabled],
   );
-  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
