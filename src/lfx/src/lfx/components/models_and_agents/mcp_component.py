@@ -590,12 +590,21 @@ class MCPToolsComponent(ComponentWithCache):
                 build_config["tool_placeholder"]["tool_mode"] = True
 
                 current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
+                build_config_server_value = build_config.get("mcp_server", {}).get("value")
+                build_config_server_name = (
+                    build_config_server_value.get("name")
+                    if isinstance(build_config_server_value, dict)
+                    else build_config_server_value
+                )
                 servers_cache_key_ui = self._mcp_servers_cache_key(current_server_name) if current_server_name else ""
                 _last_selected_server = safe_cache_get(self._shared_component_cache, "last_selected_server", "")
                 # Only treat as a server change if there was a previous server selection.
                 # Cold cache (_last_selected_server="") on initial flow load is NOT a server change —
                 # the user didn't switch anything, the backend just hasn't seen this component yet.
-                server_changed = bool(_last_selected_server and current_server_name != _last_selected_server)
+                server_changed = bool(
+                    (_last_selected_server and current_server_name != _last_selected_server)
+                    or (build_config_server_name and current_server_name != build_config_server_name)
+                )
 
                 # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
                 is_in_tool_mode = build_config["tools_metadata"]["show"]
@@ -697,12 +706,16 @@ class MCPToolsComponent(ComponentWithCache):
                             msg = f"Timeout loading tools for MCP server: {e!s}"
                             await logger.aexception(msg)
                             build_config["tool"]["options"] = []
-                            build_config["tool"]["placeholder"] = msg
+                            build_config["tool"]["placeholder"] = "Timeout on MCP server"
                         except (ValueError, ImportError, ConnectionError, OSError, RuntimeError) as e:
                             msg = f"Error loading tools for MCP server: {e!s}"
                             await logger.aexception(msg)
                             build_config["tool"]["options"] = []
-                            build_config["tool"]["placeholder"] = msg
+                            build_config["tool"]["placeholder"] = (
+                                "Error on MCP Server"
+                                if "'NoneType' object has no attribute 'id'" in msg
+                                else msg
+                            )
                     # Force a value refresh only when the user genuinely switched servers.
                     # server_changed is only True for real user-initiated changes (not initial load).
                     if server_changed:
