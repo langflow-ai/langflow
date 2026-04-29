@@ -40,8 +40,9 @@ export const useGetTypes: useQueryFunctionType<
       );
       const raw = response?.data as Record<string, unknown>;
 
-      const componentDisplayNames =
-        raw?.component_display_names as ComponentDisplayNamesType | undefined;
+      const componentDisplayNames = raw?.component_display_names as
+        | ComponentDisplayNamesType
+        | undefined;
       delete raw.component_display_names;
       const data = raw as APIObjectType;
 

@@ -1408,8 +1408,12 @@ export function syncNodeTranslations(): void {
     const normKey = normalizeComponentKey(nodeType);
     const knownNames = componentDisplayNames[normKey]?.display_name ?? [];
     const knownDescs = componentDisplayNames[normKey]?.description ?? [];
-    const shouldTranslateName = knownNames.includes(node.data.node!.display_name);
-    const shouldTranslateDesc = knownDescs.includes(node.data.node!.description);
+    const shouldTranslateName = knownNames.includes(
+      node.data.node!.display_name,
+    );
+    const shouldTranslateDesc = knownDescs.includes(
+      node.data.node!.description,
+    );
 
     // Update input field display_names, info (tooltips), and placeholders
     const updatedTemplate = { ...node.data.node!.template };
