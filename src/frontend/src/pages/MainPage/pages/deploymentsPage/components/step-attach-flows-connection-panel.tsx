@@ -1,12 +1,10 @@
-import { memo, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { memo } from "react";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/utils/utils";
 import type { ConnectionItem, EnvVarEntry } from "../types";
-import { CheckboxSelectItem } from "./radio-select-item";
+import { ConnectionSearchList } from "./connection-search-list";
 
 export type ConnectionTab = "available" | "create";
 
@@ -49,26 +47,10 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   onCreateConnection: () => void;
   isDuplicateName?: boolean;
 }) {
-  const { t } = useTranslation();
-  const [searchQuery, setSearchQuery] = useState("");
-  const filteredConnections = useMemo(() => {
-    // Sort newly created connections to the top
-    const sorted = [...connections].sort((a, b) => {
-      if (a.isNew && !b.isNew) return -1;
-      if (!a.isNew && b.isNew) return 1;
-      return 0;
-    });
-    if (!searchQuery.trim()) return sorted;
-    const q = searchQuery.toLowerCase();
-    return sorted.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q),
-    );
-  }, [connections, searchQuery]);
-
   return (
     <>
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
-        {t("deployments.selectOrCreateConnection")}
+        Select or Create New Connection
       </div>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden px-4 py-4">
         {/* Tab toggle */}
@@ -87,87 +69,35 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                 )}
               >
                 {tab === "available"
-                  ? t("deployments.availableConnections")
-                  : t("deployments.createConnection")}
+                  ? "Available Connections"
+                  : "Create Connection"}
               </button>
             ))}
           </div>
         </div>
 
         {/* Tab content */}
-        <div className="mt-4 flex-1 overflow-x-hidden overflow-y-auto">
+        <div
+          className="mt-4 flex-1 overflow-x-hidden overflow-y-auto"
+          key={connectionTab}
+        >
           {connectionTab === "available" ? (
             <div className="min-w-0 space-y-3">
-              {connections.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-                  <ForwardedIconComponent
-                    name="PlugZap"
-                    className="h-8 w-8 text-muted-foreground/50"
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {t("deployments.noConnectionsYet")}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground/70">
-                      {t("deployments.noConnectionsDescription")}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onTabChange("create")}
-                    className="text-xs font-medium text-primary hover:underline"
-                  >
-                    {t("deployments.createFirstConnection")}
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="min-w-0">
-                    <Input
-                      icon="Search"
-                      placeholder={t(
-                        "deployments.placeholderSearchConnections",
-                      )}
-                      className="bg-muted"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  {filteredConnections.length === 0 ? (
-                    <p className="py-6 text-center text-sm text-muted-foreground">
-                      {t("deployments.noConnectionsMatch", {
-                        query: searchQuery,
-                      })}
-                    </p>
-                  ) : (
-                    filteredConnections.map((conn) => (
-                      <CheckboxSelectItem
-                        key={conn.id}
-                        value={conn.id}
-                        checked={selectedConnections.has(conn.id)}
-                        onChange={() => onToggleConnection(conn.id)}
-                        data-testid={`connection-item-${conn.id}`}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium leading-tight">
-                            {conn.name}
-                          </span>
-                        </div>
-                      </CheckboxSelectItem>
-                    ))
-                  )}
-                </>
-              )}
+              <ConnectionSearchList
+                connections={connections}
+                selectedConnections={selectedConnections}
+                onToggleConnection={onToggleConnection}
+                onSwitchToCreate={() => onTabChange("create")}
+              />
             </div>
           ) : (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col">
                 <span className="pb-2 text-sm font-medium">
-                  {t("deployments.connectionNameLabel")}
-                  <span className="text-destructive">*</span>
+                  Connection Name<span className="text-destructive">*</span>
                 </span>
                 <Input
-                  placeholder={t("deployments.placeholderConnectionName")}
+                  placeholder="e.g., SALES_BOT_PROD"
                   className="bg-muted"
                   value={newConnectionName}
                   onChange={(e) =>
@@ -176,27 +106,27 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                 />
                 {isDuplicateName && (
                   <span className="pt-1 text-xs text-destructive">
-                    {t("deployments.connectionNameExists")}
+                    A connection with this name already exists.
                   </span>
                 )}
               </div>
               <div className="flex flex-col">
                 <span className="pb-2 text-sm font-medium">
-                  {t("deployments.environmentVariables")}
+                  Environment Variables
                   <span className="text-destructive">*</span>
                 </span>
                 {detectedVarCount > 0 && (
                   <p className="mb-2 text-xs text-muted-foreground">
-                    {t("deployments.variablesAutoDetected", {
-                      count: detectedVarCount,
-                    })}
+                    {detectedVarCount} variable
+                    {detectedVarCount > 1 ? "s" : ""} auto-detected from the
+                    selected flow version.
                   </p>
                 )}
                 <div className="space-y-2">
                   {envVars.map((envVar) => (
                     <div key={envVar.id} className="grid grid-cols-2 gap-2">
                       <Input
-                        placeholder={t("deployments.placeholderKey")}
+                        placeholder="Key"
                         className="bg-muted"
                         value={envVar.key}
                         onChange={(e) =>
@@ -207,10 +137,10 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                         nodeStyle
                         password
                         id={`env-val-${envVar.id}`}
-                        placeholder={t("deployments.placeholderValue")}
+                        placeholder="Value"
                         value={envVar.value}
                         options={globalVariableOptions}
-                        optionsPlaceholder={t("deployments.globalVariables")}
+                        optionsPlaceholder="Global Variables"
                         optionsIcon="Globe"
                         selectedOption={envVar.globalVar ? envVar.value : ""}
                         setSelectedOption={(sel) =>
@@ -227,7 +157,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                     onClick={onAddEnvVar}
                     className="text-sm text-muted-foreground hover:text-foreground"
                   >
-                    {t("deployments.addVariable")}
+                    + Add variable
                   </button>
                 </div>
               </div>
@@ -242,14 +172,14 @@ export const ConnectionPanel = memo(function ConnectionPanel({
             onClick={onChangeFlow}
             data-testid="connection-change-flow"
           >
-            {t("deployments.changeFlow")}
+            Change Flow
           </Button>
           <Button
             variant="outline"
             onClick={onSkipConnection}
             data-testid="connection-skip"
           >
-            {t("deployments.skip")}
+            Skip
           </Button>
           {connectionTab === "available" ? (
             <Button
@@ -258,7 +188,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
               onClick={onAttachConnection}
               data-testid="connection-attach"
             >
-              {t("deployments.attachConnectionToFlow")}
+              Attach Connection to Flow
             </Button>
           ) : (
             <Button
@@ -267,7 +197,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
               onClick={onCreateConnection}
               data-testid="connection-create"
             >
-              {t("deployments.createConnection")}
+              Create Connection
             </Button>
           )}
         </div>

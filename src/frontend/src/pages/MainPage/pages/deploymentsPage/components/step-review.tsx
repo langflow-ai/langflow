@@ -1,12 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { keepPreviousData } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { useCheckToolNames } from "@/controllers/API/queries/deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
+
+function normalizeWxoName(s: string): string {
+  return s.replace(/[\s-]/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
+}
 
 function EditableToolName({
   value,
@@ -17,7 +22,6 @@ function EditableToolName({
   placeholder: string;
   onSave: (name: string) => void;
 }) {
-  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -59,7 +63,7 @@ function EditableToolName({
           type="button"
           onClick={confirm}
           className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-          title={t("deployments.confirm")}
+          title="Confirm"
         >
           <ForwardedIconComponent name="Check" className="h-3.5 w-3.5" />
         </button>
@@ -79,7 +83,7 @@ function EditableToolName({
           setEditing(true);
         }}
         className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-        title={t("deployments.editToolName")}
+        title="Edit tool name"
         data-testid="edit-tool-name"
       >
         <ForwardedIconComponent name="Pencil" className="h-3.5 w-3.5" />
@@ -89,7 +93,6 @@ function EditableToolName({
 }
 
 export default function StepReview() {
-  const { t } = useTranslation();
   const {
     isEditMode,
     deploymentType,
@@ -101,6 +104,10 @@ export default function StepReview() {
     setToolNameByFlow,
     attachedConnectionByFlow,
     removedFlowIds,
+    selectedInstance,
+    preExistingFlowIds,
+    initialToolNameByFlow,
+    setHasToolNameErrors,
   } = useDeploymentStepper();
 
   const { folderId } = useParams();
@@ -147,14 +154,104 @@ export default function StepReview() {
     },
   );
 
+  // Collect normalized tool names to check against the provider.
+  const toolNamesToCheck = useMemo(() => {
+    const names: string[] = [];
+    for (const item of reviewFlows) {
+      const normalized = normalizeWxoName(item.toolName);
+      if (!normalized) continue;
+      // Skip pre-existing flows only if their tool name hasn't changed.
+      if (isEditMode && preExistingFlowIds.has(item.flowId)) {
+        const original = normalizeWxoName(
+          initialToolNameByFlow.get(item.flowId) ?? "",
+        );
+        if (
+          normalized.toLowerCase() === original.toLowerCase() ||
+          normalized.toLowerCase() ===
+            normalizeWxoName(item.flowName).toLowerCase()
+        )
+          continue;
+      }
+      names.push(normalized);
+    }
+    return names;
+  }, [reviewFlows, isEditMode, preExistingFlowIds, initialToolNameByFlow]);
+
+  const { data: checkNamesData } = useCheckToolNames(
+    { providerId: selectedInstance?.id ?? "", names: toolNamesToCheck },
+    {
+      enabled: !!selectedInstance?.id && toolNamesToCheck.length > 0,
+      placeholderData: keepPreviousData,
+    },
+  );
+
+  const existingToolNames = useMemo(() => {
+    if (!checkNamesData?.existing_names) return new Set<string>();
+    return new Set(checkNamesData.existing_names.map((n) => n.toLowerCase()));
+  }, [checkNamesData]);
+
+  const toolNameErrors = useMemo(() => {
+    const errors = new Map<string, string>();
+    const batchNames = new Map<string, string>(); // normalized -> flowId (first seen)
+
+    for (const item of reviewFlows) {
+      const normalized = normalizeWxoName(item.toolName).toLowerCase();
+      if (!normalized) continue;
+
+      // Check batch duplicates (two flows with same tool name in this deployment)
+      const firstFlowId = batchNames.get(normalized);
+      if (firstFlowId) {
+        errors.set(item.flowId, "Duplicate tool name within this deployment");
+        if (!errors.has(firstFlowId)) {
+          errors.set(firstFlowId, "Duplicate tool name within this deployment");
+        }
+      } else {
+        batchNames.set(normalized, item.flowId);
+      }
+
+      // Check against existing provider tools (skip for pre-existing flows only if name unchanged)
+      if (!errors.has(item.flowId) && existingToolNames.has(normalized)) {
+        let skipProviderCheck = false;
+        if (isEditMode && preExistingFlowIds.has(item.flowId)) {
+          const original = normalizeWxoName(
+            initialToolNameByFlow.get(item.flowId) ?? "",
+          ).toLowerCase();
+          skipProviderCheck =
+            normalized === original ||
+            normalized === normalizeWxoName(item.flowName).toLowerCase();
+        }
+        if (!skipProviderCheck) {
+          errors.set(
+            item.flowId,
+            "Edit tool name (already exists in provider)",
+          );
+        }
+      }
+    }
+
+    return errors;
+  }, [
+    reviewFlows,
+    existingToolNames,
+    isEditMode,
+    preExistingFlowIds,
+    initialToolNameByFlow,
+  ]);
+
+  useEffect(() => {
+    setHasToolNameErrors(toolNameErrors.size > 0);
+  }, [toolNameErrors, setHasToolNameErrors]);
+
+  useEffect(() => {
+    return () => setHasToolNameErrors(false);
+  }, [setHasToolNameErrors]);
+
   return (
     <div className="flex flex-col gap-4 py-3">
       <div>
-        <h2 className="text-lg font-semibold">
-          {t("deployments.reviewAndConfirm")}
-        </h2>
+        <h2 className="text-lg font-semibold">Review & Confirm</h2>
         <p className="text-sm text-muted-foreground">
-          {t("deployments.reviewDetails")}
+          Review your deployment details before creating.
         </p>
       </div>
 
@@ -163,13 +260,11 @@ export default function StepReview() {
           {/* Deployment column */}
           <div className="flex flex-col gap-3">
             <span className="text-sm font-medium text-foreground">
-              {t("deployments.deploymentLabel")}
+              Deployment
             </span>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <span className="w-10 text-xs text-muted-foreground">
-                  {t("deployments.labelType")}
-                </span>
+                <span className="w-10 text-xs text-muted-foreground">Type</span>
                 <div className="flex items-center gap-1.5">
                   <ForwardedIconComponent
                     name={deploymentType === "agent" ? "Bot" : "Server"}
@@ -181,9 +276,7 @@ export default function StepReview() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-10 text-xs text-muted-foreground">
-                  {t("deployments.labelName")}
-                </span>
+                <span className="w-10 text-xs text-muted-foreground">Name</span>
                 <span className="text-sm text-foreground">
                   {deploymentName || "—"}
                 </span>
@@ -191,7 +284,7 @@ export default function StepReview() {
               {selectedLlm && (
                 <div className="flex items-center gap-2">
                   <span className="w-10 text-xs text-muted-foreground">
-                    {t("deployments.labelModel")}
+                    Model
                   </span>
                   <span className="text-sm text-foreground">{selectedLlm}</span>
                 </div>
@@ -202,7 +295,7 @@ export default function StepReview() {
           {/* Attached Flows column */}
           <div className="flex flex-col gap-3">
             <span className="text-sm font-medium text-foreground">
-              {t("deployments.attachedFlowsLabel")}
+              Attached Flows
             </span>
             <div className="flex flex-col gap-1.5">
               {reviewFlows.length === 0 ? (
@@ -235,122 +328,137 @@ export default function StepReview() {
       {/* Configuration section – scoped per flow */}
       {reviewFlows.length > 0 && (
         <div className="flex flex-col gap-3">
-          {reviewFlows.map((item) => (
-            <div
-              key={item.flowId}
-              className="rounded-xl border border-border bg-background p-4"
-            >
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <ForwardedIconComponent
-                      name="Wrench"
-                      className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                    />
-                    <EditableToolName
-                      value={toolNameByFlow.get(item.flowId)?.trim() ?? ""}
-                      placeholder={item.flowName}
-                      onSave={(name) => {
-                        setToolNameByFlow((prev) => {
-                          const next = new Map(prev);
-                          if (name.trim()) {
-                            next.set(item.flowId, name.trim());
-                          } else {
-                            next.delete(item.flowId);
-                          }
-                          return next;
-                        });
-                      }}
-                    />
+          {reviewFlows.map((item) => {
+            const toolError = toolNameErrors.get(item.flowId);
+            return (
+              <div
+                key={item.flowId}
+                className={`rounded-xl border bg-background p-4 ${toolError ? "border-destructive/50" : "border-border"}`}
+              >
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <ForwardedIconComponent
+                        name="Wrench"
+                        className={`h-3.5 w-3.5 shrink-0 ${toolError ? "text-destructive" : "text-muted-foreground"}`}
+                      />
+                      <EditableToolName
+                        value={toolNameByFlow.get(item.flowId)?.trim() ?? ""}
+                        placeholder={item.flowName}
+                        onSave={(name) => {
+                          setToolNameByFlow((prev) => {
+                            const next = new Map(prev);
+                            if (name.trim()) {
+                              next.set(item.flowId, name.trim());
+                            } else {
+                              next.delete(item.flowId);
+                            }
+                            return next;
+                          });
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pl-5">
+                      <ForwardedIconComponent
+                        name="Workflow"
+                        className="h-3 w-3 shrink-0 text-muted-foreground"
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {item.flowName}
+                      </span>
+                      <Badge
+                        variant="secondaryStatic"
+                        size="tag"
+                        className="bg-accent-purple-muted text-accent-purple-muted-foreground"
+                      >
+                        {item.versionLabel}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 pl-5">
-                    <ForwardedIconComponent
-                      name="Workflow"
-                      className="h-3 w-3 shrink-0 text-muted-foreground"
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {item.flowName}
-                    </span>
-                    <Badge
-                      variant="secondaryStatic"
-                      size="tag"
-                      className="bg-accent-purple-muted text-accent-purple-muted-foreground"
-                    >
-                      {item.versionLabel}
-                    </Badge>
-                  </div>
-                </div>
 
-                {item.connectionDetails.length > 0 &&
-                  (() => {
-                    const newConns = item.connectionDetails.filter(
-                      (c) => c.isNew,
-                    );
-                    const existingConns = item.connectionDetails.filter(
-                      (c) => !c.isNew,
-                    );
-                    return (
-                      <div className="flex flex-col gap-4">
-                        {existingConns.length > 0 && (
-                          <div className="flex flex-col gap-2">
-                            <span className="text-xs font-medium text-muted-foreground">
-                              {t("deployments.existingConnections")}
-                            </span>
-                            {existingConns.map((conn) => (
-                              <span
-                                key={conn.name}
-                                className="text-xs font-medium text-foreground"
-                              >
-                                {conn.name}
+                  {item.connectionDetails.length > 0 &&
+                    (() => {
+                      const newConns = item.connectionDetails.filter(
+                        (c) => c.isNew,
+                      );
+                      const existingConns = item.connectionDetails.filter(
+                        (c) => !c.isNew,
+                      );
+                      return (
+                        <div className="flex flex-col gap-4">
+                          {existingConns.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                              <span className="text-xs font-medium text-muted-foreground">
+                                Existing Connections
                               </span>
-                            ))}
-                          </div>
-                        )}
-                        {newConns.length > 0 && (
-                          <div className="flex flex-col gap-2">
-                            <span className="text-xs font-medium text-muted-foreground">
-                              {t("deployments.newConnections")}
-                            </span>
-                            {newConns.map((conn) => (
-                              <div
-                                key={conn.name}
-                                className="flex flex-col gap-1.5"
-                              >
-                                <span className="text-xs font-medium text-foreground">
+                              {existingConns.map((conn) => (
+                                <span
+                                  key={conn.name}
+                                  className="text-xs font-medium text-foreground"
+                                >
                                   {conn.name}
                                 </span>
-                                {conn.envVars.length > 0 && (
-                                  <div className="flex flex-col divide-y divide-border overflow-hidden rounded-md border border-border">
-                                    {conn.envVars.map(({ key, masked }) => (
-                                      <div
-                                        key={key}
-                                        className="flex items-center justify-between bg-muted/40 px-3 py-1.5"
-                                      >
-                                        <span className="font-mono text-xs text-foreground">
-                                          {key}
-                                        </span>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-muted-foreground">
-                                            =
+                              ))}
+                            </div>
+                          )}
+                          {newConns.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                              <span className="text-xs font-medium text-muted-foreground">
+                                New Connections
+                              </span>
+                              {newConns.map((conn) => (
+                                <div
+                                  key={conn.name}
+                                  className="flex flex-col gap-1.5"
+                                >
+                                  <span className="text-xs font-medium text-foreground">
+                                    {conn.name}
+                                  </span>
+                                  {conn.envVars.length > 0 && (
+                                    <div className="flex flex-col divide-y divide-border overflow-hidden rounded-md border border-border">
+                                      {conn.envVars.map(({ key, masked }) => (
+                                        <div
+                                          key={key}
+                                          className="flex items-center justify-between bg-muted/40 px-3 py-1.5"
+                                        >
+                                          <span className="font-mono text-xs text-foreground">
+                                            {key}
                                           </span>
-                                          <span className="font-mono text-xs text-muted-foreground">
-                                            {masked}
-                                          </span>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-muted-foreground">
+                                              =
+                                            </span>
+                                            <span className="font-mono text-xs text-muted-foreground">
+                                              {masked}
+                                            </span>
+                                          </div>
                                         </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                  {toolError && (
+                    <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2">
+                      <ForwardedIconComponent
+                        name="AlertTriangle"
+                        className="h-3.5 w-3.5 shrink-0 text-destructive"
+                      />
+                      <span className="text-xs text-destructive">
+                        {toolError}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -360,7 +468,7 @@ export default function StepReview() {
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
           <div className="flex flex-col gap-3">
             <span className="text-sm font-medium text-destructive">
-              {t("deployments.detaching")}
+              Detaching
             </span>
             <div className="flex flex-col gap-2">
               {Array.from(removedFlowIds).map((flowId) => {
@@ -375,21 +483,22 @@ export default function StepReview() {
                       className="h-3.5 w-3.5 shrink-0 text-destructive/60"
                     />
                     <span className="text-sm text-foreground">
-                      {flow?.name ?? t("deployments.unknownFlow")}
+                      {flow?.name ?? "Unknown flow"}
                     </span>
                     <Badge
                       variant="secondaryStatic"
                       size="tag"
                       className="bg-destructive/10 text-destructive"
                     >
-                      {t("deployments.removing")}
+                      removing
                     </Badge>
                   </div>
                 );
               })}
             </div>
             <p className="text-xs text-muted-foreground">
-              {t("deployments.toolsWillBeDetached")}
+              These tools will be detached from the agent. They will remain
+              available on your provider tenant.
             </p>
           </div>
         </div>

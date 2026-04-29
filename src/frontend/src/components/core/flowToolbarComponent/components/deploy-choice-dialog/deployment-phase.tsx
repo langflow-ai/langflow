@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,11 +41,10 @@ export default function DeploymentPhaseContent({
   onContinue,
   onCancel,
 }: DeploymentPhaseContentProps) {
-  const { t } = useTranslation();
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t("deployments.selectDeployment")}</DialogTitle>
+        <DialogTitle>Select Deployment</DialogTitle>
         <DialogDescription>
           {selectedProvider
             ? `Deployments on ${selectedProvider.name} for this flow.`
@@ -93,9 +91,7 @@ export default function DeploymentPhaseContent({
               htmlFor="deploy-new"
               className="flex flex-1 cursor-pointer flex-col gap-0.5"
             >
-              <span className="text-sm font-medium">
-                {t("deployments.createNewDeployment")}
-              </span>
+              <span className="text-sm font-medium">Create new deployment</span>
               <span className="text-xs text-muted-foreground">
                 {selectedProvider
                   ? `New deployment on ${selectedProvider.name}`
@@ -117,7 +113,7 @@ export default function DeploymentPhaseContent({
             </Button>
           )}
           <Button onClick={onContinue} disabled={isBusy}>
-            {t("assistant.continue")}
+            Continue
           </Button>
         </div>
       </div>

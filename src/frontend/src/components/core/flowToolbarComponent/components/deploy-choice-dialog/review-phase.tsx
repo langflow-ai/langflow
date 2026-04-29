@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,13 +34,12 @@ export default function ReviewPhaseContent({
       { enabled: !!attachment.flow_version_id },
     );
 
-  const { t } = useTranslation();
   const currentVersionTag = currentVersion?.version_tag ?? "...";
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t("deployments.reviewUpdate")}</DialogTitle>
+        <DialogTitle>Review Update</DialogTitle>
         <DialogDescription>
           Review the version change before updating the deployment.
         </DialogDescription>
@@ -57,9 +55,7 @@ export default function ReviewPhaseContent({
 
         <div className="flex items-center gap-3">
           <div className="flex flex-1 flex-col items-center gap-1.5 rounded-lg border p-3">
-            <span className="text-xs text-muted-foreground">
-              {t("deployments.current")}
-            </span>
+            <span className="text-xs text-muted-foreground">Current</span>
             {isLoadingVersion ? (
               <ForwardedIconComponent
                 name="Loader2"
@@ -76,9 +72,7 @@ export default function ReviewPhaseContent({
           />
 
           <div className="flex flex-1 flex-col items-center gap-1.5 rounded-lg border p-3">
-            <span className="text-xs text-muted-foreground">
-              {t("deployments.new")}
-            </span>
+            <span className="text-xs text-muted-foreground">New</span>
             <Badge variant="default">{newVersionTag}</Badge>
           </div>
         </div>
@@ -93,7 +87,7 @@ export default function ReviewPhaseContent({
             Back
           </Button>
           <Button onClick={onConfirm} disabled={isBusy || isLoadingVersion}>
-            {t("deployments.confirm")}
+            Update
           </Button>
         </div>
       </div>
