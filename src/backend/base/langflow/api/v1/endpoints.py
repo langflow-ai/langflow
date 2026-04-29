@@ -124,10 +124,7 @@ async def get_all(request: Request):
         all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
 
         locale = getattr(request.state, "locale", "en")
-        if locale != "en":
-            all_types = translate_component_dict(all_types_en, locale)
-        else:
-            all_types = all_types_en
+        all_types = translate_component_dict(all_types_en, locale) if locale != "en" else all_types_en
 
         component_display_names = build_component_display_names(all_types_en)
         return compress_response({**all_types, "component_display_names": component_display_names})

@@ -155,7 +155,7 @@ def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dic
 
     result: dict[str, dict[str, set[str]]] = {}
 
-    for category, components in all_types_en.items():
+    for components in all_types_en.values():
         for name, data in components.items():
             norm = normalize_component_key(name)
             if norm not in result:
