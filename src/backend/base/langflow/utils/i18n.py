@@ -181,8 +181,7 @@ def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dic
                         result[norm]["description"].add(val)
 
     return {
-        k: {"display_name": list(v["display_name"]), "description": list(v["description"])}
-        for k, v in result.items()
+        k: {"display_name": list(v["display_name"]), "description": list(v["description"])} for k, v in result.items()
     }
 
 
