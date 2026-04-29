@@ -1352,7 +1352,12 @@ export function syncNodeTranslations(): void {
   const { nodes } = useFlowStore.getState();
   if (nodes.length === 0) return;
 
-  const { data: typesData, types, templates } = useTypesStore.getState();
+  const {
+    data: typesData,
+    types,
+    templates,
+    componentDisplayNames,
+  } = useTypesStore.getState();
 
   // Build normalized lookup: normalize(registryKey) → registryKey
   // This lets us find "Prompt Template" in the registry when nodeType is "PromptTemplate".
@@ -1397,6 +1402,15 @@ export function syncNodeTranslations(): void {
 
     if (!freshDef) return node;
 
+    // Determine whether display_name / description are default (safe to translate)
+    // or user-customized (leave alone). A value is "default" if it appears in the
+    // known-translations set for this component type across any supported locale.
+    const normKey = normalizeComponentKey(nodeType);
+    const knownNames = componentDisplayNames[normKey]?.display_name ?? [];
+    const knownDescs = componentDisplayNames[normKey]?.description ?? [];
+    const shouldTranslateName = knownNames.includes(node.data.node!.display_name);
+    const shouldTranslateDesc = knownDescs.includes(node.data.node!.description);
+
     // Update input field display_names, info (tooltips), and placeholders
     const updatedTemplate = { ...node.data.node!.template };
     for (const fieldName of Object.keys(updatedTemplate)) {
@@ -1433,6 +1447,8 @@ export function syncNodeTranslations(): void {
         ...node.data,
         node: {
           ...node.data.node!,
+          ...(shouldTranslateName && { display_name: freshDef.display_name }),
+          ...(shouldTranslateDesc && { description: freshDef.description }),
           template: updatedTemplate,
           ...(updatedOutputs && { outputs: updatedOutputs }),
         },
