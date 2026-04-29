@@ -359,6 +359,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       positionDictionary: {},
       rightClickedNodeId: null,
     });
+    // Patch translatable fields if types are already loaded in the new language
+    syncNodeTranslations();
   },
   setIsBuilding: (isBuilding) => {
     const current = get();
@@ -1339,6 +1341,130 @@ export function recomputeComponentsToUpdateIfNeeded(): void {
   if (nodes.length > 0) {
     updateComponentsToUpdate(nodes);
   }
+}
+
+/** Normalize a component key: strip spaces, lowercase. Mirrors backend normalize_component_key(). */
+function normalizeComponentKey(name: string): string {
+  return name.replace(/\s+/g, "").toLowerCase();
+}
+
+export function syncNodeTranslations(): void {
+  const { nodes } = useFlowStore.getState();
+  if (nodes.length === 0) return;
+
+  const { data: typesData, types, templates } = useTypesStore.getState();
+
+  // Build normalized lookup: normalize(registryKey) → registryKey
+  // This lets us find "Prompt Template" in the registry when nodeType is "PromptTemplate".
+  const normalizedToRegistryKey: Record<string, string> = {};
+  for (const category of Object.values(typesData)) {
+    for (const registryKey of Object.keys(
+      category as Record<string, unknown>,
+    )) {
+      normalizedToRegistryKey[normalizeComponentKey(registryKey)] = registryKey;
+    }
+  }
+
+  let noteIndex = 0;
+  const updatedNodes = nodes.map((node) => {
+    const nodeType = node.data.type;
+
+    // Skip note nodes — translations are handled by useGetNoteTranslationsQuery
+    if (node.type === "noteNode") {
+      noteIndex += 1;
+      return node;
+    }
+
+    // Resolve category: try exact match first, then normalized match
+    const category =
+      types[nodeType] ??
+      types[normalizedToRegistryKey[normalizeComponentKey(nodeType)] ?? ""];
+
+    // Resolve registry key: exact match first, then normalized match
+    const registryKey =
+      typesData[category]?.[nodeType] !== undefined
+        ? nodeType
+        : (normalizedToRegistryKey[normalizeComponentKey(nodeType)] ??
+          nodeType);
+
+    // Resolve definition: normal path first, then fall back to templates which
+    // has legacy aliases pre-resolved (e.g. "Prompt" → Prompt Template definition,
+    // "parser" → ParserComponent definition).
+    const freshDef =
+      category && typesData[category]?.[registryKey]
+        ? typesData[category][registryKey]
+        : templates[nodeType];
+
+    if (!freshDef) return node;
+
+    // Update input field display_names, info (tooltips), and placeholders
+    const updatedTemplate = { ...node.data.node!.template };
+    for (const fieldName of Object.keys(updatedTemplate)) {
+      const freshField = freshDef.template?.[fieldName];
+      if (freshField?.display_name !== undefined) {
+        updatedTemplate[fieldName] = {
+          ...updatedTemplate[fieldName],
+          display_name: freshField.display_name,
+          ...(freshField.info !== undefined && { info: freshField.info }),
+          ...(freshField.placeholder !== undefined && {
+            placeholder: freshField.placeholder,
+          }),
+        };
+      }
+    }
+
+    // Update output display_names and info
+    const updatedOutputs = node.data.node!.outputs?.map((output, i) => {
+      const freshOut = freshDef.outputs?.[i];
+      return freshOut
+        ? {
+            ...output,
+            ...(freshOut.display_name !== undefined && {
+              display_name: freshOut.display_name,
+            }),
+            ...(freshOut.info !== undefined && { info: freshOut.info }),
+          }
+        : output;
+    });
+
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        node: {
+          ...node.data.node!,
+          template: updatedTemplate,
+          ...(updatedOutputs && { outputs: updatedOutputs }),
+        },
+      },
+    };
+  });
+
+  useFlowStore.setState({ nodes: updatedNodes });
+}
+
+/**
+ * Apply translated note node descriptions to the canvas.
+ * Called from NoteNode when note_translations endpoint data arrives.
+ * translations is a map of node_id → translated markdown text.
+ */
+export function syncNoteTranslations(
+  translations: Record<string, string>,
+): void {
+  const { nodes } = useFlowStore.getState();
+  const updatedNodes = nodes.map((node) => {
+    if (node.type !== "noteNode") return node;
+    const translated = translations[node.id];
+    if (!translated) return node;
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        node: { ...node.data.node!, description: translated },
+      },
+    };
+  });
+  useFlowStore.setState({ nodes: updatedNodes });
 }
 
 export default useFlowStore;
