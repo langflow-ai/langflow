@@ -295,6 +295,72 @@ class TestKnowledgeBaseAPI:
             assert response.status_code == 422, (stubbed, response.text)
             assert "not enabled" in response.text.lower(), (stubbed, response.text)
 
+    async def test_test_connection_chroma_returns_ok(
+        self, client: AsyncClient, logged_in_headers
+    ):
+        """Chroma succeeds against a transient temp dir.
+
+        The endpoint builds the backend in a tempfile that is cleaned
+        up before the response is returned, so no on-disk state
+        outlasts the request.
+        """
+        response = await client.post(
+            "api/v1/knowledge_bases/test-connection",
+            headers=logged_in_headers,
+            json={"backend_type": "chroma", "backend_config": {}},
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["ok"] is True
+        assert "Chroma" in body["message"]
+
+    async def test_test_connection_rejects_unknown_backend(
+        self, client: AsyncClient, logged_in_headers
+    ):
+        response = await client.post(
+            "api/v1/knowledge_bases/test-connection",
+            headers=logged_in_headers,
+            json={"backend_type": "not-a-backend", "backend_config": {}},
+        )
+        assert response.status_code == 422
+        assert "unknown vector-store backend" in response.text.lower()
+
+    async def test_test_connection_rejects_missing_required_field(
+        self, client: AsyncClient, logged_in_headers
+    ):
+        response = await client.post(
+            "api/v1/knowledge_bases/test-connection",
+            headers=logged_in_headers,
+            json={"backend_type": "opensearch", "backend_config": {}},
+        )
+        assert response.status_code == 422
+        assert "index_name" in response.text
+
+    async def test_test_connection_returns_failure_for_unreachable_opensearch(
+        self, client: AsyncClient, logged_in_headers
+    ):
+        """Reachability failures return HTTP 200 with ``ok=False``.
+
+        Credential and connectivity failures are an *expected* result,
+        not an error condition — the frontend differentiates by the
+        ``ok`` field rather than the HTTP status code.
+        """
+        response = await client.post(
+            "api/v1/knowledge_bases/test-connection",
+            headers=logged_in_headers,
+            json={
+                "backend_type": "opensearch",
+                "backend_config": {
+                    "url_variable": "OPENSEARCH_URL_TEST_DOES_NOT_EXIST",
+                    "index_name": "any_idx",
+                },
+            },
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["ok"] is False
+        assert body["message"]
+
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_kb_path_traversal_single_level(
         self, mock_root, client: AsyncClient, logged_in_headers, tmp_path

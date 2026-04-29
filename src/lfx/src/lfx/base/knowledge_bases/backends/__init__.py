@@ -25,6 +25,7 @@ from lfx.base.knowledge_bases.backends.base import (
     BackendType,
     BaseVectorStoreBackend,
     IngestedDocument,
+    TestConnectionResult,
     VectorStoreBackend,
 )
 from lfx.base.knowledge_bases.backends.chroma import ChromaBackend
@@ -53,6 +54,7 @@ __all__ = [
     "MongoDBBackend",
     "OpenSearchBackend",
     "PostgresBackend",
+    "TestConnectionResult",
     "VectorStoreBackend",
     "create_backend",
     "get_backend_class",

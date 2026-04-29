@@ -86,6 +86,62 @@ class CreateKnowledgeBaseRequest(BaseModel):
         return self
 
 
+class TestBackendConnectionRequest(BaseModel):
+    """Body payload for ``POST /knowledge_bases/test-connection``.
+
+    Mirrors the ``backend_type`` / ``backend_config`` shape used by KB
+    creation so the frontend can pass the same form values to either
+    endpoint without reshaping.
+    """
+
+    # Suppress pytest's "starts with Test" auto-collection — these are
+    # request/response models, not test classes.
+    __test__ = False
+
+    backend_type: str
+    backend_config: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("backend_type")
+    @classmethod
+    def validate_backend_type(cls, value: str) -> str:
+        normalized = value or BackendType.CHROMA.value
+        try:
+            backend = BackendType(normalized).value
+        except ValueError as exc:
+            allowed = ", ".join(sorted(_CREATION_ALLOWED_BACKENDS))
+            msg = f"Unknown vector-store backend {normalized!r}. Expected one of: {allowed}."
+            raise ValueError(msg) from exc
+        if backend not in _CREATION_ALLOWED_BACKENDS:
+            allowed = ", ".join(sorted(_CREATION_ALLOWED_BACKENDS))
+            msg = f"Vector-store backend {backend!r} is not enabled in this build. Available backends: {allowed}."
+            raise ValueError(msg)
+        return backend
+
+    @model_validator(mode="after")
+    def validate_backend_config(self) -> "TestBackendConnectionRequest":
+        required_keys = _REQUIRED_BACKEND_CONFIG.get(self.backend_type, ())
+        missing = [key for key in required_keys if not str(self.backend_config.get(key) or "").strip()]
+        if missing:
+            msg = f"{self.backend_type} backend requires backend_config field(s): {', '.join(missing)}."
+            raise ValueError(msg)
+        return self
+
+
+class TestBackendConnectionResponse(BaseModel):
+    """Outcome of ``POST /knowledge_bases/test-connection``.
+
+    ``ok=False`` is returned with HTTP 200 (not 4xx) so the frontend
+    treats credential / reachability failures as expected results
+    instead of network errors. Malformed requests still get HTTP 422.
+    """
+
+    __test__ = False
+
+    ok: bool
+    message: str
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
 class AddSourceRequest(BaseModel):
     source_name: str
     files: list[str]  # List of file paths or file IDs

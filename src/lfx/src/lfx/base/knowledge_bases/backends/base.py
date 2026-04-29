@@ -91,6 +91,25 @@ class IngestedDocument:
     embedding: list[float] | None = None
 
 
+@dataclass(frozen=True)
+class TestConnectionResult:
+    """Outcome of a backend ``test_connection`` call.
+
+    ``ok`` is the only field the UI strictly needs. ``message`` is a short,
+    user-facing summary safe to surface verbatim in a toast. ``details`` is an
+    optional structured bag (e.g. ``{"type": "AuthenticationException"}``) for
+    the frontend to render extra hints without parsing free-form text.
+    """
+
+    # Tell pytest not to try to collect this dataclass as a test class
+    # just because its name starts with ``Test``.
+    __test__ = False
+
+    ok: bool
+    message: str
+    details: dict[str, Any] = field(default_factory=dict)
+
+
 @runtime_checkable
 class VectorStoreBackend(Protocol):
     """Protocol every KB vector-store backend must satisfy.
@@ -149,6 +168,16 @@ class VectorStoreBackend(Protocol):
 
     async def teardown(self) -> None:
         """Release all backend resources. Must be idempotent."""
+        ...
+
+    async def test_connection(self) -> TestConnectionResult:
+        """Validate that the backend is reachable with the current config.
+
+        Called from the KB-backend settings UI before a KB is created so users
+        can catch credential / URL / SSL mistakes without going through a full
+        ingestion cycle. Implementations must not raise — failures are reported
+        via ``TestConnectionResult(ok=False, message=...)``.
+        """
         ...
 
 
@@ -335,3 +364,24 @@ class BaseVectorStoreBackend(ABC):
     async def teardown(self) -> None:  # pragma: no cover
         """Default: drop the LangChain reference and let GC handle the rest."""
         self._vector_store = None
+
+    async def test_connection(self) -> TestConnectionResult:
+        """Default: resolve secrets and ensure the LangChain store can build.
+
+        For backends where ``_build_vector_store`` actually opens a network
+        connection (e.g. clients that eagerly dial on construction) this is
+        sufficient. Backends whose store builder is lazy should override and
+        issue a backend-native ping (cluster info, SELECT 1, etc.) — the goal
+        is to fail loudly at configure-time rather than waiting until the
+        first ingestion call.
+        """
+        try:
+            await self.ensure_ready()
+            _ = self.vector_store
+        except Exception as exc:  # noqa: BLE001 — converted to user-facing result
+            return TestConnectionResult(
+                ok=False,
+                message=str(exc) or type(exc).__name__,
+                details={"type": type(exc).__name__},
+            )
+        return TestConnectionResult(ok=True, message="Connection succeeded")

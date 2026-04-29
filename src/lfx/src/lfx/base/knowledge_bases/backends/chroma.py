@@ -27,6 +27,7 @@ from lfx.base.knowledge_bases.backends.base import (
     BackendType,
     BaseVectorStoreBackend,
     IngestedDocument,
+    TestConnectionResult,
 )
 from lfx.log.logger import logger
 
@@ -142,6 +143,46 @@ class ChromaBackend(BaseVectorStoreBackend):
                 )
             if batch:
                 yield batch
+
+    async def test_connection(self) -> TestConnectionResult:
+        """Verify the persistent path is creatable and the client opens.
+
+        Chroma is local: ``_build_vector_store`` succeeds for almost any
+        ``kb_path`` because the directory is created lazily on first write.
+        Spinning up a real ``PersistentClient`` is the only way to catch
+        permission / disk-full / SQLite issues at configure-time, which is
+        what users actually want to hear about before ingestion.
+        """
+        path_key = str(self.kb_path)
+        try:
+            self.kb_path.mkdir(parents=True, exist_ok=True)
+        except (OSError, PermissionError) as exc:
+            return TestConnectionResult(
+                ok=False,
+                message=f"Knowledge base directory is not writable: {path_key}",
+                details={"type": type(exc).__name__, "error": str(exc)},
+            )
+
+        client: chromadb.PersistentClient | None = None
+        try:
+            client = self._get_fresh_client()
+            client.heartbeat()
+        except Exception as exc:  # noqa: BLE001
+            return TestConnectionResult(
+                ok=False,
+                message=str(exc) or type(exc).__name__,
+                details={"type": type(exc).__name__},
+            )
+        finally:
+            if client is not None:
+                with contextlib.suppress(KeyError):
+                    if path_key in SharedSystemClient._identifier_to_system:  # noqa: SLF001
+                        del SharedSystemClient._identifier_to_system[path_key]  # noqa: SLF001
+        return TestConnectionResult(
+            ok=True,
+            message="Chroma persistent client opened successfully.",
+            details={"path": path_key},
+        )
 
     async def storage_size_bytes(self) -> int:
         if not self.kb_path.exists():
