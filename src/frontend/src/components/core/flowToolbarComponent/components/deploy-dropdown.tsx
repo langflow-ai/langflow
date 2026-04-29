@@ -4,6 +4,7 @@ import React, {
   type SetStateAction,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { useHref } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltipComponent from "@/components/common/shadTooltipComponent";
@@ -55,6 +56,7 @@ export default function PublishDropdown({
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const [openExportModal, setOpenExportModal] = useState(false);
+  const { t } = useTranslation();
 
   const handlePublishedSwitch = async (checked: boolean) => {
     mutateAsync(
@@ -103,7 +105,7 @@ export default function PublishDropdown({
             className="!px-2.5 font-normal"
             data-testid="publish-button"
           >
-            Share
+            {t("misc.share")}
             <IconComponent name="ChevronDown" className="!h-5 !w-5" />
           </Button>
         </DropdownMenuTrigger>
@@ -120,14 +122,14 @@ export default function PublishDropdown({
             data-testid="api-access-item"
           >
             <IconComponent name="Code2" className={`icon-size mr-2`} />
-            <span>API access</span>
+            <span>{t("misc.apiAccess")}</span>
           </DropdownMenuItem>
           <DropdownMenuItem
             className="deploy-dropdown-item group"
             onClick={() => setOpenExportModal(true)}
           >
             <IconComponent name="Download" className={`icon-size mr-2`} />
-            <span>Export</span>
+            <span>{t("misc.export")}</span>
           </DropdownMenuItem>
           <CustomLink
             className={cn("flex-1")}
@@ -140,7 +142,7 @@ export default function PublishDropdown({
               data-testid="mcp-server-item"
             >
               <IconComponent name="Mcp" className={`icon-size mr-2`} />
-              <span>MCP Server</span>
+              <span>{t("misc.mcpServer")}</span>
               <IconComponent
                 name="ExternalLink"
                 className={`icon-size ml-auto hidden group-hover:block`}
@@ -153,7 +155,7 @@ export default function PublishDropdown({
               className="deploy-dropdown-item group"
             >
               <IconComponent name="Columns2" className={`icon-size mr-2`} />
-              <span>Embed into site</span>
+              <span>{t("misc.embedIntoSite")}</span>
             </DropdownMenuItem>
           )}
 
@@ -173,8 +175,8 @@ export default function PublishDropdown({
                       hasIO
                         ? isPublished
                           ? encodeURI(`${domain}/playground/${flowId}`)
-                          : "Activate to share a public version of this Playground"
-                        : "Add a Chat Input or Chat Output to access your flow"
+                          : t("misc.activateToShare")
+                        : t("misc.addChatInputOutput")
                     }
                   >
                     <div className="flex items-center">
@@ -192,11 +194,11 @@ export default function PublishDropdown({
                           to={`/playground/${flowId}`}
                           target="_blank"
                         >
-                          <span>Shareable Playground</span>
+                          <span>{t("misc.shareablePlayground")}</span>
                         </CustomLink>
                       ) : (
                         <span className={cn(!isPublished && "opacity-50")}>
-                          Shareable Playground
+                          {t("misc.shareablePlayground")}
                         </span>
                       )}
                     </div>

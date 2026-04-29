@@ -234,6 +234,7 @@ class FlowRead(FlowBase):
     user_id: UUID | None = Field()
     folder_id: UUID | None = Field()
     tags: list[str] | None = Field(None, description="The tags of the flow")
+    name_key: str | None = Field(None, description="Stable i18n key derived from the original English name")
 
 
 class FlowHeader(BaseModel):
