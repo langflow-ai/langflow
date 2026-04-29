@@ -1404,8 +1404,12 @@ export function syncNodeTranslations(): void {
     const normKey = normalizeComponentKey(nodeType);
     const knownNames = componentDisplayNames[normKey]?.display_name ?? [];
     const knownDescs = componentDisplayNames[normKey]?.description ?? [];
-    const shouldTranslateName = knownNames.includes(node.data.node!.display_name);
-    const shouldTranslateDesc = knownDescs.includes(node.data.node!.description);
+    const shouldTranslateName = knownNames.includes(
+      node.data.node!.display_name,
+    );
+    const shouldTranslateDesc = knownDescs.includes(
+      node.data.node!.description,
+    );
 
     // Update input field display_names, info (tooltips), and placeholders
     const updatedTemplate = { ...node.data.node!.template };
@@ -1460,13 +1464,7 @@ export function syncNodeTranslations(): void {
  * Called from NoteNode when note_translations endpoint data arrives.
  * translations is a map of node_id → translated markdown text.
  */
-<<<<<<< HEAD
-export function syncNoteTranslations(
-  translations: Record<string, string>,
-): void {
-=======
 export function syncNoteTranslations(translations: Record<string, string>): void {
->>>>>>> origin/feat/gp-frontend-i18n-batch-c
   const { nodes } = useFlowStore.getState();
   const updatedNodes = nodes.map((node) => {
     if (node.type !== "noteNode") return node;

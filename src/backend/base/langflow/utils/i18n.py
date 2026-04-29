@@ -138,6 +138,51 @@ def translate_flow_notes(nodes: list[dict], locale: str) -> list[dict]:
     return result
 
 
+def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dict[str, list[str]]]:
+    """Build the set of all known translations for display_name and description per component.
+
+    Iterates every loaded locale and looks up each component's display_name / description key
+    directly in the locale dicts (one key lookup per locale, not a full translate_component_dict
+    pass).  The English value is always included as the baseline.
+
+    Returns a dict keyed by normalized component key (e.g. "textinput") where each value is:
+        {"display_name": [...all locale values...], "description": [...all locale values...]}
+    """
+    if not _translations:
+        _load_translations()
+
+    result: dict[str, dict[str, set[str]]] = {}
+
+    for components in all_types_en.values():
+        for name, data in components.items():
+            norm = normalize_component_key(name)
+            if norm not in result:
+                result[norm] = {"display_name": set(), "description": set()}
+
+            dn_en = data.get("display_name", "")
+            desc_en = data.get("description", "")
+
+            if dn_en:
+                key = component_field_key(norm, "display_name", dn_en)
+                result[norm]["display_name"].add(dn_en)
+                for locale_dict in _translations.values():
+                    val = locale_dict.get(key)
+                    if val:
+                        result[norm]["display_name"].add(val)
+
+            if desc_en:
+                key = component_field_key(norm, "description", desc_en)
+                result[norm]["description"].add(desc_en)
+                for locale_dict in _translations.values():
+                    val = locale_dict.get(key)
+                    if val:
+                        result[norm]["description"].add(val)
+
+    return {
+        k: {"display_name": list(v["display_name"]), "description": list(v["description"])} for k, v in result.items()
+    }
+
+
 def translate_component_dict(all_types: dict[str, Any], locale: str) -> dict[str, Any]:
     """Return a copy of all_types with display_names substituted for locale.
 

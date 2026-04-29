@@ -118,16 +118,16 @@ async def get_all(request: Request):
     with display_names translated to the locale indicated by Accept-Language.
     """
     from langflow.interface.components import get_and_cache_all_types_dict
-    from langflow.utils.i18n import translate_component_dict
+    from langflow.utils.i18n import build_component_display_names, translate_component_dict
 
     try:
-        all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+        all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
 
         locale = getattr(request.state, "locale", "en")
-        if locale != "en":
-            all_types = translate_component_dict(all_types, locale)
+        all_types = translate_component_dict(all_types_en, locale) if locale != "en" else all_types_en
 
-        return compress_response(all_types)
+        component_display_names = build_component_display_names(all_types_en)
+        return compress_response({**all_types, "component_display_names": component_display_names})
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
