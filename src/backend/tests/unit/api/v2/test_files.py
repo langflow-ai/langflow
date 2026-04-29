@@ -646,7 +646,9 @@ async def test_download_file_non_ascii_content_disposition(
         headers=headers,
     )
     assert upload_response.status_code == 201
-    file_id = upload_response.json()["id"]
+    upload_json = upload_response.json()
+    file_id = upload_json["id"]
+    stored_name = upload_json["path"].split("/")[-1]
 
     download_response = await files_client.get(f"api/v2/files/{file_id}", headers=headers)
     assert download_response.status_code == 200
@@ -656,10 +658,7 @@ async def test_download_file_non_ascii_content_disposition(
     assert "filename*=UTF-8''" in content_disposition
     assert expected_rfc5987 in content_disposition
     rfc5987_value = content_disposition.split("filename*=UTF-8''")[-1].split(";")[0].strip()
-    decoded = unquote(rfc5987_value)
-    # The decoded RFC 5987 value must contain both the stem and the extension
-    assert filename.rsplit(".", 1)[0] in decoded
-    assert decoded.endswith(".txt")
+    assert unquote(rfc5987_value) == stored_name
 
 
 async def test_batch_download_files_non_ascii_content_disposition(files_client, files_created_api_key):
