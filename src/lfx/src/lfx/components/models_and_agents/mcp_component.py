@@ -712,9 +712,7 @@ class MCPToolsComponent(ComponentWithCache):
                             await logger.aexception(msg)
                             build_config["tool"]["options"] = []
                             build_config["tool"]["placeholder"] = (
-                                "Error on MCP Server"
-                                if "'NoneType' object has no attribute 'id'" in msg
-                                else msg
+                                "Error on MCP Server" if "'NoneType' object has no attribute 'id'" in msg else msg
                             )
                     # Force a value refresh only when the user genuinely switched servers.
                     # server_changed is only True for real user-initiated changes (not initial load).
