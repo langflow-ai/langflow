@@ -4216,8 +4216,6 @@
   "components.jsontodata.outputs.data.display_name.db1a21a0": "JSON",
   "components.knowledgebase.description.632c6f30": "Search and retrieve data from knowledge.",
   "components.knowledgebase.display_name.12bbbbf8": "Knowledge Base",
-  "components.knowledgebase.inputs.api_key.display_name.3aa7ec80": "Embedding Provider API Key",
-  "components.knowledgebase.inputs.api_key.info.64ec5438": "API key for the embedding provider to generate embeddings.",
   "components.knowledgebase.inputs.include_embeddings.display_name.fc636579": "Include Embeddings",
   "components.knowledgebase.inputs.include_embeddings.info.be2ed588": "Whether to include embeddings in the output. Only applicable if 'Include Metadata' is enabled.",
   "components.knowledgebase.inputs.include_metadata.display_name.b54db8c6": "Include Metadata",
