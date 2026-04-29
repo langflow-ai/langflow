@@ -562,12 +562,20 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         assert captured.get("system_prompt") == "Powered by gpt-4o."
 
+    async def test_should_expose_structured_response_output_when_class_loaded(self, component_class):
+        """The Agent must declare a 'structured_response' output wired to json_response()."""
+        output_names = {o.name: o for o in component_class.outputs}
+
+        assert "structured_response" in output_names, "Agent should expose a structured_response output"
+        assert output_names["structured_response"].method == "json_response"
+        assert "Data" in output_names["structured_response"].types
+
     async def test_should_not_mutate_format_instructions_when_json_response_runs(self, component_class, default_kwargs):
         """Regression: injection must only touch agent_instructions, not format_instructions.
 
-        Ensures literal {current_date}/{model_name} tokens in user-authored
-        format_instructions survive intact while the main system_prompt is
-        still replaced by the helper.
+        Forces the prompt-fallback path (by attaching a tool) so the augmented system
+        prompt is built and passed to ``set()``. Native structured output does not
+        concatenate format_instructions because the schema is enforced by the provider.
         """
         from unittest.mock import AsyncMock, MagicMock
 
@@ -575,11 +583,20 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         default_kwargs["format_instructions"] = "Return JSON with fields {current_date} and {model_name} preserved."
         default_kwargs["add_calculator_tool"] = False
         default_kwargs["add_current_date_tool"] = False
+        # Non-empty schema is required to exercise the structured-output path at all.
+        default_kwargs["output_schema"] = [
+            {"name": "answer", "type": "str", "description": "the answer", "multiple": False},
+        ]
         component = await self.component_setup(component_class, default_kwargs)
         component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
         component.get_memory_data = AsyncMock(return_value=[])
         component._get_shared_callbacks = list
         component.set_tools_callbacks = lambda *_: None
+        # A non-empty tools list forces the orchestrator into fallback mode (prefer_native=False),
+        # which is the only path that builds the augmented system prompt asserted below.
+        fake_tool = MagicMock()
+        fake_tool.name = "fake_tool"
+        component.tools = [fake_tool]
 
         captured: dict = {}
 
@@ -589,7 +606,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         component.set = fake_set
         component.create_agent_runnable = MagicMock(return_value=MagicMock())
-        component.run_agent = AsyncMock(return_value=MagicMock(content="{}"))
+        component.run_agent = AsyncMock(return_value=MagicMock(content='{"answer": "42"}'))
 
         with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
             mock_get_llm.return_value = MockLanguageModel()

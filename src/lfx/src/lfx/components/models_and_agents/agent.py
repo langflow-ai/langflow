@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-import json
-import re
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-
-from pydantic import ValidationError
 
 from lfx.components.models_and_agents.memory import MemoryComponent
 
@@ -25,7 +21,6 @@ from lfx.components.helpers import CalculatorComponent, CurrentDateComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.helpers.base_model import build_model_from_schema
 from lfx.inputs.inputs import BoolInput, DropdownInput, ModelInput, StrInput
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput
 from lfx.log.logger import logger
@@ -38,6 +33,19 @@ from lfx.schema.table import EditMode
 def set_advanced_true(component_input):
     component_input.advanced = True
     return component_input
+
+
+def _extract_text_content(value) -> str:
+    """Pull a string payload from a Message-like, AIMessage-like, or string value."""
+    if isinstance(value, str):
+        return value
+    text = getattr(value, "text", None)
+    if isinstance(text, str):
+        return text
+    content = getattr(value, "content", None)
+    if isinstance(content, str):
+        return content
+    return str(value) if value is not None else ""
 
 
 class AgentComponent(ToolCallingAgentComponent):
@@ -201,6 +209,12 @@ class AgentComponent(ToolCallingAgentComponent):
     ]
     outputs = [
         Output(name="response", display_name="Response", method="message_response"),
+        Output(
+            name="structured_response",
+            display_name="Structured Response",
+            method="json_response",
+            types=["Data"],
+        ),
     ]
 
     def _resolve_selected_model(self):
@@ -375,187 +389,59 @@ class AgentComponent(ToolCallingAgentComponent):
         else:
             return result
 
-    def _preprocess_schema(self, schema):
-        """Preprocess schema to ensure correct data types for build_model_from_schema."""
-        processed_schema = []
-        for field in schema:
-            processed_field = {
-                "name": str(field.get("name", "field")),
-                "type": str(field.get("type", "str")),
-                "description": str(field.get("description", "")),
-                "multiple": field.get("multiple", False),
-            }
-            # Ensure multiple is handled correctly
-            if isinstance(processed_field["multiple"], str):
-                processed_field["multiple"] = processed_field["multiple"].lower() in [
-                    "true",
-                    "1",
-                    "t",
-                    "y",
-                    "yes",
-                ]
-            processed_schema.append(processed_field)
-        return processed_schema
-
-    async def build_structured_output_base(self, content: str):
-        """Build structured output with optional BaseModel validation."""
-        json_pattern = r"\{.*\}"
-        schema_error_msg = "Try setting an output schema"
-
-        # Try to parse content as JSON first
-        json_data = None
-        try:
-            json_data = json.loads(content)
-        except json.JSONDecodeError:
-            json_match = re.search(json_pattern, content, re.DOTALL)
-            if json_match:
-                try:
-                    json_data = json.loads(json_match.group())
-                except json.JSONDecodeError:
-                    return {"content": content, "error": schema_error_msg}
-            else:
-                return {"content": content, "error": schema_error_msg}
-
-        # If no output schema provided, return parsed JSON without validation
-        if not hasattr(self, "output_schema") or not self.output_schema or len(self.output_schema) == 0:
-            return json_data
-
-        # Use BaseModel validation with schema
-        try:
-            processed_schema = self._preprocess_schema(self.output_schema)
-            output_model = build_model_from_schema(processed_schema)
-
-            # Validate against the schema
-            if isinstance(json_data, list):
-                # Multiple objects
-                validated_objects = []
-                for item in json_data:
-                    try:
-                        validated_obj = output_model.model_validate(item)
-                        validated_objects.append(validated_obj.model_dump())
-                    except ValidationError as e:
-                        await logger.aerror(f"Validation error for item: {e}")
-                        # Include invalid items with error info
-                        validated_objects.append({"data": item, "validation_error": str(e)})
-                return validated_objects
-
-            # Single object
-            try:
-                validated_obj = output_model.model_validate(json_data)
-                return [validated_obj.model_dump()]  # Return as list for consistency
-            except ValidationError as e:
-                await logger.aerror(f"Validation error: {e}")
-                return [{"data": json_data, "validation_error": str(e)}]
-
-        except (TypeError, ValueError) as e:
-            await logger.aerror(f"Error building structured output: {e}")
-            # Fallback to parsed JSON without validation
-            return json_data
-
     async def json_response(self) -> Data:
-        """Convert agent response to structured JSON Data output with schema validation."""
-        # Always use structured chat agent for JSON response mode for better JSON formatting
+        """Produce structured Data via native LLM structured output, with prompt-based fallback.
+
+        Native path (no tools, llm has with_structured_output) bypasses the agent loop and
+        returns provider-validated JSON. When tools are attached, falls back to running the
+        agent with a schema-augmented system prompt and parsing the final message content.
+        """
+        from lfx.components.models_and_agents.structured_output.structured_output_orchestrator import (
+            orchestrate_structured_output,
+        )
+
         try:
-            system_components = []
-
-            # 1. Agent Instructions (system_prompt).
-            # Inject dynamic placeholders HERE so user-authored format_instructions
-            # and schema descriptions appended later keep their literal {...} tokens.
-            agent_instructions = self._inject_dynamic_prompt_values(getattr(self, "system_prompt", "") or "") or ""
-            if agent_instructions:
-                system_components.append(f"{agent_instructions}")
-
-            # 2. Format Instructions
-            format_instructions = getattr(self, "format_instructions", "") or ""
-            if format_instructions:
-                system_components.append(f"Format instructions: {format_instructions}")
-
-            # 3. Schema Information from BaseModel
-            if hasattr(self, "output_schema") and self.output_schema and len(self.output_schema) > 0:
-                try:
-                    processed_schema = self._preprocess_schema(self.output_schema)
-                    output_model = build_model_from_schema(processed_schema)
-                    schema_dict = output_model.model_json_schema()
-                    schema_info = (
-                        "You are given some text that may include format instructions, "
-                        "explanations, or other content alongside a JSON schema.\n\n"
-                        "Your task:\n"
-                        "- Extract only the JSON schema.\n"
-                        "- Return it as valid JSON.\n"
-                        "- Do not include format instructions, explanations, or extra text.\n\n"
-                        "Input:\n"
-                        f"{json.dumps(schema_dict, indent=2)}\n\n"
-                        "Output (only JSON schema):"
-                    )
-                    system_components.append(schema_info)
-                except (ValidationError, ValueError, TypeError, KeyError) as e:
-                    await logger.aerror(f"Could not build schema for prompt: {e}", exc_info=True)
-
-            # Combine all components. Injection already applied on agent_instructions
-            # above; do NOT re-run it here so literal {...} tokens in format
-            # instructions / schema descriptions stay intact.
-            combined_instructions = "\n\n".join(system_components) if system_components else ""
             llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+        except (ValueError, TypeError) as exc:
+            await logger.aerror(f"json_response.requirements_failed: {exc}")
+            return Data(data={"content": "", "error": str(exc)})
+
+        injected_system_prompt = self._inject_dynamic_prompt_values(getattr(self, "system_prompt", "") or "") or ""
+        format_instructions = getattr(self, "format_instructions", "") or ""
+        output_schema = getattr(self, "output_schema", None) or []
+        has_tools = bool(self.tools)
+
+        async def _run_agent_for_fallback(augmented_prompt: str) -> str:
             self.set(
                 llm=llm_model,
                 tools=self.tools or [],
                 chat_history=self.chat_history,
                 input_value=self.input_value,
-                system_prompt=combined_instructions,
+                system_prompt=augmented_prompt,
             )
+            agent_runnable = self.create_agent_runnable()
+            result = await self.run_agent(agent_runnable)
+            return _extract_text_content(result)
 
-            # Create and run structured chat agent
-            try:
-                structured_agent = self.create_agent_runnable()
-            except (NotImplementedError, ValueError, TypeError) as e:
-                await logger.aerror(f"Error with structured chat agent: {e}")
-                raise
-            try:
-                result = await self.run_agent(structured_agent)
-            except (
-                ExceptionWithMessageError,
-                ValueError,
-                TypeError,
-                RuntimeError,
-            ) as e:
-                await logger.aerror(f"Error with structured agent result: {e}")
-                raise
-            # Extract content from structured agent result
-            if hasattr(result, "content"):
-                content = result.content
-            elif hasattr(result, "text"):
-                content = result.text
-            else:
-                content = str(result)
-
+        try:
+            return await orchestrate_structured_output(
+                llm=llm_model,
+                output_schema=output_schema,
+                system_prompt=injected_system_prompt,
+                format_instructions=format_instructions,
+                input_value=_extract_text_content(self.input_value),
+                run_prompt_fallback=_run_agent_for_fallback,
+                prefer_native=not has_tools,
+            )
         except (
             ExceptionWithMessageError,
             ValueError,
             TypeError,
             NotImplementedError,
             AttributeError,
-        ) as e:
-            await logger.aerror(f"Error with structured chat agent: {e}")
-            # Fallback to regular agent
-            content_str = "No content returned from agent"
-            return Data(data={"content": content_str, "error": str(e)})
-
-        # Process with structured output validation
-        try:
-            structured_output = await self.build_structured_output_base(content)
-
-            # Handle different output formats
-            if isinstance(structured_output, list) and structured_output:
-                if len(structured_output) == 1:
-                    return Data(data=structured_output[0])
-                return Data(data={"results": structured_output})
-            if isinstance(structured_output, dict):
-                return Data(data=structured_output)
-            return Data(data={"content": content})
-
-        except (ValueError, TypeError) as e:
-            await logger.aerror(f"Error in structured output processing: {e}")
-            return Data(data={"content": content, "error": str(e)})
+        ) as exc:
+            await logger.aerror(f"json_response.orchestration_failed: {exc}")
+            return Data(data={"content": "", "error": str(exc)})
 
     async def get_memory_data(self):
         # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.
