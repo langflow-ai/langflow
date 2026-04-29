@@ -23,6 +23,12 @@ if TYPE_CHECKING:
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 BINARY_SNIFF_BYTES = 8 * 1024
 GLOB_RESULT_LIMIT = 100
+# Hard upper bound on the number of glob matches collected before truncation.
+# Without scanning past `GLOB_RESULT_LIMIT`, the first big branch hit by
+# `os.scandir` order fills the cap and entire nested branches are silently
+# dropped (BUG-02 / T2-001). The ceiling bounds memory/time on pathological
+# trees while leaving headroom to surface diverse branches to the agent.
+GLOB_SCAN_CEILING = GLOB_RESULT_LIMIT * 10
 GREP_LINE_LIMIT = 250
 GREP_OUTPUT_MODES = ("files_with_matches", "content", "count")
 # Hard ceiling on user-supplied regex pattern length. Long patterns are a
@@ -378,6 +384,16 @@ class FileSystemToolComponent(Component):
         if is_astra_cloud_environment():
             msg = "FileSystemTool is disabled in cloud/hosted deployments"
             raise PermissionError(msg)
+        # Reject empty/None/whitespace root_path before any path resolution.
+        # `Path("").resolve()` silently returns the process CWD (e.g. `/app/`
+        # in a container), which would let a flow author or agent escape the
+        # sandbox by leaving root_path blank — the UI's required=True is
+        # bypassed in Tool Mode because each StructuredTool has its own
+        # per-operation args schema, and `root_path` is component-level config.
+        # See BUG-03 / UI-022.
+        if self.root_path is None or not str(self.root_path).strip():
+            msg = "root_path is required and must be a non-empty path"
+            raise PermissionError(msg)
         root_resolved = Path(self.root_path).resolve()
         allowed = _allowed_roots()
         if allowed is not None and not any(root_resolved == a or root_resolved.is_relative_to(a) for a in allowed):
@@ -578,8 +594,10 @@ class FileSystemToolComponent(Component):
         if not base.exists() or not base.is_dir():
             return {"error": f"Base path is not a directory: {path or '.'}", "pattern": pattern}
 
-        matches: list[str] = []
-        truncated = False
+        # Collect up to GLOB_SCAN_CEILING (>> GLOB_RESULT_LIMIT) so we can
+        # surface diverse branches even when one directory dominates the
+        # iteration order. See BUG-02 / T2-001.
+        collected: list[str] = []
         for match in base.glob(pattern):
             try:
                 resolved_match = match.resolve()
@@ -587,16 +605,30 @@ class FileSystemToolComponent(Component):
                 continue
             if not resolved_match.is_relative_to(root_resolved):
                 continue
-            matches.append(str(resolved_match.relative_to(root_resolved)))
-            if len(matches) >= GLOB_RESULT_LIMIT:
-                truncated = True
+            collected.append(str(resolved_match.relative_to(root_resolved)))
+            if len(collected) >= GLOB_SCAN_CEILING:
                 break
+
+        # Sort for cross-filesystem determinism, then truncate to the visible
+        # cap. Emit `truncated_branches` so the agent has a non-silent signal:
+        # top-level branches under `base` whose files appear in the omitted
+        # tail. The agent can narrow with `path=<branch>` to recover them.
+        collected.sort()
+        truncated = len(collected) > GLOB_RESULT_LIMIT
+        if truncated:
+            omitted = collected[GLOB_RESULT_LIMIT:]
+            matches = collected[:GLOB_RESULT_LIMIT]
+            truncated_branches = sorted({Path(p).parts[0] for p in omitted if Path(p).parts})
+        else:
+            matches = collected
+            truncated_branches = []
 
         return {
             "status": "ok",
             "pattern": pattern,
             "matches": matches,
             "truncated": truncated,
+            "truncated_branches": truncated_branches,
         }
 
     def _grep_search(

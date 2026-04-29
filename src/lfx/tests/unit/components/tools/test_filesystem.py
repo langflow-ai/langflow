@@ -902,3 +902,162 @@ class TestStructuredToolErrorEnvelope:
         )
         payload = json.loads(output)
         assert "error" in payload
+
+
+class TestBug02GlobTruncationDropsNestedSilently:
+    """BUG-02 (T2-001) — `glob_search` silently drops nested results when truncated.
+
+    Scenario from the report: a flat sibling directory with 100+ matches fills
+    the result cap entirely, and files in nested subdirectories are silently
+    omitted with no signal beyond `truncated: True`. The agent has no way to
+    learn which branches went unrepresented.
+
+    Fix contract: when truncation occurs, the response must enumerate the
+    top-level branches under the search base whose matches were not surfaced,
+    so the agent can narrow with a `path=` argument and recover them.
+    """
+
+    def test_should_signal_truncated_branches_when_flat_dir_fills_cap_and_nested_branch_is_dropped(
+        self, component: FileSystemToolComponent, sandbox: Path
+    ) -> None:
+        # Arrange — exactly the bug-report scenario.
+        flat = sandbox / "flat"
+        flat.mkdir()
+        for i in range(110):
+            (flat / f"f{i:03d}.txt").write_text("x", encoding="utf-8")
+        deep = sandbox / "deep" / "deeper" / "deepest"
+        deep.mkdir(parents=True)
+        (deep / "must_find_me.txt").write_text("important", encoding="utf-8")
+
+        # Act
+        result = component._glob_search("**/*.txt")
+
+        # Assert — agent must NOT silently lose the nested branch.
+        assert result["status"] == "ok"
+        assert result["truncated"] is True
+        # The nested branch must be discoverable from the response: either
+        # `must_find_me.txt` is in matches, or `deep` is named in the
+        # truncation signal so the agent knows where to look.
+        nested_in_matches = any("must_find_me.txt" in p for p in result["matches"])
+        truncated_branches = result.get("truncated_branches", [])
+        deep_in_signal = "deep" in truncated_branches
+        assert nested_in_matches or deep_in_signal, (
+            "When truncation drops a whole branch, the response MUST surface "
+            "either the file itself or the branch name. "
+            f"matches sample={result['matches'][:3]}, "
+            f"truncated_branches={truncated_branches}"
+        )
+
+    def test_should_emit_truncated_branches_field_when_truncated_is_true(
+        self, component: FileSystemToolComponent, sandbox: Path
+    ) -> None:
+        # Stricter: the structured-error contract for truncation is that
+        # `truncated_branches` exists alongside `truncated: True`.
+        flat = sandbox / "flat"
+        flat.mkdir()
+        for i in range(110):
+            (flat / f"f{i:03d}.txt").write_text("x", encoding="utf-8")
+        deep = sandbox / "deep"
+        deep.mkdir()
+        (deep / "leaf.txt").write_text("y", encoding="utf-8")
+
+        result = component._glob_search("**/*.txt")
+        assert result["truncated"] is True
+        assert "truncated_branches" in result, (
+            "When truncated=True the response MUST include `truncated_branches` "
+            f"so the agent has a non-silent signal. Got keys: {list(result.keys())}"
+        )
+        # Sorted, deterministic, top-level relative paths under the search base.
+        assert isinstance(result["truncated_branches"], list)
+        assert result["truncated_branches"] == sorted(result["truncated_branches"])
+
+    def test_should_have_empty_truncated_branches_when_not_truncated(
+        self, component: FileSystemToolComponent, sandbox: Path
+    ) -> None:
+        # Sanity: small result set must not falsely report truncated branches.
+        (sandbox / "a.txt").write_text("x", encoding="utf-8")
+        (sandbox / "b.txt").write_text("y", encoding="utf-8")
+        result = component._glob_search("*.txt")
+        assert result["truncated"] is False
+        assert result.get("truncated_branches", []) == []
+
+
+class TestBug03EmptyRootPathSilentlyDefaultsToCwd:
+    """BUG-03 (UI-022) — empty `root_path` silently resolves to the process CWD.
+
+    Scenario: when an agent invokes the tool via Tool Mode, the UI's
+    `required=True` constraint on `root_path` is bypassed (each StructuredTool
+    has its own per-operation args schema; `root_path` is component-level
+    config). With an empty/None/whitespace value, `Path("").resolve()` returns
+    the CWD — in a container that's typically `/app/`. The tool then accepts
+    every operation against the CWD as if it were a legitimate sandbox.
+
+    Fix contract: the public methods MUST return a structured error mentioning
+    `root_path` before any I/O, regardless of whether root_path is "", None,
+    or whitespace-only.
+    """
+
+    def test_should_return_structured_error_when_root_path_is_empty_string(self) -> None:
+        component = FileSystemToolComponent(root_path="", read_only=False)
+        result = component._read_file("anything.txt")
+        assert "error" in result, f"Expected structured error, got: {result}"
+        assert "root_path" in result["error"].lower()
+        assert "required" in result["error"].lower() or "empty" in result["error"].lower()
+
+    def test_should_return_structured_error_when_root_path_is_whitespace_only(self) -> None:
+        component = FileSystemToolComponent(root_path="   ", read_only=False)
+        result = component._read_file("anything.txt")
+        assert "error" in result, f"Expected structured error, got: {result}"
+        assert "root_path" in result["error"].lower()
+
+    def test_should_return_structured_error_when_root_path_is_none(self) -> None:
+        # The current code raises TypeError on None — must also be converted
+        # into a structured error envelope (no raise from the public methods).
+        component = FileSystemToolComponent(root_path=None, read_only=False)
+        result = component._read_file("anything.txt")
+        assert "error" in result, f"Expected structured error, got: {result}"
+        assert "root_path" in result["error"].lower()
+
+    def test_should_not_read_files_from_cwd_when_root_path_is_empty(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The actual security implication of the bug: the agent MUST NOT be
+        # able to read files from the process working directory just because
+        # root_path was left blank. Set CWD to a place with a known file,
+        # then verify _read_file does NOT read it.
+        monkeypatch.chdir(tmp_path)
+        marker = tmp_path / "should_never_be_readable_via_empty_root.txt"
+        marker.write_text("compromised", encoding="utf-8")
+
+        component = FileSystemToolComponent(root_path="", read_only=False)
+        result = component._read_file(marker.name)
+
+        assert "error" in result, (
+            f"Empty root_path must NEVER read from CWD. Got: {result}. "
+            "This is the sandbox-escape-via-misconfig path from the bug report."
+        )
+        assert result.get("status") != "ok"
+
+    def test_glob_search_should_return_structured_error_when_root_path_is_empty(self) -> None:
+        component = FileSystemToolComponent(root_path="", read_only=False)
+        result = component._glob_search("**/*.txt")
+        assert "error" in result
+        assert "root_path" in result["error"].lower()
+
+    def test_grep_search_should_return_structured_error_when_root_path_is_empty(self) -> None:
+        component = FileSystemToolComponent(root_path="", read_only=False)
+        result = component._grep_search("foo")
+        assert "error" in result
+        assert "root_path" in result["error"].lower()
+
+    def test_write_file_should_return_structured_error_when_root_path_is_empty(self) -> None:
+        component = FileSystemToolComponent(root_path="", read_only=False)
+        result = component._write_file("anything.txt", "x")
+        assert "error" in result
+        assert "root_path" in result["error"].lower()
+
+    def test_edit_file_should_return_structured_error_when_root_path_is_empty(self) -> None:
+        component = FileSystemToolComponent(root_path="", read_only=False)
+        result = component._edit_file("anything.txt", old_string="x", new_string="y")
+        assert "error" in result
+        assert "root_path" in result["error"].lower()
