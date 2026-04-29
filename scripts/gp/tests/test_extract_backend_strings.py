@@ -105,7 +105,9 @@ class TestExtractBackendStrings:
 
     def test_collect_strings_skips_deactivated_modules(self):
         """collect_strings() must skip any module whose name contains 'deactivated'."""
+        import hashlib
         import pkgutil
+        import re
         import sys
         import types
 
@@ -132,12 +134,35 @@ class TestExtractBackendStrings:
 
         active_module.FakeComponent = FakeComponent
 
+        # Provide a minimal fake langflow.utils.i18n_keys so collect_strings()
+        # can be called without langflow installed in the test environment.
+        fake_i18n_keys = types.ModuleType("langflow.utils.i18n_keys")
+
+        def _content_hash(english: str) -> str:
+            return hashlib.sha256(english.encode()).hexdigest()[:8]
+
+        fake_i18n_keys.component_field_key = lambda norm, path, eng: f"components.{norm}.{path}.{_content_hash(eng)}"
+        fake_i18n_keys.normalize_component_key = lambda name: name.replace(" ", "").lower()
+        fake_i18n_keys.safe_flow_key = lambda name: re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
+
+        fake_langflow = types.ModuleType("langflow")
+        fake_langflow_utils = types.ModuleType("langflow.utils")
+
         with (
-            patch.dict(sys.modules, {"lfx": types.ModuleType("lfx"), "lfx.components": fake_components_pkg}),
+            patch.dict(
+                sys.modules,
+                {
+                    "lfx": types.ModuleType("lfx"),
+                    "lfx.components": fake_components_pkg,
+                    "langflow": fake_langflow,
+                    "langflow.utils": fake_langflow_utils,
+                    "langflow.utils.i18n_keys": fake_i18n_keys,
+                },
+            ),
             patch("pkgutil.walk_packages", return_value=fake_modules),
             patch("importlib.import_module", return_value=active_module),
         ):
             strings = extract_mod.collect_strings()
 
         # Deactivated module was skipped; active module processed
-        assert any("ActiveComponent" in k for k in strings)
+        assert any("activecomponent" in k for k in strings)

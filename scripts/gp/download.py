@@ -36,7 +36,9 @@ def get_backend_strings(lang: str) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download translations from GP")
-    parser.add_argument("--target", required=True, choices=["frontend", "backend"], help="Which bundle to download from")
+    parser.add_argument(
+        "--target", required=True, choices=["frontend", "backend"], help="Which bundle to download from"
+    )
     parser.add_argument("--output", help="Directory to save translated JSON files")
     args = parser.parse_args()
 

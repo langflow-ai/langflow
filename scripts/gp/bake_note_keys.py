@@ -44,7 +44,7 @@ def _note_hash(description: str) -> str:
     return hashlib.sha256(description.encode()).hexdigest()[:8]
 
 
-def _bake_file(path: Path, dry_run: bool) -> int:
+def _bake_file(path: Path, *, dry_run: bool) -> int:
     """Bake i18n_keys into a single template JSON file. Returns number of keys added/updated."""
     with path.open(encoding="utf-8") as f:
         data = json.load(f)
