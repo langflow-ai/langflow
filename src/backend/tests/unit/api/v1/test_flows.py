@@ -648,6 +648,39 @@ async def test_create_flow_rejects_traversal_in_subpath(client: AsyncClient, log
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
+async def test_upload_flow_rejects_list_payload(client: AsyncClient, logged_in_headers):
+    """Regression: uploading a JSON array (not an object) must return 422, not 500.
+
+    orjson.loads() on a list payload returns a Python list.  Before the isinstance
+    guard, 'flows' in <list> silently evaluates to False, routing to the else branch
+    where **normalize_code_for_import(list) raises TypeError — escaping as a 500.
+    """
+    import json
+
+    file_content = json.dumps([{"name": "flow1", "data": {}}])
+
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flows.json", file_content, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+async def test_upload_flow_rejects_scalar_payload(client: AsyncClient, logged_in_headers):
+    """Regression: uploading a JSON scalar (string/number) must return 422, not 500."""
+    import json
+
+    file_content = json.dumps("just a string")
+
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flows.json", file_content, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
 async def test_upload_flow_rejects_endpoint_name_with_dots(client: AsyncClient, logged_in_headers):
     """Regression: endpoint_name containing dots must return 422, not 500.
 
@@ -689,8 +722,11 @@ async def test_upload_flow_accepts_valid_endpoint_name(client: AsyncClient, logg
         files={"file": ("flows.json", file_content, "application/json")},
         headers=logged_in_headers,
     )
-    assert response.status_code != status.HTTP_500_INTERNAL_SERVER_ERROR
-    assert response.status_code != status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_201_CREATED
+    body = response.json()
+    assert isinstance(body, list)
+    assert len(body) == 1
+    assert body[0]["name"] == "neuro-vision"
 
 
 async def test_upload_flow_rejects_absolute_path(client: AsyncClient, logged_in_headers):

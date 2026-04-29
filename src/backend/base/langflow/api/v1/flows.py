@@ -438,6 +438,11 @@ async def upload_file(
 
     # Normalise code fields: if exported with code-as-lines format, rejoin to
     # strings before creating the Pydantic models so the DB always stores strings.
+    if not isinstance(data, dict):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid JSON: expected an object with 'flows' or a single flow object",
+        )
     try:
         if "flows" in data:
             data = {**data, "flows": [normalize_code_for_import(f) for f in data["flows"]]}
