@@ -1,5 +1,8 @@
 import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
-import { recomputeComponentsToUpdateIfNeeded } from "@/stores/flowStore";
+import {
+  recomputeComponentsToUpdateIfNeeded,
+  syncNodeTranslations,
+} from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useTypesStore } from "@/stores/typesStore";
 import type {
@@ -38,6 +41,7 @@ export const useGetTypes: useQueryFunctionType<
       }
 
       setTypes(data);
+      syncNodeTranslations();
       recomputeComponentsToUpdateIfNeeded();
       return data;
     } catch (error) {

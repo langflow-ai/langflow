@@ -1,14 +1,15 @@
+import i18n from "@/i18n";
 import type { WizardStep } from "./types";
 
-export const STEP_TITLES: Record<WizardStep, string> = {
-  1: "Create Knowledge Base",
-  2: "Review & Build",
-};
+export const getStepTitles = (): Record<WizardStep, string> => ({
+  1: i18n.t("knowledge.createTitle"),
+  2: i18n.t("knowledge.reviewTitle"),
+});
 
-export const STEP_DESCRIPTIONS: Record<WizardStep, string> = {
-  1: "Name your knowledge base, upload sources, and select an embedding model",
-  2: "Preview how your files will be chunked and confirm your settings",
-};
+export const getStepDescriptions = (): Record<WizardStep, string> => ({
+  1: i18n.t("knowledge.createDescription"),
+  2: i18n.t("knowledge.reviewDescription"),
+});
 
 export const DEFAULT_CHUNK_SIZE = 100;
 export const DEFAULT_CHUNK_OVERLAP = 0;
