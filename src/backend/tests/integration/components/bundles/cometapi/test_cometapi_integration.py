@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.components.cometapi.cometapi import CometAPIComponent
-from pydantic import SecretStr
 
 
 class TestCometAPIIntegration:
@@ -180,21 +179,12 @@ class TestCometAPIIntegration:
         assert len(models) > 0
 
     def test_component_serialization(self, component):
-        """Test that component can be serialized/deserialized.
-
-        Note: as of #12908 the component wraps password-typed inputs (here ``api_key``)
-        in ``pydantic.SecretStr`` at the attribute layer to prevent the value from
-        being exposed via stringification (Message.text, status, traces, logs).
-        Consumers retrieve the raw value via ``.get_secret_value()`` at the
-        provider boundary.
-        """
+        """Test that component can be serialized/deserialized."""
         # Set some values
         component.set_attributes({"api_key": "test-key", "model_name": "gpt-4o-mini", "temperature": 0.5})
 
-        # api_key is now masked via SecretStr; the raw value is still recoverable.
-        assert isinstance(component.api_key, SecretStr)
-        assert component.api_key.get_secret_value() == "test-key"
-        assert str(component.api_key) == "**********"
+        # Test that component attributes are accessible
+        assert component.api_key == "test-key"
         assert component.model_name == "gpt-4o-mini"
         assert component.temperature == 0.5
 

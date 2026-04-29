@@ -13,7 +13,7 @@ import nanoid
 import pandas as pd
 import yaml
 from langchain_core.tools import StructuredTool
-from pydantic import BaseModel, SecretStr, ValidationError
+from pydantic import BaseModel, ValidationError
 
 from lfx.base.tools.constants import (
     TOOL_OUTPUT_DISPLAY_NAME,
@@ -74,25 +74,37 @@ CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name", "_metada
 
 
 def _wrap_if_secret(input_obj: Any, value: Any) -> Any:
-    """Wrap a resolved value in pydantic.SecretStr when its input field is sensitive.
+    """Return the runtime value for an input, preserving string compatibility.
 
-    The wrapper prevents the secret from leaking into Message.text, status,
-    vertex artifacts, traces, and logs (its __str__/__repr__ render as
-    "**********"). Consumers that legitimately need the underlying value call
-    .get_secret_value() at the boundary (e.g. provider client construction).
+    Credential variables arrive as SecretStr and non-password inputs reject them
+    during validation. Password inputs keep their runtime string contract, so
+    existing component code can pass self.api_key to provider clients without
+    unwrapping every call site.
     """
-    if value is None or isinstance(value, SecretStr):
-        return value
-    if not isinstance(value, str) or not value:
-        return value
-    is_secret = bool(input_obj is not None and getattr(input_obj, "password", False))
-    return SecretStr(value) if is_secret else value
+    if input_obj is not None and getattr(input_obj, "password", False):
+        return _unwrap_secret_value(value)
+    return value
 
 
 def _mask_secret_value(value: Any) -> Any:
     if hasattr(value, "get_secret_value"):
         return str(value)
     return value
+
+
+def _unwrap_secret_value(value: Any) -> Any:
+    seen: set[int] = set()
+    while hasattr(value, "get_secret_value") and id(value) not in seen:
+        seen.add(id(value))
+        value = value.get_secret_value()
+    return value
+
+
+def _get_secret_text(input_obj: Any, value: Any) -> str | None:
+    if input_obj is None or not getattr(input_obj, "password", False):
+        return None
+    value = _unwrap_secret_value(value)
+    return value if isinstance(value, str) and value else None
 
 
 class PlaceholderGraph(NamedTuple):
@@ -155,6 +167,7 @@ class Component(CustomComponent):
         self._outputs_map: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
+        self._secret_values: set[str] = set()
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
         self._event_manager: EventManager | None = None
@@ -948,7 +961,10 @@ class Component(CustomComponent):
             raise TypeError(msg)
         self.set_input_value(key, value)
         self._parameters[key] = value
-        self._attributes[key] = value
+        input_obj = self._inputs.get(key)
+        if secret_text := _get_secret_text(input_obj, value):
+            self._secret_values.add(secret_text)
+        self._attributes[key] = _wrap_if_secret(input_obj, value)
 
     def __call__(self, **kwargs):
         self.set(**kwargs)
@@ -1140,9 +1156,14 @@ class Component(CustomComponent):
                     f"that is a reserved word and cannot be used."
                 )
                 raise ValueError(msg)
-            attributes[key] = _wrap_if_secret(self._inputs.get(key), value)
+            input_obj = self._inputs.get(key)
+            if secret_text := _get_secret_text(input_obj, value):
+                self._secret_values.add(secret_text)
+            attributes[key] = _wrap_if_secret(input_obj, value)
         for key, input_obj in self._inputs.items():
             if key not in attributes and key not in self._attributes:
+                if secret_text := _get_secret_text(input_obj, input_obj.value):
+                    self._secret_values.add(secret_text)
                 attributes[key] = _wrap_if_secret(input_obj, input_obj.value or None)
 
         self._attributes.update(attributes)
@@ -1307,6 +1328,7 @@ class Component(CustomComponent):
         ):
             result.set_flow_id(self._vertex.graph.flow_id)
         result = output.apply_options(result)
+        result = self._sanitize_secret_values(result)
         output.value = result
 
         return result
@@ -1337,13 +1359,44 @@ class Component(CustomComponent):
         custom_repr = self.custom_repr()
         if custom_repr is None and isinstance(result, dict | Data | str):
             custom_repr = result
+        custom_repr = self._sanitize_secret_values(custom_repr)
         if not isinstance(custom_repr, str):
             custom_repr = str(custom_repr)
 
         raw = self._process_raw_result(result)
+        raw = self._sanitize_secret_values(raw)
         artifact_type = get_artifact_type(self.status or raw, result)
         raw, artifact_type = post_process_raw(raw, artifact_type)
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
+
+    def _sanitize_secret_string(self, value: str) -> str:
+        for secret in sorted(self._secret_values, key=len, reverse=True):
+            value = value.replace(secret, "**********")
+        return value
+
+    def _sanitize_secret_values(self, value):
+        if not self._secret_values:
+            return _mask_secret_value(value)
+        value = _mask_secret_value(value)
+        if isinstance(value, str):
+            return self._sanitize_secret_string(value)
+        if isinstance(value, Message):
+            if isinstance(value.text, str):
+                value.text = self._sanitize_secret_string(value.text)
+            value.data = self._sanitize_secret_values(value.data)
+            return value
+        if isinstance(value, Data):
+            value.data = self._sanitize_secret_values(value.data)
+            if isinstance(value.default_value, str):
+                value.default_value = self._sanitize_secret_string(value.default_value)
+            return value
+        if isinstance(value, dict):
+            return {key: self._sanitize_secret_values(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self._sanitize_secret_values(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(self._sanitize_secret_values(item) for item in value)
+        return value
 
     def _process_raw_result(self, result):
         return self.extract_data(result)
@@ -1377,6 +1430,8 @@ class Component(CustomComponent):
         self._current_output = ""
 
     def _finalize_results(self, results, artifacts):
+        self.status = self._sanitize_secret_values(self.status)
+        self.repr_value = self._sanitize_secret_values(self.repr_value)
         self._artifacts = artifacts
         self._results = results
         if self.tracing_service:
@@ -1593,7 +1648,7 @@ class Component(CustomComponent):
         """
         if name is None:
             name = f"Log {len(self._logs) + 1}"
-        message = _mask_secret_value(message)
+        message = self._sanitize_secret_values(message)
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
         if self.tracing_service and self._vertex:

@@ -26,6 +26,8 @@ from lfx.components.input_output import TextInputComponent
 from lfx.custom import Component
 from lfx.inputs.inputs import SecretStrInput
 from lfx.interface.initialize.loading import update_params_with_load_from_db_fields
+from lfx.io import Output
+from lfx.schema.message import Message
 from pydantic import SecretStr, ValidationError
 
 # Sentinel used as a stand-in for a "real" CREDENTIAL global variable's value.
@@ -102,21 +104,25 @@ async def test_credential_variable_does_not_leak_into_text_input_output():
 
 
 @pytest.mark.asyncio
-async def test_credential_variable_in_password_field_is_masked_on_attribute():
-    """A CREDENTIAL variable in a password field must remain masked.
+async def test_credential_variable_in_password_field_preserves_runtime_string_contract():
+    """A CREDENTIAL variable in a password field remains usable as a string.
 
     A CREDENTIAL global variable routed into a password (SecretStrInput) field
-    is accepted, but the resulting component attribute is wrapped in SecretStr.
-    Any path that stringifies the attribute (Message.text, status, traces, logs)
-    surfaces the mask, not the raw value. Provider boundaries unwrap explicitly
-    with `.get_secret_value()`.
+    is accepted. The runtime component attribute is unwrapped for compatibility
+    with existing provider-client code, while component output/log boundaries
+    still sanitize the recorded secret value.
     """
 
     class _PasswordFieldComponent(Component):
         display_name = "PasswordFieldTest"
         name = "PasswordFieldTest"
         inputs = [SecretStrInput(name="api_key", display_name="API Key")]
-        outputs: list = []
+        outputs = [Output(display_name="Output", name="output", method="build_output")]
+
+        def build_output(self) -> Message:
+            self.log(self.api_key)
+            self.status = self.api_key
+            return Message(text=self.api_key)
 
     component = _PasswordFieldComponent(_user_id=str(uuid.uuid4()))
 
@@ -130,11 +136,19 @@ async def test_credential_variable_in_password_field_is_masked_on_attribute():
     component.set_attributes(resolved)
     api_key_attr = component._attributes["api_key"]
 
-    assert isinstance(api_key_attr, SecretStr)
-    assert str(api_key_attr) == "**********"
-    assert _LEAKY_SECRET not in str(api_key_attr)
-    assert _LEAKY_SECRET not in repr(api_key_attr)
-    assert api_key_attr.get_secret_value() == _LEAKY_SECRET
+    assert api_key_attr == _LEAKY_SECRET
+    assert component.api_key == _LEAKY_SECRET
+
+    results, artifacts = await component._build_results()
+
+    assert results["output"].text == "**********"
+    assert results["output"].data["text"] == "**********"
+    assert artifacts["output"]["raw"] == "**********"
+    assert "**********" in artifacts["output"]["repr"]
+    assert _LEAKY_SECRET not in artifacts["output"]["repr"]
+    assert component._output_logs["output"][0].message == "**********"
+    assert component.status == "**********"
+    assert component.repr_value == "**********"
 
 
 @pytest.mark.asyncio
