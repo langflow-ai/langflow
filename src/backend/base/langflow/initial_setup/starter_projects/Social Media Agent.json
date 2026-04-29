@@ -593,8 +593,7 @@
             "i18n_key": "template_notes.social_media_agent.15789e48",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.social_media_agent.15789e48"
+            }
           },
           "type": "note"
         },
@@ -621,8 +620,7 @@
             "i18n_key": "template_notes.social_media_agent.15789e48",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.social_media_agent.15789e48"
+            }
           },
           "type": "note"
         },
@@ -652,8 +650,7 @@
             "i18n_key": "template_notes.social_media_agent.501213ba",
             "template": {
               "backgroundColor": "amber"
-            },
-            "i18n_key": "template_notes.social_media_agent.501213ba"
+            }
           },
           "type": "note"
         },
@@ -1240,8 +1237,7 @@
             "i18n_key": "template_notes.social_media_agent.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.social_media_agent.cd87cff6"
+            }
           },
           "type": "note"
         },
