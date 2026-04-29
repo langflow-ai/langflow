@@ -4,7 +4,6 @@ import json
 import re
 import sys
 import time
-import uuid
 from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -17,8 +16,8 @@ from lfx.cli.script_loader import (
 )
 from lfx.cli.validation import validate_global_variables_for_env
 from lfx.log.logger import logger
+from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars, validate_provided_id
 from lfx.schema.schema import InputValueRequest
-from lfx.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from lfx.events.event_manager import EventManager
@@ -117,6 +116,18 @@ async def run_flow(
     else:
         configure(log_level="CRITICAL", output_file=sys.stderr)
         verbosity = 0
+
+    # Validate caller-supplied IDs up-front so users get a clear error before any
+    # graph loading work happens. None means "auto-generate later"; "" / whitespace
+    # is rejected so a typo or empty env var doesn't silently produce a fresh
+    # session and break Memory continuity.
+    try:
+        validate_provided_id("session_id", session_id)
+        validate_provided_id("user_id", user_id)
+    except ValueError as e:
+        error_msg = str(e)
+        output_error(error_msg, verbose=verbose, exception=e)
+        raise RunError(error_msg, e) from e
 
     start_time = time.time() if timing else None
 
@@ -223,47 +234,13 @@ async def run_flow(
             error_msg = "No input source provided"
             raise ValueError(error_msg)
 
-        # Set user_id on graph: caller-provided takes precedence; otherwise auto-generate
-        # a UUID so the precheck in custom_component.get_variable (which guards DB lookups
-        # by requiring a non-empty user_id) doesn't fail before the env-fallback variable
-        # service can answer. This UUID is ceremonial — lfx's VariableService ignores it
-        # and serves variables from os.getenv; cross-user scoping isn't a concept in lfx
-        # CLI mode. If a langflow DatabaseVariableService ever gets registered here (e.g.,
-        # to read per-user DB-backed variables), pass the real user_id explicitly.
-        if not user_id:
-            user_id = uuid.uuid4().hex
-            logger.debug(
-                f"No user_id provided; auto-generated {user_id} to satisfy component prechecks. "
-                "lfx's variable service is env-backed, so user_id is not used for variable scoping."
-            )
-        graph.user_id = user_id
+        # Apply session_id, user_id, and Memory-vertex propagation defaults. Both
+        # are auto-generated when not supplied so component prechecks (custom_component
+        # .get_variable for user_id) and astore_message validation (for session_id)
+        # don't fail. See lfx.run._defaults.apply_run_defaults for the full rationale.
+        session_id, user_id = apply_run_defaults(graph, session_id=session_id, user_id=user_id)
         if verbosity > 0:
             logger.info(f"Set graph user_id: {user_id}")
-
-        # Set session_id on graph: caller-provided takes precedence; otherwise auto-generate
-        # so message-store paths (e.g. streaming LLM -> ChatOutput) don't fail validation in
-        # astore_message when no session is supplied.
-        if not session_id:
-            session_id = uuid.uuid4().hex
-            logger.warning(
-                f"No session_id provided; auto-generated {session_id}. "
-                "Memory/MessageHistory components will not see prior conversation state across runs."
-            )
-        graph.session_id = session_id
-        # Propagate session_id to Memory/MessageHistory inputs the way Langflow's
-        # build_graph_from_data does (api/utils/flow_utils.py). The lfx run path uses
-        # graph.async_start instead of graph.arun, so it bypasses Graph._run's
-        # has_session_id_vertices loop. Without this, components reading
-        # `self.session_id` from their input field (e.g. Memory.retrieve_messages)
-        # would see "" regardless of --session-id. Hardcoded values on the component
-        # win, matching the playground's behavior.
-        for vertex_id in graph.has_session_id_vertices:
-            vertex = graph.get_vertex(vertex_id)
-            if vertex is None:
-                continue
-            if not vertex.raw_params.get("session_id"):
-                vertex.update_raw_params({"session_id": session_id}, overwrite=True)
-        if verbosity > 0:
             logger.info(f"Set graph session_id: {session_id}")
 
         # Inject global variables into graph context
@@ -381,15 +358,10 @@ async def run_flow(
 
         logger.info("Starting graph execution...", level="DEBUG")
 
-        # Mirror langflow's API path (processing.process.run_graph_internal): when a
-        # load_from_db variable misses (e.g. random user_id has no Variable row), fall
-        # through to os.environ instead of failing the build. The setting defaults to
-        # True; users opting out via LANGFLOW_FALLBACK_TO_ENV_VAR=false get the strict
-        # behavior. Without this plumbing, the env fallback in
-        # `loading.update_params_with_load_from_db_fields` never fires under lfx run
-        # because async_start defaults the flag to False.
-        settings_service = get_settings_service()
-        fallback_to_env_vars = bool(settings_service and settings_service.settings.fallback_to_env_var)
+        # See lfx.run._defaults.resolve_fallback_to_env_vars for why this flag is
+        # plumbed through (mirrors langflow's API path so load_from_db variables
+        # fall through to os.environ on miss instead of erroring the build).
+        fallback_to_env_vars = resolve_fallback_to_env_vars()
 
         async for result in graph.async_start(
             inputs, event_manager=event_manager, fallback_to_env_vars=fallback_to_env_vars

@@ -29,9 +29,8 @@ from lfx.cli.script_loader import (
     load_graph_from_script,
 )
 from lfx.load import load_flow_from_json
-from lfx.log.logger import logger
+from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars
 from lfx.schema.schema import InputValueRequest
-from lfx.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -307,9 +306,10 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
     Args:
         graph: Graph object to execute
         input_value: Input value to pass to the graph
-        session_id: Optional session ID. If empty, a uuid is generated so that
-            message-store paths (which validate session_id) succeed. Mirrors the
-            behavior of run_flow.
+        session_id: Optional session ID. ``None`` auto-generates one so that
+            message-store paths (which validate session_id) succeed; an empty or
+            whitespace-only string is rejected with ``ValueError`` to surface
+            shell/env-var typos (see ``lfx.run._defaults.validate_provided_id``).
 
     Returns:
         Tuple of (results, captured_logs)
@@ -317,31 +317,10 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
     Raises:
         Exception: Re-raises any exception that occurs during graph execution
     """
-    if not session_id:
-        session_id = uuid.uuid4().hex
-        logger.warning(
-            f"No session_id provided; auto-generated {session_id}. "
-            "Memory/MessageHistory components will not see prior conversation state across runs."
-        )
-    graph.session_id = session_id
-    # Auto-generate a ceremonial user_id when the graph doesn't already have one. The
-    # precheck in custom_component.get_variable requires a non-empty user_id before any
-    # variable lookup; lfx's env-fallback VariableService ignores it. See run/base.py
-    # for the same rationale on the CLI run path.
-    if not getattr(graph, "user_id", None):
-        graph.user_id = uuid.uuid4().hex
-        logger.debug(f"No user_id on graph; auto-generated {graph.user_id} to satisfy component prechecks.")
-    # Propagate session_id to Memory/MessageHistory inputs the way Langflow's
-    # build_graph_from_data does (api/utils/flow_utils.py). async_start bypasses
-    # Graph._run's has_session_id_vertices loop, so components reading
-    # `self.session_id` would otherwise see "" even when --session-id is set.
-    # Hardcoded values on the component win, matching the playground's behavior.
-    for vertex_id in graph.has_session_id_vertices:
-        vertex = graph.get_vertex(vertex_id)
-        if vertex is None:
-            continue
-        if not vertex.raw_params.get("session_id"):
-            vertex.update_raw_params({"session_id": session_id}, overwrite=True)
+    # Apply session_id, user_id, and Memory-vertex propagation defaults via the
+    # shared helper (same logic as run_flow). user_id is not exposed in this
+    # entry point, so any pre-existing graph.user_id is preserved.
+    apply_run_defaults(graph, session_id=session_id, user_id=None, overwrite_user_id=False)
 
     # Create input request
     inputs = InputValueRequest(input_value=input_value) if input_value else None
@@ -354,11 +333,7 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
     original_stdout = sys.stdout
     original_stderr = sys.stderr
 
-    # Mirror langflow's API path: when a load_from_db variable misses, fall through
-    # to os.environ instead of erroring. Setting defaults True; users can opt out via
-    # LANGFLOW_FALLBACK_TO_ENV_VAR=false. Same rationale as run/base.py.
-    settings_service = get_settings_service()
-    fallback_to_env_vars = bool(settings_service and settings_service.settings.fallback_to_env_var)
+    fallback_to_env_vars = resolve_fallback_to_env_vars()
 
     try:
         sys.stdout = captured_stdout

@@ -63,7 +63,9 @@ def register(app: typer.Typer) -> None:
         session_id: str | None = typer.Option(
             None,
             "--session-id",
-            help="Session ID to attach to the run. If omitted, a random one is generated.",
+            help=(
+                "Session ID to attach to the run. Agent and Memory Components will use this to track conversation history."
+            ),
         ),
     ) -> None:
         """Run a flow directly (lazy-loaded)."""

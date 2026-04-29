@@ -404,7 +404,7 @@ class TestGraphExecution:
         mock_settings = MagicMock()
         mock_settings.settings.fallback_to_env_var = False
 
-        with patch("lfx.cli.common.get_settings_service", return_value=mock_settings):
+        with patch("lfx.run._defaults.get_settings_service", return_value=mock_settings):
             await execute_graph_with_capture(mock_graph, "test input")
 
         assert captured.get("fallback_to_env_vars") is False

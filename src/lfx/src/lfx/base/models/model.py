@@ -341,10 +341,13 @@ class LCModelComponent(Component):
                 session_id = self._session_id
             else:
                 session_id = None
-            # Streaming requires both a session_id (so astore_message validates) and an
-            # event_manager (so the chunk iterator gets consumed). Without either, the
-            # iterator would be stored but never drained — the message text would be empty.
-            # Fall back to ainvoke instead.
+            # Streaming requires both a session_id and an event_manager:
+            #   - session_id is required so astore_message validation passes when send_message
+            #     persists the placeholder Message.
+            #   - event_manager is required so the chunk iterator that backs Message.text gets
+            #     drained; without one, no consumer iterates astream(), the iterator is stored
+            #     verbatim, and downstream readers see empty text.
+            # If either is missing, fall back to a non-streaming ainvoke.
             event_manager = getattr(self, "_event_manager", None)
             if session_id and event_manager:
                 model_message = Message(
@@ -363,8 +366,10 @@ class LCModelComponent(Component):
                     missing.append("session_id")
                 if not event_manager:
                     missing.append("event_manager")
+                component_label = getattr(self, "display_name", None) or getattr(self, "_id", "<unknown>")
                 logger.warning(
-                    f"Streaming fallback to ainvoke: missing {', '.join(missing)}. "
+                    f"Streaming fallback to ainvoke for component '{component_label}' "
+                    f"(id={getattr(self, '_id', '<unknown>')}): missing {', '.join(missing)}. "
                     "UI will not see token-by-token streaming for this run."
                 )
                 ai_message = await runnable.ainvoke(inputs)

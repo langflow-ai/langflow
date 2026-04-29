@@ -56,6 +56,7 @@ async def test_handle_stream_falls_back_to_invoke_when_no_session_id():
     probe.send_message.assert_not_awaited()
     assert lf_message is None
     assert result == "hi from invoke"
+    assert isinstance(result, str)
     assert ai_message is not None
 
 
@@ -79,6 +80,10 @@ async def test_handle_stream_falls_back_to_invoke_when_no_event_manager():
     probe.send_message.assert_not_awaited()
     assert lf_message is None
     assert result == "batched"
+    # Lock in that the fallback returns plain text, not the unconsumed AsyncIterator
+    # that astream would have produced — the original bug surfaced as empty downstream
+    # text because the iterator was stored verbatim.
+    assert isinstance(result, str)
     assert ai_message is not None
 
 
