@@ -1,41 +1,27 @@
+import { useTranslation } from "react-i18next";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
 
-export const CREATE_STEPS = [
-  { number: 1, label: "Provider" },
-  { number: 2, label: "Type" },
-  { number: 3, label: "Flows" },
-  { number: 4, label: "Review" },
-] as const;
+export const DEPLOYMENT_STEPS_COUNT = 4;
 
-export const CREATE_DEPLOYED_STEPS = [
-  { number: 1, label: "Provider" },
-  { number: 2, label: "Type" },
-  { number: 3, label: "Flows" },
-  { number: 4, label: "Deployed" },
-] as const;
-
-const EDIT_STEPS = [
-  { number: 1, label: "Type" },
-  { number: 2, label: "Flows" },
-  { number: 3, label: "Review" },
-] as const;
-
-export const DEPLOYMENT_STEPS = CREATE_STEPS;
-
-interface DeploymentStepperProps {
-  steps?: readonly { number: number; label: string }[];
-  currentStepOverride?: number;
-}
-
-export default function DeploymentStepper({
-  steps: stepsProp,
-  currentStepOverride,
-}: DeploymentStepperProps) {
+export default function DeploymentStepper() {
+  const { t } = useTranslation();
   const { currentStep, isEditMode } = useDeploymentStepper();
-  const steps = stepsProp ?? (isEditMode ? EDIT_STEPS : CREATE_STEPS);
-  const activeStep = currentStepOverride ?? currentStep;
-  const progressPercent = ((activeStep - 1) / (steps.length - 1)) * 100;
+
+  const CREATE_STEPS = [
+    { number: 1, label: t("deployments.provider") },
+    { number: 2, label: t("deployments.labelType") },
+    { number: 3, label: t("deployments.attachFlows") },
+    { number: 4, label: t("deployments.review") },
+  ];
+
+  const EDIT_STEPS = [
+    { number: 1, label: t("deployments.labelType") },
+    { number: 2, label: t("deployments.attachFlows") },
+    { number: 3, label: t("deployments.review") },
+  ];
+  const steps = isEditMode ? EDIT_STEPS : CREATE_STEPS;
+  const progressPercent = ((currentStep - 1) / (steps.length - 1)) * 100;
 
   return (
     <div className="relative mx-auto h-[52px] w-full max-w-[700px]">
@@ -51,19 +37,14 @@ export default function DeploymentStepper({
             <div
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors",
-                activeStep >= step.number
+                currentStep >= step.number
                   ? "bg-foreground text-background"
                   : "bg-muted text-muted-foreground",
               )}
             >
               {step.number}
             </div>
-            <span
-              className={cn(
-                "whitespace-nowrap text-xs text-foreground",
-                activeStep >= step.number && "font-medium",
-              )}
-            >
+            <span className="whitespace-nowrap text-xs text-muted-foreground">
               {step.label}
             </span>
           </div>

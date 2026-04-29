@@ -151,10 +151,7 @@ export default function DragFilesComponent({
         if (filesIds.length > 0) {
           onUpload(filesIds);
           setSuccessData({
-            title:
-              filesIds.length > 1
-                ? t("fileManager.filesUploadedSuccessfully")
-                : t("fileManager.fileUploadedSuccessfully"),
+            title: filesIds.length > 1 ? t("fileManager.filesUploadedSuccessfully") : t("fileManager.fileUploadedSuccessfully"),
           });
         }
       } catch (error: any) {
@@ -176,7 +173,7 @@ export default function DragFilesComponent({
 
       if (selected.length > 1000) {
         throw new Error(
-          `Too many files detected (${selected.length}). This likely includes large/hidden directories. Please select a smaller folder or exclude folders like node_modules.`,
+          t("errors.tooManyFiles", { count: selected.length }),
         );
       }
 
@@ -202,10 +199,7 @@ export default function DragFilesComponent({
       if (filesIds.length > 0) {
         onUpload(filesIds);
         setSuccessData({
-          title:
-            filesIds.length > 1
-              ? t("fileManager.filesUploadedSuccessfully")
-              : t("fileManager.fileUploadedSuccessfully"),
+          title: filesIds.length > 1 ? t("fileManager.filesUploadedSuccessfully") : t("fileManager.fileUploadedSuccessfully"),
         });
       }
     } catch (error: any) {
@@ -222,10 +216,7 @@ export default function DragFilesComponent({
       if (filesIds.length > 0) {
         onUpload(filesIds);
         setSuccessData({
-          title:
-            filesIds.length > 1
-              ? t("fileManager.filesUploadedSuccessfully")
-              : t("fileManager.fileUploadedSuccessfully"),
+          title: filesIds.length > 1 ? t("fileManager.filesUploadedSuccessfully") : t("fileManager.fileUploadedSuccessfully"),
         });
       }
     } catch (error: any) {

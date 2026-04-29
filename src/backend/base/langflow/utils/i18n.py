@@ -40,9 +40,8 @@ from typing import Any
 
 from langflow.utils.i18n_keys import (
     component_field_key,
+    content_hash as _content_hash,
     normalize_component_key,
-)
-from langflow.utils.i18n_keys import (
     safe_flow_key as _safe_flow_key,
 )
 
@@ -131,11 +130,9 @@ def translate_flow_notes(nodes: list[dict], locale: str) -> list[dict]:
         if node.get("type") == "noteNode":
             i18n_key = node.get("data", {}).get("node", {}).get("i18n_key")
             if i18n_key:
-                translated_node = copy.deepcopy(node)
-                description = translated_node["data"]["node"].get("description", "")
-                translated_node["data"]["node"]["description"] = translate(i18n_key, locale, description)
-                result.append(translated_node)
-                continue
+                node = copy.deepcopy(node)
+                description = node["data"]["node"].get("description", "")
+                node["data"]["node"]["description"] = translate(i18n_key, locale, description)
         result.append(node)
     return result
 

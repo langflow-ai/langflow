@@ -1,5 +1,6 @@
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
+import i18n from "../i18n";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import useAlertStore from "@/stores/alertStore";
@@ -111,7 +112,7 @@ export async function refreshAllModelInputs(
 
     if (nodesWithModelFields.length === 0) {
       if (showNotifications) {
-        setSuccessData({ title: "No model components to refresh" });
+        setSuccessData({ title: (i18n as any).t("errors.noModelsToRefresh") });
       }
       return;
     }
@@ -126,14 +127,13 @@ export async function refreshAllModelInputs(
 
     if (showNotifications) {
       const count = nodesWithModelFields.length;
-      const plural = count > 1 ? "s" : "";
-      setSuccessData({ title: `Refreshed ${count} model component${plural}` });
+      setSuccessData({ title: (i18n as any).t("alerts.modelsRefreshed", { count }) });
     }
   } catch (error) {
     console.error("Error refreshing model inputs:", error);
     if (showNotifications) {
       setErrorData({
-        title: "Error refreshing model components",
+        title: (i18n as any).t("errors.refreshingModels"),
         list: [(error as Error)?.message || "An unexpected error occurred"],
       });
     }

@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import IconComponent, {
   ForwardedIconComponent,
@@ -25,6 +26,7 @@ import { EditMessageButton } from "./message-options";
 
 export const BotMessage = memo(
   ({ chat, lastMessage, updateChat, playgroundPage }: chatMessagePropsType) => {
+    const { t } = useTranslation();
     const setErrorData = useAlertStore((state) => state.setErrorData);
     const [editMessage, setEditMessage] = useState(false);
     const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -65,7 +67,7 @@ export const BotMessage = memo(
           },
           onError: () => {
             setErrorData({
-              title: "Error updating messages.",
+              title: t("errors.updatingMessages"),
             });
           },
         },
@@ -96,7 +98,7 @@ export const BotMessage = memo(
         {
           onError: () => {
             setErrorData({
-              title: "Error updating messages.",
+              title: t("errors.updatingMessages"),
             });
           },
         },

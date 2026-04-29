@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ export function AssistantHeader({
   onDeleteSession,
   isExpanded,
 }: AssistantHeaderProps) {
+  const { t } = useTranslation();
   const isAtSessionLimit = sessions.length >= ASSISTANT_MAX_SESSIONS;
   const isNewSessionDisabled = !hasMessages || isAtSessionLimit;
 
@@ -39,7 +41,7 @@ export function AssistantHeader({
         <ShadTooltip
           content={
             isAtSessionLimit
-              ? `Maximum of ${ASSISTANT_MAX_SESSIONS} sessions reached. Delete a session to create a new one.`
+              ? t("assistant.maxSessionsTooltip", { max: ASSISTANT_MAX_SESSIONS })
               : ""
           }
           side="bottom"
@@ -58,7 +60,7 @@ export function AssistantHeader({
                 name={isAtSessionLimit ? "AlertCircle" : "Plus"}
                 className="h-4 w-4"
               />
-              {isAtSessionLimit ? "Max sessions" : "New session"}
+              {isAtSessionLimit ? t("assistant.maxSessionsLabel") : t("assistant.newSession")}
             </Button>
           </span>
         </ShadTooltip>

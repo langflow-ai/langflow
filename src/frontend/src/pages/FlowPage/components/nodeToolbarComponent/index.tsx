@@ -265,7 +265,7 @@ const NodeToolbarComponent = memo(
         flow: flowComponent,
         override: false,
       });
-      setSuccessData({ title: `${data.id} saved successfully` });
+      setSuccessData({ title: t("success.componentSaved", { id: data.id }) });
     }, [isSaved, data.id, flowComponent, addFlow]);
 
     const openDocs = useCallback(() => {
@@ -583,9 +583,7 @@ const NodeToolbarComponent = memo(
                       toolMode ? "text-primary" : "",
                     )}
                   />
-                  <span className="text-mmd font-medium">
-                    {t("nodeToolbar.toolMode")}
-                  </span>
+                  <span className="text-mmd font-medium">{t("nodeToolbar.toolMode")}</span>
                   <ToggleShadComponent
                     value={toolMode}
                     editNode={false}
@@ -696,11 +694,7 @@ const NodeToolbarComponent = memo(
                       style={
                         hasBreakingChange ? "text-accent-amber-foreground" : ""
                       }
-                      value={
-                        isUserEdited
-                          ? t("nodeToolbar.restore")
-                          : t("nodeToolbar.update")
-                      }
+                      value={isUserEdited ? t("nodeToolbar.restore") : t("nodeToolbar.update")}
                       icon={isUserEdited ? "RefreshCcwDot" : "CircleArrowUp"}
                       dataTestId="update-button-modal"
                     />
@@ -749,11 +743,7 @@ const NodeToolbarComponent = memo(
                         shortcuts.find((obj) => obj.name === "Minimize")
                           ?.shortcut!
                       }
-                      value={
-                        showNode
-                          ? t("nodeToolbar.minimize")
-                          : t("nodeToolbar.expand")
-                      }
+                      value={showNode ? t("nodeToolbar.minimize") : t("nodeToolbar.expand")}
                       icon={showNode ? "Minimize2" : "Maximize2"}
                     />
                   </SelectItem>

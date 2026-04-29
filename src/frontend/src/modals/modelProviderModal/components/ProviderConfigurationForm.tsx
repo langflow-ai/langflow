@@ -5,11 +5,10 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import MultiselectComponent from "@/components/core/parameterRenderComponent/components/multiselectComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { ProviderVariable } from "@/constants/providerConstants";
-import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
+import { ProviderVariable } from "@/constants/providerConstants";
 import useAlertStore from "@/stores/alertStore";
 import DisconnectWarning from "./DisconnectWarning";
-import type { Provider } from "./types";
+import { Provider } from "./types";
 
 const PROVIDER_KEY_PREVIEW: Record<
   string,
@@ -53,11 +52,7 @@ export interface ProviderConfigurationFormProps {
 }
 
 // Generate a stable random placeholder for a given variable type
-const getPlaceholder = (
-  variableName: string,
-  provider: string,
-  t: (key: string, opts?: Record<string, string>) => string,
-) => {
+const getPlaceholder = (variableName: string, provider: string, t: (key: string, opts?: Record<string, string>) => string) => {
   const name = variableName.toLowerCase();
   const providerLower = provider.toLowerCase();
 
@@ -152,22 +147,20 @@ const ProviderConfigurationForm = ({
               className="underline cursor-pointer hover:text-primary"
               onClick={() => {
                 if (selectedProvider.api_docs_url) {
-                  customOpenNewTab(selectedProvider.api_docs_url);
+                  window.open(
+                    selectedProvider.api_docs_url,
+                    "_blank",
+                    "noopener,noreferrer",
+                  );
                 }
               }}
             >
-              {t("modelProviders.credentialsLink", {
-                provider: selectedProvider.provider,
-              })}
+              {t("modelProviders.credentialsLink", { provider: selectedProvider.provider })}
             </span>{" "}
             {t("modelProviders.toEnableModels")}
           </>
         ) : (
-          <>
-            {t("modelProviders.activateToEnable", {
-              provider: selectedProvider.provider,
-            })}
-          </>
+          <>{t("modelProviders.activateToEnable", { provider: selectedProvider.provider })}</>
         )}
       </span>
       {requiresConfiguration ? (
@@ -360,12 +353,8 @@ const ProviderConfigurationForm = ({
             disabled={selectedProvider.is_enabled}
           >
             {selectedProvider.is_enabled
-              ? t("modelProviders.activatedButton", {
-                  provider: selectedProvider.provider,
-                })
-              : t("modelProviders.activateButton", {
-                  provider: selectedProvider.provider,
-                })}
+              ? t("modelProviders.activatedButton", { provider: selectedProvider.provider })
+              : t("modelProviders.activateButton", { provider: selectedProvider.provider })}
           </Button>
           {selectedProvider.is_enabled && (
             <Button
@@ -373,9 +362,7 @@ const ProviderConfigurationForm = ({
               onClick={() => setShowDisconnectWarning(true)}
               disabled={isDeleting || isPending}
             >
-              {t("modelProviders.deactivateButton", {
-                provider: selectedProvider.provider,
-              })}
+              {t("modelProviders.deactivateButton", { provider: selectedProvider.provider })}
             </Button>
           )}
         </div>
@@ -386,9 +373,7 @@ const ProviderConfigurationForm = ({
         message={
           requiresConfiguration
             ? t("modelProviders.disconnectApiKeyWarning")
-            : t("modelProviders.deactivateWarning", {
-                provider: selectedProvider.provider,
-              })
+            : t("modelProviders.deactivateWarning", { provider: selectedProvider.provider })
         }
         onCancel={() => setShowDisconnectWarning(false)}
         onConfirm={() => {

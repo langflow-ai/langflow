@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import type { FlowType } from "@/types/flow";
@@ -26,10 +27,11 @@ export const FlowListPanel = memo(function FlowListPanel({
   onRemoveFlow?: (flowId: string) => void;
   onUndoRemoveFlow?: (flowId: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex w-[280px] flex-shrink-0 flex-col border-r border-border">
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
-        Available
+        {t("deployments.availableFlows")}
       </div>
       <div className="flex-1 space-y-1 overflow-y-auto p-2">
         {flows.map((flow) => {
@@ -42,77 +44,68 @@ export const FlowListPanel = memo(function FlowListPanel({
             .map((cid) => connections.find((c) => c.id === cid)?.name)
             .filter(Boolean);
           return (
-            <div
+            <button
               key={flow.id}
-              role="button"
-              tabIndex={0}
+              type="button"
               data-testid={`flow-item-${flow.id}`}
               onClick={() => onSelectFlow(flow.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onSelectFlow(flow.id);
-                }
-              }}
               className={cn(
-                "flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 text-left transition-colors",
+                "flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors",
                 isRemoved && "opacity-50",
                 selectedFlowId === flow.id ? "bg-muted" : "hover:bg-muted/60",
               )}
             >
-              <div className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
-                  <ForwardedIconComponent
-                    name={flow.icon ?? "Workflow"}
-                    className="h-4 w-4 text-muted-foreground"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="truncate text-sm font-semibold">
-                      {flow.name}
-                    </span>
-                    {versionLabel && !isRemoved && (
-                      <Badge
-                        variant="secondaryStatic"
-                        size="tag"
-                        className="bg-accent-purple-muted text-accent-purple-muted-foreground"
-                      >
-                        {versionLabel}
-                      </Badge>
-                    )}
-                    {attached && !isRemoved && (
-                      <Badge
-                        variant="secondaryStatic"
-                        size="tag"
-                        className="bg-accent-blue-muted text-accent-blue-muted-foreground"
-                      >
-                        ATTACHED
-                      </Badge>
-                    )}
-                    {isRemoved && (
-                      <Badge
-                        variant="secondaryStatic"
-                        size="tag"
-                        className="bg-destructive/10 text-destructive"
-                      >
-                        REMOVED
-                      </Badge>
-                    )}
-                  </div>
-                  {connectionNames.length > 0 && !isRemoved && (
-                    <p className="truncate text-xs text-muted-foreground">
-                      {connectionNames.join(", ")}
-                    </p>
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
+                <ForwardedIconComponent
+                  name={flow.icon ?? "Workflow"}
+                  className="h-4 w-4 text-muted-foreground"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="truncate text-sm font-semibold">
+                    {flow.name}
+                  </span>
+                  {versionLabel && !isRemoved && (
+                    <Badge
+                      variant="secondaryStatic"
+                      size="tag"
+                      className="bg-accent-purple-muted text-accent-purple-muted-foreground"
+                    >
+                      {versionLabel}
+                    </Badge>
+                  )}
+                  {attached && !isRemoved && (
+                    <Badge
+                      variant="secondaryStatic"
+                      size="tag"
+                      className="bg-accent-blue-muted text-accent-blue-muted-foreground"
+                    >
+                      ATTACHED
+                    </Badge>
+                  )}
+                  {isRemoved && (
+                    <Badge
+                      variant="secondaryStatic"
+                      size="tag"
+                      className="bg-destructive/10 text-destructive"
+                    >
+                      REMOVED
+                    </Badge>
                   )}
                 </div>
+                {connectionNames.length > 0 && !isRemoved && (
+                  <p className="truncate text-xs text-muted-foreground">
+                    {connectionNames.join(", ")}
+                  </p>
+                )}
               </div>
               {attached && !isRemoved && onRemoveFlow && (
                 <button
                   type="button"
                   data-testid={`detach-flow-${flow.id}`}
                   className="flex-shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  title="Detach flow"
+                  title={t("deployments.detachFlow")}
                   onClick={(e) => {
                     e.stopPropagation();
                     onRemoveFlow(flow.id);
@@ -126,8 +119,11 @@ export const FlowListPanel = memo(function FlowListPanel({
                   type="button"
                   data-testid={`undo-remove-flow-${flow.id}`}
                   className="flex-shrink-0 rounded p-1 text-muted-foreground hover:bg-accent-blue-muted hover:text-accent-blue-muted-foreground"
-                  title="Undo detach"
-                  onClick={() => onUndoRemoveFlow(flow.id)}
+                  title={t("deployments.undoDetach")}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUndoRemoveFlow(flow.id);
+                  }}
                 >
                   <ForwardedIconComponent
                     name="Undo2"
@@ -135,7 +131,7 @@ export const FlowListPanel = memo(function FlowListPanel({
                   />
                 </button>
               )}
-            </div>
+            </button>
           );
         })}
       </div>

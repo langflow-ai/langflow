@@ -125,7 +125,8 @@
             "i18n_key": "template_notes.invoice_summarizer.b5ab0aab",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.invoice_summarizer.b5ab0aab"
           },
           "type": "note"
         },
@@ -604,7 +605,8 @@
             "i18n_key": "template_notes.invoice_summarizer.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.invoice_summarizer.cd87cff6"
           },
           "type": "note"
         },
@@ -631,7 +633,8 @@
             "i18n_key": "template_notes.invoice_summarizer.c3786403",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.invoice_summarizer.c3786403"
           },
           "type": "note"
         },
@@ -715,7 +718,7 @@
               }
             ],
             "pinned": false,
-            "score": 7.568328950209746e-6,
+            "score": 7.568328950209746e-06,
             "template": {
               "_type": "Component",
               "code": {

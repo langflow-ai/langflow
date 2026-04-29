@@ -1,4 +1,5 @@
 import { useIsFetching } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import type { NewValueParams, SelectionChangedEvent } from "ag-grid-community";
 import cloneDeep from "lodash/cloneDeep";
 import { useEffect, useMemo, useState } from "react";
@@ -22,6 +23,7 @@ export default function SessionView({
   session?: string;
   id?: string;
 }) {
+  const { t } = useTranslation();
   const messages = useMessagesStore((state) => state.messages);
   const setMessages = useMessagesStore((state) => state.setMessages);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -77,12 +79,12 @@ export default function SessionView({
       }
       setSelectedRows([]);
       setSuccessData({
-        title: "Messages deleted successfully.",
+        title: t("success.messagesDeleted"),
       });
     },
     onError: () => {
       setErrorData({
-        title: "Error deleting messages.",
+        title: t("errors.deletingMessages"),
       });
     },
   });
@@ -106,12 +108,12 @@ export default function SessionView({
           updateMessage(data);
           // Set success message
           setSuccessData({
-            title: "Messages updated successfully.",
+            title: t("success.messagesUpdated"),
           });
         },
         onError: () => {
           setErrorData({
-            title: "Error updating messages.",
+            title: t("errors.updatingMessages"),
           });
           event.data[field] = event.oldValue;
           event.api.refreshCells();

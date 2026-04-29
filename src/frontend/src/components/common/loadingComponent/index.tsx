@@ -24,9 +24,7 @@ export default function LoadingComponent({
         />
       </svg>
       <br></br>
-      <span className="animate-pulse text-lg text-primary">
-        {t("loading.loading")}
-      </span>
+      <span className="animate-pulse text-lg text-primary">{t("loading.loading")}</span>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import {
   Disclosure,
   DisclosureContent,
@@ -71,16 +70,9 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
                 name={item.icon}
                 className="h-4 w-4 group-aria-expanded/collapsible:text-accent-pink-foreground"
               />
-              <ShadTooltip
-                content={t(item.display_name, {
-                  defaultValue: item.display_name,
-                })}
-                styleClasses="z-50"
-              >
-                <span className="flex-1 min-w-0 truncate group-aria-expanded/collapsible:font-semibold">
-                  {t(item.display_name, { defaultValue: item.display_name })}
-                </span>
-              </ShadTooltip>
+              <span className="flex-1 min-w-0 truncate group-aria-expanded/collapsible:font-semibold">
+                {t(item.display_name, { defaultValue: item.display_name })}
+              </span>
               <ForwardedIconComponent
                 name="ChevronRight"
                 className="h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"

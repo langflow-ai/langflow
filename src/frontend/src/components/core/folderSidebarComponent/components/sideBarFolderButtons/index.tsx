@@ -214,7 +214,7 @@ const SideBarFoldersButtonsComponent = ({
     mutateAddFolder(
       {
         data: {
-          name: "New Project",
+          name: t("project.newName"),
           parent_id: null,
           description: "",
         },

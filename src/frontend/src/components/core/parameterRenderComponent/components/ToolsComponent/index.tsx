@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
@@ -25,6 +26,7 @@ export default function ToolsComponent({
   template,
   showParameter = true,
 }: InputProps<any[] | undefined, ToolsComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const actions = value
     ?.filter((action) => action.status === true)
@@ -131,7 +133,7 @@ export default function ToolsComponent({
                 No actions added to this server
               </span>
               <Button size={"sm"} onClick={() => setIsModalOpen(true)}>
-                <span>Add actions</span>
+                <span>{t("input.addActions")}</span>
               </Button>
             </div>
           )

@@ -36,6 +36,7 @@ export default function RecentFilesComponent({
   types: string[];
   isList: boolean;
 }) {
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
@@ -241,7 +242,7 @@ export default function RecentFilesComponent({
         <div className="flex-1">
           <Input
             icon="Search"
-            placeholder="Search files..."
+            placeholder={t("fileManager.searchFiles")}
             inputClassName="h-8"
             data-testid="search-files-input"
             value={searchQuery}

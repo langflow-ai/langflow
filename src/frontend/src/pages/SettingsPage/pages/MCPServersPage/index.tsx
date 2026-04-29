@@ -38,10 +38,7 @@ export default function MCPServersPage() {
       setEditInitialData(data);
       setEditOpen(true);
     } catch (e: any) {
-      setErrorData({
-        title: t("mcp.servers.errorFetching"),
-        list: [e.message],
-      });
+      setErrorData({ title: t("mcp.servers.errorFetching"), list: [e.message] });
     } finally {
     }
   };
@@ -51,10 +48,7 @@ export default function MCPServersPage() {
       { name: server.name },
       {
         onError: (e: any) =>
-          setErrorData({
-            title: t("mcp.servers.errorDeleting"),
-            list: [e.message],
-          }),
+          setErrorData({ title: t("mcp.servers.errorDeleting"), list: [e.message] }),
       },
     );
   };
@@ -134,9 +128,7 @@ export default function MCPServersPage() {
                             : t("mcp.servers.statusLoading")
                           : !server.toolsCount
                             ? t("mcp.servers.statusNoTools")
-                            : t("mcp.servers.toolsCount", {
-                                count: server.toolsCount,
-                              })}
+                            : t("mcp.servers.toolsCount", { count: server.toolsCount })}
                       </span>
                     </ShadTooltip>
                   </div>

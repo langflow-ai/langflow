@@ -189,7 +189,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isBuilding: false });
     get().revertBuiltStatusFromBuilding();
     useAlertStore.getState().setErrorData({
-      title: "Build stopped",
+      title: (i18n as any).t("alerts.buildStopped"),
     });
   },
   isPending: true,
@@ -1352,15 +1352,18 @@ export function syncNodeTranslations(): void {
   const { nodes } = useFlowStore.getState();
   if (nodes.length === 0) return;
 
-  const { data: typesData, types, templates } = useTypesStore.getState();
+  const {
+    data: typesData,
+    types,
+    templates,
+    componentDisplayNames,
+  } = useTypesStore.getState();
 
   // Build normalized lookup: normalize(registryKey) → registryKey
   // This lets us find "Prompt Template" in the registry when nodeType is "PromptTemplate".
   const normalizedToRegistryKey: Record<string, string> = {};
   for (const category of Object.values(typesData)) {
-    for (const registryKey of Object.keys(
-      category as Record<string, unknown>,
-    )) {
+    for (const registryKey of Object.keys(category as Record<string, unknown>)) {
       normalizedToRegistryKey[normalizeComponentKey(registryKey)] = registryKey;
     }
   }
@@ -1377,25 +1380,32 @@ export function syncNodeTranslations(): void {
 
     // Resolve category: try exact match first, then normalized match
     const category =
-      types[nodeType] ??
-      types[normalizedToRegistryKey[normalizeComponentKey(nodeType)] ?? ""];
+      types[nodeType] ?? types[normalizedToRegistryKey[normalizeComponentKey(nodeType)] ?? ""];
 
     // Resolve registry key: exact match first, then normalized match
     const registryKey =
       typesData[category]?.[nodeType] !== undefined
         ? nodeType
-        : (normalizedToRegistryKey[normalizeComponentKey(nodeType)] ??
-          nodeType);
+        : (normalizedToRegistryKey[normalizeComponentKey(nodeType)] ?? nodeType);
 
     // Resolve definition: normal path first, then fall back to templates which
     // has legacy aliases pre-resolved (e.g. "Prompt" → Prompt Template definition,
     // "parser" → ParserComponent definition).
     const freshDef =
-      category && typesData[category]?.[registryKey]
+      (category && typesData[category]?.[registryKey])
         ? typesData[category][registryKey]
         : templates[nodeType];
 
     if (!freshDef) return node;
+
+    // Determine whether display_name / description are default (safe to translate)
+    // or user-customized (leave alone). A value is "default" if it appears in the
+    // known-translations set for this component type across any supported locale.
+    const normKey = normalizeComponentKey(nodeType);
+    const knownNames = componentDisplayNames[normKey]?.display_name ?? [];
+    const knownDescs = componentDisplayNames[normKey]?.description ?? [];
+    const shouldTranslateName = knownNames.includes(node.data.node!.display_name);
+    const shouldTranslateDesc = knownDescs.includes(node.data.node!.description);
 
     // Update input field display_names, info (tooltips), and placeholders
     const updatedTemplate = { ...node.data.node!.template };
@@ -1433,6 +1443,8 @@ export function syncNodeTranslations(): void {
         ...node.data,
         node: {
           ...node.data.node!,
+          ...(shouldTranslateName && { display_name: freshDef.display_name }),
+          ...(shouldTranslateDesc && { description: freshDef.description }),
           template: updatedTemplate,
           ...(updatedOutputs && { outputs: updatedOutputs }),
         },
@@ -1448,9 +1460,13 @@ export function syncNodeTranslations(): void {
  * Called from NoteNode when note_translations endpoint data arrives.
  * translations is a map of node_id → translated markdown text.
  */
+<<<<<<< HEAD
 export function syncNoteTranslations(
   translations: Record<string, string>,
 ): void {
+=======
+export function syncNoteTranslations(translations: Record<string, string>): void {
+>>>>>>> origin/feat/gp-frontend-i18n-batch-c
   const { nodes } = useFlowStore.getState();
   const updatedNodes = nodes.map((node) => {
     if (node.type !== "noteNode") return node;

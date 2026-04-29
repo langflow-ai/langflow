@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import BaseModal from "../../modals/baseModal";
 
 export default function DeleteAccountPage() {
+  const { t } = useTranslation();
   const [showConfirmation, setShowConfirmation] = useState(false);
 
   const handleDeleteAccount = () => {
@@ -25,7 +27,7 @@ export default function DeleteAccountPage() {
         <span className="mb-4 text-center text-2xl font-semibold text-primary">
           Delete your account
         </span>
-        <Input className="bg-background" placeholder="Confirm password" />
+        <Input className="bg-background" placeholder={t("auth.confirmPassword")} />
 
         <BaseModal
           open={showConfirmation}

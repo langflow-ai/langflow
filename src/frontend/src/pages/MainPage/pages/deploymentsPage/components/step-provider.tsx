@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
@@ -60,6 +61,7 @@ function EnvironmentList({
   selectedEnvironment: ProviderAccount | null;
   onSelectEnvironment: (environment: ProviderAccount) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-3">
       <span className="text-sm text-muted-foreground">
@@ -67,7 +69,7 @@ function EnvironmentList({
       </span>
       <div
         role="radiogroup"
-        aria-label="Existing environments"
+        aria-label={t("deployments.ariaExistingEnvironments")}
         className="flex flex-col gap-3"
       >
         {environments.map((environment) => {
@@ -100,6 +102,7 @@ function EnvironmentList({
 }
 
 export default function StepProvider() {
+  const { t } = useTranslation();
   const {
     setSelectedProvider,
     selectedInstance,
@@ -127,7 +130,7 @@ export default function StepProvider() {
 
   return (
     <div className="flex h-full w-full flex-col gap-6 overflow-y-auto py-3">
-      <h2 className="text-lg font-semibold">Provider</h2>
+      <h2 className="text-lg font-semibold">{t("deployments.provider")}</h2>
 
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">

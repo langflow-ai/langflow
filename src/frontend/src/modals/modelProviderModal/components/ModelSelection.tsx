@@ -47,8 +47,6 @@ const ModelRow = ({
         checked={enabled}
         onCheckedChange={(checked) => onToggle(model.model_name, checked)}
         data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
-        aria-label={`${enabled ? "Disable" : "Enable"} ${model.model_name}`}
-        stopPropagation
       />
     )}
   </div>
@@ -144,11 +142,7 @@ const ModelSelection = ({
         <>
           {modelType === "all" ? (
             <>
-              {renderModelSection(
-                t("modelProviders.languageModels"),
-                llmModels,
-                "llm",
-              )}
+              {renderModelSection(t("modelProviders.languageModels"), llmModels, "llm")}
               {renderModelSection(
                 t("modelProviders.embeddingModels"),
                 embeddingModels,
@@ -156,11 +150,7 @@ const ModelSelection = ({
               )}
             </>
           ) : modelType === "llm" ? (
-            renderModelSection(
-              t("modelProviders.languageModels"),
-              llmModels,
-              "llm",
-            )
+            renderModelSection(t("modelProviders.languageModels"), llmModels, "llm")
           ) : (
             renderModelSection(
               t("modelProviders.embeddingModels"),

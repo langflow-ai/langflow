@@ -21,7 +21,7 @@ import { usePatchMCPServer } from "@/controllers/API/queries/mcp/use-patch-mcp-s
 import { CustomLink } from "@/customization/components/custom-link";
 import BaseModal from "@/modals/baseModal";
 import IOKeyPairInput, {
-  type KeyPairRow,
+  KeyPairRow,
 } from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
 import IOKeyPairInputWithVariables from "@/modals/IOModal/components/IOFieldView/components/key-pair-input-with-variables";
 import type { MCPServerType } from "@/types/mcp";
@@ -54,31 +54,6 @@ const keyPairRowToObject = (arr: KeyPairRow[]): Record<string, string> => {
     }
     return obj;
   }, {});
-};
-
-const buildKeyPairPayload = (
-  rows: KeyPairRow[],
-  existing?: Record<string, string>,
-) => {
-  const nextValue = keyPairRowToObject(rows);
-  if (Object.keys(nextValue).length > 0) {
-    return nextValue;
-  }
-  if (existing && Object.keys(existing).length > 0) {
-    return {};
-  }
-  return undefined;
-};
-
-const buildArgsPayload = (args: string[], existing?: string[]) => {
-  const nextValue = args.filter((arg) => arg.trim() !== "");
-  if (nextValue.length > 0) {
-    return nextValue;
-  }
-  if (existing && existing.length > 0) {
-    return [];
-  }
-  return undefined;
 };
 
 export default function AddMcpServerModal({
@@ -186,14 +161,12 @@ export default function AddMcpServerModal({
         "no_blank",
         "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
-      const argsPayload = buildArgsPayload(stdioArgs, initialData?.args);
-      const envPayload = buildKeyPairPayload(stdioEnv, initialData?.env);
       try {
         await modifyMCPServer({
           name,
           command: stdioCommand,
-          ...(argsPayload !== undefined ? { args: argsPayload } : {}),
-          ...(envPayload !== undefined ? { env: envPayload } : {}),
+          args: stdioArgs.filter((a) => a.trim() !== ""),
+          env: keyPairRowToObject(stdioEnv),
         });
         if (!initialData) {
           await queryClient.setQueryData(
@@ -238,17 +211,12 @@ export default function AddMcpServerModal({
         "no_blank",
         "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
-      const envPayload = buildKeyPairPayload(httpEnv, initialData?.env);
-      const headersPayload = buildKeyPairPayload(
-        httpHeaders,
-        initialData?.headers,
-      );
       try {
         await modifyMCPServer({
           name,
+          env: keyPairRowToObject(httpEnv),
           url: httpUrl,
-          ...(envPayload !== undefined ? { env: envPayload } : {}),
-          ...(headersPayload !== undefined ? { headers: headersPayload } : {}),
+          headers: keyPairRowToObject(httpHeaders),
         });
         if (!initialData) {
           await queryClient.setQueryData(
@@ -287,9 +255,7 @@ export default function AddMcpServerModal({
         ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH),
       }));
     } catch (e: unknown) {
-      setError(
-        e instanceof Error ? e.message : t("mcp.modal.errorNoServerFound"),
-      );
+      setError(e instanceof Error ? e.message : t("mcp.modal.errorNoServerFound"));
       return;
     }
     if (servers.length === 0) {
@@ -328,7 +294,7 @@ export default function AddMcpServerModal({
       setOpen={setOpen}
       size="x-small-h-full"
       onSubmit={submitForm}
-      className="!p-0 min-h-[250px] max-h-[75vh] flex-grow"
+      className="!p-0 min-h-[250px] flex-grow"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content className="flex flex-1 flex-col overflow-hidden min-h-0">
@@ -340,9 +306,7 @@ export default function AddMcpServerModal({
                 className="h-4 w-4 text-primary"
                 aria-hidden="true"
               />
-              {initialData
-                ? t("mcp.modal.updateTitle")
-                : t("mcp.modal.addTitle")}
+              {initialData ? t("mcp.modal.updateTitle") : t("mcp.modal.addTitle")}
             </div>
             <span className="text-mmd font-normal text-muted-foreground">
               {isOnMcpSettingsPage ? (
@@ -396,7 +360,7 @@ export default function AddMcpServerModal({
               </TabsList>
             </div>
             <div
-              className="flex w-full flex-1 flex-col overflow-y-auto border-y p-4 min-h-0"
+              className="flex w-full flex-1 flex-col border-y p-4 min-h-0"
               id="global-variable-modal-inputs"
             >
               {error && (
@@ -405,9 +369,7 @@ export default function AddMcpServerModal({
                 </div>
               )}
               <TabsContent value="JSON" className="flex flex-col p-0 m-0">
-                <Label className="!text-mmd mb-2">
-                  {t("mcp.modal.jsonTabLabel")}
-                </Label>
+                <Label className="!text-mmd mb-2">{t("mcp.modal.jsonTabLabel")}</Label>
                 <Textarea
                   value={jsonValue}
                   data-testid="json-input"
@@ -424,8 +386,7 @@ export default function AddMcpServerModal({
                 <div className="flex h-full flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
-                      {t("mcp.modal.fieldName")}{" "}
-                      <span className="text-destructive">*</span>
+                      {t("mcp.modal.fieldName")} <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={stdioName}
@@ -437,8 +398,7 @@ export default function AddMcpServerModal({
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
-                      {t("mcp.modal.fieldCommand")}
-                      <span className="text-destructive">*</span>
+                      {t("mcp.modal.fieldCommand")}<span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={stdioCommand}
@@ -449,9 +409,7 @@ export default function AddMcpServerModal({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">
-                      {t("mcp.modal.fieldArguments")}
-                    </Label>
+                    <Label className="!text-mmd">{t("mcp.modal.fieldArguments")}</Label>
                     <InputListComponent
                       value={stdioArgs}
                       handleOnNewValue={({ value }) => setStdioArgs(value)}
@@ -464,9 +422,7 @@ export default function AddMcpServerModal({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">
-                      {t("mcp.modal.fieldEnvironmentVariables")}
-                    </Label>
+                    <Label className="!text-mmd">{t("mcp.modal.fieldEnvironmentVariables")}</Label>
                     <IOKeyPairInput
                       value={stdioEnv}
                       onChange={setStdioEnv}
@@ -485,8 +441,7 @@ export default function AddMcpServerModal({
                 <div className="flex h-full flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
-                      {t("mcp.modal.fieldName")}
-                      <span className="text-destructive">*</span>
+                      {t("mcp.modal.fieldName")}<span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={httpName}
@@ -510,9 +465,7 @@ export default function AddMcpServerModal({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">
-                      {t("mcp.modal.fieldHeaders")}
-                    </Label>
+                    <Label className="!text-mmd">{t("mcp.modal.fieldHeaders")}</Label>
                     <IOKeyPairInputWithVariables
                       value={httpHeaders}
                       onChange={setHttpHeaders}
@@ -524,9 +477,7 @@ export default function AddMcpServerModal({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">
-                      {t("mcp.modal.fieldEnvironmentVariables")}
-                    </Label>
+                    <Label className="!text-mmd">{t("mcp.modal.fieldEnvironmentVariables")}</Label>
                     <IOKeyPairInput
                       value={httpEnv}
                       onChange={setHttpEnv}
@@ -541,11 +492,9 @@ export default function AddMcpServerModal({
             </div>
           </Tabs>
         </div>
-        <div className="flex shrink-0 justify-end gap-2 p-4">
+        <div className="flex justify-end gap-2 p-4">
           <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-            <span className="text-mmd font-normal">
-              {t("mcp.modal.cancelButton")}
-            </span>
+            <span className="text-mmd font-normal">{t("mcp.modal.cancelButton")}</span>
           </Button>
           <Button
             size="sm"
@@ -554,9 +503,7 @@ export default function AddMcpServerModal({
             loading={isPending}
           >
             <span className="text-mmd">
-              {initialData
-                ? t("mcp.modal.updateServerButton")
-                : t("mcp.modal.addServerButton")}
+              {initialData ? t("mcp.modal.updateServerButton") : t("mcp.modal.addServerButton")}
             </span>
           </Button>
         </div>

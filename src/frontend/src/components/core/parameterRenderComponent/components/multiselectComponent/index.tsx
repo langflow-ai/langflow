@@ -147,7 +147,7 @@ export default function MultiselectComponent({
         onChange={(event) => {
           setSearchValue(event.target.value);
         }}
-        placeholder="Search options..."
+        placeholder={t("input.searchOptions")}
         className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
       />
       <Button

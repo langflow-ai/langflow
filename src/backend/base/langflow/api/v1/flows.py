@@ -34,15 +34,11 @@ from langflow.api.v1.flows_helpers import (
     _upsert_flow_list,
     _verify_fs_path,
 )
-from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.cache.service import ThreadingInMemoryCache
-from langflow.services.database.models.deployment.exceptions import (
-    araise_if_deployment_guard_error_or_skip,
-)
 from langflow.services.database.models.flow.model import (
     AccessTypeEnum,
     Flow,
@@ -53,7 +49,7 @@ from langflow.services.database.models.flow.model import (
 )
 
 # TODO: Full-version import/export is planned as a follow-up feature. When implemented,
-# re-add imports for create_flow_version_entry, get_flow_versions_with_provider_status, strip_version_data,
+# re-add imports for create_flow_version_entry, get_flow_version_list, strip_version_data,
 # and FlowVersionError from the flow_version modules.
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
@@ -256,40 +252,16 @@ async def update_flow(
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
 
-        # Explicit folder_id=None is ignored here because _patch_flow builds
-        # update_data with exclude_none=True, so null folder_id is a no-op.
-        folder_id_will_change = (
-            "folder_id" in flow.model_fields_set and flow.folder_id is not None and flow.folder_id != db_flow.folder_id
+        return await _patch_flow(
+            session=session,
+            db_flow=db_flow,
+            flow=flow,
+            user_id=current_user.id,
+            storage_service=storage_service,
         )
-
-        async def operation() -> FlowRead:
-            # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
-            db_flow_for_attempt = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
-            if not db_flow_for_attempt:
-                raise HTTPException(status_code=404, detail="Flow not found")
-            return await _patch_flow(
-                session=session,
-                db_flow=db_flow_for_attempt,
-                flow=flow,
-                user_id=current_user.id,
-                storage_service=storage_service,
-            )
-
-        if folder_id_will_change:
-            return await retry_flow_operation_on_deployment_guard(
-                db=session,
-                user_id=current_user.id,
-                flow_ids=[flow_id],
-                operation=operation,
-            )
-        return await operation()
     except HTTPException:
         raise
     except Exception as e:
-        await araise_if_deployment_guard_error_or_skip(
-            e,
-            log_message=f"op=update_flow flow_id={flow_id}",
-        )
         raise _handle_unique_constraint_error(e) from e
 
 
@@ -317,37 +289,14 @@ async def upsert_flow(
             if existing_flow.user_id != current_user.id:
                 raise HTTPException(status_code=404, detail="Flow not found")
 
-            # Sync deployment state before folder changes
-            # Explicit folder_id=None is ignored here because _update_existing_flow
-            # also uses exclude_none=True for update_data.
-            folder_id_will_change = (
-                "folder_id" in flow.model_fields_set
-                and flow.folder_id is not None
-                and flow.folder_id != existing_flow.folder_id
+            # UPDATE path
+            flow_read = await _update_existing_flow(
+                session=session,
+                existing_flow=existing_flow,
+                flow=flow,
+                current_user=current_user,
+                storage_service=storage_service,
             )
-
-            async def update_operation() -> FlowRead:
-                # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
-                existing_flow_for_attempt = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
-                if existing_flow_for_attempt is None:
-                    raise HTTPException(status_code=404, detail="Flow not found")
-                return await _update_existing_flow(
-                    session=session,
-                    existing_flow=existing_flow_for_attempt,
-                    flow=flow,
-                    current_user=current_user,
-                    storage_service=storage_service,
-                )
-
-            if folder_id_will_change:
-                flow_read = await retry_flow_operation_on_deployment_guard(
-                    db=session,
-                    user_id=current_user.id,
-                    flow_ids=[existing_flow.id],
-                    operation=update_operation,
-                )
-            else:
-                flow_read = await update_operation()
             status_code = 200
         else:
             # CREATE path - flow doesn't exist
@@ -367,10 +316,6 @@ async def upsert_flow(
     except HTTPException:
         raise
     except Exception as e:
-        await araise_if_deployment_guard_error_or_skip(
-            e,
-            log_message=f"op=upsert_flow flow_id={flow_id}",
-        )
         raise _handle_unique_constraint_error(e, status_code=409) from e
 
 
@@ -389,12 +334,7 @@ async def delete_flow(
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
-    await retry_flow_operation_on_deployment_guard(
-        db=session,
-        user_id=current_user.id,
-        flow_ids=[flow.id],
-        operation=lambda: cascade_delete_flow(session, flow.id),
-    )
+    await cascade_delete_flow(session, flow.id)
     return {"message": "Flow deleted successfully"}
 
 
@@ -502,35 +442,19 @@ async def delete_multiple_flows(
 ):
     """Delete multiple flows by their IDs."""
     try:
+        flows_to_delete = (
+            await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
+        ).all()
+        for flow in flows_to_delete:
+            await cascade_delete_flow(db, flow.id)
 
-        async def _delete_operation() -> int:
-            if not flow_ids:
-                return 0
-            flows_to_delete = (
-                await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
-            ).all()
-            for flow in flows_to_delete:
-                await cascade_delete_flow(db, flow.id)
-            await db.flush()
-            return len(flows_to_delete)
-
-        deleted_count = await retry_flow_operation_on_deployment_guard(
-            db=db,
-            user_id=user.id,
-            flow_ids=flow_ids,
-            operation=_delete_operation,
-        )
+        await db.flush()
+        return {"deleted": len(flows_to_delete)}
     except Exception as exc:
-        await araise_if_deployment_guard_error_or_skip(
-            exc,
-            log_message=f"op=delete_multiple_flows flow_ids_count={len(flow_ids)}",
-        )
         import logging as _logging
 
         _logging.getLogger(__name__).exception("Error deleting multiple flows")
         raise HTTPException(status_code=500, detail="An internal error occurred while deleting flows.") from exc
-
-    return {"deleted": deleted_count}
 
 
 @router.post("/download/", status_code=200)
@@ -542,7 +466,7 @@ async def download_multiple_file(
     """Download all flows as a zip file."""
     # TODO: Full-version download (include_version parameter) is planned as a follow-up feature.
     # When implemented, add an include_version: bool = False parameter and embed version
-    # entries in each flow dict using get_flow_versions_with_provider_status and strip_version_data.
+    # entries in each flow dict using get_flow_version_list and strip_version_data.
     flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
 
     if not flows:
@@ -589,7 +513,9 @@ async def read_basic_examples(
         cached_flow_reads = _starter_flows_cache.get("starter_flows")
         if cached_flow_reads is CACHE_MISS:
             try:
-                starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
+                starter_folder = (
+                    await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))
+                ).first()
 
                 if not starter_folder:
                     return compress_response([])
@@ -607,7 +533,9 @@ async def read_basic_examples(
                 import logging as _logging
 
                 _logging.getLogger(__name__).exception("Error loading basic examples")
-                raise HTTPException(status_code=500, detail="An internal error occurred while loading examples.") from e
+                raise HTTPException(
+                    status_code=500, detail="An internal error occurred while loading examples."
+                ) from e
 
         # Translate once per locale and cache the result
         # Why: cached uncompressed so the same result can be re-compressed per

@@ -289,11 +289,7 @@ export default function InputFileComponent({
                             strokeWidth={ICON_STROKE_WIDTH}
                           />
                         ) : (
-                          <div>
-                            {isList
-                              ? t("fileManager.selectFiles")
-                              : t("fileManager.selectFile")}
-                          </div>
+                          <div>{isList ? t("fileManager.selectFiles") : t("fileManager.selectFile")}</div>
                         )}
                       </Button>
                     </div>

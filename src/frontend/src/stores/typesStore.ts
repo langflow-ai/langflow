@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { APIDataType } from "../types/api";
+import type { APIDataType, ComponentDisplayNamesType } from "../types/api";
 import type { TypesStoreType } from "../types/zustand/types";
 import {
   extractSecretFieldsFromComponents,
@@ -37,5 +37,9 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
       typeof change === "function" ? change(get().data) : change;
     set({ data: newChange });
     get().setComponentFields(extractSecretFieldsFromComponents(newChange));
+  },
+  componentDisplayNames: {} as ComponentDisplayNamesType,
+  setComponentDisplayNames: (data: ComponentDisplayNamesType) => {
+    set({ componentDisplayNames: data });
   },
 }));

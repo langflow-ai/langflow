@@ -14,7 +14,6 @@ import {
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -818,14 +817,9 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                                 className="h-4 w-4"
                               />
                             </span>
-                            <ShadTooltip
-                              content={t("sidebar.discoverMore")}
-                              styleClasses="z-50"
-                            >
-                              <span className="min-w-0 truncate">
-                                {t("sidebar.discoverMore")}
-                              </span>
-                            </ShadTooltip>
+                            <span className="min-w-0 truncate">
+                              {t("sidebar.discoverMore")}
+                            </span>
                           </Button>
                         )}
                       </>

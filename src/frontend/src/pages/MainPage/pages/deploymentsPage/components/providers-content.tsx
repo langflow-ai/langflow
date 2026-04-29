@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,14 +27,15 @@ interface ProvidersContentProps {
 }
 
 function ProvidersLoadingSkeleton() {
+  const { t } = useTranslation();
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>URL</TableHead>
-          <TableHead>Provider Key</TableHead>
-          <TableHead>Created</TableHead>
+          <TableHead>{t("deployments.columnName")}</TableHead>
+          <TableHead>{t("deployments.columnUrl")}</TableHead>
+          <TableHead>{t("deployments.columnProviderKey")}</TableHead>
+          <TableHead>{t("deployments.columnCreated")}</TableHead>
           <TableHead className="w-10" />
         </TableRow>
       </TableHeader>
@@ -63,9 +65,10 @@ function ProvidersLoadingSkeleton() {
 }
 
 function ProvidersEmptyState({ onAddProvider }: { onAddProvider: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center py-24">
-      <h3 className="text-lg font-semibold">No Environments</h3>
+      <h3 className="text-lg font-semibold">{t("deployments.noEnvironments")}</h3>
       <p className="mt-1 text-sm text-muted-foreground">
         Add your first environment to start deploying your flows.
       </p>

@@ -82,7 +82,7 @@ const ExportModal = forwardRef(
               );
 
               setSuccessData({
-                title: "Flow exported successfully",
+                title: t("success.flowExported", { name }),
               });
               setOpen(false);
               track("Flow Exported", { flowId: currentFlow!.id });
@@ -90,7 +90,7 @@ const ExportModal = forwardRef(
           } catch (error: any) {
             const detail = error?.response?.data?.detail;
             setErrorData({
-              title: "Failed to export flow",
+              title: t("errors.failedToExportFlow"),
               ...(detail ? { list: [detail] } : {}),
             });
           }
