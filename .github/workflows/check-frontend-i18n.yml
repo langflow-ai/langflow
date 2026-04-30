@@ -1,0 +1,38 @@
+name: Check Frontend i18n Key Coverage
+
+on:
+  pull_request:
+    paths:
+      - "src/frontend/src/**/*.ts"
+      - "src/frontend/src/**/*.tsx"
+      - "src/frontend/src/locales/en.json"
+
+jobs:
+  check-i18n-keys:
+    name: Verify all t() keys exist in en.json
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check i18n key coverage
+        run: |
+          python scripts/gp/check_frontend_i18n_keys.py --report i18n-report.md
+          echo "EXIT_CODE=$?" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: Post report as PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: i18n-key-coverage
+          path: i18n-report.md
+
+      - name: Fail if keys are missing
+        if: env.EXIT_CODE != '0'
+        run: exit 1
