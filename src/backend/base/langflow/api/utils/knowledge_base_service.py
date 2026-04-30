@@ -41,12 +41,55 @@ class _UnsetType:
 _UNSET = _UnsetType()
 
 
+def get_embedding_provider(model_selection: Any) -> str:
+    """Extract the provider name from a ``model_selection`` payload.
+
+    ``model_selection`` is the canonical source of truth for embedding
+    config on a KB; this helper centralizes the "what provider is this
+    KB on" lookup so the answer doesn't drift between callers.
+
+    Accepts the persisted dict shape (``{"name": ..., "provider": ...}``),
+    the list-wrapped shape used by some unified-models entry points, or
+    ``None``. Returns ``"Unknown"`` when nothing usable is present so
+    list-style API responses can render a stable column.
+    """
+    selection = _coerce_model_dict(model_selection)
+    if not selection:
+        return "Unknown"
+    provider = selection.get("provider")
+    return str(provider).strip() if provider else "Unknown"
+
+
+def get_embedding_model(model_selection: Any) -> str:
+    """Extract the model name from a ``model_selection`` payload.
+
+    Counterpart to :func:`get_embedding_provider`. Returns ``""`` (rather
+    than ``"Unknown"``) on missing input — call sites distinguish
+    "model unknown" (display-only) from "model missing" (don't try to
+    instantiate embeddings).
+    """
+    selection = _coerce_model_dict(model_selection)
+    if not selection:
+        return ""
+    name = selection.get("name")
+    return str(name).strip() if name else ""
+
+
+def _coerce_model_dict(model_selection: Any) -> dict[str, Any] | None:
+    """Coerce ``model_selection`` to the canonical single-dict form."""
+    if model_selection is None:
+        return None
+    if isinstance(model_selection, list):
+        return model_selection[0] if model_selection else None
+    if isinstance(model_selection, dict):
+        return model_selection
+    return None
+
+
 async def create_record(
     *,
     user_id: UUID,
     name: str,
-    embedding_provider: str,
-    embedding_model: str,
     model_selection: dict[str, Any] | list[dict[str, Any]] | None = None,
     chunk_size: int = 1000,
     chunk_overlap: int = 200,
@@ -63,17 +106,18 @@ async def create_record(
 ) -> KnowledgeBaseRecord:
     """Insert a new KB record. Caller should already hold the name lock.
 
-    ``model_selection`` is normalized to a single dict — the unified
-    models API accepts both shapes in other places, but persisting the
-    canonical form makes reads simpler.
+    ``model_selection`` is the single source of truth for embedding
+    config — the legacy ``embedding_provider`` / ``embedding_model``
+    flat columns were dropped in favor of the
+    :func:`get_embedding_provider` / :func:`get_embedding_model` helpers
+    that read from ``model_selection``. Callers that previously passed
+    those two params now just supply ``model_selection``.
     """
     normalized_selection = _normalize_model_selection(model_selection)
     record = KnowledgeBaseRecord(
         id=record_id or uuid4(),
         name=name,
         user_id=user_id,
-        embedding_provider=embedding_provider,
-        embedding_model=embedding_model,
         model_selection=normalized_selection,
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
@@ -281,8 +325,12 @@ def record_to_metadata_dict(record: KnowledgeBaseRecord) -> dict[str, Any]:
     return {
         "id": str(record.id),
         "name": record.name,
-        "embedding_provider": record.embedding_provider,
-        "embedding_model": record.embedding_model,
+        # Flat fields are derived views over ``model_selection`` — kept
+        # in the response shape for API back-compat (the frontend reads
+        # ``embedding_provider`` / ``embedding_model`` as flat keys),
+        # but the canonical source of truth is ``model_selection``.
+        "embedding_provider": get_embedding_provider(record.model_selection),
+        "embedding_model": get_embedding_model(record.model_selection),
         "model_selection": record.model_selection or None,
         "chunk_size": record.chunk_size,
         "chunk_overlap": record.chunk_overlap,
@@ -368,21 +416,28 @@ async def backfill_from_disk(
             backend_type = str(metadata.get("backend_type") or "chroma")
             backend_config_raw = metadata.get("backend_config") or {}
             backend_config = backend_config_raw if isinstance(backend_config_raw, dict) else {}
-            # When legacy metadata only recorded the embedding model,
-            # reuse the pure-string inference helper shipped by #12417
-            # so backfilled rows get a non-"Unknown" provider whenever
-            # the model name is recognizable (e.g. ``text-embedding-3-small`` → ``OpenAI``).
-            embedding_model_raw = str(metadata.get("embedding_model") or "Unknown")
-            provider_raw = str(metadata.get("embedding_provider") or "Unknown")
-            if provider_raw == "Unknown" and embedding_model_raw != "Unknown":
-                provider_raw = infer_embedding_provider(embedding_model_raw)
+            # Synthesise ``model_selection`` from legacy flat fields
+            # when the on-disk metadata predates the unified-models
+            # work. Reuse :func:`infer_embedding_provider` (#12417) so
+            # backfilled rows get a non-"Unknown" provider whenever the
+            # model name is recognizable
+            # (e.g. ``text-embedding-3-small`` → ``OpenAI``).
+            normalized_selection = _normalize_model_selection(model_selection)
+            if not normalized_selection:
+                embedding_model_raw = str(metadata.get("embedding_model") or "")
+                provider_raw = str(metadata.get("embedding_provider") or "Unknown")
+                if provider_raw == "Unknown" and embedding_model_raw:
+                    provider_raw = infer_embedding_provider(embedding_model_raw)
+                if embedding_model_raw or provider_raw != "Unknown":
+                    normalized_selection = {
+                        "name": embedding_model_raw,
+                        "provider": provider_raw,
+                    }
 
             await create_record(
                 user_id=user_id,
                 name=name,
-                embedding_provider=provider_raw,
-                embedding_model=embedding_model_raw,
-                model_selection=model_selection,
+                model_selection=normalized_selection,
                 chunk_size=int(metadata.get("chunk_size") or 1000),
                 chunk_overlap=int(metadata.get("chunk_overlap") or 200),
                 separator=metadata.get("separator"),

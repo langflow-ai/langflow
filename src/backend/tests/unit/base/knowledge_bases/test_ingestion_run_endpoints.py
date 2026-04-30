@@ -59,8 +59,10 @@ async def _ensure_kb_record(*, user_id: uuid.UUID, kb_name: str) -> uuid.UUID:
     record = await knowledge_base_service.create_record(
         user_id=user_id,
         name=kb_name,
-        embedding_provider="HuggingFace",
-        embedding_model="sentence-transformers/all-MiniLM-L6-v2",
+        model_selection={
+            "name": "sentence-transformers/all-MiniLM-L6-v2",
+            "provider": "HuggingFace",
+        },
     )
     return record.id
 

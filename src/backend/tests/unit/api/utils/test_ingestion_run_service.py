@@ -314,8 +314,7 @@ class TestRunRowProjection:
         kb_record = await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="kb_indexed",
-            embedding_provider="HuggingFace",
-            embedding_model="model",
+            model_selection={"name": "model", "provider": "HuggingFace"},
         )
 
         # Job linked to the KB record via asset_id — should be returned.

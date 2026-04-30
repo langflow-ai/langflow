@@ -52,8 +52,11 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("name", AutoString(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
-        sa.Column("embedding_provider", AutoString(), nullable=False),
-        sa.Column("embedding_model", AutoString(), nullable=False),
+        # ``model_selection`` is the single source of truth for
+        # embedding config; the legacy flat columns
+        # (``embedding_provider`` / ``embedding_model``) were never
+        # shipped — derived views over ``model_selection`` are exposed
+        # via helpers instead.
         sa.Column("model_selection", JsonVariant, nullable=False),
         sa.Column("chunk_size", sa.Integer(), nullable=False, server_default="1000"),
         sa.Column("chunk_overlap", sa.Integer(), nullable=False, server_default="200"),

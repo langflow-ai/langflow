@@ -550,12 +550,20 @@ async def create_knowledge_base(
         # partial success. Roll back the on-disk state and surface a
         # 500 regardless of backend type.
         try:
+            # ``model_selection`` is the canonical source of truth for
+            # embedding config; the request still carries
+            # ``embedding_provider`` / ``embedding_model`` as flat
+            # convenience fields (frontend back-compat) but those are
+            # derived views — folded into ``model_selection`` here
+            # when the request didn't carry one of its own.
+            persisted_selection = request.model_selection or {
+                "name": request.embedding_model,
+                "provider": request.embedding_provider,
+            }
             await knowledge_base_service.create_record(
                 user_id=current_user.id,
                 name=kb_name,
-                embedding_provider=request.embedding_provider,
-                embedding_model=request.embedding_model,
-                model_selection=request.model_selection,
+                model_selection=persisted_selection,
                 column_config=column_config_dicts or [],
                 backend_type=backend_type_value,
                 backend_config=backend_config_value,

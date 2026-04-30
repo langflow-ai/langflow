@@ -428,13 +428,10 @@ class KnowledgeIngestionComponent(Component):
         except ImportError:
             return
 
-        model_dict = model_selection[0] if isinstance(model_selection, list) else model_selection
         try:
             await knowledge_base_service.create_record(
                 user_id=user_id,
                 name=name,
-                embedding_provider=model_dict.get("provider", "Unknown"),
-                embedding_model=model_dict.get("name", ""),
                 model_selection=model_selection,
                 column_config=self.column_config if isinstance(self.column_config, list) else [],
                 backend_type=backend_type,
