@@ -374,7 +374,11 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMi
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
-        _reject_secret_in_non_password_field(v, info)
+        # SecretStr-rejection is handled by `_reject_credential_in_non_password`
+        # (model_validator below) instead of the field-level helper. Subclasses
+        # such as MultilineInput declare `password` after `value` in field
+        # order, so `info.data["password"]` is not yet populated when this
+        # validator runs — checking it here would always reject.
         if isinstance(v, SecretStr):
             return v
         value: str | AsyncIterator | Iterator | None = None
@@ -402,6 +406,28 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMi
             msg = f"Invalid value type {type(v)}"
             raise ValueError(msg)  # noqa: TRY004
         return value
+
+    @model_validator(mode="after")
+    def _reject_credential_in_non_password(self):
+        """Reject Credential-typed global variables unless the field is a password field.
+
+        Runs after all fields (including subclass-declared `password`) are set, so it
+        observes the correct value of `password` regardless of where in the MRO it is
+        declared. The equivalent field-level check on `value` cannot see `password`
+        when subclasses (e.g. MultilineInput, MultilineSecretInput) add it after the
+        inherited `value` field.
+        """
+        if isinstance(self.value, SecretStr) and not getattr(self, "password", False):
+            input_name = getattr(self, "name", "<unknown>")
+            msg = (
+                f"Cannot use a Credential-typed global variable in '{input_name}'. "
+                "Credential variables are only allowed in secret fields (API keys, tokens, etc.) "
+                "to prevent the value from being exposed in component outputs, logs, or traces. "
+                "Either select a Generic-typed variable, or change this variable's type to Generic "
+                "if it is not actually sensitive."
+            )
+            raise ValueError(msg)
+        return self
 
 
 class MultilineInput(MessageTextInput, AIMixin, MultilineMixin, InputTraceMixin, ToolModeMixin):

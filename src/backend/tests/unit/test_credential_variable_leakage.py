@@ -33,7 +33,7 @@ from pydantic import SecretStr, ValidationError
 # Sentinel used as a stand-in for a "real" CREDENTIAL global variable's value.
 # Tests assert this string never appears in error messages, attributes, or
 # stringified output of any object derived from it.
-_LEAKY_SECRET = "super-secret-value-XYZ"  # noqa: S105 — fixture sentinel.
+_LEAKY_SECRET = "super-secret-value-XYZ"  # noqa: S105 — fixture sentinel.  # pragma: allowlist secret
 
 
 def _patch_resolution(get_variable_return):
@@ -128,7 +128,7 @@ async def test_credential_variable_in_password_field_preserves_runtime_string_co
 
     resolved = await _resolve(
         component,
-        params={"api_key": "MY_SECRET_VAR"},
+        params={"api_key": "MY_SECRET_VAR"},  # pragma: allowlist secret
         load_from_db_fields=["api_key"],
         get_variable_return=SecretStr(_LEAKY_SECRET),
     )
@@ -170,3 +170,29 @@ async def test_generic_variable_still_flows_into_text_input():
 
     component.set_attributes(resolved)
     assert component._attributes["input_value"] == plain_value
+
+
+@pytest.mark.asyncio
+async def test_credential_variable_accepted_when_use_global_variable_toggled_on():
+    """Credential variable is accepted when 'Use Global Variable' toggle is on.
+
+    Toggling on TextInput re-types `input_value` via `update_build_config` to
+    `password=True, multiline=False`. A CREDENTIAL-typed variable must then be
+    accepted by validation, since the field is now a secret field. The original
+    bug: validation rejected it regardless of `password`, because
+    `MultilineInput` declares `password` after the inherited `value` field, so
+    the field-level check on `value` ran before `password` was populated in
+    `info.data`.
+    """
+    from lfx.inputs.inputs import MultilineInput
+
+    field = MultilineInput(name="input_value", value=SecretStr(_LEAKY_SECRET), password=True)
+    assert isinstance(field.value, SecretStr)
+    assert field.value.get_secret_value() == _LEAKY_SECRET
+
+    # And: with password=False (default), the same value is rejected.
+    with pytest.raises(ValidationError) as excinfo:
+        MultilineInput(name="input_value", value=SecretStr(_LEAKY_SECRET))
+    assert "Credential-typed global variable" in str(excinfo.value)
+    assert "input_value" in str(excinfo.value)
+    assert _LEAKY_SECRET not in str(excinfo.value)
