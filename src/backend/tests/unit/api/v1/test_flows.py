@@ -1,9 +1,80 @@
 import tempfile
 import uuid
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
+import jwt
+import pytest
 from fastapi import status
 from httpx import AsyncClient
+from langflow.services.deps import get_settings_service
+
+_FLOW_RBAC_TEST_SECRET = "flow-rbac-test-secret-with-enough-length"  # noqa: S105
+_FLOW_RBAC_EXTERNAL_HEADER = "X-Flow-External-Auth"
+
+
+def _external_flow_token(**claims) -> str:
+    payload = {
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+        **claims,
+    }
+    return jwt.encode(payload, _FLOW_RBAC_TEST_SECRET, algorithm="HS256")
+
+
+@pytest.fixture
+async def flow_rbac_settings(client):  # noqa: ARG001
+    auth_settings = get_settings_service().auth_settings
+    fields = (
+        "FLOW_RBAC_ENABLED",
+        "FLOW_RBAC_ROLE_CLAIM",
+        "FLOW_RBAC_GROUP_CLAIM",
+        "FLOW_RBAC_ADMIN_ROLES",
+        "FLOW_RBAC_ADMIN_GROUPS",
+        "FLOW_RBAC_LOCK_BYPASS_ROLES",
+        "FLOW_RBAC_LOCK_BYPASS_GROUPS",
+        "EXTERNAL_AUTH_ENABLED",
+        "EXTERNAL_AUTH_PROVIDER",
+        "EXTERNAL_AUTH_TOKEN_HEADER",
+        "EXTERNAL_AUTH_TOKEN_COOKIE",
+        "EXTERNAL_AUTH_IDENTITY_RESOLVER",
+        "EXTERNAL_AUTH_TRUSTED_JWT_DECODE",
+        "EXTERNAL_AUTH_JWKS_URL",
+        "EXTERNAL_AUTH_ISSUER",
+        "EXTERNAL_AUTH_AUDIENCE",
+        "EXTERNAL_AUTH_ALGORITHMS",
+        "EXTERNAL_AUTH_SUBJECT_CLAIM",
+        "EXTERNAL_AUTH_USERNAME_CLAIM",
+        "EXTERNAL_AUTH_EMAIL_CLAIM",
+        "EXTERNAL_AUTH_NAME_CLAIM",
+    )
+    original = {field: getattr(auth_settings, field) for field in fields}
+
+    auth_settings.FLOW_RBAC_ENABLED = True
+    auth_settings.FLOW_RBAC_ROLE_CLAIM = "roles"
+    auth_settings.FLOW_RBAC_GROUP_CLAIM = "groups"
+    auth_settings.FLOW_RBAC_ADMIN_ROLES = "flow-admin"
+    auth_settings.FLOW_RBAC_ADMIN_GROUPS = ""
+    auth_settings.FLOW_RBAC_LOCK_BYPASS_ROLES = ""
+    auth_settings.FLOW_RBAC_LOCK_BYPASS_GROUPS = ""
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "test-provider"
+    auth_settings.EXTERNAL_AUTH_TOKEN_HEADER = _FLOW_RBAC_EXTERNAL_HEADER
+    auth_settings.EXTERNAL_AUTH_TOKEN_COOKIE = None
+    auth_settings.EXTERNAL_AUTH_IDENTITY_RESOLVER = None
+    auth_settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    auth_settings.EXTERNAL_AUTH_JWKS_URL = None
+    auth_settings.EXTERNAL_AUTH_ISSUER = None
+    auth_settings.EXTERNAL_AUTH_AUDIENCE = None
+    auth_settings.EXTERNAL_AUTH_ALGORITHMS = "RS256"
+    auth_settings.EXTERNAL_AUTH_SUBJECT_CLAIM = "sub"
+    auth_settings.EXTERNAL_AUTH_USERNAME_CLAIM = "preferred_username"
+    auth_settings.EXTERNAL_AUTH_EMAIL_CLAIM = "email"
+    auth_settings.EXTERNAL_AUTH_NAME_CLAIM = "name"
+
+    yield auth_settings
+
+    for field, value in original.items():
+        setattr(auth_settings, field, value)
 
 
 async def _attach_deployment_to_flow(*, user_id: UUID, flow_id: UUID, project_id: UUID) -> None:
@@ -274,6 +345,145 @@ async def test_patch_flow_updates_access_and_action_fields(client: AsyncClient, 
     assert result["access_type"] == "PUBLIC"
     assert result["action_name"] == "shared_action"
     assert result["action_description"] == "Shared flow action"
+
+
+async def test_flow_rbac_user_acl_grants_view_then_edit(
+    client: AsyncClient,
+    logged_in_headers,
+    user_two,
+    flow_rbac_settings,  # noqa: ARG001
+):
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": "rbac_user_acl_flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    login_response = await client.post(
+        "api/v1/login",
+        data={"username": user_two.username, "password": "hashed_password"},
+    )
+    assert login_response.status_code == status.HTTP_200_OK
+    other_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+    read_response = await client.get(f"api/v1/flows/{flow_id}", headers=other_headers)
+    assert read_response.status_code == status.HTTP_404_NOT_FOUND
+
+    view_acl_response = await client.post(
+        f"api/v1/flows/{flow_id}/acl",
+        json={"subject_type": "user", "subject_id": str(user_two.id), "permission": "view"},
+        headers=logged_in_headers,
+    )
+    assert view_acl_response.status_code == status.HTTP_201_CREATED
+
+    read_response = await client.get(f"api/v1/flows/{flow_id}", headers=other_headers)
+    assert read_response.status_code == status.HTTP_200_OK
+
+    update_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"name": "rbac_user_acl_denied"},
+        headers=other_headers,
+    )
+    assert update_response.status_code == status.HTTP_403_FORBIDDEN
+
+    edit_acl_response = await client.post(
+        f"api/v1/flows/{flow_id}/acl",
+        json={"subject_type": "user", "subject_id": str(user_two.id), "permission": "edit"},
+        headers=logged_in_headers,
+    )
+    assert edit_acl_response.status_code == status.HTTP_201_CREATED
+
+    update_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"name": "rbac_user_acl_updated"},
+        headers=other_headers,
+    )
+    assert update_response.status_code == status.HTTP_200_OK
+    assert update_response.json()["name"] == "rbac_user_acl_updated"
+    assert update_response.json()["user_id"] == create_response.json()["user_id"]
+
+
+async def test_flow_rbac_role_acl_uses_external_claims(
+    client: AsyncClient,
+    logged_in_headers,
+    flow_rbac_settings,  # noqa: ARG001
+):
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": "rbac_role_acl_flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    acl_response = await client.post(
+        f"api/v1/flows/{flow_id}/acl",
+        json={"subject_type": "role", "subject_id": "analyst", "permission": "view"},
+        headers=logged_in_headers,
+    )
+    assert acl_response.status_code == status.HTTP_201_CREATED
+
+    token = _external_flow_token(
+        sub="analyst-subject",
+        preferred_username="analyst-user",
+        roles=["analyst"],
+    )
+    external_headers = {_FLOW_RBAC_EXTERNAL_HEADER: f"Bearer {token}"}
+
+    read_response = await client.get(f"api/v1/flows/{flow_id}", headers=external_headers)
+    assert read_response.status_code == status.HTTP_200_OK
+    assert read_response.json()["id"] == flow_id
+
+    update_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"name": "rbac_role_acl_denied"},
+        headers=external_headers,
+    )
+    assert update_response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_flow_rbac_locked_flow_requires_admin_role(
+    client: AsyncClient,
+    logged_in_headers,
+    flow_rbac_settings,  # noqa: ARG001
+):
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": "rbac_locked_flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    lock_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"locked": True},
+        headers=logged_in_headers,
+    )
+    assert lock_response.status_code == status.HTTP_200_OK
+    assert lock_response.json()["locked"] is True
+
+    owner_update_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"name": "rbac_locked_owner_denied"},
+        headers=logged_in_headers,
+    )
+    assert owner_update_response.status_code == status.HTTP_403_FORBIDDEN
+
+    token = _external_flow_token(
+        sub="admin-subject",
+        preferred_username="admin-user",
+        roles=["flow-admin"],
+    )
+    admin_update_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"name": "rbac_locked_admin_updated"},
+        headers={_FLOW_RBAC_EXTERNAL_HEADER: f"Bearer {token}"},
+    )
+    assert admin_update_response.status_code == status.HTTP_200_OK
+    assert admin_update_response.json()["name"] == "rbac_locked_admin_updated"
 
 
 async def test_create_flows(client: AsyncClient, logged_in_headers):

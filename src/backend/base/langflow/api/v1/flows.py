@@ -37,8 +37,13 @@ from langflow.api.v1.flows_helpers import (
 )
 from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.services.auth.flow_rbac import (
+    get_flow_principal,
+    has_flow_permission,
+    require_flow_permission,
+    viewable_flows_filter,
+)
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.models.deployment.exceptions import (
@@ -47,8 +52,12 @@ from langflow.services.database.models.deployment.exceptions import (
 from langflow.services.database.models.flow.model import (
     AccessTypeEnum,
     Flow,
+    FlowAccessControl,
+    FlowAccessControlCreate,
+    FlowAccessControlRead,
     FlowCreate,
     FlowHeader,
+    FlowPermission,
     FlowRead,
     FlowUpdate,
 )
@@ -58,6 +67,7 @@ from langflow.services.database.models.flow.model import (
 # and FlowVersionError from the flow_version modules.
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response
@@ -107,6 +117,7 @@ async def create_flow(
 @router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
 async def read_flows(
     *,
+    request: Request,
     current_user: CurrentActiveUser,
     session: DbSession,
     remove_example_flows: bool = False,
@@ -135,7 +146,10 @@ async def read_flows(
         if not folder_id:
             folder_id = default_folder_id
 
-        if auth_settings.AUTO_LOGIN:
+        if auth_settings.FLOW_RBAC_ENABLED:
+            principal = await get_flow_principal(request, current_user)
+            stmt = select(Flow).where(viewable_flows_filter(principal, auth_settings))
+        elif auth_settings.AUTO_LOGIN:
             stmt = select(Flow).where(
                 (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa: E711
             )
@@ -184,15 +198,20 @@ async def read_flows(
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 async def read_flow(
     *,
+    request: Request,
     session: DbSession,
     flow_id: UUID,
     current_user: CurrentActiveUser,
 ):
     """Read a flow."""
-    if user_flow := await _read_flow(session, flow_id, current_user.id):
-        # Convert to FlowRead while session is still active to avoid detached instance errors
-        return FlowRead.model_validate(user_flow, from_attributes=True)
-    raise HTTPException(status_code=404, detail="Flow not found")
+    principal = await get_flow_principal(request, current_user)
+    flow = await require_flow_permission(
+        session,
+        await session.get(Flow, flow_id),
+        principal,
+        FlowPermission.VIEW,
+    )
+    return FlowRead.model_validate(flow, from_attributes=True)
 
 
 @router.get("/{flow_id}/note_translations", dependencies=[Depends(get_current_active_user)], status_code=200)
@@ -235,16 +254,19 @@ async def read_public_flow(
 ):
     """Read a public flow."""
     access_type = (await session.exec(select(Flow.access_type).where(Flow.id == flow_id))).first()
-    if access_type is not AccessTypeEnum.PUBLIC:
+    if access_type != AccessTypeEnum.PUBLIC:
         raise HTTPException(status_code=403, detail="Flow is not public")
 
-    current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-    return await read_flow(session=session, flow_id=flow_id, current_user=current_user)
+    flow = await session.get(Flow, flow_id)
+    if flow is None:
+        raise HTTPException(status_code=404, detail="Flow not found")
+    return FlowRead.model_validate(flow, from_attributes=True)
 
 
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
 async def update_flow(
     *,
+    request: Request,
     session: DbSession,
     flow_id: UUID,
     flow: FlowUpdate,
@@ -253,9 +275,17 @@ async def update_flow(
 ):
     """Update a flow."""
     try:
-        db_flow = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
-        if not db_flow:
-            raise HTTPException(status_code=404, detail="Flow not found")
+        principal = await get_flow_principal(request, current_user)
+        required_permission = (
+            FlowPermission.MANAGE if {"locked", "access_type"} & flow.model_fields_set else FlowPermission.EDIT
+        )
+        db_flow = await require_flow_permission(
+            session,
+            await session.get(Flow, flow_id),
+            principal,
+            required_permission,
+        )
+        owner_id = db_flow.user_id or current_user.id
 
         # Explicit folder_id=None is ignored here because _patch_flow builds
         # update_data with exclude_none=True, so null folder_id is a no-op.
@@ -265,21 +295,24 @@ async def update_flow(
 
         async def operation() -> FlowRead:
             # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
-            db_flow_for_attempt = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
-            if not db_flow_for_attempt:
-                raise HTTPException(status_code=404, detail="Flow not found")
+            db_flow_for_attempt = await require_flow_permission(
+                session,
+                await session.get(Flow, flow_id),
+                principal,
+                required_permission,
+            )
             return await _patch_flow(
                 session=session,
                 db_flow=db_flow_for_attempt,
                 flow=flow,
-                user_id=current_user.id,
+                user_id=owner_id,
                 storage_service=storage_service,
             )
 
         if folder_id_will_change:
             return await retry_flow_operation_on_deployment_guard(
                 db=session,
-                user_id=current_user.id,
+                user_id=owner_id,
                 flow_ids=[flow_id],
                 operation=operation,
             )
@@ -297,6 +330,7 @@ async def update_flow(
 @router.put("/{flow_id}", response_model=FlowRead)
 async def upsert_flow(
     *,
+    request: Request,
     session: DbSession,
     flow_id: UUID,
     flow: FlowCreate,
@@ -310,13 +344,13 @@ async def upsert_flow(
     from fastapi.responses import JSONResponse
 
     try:
+        principal = await get_flow_principal(request, current_user)
         # Check if flow exists (without user filter to distinguish ownership vs CREATE)
         existing_flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
 
         if existing_flow is not None:
-            # Flow exists - check ownership (return 404 to avoid leaking resource existence)
-            if existing_flow.user_id != current_user.id:
-                raise HTTPException(status_code=404, detail="Flow not found")
+            await require_flow_permission(session, existing_flow, principal, FlowPermission.EDIT)
+            owner_id = existing_flow.user_id or current_user.id
 
             # Sync deployment state before folder changes
             # Explicit folder_id=None is ignored here because _update_existing_flow
@@ -329,21 +363,26 @@ async def upsert_flow(
 
             async def update_operation() -> FlowRead:
                 # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
-                existing_flow_for_attempt = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
-                if existing_flow_for_attempt is None:
-                    raise HTTPException(status_code=404, detail="Flow not found")
+                existing_flow_for_attempt = await require_flow_permission(
+                    session,
+                    await session.get(Flow, flow_id),
+                    principal,
+                    FlowPermission.EDIT,
+                )
+                flow_owner = await session.get(User, owner_id) if existing_flow_for_attempt.user_id else None
+                update_user = flow_owner or current_user
                 return await _update_existing_flow(
                     session=session,
                     existing_flow=existing_flow_for_attempt,
                     flow=flow,
-                    current_user=current_user,
+                    current_user=update_user,
                     storage_service=storage_service,
                 )
 
             if folder_id_will_change:
                 flow_read = await retry_flow_operation_on_deployment_guard(
                     db=session,
-                    user_id=current_user.id,
+                    user_id=owner_id,
                     flow_ids=[existing_flow.id],
                     operation=update_operation,
                 )
@@ -378,25 +417,100 @@ async def upsert_flow(
 @router.delete("/{flow_id}", status_code=200)
 async def delete_flow(
     *,
+    request: Request,
     session: DbSession,
     flow_id: UUID,
     current_user: CurrentActiveUser,
 ):
     """Delete a flow."""
-    flow = await _read_flow(
-        session=session,
-        flow_id=flow_id,
-        user_id=current_user.id,
+    principal = await get_flow_principal(request, current_user)
+    flow = await require_flow_permission(
+        session,
+        await session.get(Flow, flow_id),
+        principal,
+        FlowPermission.MANAGE,
     )
-    if not flow:
-        raise HTTPException(status_code=404, detail="Flow not found")
+    owner_id = flow.user_id or current_user.id
     await retry_flow_operation_on_deployment_guard(
         db=session,
-        user_id=current_user.id,
+        user_id=owner_id,
         flow_ids=[flow.id],
         operation=lambda: cascade_delete_flow(session, flow.id),
     )
     return {"message": "Flow deleted successfully"}
+
+
+@router.get("/{flow_id}/acl", response_model=list[FlowAccessControlRead], status_code=200)
+async def read_flow_acl(
+    *,
+    request: Request,
+    session: DbSession,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+):
+    principal = await get_flow_principal(request, current_user)
+    await require_flow_permission(
+        session,
+        await session.get(Flow, flow_id),
+        principal,
+        FlowPermission.MANAGE,
+    )
+    entries = (await session.exec(select(FlowAccessControl).where(FlowAccessControl.flow_id == flow_id))).all()
+    return [FlowAccessControlRead.model_validate(entry, from_attributes=True) for entry in entries]
+
+
+@router.post("/{flow_id}/acl", response_model=FlowAccessControlRead, status_code=201)
+async def create_flow_acl_entry(
+    *,
+    request: Request,
+    session: DbSession,
+    flow_id: UUID,
+    acl_entry: FlowAccessControlCreate,
+    current_user: CurrentActiveUser,
+):
+    principal = await get_flow_principal(request, current_user)
+    await require_flow_permission(
+        session,
+        await session.get(Flow, flow_id),
+        principal,
+        FlowPermission.MANAGE,
+    )
+    entry = FlowAccessControl(flow_id=flow_id, **acl_entry.model_dump())
+    session.add(entry)
+    try:
+        await session.flush()
+        await session.refresh(entry)
+    except Exception as exc:
+        raise _handle_unique_constraint_error(exc) from exc
+    return FlowAccessControlRead.model_validate(entry, from_attributes=True)
+
+
+@router.delete("/{flow_id}/acl/{acl_id}", status_code=200)
+async def delete_flow_acl_entry(
+    *,
+    request: Request,
+    session: DbSession,
+    flow_id: UUID,
+    acl_id: UUID,
+    current_user: CurrentActiveUser,
+):
+    principal = await get_flow_principal(request, current_user)
+    await require_flow_permission(
+        session,
+        await session.get(Flow, flow_id),
+        principal,
+        FlowPermission.MANAGE,
+    )
+    entry = (
+        await session.exec(
+            select(FlowAccessControl).where(FlowAccessControl.id == acl_id, FlowAccessControl.flow_id == flow_id)
+        )
+    ).first()
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Flow ACL entry not found")
+
+    await session.delete(entry)
+    return {"message": "Flow ACL entry deleted successfully"}
 
 
 @router.post("/batch/", response_model=list[FlowRead], status_code=201)
@@ -518,6 +632,7 @@ async def upload_file(
 
 @router.delete("/")
 async def delete_multiple_flows(
+    request: Request,
     flow_ids: list[UUID],
     user: CurrentActiveUser,
     db: DbSession,
@@ -528,9 +643,19 @@ async def delete_multiple_flows(
         async def _delete_operation() -> int:
             if not flow_ids:
                 return 0
-            flows_to_delete = (
-                await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
-            ).all()
+            auth_settings = get_settings_service().auth_settings
+            if auth_settings.FLOW_RBAC_ENABLED:
+                principal = await get_flow_principal(request, user)
+                candidate_flows = (await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)))).all()
+                flows_to_delete = [
+                    flow
+                    for flow in candidate_flows
+                    if await has_flow_permission(db, flow, principal, FlowPermission.MANAGE, auth_settings)
+                ]
+            else:
+                flows_to_delete = (
+                    await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
+                ).all()
             for flow in flows_to_delete:
                 await cascade_delete_flow(db, flow.id)
             await db.flush()
@@ -557,6 +682,7 @@ async def delete_multiple_flows(
 
 @router.post("/download/", status_code=200)
 async def download_multiple_file(
+    request: Request,
     flow_ids: list[UUID],
     user: CurrentActiveUser,
     db: DbSession,
@@ -565,7 +691,16 @@ async def download_multiple_file(
     # TODO: Full-version download (include_version parameter) is planned as a follow-up feature.
     # When implemented, add an include_version: bool = False parameter and embed version
     # entries in each flow dict using get_flow_versions_with_provider_status and strip_version_data.
-    flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
+    auth_settings = get_settings_service().auth_settings
+    if auth_settings.FLOW_RBAC_ENABLED:
+        principal = await get_flow_principal(request, user)
+        flows = (
+            await db.exec(
+                select(Flow).where(col(Flow.id).in_(flow_ids)).where(viewable_flows_filter(principal, auth_settings))
+            )
+        ).all()
+    else:
+        flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
 
     if not flows:
         raise HTTPException(status_code=404, detail="No flows found.")

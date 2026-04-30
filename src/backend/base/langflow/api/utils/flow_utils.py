@@ -17,7 +17,7 @@ from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
 )
 from langflow.services.database.models.deployment.guards import check_flow_has_deployed_versions
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, FlowAccessControl
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.traces.model import SpanTable, TraceTable
@@ -112,6 +112,7 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         if trace_ids:
             await session.exec(delete(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)))
             await session.exec(delete(TraceTable).where(col(TraceTable.id).in_(trace_ids)))
+        await session.exec(delete(FlowAccessControl).where(FlowAccessControl.flow_id == flow_id))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(

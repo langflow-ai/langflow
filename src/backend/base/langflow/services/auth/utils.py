@@ -145,9 +145,19 @@ def get_jwt_signing_key(settings_service: SettingsService) -> str:
 
 
 async def api_key_security(
+    request: Request,
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
+    db: AsyncSession = Depends(injectable_session_scope),
 ) -> UserRead | None:
+    if token := _get_external_token(request.headers, request.cookies):
+        try:
+            user = await _auth_service().get_current_user(token, query_param, header_param, db)
+        except AuthenticationError as e:
+            raise _auth_error_to_http(e) from e
+        from langflow.services.database.models.user.model import UserRead
+
+        return UserRead.model_validate(user, from_attributes=True)
     return await _auth_service().api_key_security(query_param, header_param)
 
 

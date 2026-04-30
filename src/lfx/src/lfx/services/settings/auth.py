@@ -197,6 +197,35 @@ class AuthSettings(BaseSettings):
         description="JWT claim containing the user's display name.",
     )
 
+    FLOW_RBAC_ENABLED: bool = Field(
+        default=False,
+        description="Enable flow-level access control checks for view, run, edit, and manage actions.",
+    )
+    FLOW_RBAC_ROLE_CLAIM: str = Field(
+        default="roles",
+        description="JWT claim containing request-time role names for flow access control.",
+    )
+    FLOW_RBAC_GROUP_CLAIM: str = Field(
+        default="groups",
+        description="JWT claim containing request-time group names for flow access control.",
+    )
+    FLOW_RBAC_ADMIN_ROLES: str = Field(
+        default="",
+        description="Comma-separated role names that can administer all flows.",
+    )
+    FLOW_RBAC_ADMIN_GROUPS: str = Field(
+        default="",
+        description="Comma-separated group names that can administer all flows.",
+    )
+    FLOW_RBAC_LOCK_BYPASS_ROLES: str = Field(
+        default="",
+        description="Comma-separated role names that can edit locked flows.",
+    )
+    FLOW_RBAC_LOCK_BYPASS_GROUPS: str = Field(
+        default="",
+        description="Comma-separated group names that can edit locked flows.",
+    )
+
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")

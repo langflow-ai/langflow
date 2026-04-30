@@ -424,6 +424,39 @@ class AuthService(BaseAuthService):
             except Exception as exc:
                 raise HTTPException(status_code=404, detail="Flow not found") from exc
 
+        if settings_service.auth_settings.FLOW_RBAC_ENABLED:
+            from langflow.services.auth.external import extract_external_token
+            from langflow.services.auth.flow_rbac import (
+                get_flow_by_id_or_name,
+                get_flow_principal,
+                require_flow_permission,
+            )
+            from langflow.services.database.models.flow.model import FlowPermission
+
+            api_key = request.headers.get("x-api-key") or request.query_params.get("x-api-key")
+            token = extract_external_token(request.headers, request.cookies, settings_service.auth_settings)
+            if not api_key and not token:
+                raise HTTPException(status_code=403, detail="API key or external credential required")
+
+            try:
+                async with session_scope() as db:
+                    authenticated_user = await self.authenticate_with_credentials(token, api_key, db)
+                    user_read = UserRead.model_validate(authenticated_user, from_attributes=True)
+                    principal = await get_flow_principal(request, user_read)
+                    await require_flow_permission(
+                        db,
+                        await get_flow_by_id_or_name(db, flow_id),
+                        principal,
+                        FlowPermission.RUN,
+                        not_found_detail="Flow not found",
+                    )
+                    return user_read
+            except HTTPException:
+                raise
+            except Exception as exc:
+                logger.error(f"Webhook authentication error: {exc}")
+                raise HTTPException(status_code=403, detail="Webhook authentication failed") from exc
+
         api_key_header_val = request.headers.get("x-api-key")
         api_key_query_val = request.query_params.get("x-api-key")
 
