@@ -206,7 +206,7 @@ export default function StepAttachFlows() {
         return prev;
       }
       const flowName =
-        allFlows.find((flow) => flow.id === preSelected.flowId)?.name ?? "Flow";
+        flows.find((flow) => flow.id === preSelected.flowId)?.name ?? "Flow";
       const next = new Map(prev);
       next.set(
         preSelected.key,
@@ -232,7 +232,7 @@ export default function StepAttachFlows() {
     };
     detect();
   }, [
-    allFlows,
+    flows,
     initialFlowId,
     selectedVersionByFlow,
     detectEnvVars,
