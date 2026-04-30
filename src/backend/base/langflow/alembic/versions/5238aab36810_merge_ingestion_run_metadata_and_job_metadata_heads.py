@@ -4,9 +4,10 @@ Revision ID: 5238aab36810
 Revises: 16a290ab1332, da7f6b9b638a
 Create Date: 2026-04-30 20:30:00.000000
 
-Phase: MERGE
-Safe to rollback: YES — merge migrations are pure graph nodes; they
-    don't run any DDL.
+Phase: EXPAND
+Safe to rollback: YES — pure graph node, no DDL. The validator only
+    recognises EXPAND / MIGRATE / CONTRACT, and a no-op merge fits the
+    additive (EXPAND) bucket since it never drops or rewrites data.
 
 After the kb_id-on-ingestion_run change (``e728126476a8``) was rebased
 onto ``72df732be86b`` so the ``ingestion_run`` chain is linear, the
