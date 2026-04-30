@@ -214,13 +214,16 @@ describe("KnowledgeBaseUploadModal", () => {
       );
     });
 
-    it("renders Ingest Content section open by default", () => {
+    it("renders Configure Sources section open by default", () => {
+      // Section heading + add-button labels switched to i18n strings
+      // during the kb-v1-db-connectors merge — the previous
+      // hardcoded "Ingest Content" / "Add Files" copy is gone.
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
       });
-      expect(screen.getByText(/Ingest Content/i)).toBeInTheDocument();
+      expect(screen.getByText(/Configure Sources/i)).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /Add Files/i }),
+        screen.getByRole("button", { name: /Add Sources/i }),
       ).toBeInTheDocument();
     });
 
@@ -542,7 +545,7 @@ describe("KnowledgeBaseUploadModal", () => {
       expect(input).toHaveValue("");
     });
 
-    it("opens file-upload dropdown when Add Files button is clicked", async () => {
+    it("opens file-upload dropdown when Add Sources button is clicked", async () => {
       const user = userEvent.setup();
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
