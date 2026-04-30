@@ -44,7 +44,9 @@ describe("computeTotalPages — regression for pages=0 producing pageIndex=0", (
   it("never returns less than 1 regardless of inputs", () => {
     for (const apiPages of [0, -1, undefined]) {
       for (const totalRuns of [0, 1, 10]) {
-        expect(computeTotalPages(apiPages as number | undefined, totalRuns, 20)).toBeGreaterThanOrEqual(1);
+        expect(
+          computeTotalPages(apiPages as number | undefined, totalRuns, 20),
+        ).toBeGreaterThanOrEqual(1);
       }
     }
   });
